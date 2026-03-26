@@ -1,16 +1,13 @@
 use anyhow::Result;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub fn run(root: &Path) -> Result<()> {
     let tickets_dir = root.join("tickets");
     if !tickets_dir.exists() {
         std::fs::create_dir_all(&tickets_dir)?;
         println!("Created tickets/");
-    }
-    let next_id = tickets_dir.join("NEXT_ID");
-    if !next_id.exists() {
-        std::fs::write(&next_id, "1\n")?;
     }
     let config_path = root.join("apm.toml");
     if !config_path.exists() {
@@ -25,6 +22,8 @@ pub fn run(root: &Path) -> Result<()> {
     ensure_gitignore(&gitignore)?;
     let git_dir = root.join(".git");
     write_hooks(&git_dir)?;
+    maybe_initial_commit(root)?;
+    maybe_create_meta_branch(root)?;
     println!("apm initialized.");
     Ok(())
 }
@@ -76,7 +75,7 @@ fn write_hooks(git_dir: &PathBuf) -> Result<()> {
     let pre_push = hooks_dir.join("pre-push");
     std::fs::write(
         &pre_push,
-        "#!/bin/sh\n# Fires event:branch_push_first → ready → in_progress\ncommand -v apm >/dev/null 2>&1 && apm _hook pre-push \"$@\" || true\n",
+        "#!/bin/sh\n# Fires event:branch_push_first on first push of ticket/<id>-* in ready state\ncommand -v apm >/dev/null 2>&1 && apm _hook pre-push \"$@\" || true\n",
     )?;
     std::fs::set_permissions(&pre_push, std::fs::Permissions::from_mode(0o755))?;
 
@@ -88,5 +87,66 @@ fn write_hooks(git_dir: &PathBuf) -> Result<()> {
     std::fs::set_permissions(&post_merge, std::fs::Permissions::from_mode(0o755))?;
 
     println!("Installed git hooks (pre-push, post-merge).");
+    Ok(())
+}
+
+/// Make an initial commit if the repo has no commits yet.
+/// This is required for git worktree support.
+fn maybe_initial_commit(root: &Path) -> Result<()> {
+    let has_commits = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if has_commits {
+        return Ok(());
+    }
+
+    // Stage apm.toml and .gitignore.
+    Command::new("git")
+        .args(["add", "apm.toml", ".gitignore"])
+        .current_dir(root)
+        .status()?;
+
+    let out = Command::new("git")
+        .args(["commit", "-m", "apm: initialize project"])
+        .current_dir(root)
+        .output()?;
+
+    if out.status.success() {
+        println!("Created initial commit.");
+    }
+    Ok(())
+}
+
+/// Create the apm/meta branch with NEXT_ID = 1 if it doesn't exist yet.
+fn maybe_create_meta_branch(root: &Path) -> Result<()> {
+    // Only attempt if the repo has commits.
+    let has_commits = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !has_commits {
+        return Ok(());
+    }
+
+    let meta_exists = Command::new("git")
+        .args(["rev-parse", "--verify", "refs/heads/apm/meta"])
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if meta_exists {
+        return Ok(());
+    }
+
+    // Use commit_to_branch to create it (non-fatal).
+    let _ = apm_core::git::commit_to_branch(root, "apm/meta", "NEXT_ID", "1\n", "meta: initialize");
     Ok(())
 }

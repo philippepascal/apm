@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, ticket};
+use apm_core::{config::Config, git, ticket};
 use chrono::Local;
 use std::path::Path;
 
@@ -21,7 +21,28 @@ pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
         other => bail!("unknown field: {other}"),
     }
     fm.updated = Some(Local::now().date_naive());
-    t.save()?;
+
+    let content = t.serialize()?;
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    let branch = t
+        .frontmatter
+        .branch
+        .clone()
+        .or_else(|| git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id:04}"));
+
+    git::commit_to_branch(
+        root,
+        &branch,
+        &rel_path,
+        &content,
+        &format!("ticket({id}): set {field} = {value}"),
+    )?;
+
     println!("#{id}: {field} = {value}");
     Ok(())
 }
