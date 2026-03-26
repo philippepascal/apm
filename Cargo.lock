@@ -87,6 +87,7 @@ dependencies = [
  "apm-core",
  "chrono",
  "clap",
+ "serde_json",
  "tempfile",
 ]
 
