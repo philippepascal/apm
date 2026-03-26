@@ -90,3 +90,9 @@ Do not check acceptance criteria boxes until the implementation is verified.
 
 Work one ticket at a time per agent process. For parallelism, use separate
 agent processes with separate clones (`apm dispatch` handles this).
+
+**Git worktrees:** If running inside a `git worktree`, ticket state commits to
+`main` require special handling — the feature branch worktree cannot checkout
+`main` while the primary worktree holds it. APM will detect this automatically
+and commit via the primary worktree (see ticket #15). Until #15 is implemented,
+use separate clones rather than worktrees for parallel agent work.

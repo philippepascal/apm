@@ -3,6 +3,10 @@ name = "apm"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "apm"
+path = "src/lib.rs"
+
 [[bin]]
 name = "apm"
 path = "src/main.rs"
@@ -12,3 +16,6 @@ apm-core = { path = "../apm-core" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

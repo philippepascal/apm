@@ -4,10 +4,10 @@ use apm_core::{
     ticket::{self, slugify, Frontmatter, Ticket},
 };
 use chrono::Local;
+use std::path::Path;
 
-pub fn run(title: String) -> Result<()> {
-    let root = crate::repo_root()?;
-    let config = Config::load(&root)?;
+pub fn run(root: &Path, title: String) -> Result<()> {
+    let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     let id = ticket::next_id(&tickets_dir)?;
     let slug = slugify(&title);
@@ -32,4 +32,3 @@ pub fn run(title: String) -> Result<()> {
     println!("Created ticket #{id}: {filename}");
     Ok(())
 }
-

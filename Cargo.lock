@@ -87,6 +87,7 @@ dependencies = [
  "apm-core",
  "chrono",
  "clap",
+ "tempfile",
 ]
 
 [[package]]
