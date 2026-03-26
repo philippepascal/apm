@@ -13,8 +13,11 @@ record of a unit of work: what needs to be done, the questions asked along the
 way, the agreed approach, and the state history.
 
 The **state** signals whose turn it is. The **spec** contains the structured
-content. There are no separate conversation commands — questions and amendment
-requests live inside the spec itself, in defined subsections.
+content. Questions and amendment requests live inside the spec itself, in
+defined subsections.
+
+Each ticket has its own git branch from creation. The ticket file is always
+read from and written to that branch — never directly on `main`.
 
 ---
 
@@ -26,6 +29,9 @@ tickets/<id>-<slug>.md
 
 - `id`: zero-padded 4-digit integer (`0001`, `0042`)
 - `slug`: derived from title at creation — lowercase, hyphens, max 40 chars; never changes even if title changes
+
+The file lives at this path on the ticket's branch. The local `tickets/` directory
+is a cache populated by `apm sync` — not the canonical source.
 
 ---
 
@@ -71,7 +77,7 @@ updated_at  = "2026-03-25T16:00:00Z"
 author      = "philippe"        # set once at creation; never changes
 supervisor  = "philippe"        # responsible engineer; can be reassigned
 agent       = "claude-0325-a3f9"  # current worker; null until in_progress
-branch      = "feature/42-add-csv-export-for-portfolio-data"
+branch      = "ticket/42-add-csv-export-for-portfolio-data"
 repos       = ["org/ticker"]
 
 [[prs]]
@@ -87,7 +93,7 @@ review      = "approved"        # "" | review_requested | changes_requested | ap
 
 | Field | Required | Set by | Notes |
 |-------|----------|--------|-------|
-| `id` | yes | APM on create | From `tickets/NEXT_ID`; never changes |
+| `id` | yes | APM on create | From `apm/meta` NEXT_ID; never changes |
 | `title` | yes | creator | Can be updated; slug does not change |
 | `state` | yes | APM | Must match a state id in `apm.toml` |
 | `effort` | no | anyone | `low` / `medium` / `high` |
@@ -117,15 +123,15 @@ review      = "approved"        # "" | review_requested | changes_requested | ap
 ## `## Spec` section
 
 The core human-written content. Written by the agent, refined through the
-question and amendment cycle with the supervisor. All subsections live here.
+question and amendment cycle with the supervisor.
 
-Committed to the **feature branch** by `apm spec` once `in_progress` begins.
-Before `in_progress`, committed to `main`.
+All spec content lives on the ticket's branch. APM's `apm spec <id>` command
+opens the file in `$EDITOR` on the correct branch. Direct file editing works
+but bypasses APM's branch routing.
 
 ### Required subsections
 
 All four must be present and non-empty before the ticket can move to `specd`.
-APM's `spec_not_empty` and `spec_has_acceptance_criteria` preconditions verify this.
 
 ---
 
@@ -149,7 +155,6 @@ export endpoint and a download trigger in the UI.
 A checklist of independently testable outcomes. Each item is a checkbox.
 The agent checks items off as they are verified during implementation.
 
-**Format:**
 ```markdown
 ### Acceptance criteria
 - [ ] GET /portfolio/export returns 200 with Content-Type: text/csv
@@ -176,7 +181,6 @@ reduces amendment cycles. Written as a flat list.
 
 ```markdown
 ### Out of scope
-- System-level dark mode auto-detection (follow-up ticket)
 - PDF export format
 - Exporting data from multiple portfolios in one file
 ```
@@ -228,7 +232,7 @@ open positions are always included regardless of date range.
 ```
 
 **Rules:**
-- Agent writes the question, then changes state to `question` via `apm state N question`
+- Agent writes the question, then `apm state N question` (or `apm ask N "..."`)
 - Supervisor writes the answer directly in this section, then changes state back
 - Unanswered questions (no `**A**` line following a `**Q**` line) are detected by `apm verify`
 - Do not delete answered questions — they are the decision record
@@ -242,6 +246,8 @@ agent writes question in ### Open questions
 supervisor writes answer in ### Open questions
 → apm state N <prior-state>   (signals: agent has the ball again)
 ```
+
+Both the question text and the state change commit to the ticket branch.
 
 ---
 
@@ -263,13 +269,12 @@ addresses each item, checks it off, and moves back to `specd`.
 ```
 
 **Rules:**
-- Supervisor writes items here, then changes state to `ammend` via `apm state N ammend`
+- Supervisor writes items here, then `apm state N ammend`
 - Each item is a checkbox the agent checks off as it is addressed in the spec
 - The agent updates the Approach section (and other sections as needed) to reflect each addressed amendment
-- Agent moves back to `specd` only when all boxes are checked
-- APM precondition `spec_all_amendments_addressed` verifies all boxes are checked before `ammend → specd`
+- Agent moves back to `specd` only when all boxes are checked (`spec_all_amendments_addressed` precondition)
 - Do not remove items once checked — they are the amendment history
-- New amendment rounds append new items below existing ones; do not reuse the same checkboxes
+- New amendment rounds append new items below existing ones
 
 **Workflow:**
 ```
@@ -279,6 +284,8 @@ supervisor writes items in ### Amendment requests
 agent addresses items, checks boxes, updates spec
 → apm state N specd           (signals: supervisor has the ball again)
 ```
+
+All edits commit to the `ticket/<id>-<slug>` branch (pre-`in_progress`).
 
 ---
 
@@ -303,25 +310,28 @@ edited manually.
 ```
 
 **Rules:**
-- APM appends a row on every state transition commit
+- APM appends a row on every state transition
 - The `By` column is the `APM_AGENT_NAME` value at the time of the transition
 - The first row always has `—` in the `From` column
 - Rows are never deleted or modified
-- Committed to `main` on every transition (Layer 1)
+- Committed to the ticket's current branch along with each state transition
 
 ---
 
-## Section ownership by layer
+## Branch and write routing
 
-| Section | Layer | Committed to | Written by |
-|---------|-------|-------------|------------|
-| Frontmatter | 1 | `main` | APM only |
-| `## Spec` (all subsections) | 2 | feature branch (after `in_progress`) | agent + supervisor |
-| `## History` | 1 | `main` | APM only |
+All ticket writes route to the ticket's current branch. APM handles this automatically.
 
-Before `in_progress` begins, all sections commit to `main`. Once `apm start`
-runs, `## Spec` changes commit to the feature branch; everything else
-continues to commit to `main`.
+| Phase | Branch | Who writes to the ticket file |
+|-------|--------|-------------------------------|
+| `new` through `accepted` | `ticket/<id>-<slug>` | agent (spec + code), supervisor (amendments, question answers), APM (frontmatter, history) |
+| `closed` | `main` (via merge + APM post-merge commit) | APM only |
+
+**Key rules:**
+- Supervisor does not push to the feature branch after `in_progress` begins
+- Supervisor feedback during implementation goes through PR review comments
+- `apm spec <id>` always opens the file on the correct branch regardless of what is checked out locally
+- The local `tickets/` directory is a cache; writing to it directly is not the same as writing to the branch
 
 ---
 
@@ -344,9 +354,6 @@ continues to commit to `main`.
 ---
 
 ## Preconditions reference
-
-APM checks these before allowing certain transitions. Failing preconditions
-block the transition with a clear error message.
 
 | Precondition | What APM checks |
 |-------------|-----------------|
@@ -375,7 +382,7 @@ updated_at  = "2026-03-26T10:00:00Z"
 author      = "philippe"
 supervisor  = "philippe"
 agent       = "claude-0325-a3f9"
-branch      = "feature/42-add-csv-export-for-portfolio-data"
+branch      = "ticket/42-add-csv-export-for-portfolio-data"
 repos       = ["org/ticker"]
 +++
 

@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, ticket};
+use apm_core::{config::Config, git, ticket};
 use chrono::Local;
 use std::path::Path;
 
@@ -17,7 +17,28 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
         ensure_amendment_section(&mut t.body);
     }
     append_history(&mut t.body, &old_state, &new_state);
-    t.save()?;
+
+    let content = t.serialize()?;
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    let branch = t
+        .frontmatter
+        .branch
+        .clone()
+        .or_else(|| git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id:04}"));
+
+    git::commit_to_branch(
+        root,
+        &branch,
+        &rel_path,
+        &content,
+        &format!("ticket({id}): {old_state} → {new_state}"),
+    )?;
+
     println!("#{id}: {old_state} → {new_state}");
     Ok(())
 }
