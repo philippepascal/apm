@@ -1,7 +1,7 @@
 +++
 id = 21
 title = "commit_to_branch writes ticket files to working tree"
-state = "implemented"
+state = "closed"
 priority = 9
 effort = 1
 risk = 2
@@ -56,3 +56,4 @@ existing working-tree file, which is correct as-is.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-26 | agent | new → ready | |
+| 2026-03-26 | manual | implemented → closed | |

@@ -1,7 +1,7 @@
 +++
 id = 22
 title = "Defer branch push from commit_to_branch to apm sync"
-state = "implemented"
+state = "closed"
 priority = 8
 effort = 2
 risk = 2
@@ -58,3 +58,4 @@ the cost (noticeable slowness on every command) outweighs the benefit.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-26 | agent | new → ready | |
+| 2026-03-26 | manual | implemented → closed | |
