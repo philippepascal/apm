@@ -11,6 +11,16 @@ updated = "2026-03-25"
 
 ## Spec
 
+### Amendment requests
+- [x] how does an agent makes the distinction between take and a regular start? is there a difference in the state machine that needs to be added? even with that, how does an agent know if another agent is working on it?
+
+  The distinction is the `agent` field: `apm start` requires `agent = null` (fails
+  immediately if already set); `apm take` requires `agent` is set (fails if null —
+  use `start` instead). `apm next` only surfaces tickets where `agent` is null, so
+  an agent following normal workflow never encounters a claimed ticket. `take` is
+  explicitly invoked when a supervisor directs an agent to resume someone else's work.
+  No state machine change needed: `take` does not change state, only the `agent` field.
+
 ### Problem
 
 When an agent session ends mid-ticket (crash, context limit, manual stop), another
@@ -46,3 +56,5 @@ New subcommand `apm take <id>` in `apm/src/cmd/take.rs`:
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ammend | |
+| 2026-03-25 | manual | ammend → specd | |
