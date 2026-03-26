@@ -194,7 +194,7 @@ fn state_transition_appends_history_row() {
     sync_from_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
-    assert!(content.contains("new → specd"));
+    assert!(content.contains("| new | specd |"));
 }
 
 #[test]

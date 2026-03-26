@@ -1,6 +1,6 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -103,20 +103,13 @@ fn apply_fixes(
         if (fm.state == "in_progress" || fm.state == "implemented")
             && merged_set.contains(branch.as_str())
         {
+            let now = Utc::now();
             let mut t = t.clone();
+            let old_state = fm.state.clone();
             t.frontmatter.state = "accepted".into();
-            t.frontmatter.updated = Some(Local::now().date_naive());
-            let today = Local::now().format("%Y-%m-%d");
-            let row = format!("| {today} | verify --fix | {} → accepted | branch merged |", fm.state);
-            if t.body.contains("## History") {
-                if !t.body.ends_with('\n') { t.body.push('\n'); }
-                t.body.push_str(&row);
-                t.body.push('\n');
-            } else {
-                t.body.push_str(&format!(
-                    "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
-                ));
-            }
+            t.frontmatter.updated_at = Some(now);
+            let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+            crate::cmd::state::append_history(&mut t.body, &old_state, "accepted", &when, "verify --fix");
             let content = t.serialize()?;
             let id = fm.id;
             let filename = t.path.file_name().unwrap().to_string_lossy().to_string();

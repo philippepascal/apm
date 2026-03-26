@@ -56,6 +56,7 @@ pub struct StateConfig {
 #[derive(Debug, Deserialize)]
 pub struct TransitionConfig {
     pub to: String,
+    #[serde(default)]
     pub trigger: String,
     #[serde(default)]
     pub actor: String,

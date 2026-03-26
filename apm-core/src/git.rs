@@ -34,34 +34,50 @@ pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<Str
 
 /// All remote ticket/* branch names (without the origin/ prefix).
 pub fn ticket_branches(root: &Path) -> Result<Vec<String>> {
-    let out = run(root, &["branch", "-r", "--list", "origin/ticket/*"]).unwrap_or_default();
-    Ok(out
+    // Prefer remote branches; fall back to local when no remote is configured.
+    let remote = run(root, &["branch", "-r", "--list", "origin/ticket/*"]).unwrap_or_default();
+    if !remote.trim().is_empty() {
+        return Ok(remote
+            .lines()
+            .map(|l| l.trim().trim_start_matches("origin/").to_string())
+            .filter(|l| !l.is_empty())
+            .collect());
+    }
+    let local = run(root, &["branch", "--list", "ticket/*"]).unwrap_or_default();
+    Ok(local
         .lines()
-        .map(|l| l.trim().trim_start_matches("origin/").to_string())
+        .map(|l| l.trim().to_string())
         .filter(|l| !l.is_empty())
         .collect())
 }
 
-/// Remote ticket/* branches that are merged into origin/main.
+/// ticket/* branches that are merged into main (remote or local).
 pub fn merged_into_main(root: &Path) -> Result<Vec<String>> {
-    if run(root, &["rev-parse", "--verify", "origin/main"]).is_err() {
+    // Try remote main first.
+    if run(root, &["rev-parse", "--verify", "refs/remotes/origin/main"]).is_ok() {
+        let out = run(
+            root,
+            &["branch", "-r", "--merged", "origin/main", "--list", "origin/ticket/*"],
+        )
+        .unwrap_or_default();
+        return Ok(out
+            .lines()
+            .map(|l| l.trim().trim_start_matches("origin/").to_string())
+            .filter(|l| !l.is_empty())
+            .collect());
+    }
+    // Fall back to local main.
+    if run(root, &["rev-parse", "--verify", "refs/heads/main"]).is_err() {
         return Ok(vec![]);
     }
     let out = run(
         root,
-        &[
-            "branch",
-            "-r",
-            "--merged",
-            "origin/main",
-            "--list",
-            "origin/ticket/*",
-        ],
+        &["branch", "--merged", "main", "--list", "ticket/*"],
     )
     .unwrap_or_default();
     Ok(out
         .lines()
-        .map(|l| l.trim().trim_start_matches("origin/").to_string())
+        .map(|l| l.trim().to_string())
         .filter(|l| !l.is_empty())
         .collect())
 }

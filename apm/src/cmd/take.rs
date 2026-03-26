@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
 use std::process::Command;
 
@@ -30,20 +30,12 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         return Ok(());
     }
 
+    let now = Utc::now();
     t.frontmatter.agent = Some(new_agent.clone());
-    t.frontmatter.updated = Some(Local::now().date_naive());
-
-    let today = Local::now().format("%Y-%m-%d");
-    let row = format!("| {today} | {new_agent} | handoff {old_agent} → {new_agent} | |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') { t.body.push('\n'); }
-        t.body.push_str(&row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
-        ));
-    }
+    t.frontmatter.updated_at = Some(now);
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    // Record handoff: From = old agent, To = new agent (state unchanged).
+    super::state::append_history(&mut t.body, &old_agent, &new_agent, &when, "handoff");
 
     let content = t.serialize()?;
     let rel_path = format!(

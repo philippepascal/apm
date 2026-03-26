@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use chrono::NaiveDate;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -23,9 +23,9 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created: Option<NaiveDate>,
+    pub created_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated: Option<NaiveDate>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]

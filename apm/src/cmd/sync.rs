@@ -1,6 +1,5 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, ticket::Ticket};
-use chrono::Local;
 use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
@@ -53,19 +52,11 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
         };
         if t.frontmatter.state != "implemented" { continue; }
 
+        let now = chrono::Utc::now();
         t.frontmatter.state = "accepted".into();
-        t.frontmatter.updated = Some(Local::now().date_naive());
-        let today = Local::now().format("%Y-%m-%d");
-        let row = format!("| {today} | sync | implemented → accepted | branch merged |");
-        if t.body.contains("## History") {
-            if !t.body.ends_with('\n') { t.body.push('\n'); }
-            t.body.push_str(&row);
-            t.body.push('\n');
-        } else {
-            t.body.push_str(&format!(
-                "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
-            ));
-        }
+        t.frontmatter.updated_at = Some(now);
+        let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+        crate::cmd::state::append_history(&mut t.body, "implemented", "accepted", &when, "apm sync");
 
         let content = match t.serialize() {
             Ok(c) => c,

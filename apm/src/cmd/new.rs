@@ -4,7 +4,7 @@ use apm_core::{
     git,
     ticket::{slugify, Frontmatter, Ticket},
 };
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, title: String) -> Result<()> {
@@ -17,9 +17,10 @@ pub fn run(root: &Path, title: String) -> Result<()> {
     let filename = format!("{id:04}-{slug}.md");
     let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
     let branch = format!("ticket/{id:04}-{slug}");
-    let today = Local::now().date_naive();
-
-    let author = std::env::var("APM_AGENT_NAME").ok();
+    let now = Utc::now();
+    let author = std::env::var("APM_AGENT_NAME")
+        .ok()
+        .unwrap_or_else(|| "apm".into());
     let fm = Frontmatter {
         id,
         title: title.clone(),
@@ -27,16 +28,19 @@ pub fn run(root: &Path, title: String) -> Result<()> {
         priority: 0,
         effort: 0,
         risk: 0,
-        author,
+        author: Some(author.clone()),
         supervisor: None,
         agent: None,
         branch: Some(branch.clone()),
-        created: Some(today),
-        updated: Some(today),
+        created_at: Some(now),
+        updated_at: Some(now),
     };
-    let body = "## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n";
+    let when = now.format("%Y-%m-%dT%H:%MZ");
+    let body = format!(
+        "## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
+    );
     let path = tickets_dir.join(&filename);
-    let t = Ticket { frontmatter: fm, body: body.into(), path };
+    let t = Ticket { frontmatter: fm, body, path };
     let content = t.serialize()?;
 
     git::commit_to_branch(

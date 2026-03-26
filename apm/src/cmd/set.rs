@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
@@ -22,7 +22,7 @@ pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
         "title"    => fm.title    = value.clone(),
         other => bail!("unknown field: {other}"),
     }
-    fm.updated = Some(Local::now().date_naive());
+    fm.updated_at = Some(Utc::now());
 
     let content = t.serialize()?;
     let rel_path = format!(

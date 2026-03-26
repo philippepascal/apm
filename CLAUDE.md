@@ -1,30 +1,6 @@
 # Claude Code — APM Project
 
-## Repo structure
-
-Rust workspace — one crate to start, structured to grow:
-
-- `apm-core/` — library: data model, config parsing, ticket storage, state machine
-- `apm/` — CLI binary (thin wrapper over `apm-core`)
-- `testdata/` — ticket fixtures for integration tests
-- `initial_specs/` — design docs (SPEC.md, STATE-MACHINE.md, TICKET-SPEC.md, USECASES.md, etc.)
-
-## Managing tasks
-
-State labels: `new` → `question` → `specd` → `ready` → `in_progress` → `implemented` → `accepted` → `closed`
-(`ammend` flags a spec needing revision before `ready`)
-
-See `apm.agents.md` for the full agent workflow and branch discipline.
-See `initial_specs/STATE-MACHINE.md` for the state machine reference schema.
-See `initial_specs/TICKET-SPEC.md` for the ticket document format.
-
-## Development workflow
-
-1. Read the relevant spec files before implementing anything
-2. Make the minimal change that satisfies the acceptance criteria
-3. Add or update tests — all acceptance criteria should be covered
-4. Run `cargo test --workspace` before opening a PR
-5. All tests must pass before opening a PR
+@apm.agents.md
 
 ## Commits
 
@@ -53,8 +29,9 @@ See `initial_specs/TICKET-SPEC.md` for the ticket document format.
 
 ## Tests
 
-- Unit tests inline in each crate or in `crate/tests/`
-- Integration tests use real ticket files in `testdata/`
+- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
+- Integration tests in `apm/tests/integration.rs` — use temp git repos, no fixture files needed
+- Run `cargo test --workspace` before opening a PR
 
 ## Things to avoid
 

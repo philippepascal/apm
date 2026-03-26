@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
 use std::process::Command;
 
@@ -32,24 +32,13 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         );
     }
 
+    let now = Utc::now();
     let old_state = t.frontmatter.state.clone();
     t.frontmatter.agent = Some(agent_name.clone());
     t.frontmatter.state = "in_progress".into();
-    t.frontmatter.updated = Some(Local::now().date_naive());
-
-    let today = Local::now().format("%Y-%m-%d");
-    let history_row = format!("| {today} | {agent_name} | {old_state} → in_progress | |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') {
-            t.body.push('\n');
-        }
-        t.body.push_str(&history_row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{history_row}\n"
-        ));
-    }
+    t.frontmatter.updated_at = Some(now);
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    super::state::append_history(&mut t.body, &old_state, "in_progress", &when, &agent_name);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -80,6 +69,14 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
             .current_dir(root)
             .status();
     }
+
+    // The ticket file may be in the working tree with an older state (e.g. the
+    // supervisor checked it out to read the spec). Reset it to the branch HEAD
+    // so the full checkout below doesn't see "local changes".
+    let _ = Command::new("git")
+        .args(["checkout", &branch, "--", &rel_path])
+        .current_dir(root)
+        .status();
 
     let checkout = Command::new("git")
         .args(["checkout", &branch])
