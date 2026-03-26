@@ -1,9 +1,11 @@
 use anyhow::Result;
+use serde_json::Value;
+use std::io::{self, BufRead, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(root: &Path) -> Result<()> {
+pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     let tickets_dir = root.join("tickets");
     if !tickets_dir.exists() {
         std::fs::create_dir_all(&tickets_dir)?;
@@ -28,6 +30,7 @@ pub fn run(root: &Path) -> Result<()> {
     ensure_gitignore(&gitignore)?;
     let git_dir = root.join(".git");
     write_hooks(&git_dir)?;
+    update_claude_settings(root, no_claude)?;
     maybe_initial_commit(root)?;
     maybe_create_meta_branch(root)?;
     println!("apm initialized.");
@@ -139,6 +142,94 @@ fn ensure_gitignore(path: &PathBuf) -> Result<()> {
         std::fs::write(path, entry)?;
         println!("Created .gitignore");
     }
+    Ok(())
+}
+
+const APM_ALLOW_ENTRIES: &[&str] = &[
+    "Bash(apm sync*)",
+    "Bash(apm next*)",
+    "Bash(apm list*)",
+    "Bash(apm show*)",
+    "Bash(apm set *)",
+    "Bash(apm state *)",
+    "Bash(apm start *)",
+    "Bash(apm take *)",
+    "Bash(apm spec *)",
+    "Bash(apm agents*)",
+    "Bash(apm _hook *)",
+    "Bash(apm verify*)",
+    "Bash(apm new *)",
+];
+
+fn update_claude_settings(root: &Path, skip: bool) -> Result<()> {
+    if skip {
+        return Ok(());
+    }
+    let settings_path = root.join(".claude/settings.json");
+    if !settings_path.exists() {
+        return Ok(());
+    }
+
+    let raw = std::fs::read_to_string(&settings_path)?;
+    let mut val: Value = serde_json::from_str(&raw)?;
+
+    let allow = val
+        .pointer_mut("/permissions/allow")
+        .and_then(|v| v.as_array_mut());
+
+    let missing: Vec<&str> = if let Some(arr) = allow {
+        APM_ALLOW_ENTRIES
+            .iter()
+            .filter(|&&e| !arr.iter().any(|v| v.as_str() == Some(e)))
+            .copied()
+            .collect()
+    } else {
+        APM_ALLOW_ENTRIES.to_vec()
+    };
+
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    println!("The following entries will be added to .claude/settings.json permissions.allow:");
+    for e in &missing {
+        println!("  {e}");
+    }
+    print!("Add apm commands to Claude allow list? [y/N] ");
+    io::stdout().flush()?;
+
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    if !line.trim().eq_ignore_ascii_case("y") {
+        println!("Skipped.");
+        return Ok(());
+    }
+
+    // Ensure permissions.allow array exists
+    if val.pointer("/permissions/allow").is_none() {
+        let perms = val
+            .as_object_mut()
+            .ok_or_else(|| anyhow::anyhow!("settings.json root is not an object"))?
+            .entry("permissions")
+            .or_insert_with(|| Value::Object(Default::default()));
+        perms
+            .as_object_mut()
+            .unwrap()
+            .entry("allow")
+            .or_insert_with(|| Value::Array(vec![]));
+    }
+
+    let arr = val
+        .pointer_mut("/permissions/allow")
+        .and_then(|v| v.as_array_mut())
+        .unwrap();
+    for e in missing {
+        arr.push(Value::String(e.to_string()));
+    }
+
+    let updated = serde_json::to_string_pretty(&val)?;
+    std::fs::write(&settings_path, updated + "\n")?;
+    println!("Updated .claude/settings.json");
     Ok(())
 }
 

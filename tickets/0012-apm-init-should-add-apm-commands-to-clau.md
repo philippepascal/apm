@@ -1,7 +1,7 @@
 +++
 id = 12
 title = "apm init should add apm commands to Claude allow list with user approval"
-state = "ready"
+state = "implemented"
 priority = 5
 effort = 4
 risk = 3
@@ -56,3 +56,4 @@ In `cmd/init.rs`, add `update_claude_settings(root: &Path, skip: bool) -> Result
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → rready | |
 | 2026-03-25 | manual | rready → ready | |
+| 2026-03-26 | agent | ready → implemented | |

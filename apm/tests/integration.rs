@@ -61,7 +61,7 @@ fn init_creates_expected_files() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p).unwrap();
+    apm::cmd::init::run(p, true).unwrap();
     assert!(p.join("tickets").is_dir());
     assert!(p.join("apm.toml").exists());
     assert!(p.join(".gitignore").exists());
@@ -76,9 +76,9 @@ fn init_is_idempotent() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p).unwrap();
+    apm::cmd::init::run(p, true).unwrap();
     let toml_before = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    apm::cmd::init::run(p).unwrap();
+    apm::cmd::init::run(p, true).unwrap();
     let toml_after = std::fs::read_to_string(p.join("apm.toml")).unwrap();
     assert_eq!(toml_before, toml_after);
 }

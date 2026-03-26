@@ -12,7 +12,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Initialize apm in the current repository
-    Init,
+    Init {
+        /// Skip updating .claude/settings.json allow list
+        #[arg(long)]
+        no_claude: bool,
+    },
     /// List tickets
     List {
         #[arg(long)]
@@ -63,7 +67,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = repo_root()?;
     match cli.command {
-        Command::Init => cmd::init::run(&root),
+        Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor } => cmd::list::run(&root, state, unassigned, all, supervisor),
         Command::Show { id } => cmd::show::run(&root, id),
         Command::New { title } => cmd::new::run(&root, title),
