@@ -140,7 +140,7 @@ requires_provider = true
 | `command:reply` | manual | `apm reply N "..."` — supervisor adds a reply to Open questions |
 | `command:start` | manual | `apm start N` — begin implementation; renames ticket branch to feature branch |
 | `command:take` | manual | `apm take N` — take over an in-progress ticket |
-| `event:branch_push_first` | auto | First push of a branch matching `feature/<id>-*` |
+| `event:branch_push_first` | auto | First push of a branch matching `ticket/<id>-*` |
 | `event:pr_opened` | auto | PR opened with branch or magic words linking to this ticket |
 | `event:pr_all_merged` | auto | All `closes`-type PRs for this ticket are now merged |
 | `event:pr_draft` | auto | PR converted to draft |
@@ -209,8 +209,8 @@ Additional operations APM performs when a transition fires, beyond updating the 
 |------|----------------------|
 | Any transition fires | Update `state` and `updated_at` in frontmatter; append row to `## History`; commit both to the ticket's current branch; update local cache |
 | `apm new` runs | Allocate ID from `apm/meta`; create `ticket/<id>-<slug>` branch; commit initial ticket file; push branch |
-| `command:start` trigger fires | Rename `ticket/<id>-<slug>` to `feature/<id>-<slug>` locally; push feature branch; delete remote ticket branch; update `branch` and `agent` fields in frontmatter; commit to feature branch |
-| `event:branch_push_first` trigger fires | Record `branch` field if not already set; commit frontmatter update to feature branch |
+| `command:start` trigger fires | Set `branch` and `agent` fields in frontmatter; commit to `ticket/<id>-<slug>` branch |
+| `event:branch_push_first` trigger fires | Record `branch` field if not already set; commit frontmatter update to ticket branch |
 | `event:pr_opened` trigger fires | Create or update `prs` record in frontmatter; commit to feature branch |
 | `event:pr_all_merged` trigger fires | Mark `prs.state = merged`; commit state update to `main` (the one post-merge main commit) |
 | `event:pr_review_*` trigger fires | Update `prs.review_state`; commit frontmatter update to feature branch |
@@ -249,14 +249,14 @@ APM is not a daemon. It does not run persistently in the background. Auto-transi
 
 ### Local git events → synchronous hooks
 
-The `pre-push` hook calls `apm _hook pre-push` as a one-shot process when the agent runs `git push`. APM detects the first push of a `feature/<id>-*` branch, fires the transition, commits the state update to the feature branch, and exits.
+The `pre-push` hook calls `apm _hook pre-push` as a one-shot process when the agent runs `git push`. APM detects the first push of a `ticket/<id>-*` branch in `ready` state, fires the transition, commits the state update to the ticket branch, and exits.
 
 ```
 agent runs: git push
   → pre-push hook fires
-  → apm _hook pre-push (detects first push of feature/<id>-*)
+  → apm _hook pre-push (detects first push of ticket/<id>-* in ready state)
   → fires ready → in_progress
-  → commits state update to feature branch
+  → commits state update to ticket branch
   → exits
 git push completes
 ```
@@ -266,7 +266,7 @@ git push completes
 ```
 apm sync runs:
   → git fetch --all
-  → for each ticket/* and feature/* branch:
+  → for each ticket/* branch:
       read ticket file from branch
       check: is branch merged into main? (git branch --merged main)
       check: does a PR exist for this branch?
@@ -291,11 +291,11 @@ apm sync runs:
 git branch --merged main
 ```
 
-If `feature/42-add-csv-export` appears in that list, ticket #42's branch is merged. APM detects this during `apm sync` and fires `event:pr_all_merged`. **No webhook required. Branches are not deleted until the ticket is closed.**
+If `ticket/42-add-csv-export` appears in that list, ticket #42's branch is merged. APM detects this during `apm sync` and fires `event:pr_all_merged`. **No webhook required. Branches are not deleted until the ticket is closed.**
 
 ### What the merge commit contains
 
-When `feature/42-*` merges into `main`, the merge commit contains the complete ticket file as it existed on the feature branch: full spec, full history, all frontmatter. No additional reconciliation needed — the file's git history tells the complete story.
+When `ticket/42-*` merges into `main`, the merge commit contains the complete ticket file as it existed on the ticket branch: full spec, full history, all frontmatter. No additional reconciliation needed — the file's git history tells the complete story.
 
 ### The one post-merge APM commit to `main`
 
@@ -362,8 +362,7 @@ This is the canonical state machine for AI-assisted development using the ticker
 
 | States | Branch | Who writes |
 |--------|--------|-----------|
-| `new`, `question`, `specd`, `ammend`, `ready` | `ticket/<id>-<slug>` | agent (spec), supervisor (amendments, replies), APM (frontmatter, history) |
-| `in_progress`, `implemented`, `accepted` | `feature/<id>-<slug>` | agent (code + spec), APM (frontmatter, history); supervisor via PR reviews only |
+| `new` through `accepted` | `ticket/<id>-<slug>` | agent (spec + code), supervisor (amendments, question answers), APM (frontmatter, history) |
 | `closed` | `main` only (via merge) | APM post-merge commit only |
 
 ### Transitions — full reference
@@ -476,7 +475,7 @@ This is the canonical state machine for AI-assisted development using the ticker
 | trigger | `command:start` (primary) or `event:branch_push_first` (secondary) |
 | actor | `agent` (for `command:start`); `system` (for event) |
 | preconditions | none |
-| git side effects | `ticket/<id>-<slug>` renamed to `feature/<id>-<slug>`; remote ticket branch deleted; `branch`, `agent`, `state`, `updated_at` committed to `feature/<id>-<slug>` |
+| git side effects | `branch`, `agent`, `state`, `updated_at` committed to `ticket/<id>-<slug>` |
 | apm side effects | Local cache updated; `agent` field set to `APM_AGENT_NAME` |
 | notes | `apm start N` is the primary path. `event:branch_push_first` is a fallback for agents that push without `apm start`. |
 
@@ -489,7 +488,7 @@ This is the canonical state machine for AI-assisted development using the ticker
 | trigger | `event:pr_opened` (primary) or `manual` (pure-git fallback) |
 | actor | `system` (event); `agent` or `engineer` (manual) |
 | preconditions | none (event); `pr_exists` (manual) |
-| git side effects | `state` + `updated_at` + `prs` committed to `feature/<id>-<slug>` |
+| git side effects | `state` + `updated_at` + `prs` committed to `ticket/<id>-<slug>` |
 | apm side effects | Local cache updated; supervisor notified |
 
 ---
@@ -501,7 +500,7 @@ This is the canonical state machine for AI-assisted development using the ticker
 | trigger | `manual` |
 | actor | `any` |
 | preconditions | none |
-| git side effects | `state` + `updated_at` committed to `feature/<id>-<slug>` |
+| git side effects | `state` + `updated_at` committed to `ticket/<id>-<slug>` |
 | side_effects | `set_agent_null`, `set_branch_null` |
 | notes | Rollback. Spec is preserved on the feature branch. Ticket returns to queue. Feature branch is NOT deleted automatically. |
 
@@ -526,7 +525,7 @@ This is the canonical state machine for AI-assisted development using the ticker
 | trigger | `event:pr_review_changes` (primary) or `manual` (secondary) |
 | actor | `system` (event); `engineer` (manual) |
 | preconditions | none |
-| git side effects | `state` + `updated_at` committed to `feature/<id>-<slug>` |
+| git side effects | `state` + `updated_at` committed to `ticket/<id>-<slug>` |
 | apm side effects | Local cache updated; agent notified |
 
 ---
@@ -558,7 +557,6 @@ ammend ◀── specd ──supervisor approves──▶ ready
   └───────────agent revises───────────▶ specd   apm start
                                             │
                                             ▼
-                               [ticket/* → feature/*]
                                       in_progress ◀── pr review changes
                                             │
                                       pr opened │

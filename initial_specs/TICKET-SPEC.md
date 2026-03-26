@@ -77,7 +77,7 @@ updated_at  = "2026-03-25T16:00:00Z"
 author      = "philippe"        # set once at creation; never changes
 supervisor  = "philippe"        # responsible engineer; can be reassigned
 agent       = "claude-0325-a3f9"  # current worker; null until in_progress
-branch      = "feature/42-add-csv-export-for-portfolio-data"
+branch      = "ticket/42-add-csv-export-for-portfolio-data"
 repos       = ["org/ticker"]
 
 [[prs]]
@@ -324,8 +324,7 @@ All ticket writes route to the ticket's current branch. APM handles this automat
 
 | Phase | Branch | Who writes to the ticket file |
 |-------|--------|-------------------------------|
-| `new` through `ready` | `ticket/<id>-<slug>` | agent (spec), supervisor (amendments, open question answers), APM (frontmatter, history) |
-| `in_progress` through `accepted` | `feature/<id>-<slug>` | agent (code + spec iterations), APM (frontmatter, history); supervisor via PR reviews only |
+| `new` through `accepted` | `ticket/<id>-<slug>` | agent (spec + code), supervisor (amendments, question answers), APM (frontmatter, history) |
 | `closed` | `main` (via merge + APM post-merge commit) | APM only |
 
 **Key rules:**
@@ -383,7 +382,7 @@ updated_at  = "2026-03-26T10:00:00Z"
 author      = "philippe"
 supervisor  = "philippe"
 agent       = "claude-0325-a3f9"
-branch      = "feature/42-add-csv-export-for-portfolio-data"
+branch      = "ticket/42-add-csv-export-for-portfolio-data"
 repos       = ["org/ticker"]
 +++
 

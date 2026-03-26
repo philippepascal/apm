@@ -79,14 +79,13 @@ Every ticket has its own branch from the moment it is created. No ticket content
 
 **Branch naming:**
 
-| Phase | Branch name |
-|-------|-------------|
-| Creation through spec approval (`new` → `ready`) | `ticket/<id>-<slug>` |
-| Implementation and beyond (`in_progress` onwards) | `feature/<id>-<slug>` |
+```
+ticket/<id>-<slug>
+```
+
+Every ticket uses this name for its entire lifecycle — from creation through implementation to close. There is no rename at any point.
 
 `apm new` creates the `ticket/<id>-<slug>` branch, commits the initial ticket file, and pushes to the remote.
-
-`apm start` renames the local branch to `feature/<id>-<slug>`, pushes the feature branch, deletes the remote ticket branch, and updates the `branch` field in the ticket frontmatter.
 
 The slug is derived from the title at creation: lowercase, hyphens, max 40 chars. It never changes.
 
@@ -96,21 +95,19 @@ Every `apm` command that reads tickets reads from a local cache. The cache is bu
 
 ```
 apm sync:
-  1. git fetch --all              → fetches all remote ticket/* and feature/* branches
+  1. git fetch --all              → fetches all remote ticket/* branches
   2. For each ticket/* branch:
        git show <branch>:tickets/<id>-<slug>.md → parse frontmatter + body
-  3. For each feature/* branch:
-       git show <branch>:tickets/<id>-<slug>.md → parse frontmatter + body
-  4. Check merged branches (git branch --merged main) → fire auto-transitions
-  5. Write unified index to local tickets/ directory
-  6. Update SQLite cache
+  3. Check merged branches (git branch --merged main) → fire auto-transitions
+  4. Write unified index to local tickets/ directory
+  5. Update SQLite cache
 ```
 
 After sync, `apm list`, `apm next`, `apm show` read from the local `tickets/` directory — fast filesystem reads, no git or network overhead.
 
 ### What lands on `main`
 
-The only ticket content that reaches `main` is what arrives via a merged PR. When a PR merges `feature/<id>-<slug>` → `main`, the ticket file (with its complete spec, full history, and final frontmatter) is included in the merge commit. `apm sync` then detects the merged branch and fires the `event:pr_all_merged` auto-transition, committing the final state update (`implemented → accepted`) to `main` as a single post-merge commit.
+The only ticket content that reaches `main` is what arrives via a merged PR. When a PR merges `ticket/<id>-<slug>` → `main`, the ticket file (with its complete spec, full history, and final frontmatter) is included in the merge commit. `apm sync` then detects the merged branch and fires the `event:pr_all_merged` auto-transition, committing the final state update (`implemented → accepted`) to `main` as a single post-merge commit.
 
 In pure-git mode (no provider), there are no PRs. `apm state N closed` commits the final ticket state directly to `main` as the only direct main commit APM ever makes.
 
@@ -232,7 +229,7 @@ type = "none"
 
 ```sh
 # .git/hooks/pre-push
-# Detects first push of feature/<id>-* branch → fires ready → in_progress
+# Detects first push of ticket/<id>-* branch in ready state → fires ready → in_progress
 #!/bin/sh
 command -v apm >/dev/null 2>&1 && apm _hook pre-push "$@" || true
 
@@ -511,9 +508,9 @@ APM is not a daemon. Auto-transitions fire through two mechanisms only:
 The `pre-push` hook calls `apm _hook pre-push` as a one-shot process when the agent runs `git push`. APM fires the transition, commits the state update to the feature branch, and exits.
 
 ```
-agent runs: git push (first push of feature/<id>-*)
+agent runs: git push (first push of ticket/<id>-*)
   → pre-push hook fires
-  → apm _hook pre-push (detects feature/<id>-* branch in ready state)
+  → apm _hook pre-push (detects ticket/<id>-* branch in ready state)
   → fires ready → in_progress
   → commits state update to feature branch
   → exits
@@ -525,7 +522,7 @@ git push completes
 ```
 apm sync runs:
   → git fetch --all
-  → for each feature/* branch:
+  → for each ticket/* branch:
       check: is branch merged into main? (git branch --merged main)
       check: does a PR exist? (GitHub API or local git)
       check: PR review state? (GitHub API)
@@ -559,11 +556,11 @@ APM asks git:
 git branch --merged main
 ```
 
-If `feature/42-add-csv-export` appears in that list, ticket #42's branch is merged. APM detects this during `apm sync` and fires `event:pr_all_merged`. **No webhook required. Branches are not deleted until the ticket is closed.**
+If `ticket/42-add-csv-export` appears in that list, ticket #42's branch is merged. APM detects this during `apm sync` and fires `event:pr_all_merged`. **No webhook required. Branches are not deleted until the ticket is closed.**
 
 ### What the merge commit contains
 
-When `feature/42-*` merges into `main`, the merge commit contains the complete ticket file as it existed on the feature branch — full spec, full history, final frontmatter. No additional reconciliation is needed.
+When `ticket/42-*` merges into `main`, the merge commit contains the complete ticket file as it existed on the ticket branch — full spec, full history, final frontmatter. No additional reconciliation is needed.
 
 ### The one post-merge commit
 
@@ -584,7 +581,7 @@ After a ticket reaches `closed`, its feature branch can be deleted:
 
 ```bash
 apm state 42 closed    # commits state update to main
-git push origin --delete feature/42-add-csv-export
+git push origin --delete ticket/42-add-csv-export
 ```
 
 APM does not auto-delete branches. Keeping them until explicitly closed preserves the `git branch --merged main` signal.
