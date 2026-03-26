@@ -2,7 +2,7 @@
 id = 7
 title = "Implement apm start (branch creation, git mutex)"
 state = "new"
-priority = 0
+priority = 10
 effort = 0
 risk = 0
 created = "2026-03-25"

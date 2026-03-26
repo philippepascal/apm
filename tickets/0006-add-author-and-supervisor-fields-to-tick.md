@@ -2,7 +2,7 @@
 id = 6
 title = "Add author and supervisor fields to ticket frontmatter"
 state = "new"
-priority = 0
+priority = 5
 effort = 0
 risk = 0
 created = "2026-03-25"

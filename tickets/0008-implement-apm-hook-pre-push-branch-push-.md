@@ -2,7 +2,7 @@
 id = 8
 title = "Implement apm _hook pre-push (branch_push_first event)"
 state = "new"
-priority = 0
+priority = 5
 effort = 0
 risk = 0
 created = "2026-03-25"

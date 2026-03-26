@@ -2,7 +2,7 @@
 id = 1
 title = "Add unit tests for ticket parsing"
 state = "new"
-priority = 0
+priority = 10
 effort = 0
 risk = 0
 created = "2026-03-25"
