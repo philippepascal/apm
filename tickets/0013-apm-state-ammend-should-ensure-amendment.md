@@ -1,7 +1,7 @@
 +++
 id = 13
 title = "apm state ammend should ensure Amendment requests section exists in spec"
-state = "in_progress"
+state = "implemented"
 priority = 10
 effort = 2
 risk = 1
@@ -51,3 +51,4 @@ In `cmd/state.rs`, after applying the state transition, check if the new state i
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-25 | manual | ready → in_progress | |
 | 2026-03-25 | manual | in_progress → in_progress | |
+| 2026-03-25 | manual | in_progress → implemented | |
