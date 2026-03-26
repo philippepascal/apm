@@ -1,7 +1,7 @@
 +++
 id = 14
 title = "apm state accepts any string as state without validation"
-state = "ready"
+state = "implemented"
 priority = 8
 effort = 2
 risk = 2
@@ -49,3 +49,4 @@ and return early before loading or modifying any ticket file.
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-26 | manual | ammend → specd | |
 | 2026-03-26 | manual | specd → ready | |
+| 2026-03-26 | agent | ready → implemented | |
