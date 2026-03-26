@@ -11,6 +11,12 @@ updated = "2026-03-25"
 
 ## Spec
 
+### Amendment requests
+- [x] verify should also look at formatting of ticket documents, there might be other areas where a manual change cause inconsistencies.
+
+  Addressed: added document format checks to acceptance criteria and approach below.
+  Checks cover: required sections present, state value is known, frontmatter id matches filename.
+
 ### Problem
 
 Ticket files can drift into inconsistent states: a branch merged but ticket still
@@ -28,11 +34,15 @@ manual audit tool and as a pre-commit hook.
 - [ ] Exit code 0 if no issues found, 1 if any issues found
 - [ ] `apm verify --fix` automatically applies safe fixes (runs `apm sync` logic for merged-but-not-accepted tickets)
 - [ ] `apm verify --fix` does not auto-fix issues that require human judgment (missing branch field, unexpected agent assignment)
+- [ ] Detects: ticket file missing `## Spec` section
+- [ ] Detects: ticket file missing `## History` section
+- [ ] Detects: state value not in the configured `[[workflow.states]]` list
+- [ ] Detects: frontmatter `id` does not match the numeric prefix in the filename
 
 ### Out of scope
 
 - SQLite cache consistency checks
-- Checking ticket file format / TOML validity (that's `apm parse`)
+- Full TOML parse validation (parse failure is already surfaced as a warning in `load_all`)
 - Cross-ticket consistency (e.g. duplicate IDs)
 
 ### Approach
@@ -47,3 +57,5 @@ issues, print, exit with appropriate code. `--fix` mode re-uses sync logic from
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ammend | |
+| 2026-03-25 | manual | ammend → specd | |
