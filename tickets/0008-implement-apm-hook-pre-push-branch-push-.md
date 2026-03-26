@@ -1,7 +1,7 @@
 +++
 id = 8
 title = "Implement apm _hook pre-push (branch_push_first event)"
-state = "specd"
+state = "ready"
 priority = 5
 effort = 3
 risk = 3
@@ -60,3 +60,4 @@ hook-specific handlers.
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-26 | manual | ready → ready | Respec: ticket/ branches, drop null-SHA detection |
 | 2026-03-26 | manual | ready → specd | |
+| 2026-03-26 | manual | specd → ready | |

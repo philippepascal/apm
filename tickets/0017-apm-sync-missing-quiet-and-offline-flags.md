@@ -1,7 +1,7 @@
 +++
 id = 17
 title = "apm sync missing --quiet and --offline flags"
-state = "specd"
+state = "ready"
 priority = 10
 effort = 1
 risk = 1
@@ -41,3 +41,4 @@ and gate all `println!` calls behind `!quiet`.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-26 | manual | new → specd | |
+| 2026-03-26 | manual | specd → ready | |

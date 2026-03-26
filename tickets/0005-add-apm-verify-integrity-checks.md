@@ -1,7 +1,7 @@
 +++
 id = 5
 title = "Add apm verify (integrity checks)"
-state = "specd"
+state = "ready"
 priority = 2
 effort = 4
 risk = 2
@@ -66,3 +66,4 @@ to `main`.
 | 2026-03-25 | manual | ready → ready | |
 | 2026-03-26 | manual | ready → ready | Respec: --fix uses commit_to_branch pattern |
 | 2026-03-26 | manual | ready → specd | |
+| 2026-03-26 | manual | specd → ready | |

@@ -1,7 +1,7 @@
 +++
 id = 10
 title = "Add apm agents command (print agent instructions)"
-state = "implemented"
+state = "closed"
 priority = 5
 effort = 1
 risk = 1
@@ -41,3 +41,4 @@ resolve relative to repo root, print with `std::fs::read_to_string`.
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-26 | agent | ready → implemented | |
+| 2026-03-26 | manual | implemented → closed | |
