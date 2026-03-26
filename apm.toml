@@ -1,0 +1,14 @@
+[project]
+name = "apm"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+actionable_states = ["new", "ammend", "ready"]
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
