@@ -6,14 +6,16 @@ priority = 8
 effort = 2
 risk = 2
 created = "2026-03-25"
-updated = "2026-03-25"
+updated = "2026-03-26"
 +++
 
 ## Spec
 
-### Ammend
+### Amendment requests
 
-create new ticket for first item out of scope
+- [x] create new ticket for first item out of scope
+
+  Created ticket #20: "apm state enforces valid transitions from state machine config"
 
 ### Problem
 
@@ -45,3 +47,4 @@ and return early before loading or modifying any ticket file.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-26 | manual | ammend → specd | |

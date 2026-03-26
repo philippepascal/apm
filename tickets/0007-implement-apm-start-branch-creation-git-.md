@@ -11,6 +11,18 @@ updated = "2026-03-26"
 
 ## Spec
 
+### Amendment requests
+
+- [x] Please specify who (agent or supervisor) is supposed to use this. is there any guard against wrong use?
+
+  `apm start` is an **agent command** (`actor = "agent"` per the state machine).
+  The guards are: (1) `APM_AGENT_NAME` must be set — unset means bare shell, not
+  an agent session; (2) ticket must be in an `actionable_state`; (3) `agent` field
+  must be null — if already set, the ticket is already claimed. There is no
+  role-level check distinguishing agents from engineers: a supervisor who wants to
+  do the work sets their username as `APM_AGENT_NAME`, same as any other actor.
+  Enforcing `actor` rules from the state machine config is a separate, future ticket.
+
 ### Problem
 
 `apm start <id>` is the entry point for implementation. In the branch-per-ticket
@@ -59,3 +71,6 @@ New subcommand `apm start <id>` in `apm/src/cmd/start.rs`:
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-26 | manual | ready → ready | Respec for branch-per-ticket model |
 | 2026-03-26 | manual | ready → specd | |
+| 2026-03-26 | manual | specd → ammend | |
+| 2026-03-26 | manual | ammend → specd | Amendment addressed |
+| 2026-03-26 | manual | ammend → specd | |
