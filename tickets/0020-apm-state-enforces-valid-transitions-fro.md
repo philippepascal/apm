@@ -51,3 +51,4 @@ message listing valid `to` targets for the current state.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-26 | agent | new → specd | |
+| 2026-03-26 | agent | ready → closed | |

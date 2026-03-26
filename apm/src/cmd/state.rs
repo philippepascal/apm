@@ -18,6 +18,20 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
         bail!("ticket #{id} not found");
     };
     let old_state = t.frontmatter.state.clone();
+
+    // Enforce transition rules if the current state defines any.
+    if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
+        if !state_cfg.transitions.is_empty() {
+            let allowed: Vec<&str> = state_cfg.transitions.iter().map(|tr| tr.to.as_str()).collect();
+            if !allowed.contains(&new_state.as_str()) {
+                bail!(
+                    "no transition from {:?} to {:?} — valid transitions from {:?}: {}",
+                    old_state, new_state, old_state,
+                    allowed.join(", ")
+                );
+            }
+        }
+    }
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated = Some(Local::now().date_naive());
     if new_state == "ammend" {
