@@ -51,6 +51,9 @@ pub fn run(root: &Path, title: String) -> Result<()> {
         &format!("ticket({id}): create {title}"),
     )?;
 
+    // Populate local cache so the ticket is immediately visible to apm show/list/next.
+    std::fs::write(tickets_dir.join(&filename), &content)?;
+
     println!("Created ticket #{id}: {filename} (branch: {branch})");
     Ok(())
 }

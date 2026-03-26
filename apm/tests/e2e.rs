@@ -210,10 +210,11 @@ fn full_ticket_lifecycle() {
     // Branch exists locally.
     assert!(env.branch_exists(branch), "ticket branch not created");
 
-    // Ticket file lives on the branch, NOT in the working tree on main.
+    // Ticket file is immediately in the local cache (working tree) so
+    // apm show/list/next work without requiring an explicit apm sync.
     assert!(
-        !env.root().join(ticket_path).exists(),
-        "ticket file should not be in working tree on main before sync"
+        env.root().join(ticket_path).exists(),
+        "ticket file should be in working tree (local cache) after apm new"
     );
 
     // Frontmatter is correct.

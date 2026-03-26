@@ -126,20 +126,26 @@ terminal = true
 }
 
 fn ensure_gitignore(path: &PathBuf) -> Result<()> {
-    let entry = "tickets/NEXT_ID\n";
+    // tickets/*.md are local cache files derived from ticket branches — not committed to main.
+    // tickets/NEXT_ID is a local counter used when apm/meta branch is unavailable.
+    let entries = ["tickets/NEXT_ID", "tickets/*.md"];
     if path.exists() {
-        let contents = std::fs::read_to_string(path)?;
-        if !contents.contains("tickets/NEXT_ID") {
-            let mut updated = contents;
-            if !updated.ends_with('\n') {
-                updated.push('\n');
+        let mut contents = std::fs::read_to_string(path)?;
+        let mut changed = false;
+        for entry in &entries {
+            if !contents.contains(entry) {
+                if !contents.ends_with('\n') { contents.push('\n'); }
+                contents.push_str(entry);
+                contents.push('\n');
+                changed = true;
             }
-            updated.push_str(entry);
-            std::fs::write(path, updated)?;
+        }
+        if changed {
+            std::fs::write(path, &contents)?;
             println!("Updated .gitignore");
         }
     } else {
-        std::fs::write(path, entry)?;
+        std::fs::write(path, entries.join("\n") + "\n")?;
         println!("Created .gitignore");
     }
     Ok(())
