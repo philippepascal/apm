@@ -1,7 +1,7 @@
 +++
 id = 2
 title = "Add integration tests for CLI commands"
-state = "specd"
+state = "ready"
 priority = 10
 effort = 3
 risk = 2
@@ -66,3 +66,4 @@ races between parallel tests.
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → ammend | |
 | 2026-03-25 | manual | ammend → specd | |
+| 2026-03-25 | manual | specd → ready | |

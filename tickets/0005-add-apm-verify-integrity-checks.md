@@ -1,7 +1,7 @@
 +++
 id = 5
 title = "Add apm verify (integrity checks)"
-state = "specd"
+state = "ready"
 priority = 2
 effort = 4
 risk = 2
@@ -59,3 +59,5 @@ issues, print, exit with appropriate code. `--fix` mode re-uses sync logic from
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → ammend | |
 | 2026-03-25 | manual | ammend → specd | |
+| 2026-03-25 | manual | specd → ready | |
+| 2026-03-25 | manual | ready → ready | |

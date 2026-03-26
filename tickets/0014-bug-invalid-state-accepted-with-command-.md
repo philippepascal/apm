@@ -11,6 +11,10 @@ updated = "2026-03-25"
 
 ## Spec
 
+### Ammend
+
+create new ticket for first item out of scope
+
 ### Problem
 
 `apm state <id> <state>` accepts any arbitrary string as the new state with no
