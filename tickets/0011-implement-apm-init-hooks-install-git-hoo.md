@@ -1,10 +1,12 @@
 +++
 id = 11
 title = "apm init should install git hooks unconditionally"
-state = "specd"
+state = "in_progress"
 priority = 10
 effort = 2
 risk = 1
+agent = "claude-0325-2043-a970"
+branch = "feature/11-init-install-hooks"
 created = "2026-03-25"
 updated = "2026-03-25"
 +++
@@ -43,3 +45,5 @@ permissions using `std::fs::set_permissions` with mode `0o755`.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ready | |
+| 2026-03-25 | manual | ready → in_progress | |
