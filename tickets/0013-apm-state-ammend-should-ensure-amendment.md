@@ -1,10 +1,12 @@
 +++
 id = 13
 title = "apm state ammend should ensure Amendment requests section exists in spec"
-state = "specd"
+state = "in_progress"
 priority = 10
 effort = 2
 risk = 1
+agent = "claude-0325-2043-a970"
+branch = "feature/13-ammend-inserts-amendment-section"
 created = "2026-03-25"
 updated = "2026-03-25"
 +++
@@ -46,3 +48,6 @@ In `cmd/state.rs`, after applying the state transition, check if the new state i
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ready | |
+| 2026-03-25 | manual | ready → in_progress | |
+| 2026-03-25 | manual | in_progress → in_progress | |
