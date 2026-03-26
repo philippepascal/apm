@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 pub fn run() -> Result<()> {
@@ -23,7 +24,31 @@ pub fn run() -> Result<()> {
     }
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore)?;
+    let git_dir = root.join(".git");
+    write_hooks(&git_dir)?;
     println!("apm initialized.");
+    Ok(())
+}
+
+fn write_hooks(git_dir: &PathBuf) -> Result<()> {
+    let hooks_dir = git_dir.join("hooks");
+    std::fs::create_dir_all(&hooks_dir)?;
+
+    let pre_push = hooks_dir.join("pre-push");
+    std::fs::write(
+        &pre_push,
+        "#!/bin/sh\n# Fires event:branch_push_first → ready → in_progress\ncommand -v apm >/dev/null 2>&1 && apm _hook pre-push \"$@\" || true\n",
+    )?;
+    std::fs::set_permissions(&pre_push, std::fs::Permissions::from_mode(0o755))?;
+
+    let post_merge = hooks_dir.join("post-merge");
+    std::fs::write(
+        &post_merge,
+        "#!/bin/sh\ncommand -v apm >/dev/null 2>&1 && apm sync --quiet --offline || true\n",
+    )?;
+    std::fs::set_permissions(&post_merge, std::fs::Permissions::from_mode(0o755))?;
+
+    println!("Installed git hooks (pre-push, post-merge).");
     Ok(())
 }
 
