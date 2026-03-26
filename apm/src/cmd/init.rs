@@ -18,6 +18,12 @@ pub fn run(root: &Path) -> Result<()> {
         std::fs::write(&config_path, default_config(name))?;
         println!("Created apm.toml");
     }
+    let agents_path = root.join("apm.agents.md");
+    if !agents_path.exists() {
+        std::fs::write(&agents_path, default_agents_md())?;
+        println!("Created apm.agents.md");
+    }
+    ensure_claude_md(root)?;
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore)?;
     let git_dir = root.join(".git");
@@ -26,6 +32,27 @@ pub fn run(root: &Path) -> Result<()> {
     maybe_create_meta_branch(root)?;
     println!("apm initialized.");
     Ok(())
+}
+
+fn ensure_claude_md(root: &Path) -> Result<()> {
+    let import_line = "@apm.agents.md";
+    let claude_path = root.join("CLAUDE.md");
+    if claude_path.exists() {
+        let contents = std::fs::read_to_string(&claude_path)?;
+        if contents.contains(import_line) {
+            return Ok(());
+        }
+        std::fs::write(&claude_path, format!("{import_line}\n\n{contents}"))?;
+        println!("Updated CLAUDE.md (added @apm.agents.md import).");
+    } else {
+        std::fs::write(&claude_path, format!("{import_line}\n"))?;
+        println!("Created CLAUDE.md.");
+    }
+    Ok(())
+}
+
+fn default_agents_md() -> &'static str {
+    include_str!("../../../apm.agents.md")
 }
 
 fn default_config(name: &str) -> String {
@@ -146,7 +173,6 @@ fn maybe_create_meta_branch(root: &Path) -> Result<()> {
         return Ok(());
     }
 
-    // Use commit_to_branch to create it (non-fatal).
-    let _ = apm_core::git::commit_to_branch(root, "apm/meta", "NEXT_ID", "1\n", "meta: initialize");
+    apm_core::git::init_meta_branch(root);
     Ok(())
 }

@@ -14,7 +14,8 @@ Rust workspace — one crate to start, structured to grow:
 State labels: `new` → `question` → `specd` → `ready` → `in_progress` → `implemented` → `accepted` → `closed`
 (`ammend` flags a spec needing revision before `ready`)
 
-See `initial_specs/STATE-MACHINE.md` for the full workflow and transition schema.
+See `apm.agents.md` for the full agent workflow and branch discipline.
+See `initial_specs/STATE-MACHINE.md` for the state machine reference schema.
 See `initial_specs/TICKET-SPEC.md` for the ticket document format.
 
 ## Development workflow

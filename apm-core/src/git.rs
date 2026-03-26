@@ -156,34 +156,108 @@ fn try_worktree_commit(
     Ok(())
 }
 
-/// Allocate the next ticket ID from the apm/meta branch.
-/// Falls back to a local NEXT_ID file if git ops are unavailable.
+/// Allocate the next ticket ID from the apm/meta branch using an optimistic-lock
+/// protocol. Retries up to 5 times on push rejection (concurrent allocation).
+/// Falls back to local NEXT_ID file if the repo has no commits.
 pub fn next_ticket_id(root: &Path, tickets_dir: &Path) -> Result<u32> {
     if !has_commits(root) {
         return crate::ticket::next_id(tickets_dir);
     }
 
+    const MAX_ATTEMPTS: u32 = 5;
     let meta_branch = "apm/meta";
-    let _ = run(root, &["fetch", "origin", meta_branch]);
 
-    let id: u32 = read_from_branch(root, meta_branch, "NEXT_ID")
-        .ok()
-        .and_then(|s| s.trim().parse().ok())
-        .unwrap_or(1);
+    for attempt in 0..MAX_ATTEMPTS {
+        let _ = run(root, &["fetch", "origin", meta_branch]);
 
-    // Try to commit the incremented ID back to apm/meta.
-    // Non-fatal: if this fails, we still return the id and accept the risk
-    // of a duplicate (acceptable for single-machine use without a remote).
-    let new_id = id + 1;
-    let _ = commit_to_branch(
-        root,
-        meta_branch,
-        "NEXT_ID",
-        &format!("{new_id}\n"),
-        &format!("meta: allocate ticket #{id}"),
-    );
+        let id: u32 = read_from_branch(root, meta_branch, "NEXT_ID")
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(1);
 
-    Ok(id)
+        match write_meta(root, meta_branch, id, id + 1) {
+            Ok(()) => return Ok(id),
+            Err(_) if attempt + 1 < MAX_ATTEMPTS => continue,
+            Err(e) => anyhow::bail!(
+                "could not allocate ticket ID after {MAX_ATTEMPTS} attempts: {e:#}"
+            ),
+        }
+    }
+
+    unreachable!()
+}
+
+/// Initialise apm/meta with NEXT_ID = 1. Called by `apm init`. Non-fatal.
+pub fn init_meta_branch(root: &Path) {
+    if has_commits(root) {
+        let _ = write_meta(root, "apm/meta", 0, 1);
+    }
+}
+
+/// Commit new_next to NEXT_ID on the meta branch and push.
+/// Returns Err if the push is rejected — the caller should retry.
+fn write_meta(root: &Path, branch: &str, claimed_id: u32, new_next: u32) -> Result<()> {
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(0);
+    let wt_path = std::env::temp_dir().join(format!(
+        "apm-{}-{}-meta",
+        std::process::id(),
+        unique,
+    ));
+
+    let has_remote = run(root, &["rev-parse", "--verify", &format!("refs/remotes/origin/{branch}")]).is_ok();
+    let has_local  = run(root, &["rev-parse", "--verify", &format!("refs/heads/{branch}")]).is_ok();
+    let is_new = !has_remote && !has_local;
+
+    // When both local and remote exist, prefer whichever is ahead.
+    // Local may be ahead if it has unpushed commits (e.g. a manually fixed NEXT_ID).
+    let local_ahead = has_remote && has_local && run(root, &[
+        "merge-base", "--is-ancestor",
+        &format!("refs/remotes/origin/{branch}"),
+        &format!("refs/heads/{branch}"),
+    ]).is_ok();
+
+    if has_remote && !local_ahead {
+        run(root, &["worktree", "add", "--detach", &wt_path.to_string_lossy(), &format!("origin/{branch}")])?;
+        run(&wt_path, &["checkout", "-B", branch])?;
+    } else if has_local {
+        let sha = run(root, &["rev-parse", &format!("refs/heads/{branch}")])?;
+        run(root, &["worktree", "add", "--detach", &wt_path.to_string_lossy(), &sha])?;
+        run(&wt_path, &["checkout", "-B", branch])?;
+    } else {
+        run(root, &["worktree", "add", "-b", branch, &wt_path.to_string_lossy(), "HEAD"])?;
+    }
+
+    let commit_result = (|| -> Result<()> {
+        if is_new {
+            // Remove files inherited from the parent commit so apm/meta
+            // contains only NEXT_ID.
+            let _ = run(&wt_path, &["rm", "-rf", "--ignore-unmatch", "."]);
+        }
+        std::fs::write(wt_path.join("NEXT_ID"), format!("{new_next}\n"))?;
+        run(&wt_path, &["add", "NEXT_ID"])?;
+        let msg = if claimed_id > 0 {
+            format!("meta: allocate ticket #{claimed_id}")
+        } else {
+            "meta: initialize".to_string()
+        };
+        run(&wt_path, &["commit", "-m", &msg])?;
+        Ok(())
+    })();
+
+    let _ = run(root, &["worktree", "remove", "--force", &wt_path.to_string_lossy()]);
+    let _ = std::fs::remove_dir_all(&wt_path);
+    commit_result?;
+
+    // Push — this is the step that fails on concurrent allocation.
+    // In pure-git mode (no remote), skip push; local commit is sufficient.
+    let has_origin = run(root, &["remote", "get-url", "origin"]).is_ok();
+    if has_origin {
+        run(root, &["push", "origin", branch])?;
+    }
+    Ok(())
 }
 
 /// Derive the ticket branch name from the ticket file path.

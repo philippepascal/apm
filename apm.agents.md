@@ -16,7 +16,7 @@ Engineers set `APM_AGENT_NAME` to their own username when working directly.
 
 ## Startup
 
-1. `apm sync` — refresh local cache from git
+1. `apm sync` — refresh local cache from all `ticket/*` branches
 2. `apm next --json` — find the highest-priority ticket you can act on now
 3. `apm list --working` — tickets where you are the active agent (resume if any)
 
@@ -45,16 +45,16 @@ The ticket's state determines what to do next:
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
-2. `apm start <id>` — creates branch `feature/<id>-<slug>`, sets agent = your
-   name, moves ticket to `in_progress`
-3. Commit code to the feature branch
-4. Update `## Spec` on the branch if the approach evolves
-5. Open a PR; then `apm state <id> implemented`
+2. `apm start <id>` — claims the ticket (sets `agent` = your name, state →
+   `in_progress`), checks out the ticket branch `ticket/<id>-<slug>`
+3. Commit all spec edits and code changes to the ticket branch
+4. Update `## Spec` if the approach evolves during implementation
+5. Open a PR targeting `main`; then `apm state <id> implemented`
 
 ## Taking over another agent's ticket
 
 1. `apm show <id>` — read the full ticket including history
-2. `apm take <id>` — checks out the branch, sets agent = your name
+2. `apm take <id>` — checks out the ticket branch, sets agent = your name
 3. Continue from where the previous agent left off
 4. Do not discard or overwrite previous spec work or open questions
 
@@ -79,20 +79,17 @@ Do not check acceptance criteria boxes until the implementation is verified.
 
 ## Branch discipline
 
-- All code changes on the feature branch (`feature/<id>-<slug>`)
-- `## Spec` section lives on the feature branch
-- Frontmatter and `## History` are managed by APM on `main` — never edit them
-  directly
-- Do not delete the feature branch until the ticket is `closed` — APM uses
+Every ticket has a single branch — `ticket/<id>-<slug>` — for its entire
+lifecycle, created automatically by `apm new`. Never create or rename branches
+manually.
+
+- All spec edits and code changes go to `ticket/<id>-<slug>`
+- `apm start <id>` checks out this branch; you are on it after a successful start
+- APM manages frontmatter and `## History` — never edit them directly
+- Do not delete the ticket branch until the ticket is `closed` — APM uses
   branch presence to detect merge state
 
 ## One ticket per agent process
 
 Work one ticket at a time per agent process. For parallelism, use separate
-agent processes with separate clones (`apm dispatch` handles this).
-
-**Git worktrees:** If running inside a `git worktree`, ticket state commits to
-`main` require special handling — the feature branch worktree cannot checkout
-`main` while the primary worktree holds it. APM will detect this automatically
-and commit via the primary worktree (see ticket #15). Until #15 is implemented,
-use separate clones rather than worktrees for parallel agent work.
+agent processes with separate clones or worktrees.
