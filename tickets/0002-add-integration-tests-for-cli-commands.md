@@ -1,7 +1,7 @@
 +++
 id = 2
 title = "Add integration tests for CLI commands"
-state = "in_progress"
+state = "implemented"
 priority = 10
 effort = 3
 risk = 2
@@ -71,3 +71,4 @@ races between parallel tests.
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-25 | manual | ready → in_progress | |
 | 2026-03-25 | manual | in_progress → in_progress | |
+| 2026-03-25 | manual | in_progress → implemented | |
