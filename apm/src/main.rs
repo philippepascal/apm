@@ -41,6 +41,8 @@ enum Command {
         field: String,
         value: String,
     },
+    /// Claim a ticket and check out its branch
+    Start { id: u32 },
     /// Return the highest-priority actionable ticket
     Next {
         #[arg(long)]
@@ -81,6 +83,7 @@ fn main() -> Result<()> {
         Command::State { id, state } => cmd::state::run(&root, id, state),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
+        Command::Start { id } => cmd::start::run(&root, id),
         Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
         Command::Agents => cmd::agents::run(&root),
     }
