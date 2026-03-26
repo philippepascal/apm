@@ -1,7 +1,7 @@
 +++
 id = 9
 title = "Implement apm take (agent handoff)"
-state = "specd"
+state = "ready"
 priority = 5
 effort = 3
 risk = 2
@@ -58,3 +58,4 @@ New subcommand `apm take <id>` in `apm/src/cmd/take.rs`:
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → ammend | |
 | 2026-03-25 | manual | ammend → specd | |
+| 2026-03-25 | manual | specd → ready | |

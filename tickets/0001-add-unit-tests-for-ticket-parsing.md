@@ -1,7 +1,7 @@
 +++
 id = 1
 title = "Add unit tests for ticket parsing"
-state = "implemented"
+state = "closed"
 priority = 10
 effort = 0
 risk = 0
@@ -25,3 +25,5 @@ updated = "2026-03-25"
 | 2026-03-25 | manual | ready → specd | |
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-25 | manual | new → implemented | |
+| 2026-03-25 | manual | implemented → accepted | |
+| 2026-03-25 | manual | accepted → closed | |
