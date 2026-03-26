@@ -1,7 +1,7 @@
 +++
 id = 21
 title = "commit_to_branch writes ticket files to working tree"
-state = "ready"
+state = "implemented"
 priority = 9
 effort = 1
 risk = 2

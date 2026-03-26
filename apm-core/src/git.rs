@@ -77,20 +77,23 @@ pub fn commit_to_branch(
     content: &str,
     message: &str,
 ) -> Result<()> {
-    // Always update the local cache first.
-    let local_path = root.join(rel_path);
-    if let Some(parent) = local_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&local_path, content)?;
-
-    // If the repo has no commits, we cannot use worktrees. Stop here.
+    // If the repo has no commits, write directly to the working tree (no worktree support yet).
     if !has_commits(root) {
+        let local_path = root.join(rel_path);
+        if let Some(parent) = local_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&local_path, content)?;
         return Ok(());
     }
 
-    // If already on the target branch, commit directly.
+    // If already on the target branch, write to working tree and commit directly.
     if current_branch(root).ok().as_deref() == Some(branch) {
+        let local_path = root.join(rel_path);
+        if let Some(parent) = local_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&local_path, content)?;
         let _ = run(root, &["add", rel_path]);
         let _ = run(root, &["commit", "-m", message]);
         let _ = run(root, &["push", "origin", branch]);

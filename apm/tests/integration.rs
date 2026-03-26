@@ -52,6 +52,23 @@ risk_weight = -1.0
     dir
 }
 
+/// Read a file's content from a git branch (does not touch the working tree).
+fn branch_content(dir: &std::path::Path, branch: &str, path: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["show", &format!("{branch}:{path}")])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "git show {branch}:{path} failed: {}", String::from_utf8_lossy(&out.stderr));
+    String::from_utf8(out.stdout).unwrap()
+}
+
+/// Check out a file from a ticket branch into the working tree so that
+/// read-only commands (apm list, apm show, apm next) can see it.
+fn sync_from_branch(dir: &std::path::Path, branch: &str, path: &str) {
+    git(dir, &["checkout", branch, "--", path]);
+}
+
 // --- init ---
 
 #[test]
@@ -89,14 +106,16 @@ fn init_is_idempotent() {
 fn new_creates_ticket_file() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "My first ticket".into()).unwrap();
-    assert!(dir.path().join("tickets/0001-my-first-ticket.md").exists());
+    // File lives on the ticket branch, not in the working tree.
+    let content = branch_content(dir.path(), "ticket/0001-my-first-ticket", "tickets/0001-my-first-ticket.md");
+    assert!(!content.is_empty());
 }
 
 #[test]
 fn new_ticket_has_correct_frontmatter() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Hello World".into()).unwrap();
-    let content = std::fs::read_to_string(dir.path().join("tickets/0001-hello-world.md")).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-hello-world", "tickets/0001-hello-world.md");
     assert!(content.contains("id = 1"));
     assert!(content.contains("title = \"Hello World\""));
     assert!(content.contains("state = \"new\""));
@@ -108,8 +127,10 @@ fn new_increments_ids() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "First".into()).unwrap();
     apm::cmd::new::run(dir.path(), "Second".into()).unwrap();
-    assert!(dir.path().join("tickets/0001-first.md").exists());
-    assert!(dir.path().join("tickets/0002-second.md").exists());
+    let c1 = branch_content(dir.path(), "ticket/0001-first", "tickets/0001-first.md");
+    let c2 = branch_content(dir.path(), "ticket/0002-second", "tickets/0002-second.md");
+    assert!(c1.contains("id = 1"));
+    assert!(c2.contains("id = 2"));
 }
 
 // --- list ---
@@ -118,7 +139,9 @@ fn new_increments_ids() {
 fn list_shows_all_tickets() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Alpha".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
     apm::cmd::list::run(dir.path(), None, false, false, None).unwrap();
 }
 
@@ -126,8 +149,12 @@ fn list_shows_all_tickets() {
 fn list_state_filter() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Alpha".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
+    // Sync the updated ticket from its branch so apm list can see the new state.
+    sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None).unwrap();
 }
 
@@ -137,6 +164,7 @@ fn list_state_filter() {
 fn show_existing_ticket() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Show me".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-show-me", "tickets/0001-show-me.md");
     apm::cmd::show::run(dir.path(), 1).unwrap();
 }
 
@@ -152,9 +180,10 @@ fn show_missing_ticket_errors() {
 fn state_transition_updates_file() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Transition test".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
-    let content =
-        std::fs::read_to_string(dir.path().join("tickets/0001-transition-test.md")).unwrap();
+    // Read the updated state from the ticket branch (not the working tree).
+    let content = branch_content(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
     assert!(content.contains("state = \"specd\""));
 }
 
@@ -162,9 +191,9 @@ fn state_transition_updates_file() {
 fn state_transition_appends_history_row() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "History test".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
-    let content =
-        std::fs::read_to_string(dir.path().join("tickets/0001-history-test.md")).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     assert!(content.contains("new → specd"));
 }
 
@@ -172,9 +201,9 @@ fn state_transition_appends_history_row() {
 fn state_ammend_inserts_amendment_section() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Ammend test".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-ammend-test", "tickets/0001-ammend-test.md");
     apm::cmd::state::run(dir.path(), 1, "ammend".into()).unwrap();
-    let content =
-        std::fs::read_to_string(dir.path().join("tickets/0001-ammend-test.md")).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-ammend-test", "tickets/0001-ammend-test.md");
     assert!(content.contains("### Amendment requests"));
 }
 
@@ -184,8 +213,9 @@ fn state_ammend_inserts_amendment_section() {
 fn set_priority_updates_frontmatter() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Set test".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-set-test", "tickets/0001-set-test.md");
     apm::cmd::set::run(dir.path(), 1, "priority".into(), "7".into()).unwrap();
-    let content = std::fs::read_to_string(dir.path().join("tickets/0001-set-test.md")).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-set-test", "tickets/0001-set-test.md");
     assert!(content.contains("priority = 7"));
 }
 
@@ -195,8 +225,11 @@ fn set_priority_updates_frontmatter() {
 fn next_returns_highest_priority() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Low priority".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-low-priority", "tickets/0001-low-priority.md");
     apm::cmd::new::run(dir.path(), "High priority".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0002-high-priority", "tickets/0002-high-priority.md");
     apm::cmd::set::run(dir.path(), 2, "priority".into(), "10".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0002-high-priority", "tickets/0002-high-priority.md");
     apm::cmd::next::run(dir.path(), false).unwrap();
 }
 
@@ -204,6 +237,7 @@ fn next_returns_highest_priority() {
 fn next_json_is_valid() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Json test".into()).unwrap();
+    sync_from_branch(dir.path(), "ticket/0001-json-test", "tickets/0001-json-test.md");
     apm::cmd::next::run(dir.path(), true).unwrap();
 }
 
@@ -233,7 +267,6 @@ fn new_ticket_creates_branch() {
 fn new_ticket_sets_branch_in_frontmatter() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Frontmatter branch".into()).unwrap();
-    let content =
-        std::fs::read_to_string(dir.path().join("tickets/0001-frontmatter-branch.md")).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-frontmatter-branch", "tickets/0001-frontmatter-branch.md");
     assert!(content.contains("branch = \"ticket/0001-frontmatter-branch\""));
 }
