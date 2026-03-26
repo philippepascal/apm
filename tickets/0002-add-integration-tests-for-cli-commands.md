@@ -1,10 +1,12 @@
 +++
 id = 2
 title = "Add integration tests for CLI commands"
-state = "specd"
+state = "in_progress"
 priority = 10
 effort = 3
 risk = 2
+agent = "claude-0325-2043-a970"
+branch = "feature/2-integration-tests"
 created = "2026-03-25"
 updated = "2026-03-25"
 +++
@@ -66,3 +68,6 @@ races between parallel tests.
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → ammend | |
 | 2026-03-25 | manual | ammend → specd | |
+| 2026-03-25 | manual | specd → ready | |
+| 2026-03-25 | manual | ready → in_progress | |
+| 2026-03-25 | manual | in_progress → in_progress | |
