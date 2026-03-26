@@ -2,16 +2,17 @@ use anyhow::Result;
 use apm_core::{config::Config, git, ticket::Ticket};
 use std::path::Path;
 
-pub fn run(root: &Path) -> Result<()> {
+pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
     let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
 
-    // Fetch all remote refs.
-    match git::fetch_all(root) {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("warning: fetch failed (no remote configured?): {e:#}");
+    if !offline {
+        match git::fetch_all(root) {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("warning: fetch failed (no remote configured?): {e:#}");
+            }
         }
     }
 
@@ -46,22 +47,27 @@ pub fn run(root: &Path) -> Result<()> {
         if local_path.exists() {
             if let Ok(t) = Ticket::load(&local_path) {
                 if t.frontmatter.state == "implemented" {
-                    eprintln!(
-                        "info: ticket #{} branch merged → consider `apm state {} accepted`",
-                        t.frontmatter.id, t.frontmatter.id
-                    );
+                    if !quiet {
+                        eprintln!(
+                            "info: ticket #{} branch merged → consider `apm state {} accepted`",
+                            t.frontmatter.id, t.frontmatter.id
+                        );
+                    }
                 }
             }
         }
     }
 
-    // Push any local ticket branches with unpushed commits.
-    git::push_ticket_branches(root);
+    if !offline {
+        git::push_ticket_branches(root);
+    }
 
-    println!(
-        "sync: {} ticket branch{} refreshed",
-        updated,
-        if updated == 1 { "" } else { "es" }
-    );
+    if !quiet {
+        println!(
+            "sync: {} ticket branch{} refreshed",
+            updated,
+            if updated == 1 { "" } else { "es" }
+        );
+    }
     Ok(())
 }

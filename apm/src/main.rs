@@ -47,7 +47,14 @@ enum Command {
         json: bool,
     },
     /// Sync with remote (poll events, detect merges)
-    Sync,
+    Sync {
+        /// Skip git fetch; re-process local branches only
+        #[arg(long)]
+        offline: bool,
+        /// Suppress non-error output
+        #[arg(long)]
+        quiet: bool,
+    },
     /// Print agent instructions from apm.agents.md
     Agents,
 }
@@ -74,7 +81,7 @@ fn main() -> Result<()> {
         Command::State { id, state } => cmd::state::run(&root, id, state),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
-        Command::Sync => cmd::sync::run(&root),
+        Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
         Command::Agents => cmd::agents::run(&root),
     }
 }
