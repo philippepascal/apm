@@ -1,7 +1,7 @@
 +++
-id = 3
-title = "Implement apm start (git mutex)"
-state = "closed"
+id = 9
+title = "Implement apm take (agent handoff)"
+state = "new"
 priority = 0
 effort = 0
 risk = 0
@@ -21,4 +21,3 @@ updated = "2026-03-25"
 
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
-| 2026-03-25 | manual | new → closed | |
