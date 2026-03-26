@@ -1,6 +1,6 @@
 +++
 id = 11
-title = "Implement apm init --hooks (install git hooks)"
+title = "apm init should install git hooks unconditionally"
 state = "new"
 priority = 0
 effort = 0
