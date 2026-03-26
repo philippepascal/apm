@@ -11,6 +11,14 @@ updated = "2026-03-25"
 
 ## Spec
 
+### Amendment requests
+- [x] specify where the temp git repo will be. I imagine it can't be within the project repo. we probably need a setting somewhere were the user can setup a test-sandbox dir
+
+  Addressed: `tempfile::tempdir()` creates directories under the OS temp dir (`/tmp/`
+  on macOS), entirely outside the project repo. No config setting is needed. Because
+  commands accept an explicit `root: &Path` parameter (see Approach), `git rev-parse`
+  is never called during tests — there is no risk of tests running inside the APM repo.
+
 ### Problem
 
 The CLI commands (`init`, `new`, `list`, `show`, `state`, `set`, `next`) have no
@@ -56,3 +64,5 @@ races between parallel tests.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ammend | |
+| 2026-03-25 | manual | ammend → specd | |
