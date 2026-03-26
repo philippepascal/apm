@@ -1,7 +1,7 @@
 +++
 id = 1
 title = "Add unit tests for ticket parsing"
-state = "new"
+state = "implemented"
 priority = 10
 effort = 0
 risk = 0
@@ -21,3 +21,4 @@ updated = "2026-03-25"
 
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
+| 2026-03-25 | manual | new → implemented | |
