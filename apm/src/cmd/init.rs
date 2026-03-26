@@ -57,7 +57,7 @@ fn default_agents_md() -> &'static str {
 
 fn default_config(name: &str) -> String {
     format!(
-        r#"[project]
+        r##"[project]
 name = "{name}"
 
 [tickets]
@@ -71,7 +71,53 @@ actionable_states = ["new", "ammend", "ready"]
 priority_weight = 10.0
 effort_weight = -2.0
 risk_weight = -1.0
-"#
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+color = "#6b7280"
+
+[[workflow.states]]
+id    = "question"
+label = "Question"
+color = "#f59e0b"
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+color = "#3b82f6"
+
+[[workflow.states]]
+id    = "ammend"
+label = "Ammend"
+color = "#ef4444"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+color = "#10b981"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+color = "#8b5cf6"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+color = "#06b6d4"
+
+[[workflow.states]]
+id    = "accepted"
+label = "Accepted"
+color = "#84cc16"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+color    = "#374151"
+terminal = true
+"##
     )
 }
 
