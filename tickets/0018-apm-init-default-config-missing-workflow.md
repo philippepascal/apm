@@ -2,7 +2,7 @@
 id = 18
 title = "apm init default config missing workflow states"
 state = "new"
-priority = 0
+priority = 9
 effort = 0
 risk = 0
 branch = "ticket/0018-apm-init-default-config-missing-workflow"
