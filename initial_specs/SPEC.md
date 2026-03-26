@@ -85,7 +85,7 @@ ticket/<id>-<slug>
 
 Every ticket uses this name for its entire lifecycle — from creation through implementation to close. There is no rename at any point.
 
-`apm new` creates the `ticket/<id>-<slug>` branch, commits the initial ticket file, and pushes to the remote.
+`apm new` creates the `ticket/<id>-<slug>` branch and commits the initial ticket file locally. The branch is **not pushed immediately** — `apm sync` is responsible for pushing all local ticket branches with unpushed commits.
 
 The slug is derived from the title at creation: lowercase, hyphens, max 40 chars. It never changes.
 
@@ -101,6 +101,7 @@ apm sync:
   3. Check merged branches (git branch --merged main) → fire auto-transitions
   4. Write unified index to local tickets/ directory
   5. Update SQLite cache
+  6. Push any local ticket/* branches with unpushed commits → origin
 ```
 
 After sync, `apm list`, `apm next`, `apm show` read from the local `tickets/` directory — fast filesystem reads, no git or network overhead.

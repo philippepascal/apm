@@ -1,7 +1,7 @@
 +++
 id = 22
 title = "Defer branch push from commit_to_branch to apm sync"
-state = "ready"
+state = "implemented"
 priority = 8
 effort = 2
 risk = 2

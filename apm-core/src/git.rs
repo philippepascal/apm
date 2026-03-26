@@ -96,7 +96,6 @@ pub fn commit_to_branch(
         std::fs::write(&local_path, content)?;
         let _ = run(root, &["add", rel_path]);
         let _ = run(root, &["commit", "-m", message]);
-        let _ = run(root, &["push", "origin", branch]);
         return Ok(());
     }
 
@@ -152,11 +151,7 @@ fn try_worktree_commit(
     let _ = run(root, &["worktree", "remove", "--force", &wt_path.to_string_lossy()]);
     let _ = std::fs::remove_dir_all(&wt_path);
 
-    result?;
-
-    // Push the local branch (non-fatal).
-    let _ = run(root, &["push", "origin", branch]);
-    Ok(())
+    result
 }
 
 /// Allocate the next ticket ID from the apm/meta branch using an optimistic-lock
@@ -261,6 +256,30 @@ fn write_meta(root: &Path, branch: &str, claimed_id: u32, new_next: u32) -> Resu
         run(root, &["push", "origin", branch])?;
     }
     Ok(())
+}
+
+/// Push all local ticket/* branches that have commits not yet on origin.
+/// Non-fatal: logs warnings on push failure. No-op when no origin is configured.
+pub fn push_ticket_branches(root: &Path) {
+    if run(root, &["remote", "get-url", "origin"]).is_err() {
+        return;
+    }
+    let out = match run(root, &["branch", "--list", "ticket/*"]) {
+        Ok(o) => o,
+        Err(_) => return,
+    };
+    for branch in out.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        let range = format!("origin/{branch}..{branch}");
+        let count = run(root, &["rev-list", "--count", &range])
+            .ok()
+            .and_then(|s| s.trim().parse::<u32>().ok())
+            .unwrap_or(0);
+        if count > 0 {
+            if let Err(e) = run(root, &["push", "origin", branch]) {
+                eprintln!("warning: push {branch} failed: {e:#}");
+            }
+        }
+    }
 }
 
 /// Derive the ticket branch name from the ticket file path.

@@ -55,6 +55,9 @@ pub fn run(root: &Path) -> Result<()> {
         }
     }
 
+    // Push any local ticket branches with unpushed commits.
+    git::push_ticket_branches(root);
+
     println!(
         "sync: {} ticket branch{} refreshed",
         updated,
