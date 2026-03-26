@@ -1,7 +1,7 @@
 +++
 id = 11
 title = "apm init should install git hooks unconditionally"
-state = "implemented"
+state = "closed"
 priority = 10
 effort = 2
 risk = 1
@@ -47,3 +47,5 @@ permissions using `std::fs::set_permissions` with mode `0o755`.
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-25 | manual | specd → in_progress | |
 | 2026-03-25 | manual | in_progress → implemented | |
+| 2026-03-25 | manual | implemented → accepted | |
+| 2026-03-25 | manual | accepted → closed | |
