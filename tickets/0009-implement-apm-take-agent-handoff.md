@@ -1,12 +1,12 @@
 +++
 id = 9
 title = "Implement apm take (agent handoff)"
-state = "ready"
+state = "specd"
 priority = 5
 effort = 3
 risk = 2
 created = "2026-03-25"
-updated = "2026-03-25"
+updated = "2026-03-26"
 +++
 
 ## Spec
@@ -24,18 +24,20 @@ updated = "2026-03-25"
 ### Problem
 
 When an agent session ends mid-ticket (crash, context limit, manual stop), another
-agent needs to pick up the work. `apm take <id>` is the handoff command: it checks
-out the feature branch and updates the `agent` field to the new agent's name.
+agent needs to pick up the work. `apm take <id>` is the handoff command: it updates
+the `agent` field to the new agent's name and checks out the ticket branch.
 Without it, resuming in-progress work requires manual git and file editing.
 
 ### Acceptance criteria
 
-- [ ] `apm take <id>` checks out the ticket's `branch` field (fails clearly if branch field is null)
-- [ ] `agent` field is updated to `APM_AGENT_NAME` and committed to main
-- [ ] The commit message identifies both the outgoing and incoming agent names
-- [ ] `apm take` works on tickets in `in_progress` or `implemented` state; fails on others with a clear error
-- [ ] If the branch does not exist locally, it is fetched from origin first
-- [ ] Running `apm take` as the current agent (same `APM_AGENT_NAME`) is a no-op with a message
+- [ ] `apm take <id>` fails if `APM_AGENT_NAME` is not set
+- [ ] Fails with a clear error if the ticket's `agent` field is null ("no agent assigned — use `apm start` instead")
+- [ ] Fails with a clear error if the ticket is not in `in_progress` or `implemented` state
+- [ ] No-op with a message if `APM_AGENT_NAME` already matches `frontmatter.agent`
+- [ ] Updates `frontmatter.agent` to `APM_AGENT_NAME` and `frontmatter.updated`
+- [ ] The commit message identifies both the outgoing and incoming agent: `ticket(<id>): agent handoff <old> → <new>`
+- [ ] Commits frontmatter update to the ticket's `ticket/<id>-<slug>` branch via `git::commit_to_branch`
+- [ ] If the branch is not present locally, fetches from origin first; then checks out the branch
 
 ### Out of scope
 
@@ -45,11 +47,14 @@ Without it, resuming in-progress work requires manual git and file editing.
 ### Approach
 
 New subcommand `apm take <id>` in `apm/src/cmd/take.rs`:
-1. Load ticket; check state is `in_progress` or `implemented`
-2. Check `APM_AGENT_NAME` env var; no-op if already the current agent
-3. Record outgoing agent name, update `frontmatter.agent`, `frontmatter.updated`
-4. Append history row; save; `git add`, `git commit`, `git push origin main`
-5. `git fetch origin` if branch not present locally; `git checkout <branch>`
+1. Load config and ticket; check state is `in_progress` or `implemented`
+2. Fail if `frontmatter.agent` is null
+3. Read `APM_AGENT_NAME` from env; no-op if already the current agent
+4. Record outgoing agent; set `frontmatter.agent`, `frontmatter.updated`
+5. Append history row; serialize
+6. Determine branch from `frontmatter.branch` or `git::branch_name_from_path`
+7. Call `git::commit_to_branch(root, &branch, &rel_path, &content, &msg)`
+8. If branch not present locally: `git fetch origin <branch>`; then `git checkout <branch>`
 
 ## History
 
@@ -59,3 +64,5 @@ New subcommand `apm take <id>` in `apm/src/cmd/take.rs`:
 | 2026-03-25 | manual | specd → ammend | |
 | 2026-03-25 | manual | ammend → specd | |
 | 2026-03-25 | manual | specd → ready | |
+| 2026-03-26 | manual | ready → ready | Respec: commit to ticket branch, not main |
+| 2026-03-26 | manual | ready → specd | |

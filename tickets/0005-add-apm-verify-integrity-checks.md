@@ -1,12 +1,12 @@
 +++
 id = 5
 title = "Add apm verify (integrity checks)"
-state = "ready"
+state = "specd"
 priority = 2
 effort = 4
 risk = 2
 created = "2026-03-25"
-updated = "2026-03-25"
+updated = "2026-03-26"
 +++
 
 ## Spec
@@ -29,15 +29,15 @@ manual audit tool and as a pre-commit hook.
 - [ ] `apm verify` loads all non-closed tickets and checks each for known inconsistencies
 - [ ] Detects: ticket in `in_progress`/`implemented`/`accepted` with no `branch` field
 - [ ] Detects: ticket in `in_progress` or `implemented` with `branch` field pointing to a branch merged into main (should have been auto-transitioned by sync)
-- [ ] Detects: ticket with `agent` set but state not in Layer 2 (`in_progress`, `implemented`, `accepted`)
-- [ ] Each issue is printed as: `#<id> [<state>]: <description of issue>`
-- [ ] Exit code 0 if no issues found, 1 if any issues found
-- [ ] `apm verify --fix` automatically applies safe fixes (runs `apm sync` logic for merged-but-not-accepted tickets)
-- [ ] `apm verify --fix` does not auto-fix issues that require human judgment (missing branch field, unexpected agent assignment)
+- [ ] Detects: ticket with `agent` set but state not in `in_progress`, `implemented`, or `accepted`
 - [ ] Detects: ticket file missing `## Spec` section
 - [ ] Detects: ticket file missing `## History` section
 - [ ] Detects: state value not in the configured `[[workflow.states]]` list
 - [ ] Detects: frontmatter `id` does not match the numeric prefix in the filename
+- [ ] Each issue is printed as: `#<id> [<state>]: <description of issue>`
+- [ ] Exit code 0 if no issues found, 1 if any issues found
+- [ ] `apm verify --fix` automatically transitions merged-but-not-accepted tickets (same logic as `apm sync`)
+- [ ] `apm verify --fix` does not auto-fix issues requiring human judgment (missing branch, unexpected agent)
 
 ### Out of scope
 
@@ -49,8 +49,11 @@ manual audit tool and as a pre-commit hook.
 
 New subcommand `apm verify` in `apm/src/cmd/verify.rs`. Walk all tickets, run each
 check as a closure returning `Option<String>` (the issue description). Collect all
-issues, print, exit with appropriate code. `--fix` mode re-uses sync logic from
-`cmd/sync.rs` for the mergeable case.
+issues, print, exit with appropriate code.
+
+`--fix` mode: for tickets with merged-but-not-accepted issue, apply the same
+transition as `cmd/sync.rs` — update state + history, call `git::commit_to_branch`
+to `main`.
 
 ## History
 
@@ -61,3 +64,5 @@ issues, print, exit with appropriate code. `--fix` mode re-uses sync logic from
 | 2026-03-25 | manual | ammend → specd | |
 | 2026-03-25 | manual | specd → ready | |
 | 2026-03-25 | manual | ready → ready | |
+| 2026-03-26 | manual | ready → ready | Respec: --fix uses commit_to_branch pattern |
+| 2026-03-26 | manual | ready → specd | |
