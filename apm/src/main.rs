@@ -57,6 +57,17 @@ enum Command {
         #[arg(long)]
         quiet: bool,
     },
+    /// Take over a ticket from another agent
+    Take { id: u32 },
+    /// Check ticket and cache integrity
+    Verify {
+        /// Auto-fix issues where possible
+        #[arg(long)]
+        fix: bool,
+    },
+    /// Internal git hook dispatcher (used by .git/hooks/*)
+    #[command(name = "_hook")]
+    Hook { hook_name: String },
     /// Print agent instructions from apm.agents.md
     Agents,
 }
@@ -85,6 +96,9 @@ fn main() -> Result<()> {
         Command::Next { json } => cmd::next::run(&root, json),
         Command::Start { id } => cmd::start::run(&root, id),
         Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
+        Command::Take { id } => cmd::take::run(&root, id),
+        Command::Verify { fix } => cmd::verify::run(&root, fix),
+        Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
 }

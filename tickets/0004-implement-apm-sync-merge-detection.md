@@ -1,7 +1,7 @@
 +++
 id = 4
 title = "Implement apm sync (merge detection)"
-state = "ready"
+state = "closed"
 priority = 2
 effort = 4
 risk = 3
@@ -58,3 +58,4 @@ Replace the stub in `cmd/sync.rs`:
 | 2026-03-26 | manual | ready → ready | Respec: actually fire transition via commit_to_branch; add --offline/--quiet |
 | 2026-03-26 | manual | ready → specd | |
 | 2026-03-26 | manual | specd → ready | |
+| 2026-03-26 | agent | ready → closed | |
