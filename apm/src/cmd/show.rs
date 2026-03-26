@@ -1,9 +1,9 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, ticket};
+use std::path::Path;
 
-pub fn run(id: u32) -> Result<()> {
-    let root = crate::repo_root()?;
-    let config = Config::load(&root)?;
+pub fn run(root: &Path, id: u32) -> Result<()> {
+    let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     let tickets = ticket::load_all(&tickets_dir)?;
     let Some(t) = tickets.iter().find(|t| t.frontmatter.id == id) else {

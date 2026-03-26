@@ -41,7 +41,7 @@ enum Command {
     Sync,
 }
 
-fn repo_root() -> Result<PathBuf> {
+pub fn repo_root() -> Result<PathBuf> {
     let output = std::process::Command::new("git")
         .args(["rev-parse", "--show-toplevel"])
         .output()
@@ -54,25 +54,17 @@ fn repo_root() -> Result<PathBuf> {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let root = repo_root()?;
     match cli.command {
-        Command::Init => cmd::init::run(),
-        Command::List { state, unassigned } => cmd::list::run(state, unassigned),
-        Command::Show { id } => cmd::show::run(id),
-        Command::New { title } => cmd::new::run(title),
-        Command::State { id, state } => cmd::state::run(id, state),
-        Command::Set { id, field, value } => cmd::set::run(id, field, value),
-        Command::Next { json } => cmd::next::run(json),
-        Command::Sync => cmd::sync::run(),
+        Command::Init => cmd::init::run(&root),
+        Command::List { state, unassigned } => cmd::list::run(&root, state, unassigned),
+        Command::Show { id } => cmd::show::run(&root, id),
+        Command::New { title } => cmd::new::run(&root, title),
+        Command::State { id, state } => cmd::state::run(&root, id, state),
+        Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
+        Command::Next { json } => cmd::next::run(&root, json),
+        Command::Sync => cmd::sync::run(&root),
     }
 }
 
-mod cmd {
-    pub mod init;
-    pub mod list;
-    pub mod show;
-    pub mod new;
-    pub mod state;
-    pub mod set;
-    pub mod next;
-    pub mod sync;
-}
+use apm::cmd;

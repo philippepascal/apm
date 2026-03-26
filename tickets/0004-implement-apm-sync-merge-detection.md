@@ -1,7 +1,7 @@
 +++
 id = 4
 title = "Implement apm sync (merge detection)"
-state = "specd"
+state = "ready"
 priority = 2
 effort = 5
 risk = 4
@@ -50,3 +50,4 @@ In `cmd/sync.rs`, replace the stub:
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ready | |

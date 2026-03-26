@@ -1,7 +1,7 @@
 +++
 id = 7
 title = "Implement apm start (branch creation, git mutex)"
-state = "specd"
+state = "ready"
 priority = 10
 effort = 5
 risk = 4
@@ -52,3 +52,4 @@ New subcommand `apm start <id>` in `apm/src/cmd/start.rs`:
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ready | |
