@@ -85,6 +85,8 @@ pub struct AgentsConfig {
     pub max_concurrent: usize,
     #[serde(default = "default_actionable_states")]
     pub actionable_states: Vec<String>,
+    #[serde(default)]
+    pub instructions: Option<PathBuf>,
 }
 
 fn default_max_concurrent() -> usize { 3 }
@@ -97,6 +99,7 @@ impl Default for AgentsConfig {
         Self {
             max_concurrent: default_max_concurrent(),
             actionable_states: default_actionable_states(),
+            instructions: None,
         }
     }
 }

@@ -42,6 +42,8 @@ enum Command {
     },
     /// Sync with remote (poll events, detect merges)
     Sync,
+    /// Print agent instructions from apm.agents.md
+    Agents,
 }
 
 pub fn repo_root() -> Result<PathBuf> {
@@ -67,6 +69,7 @@ fn main() -> Result<()> {
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
         Command::Sync => cmd::sync::run(&root),
+        Command::Agents => cmd::agents::run(&root),
     }
 }
 

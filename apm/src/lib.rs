@@ -1,4 +1,5 @@
 pub mod cmd {
+    pub mod agents;
     pub mod init;
     pub mod list;
     pub mod show;

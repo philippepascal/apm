@@ -66,6 +66,7 @@ dir = "tickets"
 [agents]
 max_concurrent = 3
 actionable_states = ["new", "ammend", "ready"]
+instructions = "apm.agents.md"
 
 [workflow.prioritization]
 priority_weight = 10.0
