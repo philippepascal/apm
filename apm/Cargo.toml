@@ -1,0 +1,14 @@
+[package]
+name = "apm"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "apm"
+path = "src/main.rs"
+
+[dependencies]
+apm-core = { path = "../apm-core" }
+clap = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }

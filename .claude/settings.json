@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(cargo *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(ls *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(cat *)",
+      "Bash(echo *)",
+      "Bash(wc *)",
+      "Bash(open *)",
+      "Bash(perl *)",
+      "Bash(python3 *)",
+      "Bash(rustup *)",
+      "Bash(ln *)",
+      "Bash(pkill *)",
+      "Bash(cd *)",
+      "Bash(bash *)",
+      "WebSearch"
+    ],
+    "ask": [
+      "Bash(git merge)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git restore *)",
+      "Bash(git clean *)",
+      "Bash(git push --force*)"
+    ]
+  }
+}
