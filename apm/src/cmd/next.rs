@@ -1,9 +1,9 @@
 use anyhow::Result;
 use apm_core::{config::Config, ticket};
+use std::path::Path;
 
-pub fn run(json: bool) -> Result<()> {
-    let root = crate::repo_root()?;
-    let config = Config::load(&root)?;
+pub fn run(root: &Path, json: bool) -> Result<()> {
+    let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     let tickets = ticket::load_all(&tickets_dir)?;
     let actionable = &config.agents.actionable_states;

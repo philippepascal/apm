@@ -1,7 +1,7 @@
 +++
 id = 6
 title = "Add author and supervisor fields to ticket frontmatter"
-state = "specd"
+state = "ready"
 priority = 5
 effort = 3
 risk = 2
@@ -45,3 +45,4 @@ personal slice, and there is no way to route questions or spec approvals.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ready | |

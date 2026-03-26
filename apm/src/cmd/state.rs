@@ -1,10 +1,10 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, ticket};
 use chrono::Local;
+use std::path::Path;
 
-pub fn run(id: u32, new_state: String) -> Result<()> {
-    let root = crate::repo_root()?;
-    let config = Config::load(&root)?;
+pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
+    let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     let mut tickets = ticket::load_all(&tickets_dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
@@ -22,14 +22,12 @@ pub fn run(id: u32, new_state: String) -> Result<()> {
     Ok(())
 }
 
-fn ensure_amendment_section(body: &mut String) {
+pub fn ensure_amendment_section(body: &mut String) {
     if body.contains("### Amendment requests") {
         return;
     }
     let placeholder = "\n### Amendment requests\n\n<!-- Add amendment requests below -->\n";
-    // Insert after ### Out of scope if present, otherwise before ## History
     if let Some(pos) = body.find("### Out of scope") {
-        // Find the end of the Out of scope block (next ### or ## or end of string)
         let after = &body[pos..];
         let block_end = after[1..]
             .find("\n##")

@@ -1,7 +1,7 @@
 +++
 id = 8
 title = "Implement apm _hook pre-push (branch_push_first event)"
-state = "specd"
+state = "ready"
 priority = 5
 effort = 3
 risk = 3
@@ -49,3 +49,4 @@ New subcommand `apm _hook <hook-name>` dispatching to hook-specific handlers.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-25 | manual | new → specd | |
+| 2026-03-25 | manual | specd → ready | |

@@ -1,13 +1,13 @@
 use anyhow::Result;
 use apm_core::{
     config::Config,
-    ticket::{self, Frontmatter, Ticket},
+    ticket::{self, slugify, Frontmatter, Ticket},
 };
 use chrono::Local;
+use std::path::Path;
 
-pub fn run(title: String) -> Result<()> {
-    let root = crate::repo_root()?;
-    let config = Config::load(&root)?;
+pub fn run(root: &Path, title: String) -> Result<()> {
+    let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     let id = ticket::next_id(&tickets_dir)?;
     let slug = slugify(&title);
@@ -31,17 +31,4 @@ pub fn run(title: String) -> Result<()> {
     t.save()?;
     println!("Created ticket #{id}: {filename}");
     Ok(())
-}
-
-fn slugify(s: &str) -> String {
-    s.chars()
-        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
-        .chars()
-        .take(40)
-        .collect()
 }
