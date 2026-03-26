@@ -3,7 +3,7 @@ use apm_core::{config::Config, ticket};
 use std::collections::HashSet;
 use std::path::Path;
 
-pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool) -> Result<()> {
+pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>) -> Result<()> {
     let config = Config::load(root)?;
     let tickets_dir = root.join(&config.tickets.dir);
     let tickets = ticket::load_all(&tickets_dir)?;
@@ -18,7 +18,8 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         let state_ok = state_filter.as_deref().map_or(true, |s| fm.state == s);
         let agent_ok = !unassigned || fm.agent.is_none();
         let terminal_ok = all || !terminal.contains(fm.state.as_str());
-        state_ok && agent_ok && terminal_ok
+        let supervisor_ok = supervisor_filter.as_deref().map_or(true, |s| fm.supervisor.as_deref() == Some(s));
+        state_ok && agent_ok && terminal_ok && supervisor_ok
     });
 
     for t in filtered {

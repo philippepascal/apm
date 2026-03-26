@@ -19,6 +19,7 @@ pub fn run(root: &Path, title: String) -> Result<()> {
     let branch = format!("ticket/{id:04}-{slug}");
     let today = Local::now().date_naive();
 
+    let author = std::env::var("APM_AGENT_NAME").ok();
     let fm = Frontmatter {
         id,
         title: title.clone(),
@@ -26,6 +27,8 @@ pub fn run(root: &Path, title: String) -> Result<()> {
         priority: 0,
         effort: 0,
         risk: 0,
+        author,
+        supervisor: None,
         agent: None,
         branch: Some(branch.clone()),
         created: Some(today),

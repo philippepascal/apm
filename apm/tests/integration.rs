@@ -119,7 +119,7 @@ fn list_shows_all_tickets() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Alpha".into()).unwrap();
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
-    apm::cmd::list::run(dir.path(), None, false, false).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None).unwrap();
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn list_state_filter() {
     apm::cmd::new::run(dir.path(), "Alpha".into()).unwrap();
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None).unwrap();
 }
 
 // --- show ---

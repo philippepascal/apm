@@ -15,6 +15,8 @@ pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
         "priority" => fm.priority = value.parse().map_err(|_| anyhow::anyhow!("priority must be 0–255"))?,
         "effort"   => fm.effort   = value.parse().map_err(|_| anyhow::anyhow!("effort must be 0–255"))?,
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
+        "author"     => bail!("author is immutable"),
+        "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.clone()) },
         "agent"    => fm.agent    = if value == "-" { None } else { Some(value.clone()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.clone()) },
         "title"    => fm.title    = value.clone(),

@@ -22,6 +22,8 @@ enum Command {
         /// Include terminal-state tickets (e.g. closed)
         #[arg(long)]
         all: bool,
+        #[arg(long)]
+        supervisor: Option<String>,
     },
     /// Show a ticket
     Show { id: u32 },
@@ -62,7 +64,7 @@ fn main() -> Result<()> {
     let root = repo_root()?;
     match cli.command {
         Command::Init => cmd::init::run(&root),
-        Command::List { state, unassigned, all } => cmd::list::run(&root, state, unassigned, all),
+        Command::List { state, unassigned, all, supervisor } => cmd::list::run(&root, state, unassigned, all, supervisor),
         Command::Show { id } => cmd::show::run(&root, id),
         Command::New { title } => cmd::new::run(&root, title),
         Command::State { id, state } => cmd::state::run(&root, id, state),
