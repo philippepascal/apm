@@ -1,7 +1,7 @@
 use anyhow::Result;
 use apm_core::{
     config::Config,
-    ticket::{self, Frontmatter, Ticket},
+    ticket::{self, slugify, Frontmatter, Ticket},
 };
 use chrono::Local;
 
@@ -33,15 +33,3 @@ pub fn run(title: String) -> Result<()> {
     Ok(())
 }
 
-fn slugify(s: &str) -> String {
-    s.chars()
-        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
-        .chars()
-        .take(40)
-        .collect()
-}
