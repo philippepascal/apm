@@ -114,19 +114,6 @@ pub fn next_id(tickets_dir: &Path) -> Result<u32> {
     Ok(id)
 }
 
-pub fn slugify(s: &str) -> String {
-    s.chars()
-        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
-        .chars()
-        .take(40)
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
