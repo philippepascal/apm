@@ -20,15 +20,22 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
     let old_state = t.frontmatter.state.clone();
 
     // Enforce transition rules if the current state defines any.
-    if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
-        if !state_cfg.transitions.is_empty() {
-            let allowed: Vec<&str> = state_cfg.transitions.iter().map(|tr| tr.to.as_str()).collect();
-            if !allowed.contains(&new_state.as_str()) {
-                bail!(
-                    "no transition from {:?} to {:?} — valid transitions from {:?}: {}",
-                    old_state, new_state, old_state,
-                    allowed.join(", ")
-                );
+    // Terminal states (e.g. "closed") are always reachable regardless of rules.
+    let target_is_terminal = config.workflow.states.iter()
+        .find(|s| s.id == new_state)
+        .map(|s| s.terminal)
+        .unwrap_or(false);
+    if !target_is_terminal {
+        if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
+            if !state_cfg.transitions.is_empty() {
+                let allowed: Vec<&str> = state_cfg.transitions.iter().map(|tr| tr.to.as_str()).collect();
+                if !allowed.contains(&new_state.as_str()) {
+                    bail!(
+                        "no transition from {:?} to {:?} — valid transitions from {:?}: {}",
+                        old_state, new_state, old_state,
+                        allowed.join(", ")
+                    );
+                }
             }
         }
     }

@@ -19,6 +19,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
     // Read each ticket/* branch and write to local cache.
     let branches = git::ticket_branches(root)?;
     let mut updated = 0usize;
+    let mut live_files: std::collections::HashSet<String> = std::collections::HashSet::new();
 
     for branch in &branches {
         // Branch is ticket/0001-my-ticket; file is tickets/0001-my-ticket.md
@@ -30,10 +31,25 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
             Ok(content) => {
                 let local_path = tickets_dir.join(&filename);
                 std::fs::write(&local_path, &content)?;
+                live_files.insert(filename);
                 updated += 1;
             }
             Err(e) => {
                 eprintln!("warning: could not read {branch}: {e:#}");
+            }
+        }
+    }
+
+    // Prune cache files that have no corresponding ticket/* branch.
+    if let Ok(entries) = std::fs::read_dir(&tickets_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if !live_files.contains(name) {
+                    let _ = std::fs::remove_file(&path);
+                    if !quiet { println!("pruned stale cache: {name}"); }
+                }
             }
         }
     }
