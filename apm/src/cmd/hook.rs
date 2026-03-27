@@ -15,8 +15,7 @@ fn pre_push(root: &Path) {
         Ok(c) => c,
         Err(e) => { eprintln!("warning: apm _hook pre-push: {e:#}"); return; }
     };
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = match ticket::load_all(&tickets_dir) {
+    let tickets = match ticket::load_all_from_git(root, &config.tickets.dir) {
         Ok(t) => t,
         Err(e) => { eprintln!("warning: apm _hook pre-push: {e:#}"); return; }
     };

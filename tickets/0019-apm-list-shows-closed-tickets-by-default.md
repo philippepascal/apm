@@ -1,7 +1,7 @@
 +++
 id = 19
 title = "apm list shows closed tickets by default"
-state = "closed"
+state = "specd"
 priority = 7
 effort = 2
 risk = 1
@@ -41,5 +41,3 @@ unless `--all` is passed. Add `--all: bool` to the `List` variant in `main.rs`.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-26 | manual | new → specd | |
-| 2026-03-26 | agent | ready → implemented | |
-| 2026-03-26 | manual | implemented → closed | |

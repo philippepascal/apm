@@ -210,14 +210,7 @@ fn full_ticket_lifecycle() {
     // Branch exists locally.
     assert!(env.branch_exists(branch), "ticket branch not created");
 
-    // Ticket file is immediately in the local cache (working tree) so
-    // apm show/list/next work without requiring an explicit apm sync.
-    assert!(
-        env.root().join(ticket_path).exists(),
-        "ticket file should be in working tree (local cache) after apm new"
-    );
-
-    // Frontmatter is correct.
+    // Frontmatter is correct — read from the branch, not the working tree.
     let ticket = env.branch_content(branch, ticket_path);
     assert!(ticket.contains("id = 1"), "wrong id");
     assert!(ticket.contains("state = \"new\""), "wrong state");

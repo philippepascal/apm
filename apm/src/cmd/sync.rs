@@ -4,8 +4,6 @@ use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    std::fs::create_dir_all(&tickets_dir)?;
 
     if !offline {
         match git::fetch_all(root) {
@@ -16,62 +14,22 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
         }
     }
 
-    // Read each ticket/* branch and write to local cache.
+    // Detect merged branches and fire implemented → accepted auto-transition.
     let branches = git::ticket_branches(root)?;
-    let mut updated = 0usize;
-    let mut live_files: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let merged = git::merged_into_main(root)?;
+    let mut transitioned = 0usize;
 
-    for branch in &branches {
-        // Branch is ticket/0001-my-ticket; file is tickets/0001-my-ticket.md
+    for branch in &merged {
         let suffix = branch.trim_start_matches("ticket/");
         let filename = format!("{suffix}.md");
         let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
 
-        match git::read_from_branch(root, branch, &rel_path) {
-            Ok(content) => {
-                let local_path = tickets_dir.join(&filename);
-                std::fs::write(&local_path, &content)?;
-                live_files.insert(filename);
-                updated += 1;
-            }
-            Err(e) => {
-                eprintln!("warning: could not read {branch}: {e:#}");
-            }
-        }
-    }
-
-    // Prune untracked cache files that have no corresponding ticket/* branch.
-    // Files tracked by git (merged tickets on main) are never pruned.
-    if let Ok(entries) = std::fs::read_dir(&tickets_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if live_files.contains(name) { continue; }
-                let rel = format!("{}/{name}", config.tickets.dir.to_string_lossy());
-                let tracked = std::process::Command::new("git")
-                    .args(["ls-files", "--error-unmatch", &rel])
-                    .current_dir(root)
-                    .output()
-                    .map(|o| o.status.success())
-                    .unwrap_or(false);
-                if !tracked {
-                    let _ = std::fs::remove_file(&path);
-                    if !quiet { println!("pruned stale cache: {name}"); }
-                }
-            }
-        }
-    }
-
-    // Detect merged branches and fire implemented → accepted auto-transition.
-    let merged = git::merged_into_main(root)?;
-    let mut transitioned = 0usize;
-    for branch in &merged {
-        let suffix = branch.trim_start_matches("ticket/");
-        let filename = format!("{suffix}.md");
-        let local_path = tickets_dir.join(&filename);
-        if !local_path.exists() { continue; }
-        let mut t = match Ticket::load(&local_path) {
+        let content = match git::read_from_branch(root, branch, &rel_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let dummy_path = root.join(&rel_path);
+        let mut t = match Ticket::parse(&dummy_path, &content) {
             Ok(t) => t,
             Err(_) => continue,
         };
@@ -83,13 +41,12 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
         let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
         crate::cmd::state::append_history(&mut t.body, "implemented", "accepted", &when, "apm sync");
 
-        let content = match t.serialize() {
+        let updated = match t.serialize() {
             Ok(c) => c,
             Err(e) => { eprintln!("warning: ticket({}) serialize: {e:#}", t.frontmatter.id); continue; }
         };
         let id = t.frontmatter.id;
-        let rel_path = format!("{}/{filename}", config.tickets.dir.to_string_lossy());
-        match git::commit_to_branch(root, "main", &rel_path, &content,
+        match git::commit_to_branch(root, "main", &rel_path, &updated,
             &format!("ticket({id}): implemented → accepted (branch merged)")) {
             Ok(_) => {
                 if !quiet { println!("#{id}: implemented → accepted (branch merged)"); }
@@ -105,9 +62,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
 
     if !quiet {
         println!(
-            "sync: {} ticket branch{} refreshed, {} auto-transitioned",
-            updated,
-            if updated == 1 { "" } else { "es" },
+            "sync: {} ticket branch{} visible, {} auto-transitioned",
+            branches.len(),
+            if branches.len() == 1 { "" } else { "es" },
             transitioned,
         );
     }

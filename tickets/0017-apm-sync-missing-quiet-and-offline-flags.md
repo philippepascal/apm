@@ -6,8 +6,7 @@ priority = 10
 effort = 1
 risk = 1
 branch = "ticket/0017-apm-sync-missing-quiet-and-offline-flags"
-created = "2026-03-26"
-updated = "2026-03-26"
+updated_at = "2026-03-27T00:06:01.145860Z"
 +++
 
 ## Spec
@@ -42,5 +41,4 @@ and gate all `println!` calls behind `!quiet`.
 |------|-------|------------|------|
 | 2026-03-26 | manual | new → specd | |
 | 2026-03-26 | manual | specd → ready | |
-| 2026-03-26 | agent | ready → implemented | |
-| 2026-03-26 | manual | implemented → closed | |
+| 2026-03-27T00:06Z | ready | closed | apm |

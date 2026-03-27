@@ -12,8 +12,7 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
         let list: Vec<&str> = config.workflow.states.iter().map(|s| s.id.as_str()).collect();
         bail!("unknown state {:?} — valid states: {}", new_state, list.join(", "));
     }
-    let tickets_dir = root.join(&config.tickets.dir);
-    let mut tickets = ticket::load_all(&tickets_dir)?;
+    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket #{id} not found");
     };

@@ -33,6 +33,12 @@
 - Integration tests in `apm/tests/integration.rs` — use temp git repos, no fixture files needed
 - Run `cargo test --workspace` before opening a PR
 
+## Performance
+
+- No premature optimisation — correctness and simplicity first
+- Do not add caching, indexes, or in-memory structures unless a measured bottleneck exists
+- Reading from git branch blobs is fast enough at ticket scale; filesystem caches are not needed
+
 ## Things to avoid
 
 - Do not run `rm -rf` or destructive git commands without confirmation

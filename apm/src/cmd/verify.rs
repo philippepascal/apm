@@ -6,8 +6,7 @@ use std::path::Path;
 
 pub fn run(root: &Path, fix: bool) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = ticket::load_all(&tickets_dir)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
     let valid_states: HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())

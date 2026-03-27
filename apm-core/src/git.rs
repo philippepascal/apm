@@ -40,7 +40,10 @@ pub fn ticket_branches(root: &Path) -> Result<Vec<String>> {
     let mut branches = Vec::new();
 
     let local = run(root, &["branch", "--list", "ticket/*"]).unwrap_or_default();
-    for b in local.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+    for b in local.lines()
+        .map(|l| l.trim().trim_start_matches('*').trim())
+        .filter(|l| !l.is_empty())
+    {
         if seen.insert(b.to_string()) {
             branches.push(b.to_string());
         }

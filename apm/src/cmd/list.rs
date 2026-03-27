@@ -5,8 +5,7 @@ use std::path::Path;
 
 pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = ticket::load_all(&tickets_dir)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
     let terminal: HashSet<&str> = config.workflow.states.iter()
         .filter(|s| s.terminal)

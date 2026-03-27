@@ -5,8 +5,7 @@ state = "closed"
 priority = 10
 effort = 3
 risk = 2
-created = "2026-03-25"
-updated = "2026-03-26"
+updated_at = "2026-03-27T00:06:00.519059Z"
 +++
 
 ## Spec
@@ -75,5 +74,4 @@ New subcommand `apm start <id>` in `apm/src/cmd/start.rs`:
 | 2026-03-26 | manual | ammend → specd | Amendment addressed |
 | 2026-03-26 | manual | ammend → specd | |
 | 2026-03-26 | manual | specd → ready | |
-| 2026-03-26 | agent | ready → implemented | |
-| 2026-03-26 | manual | implemented → closed | |
+| 2026-03-27T00:06Z | ready | closed | apm |

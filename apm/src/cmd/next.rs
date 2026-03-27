@@ -4,8 +4,7 @@ use std::path::Path;
 
 pub fn run(root: &Path, json: bool) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = ticket::load_all(&tickets_dir)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let actionable = &config.agents.actionable_states;
     let pw = config.workflow.prioritization.priority_weight;
     let ew = config.workflow.prioritization.effort_weight;
