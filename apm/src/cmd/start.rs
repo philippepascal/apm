@@ -71,6 +71,37 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     let wt_display = git::find_worktree_for_branch(root, &branch)
         .unwrap_or(wt_path);
 
+    // Merge main into the ticket branch so the agent starts from current code.
+    let merge_ref = if std::process::Command::new("git")
+        .args(["rev-parse", "--verify", "origin/main"])
+        .current_dir(&wt_display)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        "origin/main"
+    } else {
+        "main"
+    };
+    match std::process::Command::new("git")
+        .args(["merge", merge_ref, "--no-edit"])
+        .current_dir(&wt_display)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if !stdout.contains("Already up to date") {
+                println!("Merged {merge_ref} into branch.");
+            }
+        }
+        Ok(out) => eprintln!(
+            "warning: merge {} failed: {}",
+            merge_ref,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ),
+        Err(e) => eprintln!("warning: merge failed: {e}"),
+    }
+
     println!("#{id}: {old_state} → in_progress (agent: {agent_name}, branch: {branch})");
     println!("Worktree: {}", wt_display.display());
     Ok(())
