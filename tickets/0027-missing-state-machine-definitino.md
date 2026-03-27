@@ -2,20 +2,22 @@
 id = 27
 title = "missing-state-machine-definitino"
 state = "new"
-priority = 6
-effort = 4
-risk = 2
+priority = 0
+effort = 0
+risk = 0
 author = "apm"
 branch = "ticket/0027-missing-state-machine-definitino"
 created_at = "2026-03-27T05:28:59.591031Z"
-updated_at = "2026-03-27T06:18:54.103477Z"
+updated_at = "2026-03-27T06:20:02.678846Z"
 +++
 
 ## Spec
 
 ### Problem
 
-apm.agents.md refer to files in init-spec. Nothing in init-spec should be referenced since it won't be present when apm gets installed. instead, apm init creates a state machine definition in a file, and that file is referenced by apm.agents.md. users can then customize that file.
+apm.agents.md refer to files in init-spec. Nothing in init-spec should be referenced since it won't be present when apm gets installed. instead, apm.tomle is referenced by apm.agents.md. 
+
+do advise if some elements of the specs are missing from apm.agents.md for clarity.
 
 ### Acceptance criteria
 
