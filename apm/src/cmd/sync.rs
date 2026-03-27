@@ -40,13 +40,22 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
         }
     }
 
-    // Prune cache files that have no corresponding ticket/* branch.
+    // Prune untracked cache files that have no corresponding ticket/* branch.
+    // Files tracked by git (merged tickets on main) are never pruned.
     if let Ok(entries) = std::fs::read_dir(&tickets_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) != Some("md") { continue; }
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if !live_files.contains(name) {
+                if live_files.contains(name) { continue; }
+                let rel = format!("{}/{name}", config.tickets.dir.to_string_lossy());
+                let tracked = std::process::Command::new("git")
+                    .args(["ls-files", "--error-unmatch", &rel])
+                    .current_dir(root)
+                    .output()
+                    .map(|o| o.status.success())
+                    .unwrap_or(false);
+                if !tracked {
                     let _ = std::fs::remove_file(&path);
                     if !quiet { println!("pruned stale cache: {name}"); }
                 }

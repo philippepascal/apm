@@ -126,8 +126,10 @@ terminal = true
 }
 
 fn ensure_gitignore(path: &PathBuf) -> Result<()> {
-    // tickets/*.md are local cache files derived from ticket branches — not committed to main.
     // tickets/NEXT_ID is a local counter used when apm/meta branch is unavailable.
+    // tickets/*.md: gitignored so untracked cache files don't cause checkout conflicts.
+    // This does NOT affect merged-ticket files: once committed to main via a PR merge
+    // they are tracked by git and gitignore has no effect on tracked files.
     let entries = ["tickets/NEXT_ID", "tickets/*.md"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
