@@ -3,12 +3,12 @@ id = 27
 title = "missing-state-machine-definitino"
 state = "new"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "apm"
 branch = "ticket/0027-missing-state-machine-definitino"
 created_at = "2026-03-27T05:28:59.591031Z"
-updated_at = "2026-03-27T06:05:58.827874Z"
+updated_at = "2026-03-27T06:18:53.530418Z"
 +++
 
 ## Spec
