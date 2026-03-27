@@ -15,11 +15,30 @@ updated_at = "2026-03-27T06:21:17.124020Z"
 
 ### Problem
 
+When `apm init` is run, `.claude/settings.json` may exist but not be tracked
+by git. Future ticket branches created from `main` inherit whatever is committed;
+if the settings file is untracked, agent worktrees won't have it, and permission
+allow-lists won't apply. There is currently no feedback to the user about this.
+
 ### Acceptance criteria
+
+- [ ] If `.claude/settings.json` exists but is not tracked by git (`git ls-files --error-unmatch` fails), `apm init` prints a warning suggesting the user commit it
+- [ ] If the file is tracked, no warning is printed
+- [ ] If the file does not exist, no warning is printed
+- [ ] Warning is informational only — `apm init` still succeeds
 
 ### Out of scope
 
+- Auto-staging or committing `.claude/settings.json`
+- Warning about other `.claude/` files
+- Checking whether the file contents are valid JSON
+
 ### Approach
+
+In `cmd/init.rs` `run()`, after the existing setup steps, check:
+1. Does `.claude/settings.json` exist?
+2. Is it tracked? (`git ls-files --error-unmatch .claude/settings.json` exits 0)
+3. If exists but untracked: `eprintln!("Warning: .claude/settings.json exists but is not committed. Agent worktrees won't have it — run: git add .claude/settings.json && git commit")`
 
 ## History
 
