@@ -3,12 +3,12 @@ id = 30
 title = "Add blocked state: agent signals implementation blocker, supervisor unblocks"
 state = "new"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0326-2222-8071"
 branch = "ticket/0030-add-blocked-state-agent-signals-implemen"
 created_at = "2026-03-27T06:15:12.087284Z"
-updated_at = "2026-03-27T06:15:12.087284Z"
+updated_at = "2026-03-27T06:15:16.783945Z"
 +++
 
 ## Spec
