@@ -1,13 +1,12 @@
 +++
 id = 18
 title = "apm init default config missing workflow states"
-state = "specd"
+state = "ready"
 priority = 9
 effort = 2
 risk = 1
 branch = "ticket/0018-apm-init-default-config-missing-workflow"
-created = "2026-03-26"
-updated = "2026-03-26"
+updated_at = "2026-03-27T03:16:55.012287Z"
 +++
 
 ## Spec
@@ -42,3 +41,4 @@ block matching the ticker workflow defined in `initial_specs/SPEC.md §6`.
 | Date | Actor | Transition | Note |
 |------|-------|------------|------|
 | 2026-03-26 | manual | new → specd | |
+| 2026-03-27T03:16Z | specd | ready | apm |
