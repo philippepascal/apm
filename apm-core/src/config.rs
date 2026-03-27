@@ -11,6 +11,8 @@ pub struct Config {
     pub workflow: WorkflowConfig,
     #[serde(default)]
     pub agents: AgentsConfig,
+    #[serde(default)]
+    pub worktrees: WorktreesConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -51,11 +53,17 @@ pub struct StateConfig {
     pub terminal: bool,
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
+    /// Who can actively pick up / act on tickets in this state.
+    /// Values: "agent", "supervisor", "engineer", "any".
+    /// Drives `apm next`, `apm start`, and `apm list --actionable`.
+    #[serde(default)]
+    pub actionable: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct TransitionConfig {
     pub to: String,
+    #[serde(default)]
     pub trigger: String,
     #[serde(default)]
     pub actor: String,
@@ -63,6 +71,12 @@ pub struct TransitionConfig {
     pub preconditions: Vec<String>,
     #[serde(default)]
     pub side_effects: Vec<String>,
+    /// Short label shown in the review prompt (e.g. "Approve for implementation")
+    #[serde(default)]
+    pub label: String,
+    /// Guidance shown in the editor header (e.g. "Add requests in ### Amendment requests")
+    #[serde(default)]
+    pub hint: String,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -83,28 +97,42 @@ fn default_risk_weight() -> f64 { -1.0 }
 pub struct AgentsConfig {
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
-    #[serde(default = "default_actionable_states")]
-    pub actionable_states: Vec<String>,
     #[serde(default)]
     pub instructions: Option<PathBuf>,
 }
 
 fn default_max_concurrent() -> usize { 3 }
-fn default_actionable_states() -> Vec<String> {
-    vec!["new".into(), "ammend".into(), "ready".into()]
+
+#[derive(Debug, Deserialize)]
+pub struct WorktreesConfig {
+    pub dir: PathBuf,
+}
+
+impl Default for WorktreesConfig {
+    fn default() -> Self {
+        Self { dir: PathBuf::from("../worktrees") }
+    }
 }
 
 impl Default for AgentsConfig {
     fn default() -> Self {
         Self {
             max_concurrent: default_max_concurrent(),
-            actionable_states: default_actionable_states(),
             instructions: None,
         }
     }
 }
 
 impl Config {
+    /// States where `actor` can actively pick up / act on tickets.
+    /// Matches "any" as a wildcard in addition to the literal actor name.
+    pub fn actionable_states_for<'a>(&'a self, actor: &str) -> Vec<&'a str> {
+        self.workflow.states.iter()
+            .filter(|s| s.actionable.iter().any(|a| a == actor || a == "any"))
+            .map(|s| s.id.as_str())
+            .collect()
+    }
+
     pub fn load(repo_root: &Path) -> Result<Self> {
         let path = repo_root.join("apm.toml");
         let contents = std::fs::read_to_string(&path)

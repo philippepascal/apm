@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use chrono::NaiveDate;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -23,9 +23,9 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created: Option<NaiveDate>,
+    pub created_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated: Option<NaiveDate>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]
@@ -76,18 +76,22 @@ impl Ticket {
     }
 }
 
-pub fn load_all(tickets_dir: &Path) -> Result<Vec<Ticket>> {
+/// Load all tickets by reading directly from their git branches.
+/// No filesystem cache is involved.
+pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Result<Vec<Ticket>> {
+    let branches = crate::git::ticket_branches(root)?;
     let mut tickets = Vec::new();
-    let entries = std::fs::read_dir(tickets_dir)
-        .with_context(|| format!("cannot read tickets dir {}", tickets_dir.display()))?;
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("md") {
-            match Ticket::load(&path) {
+    for branch in &branches {
+        let suffix = branch.trim_start_matches("ticket/");
+        let filename = format!("{suffix}.md");
+        let rel_path = format!("{}/{}", tickets_dir_rel.to_string_lossy(), filename);
+        let dummy_path = root.join(&rel_path);
+        match crate::git::read_from_branch(root, branch, &rel_path) {
+            Ok(content) => match Ticket::parse(&dummy_path, &content) {
                 Ok(t) => tickets.push(t),
-                Err(e) => eprintln!("warning: {e:#}"),
-            }
+                Err(e) => eprintln!("warning: {branch}: {e:#}"),
+            },
+            Err(e) => eprintln!("warning: cannot read {branch}: {e:#}"),
         }
     }
     tickets.sort_by_key(|t| t.frontmatter.id);

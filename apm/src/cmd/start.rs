@@ -1,55 +1,46 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
-use std::process::Command;
 
 pub fn run(root: &Path, id: u32) -> Result<()> {
     let agent_name = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
-    let actionable: std::collections::HashSet<&str> = config.agents.actionable_states
-        .iter()
-        .map(|s| s.as_str())
+
+    // apm start is only valid from "ready" — spec-writing states (new, ammend)
+    // use the branch directly; blocked tickets go back to ready before restarting.
+    let startable: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
+        .map(|s| s.id.as_str())
         .collect();
 
-    let tickets_dir = root.join(&config.tickets.dir);
-    let mut tickets = ticket::load_all(&tickets_dir)?;
+    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found — run `apm sync` to refresh");
+        bail!("ticket #{id} not found");
     };
 
     let fm = &t.frontmatter;
     if fm.agent.is_some() {
         bail!("ticket already claimed — run `apm next`");
     }
-    if !actionable.contains(fm.state.as_str()) {
+    if !startable.is_empty() && !startable.contains(&fm.state.as_str()) {
         bail!(
-            "ticket #{id} is in state {:?} — must be one of: {}",
+            "ticket #{id} is in state {:?} — not startable\n\
+             Use `apm start` only from: {}",
             fm.state,
-            config.agents.actionable_states.join(", ")
+            startable.join(", ")
         );
     }
 
+    let now = Utc::now();
     let old_state = t.frontmatter.state.clone();
     t.frontmatter.agent = Some(agent_name.clone());
     t.frontmatter.state = "in_progress".into();
-    t.frontmatter.updated = Some(Local::now().date_naive());
-
-    let today = Local::now().format("%Y-%m-%d");
-    let history_row = format!("| {today} | {agent_name} | {old_state} → in_progress | |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') {
-            t.body.push('\n');
-        }
-        t.body.push_str(&history_row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{history_row}\n"
-        ));
-    }
+    t.frontmatter.updated_at = Some(now);
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    super::state::append_history(&mut t.body, &old_state, "in_progress", &when, &agent_name);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -66,30 +57,52 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → in_progress"))?;
 
-    // Ensure branch is present locally before checking out.
-    let branch_local = Command::new("git")
-        .args(["rev-parse", "--verify", &format!("refs/heads/{branch}")])
-        .current_dir(root)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    // Provision permanent worktree.
+    // Worktree dir name: ticket-<id>-<slug> (branch name with / replaced by -)
+    let wt_name = branch.replace('/', "-");
+    let worktrees_base = root.join(&config.worktrees.dir);
+    std::fs::create_dir_all(&worktrees_base)?;
+    let wt_path = worktrees_base.join(&wt_name);
 
-    if !branch_local {
-        let _ = Command::new("git")
-            .args(["fetch", "origin", &branch])
-            .current_dir(root)
-            .status();
+    if git::find_worktree_for_branch(root, &branch).is_none() {
+        git::add_worktree(root, &wt_path, &branch)?;
     }
 
-    let checkout = Command::new("git")
-        .args(["checkout", &branch])
-        .current_dir(root)
-        .status()?;
+    let wt_display = git::find_worktree_for_branch(root, &branch)
+        .unwrap_or(wt_path);
 
-    if !checkout.success() {
-        bail!("checkout of {branch} failed");
+    // Merge main into the ticket branch so the agent starts from current code.
+    let merge_ref = if std::process::Command::new("git")
+        .args(["rev-parse", "--verify", "origin/main"])
+        .current_dir(&wt_display)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        "origin/main"
+    } else {
+        "main"
+    };
+    match std::process::Command::new("git")
+        .args(["merge", merge_ref, "--no-edit"])
+        .current_dir(&wt_display)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if !stdout.contains("Already up to date") {
+                println!("Merged {merge_ref} into branch.");
+            }
+        }
+        Ok(out) => eprintln!(
+            "warning: merge {} failed: {}",
+            merge_ref,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ),
+        Err(e) => eprintln!("warning: merge failed: {e}"),
     }
 
     println!("#{id}: {old_state} → in_progress (agent: {agent_name}, branch: {branch})");
+    println!("Worktree: {}", wt_display.display());
     Ok(())
 }

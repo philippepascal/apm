@@ -33,6 +33,7 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     update_claude_settings(root, no_claude)?;
     maybe_initial_commit(root)?;
     maybe_create_meta_branch(root)?;
+    ensure_worktrees_dir(root)?;
     println!("apm initialized.");
     Ok(())
 }
@@ -66,9 +67,11 @@ name = "{name}"
 [tickets]
 dir = "tickets"
 
+[worktrees]
+dir = "../{name}--worktrees"
+
 [agents]
 max_concurrent = 3
-actionable_states = ["new", "ammend", "ready"]
 instructions = "apm.agents.md"
 
 [workflow.prioritization]
@@ -77,29 +80,39 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id    = "new"
-label = "New"
-color = "#6b7280"
+id         = "new"
+label      = "New"
+color      = "#6b7280"
+actionable = ["agent"]
 
 [[workflow.states]]
-id    = "question"
-label = "Question"
-color = "#f59e0b"
+id         = "question"
+label      = "Question"
+color      = "#f59e0b"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "specd"
-label = "Specd"
-color = "#3b82f6"
+id         = "specd"
+label      = "Specd"
+color      = "#3b82f6"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
-color = "#ef4444"
+id         = "ammend"
+label      = "Ammend"
+color      = "#ef4444"
+actionable = ["agent"]
 
 [[workflow.states]]
-id    = "ready"
-label = "Ready"
-color = "#10b981"
+id         = "ready"
+label      = "Ready"
+color      = "#10b981"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+  actor   = "agent"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -107,14 +120,22 @@ label = "In Progress"
 color = "#8b5cf6"
 
 [[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-color = "#06b6d4"
+id         = "blocked"
+label      = "Blocked"
+color      = "#dc2626"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "accepted"
-label = "Accepted"
-color = "#84cc16"
+id         = "implemented"
+label      = "Implemented"
+color      = "#06b6d4"
+actionable = ["supervisor"]
+
+[[workflow.states]]
+id         = "accepted"
+label      = "Accepted"
+color      = "#84cc16"
+actionable = ["supervisor"]
 
 [[workflow.states]]
 id       = "closed"
@@ -126,20 +147,25 @@ terminal = true
 }
 
 fn ensure_gitignore(path: &PathBuf) -> Result<()> {
-    let entry = "tickets/NEXT_ID\n";
+    // tickets/NEXT_ID is a local counter used when apm/meta branch is unavailable.
+    let entries = ["tickets/NEXT_ID"];
     if path.exists() {
-        let contents = std::fs::read_to_string(path)?;
-        if !contents.contains("tickets/NEXT_ID") {
-            let mut updated = contents;
-            if !updated.ends_with('\n') {
-                updated.push('\n');
+        let mut contents = std::fs::read_to_string(path)?;
+        let mut changed = false;
+        for entry in &entries {
+            if !contents.contains(entry) {
+                if !contents.ends_with('\n') { contents.push('\n'); }
+                contents.push_str(entry);
+                contents.push('\n');
+                changed = true;
             }
-            updated.push_str(entry);
-            std::fs::write(path, updated)?;
+        }
+        if changed {
+            std::fs::write(path, &contents)?;
             println!("Updated .gitignore");
         }
     } else {
-        std::fs::write(path, entry)?;
+        std::fs::write(path, entries.join("\n") + "\n")?;
         println!("Created .gitignore");
     }
     Ok(())
@@ -252,6 +278,18 @@ fn write_hooks(git_dir: &PathBuf) -> Result<()> {
     std::fs::set_permissions(&post_merge, std::fs::Permissions::from_mode(0o755))?;
 
     println!("Installed git hooks (pre-push, post-merge).");
+    Ok(())
+}
+
+/// Create the worktrees directory specified in apm.toml (if the config exists).
+fn ensure_worktrees_dir(root: &Path) -> Result<()> {
+    if let Ok(config) = apm_core::config::Config::load(root) {
+        let wt_dir = root.join(&config.worktrees.dir);
+        if !wt_dir.exists() {
+            std::fs::create_dir_all(&wt_dir)?;
+            println!("Created worktrees dir: {}", wt_dir.display());
+        }
+    }
     Ok(())
 }
 

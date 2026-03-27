@@ -1,5 +1,5 @@
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::io::BufRead;
 use std::path::Path;
 
@@ -15,8 +15,7 @@ fn pre_push(root: &Path) {
         Ok(c) => c,
         Err(e) => { eprintln!("warning: apm _hook pre-push: {e:#}"); return; }
     };
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = match ticket::load_all(&tickets_dir) {
+    let tickets = match ticket::load_all_from_git(root, &config.tickets.dir) {
         Ok(t) => t,
         Err(e) => { eprintln!("warning: apm _hook pre-push: {e:#}"); return; }
     };
@@ -41,21 +40,12 @@ fn pre_push(root: &Path) {
         if t.frontmatter.state != "ready" { continue; }
 
         let mut t = t.clone();
+        let now = Utc::now();
         let old_state = t.frontmatter.state.clone();
         t.frontmatter.state = "in_progress".into();
-        t.frontmatter.updated = Some(Local::now().date_naive());
-
-        let today = Local::now().format("%Y-%m-%d");
-        let row = format!("| {today} | hook | {old_state} → in_progress | branch push |");
-        if t.body.contains("## History") {
-            if !t.body.ends_with('\n') { t.body.push('\n'); }
-            t.body.push_str(&row);
-            t.body.push('\n');
-        } else {
-            t.body.push_str(&format!(
-                "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
-            ));
-        }
+        t.frontmatter.updated_at = Some(now);
+        let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+        crate::cmd::state::append_history(&mut t.body, &old_state, "in_progress", &when, "hook");
 
         let content = match t.serialize() {
             Ok(c) => c,

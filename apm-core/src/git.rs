@@ -26,50 +26,138 @@ pub fn fetch_all(root: &Path) -> Result<()> {
     run(root, &["fetch", "--all", "--quiet"]).map(|_| ())
 }
 
-/// Read a file's content from a remote branch ref without changing working tree.
+/// Read a file's content from a branch ref without changing working tree.
+/// Prefers the local ref (reflects recent commits before push);
+/// falls back to origin when no local ref exists.
 pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<String> {
-    run(root, &["show", &format!("origin/{branch}:{rel_path}")])
-        .or_else(|_| run(root, &["show", &format!("{branch}:{rel_path}")]))
+    run(root, &["show", &format!("{branch}:{rel_path}")])
+        .or_else(|_| run(root, &["show", &format!("origin/{branch}:{rel_path}")]))
 }
 
-/// All remote ticket/* branch names (without the origin/ prefix).
+/// All ticket/* branch names visible locally or remotely (deduplicated).
+/// Local branches are included even when a remote exists, so that
+/// unpushed branches (e.g. just created) are visible without a push.
 pub fn ticket_branches(root: &Path) -> Result<Vec<String>> {
-    let out = run(root, &["branch", "-r", "--list", "origin/ticket/*"]).unwrap_or_default();
-    Ok(out
-        .lines()
+    let mut seen = std::collections::HashSet::new();
+    let mut branches = Vec::new();
+
+    let local = run(root, &["branch", "--list", "ticket/*"]).unwrap_or_default();
+    for b in local.lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
+        .filter(|l| !l.is_empty())
+    {
+        if seen.insert(b.to_string()) {
+            branches.push(b.to_string());
+        }
+    }
+
+    let remote = run(root, &["branch", "-r", "--list", "origin/ticket/*"]).unwrap_or_default();
+    for b in remote.lines()
         .map(|l| l.trim().trim_start_matches("origin/").to_string())
         .filter(|l| !l.is_empty())
-        .collect())
+    {
+        if seen.insert(b.clone()) {
+            branches.push(b);
+        }
+    }
+
+    Ok(branches)
 }
 
-/// Remote ticket/* branches that are merged into origin/main.
+/// ticket/* branches that are merged into main (remote or local).
 pub fn merged_into_main(root: &Path) -> Result<Vec<String>> {
-    if run(root, &["rev-parse", "--verify", "origin/main"]).is_err() {
+    // Try remote main first.
+    if run(root, &["rev-parse", "--verify", "refs/remotes/origin/main"]).is_ok() {
+        let out = run(
+            root,
+            &["branch", "-r", "--merged", "origin/main", "--list", "origin/ticket/*"],
+        )
+        .unwrap_or_default();
+        return Ok(out
+            .lines()
+            .map(|l| l.trim().trim_start_matches("origin/").to_string())
+            .filter(|l| !l.is_empty())
+            .collect());
+    }
+    // Fall back to local main.
+    if run(root, &["rev-parse", "--verify", "refs/heads/main"]).is_err() {
         return Ok(vec![]);
     }
     let out = run(
         root,
-        &[
-            "branch",
-            "-r",
-            "--merged",
-            "origin/main",
-            "--list",
-            "origin/ticket/*",
-        ],
+        &["branch", "--merged", "main", "--list", "ticket/*"],
     )
     .unwrap_or_default();
     Ok(out
         .lines()
-        .map(|l| l.trim().trim_start_matches("origin/").to_string())
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
         .filter(|l| !l.is_empty())
         .collect())
 }
 
+/// Find the directory of an existing permanent worktree for the given branch.
+/// Returns None if no such worktree is registered.
+pub fn find_worktree_for_branch(root: &Path, branch: &str) -> Option<std::path::PathBuf> {
+    let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
+    let mut current_path: Option<std::path::PathBuf> = None;
+    for line in out.lines() {
+        if let Some(p) = line.strip_prefix("worktree ") {
+            current_path = Some(std::path::PathBuf::from(p));
+        } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
+            if b == branch {
+                return current_path;
+            }
+        }
+    }
+    None
+}
+
+/// List all permanent worktrees for ticket/* branches.
+/// Returns (worktree_path, branch_name) pairs, skipping the main worktree.
+pub fn list_ticket_worktrees(root: &Path) -> Result<Vec<(std::path::PathBuf, String)>> {
+    let out = run(root, &["worktree", "list", "--porcelain"])?;
+    let main = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+
+    let mut result = Vec::new();
+    let mut current_path: Option<std::path::PathBuf> = None;
+    for line in out.lines() {
+        if let Some(p) = line.strip_prefix("worktree ") {
+            current_path = Some(std::path::PathBuf::from(p));
+        } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
+            if b.starts_with("ticket/") {
+                if let Some(p) = &current_path {
+                    if p.canonicalize().unwrap_or_else(|_| p.clone()) != main {
+                        result.push((p.clone(), b.to_string()));
+                    }
+                }
+            }
+        }
+    }
+    Ok(result)
+}
+
+/// Add a permanent worktree for the given branch at wt_path.
+/// Fetches the branch locally first if needed.
+pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()> {
+    let has_local = run(root, &["rev-parse", "--verify", &format!("refs/heads/{branch}")]).is_ok();
+    if !has_local {
+        let _ = run(root, &["fetch", "origin", branch]);
+    }
+    run(root, &["worktree", "add", &wt_path.to_string_lossy(), branch])?;
+    Ok(())
+}
+
+/// Remove a permanent worktree.
+pub fn remove_worktree(root: &Path, wt_path: &Path) -> Result<()> {
+    run(root, &["worktree", "remove", &wt_path.to_string_lossy()])
+        .map(|_| ())
+}
+
 /// Commit a file to a specific branch without disturbing the current working tree.
 ///
+/// If a permanent worktree exists for the branch, commits there directly.
 /// If the caller is already on the target branch, commits directly.
-/// Otherwise uses a temporary git worktree. Push is attempted but non-fatal.
+/// Otherwise uses a temporary git worktree.
 pub fn commit_to_branch(
     root: &Path,
     branch: &str,
@@ -87,6 +175,18 @@ pub fn commit_to_branch(
         return Ok(());
     }
 
+    // If a permanent worktree exists for this branch, commit there directly.
+    if let Some(wt_path) = find_worktree_for_branch(root, branch) {
+        let full_path = wt_path.join(rel_path);
+        if let Some(parent) = full_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&full_path, content)?;
+        let _ = run(&wt_path, &["add", rel_path]);
+        let _ = run(&wt_path, &["commit", "-m", message]);
+        return Ok(());
+    }
+
     // If already on the target branch, write to working tree and commit directly.
     if current_branch(root).ok().as_deref() == Some(branch) {
         let local_path = root.join(rel_path);
@@ -99,8 +199,7 @@ pub fn commit_to_branch(
         return Ok(());
     }
 
-    let _ = try_worktree_commit(root, branch, rel_path, content, message);
-    Ok(())
+    try_worktree_commit(root, branch, rel_path, content, message)
 }
 
 fn try_worktree_commit(

@@ -5,8 +5,7 @@ state = "closed"
 priority = 8
 effort = 2
 risk = 2
-created = "2026-03-25"
-updated = "2026-03-26"
+updated_at = "2026-03-27T00:06:00.986851Z"
 +++
 
 ## Spec
@@ -49,5 +48,4 @@ and return early before loading or modifying any ticket file.
 | 2026-03-25 | manual | new → specd | |
 | 2026-03-26 | manual | ammend → specd | |
 | 2026-03-26 | manual | specd → ready | |
-| 2026-03-26 | agent | ready → implemented | |
-| 2026-03-26 | manual | implemented → closed | |
+| 2026-03-27T00:06Z | ready | closed | apm |

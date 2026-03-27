@@ -5,8 +5,7 @@ state = "closed"
 priority = 5
 effort = 3
 risk = 2
-created = "2026-03-25"
-updated = "2026-03-26"
+updated_at = "2026-03-27T00:06:00.834167Z"
 +++
 
 ## Spec
@@ -67,4 +66,4 @@ New subcommand `apm take <id>` in `apm/src/cmd/take.rs`:
 | 2026-03-26 | manual | ready → ready | Respec: commit to ticket branch, not main |
 | 2026-03-26 | manual | ready → specd | |
 | 2026-03-26 | manual | specd → ready | |
-| 2026-03-26 | agent | ready → closed | |
+| 2026-03-27T00:06Z | ready | closed | apm |

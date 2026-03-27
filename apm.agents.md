@@ -1,5 +1,24 @@
 # APM Agent Instructions
 
+## Repo structure
+
+Rust workspace:
+
+- `apm-core/` — library: data model, config parsing, ticket storage, state machine
+- `apm/` — CLI binary (thin wrapper over `apm-core`)
+- `initial_specs/` — design docs (SPEC.md, STATE-MACHINE.md, TICKET-SPEC.md, USECASES.md)
+
+State machine reference: `initial_specs/STATE-MACHINE.md`
+Ticket document format: `initial_specs/TICKET-SPEC.md`
+
+## Development workflow
+
+1. Read the relevant spec files before implementing anything
+2. Make the minimal change that satisfies the acceptance criteria
+3. Add or update tests — all acceptance criteria should be covered
+4. Run `cargo test --workspace` before opening a PR
+5. All tests must pass before opening a PR
+
 ## Identity
 
 Generate a unique session name at the start of every session and export it
@@ -31,25 +50,46 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the full ticket
 2. `apm set <id> effort <1-10>` — assess implementation scale
 3. `apm set <id> risk <1-10>` — assess technical risk
-4. Edit the ticket's `## Spec` section: fill Problem, Acceptance criteria,
-   Out of scope, Approach
+4. Check out the ticket branch to edit the spec file directly:
+   ```bash
+   git checkout <branch>   # branch name is in the frontmatter
+   # edit tickets/<id>-<slug>.md — fill Problem, Acceptance criteria, Out of scope, Approach
+   git add tickets/<id>-<slug>.md
+   git commit -m "ticket(<id>): write spec"
+   git checkout -        # return to previous branch
+   ```
 5. If blocked on an ambiguity: write the question in `### Open questions`,
-   then `apm state <id> question`
+   commit it to the ticket branch, then `apm state <id> question`
 6. `apm state <id> specd` — submit spec for supervisor review
 
 **state = `ammend`** — revise the spec:
 1. `apm show <id>` — read the Amendment requests carefully
-2. Address each item; check its box when done
-3. Update `### Approach` to reflect any decisions
-4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
+2. Check out the ticket branch, address each item, check its box, update
+   `### Approach`, then commit and return:
+   ```bash
+   git checkout <branch>
+   # edit tickets/<id>-<slug>.md
+   git add tickets/<id>-<slug>.md
+   git commit -m "ticket(<id>): address amendments"
+   git checkout -
+   ```
+3. `apm state <id> specd` — resubmit only when all amendment boxes are checked
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
+   - Check `## History`: if the ticket was previously `in_progress`, a worktree
+     and partial work already exist on the branch — pick up from there
 2. `apm start <id>` — claims the ticket (sets `agent` = your name, state →
-   `in_progress`), checks out the ticket branch `ticket/<id>-<slug>`
-3. Commit all spec edits and code changes to the ticket branch
+   `in_progress`), provisions or reuses the permanent worktree
+3. Commit all code changes to the ticket branch inside the worktree
 4. Update `## Spec` if the approach evolves during implementation
 5. Open a PR targeting `main`; then `apm state <id> implemented`
+
+**state = `blocked`** — implementation is blocked on a supervisor decision:
+1. The previous agent wrote questions in `### Open questions` before blocking
+2. Wait — this state is actionable by supervisor only
+3. Once the supervisor transitions to `ready`, pick it up with `apm start <id>`
+   and continue from the existing worktree/branch
 
 ## Taking over another agent's ticket
 
@@ -93,3 +133,4 @@ manually.
 
 Work one ticket at a time per agent process. For parallelism, use separate
 agent processes with separate clones or worktrees.
+

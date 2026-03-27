@@ -28,6 +28,9 @@ enum Command {
         all: bool,
         #[arg(long)]
         supervisor: Option<String>,
+        /// Show only tickets actionable by this actor (agent, supervisor, engineer)
+        #[arg(long, value_name = "ACTOR")]
+        actionable: Option<String>,
     },
     /// Show a ticket
     Show { id: u32 },
@@ -59,6 +62,19 @@ enum Command {
     },
     /// Take over a ticket from another agent
     Take { id: u32 },
+    /// List or remove permanent git worktrees
+    Worktrees {
+        /// Remove the worktree for the given ticket ID
+        #[arg(long, value_name = "ID")]
+        remove: Option<u32>,
+    },
+    /// Supervisor: edit ticket spec and optionally transition state
+    Review {
+        id: u32,
+        /// Transition to this state after editing (skips interactive prompt)
+        #[arg(long, value_name = "STATE")]
+        to: Option<String>,
+    },
     /// Check ticket and cache integrity
     Verify {
         /// Auto-fix issues where possible
@@ -88,7 +104,7 @@ fn main() -> Result<()> {
     let root = repo_root()?;
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
-        Command::List { state, unassigned, all, supervisor } => cmd::list::run(&root, state, unassigned, all, supervisor),
+        Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id } => cmd::show::run(&root, id),
         Command::New { title } => cmd::new::run(&root, title),
         Command::State { id, state } => cmd::state::run(&root, id, state),
@@ -97,6 +113,8 @@ fn main() -> Result<()> {
         Command::Start { id } => cmd::start::run(&root, id),
         Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
         Command::Take { id } => cmd::take::run(&root, id),
+        Command::Worktrees { remove } => cmd::worktrees::run(&root, remove),
+        Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
         Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),

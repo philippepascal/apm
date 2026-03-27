@@ -16,8 +16,10 @@ The **state** signals whose turn it is. The **spec** contains the structured
 content. Questions and amendment requests live inside the spec itself, in
 defined subsections.
 
-Each ticket has its own git branch from creation. The ticket file is always
-read from and written to that branch — never directly on `main`.
+Each ticket has its own git branch from creation. The ticket file is written
+to that branch throughout the ticket's lifecycle. Once the branch is merged
+into `main`, the file becomes a permanent tracked file on `main` — it is no
+longer ephemeral cache.
 
 ---
 
@@ -30,8 +32,15 @@ tickets/<id>-<slug>.md
 - `id`: zero-padded 4-digit integer (`0001`, `0042`)
 - `slug`: derived from title at creation — lowercase, hyphens, max 40 chars; never changes even if title changes
 
-The file lives at this path on the ticket's branch. The local `tickets/` directory
-is a cache populated by `apm sync` — not the canonical source.
+The file lives at this path on the ticket's branch until the branch is merged
+into `main`, at which point it becomes a permanently tracked file on `main`.
+The local `tickets/` directory therefore contains two kinds of files:
+
+- **Tracked (merged tickets):** committed to `main` via PR merge; permanent;
+  survive branch deletion; `apm sync` does not touch them.
+- **Untracked (open tickets):** written by `apm sync` from the ticket branch;
+  ephemeral cache; gitignored on `main`; pruned by `apm sync` when the branch
+  disappears.
 
 ---
 
@@ -322,16 +331,18 @@ edited manually.
 
 All ticket writes route to the ticket's current branch. APM handles this automatically.
 
-| Phase | Branch | Who writes to the ticket file |
-|-------|--------|-------------------------------|
-| `new` through `accepted` | `ticket/<id>-<slug>` | agent (spec + code), supervisor (amendments, question answers), APM (frontmatter, history) |
-| `closed` | `main` (via merge + APM post-merge commit) | APM only |
+| Phase | Where the file lives | Who writes |
+|-------|----------------------|------------|
+| `new` through `implemented` | `ticket/<id>-<slug>` branch | agent, supervisor, APM |
+| `accepted` | `main` (arrived via PR merge) | APM (post-merge state commit) |
+| `closed` | `main` | APM (`apm state N closed` commits to `main`) |
 
 **Key rules:**
 - Supervisor does not push to the feature branch after `in_progress` begins
 - Supervisor feedback during implementation goes through PR review comments
 - `apm spec <id>` always opens the file on the correct branch regardless of what is checked out locally
-- The local `tickets/` directory is a cache; writing to it directly is not the same as writing to the branch
+- The local `tickets/` directory is a cache for open tickets; merged ticket files are tracked by git and must not be deleted manually
+- Deleting a ticket branch after the PR is merged is safe — the file is already on `main`
 
 ---
 

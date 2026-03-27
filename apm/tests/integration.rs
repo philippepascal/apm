@@ -31,12 +31,39 @@ dir = "tickets"
 
 [agents]
 max_concurrent = 3
-actionable_states = ["new", "ammend", "ready"]
 
 [workflow.prioritization]
 priority_weight = 10.0
 effort_weight = -2.0
 risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
 "#,
     )
     .unwrap();
@@ -100,6 +127,48 @@ fn init_is_idempotent() {
     assert_eq!(toml_before, toml_after);
 }
 
+#[test]
+fn init_generated_config_has_all_workflow_states() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    apm::cmd::init::run(p, true).unwrap();
+
+    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    for state in &["new", "question", "specd", "ammend", "ready", "in_progress", "implemented", "accepted", "closed"] {
+        assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
+    }
+    assert!(toml.contains("terminal = true"), "closed must be terminal");
+    // Must parse without error.
+    apm_core::config::Config::load(p).unwrap();
+}
+
+#[test]
+fn list_excludes_terminal_tickets_by_default() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Open ticket".into()).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into()).unwrap();
+    apm::cmd::state::run(dir.path(), 2, "closed".into()).unwrap();
+
+    // Verify indirectly through the filter logic in the library.
+    let config = apm_core::config::Config::load(dir.path()).unwrap();
+    let tickets = apm_core::ticket::load_all_from_git(dir.path(), &config.tickets.dir).unwrap();
+    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
+    let visible: Vec<_> = tickets.iter()
+        .filter(|t| !terminal.contains(t.frontmatter.state.as_str()))
+        .collect();
+    assert_eq!(visible.len(), 1, "only the open ticket should be visible");
+    assert_eq!(visible[0].frontmatter.id, 1);
+
+    let all: Vec<_> = tickets.iter().collect();
+    assert_eq!(all.len(), 2, "--all should include the closed ticket");
+}
+
 // --- new ---
 
 #[test]
@@ -142,7 +211,7 @@ fn list_shows_all_tickets() {
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
-    apm::cmd::list::run(dir.path(), None, false, false, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, None).unwrap();
 }
 
 #[test]
@@ -155,7 +224,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None).unwrap();
 }
 
 // --- show ---
@@ -194,7 +263,7 @@ fn state_transition_appends_history_row() {
     sync_from_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
-    assert!(content.contains("new → specd"));
+    assert!(content.contains("| new | specd |"));
 }
 
 #[test]

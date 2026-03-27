@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
@@ -12,32 +12,40 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
         let list: Vec<&str> = config.workflow.states.iter().map(|s| s.id.as_str()).collect();
         bail!("unknown state {:?} — valid states: {}", new_state, list.join(", "));
     }
-    let tickets_dir = root.join(&config.tickets.dir);
-    let mut tickets = ticket::load_all(&tickets_dir)?;
+    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket #{id} not found");
     };
     let old_state = t.frontmatter.state.clone();
 
     // Enforce transition rules if the current state defines any.
-    if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
-        if !state_cfg.transitions.is_empty() {
-            let allowed: Vec<&str> = state_cfg.transitions.iter().map(|tr| tr.to.as_str()).collect();
-            if !allowed.contains(&new_state.as_str()) {
-                bail!(
-                    "no transition from {:?} to {:?} — valid transitions from {:?}: {}",
-                    old_state, new_state, old_state,
-                    allowed.join(", ")
-                );
+    // Terminal states (e.g. "closed") are always reachable regardless of rules.
+    let target_is_terminal = config.workflow.states.iter()
+        .find(|s| s.id == new_state)
+        .map(|s| s.terminal)
+        .unwrap_or(false);
+    if !target_is_terminal {
+        if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
+            if !state_cfg.transitions.is_empty() {
+                let allowed: Vec<&str> = state_cfg.transitions.iter().map(|tr| tr.to.as_str()).collect();
+                if !allowed.contains(&new_state.as_str()) {
+                    bail!(
+                        "no transition from {:?} to {:?} — valid transitions from {:?}: {}",
+                        old_state, new_state, old_state,
+                        allowed.join(", ")
+                    );
+                }
             }
         }
     }
+    let now = Utc::now();
+    let actor = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
     t.frontmatter.state = new_state.clone();
-    t.frontmatter.updated = Some(Local::now().date_naive());
+    t.frontmatter.updated_at = Some(now);
     if new_state == "ammend" {
         ensure_amendment_section(&mut t.body);
     }
-    append_history(&mut t.body, &old_state, &new_state);
+    append_history(&mut t.body, &old_state, &new_state, &now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -83,9 +91,8 @@ pub fn ensure_amendment_section(body: &mut String) {
     }
 }
 
-fn append_history(body: &mut String, from: &str, to: &str) {
-    let today = Local::now().format("%Y-%m-%d");
-    let row = format!("| {today} | manual | {from} → {to} | |");
+pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &str) {
+    let row = format!("| {when} | {from} | {to} | {by} |");
     if body.contains("## History") {
         if !body.ends_with('\n') {
             body.push('\n');
@@ -94,7 +101,7 @@ fn append_history(body: &mut String, from: &str, to: &str) {
         body.push('\n');
     } else {
         body.push_str(&format!(
-            "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
+            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
         ));
     }
 }

@@ -1,14 +1,26 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, ticket};
+use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
 pub fn run(root: &Path, id: u32) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = ticket::load_all(&tickets_dir)?;
-    let Some(t) = tickets.iter().find(|t| t.frontmatter.id == id) else {
+
+    let prefix = format!("ticket/{id:04}-");
+    let branches = git::ticket_branches(root)?;
+    let branch = branches.into_iter().find(|b| b.starts_with(&prefix));
+
+    let Some(branch) = branch else {
         bail!("ticket #{id} not found");
     };
+
+    let suffix = branch.trim_start_matches("ticket/");
+    let filename = format!("{suffix}.md");
+    let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
+    let dummy_path = root.join(&rel_path);
+
+    let content = git::read_from_branch(root, &branch, &rel_path)?;
+    let t = ticket::Ticket::parse(&dummy_path, &content)?;
+
     let fm = &t.frontmatter;
     println!("#{} — {}", fm.id, fm.title);
     println!("state:    {}", fm.state);

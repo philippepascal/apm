@@ -1,18 +1,16 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
-use chrono::Local;
+use chrono::Utc;
 use std::path::Path;
-use std::process::Command;
 
 pub fn run(root: &Path, id: u32) -> Result<()> {
     let new_agent = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    let mut tickets = ticket::load_all(&tickets_dir)?;
+    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found — run `apm sync` to refresh");
+        bail!("ticket #{id} not found");
     };
 
     let fm = &t.frontmatter;
@@ -26,24 +24,21 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     }
 
     if old_agent == new_agent {
-        println!("#{id}: already assigned to {new_agent} — nothing to do");
+        // Still ensure worktree exists.
+        let branch = t.frontmatter.branch.clone()
+            .or_else(|| git::branch_name_from_path(&t.path))
+            .unwrap_or_else(|| format!("ticket/{id:04}"));
+        let wt_path = ensure_worktree(root, &config, &branch)?;
+        println!("#{id}: already assigned to {new_agent}");
+        println!("Worktree: {}", wt_path.display());
         return Ok(());
     }
 
+    let now = Utc::now();
     t.frontmatter.agent = Some(new_agent.clone());
-    t.frontmatter.updated = Some(Local::now().date_naive());
-
-    let today = Local::now().format("%Y-%m-%d");
-    let row = format!("| {today} | {new_agent} | handoff {old_agent} → {new_agent} | |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') { t.body.push('\n'); }
-        t.body.push_str(&row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
-        ));
-    }
+    t.frontmatter.updated_at = Some(now);
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    super::state::append_history(&mut t.body, &old_agent, &new_agent, &when, "handoff");
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -58,19 +53,21 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     git::commit_to_branch(root, &branch, &rel_path, &content,
         &format!("ticket({id}): agent handoff {old_agent} → {new_agent}"))?;
 
-    let branch_local = Command::new("git")
-        .args(["rev-parse", "--verify", &format!("refs/heads/{branch}")])
-        .current_dir(root).output().map(|o| o.status.success()).unwrap_or(false);
-
-    if !branch_local {
-        let _ = Command::new("git").args(["fetch", "origin", &branch]).current_dir(root).status();
-    }
-
-    let checkout = Command::new("git").args(["checkout", &branch]).current_dir(root).status()?;
-    if !checkout.success() {
-        bail!("checkout of {branch} failed");
-    }
+    let wt_path = ensure_worktree(root, &config, &branch)?;
 
     println!("#{id}: agent handoff {old_agent} → {new_agent} (branch: {branch})");
+    println!("Worktree: {}", wt_path.display());
     Ok(())
+}
+
+fn ensure_worktree(root: &Path, config: &Config, branch: &str) -> anyhow::Result<std::path::PathBuf> {
+    if let Some(existing) = git::find_worktree_for_branch(root, branch) {
+        return Ok(existing);
+    }
+    let wt_name = branch.replace('/', "-");
+    let worktrees_base = root.join(&config.worktrees.dir);
+    std::fs::create_dir_all(&worktrees_base)?;
+    let wt_path = worktrees_base.join(&wt_name);
+    git::add_worktree(root, &wt_path, branch)?;
+    Ok(wt_path)
 }

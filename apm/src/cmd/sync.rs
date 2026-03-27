@@ -1,12 +1,9 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, ticket::Ticket};
-use chrono::Local;
 use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    std::fs::create_dir_all(&tickets_dir)?;
 
     if !offline {
         match git::fetch_all(root) {
@@ -17,63 +14,39 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
         }
     }
 
-    // Read each ticket/* branch and write to local cache.
+    // Detect merged branches and fire implemented → accepted auto-transition.
     let branches = git::ticket_branches(root)?;
-    let mut updated = 0usize;
+    let merged = git::merged_into_main(root)?;
+    let mut transitioned = 0usize;
 
-    for branch in &branches {
-        // Branch is ticket/0001-my-ticket; file is tickets/0001-my-ticket.md
+    for branch in &merged {
         let suffix = branch.trim_start_matches("ticket/");
         let filename = format!("{suffix}.md");
         let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
 
-        match git::read_from_branch(root, branch, &rel_path) {
-            Ok(content) => {
-                let local_path = tickets_dir.join(&filename);
-                std::fs::write(&local_path, &content)?;
-                updated += 1;
-            }
-            Err(e) => {
-                eprintln!("warning: could not read {branch}: {e:#}");
-            }
-        }
-    }
-
-    // Detect merged branches and fire implemented → accepted auto-transition.
-    let merged = git::merged_into_main(root)?;
-    let mut transitioned = 0usize;
-    for branch in &merged {
-        let suffix = branch.trim_start_matches("ticket/");
-        let filename = format!("{suffix}.md");
-        let local_path = tickets_dir.join(&filename);
-        if !local_path.exists() { continue; }
-        let mut t = match Ticket::load(&local_path) {
+        let content = match git::read_from_branch(root, branch, &rel_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let dummy_path = root.join(&rel_path);
+        let mut t = match Ticket::parse(&dummy_path, &content) {
             Ok(t) => t,
             Err(_) => continue,
         };
         if t.frontmatter.state != "implemented" { continue; }
 
+        let now = chrono::Utc::now();
         t.frontmatter.state = "accepted".into();
-        t.frontmatter.updated = Some(Local::now().date_naive());
-        let today = Local::now().format("%Y-%m-%d");
-        let row = format!("| {today} | sync | implemented → accepted | branch merged |");
-        if t.body.contains("## History") {
-            if !t.body.ends_with('\n') { t.body.push('\n'); }
-            t.body.push_str(&row);
-            t.body.push('\n');
-        } else {
-            t.body.push_str(&format!(
-                "\n## History\n\n| Date | Actor | Transition | Note |\n|------|-------|------------|------|\n{row}\n"
-            ));
-        }
+        t.frontmatter.updated_at = Some(now);
+        let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+        crate::cmd::state::append_history(&mut t.body, "implemented", "accepted", &when, "apm sync");
 
-        let content = match t.serialize() {
+        let updated = match t.serialize() {
             Ok(c) => c,
             Err(e) => { eprintln!("warning: ticket({}) serialize: {e:#}", t.frontmatter.id); continue; }
         };
         let id = t.frontmatter.id;
-        let rel_path = format!("{}/{filename}", config.tickets.dir.to_string_lossy());
-        match git::commit_to_branch(root, "main", &rel_path, &content,
+        match git::commit_to_branch(root, branch, &rel_path, &updated,
             &format!("ticket({id}): implemented → accepted (branch merged)")) {
             Ok(_) => {
                 if !quiet { println!("#{id}: implemented → accepted (branch merged)"); }
@@ -89,9 +62,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
 
     if !quiet {
         println!(
-            "sync: {} ticket branch{} refreshed, {} auto-transitioned",
-            updated,
-            if updated == 1 { "" } else { "es" },
+            "sync: {} ticket branch{} visible, {} auto-transitioned",
+            branches.len(),
+            if branches.len() == 1 { "" } else { "es" },
             transitioned,
         );
     }

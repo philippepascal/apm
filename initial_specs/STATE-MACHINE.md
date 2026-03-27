@@ -35,6 +35,7 @@ Each state has the following properties.
 | `description` | string | no | One-line explanation of what this state means and when a ticket is in it. |
 | `color` | string | no | Hex color for the board column and card. |
 | `terminal` | bool | no | If true, no transitions out. Tickets in terminal states are excluded from board by default. Defaults to false. |
+| `actionable` | []string | no | Which actors can act on tickets in this state. Values: `"agent"`, `"supervisor"`, `"engineer"`, `"any"`. Used by `apm next` (filters for `"agent"`) and `apm list --actionable <actor>`. Defaults to empty (no actor filter). |
 
 ### TOML format
 
@@ -45,6 +46,7 @@ label       = "Question"
 description = "The agent has an open question for the supervisor. Work is paused until answered."
 color       = "#f59e0b"
 terminal    = false
+actionable  = ["supervisor"]
 ```
 
 ---
@@ -316,27 +318,19 @@ After `apm start`, the feature branch is owned by the agent. Supervisors do not 
 
 ---
 
-## 10. `apm sync` and the local cache
+## 10. `apm sync` and branch reads
 
-`apm sync` is the only command that reads from remote branches. All other commands read from the local cache.
+All commands read ticket data directly from git branch blobs via `git show <branch>:<rel-path>`. There is no local filesystem cache and no SQLite index.
 
 ```
-Cache location:   tickets/   (local filesystem, gitignored)
-Cache format:     One ticket .md file per ticket (same format as branch files)
-SQLite index:     .apm/cache.db (gitignored)
+git show ticket/0018-apm-init-config:tickets/0018-apm-init-config.md
 ```
 
-After `apm sync`:
-- `apm list` reads `tickets/*.md` from disk — instant
-- `apm next` scores tickets from the SQLite index — instant
-- `apm show N` reads `tickets/<id>-<slug>.md` from disk — instant
+If the local branch ref is absent (e.g., a branch only seen on the remote), the fallback is `origin/<branch>`.
 
-`apm state`, `apm set`, `apm spec` write to:
-1. The in-memory ticket struct
-2. The local cache (`tickets/<id>-<slug>.md`)
-3. The ticket's branch (commit + push)
+`apm sync` runs `git fetch --all` to update remote refs, then detects merged branches and fires auto-transitions. After `apm sync`, all commands see the latest state.
 
-If the push fails (e.g., network down), the local cache is still updated and the operation succeeds locally. `apm sync` will push the pending commit on the next run.
+`apm state`, `apm set`, and similar write commands commit directly to the ticket's branch — using the permanent worktree if one exists, or a temporary worktree otherwise. No filesystem cache is maintained.
 
 ---
 
@@ -346,17 +340,18 @@ This is the canonical state machine for AI-assisted development using the ticker
 
 ### States
 
-| id | label | description | terminal |
-|----|-------|-------------|----------|
-| `new` | New | Ticket created. No spec yet. Waiting to be picked up or assigned. | false |
-| `question` | Question | Agent has an open question for the supervisor. Work is paused. | false |
-| `specd` | Specd | Agent has written a complete spec. Waiting for supervisor review. | false |
-| `ammend` | Ammend | Supervisor has requested spec changes. Agent is revising. | false |
-| `ready` | Ready | Spec approved. Waiting for agent to begin implementation. | false |
-| `in_progress` | In Progress | Implementation underway. Agent has a feature branch. | false |
-| `implemented` | Implemented | PR is open. Waiting for review. | false |
-| `accepted` | Accepted | PR merged. Waiting for supervisor to confirm and close. | false |
-| `closed` | Closed | Done. | true |
+| id | label | description | terminal | actionable |
+|----|-------|-------------|----------|------------|
+| `new` | New | Ticket created. No spec yet. Waiting to be picked up or assigned. | false | `["agent"]` |
+| `question` | Question | Agent has an open question for the supervisor. Work is paused. | false | `["supervisor"]` |
+| `specd` | Specd | Agent has written a complete spec. Waiting for supervisor review. | false | `["supervisor"]` |
+| `ammend` | Ammend | Supervisor has requested spec changes. Agent is revising. | false | `["agent"]` |
+| `ready` | Ready | Spec approved. Waiting for agent to begin implementation. | false | `["agent"]` |
+| `in_progress` | In Progress | Implementation underway. Agent has a feature branch. | false | `[]` |
+| `blocked` | Blocked | Agent hit a blocker during implementation. Questions written in Open questions. Supervisor must unblock. | false | `["supervisor"]` |
+| `implemented` | Implemented | PR is open. Waiting for review. | false | `["supervisor"]` |
+| `accepted` | Accepted | PR merged. Waiting for supervisor to confirm and close. | false | `["supervisor"]` |
+| `closed` | Closed | Done. | true | `[]` |
 
 ### Branch phases
 

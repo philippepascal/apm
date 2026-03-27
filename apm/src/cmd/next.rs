@@ -4,9 +4,8 @@ use std::path::Path;
 
 pub fn run(root: &Path, json: bool) -> Result<()> {
     let config = Config::load(root)?;
-    let tickets_dir = root.join(&config.tickets.dir);
-    let tickets = ticket::load_all(&tickets_dir)?;
-    let actionable = &config.agents.actionable_states;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let actionable = config.actionable_states_for("agent");
     let pw = config.workflow.prioritization.priority_weight;
     let ew = config.workflow.prioritization.effort_weight;
     let rw = config.workflow.prioritization.risk_weight;
@@ -15,7 +14,7 @@ pub fn run(root: &Path, json: bool) -> Result<()> {
         .iter()
         .filter(|t| {
             let fm = &t.frontmatter;
-            actionable.contains(&fm.state) && fm.agent.is_none()
+            actionable.contains(&fm.state.as_str()) && fm.agent.is_none()
         })
         .collect();
 
