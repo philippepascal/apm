@@ -40,8 +40,65 @@ impl Env {
             src_dir.join("main.rs"),
         ).unwrap();
 
-        // Commit source files to main before apm init.
-        git_ok(p, &["add", "src/"]);
+        // Write apm.toml before init so worktrees dir stays inside the tempdir.
+        std::fs::write(p.join("apm.toml"), r#"[project]
+name = "test-repo"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = ".worktrees"
+
+[agents]
+max_concurrent = 3
+actionable_states = ["new", "ammend", "ready"]
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states]]
+id    = "question"
+label = "Question"
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id    = "ammend"
+label = "Ammend"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "accepted"
+label = "Accepted"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#).unwrap();
+
+        // Commit source files and apm.toml to main before apm init.
+        git_ok(p, &["add", "src/", "apm.toml"]);
         git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "Add source files"]);
 
         // apm init (--no-claude skips the interactive settings.json prompt).
@@ -285,9 +342,7 @@ immediately. Update the existing tests to cover the single-item case.
     );
 
     // ── Step 4: apm state new → specd ───────────────────────────────────────
-    // Before apm state can read the ticket, sync it to the working tree.
-
-    git_ok(env.root(), &["checkout", branch, "--", ticket_path]);
+    // apm state reads from git blobs — no working-tree prep needed.
 
     let out = env.apm_as("test-agent", &["state", "1", "specd"]);
     assert!(out.status.success(), "apm state specd failed:\n{}", stderr(&out));
@@ -300,8 +355,6 @@ immediately. Update the existing tests to cover the single-item case.
 
     // ── Step 5: supervisor approves — apm state specd → ready ───────────────
 
-    git_ok(env.root(), &["checkout", branch, "--", ticket_path]);
-
     let out = env.apm_as("philippe", &["state", "1", "ready"]);
     assert!(out.status.success(), "apm state ready failed:\n{}", stderr(&out));
 
@@ -310,24 +363,32 @@ immediately. Update the existing tests to cover the single-item case.
     assert!(ticket.contains("| specd | ready |"), "history row missing");
 
     // ── Step 6: agent claims ticket — apm start ──────────────────────────────
-    // apm start transitions ready → in_progress, sets agent, checks out branch.
-
-    git_ok(env.root(), &["checkout", branch, "--", ticket_path]);
+    // apm start transitions ready → in_progress, sets agent, provisions worktree.
 
     let out = env.apm_as("test-agent", &["start", "1"]);
     assert!(out.status.success(), "apm start failed:\n{}", stderr(&out));
-    assert!(stdout(&out).contains("in_progress"), "unexpected output: {}", stdout(&out));
+    let start_out = stdout(&out);
+    assert!(start_out.contains("in_progress"), "unexpected output: {}", start_out);
+    assert!(start_out.contains("Worktree:"), "worktree path missing from output: {}", start_out);
 
-    // We're now on the ticket branch.
-    assert_eq!(env.current_branch(), branch, "apm start did not check out ticket branch");
+    // Main worktree is still on main — agent works in the provisioned worktree.
+    assert_eq!(env.current_branch(), "main", "main worktree should stay on main");
 
     let ticket = env.branch_content(branch, ticket_path);
     assert!(ticket.contains("state = \"in_progress\""), "state not in_progress");
     assert!(ticket.contains("agent = \"test-agent\""), "agent not set");
     assert!(ticket.contains("| ready | in_progress |"), "history row missing");
 
+    // Parse the worktree path from the output line "Worktree: /path/to/wt"
+    let wt_path = start_out
+        .lines()
+        .find(|l| l.starts_with("Worktree:"))
+        .and_then(|l| l.strip_prefix("Worktree:"))
+        .map(|s| std::path::PathBuf::from(s.trim()))
+        .expect("could not parse worktree path from apm start output");
+
     // ── Step 7: agent fixes the bug ──────────────────────────────────────────
-    // Edit src/parser.rs on the ticket branch and commit.
+    // Work in the worktree (the agent's checkout of the ticket branch).
 
     let fixed = r#"/// Parse a comma-separated list and return the item count.
 pub fn parse_count(input: &str) -> usize {
@@ -361,9 +422,10 @@ mod tests {
     }
 }
 "#;
-    env.write("src/parser.rs", fixed);
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "add", "src/parser.rs"]);
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): fix parse_count off-by-one"]);
+    std::fs::create_dir_all(wt_path.join("src")).unwrap();
+    std::fs::write(wt_path.join("src/parser.rs"), fixed).unwrap();
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", "src/parser.rs"]);
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): fix parse_count off-by-one"]);
 
     // Code fix commit is on the ticket branch.
     let branch_commits = env.commits_on_branch(branch, "main");
@@ -372,22 +434,23 @@ mod tests {
         "code fix commit not found on ticket branch"
     );
 
-    // Fixed file is in the working tree.
-    let src = env.read("src/parser.rs");
+    // Fixed file is in the worktree.
+    let src = std::fs::read_to_string(wt_path.join("src/parser.rs")).unwrap();
     assert!(!src.contains("- 1"), "bug still present in fixed file");
     assert!(src.contains("if input.is_empty()"), "empty guard missing");
 
     // ── Step 8: agent checks acceptance criteria boxes ───────────────────────
+    // Work in the worktree.
 
-    let ticket_content = env.read(ticket_path);
+    let ticket_content = std::fs::read_to_string(wt_path.join(ticket_path)).unwrap();
     let checked = ticket_content
         .replace("- [ ] `parse_count(\"\")` returns 0 without panicking", "- [x] `parse_count(\"\")` returns 0 without panicking")
         .replace("- [ ] `parse_count(\"a\")` returns 1", "- [x] `parse_count(\"a\")` returns 1")
         .replace("- [ ] `parse_count(\"a,b,c\")` returns 3", "- [x] `parse_count(\"a,b,c\")` returns 3")
         .replace("- [ ] Existing `parse_items` behaviour is unchanged", "- [x] Existing `parse_items` behaviour is unchanged");
-    env.write(ticket_path, &checked);
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "add", ticket_path]);
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): check acceptance criteria"]);
+    std::fs::write(wt_path.join(ticket_path), &checked).unwrap();
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", ticket_path]);
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): check acceptance criteria"]);
 
     // All boxes checked.
     let ticket = env.branch_content(branch, ticket_path);
@@ -419,10 +482,8 @@ mod tests {
     assert!(src.contains("if input.is_empty()"), "fix not in main after merge");
 
     // ── Step 11: apm sync detects merged branch → accepted ──────────────────
-    // --offline skips the remote fetch/push; --quiet suppresses progress output.
-
-    // First sync the working-tree cache so sync can read the ticket.
-    git_ok(env.root(), &["checkout", branch, "--", ticket_path]);
+    // --offline skips the remote fetch/push.
+    // sync reads tickets from git blobs directly — no working-tree prep needed.
 
     let out = env.apm(&["sync", "--offline"]);
     assert!(out.status.success(), "apm sync failed:\n{}", stderr(&out));
@@ -432,10 +493,10 @@ mod tests {
         stdout(&out)
     );
 
-    // Local cache now has state = accepted.
-    let cached = env.read(ticket_path);
-    assert!(cached.contains("state = \"accepted\""), "local cache not updated to accepted");
-    assert!(cached.contains("| implemented | accepted |"), "history row missing in cache");
+    // Ticket on main now has state = accepted (committed by sync).
+    let accepted = env.branch_content("main", ticket_path);
+    assert!(accepted.contains("state = \"accepted\""), "main branch ticket not updated to accepted");
+    assert!(accepted.contains("| implemented | accepted |"), "history row missing");
 }
 
 // ---------------------------------------------------------------------------
@@ -499,19 +560,13 @@ terminal = true
     git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    // Create a ticket and sync it to the working tree.
+    // Create a ticket (apm state reads from git blobs — no working-tree prep needed).
     let out = apm_env(p, "test-agent", &["new", "Enforcement test"]);
     assert!(out.status.success());
-
-    let branch = "ticket/0001-enforcement-test";
-    let ticket_path = "tickets/0001-enforcement-test.md";
-    git_ok(p, &["checkout", branch, "--", ticket_path]);
 
     // new → specd is allowed.
     let out = apm_env(p, "test-agent", &["state", "1", "specd"]);
     assert!(out.status.success(), "new → specd should be allowed:\n{}", stderr(&out));
-
-    git_ok(p, &["checkout", branch, "--", ticket_path]);
 
     // specd → new is NOT allowed (no such transition defined, and new is not terminal).
     let out = apm_env(p, "test-agent", &["state", "1", "new"]);
@@ -522,16 +577,15 @@ terminal = true
     assert!(err.contains("new"), "error should mention target state");
 
     // Terminal states are always reachable regardless of transition rules.
-    git_ok(p, &["checkout", branch, "--", ticket_path]);
     let out = apm_env(p, "test-agent", &["state", "1", "closed"]);
     assert!(out.status.success(), "specd → closed should be allowed (terminal state)");
 
-    // specd → ready is also allowed by the defined transition.
-    git_ok(p, &["checkout", branch, "--", ticket_path]);
-    let out = apm_env(p, "test-agent", &["state", "1", "specd"]);
+    // new → specd → ready via defined transitions (need a fresh ticket since #1 is now closed).
+    let out = apm_env(p, "test-agent", &["new", "Second enforcement test"]);
+    assert!(out.status.success());
+    let out = apm_env(p, "test-agent", &["state", "2", "specd"]);
     assert!(out.status.success(), "new → specd should be allowed");
-    git_ok(p, &["checkout", branch, "--", ticket_path]);
-    let out = apm_env(p, "test-agent", &["state", "1", "ready"]);
+    let out = apm_env(p, "test-agent", &["state", "2", "ready"]);
     assert!(out.status.success(), "specd → ready should be allowed");
 }
 
@@ -551,32 +605,10 @@ fn next_respects_priority_and_actionable_states() {
     let out = env.apm_as("test-agent", &["new", "Medium priority task"]);
     assert!(out.status.success());
 
-    // Sync all three to working tree.
-    for (id, slug) in &[
-        ("0001", "low-priority-task"),
-        ("0002", "high-priority-task"),
-        ("0003", "medium-priority-task"),
-    ] {
-        let branch = format!("ticket/{id}-{slug}");
-        let path = format!("tickets/{id}-{slug}.md");
-        git_ok(env.root(), &["checkout", &branch, "--", &path]);
-    }
-
-    // Set priorities.
+    // Set priorities (apm set/next/state read from git blobs — no working-tree prep needed).
     env.apm(&["set", "1", "priority", "1"]);
     env.apm(&["set", "2", "priority", "9"]);
     env.apm(&["set", "3", "priority", "5"]);
-
-    // Sync updated frontmatter.
-    for (id, slug) in &[
-        ("0001", "low-priority-task"),
-        ("0002", "high-priority-task"),
-        ("0003", "medium-priority-task"),
-    ] {
-        let branch = format!("ticket/{id}-{slug}");
-        let path = format!("tickets/{id}-{slug}.md");
-        git_ok(env.root(), &["checkout", &branch, "--", &path]);
-    }
 
     // apm next --json should return the highest-priority actionable ticket.
     let out = env.apm(&["next", "--json"]);
@@ -585,9 +617,7 @@ fn next_respects_priority_and_actionable_states() {
     assert!(json.contains("\"id\":2") || json.contains("\"id\": 2"), "expected ticket #2 (highest priority), got: {json}");
 
     // Move #2 to specd (not actionable) — next should now return #3.
-    git_ok(env.root(), &["checkout", "ticket/0002-high-priority-task", "--", "tickets/0002-high-priority-task.md"]);
     env.apm(&["state", "2", "specd"]);
-    git_ok(env.root(), &["checkout", "ticket/0002-high-priority-task", "--", "tickets/0002-high-priority-task.md"]);
 
     let out = env.apm(&["next", "--json"]);
     assert!(out.status.success());

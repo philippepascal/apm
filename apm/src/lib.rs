@@ -12,6 +12,7 @@ pub mod cmd {
     pub mod set;
     pub mod next;
     pub mod sync;
+    pub mod worktrees;
 }
 
 pub use crate::cmd::*;

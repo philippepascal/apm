@@ -59,6 +59,12 @@ enum Command {
     },
     /// Take over a ticket from another agent
     Take { id: u32 },
+    /// List or remove permanent git worktrees
+    Worktrees {
+        /// Remove the worktree for the given ticket ID
+        #[arg(long, value_name = "ID")]
+        remove: Option<u32>,
+    },
     /// Check ticket and cache integrity
     Verify {
         /// Auto-fix issues where possible
@@ -97,6 +103,7 @@ fn main() -> Result<()> {
         Command::Start { id } => cmd::start::run(&root, id),
         Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
         Command::Take { id } => cmd::take::run(&root, id),
+        Command::Worktrees { remove } => cmd::worktrees::run(&root, remove),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
         Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),

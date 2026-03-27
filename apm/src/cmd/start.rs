@@ -2,7 +2,6 @@ use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
-use std::process::Command;
 
 pub fn run(root: &Path, id: u32) -> Result<()> {
     let agent_name = std::env::var("APM_AGENT_NAME")
@@ -16,7 +15,7 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
 
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found — run `apm sync` to refresh");
+        bail!("ticket #{id} not found");
     };
 
     let fm = &t.frontmatter;
@@ -54,38 +53,21 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → in_progress"))?;
 
-    // Ensure branch is present locally before checking out.
-    let branch_local = Command::new("git")
-        .args(["rev-parse", "--verify", &format!("refs/heads/{branch}")])
-        .current_dir(root)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    // Provision permanent worktree.
+    // Worktree dir name: ticket-<id>-<slug> (branch name with / replaced by -)
+    let wt_name = branch.replace('/', "-");
+    let worktrees_base = root.join(&config.worktrees.dir);
+    std::fs::create_dir_all(&worktrees_base)?;
+    let wt_path = worktrees_base.join(&wt_name);
 
-    if !branch_local {
-        let _ = Command::new("git")
-            .args(["fetch", "origin", &branch])
-            .current_dir(root)
-            .status();
+    if git::find_worktree_for_branch(root, &branch).is_none() {
+        git::add_worktree(root, &wt_path, &branch)?;
     }
 
-    // The ticket file may be in the working tree with an older state (e.g. the
-    // supervisor checked it out to read the spec). Reset it to the branch HEAD
-    // so the full checkout below doesn't see "local changes".
-    let _ = Command::new("git")
-        .args(["checkout", &branch, "--", &rel_path])
-        .current_dir(root)
-        .status();
-
-    let checkout = Command::new("git")
-        .args(["checkout", &branch])
-        .current_dir(root)
-        .status()?;
-
-    if !checkout.success() {
-        bail!("checkout of {branch} failed");
-    }
+    let wt_display = git::find_worktree_for_branch(root, &branch)
+        .unwrap_or(wt_path);
 
     println!("#{id}: {old_state} → in_progress (agent: {agent_name}, branch: {branch})");
+    println!("Worktree: {}", wt_display.display());
     Ok(())
 }

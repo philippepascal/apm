@@ -11,6 +11,8 @@ pub struct Config {
     pub workflow: WorkflowConfig,
     #[serde(default)]
     pub agents: AgentsConfig,
+    #[serde(default)]
+    pub worktrees: WorktreesConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +95,17 @@ pub struct AgentsConfig {
 fn default_max_concurrent() -> usize { 3 }
 fn default_actionable_states() -> Vec<String> {
     vec!["new".into(), "ammend".into(), "ready".into()]
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorktreesConfig {
+    pub dir: PathBuf,
+}
+
+impl Default for WorktreesConfig {
+    fn default() -> Self {
+        Self { dir: PathBuf::from("../worktrees") }
+    }
 }
 
 impl Default for AgentsConfig {

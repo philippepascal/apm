@@ -4,7 +4,9 @@ description = "Git-native, agent-first project management tool"
 
 [tickets]
 dir = "tickets"
-layer_boundary = "in_progress"
+
+[worktrees]
+dir = "../apm--worktrees"
 
 [[repos.code]]
 path = "philippepascal/apm"

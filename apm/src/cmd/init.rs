@@ -33,6 +33,7 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     update_claude_settings(root, no_claude)?;
     maybe_initial_commit(root)?;
     maybe_create_meta_branch(root)?;
+    ensure_worktrees_dir(root)?;
     println!("apm initialized.");
     Ok(())
 }
@@ -65,6 +66,9 @@ name = "{name}"
 
 [tickets]
 dir = "tickets"
+
+[worktrees]
+dir = "../{name}--worktrees"
 
 [agents]
 max_concurrent = 3
@@ -257,6 +261,18 @@ fn write_hooks(git_dir: &PathBuf) -> Result<()> {
     std::fs::set_permissions(&post_merge, std::fs::Permissions::from_mode(0o755))?;
 
     println!("Installed git hooks (pre-push, post-merge).");
+    Ok(())
+}
+
+/// Create the worktrees directory specified in apm.toml (if the config exists).
+fn ensure_worktrees_dir(root: &Path) -> Result<()> {
+    if let Ok(config) = apm_core::config::Config::load(root) {
+        let wt_dir = root.join(&config.worktrees.dir);
+        if !wt_dir.exists() {
+            std::fs::create_dir_all(&wt_dir)?;
+            println!("Created worktrees dir: {}", wt_dir.display());
+        }
+    }
     Ok(())
 }
 
