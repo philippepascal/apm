@@ -109,10 +109,21 @@ label      = "Ready"
 color      = "#10b981"
 actionable = ["agent"]
 
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+  actor   = "agent"
+
 [[workflow.states]]
 id    = "in_progress"
 label = "In Progress"
 color = "#8b5cf6"
+
+[[workflow.states]]
+id         = "blocked"
+label      = "Blocked"
+color      = "#dc2626"
+actionable = ["supervisor"]
 
 [[workflow.states]]
 id         = "implemented"

@@ -77,11 +77,19 @@ The ticket's state determines what to do next:
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
+   - Check `## History`: if the ticket was previously `in_progress`, a worktree
+     and partial work already exist on the branch — pick up from there
 2. `apm start <id>` — claims the ticket (sets `agent` = your name, state →
-   `in_progress`), checks out the ticket branch `ticket/<id>-<slug>`
-3. Commit all spec edits and code changes to the ticket branch
+   `in_progress`), provisions or reuses the permanent worktree
+3. Commit all code changes to the ticket branch inside the worktree
 4. Update `## Spec` if the approach evolves during implementation
 5. Open a PR targeting `main`; then `apm state <id> implemented`
+
+**state = `blocked`** — implementation is blocked on a supervisor decision:
+1. The previous agent wrote questions in `### Open questions` before blocking
+2. Wait — this state is actionable by supervisor only
+3. Once the supervisor transitions to `ready`, pick it up with `apm start <id>`
+   and continue from the existing worktree/branch
 
 ## Taking over another agent's ticket
 
