@@ -26,10 +26,12 @@ pub fn fetch_all(root: &Path) -> Result<()> {
     run(root, &["fetch", "--all", "--quiet"]).map(|_| ())
 }
 
-/// Read a file's content from a remote branch ref without changing working tree.
+/// Read a file's content from a branch ref without changing working tree.
+/// Prefers the local ref (reflects recent commits before push);
+/// falls back to origin when no local ref exists.
 pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<String> {
-    run(root, &["show", &format!("origin/{branch}:{rel_path}")])
-        .or_else(|_| run(root, &["show", &format!("{branch}:{rel_path}")]))
+    run(root, &["show", &format!("{branch}:{rel_path}")])
+        .or_else(|_| run(root, &["show", &format!("origin/{branch}:{rel_path}")]))
 }
 
 /// All ticket/* branch names visible locally or remotely (deduplicated).
@@ -197,8 +199,7 @@ pub fn commit_to_branch(
         return Ok(());
     }
 
-    let _ = try_worktree_commit(root, branch, rel_path, content, message);
-    Ok(())
+    try_worktree_commit(root, branch, rel_path, content, message)
 }
 
 fn try_worktree_commit(

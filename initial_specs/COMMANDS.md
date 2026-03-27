@@ -136,8 +136,10 @@ time. It is created later by `apm start`.
 
 **Purpose:** Show tickets, filtered by state and agent.
 
-**Flags:** `--all` (include terminal states), `--state <s>`, `--working`
-(only tickets assigned to current agent).
+**Flags:** `--all` (include terminal states), `--state <s>`, `--unassigned`
+(only tickets with no agent), `--supervisor <name>`, `--actionable <actor>`
+(only tickets where the state's `actionable` list includes `<actor>` or `"any"`;
+values: `agent`, `supervisor`, `engineer`).
 
 **Git operations:**
 - `git branch --list ticket/*` + `git branch -r --list origin/ticket/*` — enumerate branches
@@ -172,15 +174,17 @@ consistency with what is committed).
 
 ## `apm next`
 
-**Purpose:** Find and print the highest-priority actionable ticket that has
-no assigned agent.
+**Purpose:** Find and print the highest-priority ticket that has no assigned
+agent and is in a state where `actionable` includes `"agent"`. Scores
+candidates using `priority_weight`, `effort_weight`, and `risk_weight`.
+
+**Flags:** `--json` (output as JSON object or `null`).
 
 **Git operations:** Same as `apm list` (enumerates and reads all branches).
 
 **File operations:** None.
 
-**Worktree effect:** None. Output format same as `apm show` for the selected
-ticket.
+**Worktree effect:** None.
 
 ---
 
@@ -229,8 +233,8 @@ tickets the commit targets `main`, not the ticket branch.
 set `agent` and confirm `branch` in frontmatter, and provision a permanent
 git worktree for the ticket branch.
 
-**Preconditions:** Ticket must be in an actionable state (`new`, `ammend`,
-`ready` by default) and have no current agent.
+**Preconditions:** Ticket must be in a state whose `actionable` list includes
+`"agent"` (by default: `new`, `ammend`, `ready`) and have no current agent.
 
 **Git operations:**
 1. Enumerate branches + read all tickets

@@ -72,7 +72,6 @@ dir = "../{name}--worktrees"
 
 [agents]
 max_concurrent = 3
-actionable_states = ["new", "ammend", "ready"]
 instructions = "apm.agents.md"
 
 [workflow.prioritization]
@@ -81,29 +80,34 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id    = "new"
-label = "New"
-color = "#6b7280"
+id         = "new"
+label      = "New"
+color      = "#6b7280"
+actionable = ["agent"]
 
 [[workflow.states]]
-id    = "question"
-label = "Question"
-color = "#f59e0b"
+id         = "question"
+label      = "Question"
+color      = "#f59e0b"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "specd"
-label = "Specd"
-color = "#3b82f6"
+id         = "specd"
+label      = "Specd"
+color      = "#3b82f6"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
-color = "#ef4444"
+id         = "ammend"
+label      = "Ammend"
+color      = "#ef4444"
+actionable = ["agent"]
 
 [[workflow.states]]
-id    = "ready"
-label = "Ready"
-color = "#10b981"
+id         = "ready"
+label      = "Ready"
+color      = "#10b981"
+actionable = ["agent"]
 
 [[workflow.states]]
 id    = "in_progress"
@@ -111,14 +115,16 @@ label = "In Progress"
 color = "#8b5cf6"
 
 [[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-color = "#06b6d4"
+id         = "implemented"
+label      = "Implemented"
+color      = "#06b6d4"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "accepted"
-label = "Accepted"
-color = "#84cc16"
+id         = "accepted"
+label      = "Accepted"
+color      = "#84cc16"
+actionable = ["supervisor"]
 
 [[workflow.states]]
 id       = "closed"

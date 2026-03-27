@@ -28,6 +28,9 @@ enum Command {
         all: bool,
         #[arg(long)]
         supervisor: Option<String>,
+        /// Show only tickets actionable by this actor (agent, supervisor, engineer)
+        #[arg(long, value_name = "ACTOR")]
+        actionable: Option<String>,
     },
     /// Show a ticket
     Show { id: u32 },
@@ -101,7 +104,7 @@ fn main() -> Result<()> {
     let root = repo_root()?;
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
-        Command::List { state, unassigned, all, supervisor } => cmd::list::run(&root, state, unassigned, all, supervisor),
+        Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id } => cmd::show::run(&root, id),
         Command::New { title } => cmd::new::run(&root, title),
         Command::State { id, state } => cmd::state::run(&root, id, state),

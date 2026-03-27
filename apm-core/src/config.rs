@@ -53,6 +53,11 @@ pub struct StateConfig {
     pub terminal: bool,
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
+    /// Who can actively pick up / act on tickets in this state.
+    /// Values: "agent", "supervisor", "engineer", "any".
+    /// Drives `apm next`, `apm start`, and `apm list --actionable`.
+    #[serde(default)]
+    pub actionable: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -92,16 +97,11 @@ fn default_risk_weight() -> f64 { -1.0 }
 pub struct AgentsConfig {
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
-    #[serde(default = "default_actionable_states")]
-    pub actionable_states: Vec<String>,
     #[serde(default)]
     pub instructions: Option<PathBuf>,
 }
 
 fn default_max_concurrent() -> usize { 3 }
-fn default_actionable_states() -> Vec<String> {
-    vec!["new".into(), "ammend".into(), "ready".into()]
-}
 
 #[derive(Debug, Deserialize)]
 pub struct WorktreesConfig {
@@ -118,13 +118,21 @@ impl Default for AgentsConfig {
     fn default() -> Self {
         Self {
             max_concurrent: default_max_concurrent(),
-            actionable_states: default_actionable_states(),
             instructions: None,
         }
     }
 }
 
 impl Config {
+    /// States where `actor` can actively pick up / act on tickets.
+    /// Matches "any" as a wildcard in addition to the literal actor name.
+    pub fn actionable_states_for<'a>(&'a self, actor: &str) -> Vec<&'a str> {
+        self.workflow.states.iter()
+            .filter(|s| s.actionable.iter().any(|a| a == actor || a == "any"))
+            .map(|s| s.id.as_str())
+            .collect()
+    }
+
     pub fn load(repo_root: &Path) -> Result<Self> {
         let path = repo_root.join("apm.toml");
         let contents = std::fs::read_to_string(&path)

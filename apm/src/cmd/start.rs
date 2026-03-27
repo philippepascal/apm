@@ -8,10 +8,7 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
-    let actionable: std::collections::HashSet<&str> = config.agents.actionable_states
-        .iter()
-        .map(|s| s.as_str())
-        .collect();
+    let actionable = config.actionable_states_for("agent");
 
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
@@ -22,11 +19,12 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     if fm.agent.is_some() {
         bail!("ticket already claimed — run `apm next`");
     }
-    if !actionable.contains(fm.state.as_str()) {
+    if !actionable.contains(&fm.state.as_str()) {
         bail!(
-            "ticket #{id} is in state {:?} — must be one of: {}",
+            "ticket #{id} is in state {:?} — not agent-actionable\n\
+             Agent-actionable states: {}",
             fm.state,
-            config.agents.actionable_states.join(", ")
+            if actionable.is_empty() { "(none configured)".to_string() } else { actionable.join(", ") }
         );
     }
 

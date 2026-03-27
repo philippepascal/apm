@@ -22,10 +22,11 @@ webhook_secret_env = "APM_WEBHOOK_SECRET"
 terminal_states = ["closed"]
 
 [[workflow.states]]
-id    = "new"
-label = "New"
-color = "#6b7280"
-layer = 1
+id         = "new"
+label      = "New"
+color      = "#6b7280"
+layer      = 1
+actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -39,10 +40,11 @@ layer = 1
   actor   = "agent"
 
 [[workflow.states]]
-id    = "question"
-label = "Question"
-color = "#f59e0b"
-layer = 1
+id         = "question"
+label      = "Question"
+color      = "#f59e0b"
+layer      = 1
+actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
   to      = "new"
@@ -56,10 +58,11 @@ layer = 1
   preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
 
 [[workflow.states]]
-id    = "specd"
-label = "Specd"
-color = "#3b82f6"
-layer = 1
+id         = "specd"
+label      = "Specd"
+color      = "#3b82f6"
+layer      = 1
+actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
   to      = "ready"
@@ -72,10 +75,11 @@ layer = 1
   actor   = "supervisor"
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
-color = "#ef4444"
-layer = 1
+id         = "ammend"
+label      = "Ammend"
+color      = "#ef4444"
+layer      = 1
+actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -89,10 +93,11 @@ layer = 1
   actor   = "agent"
 
 [[workflow.states]]
-id    = "ready"
-label = "Ready"
-color = "#10b981"
-layer = 1
+id         = "ready"
+label      = "Ready"
+color      = "#10b981"
+layer      = 1
+actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -118,10 +123,11 @@ layer = 2
   side_effects = ["set_agent_null", "set_branch_null"]
 
 [[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-color = "#06b6d4"
-layer = 2
+id         = "implemented"
+label      = "Implemented"
+color      = "#06b6d4"
+layer      = 2
+actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
   to            = "accepted"
@@ -135,10 +141,11 @@ layer = 2
   actor   = "any"
 
 [[workflow.states]]
-id    = "accepted"
-label = "Accepted"
-color = "#84cc16"
-layer = 2
+id         = "accepted"
+label      = "Accepted"
+color      = "#84cc16"
+layer      = 2
+actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -178,6 +185,5 @@ effort_weight   = -2.0
 risk_weight     = -1.0
 
 [agents]
-instructions      = "apm.agents.md"
-max_concurrent    = 3
-actionable_states = ["new", "ammend", "ready"]
+instructions   = "apm.agents.md"
+max_concurrent = 3
