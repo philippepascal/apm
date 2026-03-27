@@ -4,11 +4,11 @@ title = "Add blocked state: agent signals implementation blocker, supervisor unb
 state = "new"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0326-2222-8071"
 branch = "ticket/0030-add-blocked-state-agent-signals-implemen"
 created_at = "2026-03-27T06:15:12.087284Z"
-updated_at = "2026-03-27T06:15:16.783945Z"
+updated_at = "2026-03-27T06:15:17.077441Z"
 +++
 
 ## Spec
