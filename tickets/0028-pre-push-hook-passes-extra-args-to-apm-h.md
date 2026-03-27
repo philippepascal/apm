@@ -15,11 +15,30 @@ updated_at = "2026-03-27T06:21:16.270625Z"
 
 ### Problem
 
+The `.git/hooks/pre-push` script installed by `apm init` passes `"$@"` to
+`apm _hook pre-push`. Git calls the pre-push hook as `pre-push <remote> <url>`,
+so the shell expands to `apm _hook pre-push origin https://...`. Clap sees
+`pre-push` as the hook name and then `origin` as an unexpected positional
+argument, printing an error. The `|| true` in the script masks the failure so
+the push succeeds, but the hook does nothing — first-push auto-transitions
+(`ready → in_progress`) never fire.
+
 ### Acceptance criteria
+
+- [ ] No clap error printed to stderr during `git push` on any ticket branch
+- [ ] `apm _hook pre-push` executes successfully when called as `apm _hook pre-push origin https://...`
+- [ ] The pre-push hook script installed by `apm init` is updated to the correct invocation
 
 ### Out of scope
 
+- Changing what the hook does beyond fixing the invocation
+- Other git hooks (post-merge is unaffected)
+
 ### Approach
+
+Drop `"$@"` from the hook script — the remote name and URL are not used by
+`apm _hook`. The hook reads pushed ref info from stdin, not from argv. Update
+the hook template string in `cmd/init.rs` `write_hooks()`.
 
 ## History
 
