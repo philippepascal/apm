@@ -66,6 +66,12 @@ pub struct TransitionConfig {
     pub preconditions: Vec<String>,
     #[serde(default)]
     pub side_effects: Vec<String>,
+    /// Short label shown in the review prompt (e.g. "Approve for implementation")
+    #[serde(default)]
+    pub label: String,
+    /// Guidance shown in the editor header (e.g. "Add requests in ### Amendment requests")
+    #[serde(default)]
+    pub hint: String,
 }
 
 #[derive(Debug, Deserialize, Default)]
