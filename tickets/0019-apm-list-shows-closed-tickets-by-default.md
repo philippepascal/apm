@@ -1,12 +1,13 @@
 +++
 id = 19
 title = "apm list shows closed tickets by default"
-state = "ready"
+state = "in_progress"
 priority = 7
 effort = 2
 risk = 1
+agent = "claude-0326-2222-8071"
 branch = "ticket/0019-apm-list-shows-closed-tickets-by-default"
-updated_at = "2026-03-27T04:09:56.205509Z"
+updated_at = "2026-03-27T05:30:51.646787Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ unless `--all` is passed. Add `--all: bool` to the `List` variant in `main.rs`.
 |------|-------|------------|------|
 | 2026-03-26 | manual | new → specd | |
 | 2026-03-27T04:09Z | specd | ready | apm |
+| 2026-03-27T05:30Z | ready | in_progress | claude-0326-2222-8071 |
