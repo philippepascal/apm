@@ -31,12 +31,39 @@ dir = "tickets"
 
 [agents]
 max_concurrent = 3
-actionable_states = ["new", "ammend", "ready"]
 
 [workflow.prioritization]
 priority_weight = 10.0
 effort_weight = -2.0
 risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
 "#,
     )
     .unwrap();
@@ -142,7 +169,7 @@ fn list_shows_all_tickets() {
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
-    apm::cmd::list::run(dir.path(), None, false, false, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, None).unwrap();
 }
 
 #[test]
@@ -155,7 +182,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None).unwrap();
 }
 
 // --- show ---

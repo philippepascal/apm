@@ -52,7 +52,6 @@ dir = ".worktrees"
 
 [agents]
 max_concurrent = 3
-actionable_states = ["new", "ammend", "ready"]
 
 [workflow.prioritization]
 priority_weight = 10.0
@@ -60,36 +59,43 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id    = "new"
-label = "New"
+id         = "new"
+label      = "New"
+actionable = ["agent"]
 
 [[workflow.states]]
-id    = "question"
-label = "Question"
+id         = "question"
+label      = "Question"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "specd"
-label = "Specd"
+id         = "specd"
+label      = "Specd"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
 
 [[workflow.states]]
-id    = "ready"
-label = "Ready"
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
 
 [[workflow.states]]
 id    = "in_progress"
 label = "In Progress"
 
 [[workflow.states]]
-id    = "implemented"
-label = "Implemented"
+id         = "implemented"
+label      = "Implemented"
+actionable = ["supervisor"]
 
 [[workflow.states]]
-id    = "accepted"
-label = "Accepted"
+id         = "accepted"
+label      = "Accepted"
+actionable = ["supervisor"]
 
 [[workflow.states]]
 id       = "closed"
@@ -522,7 +528,6 @@ dir = "tickets"
 
 [agents]
 max_concurrent = 1
-actionable_states = ["new", "ready"]
 
 [workflow.prioritization]
 priority_weight = 10.0
@@ -530,8 +535,9 @@ effort_weight   = -2.0
 risk_weight     = -1.0
 
 [[workflow.states]]
-id = "new"
-label = "New"
+id         = "new"
+label      = "New"
+actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to      = "specd"
@@ -546,8 +552,9 @@ to      = "ready"
 trigger = "manual"
 
 [[workflow.states]]
-id = "ready"
-label = "Ready"
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
 
 [[workflow.states]]
 id = "closed"
