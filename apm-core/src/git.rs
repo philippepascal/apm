@@ -32,23 +32,31 @@ pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<Str
         .or_else(|_| run(root, &["show", &format!("{branch}:{rel_path}")]))
 }
 
-/// All remote ticket/* branch names (without the origin/ prefix).
+/// All ticket/* branch names visible locally or remotely (deduplicated).
+/// Local branches are included even when a remote exists, so that
+/// unpushed branches (e.g. just created) are visible without a push.
 pub fn ticket_branches(root: &Path) -> Result<Vec<String>> {
-    // Prefer remote branches; fall back to local when no remote is configured.
-    let remote = run(root, &["branch", "-r", "--list", "origin/ticket/*"]).unwrap_or_default();
-    if !remote.trim().is_empty() {
-        return Ok(remote
-            .lines()
-            .map(|l| l.trim().trim_start_matches("origin/").to_string())
-            .filter(|l| !l.is_empty())
-            .collect());
-    }
+    let mut seen = std::collections::HashSet::new();
+    let mut branches = Vec::new();
+
     let local = run(root, &["branch", "--list", "ticket/*"]).unwrap_or_default();
-    Ok(local
-        .lines()
-        .map(|l| l.trim().to_string())
+    for b in local.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        if seen.insert(b.to_string()) {
+            branches.push(b.to_string());
+        }
+    }
+
+    let remote = run(root, &["branch", "-r", "--list", "origin/ticket/*"]).unwrap_or_default();
+    for b in remote.lines()
+        .map(|l| l.trim().trim_start_matches("origin/").to_string())
         .filter(|l| !l.is_empty())
-        .collect())
+    {
+        if seen.insert(b.clone()) {
+            branches.push(b);
+        }
+    }
+
+    Ok(branches)
 }
 
 /// ticket/* branches that are merged into main (remote or local).

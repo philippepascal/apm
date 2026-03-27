@@ -520,15 +520,23 @@ terminal = true
 
     git_ok(p, &["checkout", branch, "--", ticket_path]);
 
-    // specd → closed is NOT allowed (no such transition defined).
-    let out = apm_env(p, "test-agent", &["state", "1", "closed"]);
-    assert!(!out.status.success(), "specd → closed should be rejected");
+    // specd → new is NOT allowed (no such transition defined, and new is not terminal).
+    let out = apm_env(p, "test-agent", &["state", "1", "new"]);
+    assert!(!out.status.success(), "specd → new should be rejected");
     let err = stderr(&out);
     assert!(err.contains("no transition"), "expected transition error, got: {err}");
     assert!(err.contains("specd"), "error should mention current state");
-    assert!(err.contains("closed"), "error should mention target state");
+    assert!(err.contains("new"), "error should mention target state");
 
-    // Ticket state unchanged after rejected transition.
+    // Terminal states are always reachable regardless of transition rules.
+    git_ok(p, &["checkout", branch, "--", ticket_path]);
+    let out = apm_env(p, "test-agent", &["state", "1", "closed"]);
+    assert!(out.status.success(), "specd → closed should be allowed (terminal state)");
+
+    // specd → ready is also allowed by the defined transition.
+    git_ok(p, &["checkout", branch, "--", ticket_path]);
+    let out = apm_env(p, "test-agent", &["state", "1", "specd"]);
+    assert!(out.status.success(), "new → specd should be allowed");
     git_ok(p, &["checkout", branch, "--", ticket_path]);
     let out = apm_env(p, "test-agent", &["state", "1", "ready"]);
     assert!(out.status.success(), "specd → ready should be allowed");
