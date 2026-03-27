@@ -46,7 +46,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
             Err(e) => { eprintln!("warning: ticket({}) serialize: {e:#}", t.frontmatter.id); continue; }
         };
         let id = t.frontmatter.id;
-        match git::commit_to_branch(root, "main", &rel_path, &updated,
+        match git::commit_to_branch(root, branch, &rel_path, &updated,
             &format!("ticket({id}): implemented → accepted (branch merged)")) {
             Ok(_) => {
                 if !quiet { println!("#{id}: implemented → accepted (branch merged)"); }
