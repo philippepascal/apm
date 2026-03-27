@@ -127,6 +127,55 @@ fn init_is_idempotent() {
     assert_eq!(toml_before, toml_after);
 }
 
+#[test]
+fn list_excludes_terminal_tickets_by_default() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Open ticket".into()).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into()).unwrap();
+    apm::cmd::state::run(dir.path(), 2, "closed".into()).unwrap();
+
+    let config = apm_core::config::Config::load(dir.path()).unwrap();
+    let tickets = apm_core::ticket::load_all_from_git(dir.path(), &config.tickets.dir).unwrap();
+    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
+
+    // Without --all: only non-terminal tickets.
+    let visible: Vec<_> = tickets.iter()
+        .filter(|t| !terminal.contains(t.frontmatter.state.as_str()))
+        .collect();
+    assert_eq!(visible.len(), 1);
+    assert_eq!(visible[0].frontmatter.id, 1);
+
+    // With --all: terminal tickets included.
+    assert_eq!(tickets.len(), 2);
+}
+
+#[test]
+fn list_state_filter_and_terminal_exclusion_compose() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "New ticket".into()).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into()).unwrap();
+    apm::cmd::state::run(dir.path(), 2, "closed".into()).unwrap();
+
+    // --state new should return only #1, ignoring #2 (closed, terminal).
+    apm::cmd::list::run(dir.path(), Some("new".into()), false, false, None, None).unwrap();
+
+    // --state closed with --all should return only #2.
+    apm::cmd::list::run(dir.path(), Some("closed".into()), false, true, None, None).unwrap();
+
+    // --state closed without --all returns nothing (terminal excluded).
+    let config = apm_core::config::Config::load(dir.path()).unwrap();
+    let tickets = apm_core::ticket::load_all_from_git(dir.path(), &config.tickets.dir).unwrap();
+    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal).map(|s| s.id.as_str()).collect();
+    let filtered: Vec<_> = tickets.iter()
+        .filter(|t| t.frontmatter.state == "closed" && !terminal.contains(t.frontmatter.state.as_str()))
+        .collect();
+    assert_eq!(filtered.len(), 0, "closed tickets should be excluded without --all");
+}
+
 // --- new ---
 
 #[test]
