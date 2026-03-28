@@ -117,10 +117,29 @@ layer = 2
   preconditions = ["pr_exists"]
 
   [[workflow.states.transitions]]
+  to      = "blocked"
+  trigger = "manual"
+  actor   = "agent"
+  label   = "Agent is blocked — wrote questions in ### Open questions"
+
+  [[workflow.states.transitions]]
   to           = "ready"
   trigger      = "manual"
   actor        = "any"
   side_effects = ["set_agent_null", "set_branch_null"]
+
+[[workflow.states]]
+id         = "blocked"
+label      = "Blocked"
+color      = "#dc2626"
+layer      = 2
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "ready"
+  trigger = "manual"
+  actor   = "supervisor"
+  label   = "Supervisor answered questions — agent can resume"
 
 [[workflow.states]]
 id         = "implemented"

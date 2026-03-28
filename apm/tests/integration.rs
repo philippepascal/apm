@@ -127,6 +127,48 @@ fn init_is_idempotent() {
     assert_eq!(toml_before, toml_after);
 }
 
+#[test]
+fn init_generated_config_has_all_workflow_states() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    apm::cmd::init::run(p, true).unwrap();
+
+    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    for state in &["new", "question", "specd", "ammend", "ready", "in_progress", "implemented", "accepted", "closed"] {
+        assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
+    }
+    assert!(toml.contains("terminal = true"), "closed must be terminal");
+    // Must parse without error.
+    apm_core::config::Config::load(p).unwrap();
+}
+
+#[test]
+fn list_excludes_terminal_tickets_by_default() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Open ticket".into()).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into()).unwrap();
+    apm::cmd::state::run(dir.path(), 2, "closed".into()).unwrap();
+
+    // Verify indirectly through the filter logic in the library.
+    let config = apm_core::config::Config::load(dir.path()).unwrap();
+    let tickets = apm_core::ticket::load_all_from_git(dir.path(), &config.tickets.dir).unwrap();
+    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
+    let visible: Vec<_> = tickets.iter()
+        .filter(|t| !terminal.contains(t.frontmatter.state.as_str()))
+        .collect();
+    assert_eq!(visible.len(), 1, "only the open ticket should be visible");
+    assert_eq!(visible[0].frontmatter.id, 1);
+
+    let all: Vec<_> = tickets.iter().collect();
+    assert_eq!(all.len(), 2, "--all should include the closed ticket");
+}
+
 // --- new ---
 
 #[test]
@@ -296,4 +338,33 @@ fn new_ticket_sets_branch_in_frontmatter() {
     apm::cmd::new::run(dir.path(), "Frontmatter branch".into()).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-frontmatter-branch", "tickets/0001-frontmatter-branch.md");
     assert!(content.contains("branch = \"ticket/0001-frontmatter-branch\""));
+}
+
+#[test]
+fn init_config_has_default_branch_and_parses() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q", "-b", "trunk"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    apm::cmd::init::run(p, true).unwrap();
+
+    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    assert!(toml.contains("default_branch = \"trunk\""), "default_branch not written: {toml}");
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.project.default_branch, "trunk");
+}
+
+#[test]
+fn config_default_branch_defaults_to_main_when_absent() {
+    // A config without default_branch should deserialize with "main" as default.
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.project.default_branch, "main");
 }

@@ -16,7 +16,7 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
         .map(|s| s.id.as_str())
         .collect();
 
-    let merged = git::merged_into_main(root).unwrap_or_default();
+    let merged = git::merged_into_main(root, &config.project.default_branch).unwrap_or_default();
     let merged_set: HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
 
     let in_progress_states: HashSet<&str> = ["in_progress", "implemented", "accepted"].iter().copied().collect();
@@ -113,7 +113,7 @@ fn apply_fixes(
             let id = fm.id;
             let filename = t.path.file_name().unwrap().to_string_lossy().to_string();
             let rel_path = format!("{}/{filename}", config.tickets.dir.to_string_lossy());
-            match git::commit_to_branch(root, "main", &rel_path, &content,
+            match git::commit_to_branch(root, branch, &rel_path, &content,
                 &format!("ticket({id}): {} → accepted (verify --fix)", fm.state)) {
                 Ok(_) => println!("  fixed #{id}: {} → accepted", fm.state),
                 Err(e) => eprintln!("  warning: could not fix #{id}: {e:#}"),

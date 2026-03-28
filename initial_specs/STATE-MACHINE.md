@@ -348,6 +348,7 @@ This is the canonical state machine for AI-assisted development using the ticker
 | `ammend` | Ammend | Supervisor has requested spec changes. Agent is revising. | false | `["agent"]` |
 | `ready` | Ready | Spec approved. Waiting for agent to begin implementation. | false | `["agent"]` |
 | `in_progress` | In Progress | Implementation underway. Agent has a feature branch. | false | `[]` |
+| `blocked` | Blocked | Agent hit a blocker during implementation. Questions written in Open questions. Supervisor must unblock. | false | `["supervisor"]` |
 | `implemented` | Implemented | PR is open. Waiting for review. | false | `["supervisor"]` |
 | `accepted` | Accepted | PR merged. Waiting for supervisor to confirm and close. | false | `["supervisor"]` |
 | `closed` | Closed | Done. | true | `[]` |
