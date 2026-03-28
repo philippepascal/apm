@@ -20,6 +20,12 @@ pub struct ProjectConfig {
     pub name: String,
     #[serde(default)]
     pub description: String,
+    #[serde(default = "default_branch_main")]
+    pub default_branch: String,
+}
+
+fn default_branch_main() -> String {
+    "main".to_string()
 }
 
 #[derive(Debug, Deserialize)]

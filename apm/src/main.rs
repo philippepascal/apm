@@ -64,6 +64,9 @@ enum Command {
     Take { id: u32 },
     /// List or remove permanent git worktrees
     Worktrees {
+        /// Provision a permanent worktree for the given ticket ID (any state)
+        #[arg(long, value_name = "ID")]
+        add: Option<u32>,
         /// Remove the worktree for the given ticket ID
         #[arg(long, value_name = "ID")]
         remove: Option<u32>,
@@ -83,7 +86,12 @@ enum Command {
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
-    Hook { hook_name: String },
+    Hook {
+        hook_name: String,
+        /// Extra args passed by git (remote, url) — ignored
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        _extra: Vec<String>,
+    },
     /// Print agent instructions from apm.agents.md
     Agents,
 }
@@ -113,10 +121,10 @@ fn main() -> Result<()> {
         Command::Start { id } => cmd::start::run(&root, id),
         Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
         Command::Take { id } => cmd::take::run(&root, id),
-        Command::Worktrees { remove } => cmd::worktrees::run(&root, remove),
+        Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
-        Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
+        Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
 }

@@ -16,7 +16,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
 
     // Detect merged branches and fire implemented → accepted auto-transition.
     let branches = git::ticket_branches(root)?;
-    let merged = git::merged_into_main(root)?;
+    let merged = git::merged_into_main(root, &config.project.default_branch)?;
     let mut transitioned = 0usize;
 
     for branch in &merged {
@@ -46,7 +46,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
             Err(e) => { eprintln!("warning: ticket({}) serialize: {e:#}", t.frontmatter.id); continue; }
         };
         let id = t.frontmatter.id;
-        match git::commit_to_branch(root, "main", &rel_path, &updated,
+        match git::commit_to_branch(root, branch, &rel_path, &updated,
             &format!("ticket({id}): implemented → accepted (branch merged)")) {
             Ok(_) => {
                 if !quiet { println!("#{id}: implemented → accepted (branch merged)"); }
