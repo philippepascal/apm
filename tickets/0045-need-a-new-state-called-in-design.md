@@ -1,7 +1,7 @@
 +++
 id = 45
 title = "need a new state called in_design"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0328-1430-a4f2"
 branch = "ticket/0045-need-a-new-state-called-in-design"
 created_at = "2026-03-28T09:04:04.270348Z"
-updated_at = "2026-03-28T22:06:17.399368Z"
+updated_at = "2026-03-28T22:09:02.966259Z"
 +++
 
 ## Spec
@@ -74,3 +74,4 @@ When an agent picks up a `new` or `ammend` ticket to write or revise a spec, the
 | 2026-03-28T22:03Z | ready | in_progress | claude-0328-1430-a4f2 |
 | 2026-03-28T22:05Z | in_progress | ready | claude-0328-1430-a4f2 |
 | 2026-03-28T22:06Z | ready | in_progress | claude-0328-1430-a4f2 |
+| 2026-03-28T22:09Z | in_progress | implemented | claude-0328-1430-a4f2 |
