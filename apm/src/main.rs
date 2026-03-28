@@ -84,6 +84,9 @@ enum Command {
         quiet: bool,
         #[arg(long)]
         no_aggressive: bool,
+        /// Automatically close accepted/stale tickets without prompting
+        #[arg(long)]
+        auto_close: bool,
     },
     /// Take over a ticket from another agent
     Take { id: u32 },
@@ -152,7 +155,7 @@ fn main() -> Result<()> {
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
         Command::Start { id, no_aggressive } => cmd::start::run(&root, id, no_aggressive),
-        Command::Sync { offline, quiet, no_aggressive } => cmd::sync::run(&root, offline, quiet, no_aggressive),
+        Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
         Command::Take { id } => cmd::take::run(&root, id),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
