@@ -256,6 +256,8 @@ fn full_ticket_lifecycle() {
     assert!(env.root().join("apm.toml").exists(), "apm.toml missing");
     assert!(env.root().join(".git/hooks/pre-push").exists(), "pre-push hook missing");
     assert!(env.root().join(".git/hooks/post-merge").exists(), "post-merge hook missing");
+    // Remove the post-merge hook to prevent it interfering with the explicit apm sync step.
+    std::fs::remove_file(env.root().join(".git/hooks/post-merge")).unwrap();
 
     let claude = env.read("CLAUDE.md");
     assert!(claude.contains("@apm.agents.md"), "CLAUDE.md missing @apm.agents.md import");
@@ -499,9 +501,9 @@ mod tests {
         stdout(&out)
     );
 
-    // Ticket on main now has state = accepted (committed by sync).
-    let accepted = env.branch_content("main", ticket_path);
-    assert!(accepted.contains("state = \"accepted\""), "main branch ticket not updated to accepted");
+    // Ticket branch now has state = accepted (sync commits to ticket branch, not main).
+    let accepted = env.branch_content(branch, ticket_path);
+    assert!(accepted.contains("state = \"accepted\""), "ticket branch not updated to accepted");
     assert!(accepted.contains("| implemented | accepted |"), "history row missing");
 }
 
