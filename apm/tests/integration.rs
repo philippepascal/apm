@@ -164,7 +164,7 @@ fn list_excludes_terminal_tickets_by_default() {
     let dir = setup();
 apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None).unwrap();
     apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None).unwrap();
-    apm::cmd::state::run(dir.path(), 2, "closed".into()).unwrap();
+    apm::cmd::state::run(dir.path(), 2, "closed".into(), false).unwrap();
 
     // Verify indirectly through the filter logic in the library.
     let config = apm_core::config::Config::load(dir.path()).unwrap();
@@ -236,7 +236,7 @@ apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None).unwrap();
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
     write_valid_spec_to_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
-    apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
+apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None).unwrap();
@@ -249,13 +249,13 @@ fn show_existing_ticket() {
     let dir = setup();
 apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-show-me", "tickets/0001-show-me.md");
-    apm::cmd::show::run(dir.path(), 1).unwrap();
+    apm::cmd::show::run(dir.path(), 1, false).unwrap();
 }
 
 #[test]
 fn show_missing_ticket_errors() {
     let dir = setup();
-    assert!(apm::cmd::show::run(dir.path(), 99).is_err());
+    assert!(apm::cmd::show::run(dir.path(), 99, false).is_err());
 }
 
 // --- state ---
@@ -266,7 +266,7 @@ fn state_transition_updates_file() {
 apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
     write_valid_spec_to_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
-    apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
+apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
     // Read the updated state from the ticket branch (not the working tree).
     let content = branch_content(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
     assert!(content.contains("state = \"specd\""));
@@ -278,7 +278,7 @@ fn state_transition_appends_history_row() {
 apm::cmd::new::run(dir.path(), "History test".into(), true, false, None).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     write_valid_spec_to_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
-    apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
+apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     assert!(content.contains("| new | specd |"));
 }
@@ -288,7 +288,7 @@ fn state_ammend_inserts_amendment_section() {
     let dir = setup();
 apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-ammend-test", "tickets/0001-ammend-test.md");
-    apm::cmd::state::run(dir.path(), 1, "ammend".into()).unwrap();
+    apm::cmd::state::run(dir.path(), 1, "ammend".into(), false).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-ammend-test", "tickets/0001-ammend-test.md");
     assert!(content.contains("### Amendment requests"));
 }

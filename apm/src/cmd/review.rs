@@ -91,7 +91,7 @@ pub fn run(root: &Path, id: u32, to: Option<String>) -> Result<()> {
 
     // Apply the state transition (state::run re-reads from git, handles history etc.).
     if let Some(target) = chosen_state {
-        super::state::run(root, id, target)?;
+        super::state::run(root, id, target, false)?;
     }
 
     Ok(())

@@ -401,3 +401,25 @@ pub fn branch_name_from_path(path: &Path) -> Option<String> {
     let stem = path.file_stem()?.to_str()?;
     Some(format!("ticket/{stem}"))
 }
+
+pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
+    let status = std::process::Command::new("git")
+        .args(["fetch", "origin", branch])
+        .current_dir(root)
+        .status()?;
+    if !status.success() {
+        anyhow::bail!("git fetch failed");
+    }
+    Ok(())
+}
+
+pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
+    let status = std::process::Command::new("git")
+        .args(["push", "origin", &format!("{branch}:{branch}")])
+        .current_dir(root)
+        .status()?;
+    if !status.success() {
+        anyhow::bail!("git push failed");
+    }
+    Ok(())
+}

@@ -21,7 +21,15 @@ pub struct Config {
     #[serde(default)]
     pub worktrees: WorktreesConfig,
     #[serde(default)]
+    pub sync: SyncConfig,
+    #[serde(default)]
     pub logging: LoggingConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct SyncConfig {
+    #[serde(default)]
+    pub aggressive: bool,
 }
 
 #[derive(Debug, Deserialize)]
