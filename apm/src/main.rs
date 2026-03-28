@@ -151,6 +151,8 @@ fn main() -> Result<()> {
             apm_core::logger::init(&root, &log_path, &agent);
         }
     }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
