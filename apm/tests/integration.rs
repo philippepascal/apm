@@ -385,3 +385,161 @@ fn config_default_branch_defaults_to_main_when_absent() {
     let config = apm_core::config::Config::load(p).unwrap();
     assert_eq!(config.project.default_branch, "main");
 }
+
+// --- sync bulk close ---
+
+fn setup_with_close_workflow() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "accepted"
+label = "Accepted"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+fn write_ticket_to_branch(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str) {
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    // Create branch if it doesn't exist
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn sync_closes_accepted_ticket_auto() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    write_ticket_to_branch(p, "ticket/0001-my-ticket", "0001-my-ticket.md", "accepted", 1, "my ticket");
+
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+
+    let content = branch_content(p, "main", "tickets/0001-my-ticket.md");
+    assert!(content.contains("state = \"closed\""), "ticket should be closed on main: {content}");
+}
+
+#[test]
+fn sync_closes_implemented_ticket_with_no_branch() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    // Write ticket directly to main in implemented state (simulating stale ticket after branch deleted)
+    let path = "tickets/0001-stale.md";
+    let content = "+++\nid = 1\ntitle = \"stale\"\nstate = \"implemented\"\nbranch = \"ticket/0001-stale\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+    std::fs::write(p.join(path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add stale ticket"]);
+    // No ticket branch exists
+
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+
+    let updated = std::fs::read_to_string(p.join(path)).unwrap();
+    assert!(updated.contains("state = \"closed\""), "stale ticket should be closed: {updated}");
+}
+
+#[test]
+fn sync_no_close_when_nothing_to_close() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+    // No tickets at all
+    let log_before = branch_content(p, "main", "apm.toml"); // just to get a ref point
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    // main should have no new commits (same HEAD)
+    let head = std::process::Command::new("git")
+        .args(["log", "--oneline", "-1"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let head_msg = String::from_utf8(head.stdout).unwrap();
+    assert!(!head_msg.contains("apm sync: close"), "no close commit expected: {head_msg}");
+    drop(log_before);
+}
+
+#[test]
+fn sync_batches_multiple_closes_into_one_commit() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "accepted", 1, "alpha");
+    write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "accepted", 2, "beta");
+
+    let commits_before: usize = std::process::Command::new("git")
+        .args(["rev-list", "--count", "main"])
+        .current_dir(p)
+        .output()
+        .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
+        .unwrap_or(0);
+
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+
+    let commits_after: usize = std::process::Command::new("git")
+        .args(["rev-list", "--count", "main"])
+        .current_dir(p)
+        .output()
+        .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
+        .unwrap_or(0);
+
+    assert_eq!(commits_after, commits_before + 1, "exactly one new commit expected");
+
+    let msg = std::process::Command::new("git")
+        .args(["log", "--format=%s", "-1"])
+        .current_dir(p)
+        .output()
+        .map(|o| String::from_utf8(o.stdout).unwrap())
+        .unwrap();
+    assert!(msg.contains("#1") && msg.contains("#2"), "commit message should list both tickets: {msg}");
+}

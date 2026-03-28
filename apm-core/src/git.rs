@@ -402,6 +402,110 @@ pub fn branch_name_from_path(path: &Path) -> Option<String> {
     Some(format!("ticket/{stem}"))
 }
 
+/// List all files in a directory on a branch (non-recursive).
+pub fn list_files_on_branch(root: &Path, branch: &str, dir: &str) -> Result<Vec<String>> {
+    let tree_ref = format!("{branch}:{dir}");
+    let out = run(root, &["ls-tree", "--name-only", &tree_ref])
+        .or_else(|_| run(root, &["ls-tree", "--name-only", &format!("origin/{branch}:{dir}")]))?;
+    Ok(out.lines()
+        .filter(|l| !l.is_empty())
+        .map(|l| format!("{dir}/{l}"))
+        .collect())
+}
+
+/// Commit multiple files to a branch in a single commit without disturbing the working tree.
+pub fn commit_files_to_branch(
+    root: &Path,
+    branch: &str,
+    files: &[(&str, String)],
+    message: &str,
+) -> Result<()> {
+    if !has_commits(root) {
+        for (rel_path, content) in files {
+            let local_path = root.join(rel_path);
+            if let Some(parent) = local_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&local_path, content)?;
+        }
+        return Ok(());
+    }
+
+    if let Some(wt_path) = find_worktree_for_branch(root, branch) {
+        for (rel_path, content) in files {
+            let full_path = wt_path.join(rel_path);
+            if let Some(parent) = full_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&full_path, content)?;
+            let _ = run(&wt_path, &["add", rel_path]);
+        }
+        run(&wt_path, &["commit", "-m", message])?;
+        crate::logger::log("commit_files_to_branch", &format!("{branch} {message}"));
+        return Ok(());
+    }
+
+    if current_branch(root).ok().as_deref() == Some(branch) {
+        for (rel_path, content) in files {
+            let local_path = root.join(rel_path);
+            if let Some(parent) = local_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&local_path, content)?;
+            let _ = run(root, &["add", rel_path]);
+        }
+        run(root, &["commit", "-m", message])?;
+        crate::logger::log("commit_files_to_branch", &format!("{branch} {message}"));
+        return Ok(());
+    }
+
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(0);
+    let wt_path = std::env::temp_dir().join(format!(
+        "apm-{}-{}-{}",
+        std::process::id(),
+        unique,
+        branch.replace('/', "-"),
+    ));
+
+    let has_remote = run(root, &["rev-parse", "--verify", &format!("refs/remotes/origin/{branch}")]).is_ok();
+    let has_local = run(root, &["rev-parse", "--verify", &format!("refs/heads/{branch}")]).is_ok();
+
+    if has_remote {
+        run(root, &["worktree", "add", "--detach", &wt_path.to_string_lossy(), &format!("origin/{branch}")])?;
+        let _ = run(&wt_path, &["checkout", "-B", branch]);
+    } else if has_local {
+        let sha = run(root, &["rev-parse", &format!("refs/heads/{branch}")])?;
+        run(root, &["worktree", "add", "--detach", &wt_path.to_string_lossy(), &sha])?;
+        let _ = run(&wt_path, &["checkout", "-B", branch]);
+    } else {
+        run(root, &["worktree", "add", &wt_path.to_string_lossy(), branch])?;
+    }
+
+    let result = (|| -> Result<()> {
+        for (rel_path, content) in files {
+            let full_path = wt_path.join(rel_path);
+            if let Some(parent) = full_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&full_path, content)?;
+            run(&wt_path, &["add", rel_path])?;
+        }
+        run(&wt_path, &["commit", "-m", message])?;
+        Ok(())
+    })();
+
+    let _ = run(root, &["worktree", "remove", "--force", &wt_path.to_string_lossy()]);
+    let _ = std::fs::remove_dir_all(&wt_path);
+
+    if result.is_ok() {
+        crate::logger::log("commit_files_to_branch", &format!("{branch} {message}"));
+    }
+    result
+}
+
 pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
     let status = std::process::Command::new("git")
         .args(["fetch", "origin", branch])
