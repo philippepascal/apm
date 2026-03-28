@@ -2,6 +2,13 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct LoggingConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    pub file: Option<std::path::PathBuf>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
@@ -13,6 +20,8 @@ pub struct Config {
     pub agents: AgentsConfig,
     #[serde(default)]
     pub worktrees: WorktreesConfig,
+    #[serde(default)]
+    pub logging: LoggingConfig,
 }
 
 #[derive(Debug, Deserialize)]

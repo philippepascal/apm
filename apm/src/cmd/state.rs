@@ -67,6 +67,7 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
         &content,
         &format!("ticket({id}): {old_state} → {new_state}"),
     )?;
+    apm_core::logger::log("state_transition", &format!("#{id} {old_state} -> {new_state}"));
 
     println!("#{id}: {old_state} → {new_state}");
     Ok(())
