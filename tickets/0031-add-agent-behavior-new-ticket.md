@@ -1,7 +1,7 @@
 +++
 id = 31
 title = "add-agent-behavior-new-ticket"
-state = "implemented"
+state = "accepted"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-2000-31cc"
 branch = "ticket/0031-add-agent-behavior-new-ticket"
 created_at = "2026-03-27T06:53:11.802207Z"
-updated_at = "2026-03-28T02:11:29.699375Z"
+updated_at = "2026-03-28T07:31:53.965192Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ Agents working on a ticket regularly encounter issues outside the scope of their
 | 2026-03-28T01:04Z | specd | ready | apm |
 | 2026-03-28T02:08Z | ready | in_progress | claude-0327-2000-31cc |
 | 2026-03-28T02:11Z | in_progress | implemented | claude-0327-2000-31cc |
+| 2026-03-28T07:31Z | implemented | accepted | apm sync |
