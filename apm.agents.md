@@ -2,14 +2,29 @@
 
 ## Repo structure
 
-Rust workspace:
+_Fill in your project's structure here._
 
-- `apm-core/` — library: data model, config parsing, ticket storage, state machine
-- `apm/` — CLI binary (thin wrapper over `apm-core`)
-- `initial_specs/` — design docs (SPEC.md, STATE-MACHINE.md, TICKET-SPEC.md, USECASES.md)
+State machine: transitions defined in `apm.toml` under `[[workflow.states]]`
 
-State machine reference: `initial_specs/STATE-MACHINE.md`
-Ticket document format: `initial_specs/TICKET-SPEC.md`
+## Ticket format
+
+Tickets are Markdown files with TOML frontmatter (between `+++` delimiters):
+
+```toml
+id = 1
+title = "Short title"
+state = "new"
+branch = "ticket/0001-short-title"
+author = "agent-name"
+created_at = "2026-01-01T00:00Z"
+```
+
+Body sections (`## Spec` required):
+- `### Problem` — what is broken or missing
+- `### Acceptance criteria` — checkbox list, each independently testable
+- `### Out of scope` — explicit exclusions
+- `### Approach` — implementation plan
+- `## History` — auto-managed transition log
 
 ## Development workflow
 
