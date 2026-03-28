@@ -136,7 +136,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
     // Build claude command
     let mut cmd = std::process::Command::new("claude");
     cmd.arg("--print");
-    cmd.args(["--system", &worker_system]);
+    cmd.args(["--system-prompt", &worker_system]);
     if skip_permissions {
         cmd.arg("--dangerously-skip-permissions");
     }
