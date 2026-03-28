@@ -3,7 +3,7 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
+pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
     let valid_states: std::collections::HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
@@ -67,6 +67,13 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
         &content,
         &format!("ticket({id}): {old_state} → {new_state}"),
     )?;
+
+    let aggressive = config.sync.aggressive && !no_aggressive;
+    if aggressive {
+        if let Err(e) = git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
 
     println!("#{id}: {old_state} → {new_state}");
     Ok(())

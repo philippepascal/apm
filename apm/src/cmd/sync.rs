@@ -2,8 +2,9 @@ use anyhow::Result;
 use apm_core::{config::Config, git, ticket::Ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
+pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
 
     if !offline {
         match git::fetch_all(root) {
@@ -56,7 +57,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
         }
     }
 
-    if !offline {
+    if !offline || aggressive {
         git::push_ticket_branches(root);
     }
 

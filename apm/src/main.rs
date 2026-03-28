@@ -33,11 +33,20 @@ enum Command {
         actionable: Option<String>,
     },
     /// Show a ticket
-    Show { id: u32 },
+    Show {
+        id: u32,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// Create a new ticket
     New { title: String },
     /// Transition a ticket's state
-    State { id: u32, state: String },
+    State {
+        id: u32,
+        state: String,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// Set a field on a ticket
     Set {
         id: u32,
@@ -45,7 +54,11 @@ enum Command {
         value: String,
     },
     /// Claim a ticket and check out its branch
-    Start { id: u32 },
+    Start {
+        id: u32,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// Return the highest-priority actionable ticket
     Next {
         #[arg(long)]
@@ -59,6 +72,8 @@ enum Command {
         /// Suppress non-error output
         #[arg(long)]
         quiet: bool,
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Take over a ticket from another agent
     Take { id: u32 },
@@ -108,13 +123,13 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
-        Command::Show { id } => cmd::show::run(&root, id),
+        Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
         Command::New { title } => cmd::new::run(&root, title),
-        Command::State { id, state } => cmd::state::run(&root, id, state),
+        Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
-        Command::Start { id } => cmd::start::run(&root, id),
-        Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
+        Command::Start { id, no_aggressive } => cmd::start::run(&root, id, no_aggressive),
+        Command::Sync { offline, quiet, no_aggressive } => cmd::sync::run(&root, offline, quiet, no_aggressive),
         Command::Take { id } => cmd::take::run(&root, id),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),

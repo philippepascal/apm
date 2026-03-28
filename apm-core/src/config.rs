@@ -13,6 +13,14 @@ pub struct Config {
     pub agents: AgentsConfig,
     #[serde(default)]
     pub worktrees: WorktreesConfig,
+    #[serde(default)]
+    pub sync: SyncConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct SyncConfig {
+    #[serde(default)]
+    pub aggressive: bool,
 }
 
 #[derive(Debug, Deserialize)]
