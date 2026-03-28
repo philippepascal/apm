@@ -281,7 +281,7 @@ fn write_hooks(git_dir: &PathBuf) -> Result<()> {
     let pre_push = hooks_dir.join("pre-push");
     std::fs::write(
         &pre_push,
-        "#!/bin/sh\n# Fires event:branch_push_first on first push of ticket/<id>-* in ready state\ncommand -v apm >/dev/null 2>&1 && apm _hook pre-push \"$@\" || true\n",
+        "#!/bin/sh\n# Fires event:branch_push_first on first push of ticket/<id>-* in ready state\ncommand -v apm >/dev/null 2>&1 && apm _hook pre-push || true\n",
     )?;
     std::fs::set_permissions(&pre_push, std::fs::Permissions::from_mode(0o755))?;
 
