@@ -37,10 +37,10 @@ and `apm start` is the correct entry point.
 
 ### Acceptance criteria
 
-- [ ] `apm take <id>` succeeds on any ticket where `agent` is set, regardless of state
-- [ ] `apm take <id>` fails with a clear error when `agent` is not set (use `apm start` instead)
-- [ ] The existing `handoff` history entry is still appended on success
-- [ ] All existing tests pass
+- [x] `apm take <id>` succeeds on any ticket where `agent` is set, regardless of state
+- [x] `apm take <id>` fails with a clear error when `agent` is not set (use `apm start` instead)
+- [x] The existing `handoff` history entry is still appended on success
+- [x] All existing tests pass
 
 ### Out of scope
 
