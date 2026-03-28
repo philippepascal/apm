@@ -15,11 +15,81 @@ updated_at = "2026-03-28T09:01:45.179737Z"
 
 ### Problem
 
+Ticket #40 added `default_log_path()` which resolves the log path automatically
+from the platform convention (macOS: `~/Library/Logs/apm/<project>.log`, Linux:
+`~/.local/state/apm/<project>.log`). The resolved path is used unconditionally —
+there is no way for a user to override it in `apm.toml`.
+
+The `file` field already exists in `LoggingConfig` as `Option<PathBuf>` but is
+completely ignored in `main.rs`. Users who want logs in a custom location have
+no recourse.
+
+Additionally, `apm init` writes only `enabled = false` in the generated
+`[logging]` block — the user has no idea what path will be used when they flip
+the flag. Writing the platform default explicitly as `file = "..."` in the
+generated config makes the default discoverable and immediately editable.
+
 ### Acceptance criteria
+
+- [ ] When `[logging]` has a `file` key, that path is used for the log file
+  (after tilde expansion — `~/...` → `$HOME/...`)
+- [ ] When `file` is absent, the platform default from `default_log_path()` is
+  used (existing behavior — no regression)
+- [ ] `apm init` writes a platform-aware default into the generated `apm.toml`:
+  - macOS: `file = "~/Library/Logs/apm/<project-name>.log"`
+  - Linux: `file = "~/.local/state/apm/<project-name>.log"`
+- [ ] `apm verify` prints the resolved log path when logging is enabled, using
+  `resolve_log_path` so it reflects any `file` override
+- [ ] A unit test covers tilde expansion: `~/foo.log` → `<HOME>/foo.log`
 
 ### Out of scope
 
+- Environment variable expansion beyond `~` (no `$VAR` substitution in paths)
+- Windows support
+- Log rotation or size limits
+
 ### Approach
+
+**`apm-core/src/logger.rs`**: add a `resolve_log_path` helper that takes an
+`Option<&Path>` (the `file` override) and falls back to `default_log_path`:
+
+```rust
+pub fn resolve_log_path(project_name: &str, override_path: Option<&std::path::Path>) -> std::path::PathBuf {
+    if let Some(p) = override_path {
+        expand_tilde(p)
+    } else {
+        default_log_path(project_name)
+    }
+}
+
+fn expand_tilde(path: &std::path::Path) -> std::path::PathBuf {
+    let s = path.to_string_lossy();
+    if let Some(rest) = s.strip_prefix("~/") {
+        let home = std::env::var("HOME").unwrap_or_default();
+        std::path::PathBuf::from(home).join(rest)
+    } else {
+        path.to_path_buf()
+    }
+}
+```
+
+**`apm/src/main.rs`**: update logging init to pass `config.logging.file`:
+
+```rust
+if config.logging.enabled {
+    let log_path = apm_core::logger::resolve_log_path(
+        &config.project.name,
+        config.logging.file.as_deref(),
+    );
+    // ...
+}
+```
+
+**`apm/src/cmd/init.rs`**: update `default_config()` to include a platform-aware
+`file` line in the `[logging]` block using `#[cfg(target_os = "macos")]`.
+
+**`apm/src/cmd/verify.rs`**: update to use `resolve_log_path` so the printed
+path reflects any `file` override from config.
 
 ## History
 
