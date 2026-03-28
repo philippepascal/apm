@@ -221,3 +221,4 @@ aggressive = true
 
 [logging]
 enabled = true
+file = "/tmp/apm.log"
