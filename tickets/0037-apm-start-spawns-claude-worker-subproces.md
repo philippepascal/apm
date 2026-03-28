@@ -1,14 +1,14 @@
 +++
 id = 37
 title = "apm start spawns claude worker subprocess"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 6
 risk = 3
 author = "claude-0327-1854-10aa"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-28T18:20:36.359809Z"
+updated_at = "2026-03-28T18:20:36.730435Z"
 +++
 
 ## Spec
@@ -59,6 +59,10 @@ directory with its own permission context.
 - Multi-turn worker conversations (one prompt → worker runs to completion)
 - The worker pushing branches or creating PRs (those are `apm start`'s responsibility)
 
+### Amendment requests
+
+<!-- Add amendment requests below -->
+
 ### Approach
 
 **`apm/src/cmd/start.rs`**: After provisioning the worktree and claiming the ticket,
@@ -97,3 +101,4 @@ on a new `apm.worker.md` template file in the repo.
 |------|------|----|----|
 | 2026-03-28T02:28Z | — | new | claude-0327-1854-10aa |
 | 2026-03-28T02:31Z | new | specd | claude-0327-1854-10aa |
+| 2026-03-28T18:20Z | specd | ammend | apm |
