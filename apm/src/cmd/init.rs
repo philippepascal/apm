@@ -189,9 +189,9 @@ label    = "Closed"
 color    = "#374151"
 terminal = true
 
-# [logging]
-# enabled = true
-# file = "apm.log"
+[logging]
+enabled = false
+file    = "apm.log"
 "##
     )
 }

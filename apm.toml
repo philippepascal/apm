@@ -206,3 +206,7 @@ risk_weight     = -1.0
 [agents]
 instructions   = "apm.agents.md"
 max_concurrent = 3
+
+[logging]
+enabled = false
+file    = "apm.log"
