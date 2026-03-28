@@ -1,7 +1,7 @@
 +++
 id = 40
 title = "Log to platform default location instead of project dir"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0328-1000-a1b2"
 agent = "claude-0328-impl-a1b2"
 branch = "ticket/0040-log-to-platform-default-location-instead"
 created_at = "2026-03-28T08:11:44.464120Z"
-updated_at = "2026-03-28T08:23:32.853055Z"
+updated_at = "2026-03-28T08:36:50.401809Z"
 +++
 
 ## Spec
@@ -115,3 +115,4 @@ if config.logging.enabled {
 | 2026-03-28T08:12Z | new | specd | claude-0328-1000-a1b2 |
 | 2026-03-28T08:15Z | specd | ready | apm |
 | 2026-03-28T08:23Z | ready | in_progress | claude-0328-impl-a1b2 |
+| 2026-03-28T08:36Z | in_progress | implemented | claude-0328-impl-a1b2 |
