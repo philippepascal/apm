@@ -1,14 +1,14 @@
 +++
 id = 35
 title = "github-apm-meta"
-state = "ammend"
+state = "specd"
 priority = 0
 effort = 3
 risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T07:45:43.078644Z"
+updated_at = "2026-03-28T18:18:23.331436Z"
 +++
 
 ## Spec
@@ -109,3 +109,4 @@ hash IDs or accept the limitations of any counter approach.
 | 2026-03-27T21:14Z | — | new | apm |
 | 2026-03-28T01:03Z | new | specd | claude-0327-1757-391b |
 | 2026-03-28T07:45Z | specd | ammend | apm |
+| 2026-03-28T18:18Z | ammend | specd | apm |
