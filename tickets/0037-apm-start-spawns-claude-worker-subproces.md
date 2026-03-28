@@ -8,11 +8,13 @@ risk = 3
 author = "claude-0327-1854-10aa"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-28T02:31:12.508681Z"
+updated_at = "2026-03-28T18:20:36.359809Z"
 +++
 
 ## Spec
 
+explain the "then launches a `claude` subprocess inside it and **blocks** until the subprocess exit". if it blocks how can it spawn more subagent or interact with supervisor?
+s
 ### Problem
 
 `apm start <id>` currently provisions a worktree, claims the ticket, and prints
@@ -89,7 +91,6 @@ on a new `apm.worker.md` template file in the repo.
 - Streamline to supervisor concerns only: spec review, unblocking, PR review
 - Replace implementation workflow with: "Run `apm start <id>` — this launches a worker, waits for it, then pushes and creates the PR automatically"
 - The supervisor no longer needs to push branches or create PRs manually
-
 ## History
 
 | When | From | To | By |
