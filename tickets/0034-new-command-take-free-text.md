@@ -1,14 +1,14 @@
 +++
 id = 34
 title = "new-command-take-free-text"
-state = "new"
+state = "specd"
 priority = 0
 effort = 3
 risk = 1
 author = "apm"
 branch = "ticket/0034-new-command-take-free-text"
 created_at = "2026-03-27T21:11:48.964488Z"
-updated_at = "2026-03-28T01:02:50.380992Z"
+updated_at = "2026-03-28T01:03:10.965424Z"
 +++
 
 ## Spec
@@ -40,3 +40,4 @@ In `apm/src/cmd/new.rs`, after `commit_to_branch` creates the ticket, check `$ED
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-27T21:11Z | — | new | apm |
+| 2026-03-28T01:03Z | new | specd | claude-0327-1757-391b |
