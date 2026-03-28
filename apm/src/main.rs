@@ -86,7 +86,12 @@ enum Command {
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
-    Hook { hook_name: String },
+    Hook {
+        hook_name: String,
+        /// Extra args passed by git (remote, url) — ignored
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        _extra: Vec<String>,
+    },
     /// Print agent instructions from apm.agents.md
     Agents,
 }
@@ -119,7 +124,7 @@ fn main() -> Result<()> {
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
-        Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
+        Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
 }
