@@ -15,13 +15,29 @@ updated_at = "2026-03-28T01:04:08.616251Z"
 
 ### Problem
 
-working in a team requires more sync'ing of the repo. let's introduce a "agressive" more that forces push/pull on more commands where it makes sense, sacrificing speed for avoiding conflicts.
+In the default mode, APM commands (`apm show`, `apm state`, `apm start`) operate on local branch data and do not fetch from remote first. In a team setting with multiple agents and humans pushing to ticket branches, local state can fall behind, causing stale reads and avoidable conflicts. An opt-in "aggressive" mode would fetch before reading and push after writing, trading latency for freshness.
 
 ### Acceptance criteria
 
+- [ ] `apm.toml` supports `[sync] aggressive = true/false` (default `false`)
+- [ ] `apm show <id>` fetches the ticket branch before reading when aggressive mode is on
+- [ ] `apm state <id> <state>` pushes the ticket branch after committing when aggressive mode is on
+- [ ] `apm start <id>` fetches and merges the latest remote branch before checking out when aggressive mode is on
+- [ ] `apm sync` always pushes all ticket branches when aggressive mode is on (in addition to fetching)
+- [ ] All commands that read/write ticket branches accept a `--no-aggressive` flag to override aggressive mode for that invocation
+- [ ] When a fetch or push fails in aggressive mode, the command prints a warning and continues (non-fatal)
+
 ### Out of scope
 
+- Real-time sync or webhook-based triggers
+- Conflict resolution strategy (push conflicts still require manual resolution)
+- Changing the behavior of non-aggressive (default) mode
+- Per-command aggressive toggles in `apm.toml` (one global flag is enough)
+
 ### Approach
+
+Add `AggressiveSync: bool` to a `[sync]` section in `apm-core/src/config.rs`. Thread the config through to the relevant command handlers. In each affected command, wrap the existing logic with a pre-step (`git fetch origin <branch>`) and/or post-step (`git push origin <branch>`) conditional on `config.sync.aggressive`. The `--no-aggressive` flag is added as a shared boolean on affected subcommands in `main.rs`. Failures in fetch/push emit `eprintln!` warnings and do not propagate as errors.
+
 ## History
 
 | When | From | To | By |
