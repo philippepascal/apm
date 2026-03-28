@@ -21,7 +21,8 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         let fm = &t.frontmatter;
         let state_ok = state_filter.as_deref().map_or(true, |s| fm.state == s);
         let agent_ok = !unassigned || fm.agent.is_none();
-        let terminal_ok = all || !terminal.contains(fm.state.as_str());
+        let state_is_terminal = state_filter.as_deref().map_or(false, |s| terminal.contains(s));
+        let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
         let supervisor_ok = supervisor_filter.as_deref().map_or(true, |s| fm.supervisor.as_deref() == Some(s));
         let actionable_ok = actionable_filter.as_deref().map_or(true, |actor| {
             actionable_map.get(fm.state.as_str())
