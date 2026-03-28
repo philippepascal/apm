@@ -31,17 +31,17 @@ from multiple repos don't collide.
 
 ### Acceptance criteria
 
-- [ ] When `enabled = true`, apm writes logs to the platform default location:
+- [x] When `enabled = true`, apm writes logs to the platform default location:
   - macOS: `~/Library/Logs/apm/<project-name>.log`
   - Linux: `${XDG_STATE_HOME:-~/.local/state}/apm/<project-name>.log`
-- [ ] The directory is created automatically if it does not exist
-- [ ] The `file` key is removed from `LoggingConfig` and from the `apm init`
+- [x] The directory is created automatically if it does not exist
+- [x] The `file` key is removed from `LoggingConfig` and from the `apm init`
   default template; `[logging]` only needs `enabled = true/false`
-- [ ] `apm init` no longer writes `file = "apm.log"` in the generated `apm.toml`
-- [ ] Existing `apm.toml` files that still contain a `file` key continue to
+- [x] `apm init` no longer writes `file = "apm.log"` in the generated `apm.toml`
+- [x] Existing `apm.toml` files that still contain a `file` key continue to
   parse without error (serde `#[serde(default)]` + ignore unknown, or keep the
   field as `Option<PathBuf>` and ignore it with a deprecation note in code)
-- [ ] `apm verify` prints the resolved log path when logging is enabled, so
+- [x] `apm verify` prints the resolved log path when logging is enabled, so
   users can find their logs
 
 ### Out of scope
