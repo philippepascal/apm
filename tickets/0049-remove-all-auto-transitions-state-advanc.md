@@ -1,7 +1,7 @@
 +++
 id = 49
 title = "Remove all auto-transitions: state advances via explicit commands only"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0328-c72b"
 agent = "claude-0328-c72b"
 branch = "ticket/0049-remove-all-auto-transitions-state-advanc"
 created_at = "2026-03-28T20:12:28.488323Z"
-updated_at = "2026-03-28T20:22:07.662116Z"
+updated_at = "2026-03-28T20:48:21.399713Z"
 +++
 
 ## Spec
@@ -97,3 +97,4 @@ or `implemented → accepted` on merge.
 | 2026-03-28T20:16Z | ready | in_progress | claude-0328-c72b |
 | 2026-03-28T20:21Z | in_progress | implemented | claude-0328-c72b |
 | 2026-03-28T20:22Z | implemented | accepted | claude-0328-c72b |
+| 2026-03-28T20:48Z | accepted | closed | apm |
