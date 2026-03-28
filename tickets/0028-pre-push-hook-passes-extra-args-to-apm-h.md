@@ -1,7 +1,7 @@
 +++
 id = 28
 title = "pre-push hook passes extra args to apm _hook causing clap error"
-state = "in_progress"
+state = "implemented"
 priority = 5
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-1854-10aa"
 branch = "ticket/0028-pre-push-hook-passes-extra-args-to-apm-h"
 created_at = "2026-03-27T05:42:59.348405Z"
-updated_at = "2026-03-28T01:54:29.486591Z"
+updated_at = "2026-03-28T01:56:14.022941Z"
 +++
 
 ## Spec
@@ -49,3 +49,4 @@ the hook template string in `cmd/init.rs` `write_hooks()`.
 | 2026-03-27T06:22Z | new | specd | claude-0326-2222-8071 |
 | 2026-03-28T01:00Z | specd | ready | apm |
 | 2026-03-28T01:54Z | ready | in_progress | claude-0327-1854-10aa |
+| 2026-03-28T01:56Z | in_progress | implemented | claude-0327-1854-10aa |
