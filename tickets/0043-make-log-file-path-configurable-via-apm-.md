@@ -32,16 +32,16 @@ generated config makes the default discoverable and immediately editable.
 
 ### Acceptance criteria
 
-- [ ] When `[logging]` has a `file` key, that path is used for the log file
+- [x] When `[logging]` has a `file` key, that path is used for the log file
   (after tilde expansion — `~/...` → `$HOME/...`)
-- [ ] When `file` is absent, the platform default from `default_log_path()` is
+- [x] When `file` is absent, the platform default from `default_log_path()` is
   used (existing behavior — no regression)
-- [ ] `apm init` writes a platform-aware default into the generated `apm.toml`:
+- [x] `apm init` writes a platform-aware default into the generated `apm.toml`:
   - macOS: `file = "~/Library/Logs/apm/<project-name>.log"`
   - Linux: `file = "~/.local/state/apm/<project-name>.log"`
-- [ ] `apm verify` prints the resolved log path when logging is enabled, using
+- [x] `apm verify` prints the resolved log path when logging is enabled, using
   `resolve_log_path` so it reflects any `file` override
-- [ ] A unit test covers tilde expansion: `~/foo.log` → `<HOME>/foo.log`
+- [x] A unit test covers tilde expansion: `~/foo.log` → `<HOME>/foo.log`
 
 ### Out of scope
 
