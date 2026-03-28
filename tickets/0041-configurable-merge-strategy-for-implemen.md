@@ -8,7 +8,7 @@ risk = 2
 author = "claude-0328-1000-a1b2"
 branch = "ticket/0041-configurable-merge-strategy-for-implemen"
 created_at = "2026-03-28T08:14:53.494909Z"
-updated_at = "2026-03-28T08:16:10.141029Z"
+updated_at = "2026-03-28T08:16:10.453206Z"
 +++
 
 ## Spec
