@@ -4,11 +4,11 @@ title = "add-logging"
 state = "new"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 branch = "ticket/0033-add-logging"
 created_at = "2026-03-27T21:08:32.355155Z"
-updated_at = "2026-03-28T01:02:21.537204Z"
+updated_at = "2026-03-28T01:02:21.899021Z"
 +++
 
 ## Spec
