@@ -8,13 +8,15 @@ risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T22:04:43.862344Z"
+updated_at = "2026-03-28T22:09:13.772121Z"
 +++
 
 ## Spec
 
 ### Ammend
 add a migration plan or script for all the existing tickets
+migrate script should be a one time thing for this repo. don't implement it as command.
+when you ammend a spec, you need to mark the ammendements as handled with a checkbox. open a ticket if that's a bug or missing feature
 
 ### Problem
 
