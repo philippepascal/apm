@@ -1,14 +1,15 @@
 +++
 id = 33
 title = "add-logging"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
 author = "apm"
+agent = "claude-0327-2000-33dd"
 branch = "ticket/0033-add-logging"
 created_at = "2026-03-27T21:08:32.355155Z"
-updated_at = "2026-03-28T01:05:06.580424Z"
+updated_at = "2026-03-28T02:09:04.930466Z"
 +++
 
 ## Spec
@@ -47,3 +48,4 @@ Add a `LoggingConfig` struct in `apm-core/src/config.rs` with `enabled: bool` an
 | 2026-03-27T21:08Z | — | new | apm |
 | 2026-03-28T01:02Z | new | specd | claude-0327-1757-391b |
 | 2026-03-28T01:05Z | specd | ready | apm |
+| 2026-03-28T02:09Z | ready | in_progress | claude-0327-2000-33dd |
