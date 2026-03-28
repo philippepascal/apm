@@ -20,10 +20,10 @@ updated_at = "2026-03-28T19:24:34.849777Z"
 
 ### Acceptance criteria
 
-- [ ] `apm list --state closed` returns all closed tickets without requiring `--all`
-- [ ] `apm list --state closed --all` continues to work (no regression)
-- [ ] `apm list` (no flags) still excludes closed and other terminal-state tickets
-- [ ] `apm list --all` still shows every ticket including terminal-state ones
+- [x] `apm list --state closed` returns all closed tickets without requiring `--all`
+- [x] `apm list --state closed --all` continues to work (no regression)
+- [x] `apm list` (no flags) still excludes closed and other terminal-state tickets
+- [x] `apm list --all` still shows every ticket including terminal-state ones
 
 ### Out of scope
 
