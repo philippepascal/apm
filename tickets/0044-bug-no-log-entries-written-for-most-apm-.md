@@ -4,11 +4,11 @@ title = "Bug: no log entries written for most apm commands"
 state = "new"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "claude-0328-1000-a1b2"
 branch = "ticket/0044-bug-no-log-entries-written-for-most-apm-"
 created_at = "2026-03-28T08:58:40.578900Z"
-updated_at = "2026-03-28T09:01:45.549950Z"
+updated_at = "2026-03-28T09:01:45.909815Z"
 +++
 
 ## Spec
