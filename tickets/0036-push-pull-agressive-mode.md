@@ -4,11 +4,11 @@ title = "push-pull-agressive-mode"
 state = "new"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 branch = "ticket/0036-push-pull-agressive-mode"
 created_at = "2026-03-28T00:45:49.063412Z"
-updated_at = "2026-03-28T01:04:08.268287Z"
+updated_at = "2026-03-28T01:04:08.616251Z"
 +++
 
 ## Spec
