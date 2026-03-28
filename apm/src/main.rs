@@ -39,6 +39,12 @@ enum Command {
         title: String,
         #[arg(long)]
         no_edit: bool,
+        /// Mark this ticket as a side-note (out-of-scope observation)
+        #[arg(long)]
+        side_note: bool,
+        /// Context to insert into the Problem section
+        #[arg(long)]
+        context: Option<String>,
     },
     /// Transition a ticket's state
     State { id: u32, state: String },
@@ -90,7 +96,12 @@ enum Command {
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
-    Hook { hook_name: String },
+    Hook {
+        hook_name: String,
+        /// Extra args passed by git (remote, url) — ignored
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        _extra: Vec<String>,
+    },
     /// Print agent instructions from apm.agents.md
     Agents,
 }
@@ -109,11 +120,19 @@ pub fn repo_root() -> Result<PathBuf> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = repo_root()?;
+    if let Ok(ref config) = apm_core::config::Config::load(&root) {
+        if config.logging.enabled {
+            if let Some(ref log_file) = config.logging.file {
+                let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".to_string());
+                apm_core::logger::init(&root, log_file, &agent);
+            }
+        }
+    }
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id } => cmd::show::run(&root, id),
-        Command::New { title, no_edit } => cmd::new::run(&root, title, no_edit),
+        Command::New { title, no_edit, side_note, context } => cmd::new::run(&root, title, no_edit, side_note, context),
         Command::State { id, state } => cmd::state::run(&root, id, state),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
@@ -123,7 +142,7 @@ fn main() -> Result<()> {
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
-        Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
+        Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
 }

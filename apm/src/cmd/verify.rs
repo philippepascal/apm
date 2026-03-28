@@ -72,6 +72,13 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
         if !t.body.contains("## History") {
             issues.push(format!("{prefix}: missing ## History section"));
         }
+
+        // Validate document structure (required sections non-empty, AC items present).
+        if let Ok(doc) = t.document() {
+            for err in doc.validate() {
+                issues.push(format!("{prefix}: {err}"));
+            }
+        }
     }
 
     if issues.is_empty() {
