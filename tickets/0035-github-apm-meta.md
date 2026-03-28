@@ -41,10 +41,11 @@ The only sound solution is one that requires no shared state at all.
 - [ ] `apm list` output shows the full 8-char ID; sorting is by creation timestamp (embedded in the ID generation, not the ID itself)
 - [ ] The `apm/meta` branch is no longer created or pushed on `apm new`
 - [ ] Collision probability with 1 000 tickets is documented and acceptable (≤ 0.01% birthday probability at 32 bits)
+- [ ] An `apm migrate` command (or `apm migrate --ids`) rewrites existing numeric-ID tickets to hex IDs in-place: updates the `id` field in frontmatter, renames the ticket file and branch, and pushes the renamed branch; original numeric branches are deleted after successful rename
+- [ ] `apm` continues to accept numeric IDs (e.g. `apm show 35`) as aliases during a transition period until `apm migrate` has been run; after migration, numeric aliases are no longer needed
 
 ### Out of scope
 
-- Migrating existing numeric-ID tickets to hex IDs (handled separately if needed)
 - Tab-completion scripts
 - Any UI work (the UI will display full IDs; hash ergonomics are a CLI-only concern)
 
@@ -61,6 +62,8 @@ The only sound solution is one that requires no shared state at all.
   explains why all counter-based approaches are broken
 - [x] CLI ergonomics (prefix match, disambiguation list) specified in acceptance
   criteria and approach; UI context noted
+- [x] Migration plan added: `apm migrate` command rewrites existing numeric-ID
+  tickets to hex IDs in-place; numeric ID aliases supported during transition
 
 ### Approach
 
@@ -103,6 +106,21 @@ Every command that accepts an ID (`show`, `state`, `set`, `start`, `take`, `revi
 #### `apm list` sort order
 
 Sort by `created_at` timestamp from the frontmatter (already present), not by ID. This preserves chronological ordering even though IDs are not sequential.
+
+#### Migration: `apm migrate`
+
+A new subcommand rewrites all existing numeric-ID tickets to hex IDs:
+
+1. For each ticket branch matching `ticket/NNNN-<slug>`:
+   - Generate a hex ID from the ticket's `created_at` timestamp (deterministic: `sha256(created_at_nanos_le || zeroed_8_bytes)[..8]`), so repeated runs are idempotent
+   - Update `id` in frontmatter to the hex string
+   - Rename the ticket file from `tickets/NNNN-<slug>.md` → `tickets/<hex8>-<slug>.md`
+   - Commit the rename on the branch
+   - Push the renamed branch as `ticket/<hex8>-<slug>`
+   - Delete the old `ticket/NNNN-<slug>` branch (remote + local)
+2. Print a summary of all renamed tickets
+
+**Transition period**: until `apm migrate` is run, `apm` commands accept a plain integer (e.g. `35`) as a shorthand that resolves to the first ticket branch matching `ticket/0035-*`. This lets the existing workflow continue without interruption. The resolver tries hex prefix first, then integer-with-zero-padding fallback.
 
 #### CLI ergonomics note
 
