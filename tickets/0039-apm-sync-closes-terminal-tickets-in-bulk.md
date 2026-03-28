@@ -1,14 +1,14 @@
 +++
 id = 39
 title = "apm sync closes terminal tickets in bulk"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 1
 author = "claude-0328-1000-a1b2"
 branch = "ticket/0039-apm-sync-closes-terminal-tickets-in-bulk"
 created_at = "2026-03-28T08:07:08.341760Z"
-updated_at = "2026-03-28T08:08:08.222927Z"
+updated_at = "2026-03-28T08:19:49.896729Z"
 +++
 
 ## Spec
@@ -106,3 +106,4 @@ Close all? [y/N]
 |------|------|----|----|
 | 2026-03-28T08:07Z | — | new | claude-0328-1000-a1b2 |
 | 2026-03-28T08:08Z | new | specd | claude-0328-1000-a1b2 |
+| 2026-03-28T08:19Z | specd | ready | apm |
