@@ -4,11 +4,11 @@ title = "Docker sandbox for apm worker processes"
 state = "new"
 priority = 0
 effort = 5
-risk = 0
+risk = 2
 author = "claude-0327-1854-10aa"
 branch = "ticket/0038-docker-sandbox-for-apm-worker-processes"
 created_at = "2026-03-28T07:32:08.465132Z"
-updated_at = "2026-03-28T07:34:58.310362Z"
+updated_at = "2026-03-28T07:34:58.587298Z"
 +++
 
 ## Spec
