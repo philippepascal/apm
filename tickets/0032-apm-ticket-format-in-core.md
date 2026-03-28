@@ -15,13 +15,40 @@ updated_at = "2026-03-28T01:01:46.596386Z"
 
 ### Problem
 
-ticket document format needs to be controller tighter. let's add programatic support for it in apm-core. this is a good way to add more safeguards against unformatted changes, like support for checklists.
+The ticket document body is stored and manipulated as a raw `String` in `apm-core`. The spec body sections (`### Problem`, `### Acceptance criteria`, etc.) are matched with ad-hoc `str::contains` checks. This means malformed tickets — missing required sections, empty sections, improperly formatted checklists — are never detected at parse time. Acceptance criteria checkbox state (`- [ ]` / `- [x]`) cannot be read or toggled programmatically. `apm verify` only checks that `## Spec` and `## History` substrings exist, not whether required sections are present or non-empty. The preconditions declared in `TICKET-SPEC.md` (`spec_not_empty`, `spec_has_acceptance_criteria`, `spec_all_criteria_checked`, etc.) are defined but not enforced in code at state-transition time.
 
 ### Acceptance criteria
 
+- [ ] A `TicketDocument` struct in `apm-core` (in `ticket.rs` or a new `document.rs`) owns the parsed spec body as typed fields: `problem`, `acceptance_criteria`, `out_of_scope`, `approach`, and optional `open_questions` and `amendment_requests`
+- [ ] `TicketDocument::parse(body: &str)` extracts each section; returns an error if any required section is absent
+- [ ] Round-trip: `parse(doc.serialize())` reproduces the original body (modulo trailing whitespace normalization)
+- [ ] Acceptance criteria items are exposed as `Vec<ChecklistItem>` where each item has `checked: bool` and `text: String`
+- [ ] A `toggle_criterion(index: usize, checked: bool)` method re-serializes the document with the checkbox updated
+- [ ] A `validate()` method returns `Vec<ValidationError>` covering: missing required section, empty required section, no acceptance criteria items, unanswered open questions
+- [ ] `apm verify` calls `validate()` on each ticket body and reports per-ticket errors
+- [ ] `apm state <id> specd` rejects the transition if required sections are absent/empty or open questions are unanswered
+- [ ] `apm state <id> implemented` rejects if any acceptance criteria checkbox is unchecked
+- [ ] `apm state <id> specd` (returning from `ammend`) rejects if any amendment request checkbox is unchecked
+- [ ] All new logic is covered by unit tests in `apm-core/src/`
+
 ### Out of scope
 
+- Markdown rendering or rich display formatting
+- An interactive editor for ticket files
+- Migration tooling for existing ticket files (backward compatibility required, not migration)
+- Enforcement of criterion wording style
+- PR-based preconditions (`pr_exists`, `pr_all_closing_merged`)
+
 ### Approach
+
+Add a `TicketDocument` struct (in `apm-core/src/ticket.rs` or a new `apm-core/src/document.rs`). The struct holds the body split into named section strings, extracted by scanning for `### <Name>` headings. A `ChecklistItem { checked: bool, text: String }` type and helper methods for reading/toggling checklists live on the struct.
+
+The `Ticket` struct gains a `document()` method that parses `self.body` into a `TicketDocument`. `validate()` returns `Vec<ValidationError>` so callers can report all issues at once.
+
+In `apm/src/cmd/state.rs`, before writing the new state, call `t.document()?.validate()` and filter errors relevant to the transition. In `apm/src/cmd/verify.rs`, call `validate()` on every non-terminal ticket and report all errors.
+
+Optional sections (`### Open questions`, `### Amendment requests`) are `Option<String>` fields — tickets without them parse cleanly.
+
 ## History
 
 | When | From | To | By |
