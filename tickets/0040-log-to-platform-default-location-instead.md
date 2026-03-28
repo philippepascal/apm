@@ -1,14 +1,14 @@
 +++
 id = 40
 title = "Log to platform default location instead of project dir"
-state = "new"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "claude-0328-1000-a1b2"
 branch = "ticket/0040-log-to-platform-default-location-instead"
 created_at = "2026-03-28T08:11:44.464120Z"
-updated_at = "2026-03-28T08:12:28.703787Z"
+updated_at = "2026-03-28T08:12:29.005283Z"
 +++
 
 ## Spec
@@ -111,3 +111,4 @@ if config.logging.enabled {
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-28T08:11Z | — | new | claude-0328-1000-a1b2 |
+| 2026-03-28T08:12Z | new | specd | claude-0328-1000-a1b2 |
