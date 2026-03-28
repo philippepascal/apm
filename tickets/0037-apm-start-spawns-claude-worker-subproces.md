@@ -1,14 +1,14 @@
 +++
 id = 37
 title = "apm start spawns claude worker subprocess"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 6
 risk = 3
 author = "claude-0327-1854-10aa"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-28T18:51:14.316866Z"
+updated_at = "2026-03-28T20:04:02.641115Z"
 +++
 
 ## Spec
@@ -140,3 +140,4 @@ If `--spawn` is not set, exit after printing the worktree path as today.
 | 2026-03-28T18:20Z | specd | ammend | apm |
 | 2026-03-28T18:51Z | ammend | specd | claude-0328-c72b |
 | 2026-03-28T19:45Z | specd | ammend | apm |
+| 2026-03-28T20:04Z | specd | ready | apm |
