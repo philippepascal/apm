@@ -35,7 +35,15 @@ enum Command {
     /// Show a ticket
     Show { id: u32 },
     /// Create a new ticket
-    New { title: String },
+    New {
+        title: String,
+        /// Mark this ticket as a side-note (out-of-scope observation)
+        #[arg(long)]
+        side_note: bool,
+        /// Context to insert into the Problem section
+        #[arg(long)]
+        context: Option<String>,
+    },
     /// Transition a ticket's state
     State { id: u32, state: String },
     /// Set a field on a ticket
@@ -122,7 +130,7 @@ fn main() -> Result<()> {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id } => cmd::show::run(&root, id),
-        Command::New { title } => cmd::new::run(&root, title),
+        Command::New { title, side_note, context } => cmd::new::run(&root, title, side_note, context),
         Command::State { id, state } => cmd::state::run(&root, id, state),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),

@@ -164,3 +164,13 @@ manually.
 
 Work one ticket at a time per agent process. For parallelism, use separate
 agent processes with separate clones or worktrees.
+
+## Side tickets
+
+When you notice an out-of-scope issue during implementation, capture it without interrupting your current work:
+
+```bash
+apm new --side-note "Brief title" --context "What you observed and why it matters"
+```
+
+Then immediately resume the current ticket. The supervisor will triage the side ticket separately.

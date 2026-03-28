@@ -114,9 +114,12 @@ pub struct AgentsConfig {
     pub max_concurrent: usize,
     #[serde(default)]
     pub instructions: Option<PathBuf>,
+    #[serde(default = "default_true")]
+    pub side_tickets: bool,
 }
 
 fn default_max_concurrent() -> usize { 3 }
+fn default_true() -> bool { true }
 
 #[derive(Debug, Deserialize)]
 pub struct WorktreesConfig {
@@ -134,6 +137,7 @@ impl Default for AgentsConfig {
         Self {
             max_concurrent: default_max_concurrent(),
             instructions: None,
+            side_tickets: true,
         }
     }
 }
