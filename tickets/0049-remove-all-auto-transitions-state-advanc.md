@@ -1,14 +1,14 @@
 +++
 id = 49
 title = "Remove all auto-transitions: state advances via explicit commands only"
-state = "new"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
 author = "claude-0328-c72b"
 branch = "ticket/0049-remove-all-auto-transitions-state-advanc"
 created_at = "2026-03-28T20:12:28.488323Z"
-updated_at = "2026-03-28T20:12:35.029005Z"
+updated_at = "2026-03-28T20:14:45.691522Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ or `implemented → accepted` on merge.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-28T20:12Z | — | new | claude-0328-c72b |
+| 2026-03-28T20:14Z | new | specd | claude-0328-c72b |
