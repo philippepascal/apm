@@ -1,14 +1,14 @@
 +++
 id = 35
 title = "github-apm-meta"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T07:45:42.662600Z"
+updated_at = "2026-03-28T07:45:43.078644Z"
 +++
 
 ## Spec
@@ -34,6 +34,10 @@ Every `apm new` pushes a new commit to `refs/heads/apm/meta`, causing GitHub to 
 - Implementation (this is a proposal/design ticket)
 - Changing the ticket file format or branch naming scheme
 
+### Amendment requests
+
+<!-- Add amendment requests below -->
+
 ### Approach
 
 **Option A — Use `refs/apm/meta` instead of `refs/heads/apm/meta`**
@@ -55,3 +59,4 @@ Use lightweight git tags (`refs/tags/apm/next-id`) as the counter. Tags don't sh
 |------|------|----|----|
 | 2026-03-27T21:14Z | — | new | apm |
 | 2026-03-28T01:03Z | new | specd | claude-0327-1757-391b |
+| 2026-03-28T07:45Z | specd | ammend | apm |
