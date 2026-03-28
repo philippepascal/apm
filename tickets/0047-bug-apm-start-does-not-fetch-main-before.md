@@ -15,11 +15,50 @@ updated_at = "2026-03-28T19:50:18.823464Z"
 
 ### Problem
 
+`apm start` merges `origin/<default_branch>` into the ticket branch so the agent
+starts from current code (lines 82–112 of `start.rs`). However, it checks whether
+`origin/main` exists locally and uses it directly — it never fetches from the
+remote first. When aggressive mode is on, `apm start` already fetches the ticket
+branch (lines 60–63), but not `main`. If the local `origin/main` ref is stale, the
+merge brings in an outdated base even in aggressive mode.
+
 ### Acceptance criteria
+
+- [ ] When `sync.aggressive = true`, `apm start` fetches `origin/<default_branch>`
+  before merging it into the ticket branch
+- [ ] When `sync.aggressive = false` (or `--no-aggressive` is passed), the fetch
+  is skipped (existing behaviour — no regression)
+- [ ] If the fetch fails, a warning is printed and the merge proceeds with the
+  locally-cached ref (same fail-soft pattern used elsewhere)
+- [ ] The fetch of the ticket branch and the fetch of the default branch are both
+  present in aggressive mode (neither replaces the other)
 
 ### Out of scope
 
+- Fetching all branches (only the default branch and the ticket branch are needed)
+- Changing merge strategy or conflict handling
+
 ### Approach
+
+In `apm/src/cmd/start.rs`, move the `default_branch` binding before the
+`if aggressive` block, then add a second fetch inside it:
+
+```rust
+let default_branch = &config.project.default_branch;  // move up
+
+if aggressive {
+    if let Err(e) = git::fetch_branch(root, &branch) {
+        eprintln!("warning: fetch failed: {e:#}");
+    }
+    if let Err(e) = git::fetch_branch(root, default_branch) {
+        eprintln!("warning: fetch {} failed: {e:#}", default_branch);
+    }
+}
+```
+
+`default_branch` is currently declared a few lines later (line 82) — moving it
+earlier makes it available for both the fetch and the existing merge logic with
+no other changes needed.
 
 ## History
 
