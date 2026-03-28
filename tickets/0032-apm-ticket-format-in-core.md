@@ -1,14 +1,14 @@
 +++
 id = 32
 title = "apm-ticket-format-in-core"
-state = "new"
+state = "specd"
 priority = 0
 effort = 5
 risk = 3
 author = "apm"
 branch = "ticket/0032-apm-ticket-format-in-core"
 created_at = "2026-03-27T20:49:59.747092Z"
-updated_at = "2026-03-28T01:01:46.596386Z"
+updated_at = "2026-03-28T01:02:16.696097Z"
 +++
 
 ## Spec
@@ -54,3 +54,4 @@ Optional sections (`### Open questions`, `### Amendment requests`) are `Option<S
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-27T20:49Z | — | new | apm |
+| 2026-03-28T01:02Z | new | specd | claude-0327-1757-391b |
