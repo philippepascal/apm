@@ -2,6 +2,13 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct LoggingConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    pub file: Option<std::path::PathBuf>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
@@ -13,6 +20,16 @@ pub struct Config {
     pub agents: AgentsConfig,
     #[serde(default)]
     pub worktrees: WorktreesConfig,
+    #[serde(default)]
+    pub sync: SyncConfig,
+    #[serde(default)]
+    pub logging: LoggingConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct SyncConfig {
+    #[serde(default)]
+    pub aggressive: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,9 +122,12 @@ pub struct AgentsConfig {
     pub max_concurrent: usize,
     #[serde(default)]
     pub instructions: Option<PathBuf>,
+    #[serde(default = "default_true")]
+    pub side_tickets: bool,
 }
 
 fn default_max_concurrent() -> usize { 3 }
+fn default_true() -> bool { true }
 
 #[derive(Debug, Deserialize)]
 pub struct WorktreesConfig {
@@ -125,6 +145,7 @@ impl Default for AgentsConfig {
         Self {
             max_concurrent: default_max_concurrent(),
             instructions: None,
+            side_tickets: true,
         }
     }
 }

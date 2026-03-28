@@ -2,14 +2,29 @@
 
 ## Repo structure
 
-Rust workspace:
+_Fill in your project's structure here._
 
-- `apm-core/` — library: data model, config parsing, ticket storage, state machine
-- `apm/` — CLI binary (thin wrapper over `apm-core`)
-- `initial_specs/` — design docs (SPEC.md, STATE-MACHINE.md, TICKET-SPEC.md, USECASES.md)
+State machine: transitions defined in `apm.toml` under `[[workflow.states]]`
 
-State machine reference: `initial_specs/STATE-MACHINE.md`
-Ticket document format: `initial_specs/TICKET-SPEC.md`
+## Ticket format
+
+Tickets are Markdown files with TOML frontmatter (between `+++` delimiters):
+
+```toml
+id = 1
+title = "Short title"
+state = "new"
+branch = "ticket/0001-short-title"
+author = "agent-name"
+created_at = "2026-01-01T00:00Z"
+```
+
+Body sections (`## Spec` required):
+- `### Problem` — what is broken or missing
+- `### Acceptance criteria` — checkbox list, each independently testable
+- `### Out of scope` — explicit exclusions
+- `### Approach` — implementation plan
+- `## History` — auto-managed transition log
 
 ## Development workflow
 
@@ -69,6 +84,8 @@ The ticket's state determines what to do next:
    git -C "$wt" add tickets/<id>-<slug>.md
    git -C "$wt" commit -m "ticket(<id>): write spec"
    ```
+   Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
+   pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
 5. If blocked on an ambiguity: write the question in `### Open questions`,
    commit it to the worktree, then `apm state <id> question`
 6. `apm state <id> specd` — submit spec for supervisor review
@@ -149,3 +166,13 @@ manually.
 
 Work one ticket at a time per agent process. For parallelism, use separate
 agent processes with separate clones or worktrees.
+
+## Side tickets
+
+When you notice an out-of-scope issue during implementation, capture it without interrupting your current work:
+
+```bash
+apm new --side-note "Brief title" --context "What you observed and why it matters"
+```
+
+Then immediately resume the current ticket. The supervisor will triage the side ticket separately.

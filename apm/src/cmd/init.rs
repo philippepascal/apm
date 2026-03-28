@@ -36,8 +36,28 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     maybe_create_meta_branch(root)?;
     ensure_worktrees_dir(root)?;
     update_user_claude_settings()?;
+    warn_if_settings_untracked(root);
     println!("apm initialized.");
     Ok(())
+}
+
+fn warn_if_settings_untracked(root: &Path) {
+    let settings = root.join(".claude/settings.json");
+    if !settings.exists() {
+        return;
+    }
+    let tracked = Command::new("git")
+        .args(["ls-files", "--error-unmatch", ".claude/settings.json"])
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !tracked {
+        eprintln!(
+            "Warning: .claude/settings.json exists but is not committed. \
+Agent worktrees won't have it — run: git add .claude/settings.json && git commit"
+        );
+    }
 }
 
 fn ensure_claude_md(root: &Path) -> Result<()> {
@@ -74,7 +94,18 @@ fn detect_default_branch(root: &Path) -> String {
         .unwrap_or_else(|| "main".to_string())
 }
 
+#[cfg(target_os = "macos")]
+fn default_log_file(name: &str) -> String {
+    format!("~/Library/Logs/apm/{name}.log")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_log_file(name: &str) -> String {
+    format!("~/.local/state/apm/{name}.log")
+}
+
 fn default_config(name: &str, default_branch: &str) -> String {
+    let log_file = default_log_file(name);
     format!(
         r##"[project]
 name = "{name}"
@@ -135,11 +166,21 @@ id    = "in_progress"
 label = "In Progress"
 color = "#8b5cf6"
 
+  [[workflow.states.transitions]]
+  to      = "blocked"
+  trigger = "command:block"
+  actor   = "agent"
+
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"
 color      = "#dc2626"
 actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "ready"
+  trigger = "command:unblock"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id         = "implemented"
@@ -158,6 +199,10 @@ id       = "closed"
 label    = "Closed"
 color    = "#374151"
 terminal = true
+
+[logging]
+enabled = false
+file = "{log_file}"
 "##
     )
 }

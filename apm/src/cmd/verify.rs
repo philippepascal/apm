@@ -72,6 +72,21 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
         if !t.body.contains("## History") {
             issues.push(format!("{prefix}: missing ## History section"));
         }
+
+        // Validate document structure (required sections non-empty, AC items present).
+        if let Ok(doc) = t.document() {
+            for err in doc.validate() {
+                issues.push(format!("{prefix}: {err}"));
+            }
+        }
+    }
+
+    if config.logging.enabled {
+        let log_path = apm_core::logger::resolve_log_path(
+            &config.project.name,
+            config.logging.file.as_deref(),
+        );
+        println!("logging: {}", log_path.display());
     }
 
     if issues.is_empty() {

@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32) -> Result<()> {
+pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
 
     let prefix = format!("ticket/{id:04}-");
@@ -12,6 +12,13 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     let Some(branch) = branch else {
         bail!("ticket #{id} not found");
     };
+
+    let aggressive = config.sync.aggressive && !no_aggressive;
+    if aggressive {
+        if let Err(e) = git::fetch_branch(root, &branch) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
 
     let suffix = branch.trim_start_matches("ticket/");
     let filename = format!("{suffix}.md");

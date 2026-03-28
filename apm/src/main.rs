@@ -33,11 +33,30 @@ enum Command {
         actionable: Option<String>,
     },
     /// Show a ticket
-    Show { id: u32 },
+    Show {
+        id: u32,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// Create a new ticket
-    New { title: String },
+    New {
+        title: String,
+        #[arg(long)]
+        no_edit: bool,
+        /// Mark this ticket as a side-note (out-of-scope observation)
+        #[arg(long)]
+        side_note: bool,
+        /// Context to insert into the Problem section
+        #[arg(long)]
+        context: Option<String>,
+    },
     /// Transition a ticket's state
-    State { id: u32, state: String },
+    State {
+        id: u32,
+        state: String,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// Set a field on a ticket
     Set {
         id: u32,
@@ -45,7 +64,11 @@ enum Command {
         value: String,
     },
     /// Claim a ticket and check out its branch
-    Start { id: u32 },
+    Start {
+        id: u32,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// Return the highest-priority actionable ticket
     Next {
         #[arg(long)]
@@ -59,6 +82,11 @@ enum Command {
         /// Suppress non-error output
         #[arg(long)]
         quiet: bool,
+        #[arg(long)]
+        no_aggressive: bool,
+        /// Automatically close accepted/stale tickets without prompting
+        #[arg(long)]
+        auto_close: bool,
     },
     /// Take over a ticket from another agent
     Take { id: u32 },
@@ -86,7 +114,12 @@ enum Command {
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
-    Hook { hook_name: String },
+    Hook {
+        hook_name: String,
+        /// Extra args passed by git (remote, url) — ignored
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        _extra: Vec<String>,
+    },
     /// Print agent instructions from apm.agents.md
     Agents,
 }
@@ -105,21 +138,36 @@ pub fn repo_root() -> Result<PathBuf> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = repo_root()?;
+    if let Ok(ref config) = apm_core::config::Config::load(&root) {
+        if config.logging.enabled {
+            let log_path = apm_core::logger::resolve_log_path(
+                &config.project.name,
+                config.logging.file.as_deref(),
+            );
+            if let Some(parent) = log_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".to_string());
+            apm_core::logger::init(&root, &log_path, &agent);
+        }
+    }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
-        Command::Show { id } => cmd::show::run(&root, id),
-        Command::New { title } => cmd::new::run(&root, title),
-        Command::State { id, state } => cmd::state::run(&root, id, state),
+        Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
+        Command::New { title, no_edit, side_note, context } => cmd::new::run(&root, title, no_edit, side_note, context),
+        Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
-        Command::Start { id } => cmd::start::run(&root, id),
-        Command::Sync { offline, quiet } => cmd::sync::run(&root, offline, quiet),
+        Command::Start { id, no_aggressive } => cmd::start::run(&root, id, no_aggressive),
+        Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
         Command::Take { id } => cmd::take::run(&root, id),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
-        Command::Hook { hook_name } => { cmd::hook::run(&root, &hook_name); Ok(()) }
+        Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
 }

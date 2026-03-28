@@ -3,11 +3,12 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32) -> Result<()> {
+pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
     let agent_name = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
 
     // apm start is only valid from "ready" — spec-writing states (new, ammend)
     // use the branch directly; blocked tickets go back to ready before restarting.
@@ -54,6 +55,12 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         .clone()
         .or_else(|| git::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id:04}"));
+
+    if aggressive {
+        if let Err(e) = git::fetch_branch(root, &branch) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → in_progress"))?;
 
