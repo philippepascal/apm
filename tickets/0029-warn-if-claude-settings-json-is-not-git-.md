@@ -1,14 +1,14 @@
 +++
 id = 29
 title = "warn if .claude/settings.json is not git-tracked during init"
-state = "specd"
+state = "ready"
 priority = 4
 effort = 2
 risk = 1
 author = "claude-0326-2222-8071"
 branch = "ticket/0029-warn-if-claude-settings-json-is-not-git-"
 created_at = "2026-03-27T05:57:10.499993Z"
-updated_at = "2026-03-27T06:22:40.847157Z"
+updated_at = "2026-03-28T01:01:33.012168Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ In `cmd/init.rs` `run()`, after the existing setup steps, check:
 |------|------|----|----|
 | 2026-03-27T05:57Z | — | new | claude-0326-2222-8071 |
 | 2026-03-27T06:22Z | new | specd | claude-0326-2222-8071 |
+| 2026-03-28T01:01Z | specd | ready | apm |
