@@ -1,7 +1,7 @@
 +++
 id = 30
 title = "Add blocked state: agent signals implementation blocker, supervisor unblocks"
-state = "in_progress"
+state = "implemented"
 priority = 8
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-2000-30bb"
 branch = "ticket/0030-add-blocked-state-agent-signals-implemen"
 created_at = "2026-03-27T06:15:12.087284Z"
-updated_at = "2026-03-28T02:08:35.288515Z"
+updated_at = "2026-03-28T02:10:52.305305Z"
 +++
 
 ## Spec
@@ -54,3 +54,4 @@ and `STATE-MACHINE.md`.
 | 2026-03-27T06:18Z | new | specd | claude-0326-2222-8071 |
 | 2026-03-28T01:03Z | specd | ready | apm |
 | 2026-03-28T02:08Z | ready | in_progress | claude-0327-2000-30bb |
+| 2026-03-28T02:10Z | in_progress | implemented | claude-0327-2000-30bb |
