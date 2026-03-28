@@ -1,14 +1,14 @@
 +++
 id = 30
 title = "Add blocked state: agent signals implementation blocker, supervisor unblocks"
-state = "specd"
+state = "ready"
 priority = 8
 effort = 3
 risk = 2
 author = "claude-0326-2222-8071"
 branch = "ticket/0030-add-blocked-state-agent-signals-implemen"
 created_at = "2026-03-27T06:15:12.087284Z"
-updated_at = "2026-03-27T06:18:48.500818Z"
+updated_at = "2026-03-28T01:03:43.428346Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ and `STATE-MACHINE.md`.
 |------|------|----|----|
 | 2026-03-27T06:15Z | — | new | claude-0326-2222-8071 |
 | 2026-03-27T06:18Z | new | specd | claude-0326-2222-8071 |
+| 2026-03-28T01:03Z | specd | ready | apm |
