@@ -35,7 +35,11 @@ enum Command {
     /// Show a ticket
     Show { id: u32 },
     /// Create a new ticket
-    New { title: String },
+    New {
+        title: String,
+        #[arg(long)]
+        no_edit: bool,
+    },
     /// Transition a ticket's state
     State { id: u32, state: String },
     /// Set a field on a ticket
@@ -109,7 +113,7 @@ fn main() -> Result<()> {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id } => cmd::show::run(&root, id),
-        Command::New { title } => cmd::new::run(&root, title),
+        Command::New { title, no_edit } => cmd::new::run(&root, title, no_edit),
         Command::State { id, state } => cmd::state::run(&root, id, state),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
