@@ -26,6 +26,11 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
         std::fs::write(&agents_path, default_agents_md())?;
         println!("Created apm.agents.md");
     }
+    let worker_md_path = root.join("apm.worker.md");
+    if !worker_md_path.exists() {
+        std::fs::write(&worker_md_path, include_str!("../apm.worker.md"))?;
+        println!("Created apm.worker.md");
+    }
     ensure_claude_md(root)?;
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore)?;
