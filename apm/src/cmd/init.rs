@@ -36,8 +36,28 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     maybe_create_meta_branch(root)?;
     ensure_worktrees_dir(root)?;
     update_user_claude_settings()?;
+    warn_if_settings_untracked(root);
     println!("apm initialized.");
     Ok(())
+}
+
+fn warn_if_settings_untracked(root: &Path) {
+    let settings = root.join(".claude/settings.json");
+    if !settings.exists() {
+        return;
+    }
+    let tracked = Command::new("git")
+        .args(["ls-files", "--error-unmatch", ".claude/settings.json"])
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !tracked {
+        eprintln!(
+            "Warning: .claude/settings.json exists but is not committed. \
+Agent worktrees won't have it — run: git add .claude/settings.json && git commit"
+        );
+    }
 }
 
 fn ensure_claude_md(root: &Path) -> Result<()> {
