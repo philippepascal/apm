@@ -1,14 +1,14 @@
 +++
 id = 27
 title = "missing-state-machine-definitino"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/0027-missing-state-machine-definitino"
 created_at = "2026-03-27T05:28:59.591031Z"
-updated_at = "2026-03-27T06:21:10.856086Z"
+updated_at = "2026-03-28T01:00:36.535266Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ Edit `apm.agents.md` at the repo root (the template shipped via `include_str!` i
 | 2026-03-27T05:38Z | new | question | claude-0326-2222-8071 |
 | 2026-03-27T06:05Z | question | new | apm |
 | 2026-03-27T06:21Z | new | specd | claude-0326-2222-8071 |
+| 2026-03-28T01:00Z | specd | ready | apm |
