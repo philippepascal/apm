@@ -20,15 +20,15 @@ When an agent picks up a `new` or `ammend` ticket to write or revise a spec, the
 
 ### Acceptance criteria
 
-- [ ] `in_design` state exists in `apm.toml` with `actionable = ["agent"]` and `layer = 1`
-- [ ] Transition `new` → `in_design` is allowed (actor: agent, manual)
-- [ ] Transition `ammend` → `in_design` is allowed (actor: agent, manual)
-- [ ] Transition `in_design` → `specd` is allowed (actor: agent, manual, preconditions: `spec_not_empty`, `spec_has_acceptance_criteria`)
-- [ ] Transition `in_design` → `question` is allowed (actor: agent, manual)
-- [ ] `apm state <id> in_design` succeeds from `new` or `ammend`
-- [ ] `apm list --state in_design` shows tickets in that state
-- [ ] `apm next` does not return `in_design` tickets as actionable (they are already claimed)
-- [ ] Agent instructions in `apm.agents.md` document the new state and when to use it
+- [x] `in_design` state exists in `apm.toml` with `actionable = ["agent"]` and `layer = 1`
+- [x] Transition `new` → `in_design` is allowed (actor: agent, manual)
+- [x] Transition `ammend` → `in_design` is allowed (actor: agent, manual)
+- [x] Transition `in_design` → `specd` is allowed (actor: agent, manual, preconditions: `spec_not_empty`, `spec_has_acceptance_criteria`)
+- [x] Transition `in_design` → `question` is allowed (actor: agent, manual)
+- [x] `apm state <id> in_design` succeeds from `new` or `ammend`
+- [x] `apm list --state in_design` shows tickets in that state
+- [x] `apm next` does not return `in_design` tickets as actionable (they are already claimed)
+- [x] Agent instructions in `apm.agents.md` document the new state and when to use it
 
 ### Out of scope
 
