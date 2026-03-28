@@ -4,11 +4,11 @@ title = "apm work: headless ticket orchestration without a supervisor session"
 state = "new"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "claude-0328-c72b"
 branch = "ticket/0046-apm-work-headless-ticket-orchestration-w"
 created_at = "2026-03-28T19:42:39.548558Z"
-updated_at = "2026-03-28T19:42:42.353977Z"
+updated_at = "2026-03-28T19:42:42.866718Z"
 +++
 
 ## Spec
