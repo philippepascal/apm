@@ -1,14 +1,14 @@
 +++
 id = 35
 title = "github-apm-meta"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T22:34:30.876479Z"
+updated_at = "2026-03-28T22:35:35.743895Z"
 +++
 
 ## Spec
@@ -145,3 +145,4 @@ Engineers will primarily interact with tickets through the UI, where IDs are cli
 | 2026-03-28T22:04Z | ammend | specd | claude-0328-1430-a4f2 |
 | 2026-03-28T22:09Z | specd | ammend | apm |
 | 2026-03-28T22:34Z | ammend | in_design | claude-0328-1430-a4f2 |
+| 2026-03-28T22:35Z | in_design | specd | claude-0328-1430-a4f2 |
