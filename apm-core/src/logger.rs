@@ -6,6 +6,26 @@ use std::sync::{Mutex, OnceLock};
 static LOGGER: OnceLock<Option<Mutex<std::io::BufWriter<std::fs::File>>>> = OnceLock::new();
 static AGENT: OnceLock<String> = OnceLock::new();
 
+pub fn default_log_path(project_name: &str) -> std::path::PathBuf {
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var("HOME").unwrap_or_default();
+        std::path::PathBuf::from(home)
+            .join("Library/Logs/apm")
+            .join(format!("{project_name}.log"))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let base = std::env::var("XDG_STATE_HOME")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| {
+                let home = std::env::var("HOME").unwrap_or_default();
+                std::path::PathBuf::from(home).join(".local/state")
+            });
+        base.join("apm").join(format!("{project_name}.log"))
+    }
+}
+
 pub fn init(root: &Path, log_file: &Path, agent: &str) {
     AGENT.get_or_init(|| agent.to_string());
     let path = if log_file.is_absolute() {
@@ -15,6 +35,19 @@ pub fn init(root: &Path, log_file: &Path, agent: &str) {
     };
     let file = OpenOptions::new().create(true).append(true).open(&path).ok();
     LOGGER.get_or_init(|| file.map(|f| Mutex::new(std::io::BufWriter::new(f))));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn default_log_path_contains_apm_and_ends_log() {
+        let p = default_log_path("myproject");
+        let s = p.to_string_lossy();
+        assert!(s.contains("apm"), "path should contain 'apm': {s}");
+        assert!(s.ends_with(".log"), "path should end with .log: {s}");
+        assert!(s.contains("myproject"), "path should contain project name: {s}");
+    }
 }
 
 pub fn log(action: &str, detail: &str) {
