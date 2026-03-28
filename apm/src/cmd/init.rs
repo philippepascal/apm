@@ -153,6 +153,12 @@ color      = "#ef4444"
 actionable = ["agent"]
 
 [[workflow.states]]
+id         = "in_design"
+label      = "In Design"
+color      = "#f97316"
+actionable = ["agent"]
+
+[[workflow.states]]
 id         = "ready"
 label      = "Ready"
 color      = "#10b981"
