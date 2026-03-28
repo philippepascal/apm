@@ -8,10 +8,16 @@ risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T01:03:57.553944Z"
+updated_at = "2026-03-28T07:45:42.662600Z"
 +++
 
 ## Spec
+
+### Ammend
+aren't A and B not really safe anyway? if some other engineer works in another clone, if they don't pull often, they will miss changes to the meta branch and have wrong numbers anyway... so A and B are not really strong, work locally, which could be done with a gitignored file.
+C is out of the question as it uses main.
+D seems just a hacky A/B.
+Nothing is satisfying... how about mimicing git's hash?
 
 ### Problem
 
@@ -43,7 +49,6 @@ Use `tickets/NEXT_ID` (already the offline fallback) as the sole counter, tracke
 Use lightweight git tags (`refs/tags/apm/next-id`) as the counter. Tags don't show in GitHub's branch list and don't trigger the banner. Optimistic locking works: compare-and-swap via tag replacement. Push with `--force` on the tag ref is required, which some repos restrict.
 
 **Recommendation: Option A** is the minimal-risk change — identical logic, just rename `refs/heads/apm/meta` → `refs/apm/meta`. If the hosting environment supports non-standard ref pushes (GitHub does), this eliminates all GitHub noise immediately. Option B is cleaner long-term but introduces a theoretical race condition. Supervisor to decide.
-
 ## History
 
 | When | From | To | By |
