@@ -148,6 +148,7 @@ pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()> {
         let _ = run(root, &["fetch", "origin", branch]);
     }
     run(root, &["worktree", "add", &wt_path.to_string_lossy(), branch])?;
+    crate::logger::log("add_worktree", &format!("{}", wt_path.display()));
     Ok(())
 }
 
@@ -188,6 +189,7 @@ pub fn commit_to_branch(
         std::fs::write(&full_path, content)?;
         let _ = run(&wt_path, &["add", rel_path]);
         let _ = run(&wt_path, &["commit", "-m", message]);
+        crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
     }
 
@@ -200,10 +202,15 @@ pub fn commit_to_branch(
         std::fs::write(&local_path, content)?;
         let _ = run(root, &["add", rel_path]);
         let _ = run(root, &["commit", "-m", message]);
+        crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
     }
 
-    try_worktree_commit(root, branch, rel_path, content, message)
+    let result = try_worktree_commit(root, branch, rel_path, content, message);
+    if result.is_ok() {
+        crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
+    }
+    result
 }
 
 fn try_worktree_commit(
@@ -277,7 +284,10 @@ pub fn next_ticket_id(root: &Path, tickets_dir: &Path) -> Result<u32> {
             .unwrap_or(1);
 
         match write_meta(root, meta_branch, id, id + 1) {
-            Ok(()) => return Ok(id),
+            Ok(()) => {
+                crate::logger::log("next_ticket_id", &format!("{id}"));
+                return Ok(id);
+            }
             Err(_) if attempt + 1 < MAX_ATTEMPTS => continue,
             Err(e) => anyhow::bail!(
                 "could not allocate ticket ID after {MAX_ATTEMPTS} attempts: {e:#}"

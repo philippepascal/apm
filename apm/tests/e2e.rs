@@ -231,6 +231,19 @@ fn git_ok(dir: &Path, args: &[&str]) {
     assert!(out.status.success(), "git {:?} failed:\n{}", args, stderr(&out));
 }
 
+/// Check out ticket branch, write a valid spec body, commit, return to main.
+fn write_valid_spec_for_test(dir: &Path, branch: &str, ticket_path: &str) {
+    git_ok(dir, &["checkout", branch]);
+    let existing = std::fs::read_to_string(dir.join(ticket_path)).unwrap();
+    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let frontmatter = &existing[..fm_end];
+    let body = "\n## Spec\n\n### Problem\n\nTest problem.\n\n### Acceptance criteria\n\n- [ ] One criterion\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDirect approach.\n\n## History\n\n| When | From | To | By |\n|------|------|----|-----|\n| 2026-01-01T00:00Z | — | new | test-agent |\n";
+    std::fs::write(dir.join(ticket_path), format!("{frontmatter}{body}")).unwrap();
+    git_ok(dir, &["-c", "commit.gpgsign=false", "add", ticket_path]);
+    git_ok(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "write spec"]);
+    git_ok(dir, &["checkout", "main"]);
+}
+
 fn stdout(out: &Output) -> String {
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
@@ -569,9 +582,10 @@ terminal = true
     git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    // Create a ticket (apm state reads from git blobs — no working-tree prep needed).
+    // Create a ticket and write a valid spec body before transitioning to specd.
     let out = apm_env(p, "test-agent", &["new", "Enforcement test"]);
     assert!(out.status.success());
+    write_valid_spec_for_test(p, "ticket/0001-enforcement-test", "tickets/0001-enforcement-test.md");
 
     // new → specd is allowed.
     let out = apm_env(p, "test-agent", &["state", "1", "specd"]);
@@ -592,6 +606,7 @@ terminal = true
     // new → specd → ready via defined transitions (need a fresh ticket since #1 is now closed).
     let out = apm_env(p, "test-agent", &["new", "Second enforcement test"]);
     assert!(out.status.success());
+    write_valid_spec_for_test(p, "ticket/0002-second-enforcement-test", "tickets/0002-second-enforcement-test.md");
     let out = apm_env(p, "test-agent", &["state", "2", "specd"]);
     assert!(out.status.success(), "new → specd should be allowed");
     let out = apm_env(p, "test-agent", &["state", "2", "ready"]);
@@ -626,6 +641,7 @@ fn next_respects_priority_and_actionable_states() {
     assert!(json.contains("\"id\":2") || json.contains("\"id\": 2"), "expected ticket #2 (highest priority), got: {json}");
 
     // Move #2 to specd (not actionable) — next should now return #3.
+    write_valid_spec_for_test(env.root(), "ticket/0002-high-priority-task", "tickets/0002-high-priority-task.md");
     env.apm(&["state", "2", "specd"]);
 
     let out = env.apm(&["next", "--json"]);
