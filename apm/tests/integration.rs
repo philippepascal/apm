@@ -96,6 +96,20 @@ fn sync_from_branch(dir: &std::path::Path, branch: &str, path: &str) {
     git(dir, &["checkout", branch, "--", path]);
 }
 
+/// Write a valid spec body to a ticket on its branch, without changing HEAD.
+fn write_valid_spec_to_branch(dir: &std::path::Path, branch: &str, path: &str) {
+    let existing = branch_content(dir, branch, path);
+    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let frontmatter = &existing[..fm_end];
+    let body = "\n## Spec\n\n### Problem\n\nTest problem.\n\n### Acceptance criteria\n\n- [ ] One criterion\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDirect approach.\n\n## History\n\n| When | From | To | By |\n|------|------|----|-----|\n| 2026-01-01T00:00Z | — | new | test-agent |\n";
+    let content = format!("{frontmatter}{body}");
+    git(dir, &["checkout", branch]);
+    std::fs::write(dir.join(path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "write spec"]);
+    git(dir, &["checkout", "-"]);
+}
+
 // --- init ---
 
 #[test]
@@ -221,6 +235,7 @@ fn list_state_filter() {
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::new::run(dir.path(), "Beta".into()).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
+    write_valid_spec_to_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
@@ -250,6 +265,7 @@ fn state_transition_updates_file() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Transition test".into()).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
+    write_valid_spec_to_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     // Read the updated state from the ticket branch (not the working tree).
     let content = branch_content(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
@@ -261,6 +277,7 @@ fn state_transition_appends_history_row() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "History test".into()).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
+    write_valid_spec_to_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     apm::cmd::state::run(dir.path(), 1, "specd".into()).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     assert!(content.contains("| new | specd |"));

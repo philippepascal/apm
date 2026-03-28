@@ -38,6 +38,36 @@ pub fn run(root: &Path, id: u32, new_state: String) -> Result<()> {
             }
         }
     }
+    // Validate document for state-specific constraints.
+    match new_state.as_str() {
+        "specd" => {
+            if let Ok(doc) = t.document() {
+                let errors = doc.validate();
+                if !errors.is_empty() {
+                    let msgs: Vec<String> = errors.iter().map(|e| format!("  - {e}")).collect();
+                    bail!("spec validation failed:\n{}", msgs.join("\n"));
+                }
+                if old_state == "ammend" {
+                    let unchecked = doc.unchecked_amendments();
+                    if !unchecked.is_empty() {
+                        bail!("not all amendment requests are checked — mark them [x] before resubmitting");
+                    }
+                }
+            }
+        }
+        "implemented" => {
+            if let Ok(doc) = t.document() {
+                let unchecked = doc.unchecked_criteria();
+                if !unchecked.is_empty() {
+                    bail!(
+                        "not all acceptance criteria are checked — mark them [x] before transitioning to implemented"
+                    );
+                }
+            }
+        }
+        _ => {}
+    }
+
     let now = Utc::now();
     let actor = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
     t.frontmatter.state = new_state.clone();
