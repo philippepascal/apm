@@ -140,7 +140,10 @@ fn main() -> Result<()> {
     let root = repo_root()?;
     if let Ok(ref config) = apm_core::config::Config::load(&root) {
         if config.logging.enabled {
-            let log_path = apm_core::logger::default_log_path(&config.project.name);
+            let log_path = apm_core::logger::resolve_log_path(
+                &config.project.name,
+                config.logging.file.as_deref(),
+            );
             if let Some(parent) = log_path.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }

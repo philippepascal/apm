@@ -94,7 +94,18 @@ fn detect_default_branch(root: &Path) -> String {
         .unwrap_or_else(|| "main".to_string())
 }
 
+#[cfg(target_os = "macos")]
+fn default_log_file(name: &str) -> String {
+    format!("~/Library/Logs/apm/{name}.log")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_log_file(name: &str) -> String {
+    format!("~/.local/state/apm/{name}.log")
+}
+
 fn default_config(name: &str, default_branch: &str) -> String {
+    let log_file = default_log_file(name);
     format!(
         r##"[project]
 name = "{name}"
@@ -191,6 +202,7 @@ terminal = true
 
 [logging]
 enabled = false
+file = "{log_file}"
 "##
     )
 }
