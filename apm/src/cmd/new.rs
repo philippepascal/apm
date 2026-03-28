@@ -7,8 +7,11 @@ use apm_core::{
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, title: String) -> Result<()> {
+pub fn run(root: &Path, title: String, side_note: bool, context: Option<String>) -> Result<()> {
     let config = Config::load(root)?;
+    if side_note && !config.agents.side_tickets {
+        anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
+    }
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
 
@@ -36,8 +39,12 @@ pub fn run(root: &Path, title: String) -> Result<()> {
         updated_at: Some(now),
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
+    let problem_section = match &context {
+        Some(ctx) => format!("### Problem\n\n{ctx}\n\n"),
+        None => "### Problem\n\n".to_string(),
+    };
     let body = format!(
-        "## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
+        "## Spec\n\n{problem_section}### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
     );
     let path = tickets_dir.join(&filename);
     let t = Ticket { frontmatter: fm, body, path };
