@@ -8,7 +8,13 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
-    let actionable = config.actionable_states_for("agent");
+
+    // apm start is only valid from "ready" — spec-writing states (new, ammend)
+    // use the branch directly; blocked tickets go back to ready before restarting.
+    let startable: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
+        .map(|s| s.id.as_str())
+        .collect();
 
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
@@ -19,12 +25,12 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     if fm.agent.is_some() {
         bail!("ticket already claimed — run `apm next`");
     }
-    if !actionable.contains(&fm.state.as_str()) {
+    if !startable.is_empty() && !startable.contains(&fm.state.as_str()) {
         bail!(
-            "ticket #{id} is in state {:?} — not agent-actionable\n\
-             Agent-actionable states: {}",
+            "ticket #{id} is in state {:?} — not startable\n\
+             Use `apm start` only from: {}",
             fm.state,
-            if actionable.is_empty() { "(none configured)".to_string() } else { actionable.join(", ") }
+            startable.join(", ")
         );
     }
 
@@ -64,6 +70,39 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
 
     let wt_display = git::find_worktree_for_branch(root, &branch)
         .unwrap_or(wt_path);
+
+    // Merge the default branch into the ticket branch so the agent starts from current code.
+    let default_branch = &config.project.default_branch;
+    let remote_ref = format!("origin/{default_branch}");
+    let merge_ref = if std::process::Command::new("git")
+        .args(["rev-parse", "--verify", &remote_ref])
+        .current_dir(&wt_display)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        remote_ref.as_str()
+    } else {
+        default_branch.as_str()
+    };
+    match std::process::Command::new("git")
+        .args(["merge", merge_ref, "--no-edit"])
+        .current_dir(&wt_display)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if !stdout.contains("Already up to date") {
+                println!("Merged {merge_ref} into branch.");
+            }
+        }
+        Ok(out) => eprintln!(
+            "warning: merge {} failed: {}",
+            merge_ref,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ),
+        Err(e) => eprintln!("warning: merge failed: {e}"),
+    }
 
     println!("#{id}: {old_state} → in_progress (agent: {agent_name}, branch: {branch})");
     println!("Worktree: {}", wt_display.display());
