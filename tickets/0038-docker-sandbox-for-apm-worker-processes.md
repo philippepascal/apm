@@ -31,10 +31,20 @@ The right model is:
 
 1. Run the worker inside a Docker container so the host filesystem is not
    accessible (only the worktree is mounted).
-2. Inject credentials as short-lived, scoped environment variables — not as
-   mounted files — so secrets are never written to the container's filesystem.
+2. Inject only the credentials the worker actually needs as environment
+   variables — never as mounted files — so secrets are never written to the
+   container's filesystem.
 3. Derive those values at spawn time from the OS keychain or environment,
    keeping long-lived keys out of `apm.toml` and off disk.
+
+**The worker's credential footprint is minimal.** Per ticket #37, the worker
+only does local `git commit` — it never pushes, never creates PRs. Those
+operations happen on the host after the container exits, using credentials
+that never enter the container. The worker therefore needs only:
+- `ANTHROPIC_API_KEY` — for the claude CLI to call the Anthropic API
+- `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL` — so commits have the right identity
+
+That's it. `GH_TOKEN` stays on the host.
 
 This is opt-in. Users who do not configure `[workers] container` get the
 current native behaviour unchanged.
@@ -46,11 +56,13 @@ current native behaviour unchanged.
 - [ ] When `container` is set, `apm start` runs the worker via
   `docker run --rm` with only the worktree mounted at `/workspace` (read-write)
   and nothing else from the host filesystem
-- [ ] Credentials are injected as environment variables, never as volume mounts:
+- [ ] Credentials are injected as environment variables, never as volume mounts.
+  The worker needs only:
   - `ANTHROPIC_API_KEY` — required for the claude CLI
-  - `GH_TOKEN` — used by `gh` for PR creation and by git for HTTPS auth
   - `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`,
     `GIT_COMMITTER_EMAIL` — so commits have the right identity
+  (`GH_TOKEN` is NOT injected — the worker never pushes or creates PRs;
+  those are handled by `apm start` on the host after the container exits)
 - [ ] `apm start` resolves each credential at spawn time using this priority:
   1. Environment variable already set in the caller's shell
   2. macOS Keychain (`security find-generic-password -s "<service>" -w`)
@@ -61,16 +73,13 @@ current native behaviour unchanged.
   ```toml
   [workers.keychain]
   ANTHROPIC_API_KEY = "anthropic-api-key"
-  GH_TOKEN          = "github-token"
   ```
 - [ ] `apm init --with-docker` generates a `Dockerfile.apm-worker` at the repo
   root and prints instructions to build it; it does NOT auto-run `docker build`
 - [ ] The generated `Dockerfile.apm-worker` installs: `claude` CLI, `git`,
-  `gh`, `apm` (from the project's own binary or a downloaded release), and
+  `apm` (from the project's own binary or a downloaded release), and
   `cargo`/`rustup`; it includes commented sections for users to add
-  project-specific dependencies
-- [ ] Git HTTPS auth uses `GH_TOKEN` via git credential helper inside the
-  container — no SSH key mounting required or supported in the default image
+  project-specific dependencies (`gh` is not needed — no push or PR from inside)
 - [ ] The worker container is ephemeral: started with `--rm`, no persistent
   volumes or named containers
 - [ ] `apm verify` checks: if `[workers] container` is set but `docker` is not
@@ -82,8 +91,8 @@ current native behaviour unchanged.
   generated `Dockerfile.apm-worker`)
 - Linux keychain / `libsecret` integration (macOS Keychain only for now;
   Linux users pass credentials via environment variables)
-- Container networking restrictions (no `--network none`; the worker needs
-  outbound access to GitHub and the Anthropic API)
+- Container networking restrictions — the worker needs outbound access to the
+  Anthropic API; `--network none` is therefore not used
 - Multi-platform image builds or image version pinning in `apm.toml`
 - Windows support for the container path
 - Secret rotation or TTL enforcement (that is the user's responsibility)
@@ -144,7 +153,6 @@ docker run --rm
   --volume <wt>:/workspace
   --workdir /workspace
   --env ANTHROPIC_API_KEY=<resolved>
-  --env GH_TOKEN=<resolved>
   --env GIT_AUTHOR_NAME=<from git config or env>
   --env GIT_AUTHOR_EMAIL=<from git config or env>
   --env GIT_COMMITTER_NAME=<same>
@@ -154,13 +162,12 @@ docker run --rm
   claude --dangerously-skip-permissions -p "<ticket>" --system "<worker md>"
 ```
 
+The container has no network git credentials and no `GH_TOKEN`. The worker
+only does local `git commit`. After the container exits, `apm start` (running
+on the host, with full credentials) handles `git push` and `gh pr create`.
+
 Git identity falls back to `git config user.name` / `git config user.email`
 from the host if the env vars are not set.
-
-If the worktree's `origin` remote URL uses SSH (`git@github.com:...`),
-`apm start` rewrites it to HTTPS (`https://github.com/...`) before spawning
-the container. `GH_TOKEN` covers both `git push` and `gh pr create`; no SSH
-key is needed or supported.
 
 **`Dockerfile.apm-worker` template** (generated by `apm init --with-docker`):
 
@@ -184,10 +191,6 @@ RUN curl -fsSL https://storage.googleapis.com/anthropic-claude-cli/install.sh | 
 
 # apm binary (replace with your version)
 COPY target/release/apm /usr/local/bin/apm
-
-# Configure git to use GH_TOKEN for HTTPS auth
-RUN git config --global credential.helper \
-    '!f() { echo username=x-token; echo password=$GH_TOKEN; }; f'
 
 # Add project-specific dependencies here:
 # RUN apt-get install -y nodejs npm   # for Node projects
