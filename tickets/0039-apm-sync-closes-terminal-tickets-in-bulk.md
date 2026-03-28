@@ -35,22 +35,22 @@ git noise low and keeping `main`'s ticket files accurate.
 
 ### Acceptance criteria
 
-- [ ] `apm sync` detects tickets in `accepted` state (on any branch) and
+- [x] `apm sync` detects tickets in `accepted` state (on any branch) and
   proposes to transition them to `closed`, writing the updated ticket file
   to `main`
-- [ ] `apm sync` detects tickets where `main` shows `implemented` but no
+- [x] `apm sync` detects tickets where `main` shows `implemented` but no
   ticket branch exists (branch was deleted after merge) and proposes to
   transition them to `closed` on `main`
-- [ ] By default (interactive), `apm sync` prints a summary of proposed
+- [x] By default (interactive), `apm sync` prints a summary of proposed
   closures and prompts for confirmation before committing
-- [ ] `apm sync --auto-close` skips the prompt and applies all closures
+- [x] `apm sync --auto-close` skips the prompt and applies all closures
   automatically
-- [ ] All closure updates in a single sync run are batched into **one commit**
+- [x] All closure updates in a single sync run are batched into **one commit**
   to `main` (not one commit per ticket)
-- [ ] The batch commit message lists the closed ticket IDs:
+- [x] The batch commit message lists the closed ticket IDs:
   `"apm sync: close tickets #32, #34, #36"`
-- [ ] `apm sync --quiet --auto-close` applies closures silently with no output
-- [ ] If there is nothing to close, no commit is made and no prompt is shown
+- [x] `apm sync --quiet --auto-close` applies closures silently with no output
+- [x] If there is nothing to close, no commit is made and no prompt is shown
 
 ### Out of scope
 
