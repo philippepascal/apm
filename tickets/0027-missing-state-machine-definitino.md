@@ -1,7 +1,7 @@
 +++
 id = 27
 title = "missing-state-machine-definitino"
-state = "implemented"
+state = "accepted"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-2000-27aa"
 branch = "ticket/0027-missing-state-machine-definitino"
 created_at = "2026-03-27T05:28:59.591031Z"
-updated_at = "2026-03-28T02:10:42.506681Z"
+updated_at = "2026-03-28T07:31:53.807728Z"
 +++
 
 ## Spec
@@ -38,3 +38,4 @@ Please clarify the intended scope so I can write the spec.
 |------|------|----|----|
 | 2026-03-27T05:28Z | — | new | apm |
 | 2026-03-28T02:10Z | in_progress | implemented | claude-0327-2000-27aa |
+| 2026-03-28T07:31Z | implemented | accepted | apm sync |
