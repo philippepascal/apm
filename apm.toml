@@ -178,25 +178,6 @@ color    = "#374151"
 layer    = 1
 terminal = true
 
-# Auto-transitions: fired by apm sync or git hooks — no daemon required.
-
-[[workflow.auto_transitions]]
-on                = "event:branch_push_first"
-from              = "ready"
-to                = "in_progress"
-requires_provider = false   # fires from local pre-push hook
-
-[[workflow.auto_transitions]]
-on                = "event:pr_opened"
-from              = "in_progress"
-to                = "implemented"
-requires_provider = true
-
-[[workflow.auto_transitions]]
-on                = "event:pr_all_merged"
-from              = "implemented"
-to                = "accepted"
-requires_provider = false   # detected via git branch --merged
 
 [workflow.prioritization]
 priority_weight = 10.0
@@ -207,5 +188,8 @@ risk_weight     = -1.0
 instructions   = "apm.agents.md"
 max_concurrent = 3
 
+[sync]
+aggressive = true
+
 [logging]
-enabled = false
+enabled = true

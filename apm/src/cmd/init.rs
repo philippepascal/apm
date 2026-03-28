@@ -1,7 +1,6 @@
 use anyhow::Result;
 use serde_json::Value;
 use std::io::{self, BufRead, Write};
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -29,8 +28,6 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     ensure_claude_md(root)?;
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore)?;
-    let git_dir = root.join(".git");
-    write_hooks(&git_dir)?;
     update_claude_settings(root, no_claude)?;
     maybe_initial_commit(root)?;
     maybe_create_meta_branch(root)?;
@@ -418,27 +415,6 @@ fn update_user_claude_settings() -> Result<()> {
     Ok(())
 }
 
-fn write_hooks(git_dir: &PathBuf) -> Result<()> {
-    let hooks_dir = git_dir.join("hooks");
-    std::fs::create_dir_all(&hooks_dir)?;
-
-    let pre_push = hooks_dir.join("pre-push");
-    std::fs::write(
-        &pre_push,
-        "#!/bin/sh\n# Fires event:branch_push_first on first push of ticket/<id>-* in ready state\ncommand -v apm >/dev/null 2>&1 && apm _hook pre-push || true\n",
-    )?;
-    std::fs::set_permissions(&pre_push, std::fs::Permissions::from_mode(0o755))?;
-
-    let post_merge = hooks_dir.join("post-merge");
-    std::fs::write(
-        &post_merge,
-        "#!/bin/sh\ncommand -v apm >/dev/null 2>&1 && apm sync --quiet --offline || true\n",
-    )?;
-    std::fs::set_permissions(&post_merge, std::fs::Permissions::from_mode(0o755))?;
-
-    println!("Installed git hooks (pre-push, post-merge).");
-    Ok(())
-}
 
 /// Create the worktrees directory specified in apm.toml (if the config exists).
 fn ensure_worktrees_dir(root: &Path) -> Result<()> {

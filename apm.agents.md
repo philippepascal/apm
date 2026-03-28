@@ -36,12 +36,13 @@ Body sections (`## Spec` required):
 
 ## Identity
 
-Generate a unique session name at the start of every session and export it
-before running any apm command:
+Generate a unique session name at the start of every session. Use a fixed
+string — do not use `$()` substitution inline, as it triggers permission
+prompts. Pick a name of the form `claude-MMDD-HHMM-XXXX` (e.g.
+`claude-0325-1430-a3f9`) and export it before running any apm command:
 
 ```bash
-export APM_AGENT_NAME=claude-$(date +%m%d-%H%M)-$(openssl rand -hex 2)
-# example: claude-0325-1430-a3f9
+export APM_AGENT_NAME=claude-0325-1430-a3f9
 ```
 
 Hold the same name for the entire session. Do not regenerate mid-session.
@@ -166,6 +167,56 @@ manually.
 
 Work one ticket at a time per agent process. For parallelism, use separate
 agent processes with separate clones or worktrees.
+
+## Shell discipline
+
+Claude Code's permission system matches the **start** of the command string.
+Compound calls defeat this matching and generate permission prompts. Keep each
+Bash call to a single operation.
+
+**Do not chain commands:**
+```bash
+# Wrong — && chains defeat allow-list matching
+apm sync && apm list --state ready
+
+# Right — one call per operation
+apm sync
+apm list --state ready
+```
+
+**Do not use `$()` subshells:**
+```bash
+# Wrong — triggers "command substitution" security check
+gh pr create --body "$(cat /tmp/body.md)"
+
+# Right — write body with the Write tool, then reference by file
+gh pr create --body-file /tmp/body.md
+```
+
+**Do not use background jobs (`&`):**
+```bash
+# Wrong — & defeats pattern matching
+gh pr merge 1 & gh pr merge 2 & wait
+
+# Right — sequential calls
+gh pr merge 1
+gh pr merge 2
+```
+
+**Use `git -C` for all git operations in worktrees:**
+```bash
+# Wrong — cd && git triggers "bare repository attack" check
+cd "$wt" && git add .
+
+# Right
+git -C "$wt" add <files>
+```
+
+**Use `bash -c` for multi-step commands that must share a directory:**
+```bash
+# Right — single bash call, matches Bash(bash *)
+bash -c "cd $wt && cargo test --workspace 2>&1"
+```
 
 ## Side tickets
 
