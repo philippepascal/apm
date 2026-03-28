@@ -1,14 +1,14 @@
 +++
 id = 31
 title = "add-agent-behavior-new-ticket"
-state = "new"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
 branch = "ticket/0031-add-agent-behavior-new-ticket"
 created_at = "2026-03-27T06:53:11.802207Z"
-updated_at = "2026-03-28T01:01:03.988902Z"
+updated_at = "2026-03-28T01:01:42.291463Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ Agents working on a ticket regularly encounter issues outside the scope of their
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-27T06:53Z | — | new | apm |
+| 2026-03-28T01:01Z | new | specd | claude-0327-1757-391b |
