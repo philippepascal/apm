@@ -35,14 +35,14 @@ The result: the log file is created but effectively empty during normal use.
 
 ### Acceptance criteria
 
-- [ ] Every `apm` command invocation writes at least one log entry when logging
+- [x] Every `apm` command invocation writes at least one log entry when logging
   is enabled — at minimum: `cmd <subcommand> <args>` at entry
-- [ ] State transitions log the event: `state <id> <from> -> <to>`
-- [ ] Log entries use the existing format:
+- [x] State transitions log the event: `state <id> <from> -> <to>`
+- [x] Log entries use the existing format:
   `<timestamp> [<agent>] <action> <detail>`
-- [ ] Read-only commands (`list`, `show`, `next`, `verify`, `agents`) log their
+- [x] Read-only commands (`list`, `show`, `next`, `verify`, `agents`) log their
   invocation
-- [ ] No new log calls are needed inside `git.rs` (existing ones stay)
+- [x] No new log calls are needed inside `git.rs` (existing ones stay)
 
 ### Out of scope
 
