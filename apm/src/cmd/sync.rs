@@ -16,7 +16,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool) -> Result<()> {
 
     // Detect merged branches and fire implemented → accepted auto-transition.
     let branches = git::ticket_branches(root)?;
-    let merged = git::merged_into_main(root)?;
+    let merged = git::merged_into_main(root, &config.project.default_branch)?;
     let mut transitioned = 0usize;
 
     for branch in &merged {
