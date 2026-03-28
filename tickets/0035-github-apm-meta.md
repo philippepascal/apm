@@ -3,12 +3,12 @@ id = 35
 title = "github-apm-meta"
 state = "new"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-27T21:16:06.651846Z"
+updated_at = "2026-03-28T01:03:15.237117Z"
 +++
 
 ## Spec
