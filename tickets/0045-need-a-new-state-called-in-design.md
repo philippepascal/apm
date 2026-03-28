@@ -15,13 +15,54 @@ updated_at = "2026-03-28T18:25:55.938433Z"
 
 ### Problem
 
-we don't see that an agent is working on a spec. add a state in_design, and the proper transitions between new, ammend and specd
+When an agent picks up a `new` or `ammend` ticket to write or revise a spec, the ticket stays in `new`/`ammend` until the agent finishes and runs `apm state <id> specd`. Supervisors have no visibility into which tickets are actively being specced versus sitting idle. Adding an `in_design` state gives agents a place to claim a ticket during spec-writing, mirroring how `in_progress` works during implementation.
 
 ### Acceptance criteria
 
+- [ ] `in_design` state exists in `apm.toml` with `actionable = ["agent"]` and `layer = 1`
+- [ ] Transition `new` → `in_design` is allowed (actor: agent, manual)
+- [ ] Transition `ammend` → `in_design` is allowed (actor: agent, manual)
+- [ ] Transition `in_design` → `specd` is allowed (actor: agent, manual, preconditions: `spec_not_empty`, `spec_has_acceptance_criteria`)
+- [ ] Transition `in_design` → `question` is allowed (actor: agent, manual)
+- [ ] `apm state <id> in_design` succeeds from `new` or `ammend`
+- [ ] `apm list --state in_design` shows tickets in that state
+- [ ] `apm next` does not return `in_design` tickets as actionable (they are already claimed)
+- [ ] Agent instructions in `apm.agents.md` document the new state and when to use it
+
 ### Out of scope
 
+- An automatic transition into `in_design` (agents trigger it manually, same as `specd`)
+- Any UI or dashboard changes
+- Changing the `in_progress` state or implementation workflow
+
 ### Approach
+
+1. **`apm.toml`** — add `in_design` state block between `ammend` and `ready`:
+   ```toml
+   [[workflow.states]]
+   id         = "in_design"
+   label      = "In Design"
+   color      = "#f97316"
+   layer      = 1
+   actionable = ["agent"]
+
+     [[workflow.states.transitions]]
+     to            = "specd"
+     trigger       = "manual"
+     actor         = "agent"
+     preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
+
+     [[workflow.states.transitions]]
+     to      = "question"
+     trigger = "manual"
+     actor   = "agent"
+   ```
+   Then add a `to = "in_design"` transition under the `new` state block and under the `ammend` state block (actor: agent, manual).
+
+2. **`apm.agents.md`** — update the "Working a ticket" section:
+   - Under `state = "new"`: after reading the ticket, add `apm state <id> in_design` before editing the spec file.
+   - Under `state = "ammend"`: same — transition to `in_design` before editing.
+   - Add a short paragraph describing `in_design` as the state that signals "agent is actively writing/revising the spec".
 ## History
 
 | When | From | To | By |
