@@ -68,6 +68,12 @@ enum Command {
         id: u32,
         #[arg(long)]
         no_aggressive: bool,
+        /// Launch a claude worker subprocess in the background
+        #[arg(long)]
+        spawn: bool,
+        /// Pass --dangerously-skip-permissions to the worker (use with --spawn)
+        #[arg(long, short = 'P')]
+        skip_permissions: bool,
     },
     /// Return the highest-priority actionable ticket
     Next {
@@ -161,7 +167,7 @@ fn main() -> Result<()> {
         Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
-        Command::Start { id, no_aggressive } => cmd::start::run(&root, id, no_aggressive),
+        Command::Start { id, no_aggressive, spawn, skip_permissions } => cmd::start::run(&root, id, no_aggressive, spawn, skip_permissions),
         Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
         Command::Take { id } => cmd::take::run(&root, id),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),

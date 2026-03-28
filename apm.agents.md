@@ -108,6 +108,14 @@ The ticket's state determines what to do next:
      and partial work already exist on the branch — pick up from there
 2. `apm start <id>` — claims the ticket (sets `agent` = your name, state →
    `in_progress`), provisions or reuses the permanent worktree; prints its path
+
+   To hand the ticket to an autonomous background worker instead:
+   ```
+   apm start --spawn <id>          # worker runs under project allow list
+   apm start --spawn -P <id>       # worker runs with --dangerously-skip-permissions
+   ```
+   The worker provisions the worktree, implements, pushes, and opens a PR autonomously.
+   The supervisor gets control back immediately.
 3. Commit all code changes to the ticket branch inside the worktree:
    ```bash
    # apm start prints the worktree path — use git -C to work there

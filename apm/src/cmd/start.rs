@@ -3,7 +3,7 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
     let agent_name = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
@@ -113,5 +113,56 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
 
     println!("#{id}: {old_state} → in_progress (agent: {agent_name}, branch: {branch})");
     println!("Worktree: {}", wt_display.display());
+
+    if !spawn {
+        return Ok(());
+    }
+
+    // Generate worker agent name
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
+
+    // Read apm.worker.md
+    let worker_md_path = root.join("apm.worker.md");
+    let worker_system = std::fs::read_to_string(&worker_md_path)
+        .unwrap_or_else(|_| "You are an APM worker agent.".to_string());
+
+    // Get ticket content
+    let ticket_content = content;
+
+    // Build log path
+    let log_path = wt_display.join(".apm-worker.log");
+
+    // Build claude command
+    let mut cmd = std::process::Command::new("claude");
+    cmd.arg("--print");
+    cmd.args(["--system", &worker_system]);
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
+    }
+    cmd.arg(&ticket_content);
+    cmd.env("APM_AGENT_NAME", &worker_name);
+    cmd.current_dir(&wt_display);
+
+    // Redirect stdout+stderr to log file
+    let log_file = std::fs::File::create(&log_path)?;
+    let log_clone = log_file.try_clone()?;
+    cmd.stdout(log_file);
+    cmd.stderr(log_clone);
+
+    // Spawn detached
+    let child = cmd.spawn()?;
+    let pid = child.id();
+    // Do not wait — drop child handle, process runs independently
+    std::mem::drop(child);
+
+    println!("Worker spawned: PID={pid}, log={}", log_path.display());
+    println!("Agent name: {worker_name}");
+
     Ok(())
+}
+
+fn rand_u16() -> u16 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().subsec_nanos() as u16
 }
