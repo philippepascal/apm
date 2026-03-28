@@ -71,17 +71,19 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
     let wt_display = git::find_worktree_for_branch(root, &branch)
         .unwrap_or(wt_path);
 
-    // Merge main into the ticket branch so the agent starts from current code.
+    // Merge the default branch into the ticket branch so the agent starts from current code.
+    let default_branch = &config.project.default_branch;
+    let remote_ref = format!("origin/{default_branch}");
     let merge_ref = if std::process::Command::new("git")
-        .args(["rev-parse", "--verify", "origin/main"])
+        .args(["rev-parse", "--verify", &remote_ref])
         .current_dir(&wt_display)
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
     {
-        "origin/main"
+        remote_ref.as_str()
     } else {
-        "main"
+        default_branch.as_str()
     };
     match std::process::Command::new("git")
         .args(["merge", merge_ref, "--no-edit"])

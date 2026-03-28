@@ -64,13 +64,15 @@ pub fn ticket_branches(root: &Path) -> Result<Vec<String>> {
     Ok(branches)
 }
 
-/// ticket/* branches that are merged into main (remote or local).
-pub fn merged_into_main(root: &Path) -> Result<Vec<String>> {
-    // Try remote main first.
-    if run(root, &["rev-parse", "--verify", "refs/remotes/origin/main"]).is_ok() {
+/// ticket/* branches that are merged into the default branch (remote or local).
+pub fn merged_into_main(root: &Path, default_branch: &str) -> Result<Vec<String>> {
+    let remote_ref = format!("refs/remotes/origin/{default_branch}");
+    let remote_merged = format!("origin/{default_branch}");
+    // Try remote branch first.
+    if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
         let out = run(
             root,
-            &["branch", "-r", "--merged", "origin/main", "--list", "origin/ticket/*"],
+            &["branch", "-r", "--merged", &remote_merged, "--list", "origin/ticket/*"],
         )
         .unwrap_or_default();
         return Ok(out
@@ -79,13 +81,15 @@ pub fn merged_into_main(root: &Path) -> Result<Vec<String>> {
             .filter(|l| !l.is_empty())
             .collect());
     }
-    // Fall back to local main.
-    if run(root, &["rev-parse", "--verify", "refs/heads/main"]).is_err() {
+    // Fall back to local branch.
+    let local_ref = format!("refs/heads/{default_branch}");
+    let local_exists = run(root, &["rev-parse", "--verify", &local_ref]);
+    if local_exists.is_err() {
         return Ok(vec![]);
     }
     let out = run(
         root,
-        &["branch", "--merged", "main", "--list", "ticket/*"],
+        &["branch", "--merged", default_branch, "--list", "ticket/*"],
     )
     .unwrap_or_default();
     Ok(out

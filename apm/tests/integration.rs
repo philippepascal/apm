@@ -339,3 +339,32 @@ fn new_ticket_sets_branch_in_frontmatter() {
     let content = branch_content(dir.path(), "ticket/0001-frontmatter-branch", "tickets/0001-frontmatter-branch.md");
     assert!(content.contains("branch = \"ticket/0001-frontmatter-branch\""));
 }
+
+#[test]
+fn init_config_has_default_branch_and_parses() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q", "-b", "trunk"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    apm::cmd::init::run(p, true).unwrap();
+
+    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    assert!(toml.contains("default_branch = \"trunk\""), "default_branch not written: {toml}");
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.project.default_branch, "trunk");
+}
+
+#[test]
+fn config_default_branch_defaults_to_main_when_absent() {
+    // A config without default_branch should deserialize with "main" as default.
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.project.default_branch, "main");
+}

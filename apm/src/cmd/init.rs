@@ -17,7 +17,8 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project");
-        std::fs::write(&config_path, default_config(name))?;
+        let branch = detect_default_branch(root);
+        std::fs::write(&config_path, default_config(name, &branch))?;
         println!("Created apm.toml");
     }
     let agents_path = root.join("apm.agents.md");
@@ -59,10 +60,24 @@ fn default_agents_md() -> &'static str {
     include_str!("../../../apm.agents.md")
 }
 
-fn default_config(name: &str) -> String {
+fn detect_default_branch(root: &Path) -> String {
+    std::process::Command::new("git")
+        .args(["symbolic-ref", "--short", "HEAD"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "main".to_string())
+}
+
+fn default_config(name: &str, default_branch: &str) -> String {
     format!(
         r##"[project]
 name = "{name}"
+default_branch = "{default_branch}"
 
 [tickets]
 dir = "tickets"
