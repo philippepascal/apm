@@ -4,11 +4,11 @@ title = "need a new state called in_design"
 state = "new"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 branch = "ticket/0045-need-a-new-state-called-in-design"
 created_at = "2026-03-28T09:04:04.270348Z"
-updated_at = "2026-03-28T18:25:55.454100Z"
+updated_at = "2026-03-28T18:25:55.938433Z"
 +++
 
 ## Spec
