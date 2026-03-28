@@ -110,6 +110,14 @@ pub fn repo_root() -> Result<PathBuf> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = repo_root()?;
+    if let Ok(ref config) = apm_core::config::Config::load(&root) {
+        if config.logging.enabled {
+            if let Some(ref log_file) = config.logging.file {
+                let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".to_string());
+                apm_core::logger::init(&root, log_file, &agent);
+            }
+        }
+    }
     match cli.command {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
