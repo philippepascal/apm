@@ -78,7 +78,8 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the full ticket
 2. `apm set <id> effort <1-10>` — assess implementation scale
 3. `apm set <id> risk <1-10>` — assess technical risk
-4. Provision a worktree and edit the spec file there:
+4. `apm state <id> in_design` — claim the ticket before editing (signals you are actively writing the spec)
+5. Provision a worktree and edit the spec file there:
    ```bash
    wt=$(apm worktrees --add <id>)   # prints the worktree path; reuses it if it already exists
    # edit $wt/tickets/<id>-<slug>.md — fill Problem, Acceptance criteria, Out of scope, Approach
@@ -87,20 +88,26 @@ The ticket's state determines what to do next:
    ```
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
-5. If blocked on an ambiguity: write the question in `### Open questions`,
+6. If blocked on an ambiguity: write the question in `### Open questions`,
    commit it to the worktree, then `apm state <id> question`
-6. `apm state <id> specd` — submit spec for supervisor review
+7. `apm state <id> specd` — submit spec for supervisor review
 
 **state = `ammend`** — revise the spec:
 1. `apm show <id>` — read the Amendment requests carefully
-2. Provision a worktree, address each item, check its box, update `### Approach`:
+2. `apm state <id> in_design` — claim the ticket before editing (signals you are actively revising the spec)
+3. Provision a worktree, address each item, check its box, update `### Approach`:
    ```bash
    wt=$(apm worktrees --add <id>)
    # edit $wt/tickets/<id>-<slug>.md
    git -C "$wt" add tickets/<id>-<slug>.md
    git -C "$wt" commit -m "ticket(<id>): address amendments"
    ```
-3. `apm state <id> specd` — resubmit only when all amendment boxes are checked
+4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
+
+**state = `in_design`** — spec is actively being written or revised:
+The ticket is claimed by an agent. This state mirrors `in_progress` for the
+implementation phase. Do not pick up an `in_design` ticket unless you are
+taking it over with `apm take <id>`.
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
