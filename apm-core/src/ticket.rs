@@ -122,6 +122,206 @@ pub fn next_id(tickets_dir: &Path) -> Result<u32> {
     Ok(id)
 }
 
+// ── TicketDocument ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub struct ChecklistItem {
+    pub checked: bool,
+    pub text: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum ValidationError {
+    EmptySection(&'static str),
+    NoAcceptanceCriteria,
+    UncheckedCriterion(usize),
+    UncheckedAmendment(usize),
+}
+
+impl std::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptySection(s) => write!(f, "### {s} section is empty"),
+            Self::NoAcceptanceCriteria => write!(f, "### Acceptance criteria has no checklist items"),
+            Self::UncheckedCriterion(i) => write!(f, "acceptance criterion #{} is not checked", i + 1),
+            Self::UncheckedAmendment(i) => write!(f, "amendment request #{} is not checked", i + 1),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TicketDocument {
+    pub problem: String,
+    pub acceptance_criteria: Vec<ChecklistItem>,
+    pub out_of_scope: String,
+    pub approach: String,
+    pub open_questions: Option<String>,
+    pub amendment_requests: Option<Vec<ChecklistItem>>,
+    raw_history: String,
+}
+
+fn parse_checklist(text: &str) -> Vec<ChecklistItem> {
+    text.lines()
+        .filter_map(|line| {
+            let l = line.trim();
+            if l.starts_with("- [ ] ") {
+                Some(ChecklistItem { checked: false, text: l[6..].to_string() })
+            } else if l.starts_with("- [x] ") || l.starts_with("- [X] ") {
+                Some(ChecklistItem { checked: true, text: l[6..].to_string() })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn serialize_checklist(items: &[ChecklistItem]) -> String {
+    items.iter()
+        .map(|i| format!("- [{}] {}", if i.checked { "x" } else { " " }, i.text))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn extract_sections(text: &str) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    let mut current: Option<String> = None;
+    let mut lines: Vec<&str> = Vec::new();
+    for line in text.lines() {
+        if let Some(name) = line.strip_prefix("### ") {
+            if let Some(prev) = current.take() {
+                map.insert(prev, lines.join("\n").trim().to_string());
+            }
+            current = Some(name.trim().to_string());
+            lines.clear();
+        } else if line.starts_with("## ") {
+            if let Some(prev) = current.take() {
+                map.insert(prev, lines.join("\n").trim().to_string());
+            }
+            lines.clear();
+        } else if current.is_some() {
+            lines.push(line);
+        }
+    }
+    if let Some(name) = current {
+        map.insert(name, lines.join("\n").trim().to_string());
+    }
+    map
+}
+
+impl TicketDocument {
+    pub fn parse(body: &str) -> Result<Self> {
+        let (spec_part, raw_history) = if let Some(pos) = body.find("\n## History") {
+            (&body[..pos], body[pos + 1..].to_string())
+        } else {
+            (body, String::new())
+        };
+
+        let sections = extract_sections(spec_part);
+
+        for name in ["Problem", "Acceptance criteria", "Out of scope", "Approach"] {
+            if !sections.contains_key(name) {
+                anyhow::bail!("missing required section: ### {name}");
+            }
+        }
+
+        Ok(Self {
+            problem: sections["Problem"].clone(),
+            acceptance_criteria: parse_checklist(&sections["Acceptance criteria"]),
+            out_of_scope: sections["Out of scope"].clone(),
+            approach: sections["Approach"].clone(),
+            open_questions: sections.get("Open questions").cloned(),
+            amendment_requests: sections.get("Amendment requests").map(|s| parse_checklist(s)),
+            raw_history,
+        })
+    }
+
+    pub fn serialize(&self) -> String {
+        let mut out = String::from("## Spec\n");
+
+        out.push_str("\n### Problem\n\n");
+        out.push_str(&self.problem);
+        out.push('\n');
+
+        out.push_str("\n### Acceptance criteria\n\n");
+        if !self.acceptance_criteria.is_empty() {
+            out.push_str(&serialize_checklist(&self.acceptance_criteria));
+            out.push('\n');
+        }
+
+        out.push_str("\n### Out of scope\n\n");
+        out.push_str(&self.out_of_scope);
+        out.push('\n');
+
+        out.push_str("\n### Approach\n\n");
+        out.push_str(&self.approach);
+        out.push('\n');
+
+        if let Some(oq) = &self.open_questions {
+            out.push_str("\n### Open questions\n\n");
+            out.push_str(oq);
+            out.push('\n');
+        }
+
+        if let Some(ar) = &self.amendment_requests {
+            out.push_str("\n### Amendment requests\n\n");
+            out.push_str(&serialize_checklist(ar));
+            out.push('\n');
+        }
+
+        if !self.raw_history.is_empty() {
+            out.push('\n');
+            out.push_str(&self.raw_history);
+        }
+
+        out
+    }
+
+    pub fn validate(&self) -> Vec<ValidationError> {
+        let mut errors = Vec::new();
+        if self.problem.is_empty() {
+            errors.push(ValidationError::EmptySection("Problem"));
+        }
+        if self.acceptance_criteria.is_empty() {
+            errors.push(ValidationError::NoAcceptanceCriteria);
+        }
+        if self.out_of_scope.is_empty() {
+            errors.push(ValidationError::EmptySection("Out of scope"));
+        }
+        if self.approach.is_empty() {
+            errors.push(ValidationError::EmptySection("Approach"));
+        }
+        errors
+    }
+
+    pub fn unchecked_criteria(&self) -> Vec<usize> {
+        self.acceptance_criteria.iter().enumerate()
+            .filter(|(_, c)| !c.checked)
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    pub fn unchecked_amendments(&self) -> Vec<usize> {
+        self.amendment_requests.as_deref().unwrap_or(&[]).iter().enumerate()
+            .filter(|(_, c)| !c.checked)
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    pub fn toggle_criterion(&mut self, index: usize, checked: bool) -> Result<()> {
+        if index >= self.acceptance_criteria.len() {
+            anyhow::bail!("criterion index {index} out of range (have {})", self.acceptance_criteria.len());
+        }
+        self.acceptance_criteria[index].checked = checked;
+        Ok(())
+    }
+}
+
+impl Ticket {
+    pub fn document(&self) -> Result<TicketDocument> {
+        TicketDocument::parse(&self.body)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,5 +430,90 @@ mod tests {
         assert_eq!(next_id(p).unwrap(), 1);
         assert_eq!(next_id(p).unwrap(), 2);
         assert_eq!(next_id(p).unwrap(), 3);
+    }
+
+    // ── TicketDocument ────────────────────────────────────────────────────
+
+    fn full_body(ac: &str) -> String {
+        format!(
+            "## Spec\n\n### Problem\n\nSome problem.\n\n### Acceptance criteria\n\n{ac}\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDo it.\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+        )
+    }
+
+    #[test]
+    fn document_parse_required_sections() {
+        let body = full_body("- [ ] item one\n- [x] item two");
+        let doc = TicketDocument::parse(&body).unwrap();
+        assert_eq!(doc.problem, "Some problem.");
+        assert_eq!(doc.acceptance_criteria.len(), 2);
+        assert!(!doc.acceptance_criteria[0].checked);
+        assert!(doc.acceptance_criteria[1].checked);
+        assert_eq!(doc.out_of_scope, "Nothing.");
+        assert_eq!(doc.approach, "Do it.");
+    }
+
+    #[test]
+    fn document_parse_missing_section_errors() {
+        let body = "## Spec\n\n### Problem\n\nSome problem.\n\n## History\n\n";
+        let err = TicketDocument::parse(body).unwrap_err();
+        assert!(err.to_string().contains("missing required section"));
+    }
+
+    #[test]
+    fn document_round_trip() {
+        let body = full_body("- [ ] criterion A\n- [x] criterion B");
+        let doc = TicketDocument::parse(&body).unwrap();
+        let serialized = doc.serialize();
+        let doc2 = TicketDocument::parse(&serialized).unwrap();
+        assert_eq!(doc2.problem, doc.problem);
+        assert_eq!(doc2.acceptance_criteria.len(), doc.acceptance_criteria.len());
+        assert_eq!(doc2.acceptance_criteria[0].checked, false);
+        assert_eq!(doc2.acceptance_criteria[1].checked, true);
+        assert_eq!(doc2.out_of_scope, doc.out_of_scope);
+        assert_eq!(doc2.approach, doc.approach);
+    }
+
+    #[test]
+    fn document_validate_empty_sections() {
+        let body = "## Spec\n\n### Problem\n\n\n### Acceptance criteria\n\n- [ ] x\n\n### Out of scope\n\n\n### Approach\n\ncontent\n";
+        let doc = TicketDocument::parse(body).unwrap();
+        let errs = doc.validate();
+        let msgs: Vec<String> = errs.iter().map(|e| e.to_string()).collect();
+        assert!(msgs.iter().any(|m| m.contains("Problem")));
+        assert!(msgs.iter().any(|m| m.contains("Out of scope")));
+        assert!(!msgs.iter().any(|m| m.contains("Approach")));
+    }
+
+    #[test]
+    fn document_validate_no_criteria() {
+        let body = "## Spec\n\n### Problem\n\nfoo\n\n### Acceptance criteria\n\n\n### Out of scope\n\nbar\n\n### Approach\n\nbaz\n";
+        let doc = TicketDocument::parse(body).unwrap();
+        let errs = doc.validate();
+        assert!(errs.iter().any(|e| matches!(e, ValidationError::NoAcceptanceCriteria)));
+    }
+
+    #[test]
+    fn document_toggle_criterion() {
+        let body = full_body("- [ ] item one\n- [ ] item two");
+        let mut doc = TicketDocument::parse(&body).unwrap();
+        assert!(!doc.acceptance_criteria[0].checked);
+        doc.toggle_criterion(0, true).unwrap();
+        assert!(doc.acceptance_criteria[0].checked);
+    }
+
+    #[test]
+    fn document_unchecked_criteria() {
+        let body = full_body("- [ ] one\n- [x] two\n- [ ] three");
+        let doc = TicketDocument::parse(&body).unwrap();
+        assert_eq!(doc.unchecked_criteria(), vec![0, 2]);
+    }
+
+    #[test]
+    fn document_history_preserved() {
+        let body = full_body("- [x] done");
+        let doc = TicketDocument::parse(&body).unwrap();
+        let s = doc.serialize();
+        assert!(s.contains("## History"));
+        assert!(s.contains("| When |"));
     }
 }
