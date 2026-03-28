@@ -4,11 +4,11 @@ title = "new-command-take-free-text"
 state = "new"
 priority = 0
 effort = 3
-risk = 0
+risk = 1
 author = "apm"
 branch = "ticket/0034-new-command-take-free-text"
 created_at = "2026-03-27T21:11:48.964488Z"
-updated_at = "2026-03-28T01:02:50.031200Z"
+updated_at = "2026-03-28T01:02:50.380992Z"
 +++
 
 ## Spec
