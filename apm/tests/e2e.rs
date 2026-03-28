@@ -267,10 +267,8 @@ fn full_ticket_lifecycle() {
     assert!(env.root().join("CLAUDE.md").exists(), "CLAUDE.md missing");
     assert!(env.root().join("apm.agents.md").exists(), "apm.agents.md missing");
     assert!(env.root().join("apm.toml").exists(), "apm.toml missing");
-    assert!(env.root().join(".git/hooks/pre-push").exists(), "pre-push hook missing");
-    assert!(env.root().join(".git/hooks/post-merge").exists(), "post-merge hook missing");
-    // Remove the post-merge hook to prevent it interfering with the explicit apm sync step.
-    std::fs::remove_file(env.root().join(".git/hooks/post-merge")).unwrap();
+    assert!(!env.root().join(".git/hooks/pre-push").exists(), "pre-push hook should not be installed");
+    assert!(!env.root().join(".git/hooks/post-merge").exists(), "post-merge hook should not be installed");
 
     let claude = env.read("CLAUDE.md");
     assert!(claude.contains("@apm.agents.md"), "CLAUDE.md missing @apm.agents.md import");
@@ -502,22 +500,26 @@ mod tests {
     assert!(!src.contains("- 1"), "merged main still has the bug");
     assert!(src.contains("if input.is_empty()"), "fix not in main after merge");
 
-    // ── Step 11: apm sync detects merged branch → accepted ──────────────────
+    // ── Step 11: apm sync detects merged branch and suggests manual accept ──────
     // --offline skips the remote fetch/push.
     // sync reads tickets from git blobs directly — no working-tree prep needed.
 
     let out = env.apm(&["sync", "--offline"]);
     assert!(out.status.success(), "apm sync failed:\n{}", stderr(&out));
     assert!(
-        stdout(&out).contains("implemented → accepted"),
-        "auto-transition not reported:\n{}",
+        stdout(&out).contains("branch merged"),
+        "merge suggestion not reported:\n{}",
+        stdout(&out)
+    );
+    assert!(
+        stdout(&out).contains("apm state 1 accepted"),
+        "apm state suggestion missing:\n{}",
         stdout(&out)
     );
 
-    // Ticket branch now has state = accepted (sync commits to ticket branch, not main).
-    let accepted = env.branch_content(branch, ticket_path);
-    assert!(accepted.contains("state = \"accepted\""), "ticket branch not updated to accepted");
-    assert!(accepted.contains("| implemented | accepted |"), "history row missing");
+    // Ticket is still in implemented — no auto-transition.
+    let ticket_after = env.branch_content(branch, ticket_path);
+    assert!(ticket_after.contains("state = \"implemented\""), "state should still be implemented after sync");
 }
 
 // ---------------------------------------------------------------------------

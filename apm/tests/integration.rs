@@ -123,8 +123,8 @@ fn init_creates_expected_files() {
     assert!(p.join("tickets").is_dir());
     assert!(p.join("apm.toml").exists());
     assert!(p.join(".gitignore").exists());
-    assert!(p.join(".git/hooks/pre-push").exists());
-    assert!(p.join(".git/hooks/post-merge").exists());
+    assert!(!p.join(".git/hooks/pre-push").exists());
+    assert!(!p.join(".git/hooks/post-merge").exists());
 }
 
 #[test]
