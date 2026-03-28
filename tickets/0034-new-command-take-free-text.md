@@ -15,15 +15,26 @@ updated_at = "2026-03-28T01:02:50.380992Z"
 
 ### Problem
 
+After `apm new "title"`, the ticket is created but the supervisor must separately check out the branch, open the file, fill in the spec, commit, and transition state. This friction discourages writing a good spec immediately. When a human supervisor creates a ticket, they usually know the problem and want to write the spec right then. The command should open `$EDITOR` automatically so the spec can be written in one flow.
+
 ### Acceptance criteria
 
-user can do `apm new "title of ticket"`
-after that command, apm opens the edit of the ticket to allow user to enter spec
-behavior can be changed by flag if use feels title is enough
- 
+- [ ] After `apm new "<title>"`, `$EDITOR` opens with the ticket file pre-populated on the ticket branch
+- [ ] When the user saves and closes the editor, the changes are committed to the ticket branch automatically with message `ticket(<id>): write spec`
+- [ ] A `--no-edit` flag skips the editor (current behavior, useful for scripts and agents)
+- [ ] If `$EDITOR` is unset, `apm new` warns and skips the editor (does not fail)
+- [ ] If the editor exits non-zero, the file as written is still committed (editor abort ≠ content loss)
+
 ### Out of scope
 
+- Agents using `apm new` interactively (agents pass `--no-edit` by convention)
+- Templating beyond the current skeleton structure
+- Syntax validation of the spec before commit
+
 ### Approach
+
+In `apm/src/cmd/new.rs`, after `commit_to_branch` creates the ticket, check `$EDITOR`. If set and `--no-edit` is not passed: check out the ticket branch, open `$EDITOR <file>` via `std::process::Command::new(editor).arg(&path).status()`, then `git add` + `git commit` the result and check back out to the previous branch. The `--no-edit` flag is added as a boolean arg to the `New` command in `main.rs`.
+
 ## History
 
 | When | From | To | By |
