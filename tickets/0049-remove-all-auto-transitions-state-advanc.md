@@ -44,18 +44,18 @@ a human in the loop.
 
 ### Acceptance criteria
 
-- [ ] The three `[[workflow.auto_transitions]]` blocks are removed from `apm.toml`
-- [ ] The `pre-push` hook no longer auto-transitions tickets; `apm _hook pre-push`
+- [x] The three `[[workflow.auto_transitions]]` blocks are removed from `apm.toml`
+- [x] The `pre-push` hook no longer auto-transitions tickets; `apm _hook pre-push`
   becomes a no-op (or the hook is removed from `.git/hooks/pre-push` during
   `apm init` if it has no other purpose)
-- [ ] The `event:pr_opened` detection path in `apm sync` no longer triggers a
+- [x] The `event:pr_opened` detection path in `apm sync` no longer triggers a
   state transition
-- [ ] The `event:pr_all_merged` / branch-merged detection in `apm sync` no longer
+- [x] The `event:pr_all_merged` / branch-merged detection in `apm sync` no longer
   triggers a state transition; it may still surface the information to the user
   (e.g. "PR merged — run `apm state <id> accepted` to advance") but does not act
-- [ ] Existing tickets already in `in_progress` or `accepted` via auto-transition
+- [x] Existing tickets already in `in_progress` or `accepted` via auto-transition
   are unaffected (no data migration needed — frontmatter states are valid)
-- [ ] All existing tests pass; any tests that assert auto-transition behaviour are
+- [x] All existing tests pass; any tests that assert auto-transition behaviour are
   updated or removed
 
 ### Out of scope
