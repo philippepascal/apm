@@ -36,23 +36,72 @@ Every `apm new` pushes a new commit to `refs/heads/apm/meta`, causing GitHub to 
 
 ### Amendment requests
 
-<!-- Add amendment requests below -->
+- [x] Options A and B dismissed: any shared counter (ref or branch-scan) is
+  broken when clones are stale — engineers who don't pull frequently will
+  produce duplicate IDs regardless of locking protocol
+- [x] Options C and D dismissed: C commits to main (unacceptable), D is the
+  same stale-clone problem in a different container
+- [x] Add an option that mimics git's hash: coordinator-free, works offline,
+  no shared state required
 
 ### Approach
 
-**Option A — Use `refs/apm/meta` instead of `refs/heads/apm/meta`**
-Move the counter to a non-heads ref. GitHub only shows "recent push" banners and lists branches for refs under `refs/heads/`. The optimistic locking logic stays identical; only the ref name changes. Risk: some hosting providers restrict pushes to non-standard refs. Lowest-effort change.
+**Option A — Use `refs/apm/meta` instead of `refs/heads/apm/meta`** _(dismissed)_
+Eliminates GitHub noise but the stale-clone problem remains: a clone that
+hasn't fetched recently reads an outdated counter and generates a duplicate ID.
+The optimistic-locking retry only helps for concurrent pushes, not for offline
+or stale-clone creation.
 
-**Option B — Derive ID from existing branch names**
-Scan `refs/heads/ticket/NNNN-*` (locally after `git fetch`) and take `max(NNNN) + 1`. No special branch or push needed. Race condition: two agents running simultaneously could both read the same max and generate the same ID. At typical ticket creation rate (seconds apart, not milliseconds) this is unlikely but not impossible. Offline: works with local refs only. Simplest long-term.
+**Option B — Derive ID from existing branch names** _(dismissed)_
+Same root failure: scanning local `refs/heads/ticket/NNNN-*` without fetching
+returns the stale max. Two engineers on different clones both get the same `max
++ 1`. Locking is impossible without coordination.
 
-**Option C — Local counter file only**
-Use `tickets/NEXT_ID` (already the offline fallback) as the sole counter, tracked in git on `main`. Every `apm new` commits to `main` then pushes. Pros: no special branch. Cons: requires `main` to be pushable (not always true), adds commits to `main` for every ticket, still creates GitHub noise (on main itself).
+**Option C — Commit counter to `main`** _(dismissed)_
+Pollutes `main` with non-code commits and requires `main` to be pushable.
 
-**Option D — Monotonic tag**
-Use lightweight git tags (`refs/tags/apm/next-id`) as the counter. Tags don't show in GitHub's branch list and don't trigger the banner. Optimistic locking works: compare-and-swap via tag replacement. Push with `--force` on the tag ref is required, which some repos restrict.
+**Option D — Monotonic tag** _(dismissed)_
+Structurally identical to A: same stale-clone failure mode, requires `--force`
+tag pushes which many repos restrict.
 
-**Recommendation: Option A** is the minimal-risk change — identical logic, just rename `refs/heads/apm/meta` → `refs/apm/meta`. If the hosting environment supports non-standard ref pushes (GitHub does), this eliminates all GitHub noise immediately. Option B is cleaner long-term but introduces a theoretical race condition. Supervisor to decide.
+---
+
+**Option E — Hash-derived ticket IDs (recommended)**
+
+Mimic git object IDs: derive the ticket ID from a hash of local entropy
+(timestamp + random bytes), making it globally unique without any shared
+counter or network access.
+
+```
+id = sha1(unix_timestamp_ns + 8 random bytes) → take first 8 hex chars
+```
+
+Example ID: `a3f9b2c1`. Branch name: `ticket/a3f9b2c1-short-title`.
+
+Trade-offs:
+
+| Property | Current (counter) | Option E (hash) |
+|---|---|---|
+| GitHub noise | Yes (apm/meta branch) | None |
+| Stale-clone safe | No | Yes — no shared state |
+| Offline | Fallback only | Always works |
+| Collision probability | Zero (counter) | ~1 in 4 billion per 8-char hex |
+| Sequential / sortable | Yes | No (timestamp prefix helps) |
+| `apm show 35` syntax | Works | Needs prefix search |
+| Format change | No | Breaking — all existing IDs change |
+
+Collision risk at 8 hex chars (32 bits): with 1000 tickets the birthday
+probability is `~0.01%` — acceptable for project-scale ticket counts.
+
+Partial-match lookup (`apm show a3f9` → finds `a3f9b2c1`) matches git's UX.
+
+**Recommendation: Option E** if the format change is acceptable. It is the only
+option that is truly coordination-free and immune to stale clones. The UX shift
+from numeric IDs to short hashes is the main cost.
+
+If the format change is not acceptable, there is no good solution — all counter
+approaches are broken when clones diverge. Supervisor to decide whether to adopt
+hash IDs or accept the limitations of any counter approach.
 ## History
 
 | When | From | To | By |
