@@ -81,6 +81,11 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
         }
     }
 
+    if config.logging.enabled {
+        let log_path = apm_core::logger::default_log_path(&config.project.name);
+        println!("logging: {}", log_path.display());
+    }
+
     if issues.is_empty() {
         println!("verify: no issues found");
         return Ok(());

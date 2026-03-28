@@ -191,7 +191,6 @@ terminal = true
 
 [logging]
 enabled = false
-file    = "apm.log"
 "##
     )
 }

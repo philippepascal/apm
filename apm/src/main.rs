@@ -140,10 +140,12 @@ fn main() -> Result<()> {
     let root = repo_root()?;
     if let Ok(ref config) = apm_core::config::Config::load(&root) {
         if config.logging.enabled {
-            if let Some(ref log_file) = config.logging.file {
-                let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".to_string());
-                apm_core::logger::init(&root, log_file, &agent);
+            let log_path = apm_core::logger::default_log_path(&config.project.name);
+            if let Some(parent) = log_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
             }
+            let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".to_string());
+            apm_core::logger::init(&root, &log_path, &agent);
         }
     }
     match cli.command {
