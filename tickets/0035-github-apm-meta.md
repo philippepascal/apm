@@ -8,7 +8,7 @@ risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T18:18:23.331436Z"
+updated_at = "2026-03-28T18:28:18.504284Z"
 +++
 
 ## Spec
@@ -18,6 +18,10 @@ aren't A and B not really safe anyway? if some other engineer works in another c
 C is out of the question as it uses main.
 D seems just a hacky A/B.
 Nothing is satisfying... how about mimicing git's hash?
+
+take option E and rewrite this entire spec around it, with a preamble explaining the issues with othe numbering systems. 
+include in spec facilities to help user in command line (can we accept first few char if unique?, can we offer a sublist with short names if first few char is not?). propose other way to help with command line. 
+one key insight here is that we will also have a UI, in which we will not neet to type the hash-id, so this will be alleviated. we only need some sugar on manual cli commands
 
 ### Problem
 
