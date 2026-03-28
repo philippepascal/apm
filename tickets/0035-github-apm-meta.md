@@ -13,30 +13,37 @@ updated_at = "2026-03-28T18:28:18.863957Z"
 
 ## Spec
 
-### Ammend
-aren't A and B not really safe anyway? if some other engineer works in another clone, if they don't pull often, they will miss changes to the meta branch and have wrong numbers anyway... so A and B are not really strong, work locally, which could be done with a gitignored file.
-C is out of the question as it uses main.
-D seems just a hacky A/B.
-Nothing is satisfying... how about mimicing git's hash?
-
-take option E and rewrite this entire spec around it, with a preamble explaining the issues with othe numbering systems. 
-include in spec facilities to help user in command line (can we accept first few char if unique?, can we offer a sublist with short names if first few char is not?). propose other way to help with command line. 
-one key insight here is that we will also have a UI, in which we will not neet to type the hash-id, so this will be alleviated. we only need some sugar on manual cli commands
-
 ### Problem
 
-Every `apm new` pushes a new commit to `refs/heads/apm/meta`, causing GitHub to show a "apm/meta had recent pushes" banner on the repo home page. The branch also appears in GitHub's branch list, confusing users unfamiliar with APM. The current optimistic-locking protocol (read NEXT_ID, increment, push, retry on rejection) adds complexity. This ticket proposes alternatives for supervisor to choose from.
+APM currently assigns ticket IDs using a shared counter stored in `refs/heads/apm/meta`. This causes two distinct problems:
+
+**1. GitHub noise.** Every `apm new` pushes a commit to `apm/meta`, triggering GitHub's "branch had recent pushes" banner on the repo home page. The branch also appears in the branch list, confusing contributors unfamiliar with APM.
+
+**2. The counter approach is fundamentally broken across clones.** Any scheme that derives the next ID from shared state (a meta branch, a tag, a scan of existing branch names) fails the moment a clone is stale. An engineer who hasn't fetched recently reads an outdated max and generates a duplicate ID. Optimistic locking only prevents two concurrent pushes from the same up-to-date state; it cannot prevent two engineers on diverged clones from independently arriving at the same number. This rules out:
+
+- Option A (meta ref): stale clone, same problem, just less visible on GitHub
+- Option B (scan branch names): stale `refs/heads/ticket/NNNN-*`, same duplicate ID failure
+- Option C (commit to main): pollutes main with non-code commits
+- Option D (monotonic tag): stale clone, same failure, plus force-push restrictions
+
+The only sound solution is one that requires no shared state at all.
 
 ### Acceptance criteria
 
-- [ ] At least three alternatives are documented with trade-offs (GitHub noise, concurrency safety, offline support, implementation complexity)
-- [ ] A recommended approach is identified with rationale
-- [ ] The spec is sufficient for a supervisor to make an informed decision without additional research
+- [ ] Ticket IDs are 8-character hex strings derived from local entropy (timestamp + random bytes); no network access or shared state is required to generate one
+- [ ] The branch name format changes to `ticket/<hex8>-<slug>` (e.g. `ticket/a3f9b2c1-short-title`)
+- [ ] The `id` field in ticket frontmatter stores the 8-char hex string
+- [ ] All `apm` commands that take an ID also accept a unique prefix of at least 4 characters (`apm show a3f9` resolves to `a3f9b2c1` if unambiguous)
+- [ ] If a prefix matches more than one ticket, `apm` prints a disambiguation list and exits non-zero
+- [ ] `apm list` output shows the full 8-char ID; sorting is by creation timestamp (embedded in the ID generation, not the ID itself)
+- [ ] The `apm/meta` branch is no longer created or pushed on `apm new`
+- [ ] Collision probability with 1 000 tickets is documented and acceptable (≤ 0.01% birthday probability at 32 bits)
 
 ### Out of scope
 
-- Implementation (this is a proposal/design ticket)
-- Changing the ticket file format or branch naming scheme
+- Migrating existing numeric-ID tickets to hex IDs (handled separately if needed)
+- Tab-completion scripts
+- Any UI work (the UI will display full IDs; hash ergonomics are a CLI-only concern)
 
 ### Amendment requests
 
@@ -47,65 +54,56 @@ Every `apm new` pushes a new commit to `refs/heads/apm/meta`, causing GitHub to 
   same stale-clone problem in a different container
 - [x] Add an option that mimics git's hash: coordinator-free, works offline,
   no shared state required
+- [x] Spec rewritten entirely around hash-derived IDs (Option E); preamble
+  explains why all counter-based approaches are broken
+- [x] CLI ergonomics (prefix match, disambiguation list) specified in acceptance
+  criteria and approach; UI context noted
 
 ### Approach
 
-**Option A — Use `refs/apm/meta` instead of `refs/heads/apm/meta`** _(dismissed)_
-Eliminates GitHub noise but the stale-clone problem remains: a clone that
-hasn't fetched recently reads an outdated counter and generates a duplicate ID.
-The optimistic-locking retry only helps for concurrent pushes, not for offline
-or stale-clone creation.
-
-**Option B — Derive ID from existing branch names** _(dismissed)_
-Same root failure: scanning local `refs/heads/ticket/NNNN-*` without fetching
-returns the stale max. Two engineers on different clones both get the same `max
-+ 1`. Locking is impossible without coordination.
-
-**Option C — Commit counter to `main`** _(dismissed)_
-Pollutes `main` with non-code commits and requires `main` to be pushable.
-
-**Option D — Monotonic tag** _(dismissed)_
-Structurally identical to A: same stale-clone failure mode, requires `--force`
-tag pushes which many repos restrict.
-
----
-
-**Option E — Hash-derived ticket IDs (recommended)**
-
-Mimic git object IDs: derive the ticket ID from a hash of local entropy
-(timestamp + random bytes), making it globally unique without any shared
-counter or network access.
+#### ID generation
 
 ```
-id = sha1(unix_timestamp_ns + 8 random bytes) → take first 8 hex chars
+raw   = sha256(unix_timestamp_nanos as u64 LE || 8 random bytes)
+id    = hex(raw)[..8]   // first 8 hex chars = 32 bits of entropy
 ```
 
-Example ID: `a3f9b2c1`. Branch name: `ticket/a3f9b2c1-short-title`.
+Using `sha256` (already a common dependency) over the concatenation of a nanosecond timestamp and 8 cryptographically random bytes. Birthday collision probability with N tickets: `N² / 2³²`. At N = 1 000 that is ~0.023% — acceptable. At N = 10 000 it reaches ~2.3%; if the project ever grows that large, the prefix length can be extended without breaking the format (old 8-char IDs remain valid, new IDs are longer).
 
-Trade-offs:
+The `apm/meta` branch is removed from `apm new`; the ID generation function replaces the counter read.
 
-| Property | Current (counter) | Option E (hash) |
-|---|---|---|
-| GitHub noise | Yes (apm/meta branch) | None |
-| Stale-clone safe | No | Yes — no shared state |
-| Offline | Fallback only | Always works |
-| Collision probability | Zero (counter) | ~1 in 4 billion per 8-char hex |
-| Sequential / sortable | Yes | No (timestamp prefix helps) |
-| `apm show 35` syntax | Works | Needs prefix search |
-| Format change | No | Breaking — all existing IDs change |
+#### Branch and file naming
 
-Collision risk at 8 hex chars (32 bits): with 1000 tickets the birthday
-probability is `~0.01%` — acceptable for project-scale ticket counts.
+```
+ticket/<hex8>-<slug>           branch
+tickets/<hex8>-<slug>.md       file
+```
 
-Partial-match lookup (`apm show a3f9` → finds `a3f9b2c1`) matches git's UX.
+The slug is derived the same way as today (title → lowercase, spaces → hyphens, truncated). The 4-digit zero-padded prefix in the current scheme (`0042-`) is replaced with the 8-char hex prefix.
 
-**Recommendation: Option E** if the format change is acceptable. It is the only
-option that is truly coordination-free and immune to stale clones. The UX shift
-from numeric IDs to short hashes is the main cost.
+#### CLI prefix resolution
 
-If the format change is not acceptable, there is no good solution — all counter
-approaches are broken when clones diverge. Supervisor to decide whether to adopt
-hash IDs or accept the limitations of any counter approach.
+Every command that accepts an ID (`show`, `state`, `set`, `start`, `take`, `review`, `worktrees --add/--remove`) runs the ID through a resolver before acting:
+
+1. If the argument is exactly 8 hex chars and matches a known ticket exactly → use it.
+2. If the argument is a prefix (4–7 hex chars) → scan loaded tickets for all IDs starting with that prefix.
+   - Exactly one match → use it, silently.
+   - Zero matches → error: "no ticket matches prefix `<arg>`".
+   - Two or more matches → print disambiguation list and exit non-zero:
+     ```
+     error: prefix 'a3f9' is ambiguous
+       a3f9b2c1  fix login timeout
+       a3f9dd04  add retry logic
+     ```
+3. Reject anything that is not 4–8 hex chars.
+
+#### `apm list` sort order
+
+Sort by `created_at` timestamp from the frontmatter (already present), not by ID. This preserves chronological ordering even though IDs are not sequential.
+
+#### CLI ergonomics note
+
+Engineers will primarily interact with tickets through the UI, where IDs are clickable and never typed. On the CLI, prefix resolution and the disambiguation list cover the common manual-command case. If further sugar is needed in the future (e.g. fuzzy title match: `apm show "login timeout"`), that is a separate ticket.
 ## History
 
 | When | From | To | By |
