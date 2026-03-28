@@ -1,14 +1,14 @@
 +++
 id = 35
 title = "github-apm-meta"
-state = "new"
+state = "specd"
 priority = 0
 effort = 3
 risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-28T01:03:15.585381Z"
+updated_at = "2026-03-28T01:03:57.553944Z"
 +++
 
 ## Spec
@@ -49,3 +49,4 @@ Use lightweight git tags (`refs/tags/apm/next-id`) as the counter. Tags don't sh
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-27T21:14Z | — | new | apm |
+| 2026-03-28T01:03Z | new | specd | claude-0327-1757-391b |
