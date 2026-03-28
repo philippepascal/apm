@@ -3,12 +3,12 @@ id = 32
 title = "apm-ticket-format-in-core"
 state = "new"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "apm"
 branch = "ticket/0032-apm-ticket-format-in-core"
 created_at = "2026-03-27T20:49:59.747092Z"
-updated_at = "2026-03-27T20:57:45.748777Z"
+updated_at = "2026-03-28T01:01:46.236184Z"
 +++
 
 ## Spec
