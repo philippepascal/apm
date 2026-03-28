@@ -4,11 +4,11 @@ title = "apm start spawns claude worker subprocess"
 state = "new"
 priority = 0
 effort = 6
-risk = 0
+risk = 3
 author = "claude-0327-1854-10aa"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-28T02:31:11.974798Z"
+updated_at = "2026-03-28T02:31:12.241984Z"
 +++
 
 ## Spec
