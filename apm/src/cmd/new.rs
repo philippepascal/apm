@@ -7,7 +7,7 @@ use apm_core::{
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, title: String, side_note: bool, context: Option<String>) -> Result<()> {
+pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>) -> Result<()> {
     let config = Config::load(root)?;
     if side_note && !config.agents.side_tickets {
         anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
@@ -59,5 +59,63 @@ pub fn run(root: &Path, title: String, side_note: bool, context: Option<String>)
     )?;
 
     println!("Created ticket #{id}: {filename} (branch: {branch})");
+
+    if !no_edit {
+        open_editor(root, &config, &branch, &rel_path)?;
+    }
+
+    Ok(())
+}
+
+fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> Result<()> {
+    let editor = match std::env::var("EDITOR") {
+        Ok(e) if !e.is_empty() => e,
+        _ => {
+            eprintln!("warning: $EDITOR is not set, skipping editor open");
+            return Ok(());
+        }
+    };
+
+    // Check out the ticket branch, open editor, commit result, return to previous branch.
+    let prev_branch = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| "main".to_string());
+
+    let _ = std::process::Command::new("git")
+        .args(["checkout", branch])
+        .current_dir(root)
+        .status();
+
+    let file_path = root.join(rel_path);
+    let status = std::process::Command::new(&editor)
+        .arg(&file_path)
+        .status();
+
+    // Commit whatever the user wrote, even if editor exited non-zero.
+    let _ = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "add", rel_path])
+        .current_dir(root)
+        .status();
+    let _ = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "write spec"])
+        .current_dir(root)
+        .status();
+
+    let _ = std::process::Command::new("git")
+        .args(["checkout", &prev_branch])
+        .current_dir(root)
+        .status();
+
+    if let Ok(s) = status {
+        if !s.success() {
+            eprintln!("warning: editor exited with non-zero status");
+        }
+    }
+
     Ok(())
 }

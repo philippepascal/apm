@@ -84,6 +84,8 @@ The ticket's state determines what to do next:
    git -C "$wt" add tickets/<id>-<slug>.md
    git -C "$wt" commit -m "ticket(<id>): write spec"
    ```
+   Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
+   pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
 5. If blocked on an ambiguity: write the question in `### Open questions`,
    commit it to the worktree, then `apm state <id> question`
 6. `apm state <id> specd` — submit spec for supervisor review

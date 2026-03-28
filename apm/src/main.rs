@@ -37,6 +37,8 @@ enum Command {
     /// Create a new ticket
     New {
         title: String,
+        #[arg(long)]
+        no_edit: bool,
         /// Mark this ticket as a side-note (out-of-scope observation)
         #[arg(long)]
         side_note: bool,
@@ -130,7 +132,7 @@ fn main() -> Result<()> {
         Command::Init { no_claude } => cmd::init::run(&root, no_claude),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id } => cmd::show::run(&root, id),
-        Command::New { title, side_note, context } => cmd::new::run(&root, title, side_note, context),
+        Command::New { title, no_edit, side_note, context } => cmd::new::run(&root, title, no_edit, side_note, context),
         Command::State { id, state } => cmd::state::run(&root, id, state),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
