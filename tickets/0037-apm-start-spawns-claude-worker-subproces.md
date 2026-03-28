@@ -1,14 +1,14 @@
 +++
 id = 37
 title = "apm start spawns claude worker subprocess"
-state = "ammend"
+state = "specd"
 priority = 0
 effort = 6
 risk = 3
 author = "claude-0327-1854-10aa"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-28T18:20:36.730435Z"
+updated_at = "2026-03-28T18:51:14.316886Z"
 +++
 
 ## Spec
@@ -104,3 +104,4 @@ on a new `apm.worker.md` template file in the repo.
 | 2026-03-28T02:28Z | — | new | claude-0327-1854-10aa |
 | 2026-03-28T02:31Z | new | specd | claude-0327-1854-10aa |
 | 2026-03-28T18:20Z | specd | ammend | apm |
+| 2026-03-28T18:51Z | ammend | specd | claude-0328-c72b |
