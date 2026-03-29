@@ -20,12 +20,12 @@ After tickets are closed and their PRs merged, the permanent git worktrees and l
 
 ### Acceptance criteria
 
-- [ ] `apm clean` iterates all tickets in terminal states (per `workflow.terminal_states` in `apm.toml`) and, for each: removes the permanent worktree if one exists, and deletes the local branch ref.
-- [ ] `--dry-run` prints what would be removed without modifying anything.
-- [ ] A ticket whose branch is not merged into the default branch is skipped with a warning (safety guard against premature cleanup).
-- [ ] A worktree with uncommitted changes (dirty index or working tree) is skipped with a warning and its local branch is left intact.
-- [ ] Each removed worktree or branch ref produces one line of output: `removed worktree <path>` or `removed branch <name>`.
-- [ ] If there is nothing to clean, prints `Nothing to clean.` and exits 0.
+- [x] `apm clean` iterates all tickets in terminal states (per `workflow.terminal_states` in `apm.toml`) and, for each: removes the permanent worktree if one exists, and deletes the local branch ref.
+- [x] `--dry-run` prints what would be removed without modifying anything.
+- [x] A ticket whose branch is not merged into the default branch is skipped with a warning (safety guard against premature cleanup).
+- [x] A worktree with uncommitted changes (dirty index or working tree) is skipped with a warning and its local branch is left intact.
+- [x] Each removed worktree or branch ref produces one line of output: `removed worktree <path>` or `removed branch <name>`.
+- [x] If there is nothing to clean, prints `Nothing to clean.` and exits 0.
 
 ### Out of scope
 
