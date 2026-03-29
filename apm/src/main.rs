@@ -140,6 +140,19 @@ enum Command {
     },
     /// Print agent instructions from apm.agents.md
     Agents,
+    /// Read or write individual spec sections of a ticket
+    Spec {
+        id: u32,
+        /// Section name (e.g. "Problem", "Approach")
+        #[arg(long)]
+        section: Option<String>,
+        /// New content for the section; use "-" to read from stdin
+        #[arg(long)]
+        set: Option<String>,
+        /// Check that all required sections are non-empty
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 pub fn repo_root() -> Result<PathBuf> {
@@ -188,6 +201,7 @@ fn main() -> Result<()> {
         Command::Validate { fix, json } => cmd::validate::run(&root, fix, json),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
+        Command::Spec { id, section, set, check } => cmd::spec::run(&root, id, section, set, check),
     }
 }
 
