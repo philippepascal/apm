@@ -22,10 +22,10 @@ The Unix convention is that `$EDITOR` may contain flags. `git`, `less`, and most
 
 ### Acceptance criteria
 
-- [ ] `open_editor` splits `$VISUAL` / `$EDITOR` on whitespace; first token is the binary, remaining tokens are prepended as arguments before the file path
-- [ ] `EDITOR="zed --wait"` launches `zed` with args `["--wait", "<path>"]`
-- [ ] `EDITOR="vim"` (no flags) continues to work unchanged
-- [ ] Fix applies to `open_editor` in both `review.rs` and `new.rs`
+- [x] `open_editor` splits `$VISUAL` / `$EDITOR` on whitespace; first token is the binary, remaining tokens are prepended as arguments before the file path
+- [x] `EDITOR="zed --wait"` launches `zed` with args `["--wait", "<path>"]`
+- [x] `EDITOR="vim"` (no flags) continues to work unchanged
+- [x] Fix applies to `open_editor` in both `review.rs` and `new.rs`
 
 ### Out of scope
 
