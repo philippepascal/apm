@@ -2,13 +2,13 @@
 id = 47
 title = "Bug: apm start does not fetch main before merging in aggressive mode"
 state = "ready"
-priority = 0
+priority = 4
 effort = 2
 risk = 2
 author = "claude-0328-c72b"
 branch = "ticket/0047-bug-apm-start-does-not-fetch-main-before"
 created_at = "2026-03-28T19:50:04.169100Z"
-updated_at = "2026-03-29T19:08:52.117430Z"
+updated_at = "2026-03-29T19:28:46.115539Z"
 +++
 
 ## Spec
