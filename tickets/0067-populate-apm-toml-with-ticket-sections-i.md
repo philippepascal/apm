@@ -22,12 +22,12 @@ Without `[[ticket.sections]]`, `apm new` uses a hardcoded body template and `apm
 
 ### Acceptance criteria
 
-- [ ] `apm.toml` defines 7 `[[ticket.sections]]` entries: Problem (free, required), Acceptance criteria (tasks, required), Out of scope (free, required), Approach (free, required), Open questions (qa, optional), Amendment requests (tasks, optional), Code review (tasks, optional); required sections have a `placeholder`
-- [ ] The `in_design` state entry has `instructions = "apm.spec-writer.md"`
-- [ ] The `in_progress` state entry has `instructions = "apm.worker.md"`
-- [ ] The `new → in_design` transition has `context_section = "Problem"`
-- [ ] The `implemented → ready` transition has `focus_section = "Code review"`
-- [ ] `cargo test --workspace` passes after the changes
+- [x] `apm.toml` defines 7 `[[ticket.sections]]` entries: Problem (free, required), Acceptance criteria (tasks, required), Out of scope (free, required), Approach (free, required), Open questions (qa, optional), Amendment requests (tasks, optional), Code review (tasks, optional); required sections have a `placeholder`
+- [x] The `in_design` state entry has `instructions = "apm.spec-writer.md"`
+- [x] The `in_progress` state entry has `instructions = "apm.worker.md"`
+- [x] The `new → in_design` transition has `context_section = "Problem"`
+- [x] The `implemented → ready` transition has `focus_section = "Code review"`
+- [x] `cargo test --workspace` passes after the changes
 
 ### Out of scope
 
