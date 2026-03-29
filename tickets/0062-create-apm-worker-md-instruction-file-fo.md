@@ -4,11 +4,11 @@ title = "Create apm.worker.md: instruction file for implementation agents"
 state = "in_design"
 priority = 2
 effort = 2
-risk = 0
+risk = 1
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0062-create-apm-worker-md-instruction-file-fo"
 created_at = "2026-03-29T19:12:40.149419Z"
-updated_at = "2026-03-29T23:08:47.044745Z"
+updated_at = "2026-03-29T23:08:57.953661Z"
 +++
 
 ## Spec
