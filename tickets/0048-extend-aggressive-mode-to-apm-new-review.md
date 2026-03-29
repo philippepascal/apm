@@ -1,14 +1,14 @@
 +++
 id = 48
 title = "Extend aggressive mode to apm new, review, and take"
-state = "specd"
+state = "ready"
 priority = 2
 effort = 3
 risk = 1
 author = "claude-0328-c72b"
 branch = "ticket/0048-extend-aggressive-mode-to-apm-new-review"
 created_at = "2026-03-28T19:50:06.625320Z"
-updated_at = "2026-03-29T20:38:50.727526Z"
+updated_at = "2026-03-29T20:49:31.988874Z"
 +++
 
 ## Spec
@@ -104,3 +104,4 @@ the updated ticket to the branch, push when aggressive.
 | 2026-03-29T19:11Z | specd | ammend | claude-0329-1200-a1b2 |
 | 2026-03-29T20:36Z | ammend | in_design | claude-0329-main |
 | 2026-03-29T20:38Z | in_design | specd | claude-0329-main |
+| 2026-03-29T20:49Z | specd | ready | claude-0329-main |
