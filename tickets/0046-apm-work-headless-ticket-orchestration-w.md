@@ -52,6 +52,24 @@ Likely: `apm/src/cmd/work.rs` wraps the same spawn logic extracted from
 `start.rs` into a shared helper, loops over `ready` tickets respecting
 `max_concurrent`, and waits for all child processes.
 
+### Amendment requests
+
+- [ ] `apm work` is the delegator loop, not just a worker launcher for `ready`
+  tickets. It should call `apm start --next` in a loop (a separate ticket),
+  which internally finds the next actionable ticket across all states with
+  `trigger: command:start` — including `new → in_design` (spec-writing) and
+  `ready → in_progress` (implementation). Update the acceptance criteria to
+  reflect this broader scope.
+- [ ] Remove the "out of scope" exclusion of spec-writing workers. Under the
+  delegator model, `apm work` does not decide what kind of agent to spawn —
+  `apm start --next` does, by reading the `instructions` property from the
+  target state config.
+- [ ] The acceptance criteria mention `ready` state specifically; replace with
+  "any state where `actionable = ['agent']` and `agent` is unset and a
+  `trigger: command:start` transition exists."
+- [ ] Update the approach section now that `apm start --next` (separate ticket)
+  exists as the primitive. `apm work` is a thin loop around it.
+
 ## History
 
 | When | From | To | By |
