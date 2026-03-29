@@ -1,6 +1,6 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, ticket::Ticket};
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::Path;
 
 struct CloseCandidate {
@@ -9,7 +9,11 @@ struct CloseCandidate {
     reason: &'static str,
 }
 
-pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool) -> Result<()> {
+struct AcceptCandidate {
+    ticket: Ticket,
+}
+
+pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool, auto_accept: bool) -> Result<()> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
@@ -26,6 +30,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
     let branches = git::ticket_branches(root)?;
     let merged = git::merged_into_main(root, &config.project.default_branch)?;
 
+    let mut accept_candidates: Vec<AcceptCandidate> = Vec::new();
     for branch in &merged {
         let suffix = branch.trim_start_matches("ticket/");
         let filename = format!("{suffix}.md");
@@ -45,6 +50,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         if !quiet {
             println!("#{}: branch merged — run `apm state {} accepted` to accept", t.frontmatter.id, t.frontmatter.id);
         }
+        accept_candidates.push(AcceptCandidate { ticket: t });
     }
 
     if !offline || aggressive {
@@ -59,6 +65,16 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         );
     }
 
+    // Prompt to accept merged tickets.
+    if !accept_candidates.is_empty() {
+        let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_candidates)?);
+        if confirmed {
+            for c in &accept_candidates {
+                super::state::run(root, c.ticket.frontmatter.id, "accepted".into(), no_aggressive)?;
+            }
+        }
+    }
+
     // Detect tickets ready to close and batch-commit them to main.
     let branch_set: std::collections::HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
     let candidates = detect_closeable(root, &config, &branches, &branch_set)?;
@@ -70,6 +86,22 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
     }
 
     Ok(())
+}
+
+fn is_interactive() -> bool {
+    io::stdout().is_terminal()
+}
+
+fn prompt_accept(candidates: &[AcceptCandidate]) -> Result<bool> {
+    println!("\nTickets ready to accept:");
+    for c in candidates {
+        println!("  #{}  {}", c.ticket.frontmatter.id, c.ticket.frontmatter.title);
+    }
+    print!("\nAccept all? [y/N] ");
+    io::stdout().flush()?;
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    Ok(line.trim().eq_ignore_ascii_case("y"))
 }
 
 fn detect_closeable(
