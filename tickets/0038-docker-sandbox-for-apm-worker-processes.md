@@ -74,12 +74,12 @@ current native behaviour unchanged.
   [workers.keychain]
   ANTHROPIC_API_KEY = "anthropic-api-key"
   ```
-- [ ] `apm init --with-docker` generates a `Dockerfile.apm-worker` at the repo
-  root and prints instructions to build it; it does NOT auto-run `docker build`
+- [ ] `apm init --with-docker` generates a `Dockerfile.apm-worker` into `.apm/`
+  and prints instructions to build it; it does NOT auto-run `docker build`
 - [ ] The generated `Dockerfile.apm-worker` installs: `claude` CLI, `git`,
-  `apm` (from the project's own binary or a downloaded release), and
-  `cargo`/`rustup`; it includes commented sections for users to add
-  project-specific dependencies (`gh` is not needed — no push or PR from inside)
+  and `apm` (from the project's own binary or a downloaded release); it does
+  NOT include `gh` — the worker never pushes or creates PRs; it includes
+  commented sections for users to add project-specific dependencies
 - [ ] The worker container is ephemeral: started with `--rm`, no persistent
   volumes or named containers
 - [ ] `apm verify` checks: if `[workers] container` is set but `docker` is not
@@ -163,8 +163,9 @@ docker run --rm
 ```
 
 The container has no network git credentials and no `GH_TOKEN`. The worker
-only does local `git commit`. After the container exits, `apm start` (running
-on the host, with full credentials) handles `git push` and `gh pr create`.
+only does local `git commit`. After the container exits, `apm state <id> implemented`
+(running on the host, with full credentials) handles `git push` and `gh pr create`
+via the `completion` property on the transition.
 
 Git identity falls back to `git config user.name` / `git config user.email`
 from the host if the env vars are not set.
@@ -179,13 +180,6 @@ RUN apt-get update && apt-get install -y \
     curl git unzip ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-    | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
-    echo "deb [signed-by=...] https://cli.github.com/packages stable main" \
-    > /etc/apt/sources.list.d/github-cli.list && \
-    apt-get update && apt-get install -y gh
-
 # Claude CLI
 RUN curl -fsSL https://storage.googleapis.com/anthropic-claude-cli/install.sh | sh
 
@@ -196,19 +190,22 @@ COPY target/release/apm /usr/local/bin/apm
 # RUN apt-get install -y nodejs npm   # for Node projects
 # RUN pip install -r requirements.txt # for Python projects
 
+# gh CLI is NOT needed — the worker only runs local git commits;
+# push and PR creation happen on the host via apm state <id> implemented.
+
 WORKDIR /workspace
 ```
 
 ### Amendment requests
 
-- [ ] The worker never pushes the branch or creates a PR. Under the new design
+- [x] The worker never pushes the branch or creates a PR. Under the new design
   (`completion` property on transitions), `apm state <id> implemented` handles
   push and PR creation on the host. Remove all references to `apm start`
   doing post-container push/PR. Update the credential list: `GH_TOKEN` is
   confirmed not needed, but make this explicit in the AC and Dockerfile.
-- [ ] Remove `gh` CLI from the `Dockerfile.apm-worker` template — it is not
+- [x] Remove `gh` CLI from the `Dockerfile.apm-worker` template — it is not
   needed inside the container.
-- [ ] `apm init --with-docker` references need to align with the new `apm init`
+- [x] `apm init --with-docker` references need to align with the new `apm init`
   design (`.apm/` folder). The Dockerfile should be generated into `.apm/` or
   documented alongside other init outputs.
 
