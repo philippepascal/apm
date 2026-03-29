@@ -3,12 +3,12 @@ id = 52
 title = "apm init: create .apm/ folder and migrate config"
 state = "in_design"
 priority = 3
-effort = 0
+effort = 4
 risk = 0
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0052-apm-init-create-apm-folder-and-migrate-c"
 created_at = "2026-03-29T19:11:25.479427Z"
-updated_at = "2026-03-29T19:36:09.479705Z"
+updated_at = "2026-03-29T19:37:33.587055Z"
 +++
 
 ## Spec
