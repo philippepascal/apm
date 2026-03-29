@@ -15,11 +15,35 @@ updated_at = "2026-03-29T23:26:36.651018Z"
 
 ### Problem
 
+`apm new --context <text>` always places the context string into `### Problem`. The target section is hardcoded in `new.rs`.
+
+`TransitionConfig` already has a `context_section: Option<String>` field (parsed from `apm.toml`) intended to control exactly this — which section receives the `--context` value when a ticket is created. But the field is never read at runtime.
+
+The lifecycle design calls for `apm new --context` to route text to the section named by `context_section` on the `new → in_design` transition, so the mapping is declared in `apm.toml` rather than hardcoded.
+
+This is distinct from ticket #58, which adds a `--context-section` CLI override. This ticket wires the config-driven default so that even without a CLI flag, the right section is used.
+
 ### Acceptance criteria
+
+- [ ] When `apm new --context <text>` is run, `apm` looks up the `new → in_design` transition in `config.workflow` and reads its `context_section` field
+- [ ] If `context_section` is set, `--context` text is placed into that section; if absent, falls back to `"Problem"` (current behaviour preserved)
+- [ ] The `--context-section` CLI flag (ticket #58) takes precedence over the transition config value when both are present
+- [ ] If the resolved section name does not exist in the ticket body, `apm new` returns an error
+- [ ] Unit test: with `context_section = "Approach"` on the `new → in_design` transition, `--context` text lands in `### Approach`
 
 ### Out of scope
 
+- Adding `context_section` support to transitions other than `new → in_design`
+- Changing `apm spec`
+
 ### Approach
+
+In `apm/src/cmd/new.rs`, after loading config, resolve the target section:
+
+1. Find the `new → in_design` transition in `config.workflow.states` where `state.id == "new"`.
+2. Read `tr.context_section` from that transition.
+3. Priority: `--context-section` CLI arg > `tr.context_section` > `"Problem"`.
+4. Use the resolved name when inserting context text into the body template (find `### <section>` heading, insert after it).
 
 ## History
 
