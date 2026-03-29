@@ -4,11 +4,11 @@ title = "apm start --next: delegator primitive for headless dispatch"
 state = "in_design"
 priority = 4
 effort = 7
-risk = 0
+risk = 4
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0056-apm-start-next-delegator-primitive-for-h"
 created_at = "2026-03-29T19:11:56.426262Z"
-updated_at = "2026-03-29T20:38:52.393640Z"
+updated_at = "2026-03-29T20:38:54.803359Z"
 +++
 
 ## Spec
