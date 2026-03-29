@@ -3,12 +3,12 @@ id = 66
 title = "apm spec --mark: check off items in tasks-type sections"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "claude-0329-1430-main"
 branch = "ticket/0066-apm-spec-mark-check-off-items-in-tasks-t"
 created_at = "2026-03-29T23:26:12.975776Z"
-updated_at = "2026-03-29T23:26:39.120835Z"
+updated_at = "2026-03-29T23:30:50.517834Z"
 +++
 
 ## Spec
