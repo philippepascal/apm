@@ -115,7 +115,10 @@ fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> R
         .status();
 
     let file_path = root.join(rel_path);
-    let status = std::process::Command::new(&editor)
+    let mut parts = editor.split_whitespace();
+    let bin = parts.next().unwrap();
+    let status = std::process::Command::new(bin)
+        .args(parts)
         .arg(&file_path)
         .status();
 

@@ -219,7 +219,10 @@ fn open_editor(path: &Path) -> Result<()> {
         .or_else(|_| std::env::var("EDITOR"))
         .unwrap_or_else(|_| "vi".to_string());
 
-    let status = std::process::Command::new(&editor)
+    let mut parts = editor.split_whitespace();
+    let bin = parts.next().unwrap();
+    let status = std::process::Command::new(bin)
+        .args(parts)
         .arg(path)
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
