@@ -22,11 +22,11 @@ The spec quality bar documented in `apm.agents.md` is brief. A richer, dedicated
 
 ### Acceptance criteria
 
-- [ ] A file `apm.spec-writer.md` exists at the repo root with practical guidance for spec-writing agents (problem framing, acceptance criteria quality, approach detail, effort/risk calibration)
-- [ ] `apm.toml` references `apm.spec-writer.md` as the `instructions` for the `new` and `ammend` states via a new `instructions` field on those state entries
-- [ ] `apm-core` config parsing accepts an optional `instructions: String` field on `StateConfig` without breaking existing configs that omit it
-- [ ] `apm show <id>` or `apm next --json` does not need to change — the instructions field is advisory metadata for agent tooling, not enforced at runtime
-- [ ] The content of `apm.spec-writer.md` covers: problem framing, acceptance criteria format, out-of-scope discipline, approach depth, effort/risk scale, and the spec quality bar from `apm.agents.md`
+- [x] A file `apm.spec-writer.md` exists at the repo root with practical guidance for spec-writing agents (problem framing, acceptance criteria quality, approach detail, effort/risk calibration)
+- [x] `apm.toml` references `apm.spec-writer.md` as the `instructions` for the `new` and `ammend` states via a new `instructions` field on those state entries
+- [x] `apm-core` config parsing accepts an optional `instructions: String` field on `StateConfig` without breaking existing configs that omit it
+- [x] `apm show <id>` or `apm next --json` does not need to change — the instructions field is advisory metadata for agent tooling, not enforced at runtime
+- [x] The content of `apm.spec-writer.md` covers: problem framing, acceptance criteria format, out-of-scope discipline, approach depth, effort/risk scale, and the spec quality bar from `apm.agents.md`
 
 ### Out of scope
 
