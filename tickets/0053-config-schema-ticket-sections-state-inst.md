@@ -1,14 +1,15 @@
 +++
 id = 53
 title = "Config schema: ticket.sections, state instructions, transition completion and focus_section"
-state = "ready"
+state = "in_progress"
 priority = 5
 effort = 3
 risk = 1
 author = "claude-0329-1200-a1b2"
+agent = "claude-0329-impl-53"
 branch = "ticket/0053-config-schema-ticket-sections-state-inst"
 created_at = "2026-03-29T19:11:32.157761Z"
-updated_at = "2026-03-29T19:42:04.350584Z"
+updated_at = "2026-03-29T19:42:48.448994Z"
 +++
 
 ## Spec
@@ -160,3 +161,4 @@ Unit tests go in a `#[cfg(test)]` block at the bottom of `config.rs`, using inli
 | 2026-03-29T19:32Z | new | in_design | claude-0329-spec-53 |
 | 2026-03-29T19:35Z | in_design | specd | claude-0329-spec-53 |
 | 2026-03-29T19:42Z | specd | ready | claude-0329-1200-a1b2 |
+| 2026-03-29T19:42Z | ready | in_progress | claude-0329-impl-53 |
