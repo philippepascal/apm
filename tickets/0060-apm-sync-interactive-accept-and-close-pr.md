@@ -1,7 +1,7 @@
 +++
 id = 60
 title = "apm sync: interactive accept and close prompts after merge detection"
-state = "implemented"
+state = "accepted"
 priority = 1
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1430-main"
 branch = "ticket/0060-apm-sync-interactive-accept-and-close-pr"
 created_at = "2026-03-29T19:12:24.587299Z"
-updated_at = "2026-03-29T23:41:23.493590Z"
+updated_at = "2026-03-29T23:55:11.588853Z"
 +++
 
 ## Spec
@@ -69,3 +69,4 @@ In `apm/src/cmd/sync.rs`:
 | 2026-03-29T23:17Z | specd | ready | apm |
 | 2026-03-29T23:37Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-29T23:41Z | in_progress | implemented | claude-0329-1430-main |
+| 2026-03-29T23:55Z | implemented | accepted | apm |
