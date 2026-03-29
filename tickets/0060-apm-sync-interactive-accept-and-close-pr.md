@@ -1,14 +1,14 @@
 +++
 id = 60
 title = "apm sync: interactive accept and close prompts after merge detection"
-state = "new"
+state = "in_design"
 priority = 1
 effort = 0
 risk = 0
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0060-apm-sync-interactive-accept-and-close-pr"
 created_at = "2026-03-29T19:12:24.587599Z"
-updated_at = "2026-03-29T19:29:03.448932Z"
+updated_at = "2026-03-29T22:57:04.175539Z"
 +++
 
 ## Spec
@@ -26,3 +26,4 @@ updated_at = "2026-03-29T19:29:03.448932Z"
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-29T19:12Z | — | new | claude-0329-1200-a1b2 |
+| 2026-03-29T22:57Z | new | in_design | claude-spec-60 |
