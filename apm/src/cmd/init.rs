@@ -4,13 +4,22 @@ use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(root: &Path, no_claude: bool) -> Result<()> {
+pub fn run(root: &Path, no_claude: bool, migrate: bool) -> Result<()> {
+    if migrate {
+        return run_migrate(root);
+    }
+
     let tickets_dir = root.join("tickets");
     if !tickets_dir.exists() {
         std::fs::create_dir_all(&tickets_dir)?;
         println!("Created tickets/");
     }
-    let config_path = root.join("apm.toml");
+
+    // Write config to .apm/
+    let apm_dir = root.join(".apm");
+    std::fs::create_dir_all(&apm_dir)?;
+
+    let config_path = apm_dir.join("config.toml");
     if !config_path.exists() {
         let name = root
             .file_name()
@@ -18,19 +27,24 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
             .unwrap_or("project");
         let branch = detect_default_branch(root);
         std::fs::write(&config_path, default_config(name, &branch))?;
-        println!("Created apm.toml");
+        println!("Created .apm/config.toml");
     }
-    let agents_path = root.join("apm.agents.md");
+    let agents_path = apm_dir.join("agents.md");
     if !agents_path.exists() {
         std::fs::write(&agents_path, default_agents_md())?;
-        println!("Created apm.agents.md");
+        println!("Created .apm/agents.md");
     }
-    let worker_md_path = root.join("apm.worker.md");
+    let spec_writer_path = apm_dir.join("spec-writer.md");
+    if !spec_writer_path.exists() {
+        std::fs::write(&spec_writer_path, "# APM Spec-Writer Agent\n\n_Fill in spec-writing instructions here._\n")?;
+        println!("Created .apm/spec-writer.md");
+    }
+    let worker_md_path = apm_dir.join("worker.md");
     if !worker_md_path.exists() {
         std::fs::write(&worker_md_path, include_str!("../apm.worker.md"))?;
-        println!("Created apm.worker.md");
+        println!("Created .apm/worker.md");
     }
-    ensure_claude_md(root)?;
+    ensure_claude_md(root, ".apm/agents.md")?;
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore)?;
     update_claude_settings(root, no_claude)?;
@@ -40,6 +54,50 @@ pub fn run(root: &Path, no_claude: bool) -> Result<()> {
     update_user_claude_settings()?;
     warn_if_settings_untracked(root);
     println!("apm initialized.");
+    Ok(())
+}
+
+fn run_migrate(root: &Path) -> Result<()> {
+    let apm_dir = root.join(".apm");
+    let new_config = apm_dir.join("config.toml");
+
+    if new_config.exists() {
+        println!("Already migrated.");
+        return Ok(());
+    }
+
+    let old_config = root.join("apm.toml");
+    let old_agents = root.join("apm.agents.md");
+
+    if !old_config.exists() && !old_agents.exists() {
+        println!("Nothing to migrate.");
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(&apm_dir)?;
+
+    if old_config.exists() {
+        std::fs::rename(&old_config, &new_config)?;
+        println!("Moved apm.toml → .apm/config.toml");
+    }
+
+    if old_agents.exists() {
+        let new_agents = apm_dir.join("agents.md");
+        std::fs::rename(&old_agents, &new_agents)?;
+        println!("Moved apm.agents.md → .apm/agents.md");
+    }
+
+    // Update CLAUDE.md import if present
+    let claude_path = root.join("CLAUDE.md");
+    if claude_path.exists() {
+        let contents = std::fs::read_to_string(&claude_path)?;
+        if contents.contains("@apm.agents.md") {
+            let updated = contents.replace("@apm.agents.md", "@.apm/agents.md");
+            std::fs::write(&claude_path, updated)?;
+            println!("Updated CLAUDE.md (@apm.agents.md → @.apm/agents.md)");
+        }
+    }
+
     Ok(())
 }
 
@@ -62,16 +120,16 @@ Agent worktrees won't have it — run: git add .claude/settings.json && git comm
     }
 }
 
-fn ensure_claude_md(root: &Path) -> Result<()> {
-    let import_line = "@apm.agents.md";
+fn ensure_claude_md(root: &Path, agents_path: &str) -> Result<()> {
+    let import_line = format!("@{agents_path}");
     let claude_path = root.join("CLAUDE.md");
     if claude_path.exists() {
         let contents = std::fs::read_to_string(&claude_path)?;
-        if contents.contains(import_line) {
+        if contents.contains(&import_line) {
             return Ok(());
         }
         std::fs::write(&claude_path, format!("{import_line}\n\n{contents}"))?;
-        println!("Updated CLAUDE.md (added @apm.agents.md import).");
+        println!("Updated CLAUDE.md (added {import_line} import).");
     } else {
         std::fs::write(&claude_path, format!("{import_line}\n"))?;
         println!("Created CLAUDE.md.");
@@ -173,6 +231,11 @@ actionable = ["agent"]
 id    = "in_progress"
 label = "In Progress"
 color = "#8b5cf6"
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+  actor   = "agent"
 
   [[workflow.states.transitions]]
   to      = "blocked"
@@ -453,9 +516,9 @@ fn maybe_initial_commit(root: &Path) -> Result<()> {
         return Ok(());
     }
 
-    // Stage apm.toml and .gitignore.
+    // Stage .apm/config.toml and .gitignore.
     Command::new("git")
-        .args(["add", "apm.toml", ".gitignore"])
+        .args(["add", ".apm/config.toml", ".gitignore"])
         .current_dir(root)
         .status()?;
 

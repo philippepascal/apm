@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::{CompletionStrategy, Config}, git, ticket};
 use chrono::Utc;
 use std::collections::HashSet;
 use std::path::Path;
@@ -78,6 +78,18 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
             for err in doc.validate() {
                 issues.push(format!("{prefix}: {err}"));
             }
+        }
+    }
+
+    // Report completion strategies configured on transitions.
+    for state in &config.workflow.states {
+        for tr in &state.transitions {
+            let label = match &tr.completion {
+                CompletionStrategy::Pr => "pr",
+                CompletionStrategy::Merge => "merge",
+                CompletionStrategy::None => continue,
+            };
+            println!("completion: {} → {} = {label}", state.id, tr.to);
         }
     }
 
