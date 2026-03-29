@@ -161,6 +161,12 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Remove worktrees and local branches for closed tickets
+    Clean {
+        /// Print what would be removed without modifying anything
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Read or write individual spec sections of a ticket
     Spec {
         id: u32,
@@ -230,6 +236,7 @@ fn main() -> Result<()> {
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
+        Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
         Command::Spec { id, section, set, check } => cmd::spec::run(&root, id, section, set, check),
     }
 }
