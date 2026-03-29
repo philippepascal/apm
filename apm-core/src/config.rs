@@ -205,7 +205,12 @@ impl Config {
     }
 
     pub fn load(repo_root: &Path) -> Result<Self> {
-        let path = repo_root.join("apm.toml");
+        let apm_dir_path = repo_root.join(".apm").join("config.toml");
+        let path = if apm_dir_path.exists() {
+            apm_dir_path
+        } else {
+            repo_root.join("apm.toml")
+        };
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("cannot read {}", path.display()))?;
         toml::from_str(&contents)
