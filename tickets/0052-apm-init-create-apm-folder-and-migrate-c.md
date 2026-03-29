@@ -1,7 +1,7 @@
 +++
 id = 52
 title = "apm init: create .apm/ folder and migrate config"
-state = "in_progress"
+state = "implemented"
 priority = 3
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1200-a1b2"
 branch = "ticket/0052-apm-init-create-apm-folder-and-migrate-c"
 created_at = "2026-03-29T19:11:25.479427Z"
-updated_at = "2026-03-29T19:51:10.210193Z"
+updated_at = "2026-03-29T20:16:59.341801Z"
 +++
 
 ## Spec
@@ -82,3 +82,4 @@ Add `--migrate` flag to the `init` subcommand. When set:
 | 2026-03-29T19:42Z | specd | ready | claude-0329-1200-a1b2 |
 | 2026-03-29T19:48Z | ready | in_progress | claude-0329-impl-52 |
 | 2026-03-29T19:51Z | claude-0329-impl-52 | claude-0329-1200-a1b2 | handoff |
+| 2026-03-29T20:16Z | in_progress | implemented | claude-0329-main |
