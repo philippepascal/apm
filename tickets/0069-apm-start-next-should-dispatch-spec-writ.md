@@ -4,11 +4,11 @@ title = "apm start --next should dispatch spec-writing agents via command:start 
 state = "in_design"
 priority = 5
 effort = 1
-risk = 0
+risk = 1
 author = "claude-0329-1430-main"
 branch = "ticket/0069-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-29T23:34:47.739616Z"
-updated_at = "2026-03-29T23:35:34.599492Z"
+updated_at = "2026-03-29T23:35:36.146331Z"
 +++
 
 ## Spec
