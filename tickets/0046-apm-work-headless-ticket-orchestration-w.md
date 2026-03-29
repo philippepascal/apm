@@ -1,14 +1,14 @@
 +++
 id = 46
 title = "apm work: headless ticket orchestration without a supervisor session"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 3
 author = "claude-0328-c72b"
 branch = "ticket/0046-apm-work-headless-ticket-orchestration-w"
 created_at = "2026-03-28T19:42:39.548558Z"
-updated_at = "2026-03-28T19:43:18.015852Z"
+updated_at = "2026-03-29T19:11:14.534410Z"
 +++
 
 ## Spec
@@ -76,3 +76,4 @@ Likely: `apm/src/cmd/work.rs` wraps the same spawn logic extracted from
 |------|------|----|----|
 | 2026-03-28T19:42Z | — | new | claude-0328-c72b |
 | 2026-03-28T19:43Z | new | specd | claude-0328-c72b |
+| 2026-03-29T19:11Z | specd | ammend | claude-0329-1200-a1b2 |
