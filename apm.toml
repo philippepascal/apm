@@ -116,6 +116,16 @@ actionable = ["agent"]
   trigger = "command:start"
   actor   = "agent"
 
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "specd"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id    = "in_progress"
 label = "In Progress"
