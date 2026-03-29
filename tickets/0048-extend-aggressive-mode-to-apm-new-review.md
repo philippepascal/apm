@@ -2,13 +2,13 @@
 id = 48
 title = "Extend aggressive mode to apm new, review, and take"
 state = "ammend"
-priority = 0
+priority = 2
 effort = 3
 risk = 1
 author = "claude-0328-c72b"
 branch = "ticket/0048-extend-aggressive-mode-to-apm-new-review"
 created_at = "2026-03-28T19:50:06.625320Z"
-updated_at = "2026-03-29T19:11:15.960125Z"
+updated_at = "2026-03-29T19:29:02.129433Z"
 +++
 
 ## Spec
