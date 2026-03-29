@@ -22,10 +22,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         }
     }
 
-    // Detect merged branches and fire implemented → accepted auto-transition.
+    // Detect merged branches and suggest manual transition to accepted.
     let branches = git::ticket_branches(root)?;
     let merged = git::merged_into_main(root, &config.project.default_branch)?;
-    let mut transitioned = 0usize;
 
     for branch in &merged {
         let suffix = branch.trim_start_matches("ticket/");
@@ -37,30 +36,14 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
             Err(_) => continue,
         };
         let dummy_path = root.join(&rel_path);
-        let mut t = match Ticket::parse(&dummy_path, &content) {
+        let t = match Ticket::parse(&dummy_path, &content) {
             Ok(t) => t,
             Err(_) => continue,
         };
         if t.frontmatter.state != "implemented" { continue; }
 
-        let now = chrono::Utc::now();
-        t.frontmatter.state = "accepted".into();
-        t.frontmatter.updated_at = Some(now);
-        let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-        crate::cmd::state::append_history(&mut t.body, "implemented", "accepted", &when, "apm sync");
-
-        let updated = match t.serialize() {
-            Ok(c) => c,
-            Err(e) => { eprintln!("warning: ticket({}) serialize: {e:#}", t.frontmatter.id); continue; }
-        };
-        let id = t.frontmatter.id;
-        match git::commit_to_branch(root, branch, &rel_path, &updated,
-            &format!("ticket({id}): implemented → accepted (branch merged)")) {
-            Ok(_) => {
-                if !quiet { println!("#{id}: implemented → accepted (branch merged)"); }
-                transitioned += 1;
-            }
-            Err(e) => eprintln!("warning: ticket({id}) transition failed: {e:#}"),
+        if !quiet {
+            println!("#{}: branch merged — run `apm state {} accepted` to accept", t.frontmatter.id, t.frontmatter.id);
         }
     }
 
@@ -70,10 +53,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
 
     if !quiet {
         println!(
-            "sync: {} ticket branch{} visible, {} auto-transitioned",
+            "sync: {} ticket branch{} visible",
             branches.len(),
             if branches.len() == 1 { "" } else { "es" },
-            transitioned,
         );
     }
 
