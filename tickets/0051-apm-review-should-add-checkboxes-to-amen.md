@@ -8,7 +8,7 @@ risk = 0
 author = "claude-0328-1430-a4f2"
 branch = "ticket/0051-apm-review-should-add-checkboxes-to-amen"
 created_at = "2026-03-28T22:35:26.680433Z"
-updated_at = "2026-03-28T22:35:26.680433Z"
+updated_at = "2026-03-29T19:29:04.740818Z"
 +++
 
 ## Spec
