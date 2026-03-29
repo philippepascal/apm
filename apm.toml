@@ -29,17 +29,6 @@ layer      = 1
 actionable = ["agent"]
 
   [[workflow.states.transitions]]
-  to            = "specd"
-  trigger       = "manual"
-  actor         = "agent"
-  preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
-
-  [[workflow.states.transitions]]
-  to      = "question"
-  trigger = "manual"
-  actor   = "agent"
-
-  [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "manual"
   actor   = "agent"
@@ -56,12 +45,6 @@ actionable = ["supervisor"]
   trigger = "manual"
   actor   = "any"
 
-  [[workflow.states.transitions]]
-  to            = "specd"
-  trigger       = "manual"
-  actor         = "agent"
-  preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
-
 [[workflow.states]]
 id         = "specd"
 label      = "Specd"
@@ -70,9 +53,10 @@ layer      = 1
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "ready"
-  trigger = "manual"
-  actor   = "supervisor"
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
 
   [[workflow.states.transitions]]
   to      = "ammend"
@@ -150,12 +134,6 @@ layer = 2
   actor   = "agent"
   label   = "Agent is blocked — wrote questions in ### Open questions"
 
-  [[workflow.states.transitions]]
-  to           = "ready"
-  trigger      = "manual"
-  actor        = "any"
-  side_effects = ["set_agent_null", "set_branch_null"]
-
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"
@@ -164,10 +142,11 @@ layer      = 2
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "ready"
-  trigger = "manual"
-  actor   = "supervisor"
-  label   = "Supervisor answered questions — agent can resume"
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  label        = "Supervisor answered questions — agent can resume"
+  side_effects = ["set_agent_null"]
 
 [[workflow.states]]
 id         = "implemented"
@@ -181,6 +160,18 @@ actionable = ["supervisor"]
   trigger       = "manual"
   actor         = "engineer"
   preconditions = ["pr_all_closing_merged"]
+
+  [[workflow.states.transitions]]
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+
+  [[workflow.states.transitions]]
+  to           = "ammend"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
 
   [[workflow.states.transitions]]
   to      = "in_progress"
