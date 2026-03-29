@@ -4,11 +4,11 @@ title = "apm clean: remove worktrees and local branches for closed tickets"
 state = "in_design"
 priority = 3
 effort = 2
-risk = 0
+risk = 1
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0059-apm-clean-remove-worktrees-and-local-bra"
 created_at = "2026-03-29T19:12:18.328861Z"
-updated_at = "2026-03-29T22:58:47.942506Z"
+updated_at = "2026-03-29T22:58:51.822733Z"
 +++
 
 ## Spec
