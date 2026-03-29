@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-1854-10aa"
 branch = "ticket/0029-warn-if-claude-settings-json-is-not-git-"
 created_at = "2026-03-27T05:57:10.499993Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

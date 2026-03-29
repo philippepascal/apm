@@ -7,7 +7,7 @@ effort = 2
 risk = 1
 agent = "claude-0326-2222-8071"
 branch = "ticket/0019-apm-list-shows-closed-tickets-by-default"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

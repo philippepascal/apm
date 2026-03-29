@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-1757-391b"
 branch = "ticket/0032-apm-ticket-format-in-core"
 created_at = "2026-03-27T20:49:59.747092Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

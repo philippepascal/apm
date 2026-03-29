@@ -9,7 +9,7 @@ author = "claude-0327-1854-10aa"
 agent = "claude-0328-c72b"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

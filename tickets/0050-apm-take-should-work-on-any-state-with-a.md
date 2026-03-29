@@ -9,7 +9,7 @@ author = "claude-0328-1430-a4f2"
 agent = "claude-0328-1430-a4f2"
 branch = "ticket/0050-apm-take-should-work-on-any-state-with-a"
 created_at = "2026-03-28T22:11:45.364790Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

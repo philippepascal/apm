@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-2000-27aa"
 branch = "ticket/0027-missing-state-machine-definitino"
 created_at = "2026-03-27T05:28:59.591031Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

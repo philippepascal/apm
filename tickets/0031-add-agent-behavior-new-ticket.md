@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-2000-31cc"
 branch = "ticket/0031-add-agent-behavior-new-ticket"
 created_at = "2026-03-27T06:53:11.802207Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec

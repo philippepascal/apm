@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0328-t42a"
 branch = "ticket/0042-need-an-option-on-apm-list-to-show-all-c"
 created_at = "2026-03-28T08:35:04.245019Z"
-updated_at = "2026-03-29T20:19:19.244283Z"
+updated_at = "2026-03-29T20:19:42.374044Z"
 +++
 
 ## Spec
