@@ -4,11 +4,11 @@ title = "apm new --context: route creation context to configured section"
 state = "in_design"
 priority = 3
 effort = 2
-risk = 0
+risk = 1
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0058-apm-new-context-route-creation-context-t"
 created_at = "2026-03-29T19:12:09.185811Z"
-updated_at = "2026-03-29T23:08:42.614594Z"
+updated_at = "2026-03-29T23:08:53.595890Z"
 +++
 
 ## Spec
