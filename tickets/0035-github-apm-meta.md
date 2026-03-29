@@ -13,13 +13,6 @@ updated_at = "2026-03-29T23:14:45.289011Z"
 
 ## Spec
 
-### Ammend
-add a migration plan or script for all the existing tickets
-migrate script should be a one time thing for this repo. don't implement it as command.
-when you ammend a spec, you need to mark the ammendements as handled with a checkbox. open a ticket if that's a bug or missing feature
-
-why do we need to migrate existing numbers, can't we just assume they have zeros in front of their numbers?
-
 ### Problem
 
 APM currently assigns ticket IDs using a shared counter stored in `refs/heads/apm/meta`. This causes two distinct problems:
@@ -45,8 +38,8 @@ The only sound solution is one that requires no shared state at all.
 - [ ] `apm list` output shows the full 8-char ID; sorting is by creation timestamp (embedded in the ID generation, not the ID itself)
 - [ ] The `apm/meta` branch is no longer created or pushed on `apm new`
 - [ ] Collision probability with 1 000 tickets is documented and acceptable (≤ 0.01% birthday probability at 32 bits)
-- [ ] A one-time migration script (`scripts/migrate-ticket-ids.sh`) rewrites existing numeric-ID tickets to hex IDs in-place: updates the `id` field in frontmatter, renames the ticket file and branch, and pushes the renamed branch; original numeric branches are deleted after successful rename
-- [ ] `apm` continues to accept numeric IDs (e.g. `apm show 35`) as aliases during the transition period; after the migration script is run against this repo, numeric aliases are no longer needed but remain harmless
+- [ ] A one-time migration script (`scripts/migrate-ticket-ids.sh`) updates the `id` field in frontmatter for all existing numeric-ID tickets from integer form (`id = 35`) to zero-padded string form (`id = "0035"`); no branch or file renaming is performed
+- [ ] After the migration script runs, `apm show 0035` and `apm show 35` both resolve correctly (the integer shorthand continues to work as a convenience)
 
 ### Out of scope
 
@@ -70,6 +63,10 @@ The only sound solution is one that requires no shared state at all.
   tickets to hex IDs in-place; numeric ID aliases supported during transition
 - [x] Migration changed from `apm migrate` command to a one-time repo script
   (`scripts/migrate-ticket-ids.sh`); numeric ID aliases kept for transition period
+- [x] Migration script simplified: existing branches are already zero-padded (`ticket/0035-*`) and
+  are valid hex strings — no branch or file renaming needed; script only updates `id` frontmatter field
+- [x] Amendment items now formatted as checkboxes per convention; ticket #51 covers
+  auto-normalisation of plain bullets in `### Amendment requests` at review time
 
 ### Approach
 
@@ -115,20 +112,16 @@ Sort by `created_at` timestamp from the frontmatter (already present), not by ID
 
 #### Migration: `scripts/migrate-ticket-ids.sh`
 
-A one-time shell script committed to this repo (not an `apm` subcommand) rewrites all existing numeric-ID tickets to hex IDs. It is run once against this repo after the hex-ID implementation lands.
+A one-time shell script committed to this repo (not an `apm` subcommand). Existing ticket branches are already named `ticket/0035-*` with zero-padded 4-digit prefixes — these are valid hex strings and do not need renaming. Only the frontmatter `id` field needs updating from integer to string.
 
-The script, for each ticket branch matching `ticket/NNNN-<slug>`:
-1. Reads the `created_at` field from the ticket frontmatter
-2. Generates a deterministic hex ID: `sha256(created_at_nanos_le || zeroed_8_bytes)[..8]` — idempotent across repeated runs
-3. Updates `id` in frontmatter to the hex string
-4. Renames the ticket file from `tickets/NNNN-<slug>.md` → `tickets/<hex8>-<slug>.md`
-5. Commits the rename on the branch
-6. Pushes the renamed branch as `ticket/<hex8>-<slug>`
-7. Deletes the old `ticket/NNNN-<slug>` remote and local branch
+The script, for each ticket branch matching `ticket/[0-9][0-9][0-9][0-9]-*`:
+1. Checks out the branch into a temp worktree (or reads via `git show`)
+2. Updates `id = N` → `id = "NNNN"` (zero-padded 4-char string) in the frontmatter
+3. Commits the change on the branch with message `"migrate: id N → NNNN"`
 
-Prints a summary of all renamed tickets on completion.
+Prints a summary of all updated tickets on completion. No branch renaming, no file renaming.
 
-**Transition period**: `apm` commands accept a plain integer (e.g. `35`) as a shorthand that resolves to the first ticket branch matching `ticket/0035-*`. The resolver tries hex prefix first, then integer-with-zero-padding fallback. This lets the existing workflow continue until the migration script is run.
+**Integer shorthand**: `apm` commands accept a plain integer (e.g. `35`) and zero-pad it to 4 chars for lookup — this matches existing branches and remains valid after migration. No separate alias mechanism needed.
 
 #### CLI ergonomics note
 
