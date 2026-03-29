@@ -119,9 +119,9 @@ fn init_creates_expected_files() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
     assert!(p.join("tickets").is_dir());
-    assert!(p.join("apm.toml").exists());
+    assert!(p.join(".apm/config.toml").exists());
     assert!(p.join(".gitignore").exists());
     assert!(!p.join(".git/hooks/pre-push").exists());
     assert!(!p.join(".git/hooks/post-merge").exists());
@@ -134,10 +134,10 @@ fn init_is_idempotent() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
-    let toml_before = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    apm::cmd::init::run(p, true).unwrap();
-    let toml_after = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
+    let toml_before = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
+    let toml_after = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
     assert_eq!(toml_before, toml_after);
 }
 
@@ -148,9 +148,9 @@ fn init_generated_config_has_all_workflow_states() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
 
-    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
     for state in &["new", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "accepted", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
@@ -364,9 +364,9 @@ fn init_config_has_default_branch_and_parses() {
     git(p, &["init", "-q", "-b", "trunk"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
 
-    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
     assert!(toml.contains("default_branch = \"trunk\""), "default_branch not written: {toml}");
 
     let config = apm_core::config::Config::load(p).unwrap();
