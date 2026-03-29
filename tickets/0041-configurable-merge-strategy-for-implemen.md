@@ -104,6 +104,23 @@ ticket in `implemented`.
 **`apm/src/cmd/init.rs`**: generate `apm.reviewer.md` when `merge_strategy =
 "agent"` is set, or unconditionally alongside `apm.worker.md`.
 
+### Amendment requests
+
+- [ ] The design has changed: merge strategy is no longer a global `[workers]`
+  config. It is now a `completion` property on individual
+  `[[workflow.states.transitions]]` entries (e.g. `completion = "pr"` on
+  `in_progress → implemented`). This allows different transitions to use
+  different strategies. Rewrite the entire spec around `completion` on
+  transitions instead of `[workers] merge_strategy`.
+- [ ] Replace `"pr"` / `"direct"` / `"agent"` / `"none"` values with the
+  canonical set from TICKET-LIFECYCLE: `"pr"`, `"merge"`, `"none"`. The
+  `"agent"` review strategy is deferred to a separate ticket.
+- [ ] The config section `[workers]` is no longer the right home. The
+  `completion` property lives on the transition definition in `apm.toml`.
+  Update all config structs and field names accordingly.
+- [ ] Update the approach section to reflect that `apm state` (not `apm start`)
+  reads `completion` and performs the push/PR when transitioning.
+
 ## History
 
 | When | From | To | By |
