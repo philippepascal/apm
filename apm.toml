@@ -31,7 +31,7 @@ instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
-  trigger = "manual"
+  trigger = "command:start"
   actor   = "agent"
 
 [[workflow.states]]
@@ -85,7 +85,7 @@ instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
-  trigger = "manual"
+  trigger = "command:start"
   actor   = "agent"
 
 [[workflow.states]]
