@@ -118,6 +118,15 @@ enum Command {
         #[arg(long)]
         fix: bool,
     },
+    /// Validate config and ticket integrity
+    Validate {
+        /// Auto-fix repairable issues (branch field mismatches)
+        #[arg(long)]
+        fix: bool,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
     Hook {
@@ -173,6 +182,7 @@ fn main() -> Result<()> {
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
+        Command::Validate { fix, json } => cmd::validate::run(&root, fix, json),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
