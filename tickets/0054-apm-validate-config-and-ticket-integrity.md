@@ -24,22 +24,22 @@ Concretely, a misconfigured `apm.toml` can silently break the entire workflow: a
 
 ### Acceptance criteria
 
-- [ ] `apm validate` runs without arguments, reads `apm.toml` from the repo root, and prints a summary line `N tickets checked, N errors, N warnings`
-- [ ] Exits 0 when no errors are found; exits 1 when at least one error is found
-- [ ] Config check — all `to` targets in all transitions reference a state that exists in `[[workflow.states]]`; violations are reported as errors
-- [ ] Config check — every value in `preconditions` arrays is one of the known strings: `spec_not_empty`, `spec_has_acceptance_criteria`, `pr_exists`, `pr_all_closing_merged`; unknown values are reported as errors
-- [ ] Config check — every value in `side_effects` arrays is one of the known strings: `set_agent_null`; unknown values are reported as errors
-- [ ] Config check — no state has both `terminal = true` and at least one outgoing transition; violations are reported as errors
-- [ ] Config check — at least one non-terminal state exists; absence is reported as an error
-- [ ] Config check (gated on ticket #53) — each `[[ticket.sections]]` entry has a `type` value that is one of `"free"`, `"tasks"`, `"qa"`; invalid values are reported as errors
-- [ ] Config check (gated on ticket #53) — each `instructions` field on `[[workflow.states]]` that is set points to a file that exists relative to the repo root; missing files are reported as errors
-- [ ] Ticket check — each ticket file's `state` field names a state that exists in `[[workflow.states]]`; violations are reported as errors
-- [ ] Ticket check — each ticket file's `branch` field, when set, matches the canonical branch name `ticket/<id>-<slug>` that would be derived from the filename; mismatches are reported as errors
-- [ ] Ticket check (gated on ticket #53) — for tickets in `specd` or any later non-terminal state, each `[[ticket.sections]]` entry with `required = true` must have non-empty content in the ticket body; violations are reported as errors
-- [ ] `--json` flag outputs a JSON object `{"tickets_checked": N, "errors": [...], "warnings": [...]}` instead of human-readable lines; errors and warnings are objects with `"kind"`, `"subject"`, and `"message"` fields
-- [ ] `--fix` flag auto-repairs the one fixable error class: a `branch` field that is set but does not match the canonical name is rewritten to match and committed to the ticket branch; all other issues are reported only, never silently mutated
-- [ ] `apm validate` is listed in `apm --help` output
-- [ ] `cargo test --workspace` passes with at least: one test that validates a correct config passes; one test that detects a transition to a non-existent state; one test that detects a terminal state with outgoing transitions; one test that detects an unknown precondition; one test that detects a ticket with an unknown state
+- [x] `apm validate` runs without arguments, reads `apm.toml` from the repo root, and prints a summary line `N tickets checked, N errors, N warnings`
+- [x] Exits 0 when no errors are found; exits 1 when at least one error is found
+- [x] Config check — all `to` targets in all transitions reference a state that exists in `[[workflow.states]]`; violations are reported as errors
+- [x] Config check — every value in `preconditions` arrays is one of the known strings: `spec_not_empty`, `spec_has_acceptance_criteria`, `pr_exists`, `pr_all_closing_merged`; unknown values are reported as errors
+- [x] Config check — every value in `side_effects` arrays is one of the known strings: `set_agent_null`; unknown values are reported as errors
+- [x] Config check — no state has both `terminal = true` and at least one outgoing transition; violations are reported as errors
+- [x] Config check — at least one non-terminal state exists; absence is reported as an error
+- [x] Config check (gated on ticket #53) — each `[[ticket.sections]]` entry has a `type` value that is one of `"free"`, `"tasks"`, `"qa"`; invalid values are reported as errors
+- [x] Config check (gated on ticket #53) — each `instructions` field on `[[workflow.states]]` that is set points to a file that exists relative to the repo root; missing files are reported as errors
+- [x] Ticket check — each ticket file's `state` field names a state that exists in `[[workflow.states]]`; violations are reported as errors
+- [x] Ticket check — each ticket file's `branch` field, when set, matches the canonical branch name `ticket/<id>-<slug>` that would be derived from the filename; mismatches are reported as errors
+- [x] Ticket check (gated on ticket #53) — for tickets in `specd` or any later non-terminal state, each `[[ticket.sections]]` entry with `required = true` must have non-empty content in the ticket body; violations are reported as errors
+- [x] `--json` flag outputs a JSON object `{"tickets_checked": N, "errors": [...], "warnings": [...]}` instead of human-readable lines; errors and warnings are objects with `"kind"`, `"subject"`, and `"message"` fields
+- [x] `--fix` flag auto-repairs the one fixable error class: a `branch` field that is set but does not match the canonical name is rewritten to match and committed to the ticket branch; all other issues are reported only, never silently mutated
+- [x] `apm validate` is listed in `apm --help` output
+- [x] `cargo test --workspace` passes with at least: one test that validates a correct config passes; one test that detects a transition to a non-existent state; one test that detects a terminal state with outgoing transitions; one test that detects an unknown precondition; one test that detects a ticket with an unknown state
 
 ### Out of scope
 
