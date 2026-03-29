@@ -12,6 +12,17 @@ pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Resu
         let list: Vec<&str> = config.workflow.states.iter().map(|s| s.id.as_str()).collect();
         bail!("unknown state {:?} — valid states: {}", new_state, list.join(", "));
     }
+    let aggressive = config.sync.aggressive && !no_aggressive;
+    if aggressive {
+        let prefix = format!("ticket/{id:04}-");
+        if let Ok(branches) = git::ticket_branches(root) {
+            if let Some(b) = branches.iter().find(|b| b.starts_with(&prefix)) {
+                if let Err(e) = git::fetch_branch(root, b) {
+                    eprintln!("warning: fetch failed: {e:#}");
+                }
+            }
+        }
+    }
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket #{id} not found");
@@ -107,7 +118,6 @@ pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Resu
     )?;
     apm_core::logger::log("state_transition", &format!("#{id} {old_state} -> {new_state}"));
 
-    let aggressive = config.sync.aggressive && !no_aggressive;
 
     match completion {
         CompletionStrategy::Pr => {
