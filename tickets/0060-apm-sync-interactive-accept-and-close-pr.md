@@ -28,13 +28,13 @@ The batch-close prompt already handles the close step interactively (`prompt_clo
 
 ### Acceptance criteria
 
-- [ ] When `apm sync` detects one or more merged-but-not-accepted tickets and stdout is a terminal, it prints each one and asks the supervisor to accept them (individually or in batch)
-- [ ] The prompt is suppressed (reverts to the current print-only behaviour) when stdout is not a terminal
-- [ ] `--quiet` suppresses the accept prompt (same as it suppresses the close prompt)
-- [ ] An `--auto-accept` flag (mirrors `--auto-close`) accepts all eligible tickets without prompting
-- [ ] Accepting a ticket via the sync prompt is equivalent to running `apm state <id> accepted` — it commits the state transition to the ticket branch
-- [ ] If the `accepted → closed` transition does not exist in the workflow, the ticket is accepted but not auto-closed (the close step remains separate)
-- [ ] Integration test: after a sync that detects a merged ticket, simulating `y` at the accept prompt results in the ticket being in `accepted` state
+- [x] When `apm sync` detects one or more merged-but-not-accepted tickets and stdout is a terminal, it prints each one and asks the supervisor to accept them (individually or in batch)
+- [x] The prompt is suppressed (reverts to the current print-only behaviour) when stdout is not a terminal
+- [x] `--quiet` suppresses the accept prompt (same as it suppresses the close prompt)
+- [x] An `--auto-accept` flag (mirrors `--auto-close`) accepts all eligible tickets without prompting
+- [x] Accepting a ticket via the sync prompt is equivalent to running `apm state <id> accepted` — it commits the state transition to the ticket branch
+- [x] If the `accepted → closed` transition does not exist in the workflow, the ticket is accepted but not auto-closed (the close step remains separate)
+- [x] Integration test: after a sync that detects a merged ticket, simulating `y` at the accept prompt results in the ticket being in `accepted` state
 
 ### Out of scope
 
