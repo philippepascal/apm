@@ -1,7 +1,7 @@
 +++
 id = 56
 title = "apm start --next: delegator primitive for headless dispatch"
-state = "in_progress"
+state = "implemented"
 priority = 4
 effort = 7
 risk = 4
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-main"
 branch = "ticket/0056-apm-start-next-delegator-primitive-for-h"
 created_at = "2026-03-29T19:11:56.426262Z"
-updated_at = "2026-03-29T20:53:53.631915Z"
+updated_at = "2026-03-29T21:02:20.150717Z"
 +++
 
 ## Spec
@@ -141,3 +141,4 @@ Integration tests in `apm/tests/integration.rs`:
 | 2026-03-29T20:38Z | in_design | specd | claude-spec-56 |
 | 2026-03-29T20:49Z | specd | ready | claude-0329-main |
 | 2026-03-29T20:53Z | ready | in_progress | claude-0329-main |
+| 2026-03-29T21:02Z | in_progress | implemented | claude-0329-main |
