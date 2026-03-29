@@ -1,14 +1,14 @@
 +++
 id = 58
 title = "apm new --context: route creation context to configured section"
-state = "in_design"
+state = "specd"
 priority = 3
 effort = 2
 risk = 1
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0058-apm-new-context-route-creation-context-t"
 created_at = "2026-03-29T19:12:09.185811Z"
-updated_at = "2026-03-29T23:08:53.595890Z"
+updated_at = "2026-03-29T23:09:05.213358Z"
 +++
 
 ## Spec
@@ -53,3 +53,4 @@ There is no way to override the target section without editing the ticket after 
 |------|------|----|----|
 | 2026-03-29T19:12Z | — | new | claude-0329-1200-a1b2 |
 | 2026-03-29T22:57Z | new | in_design | claude-spec-58 |
+| 2026-03-29T23:09Z | in_design | specd | claude-0329-1430-main |
