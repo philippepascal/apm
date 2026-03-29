@@ -1,7 +1,7 @@
 +++
 id = 59
 title = "apm clean: remove worktrees and local branches for closed tickets"
-state = "in_progress"
+state = "implemented"
 priority = 3
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1430-main"
 branch = "ticket/0059-apm-clean-remove-worktrees-and-local-bra"
 created_at = "2026-03-29T19:12:18.328861Z"
-updated_at = "2026-03-29T23:36:57.522051Z"
+updated_at = "2026-03-29T23:39:37.464317Z"
 +++
 
 ## Spec
@@ -63,3 +63,4 @@ The local branch deletion uses `git branch -d` (safe delete — refuses if unmer
 | 2026-03-29T22:58Z | in_design | specd | claude-spec-59 |
 | 2026-03-29T23:16Z | specd | ready | apm |
 | 2026-03-29T23:36Z | ready | in_progress | claude-0329-1430-main |
+| 2026-03-29T23:39Z | in_progress | implemented | claude-0329-1430-main |
