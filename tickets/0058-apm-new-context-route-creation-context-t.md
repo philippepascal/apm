@@ -22,12 +22,12 @@ There is no way to override the target section without editing the ticket after 
 
 ### Acceptance criteria
 
-- [ ] `apm new --context-section <name>` routes `--context` text to `### <name>` instead of `### Problem`
-- [ ] If `--context-section` is not provided, the target section defaults to the first entry in `tickets.sections` from `apm.toml`; if `tickets.sections` is absent or empty, the default is `Problem` (preserving current behaviour)
-- [ ] If the specified section does not exist in the ticket body template, `apm new` returns an error
-- [ ] `--context-section` without `--context` is an error
-- [ ] The `tickets.sections` config field is optional; omitting it preserves all existing behaviour
-- [ ] Unit test: `--context-section Approach` places text under `### Approach` in the created ticket body
+- [x] `apm new --context-section <name>` routes `--context` text to `### <name>` instead of `### Problem`
+- [x] If `--context-section` is not provided, the target section defaults to the first entry in `tickets.sections` from `apm.toml`; if `tickets.sections` is absent or empty, the default is `Problem` (preserving current behaviour)
+- [x] If the specified section does not exist in the ticket body template, `apm new` returns an error
+- [x] `--context-section` without `--context` is an error
+- [x] The `tickets.sections` config field is optional; omitting it preserves all existing behaviour
+- [x] Unit test: `--context-section Approach` places text under `### Approach` in the created ticket body
 
 ### Out of scope
 
