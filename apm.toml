@@ -22,11 +22,12 @@ webhook_secret_env = "APM_WEBHOOK_SECRET"
 terminal_states = ["closed"]
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-color      = "#6b7280"
-layer      = 1
-actionable = ["agent"]
+id           = "new"
+label        = "New"
+color        = "#6b7280"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
@@ -64,11 +65,12 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-color      = "#ef4444"
-layer      = 1
-actionable = ["agent"]
+id           = "ammend"
+label        = "Ammend"
+color        = "#ef4444"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
