@@ -3,12 +3,12 @@ id = 71
 title = "open_editor should split EDITOR/VISUAL on whitespace to support flags"
 state = "in_design"
 priority = 5
-effort = 0
+effort = 1
 risk = 0
 author = "claude-0329-1430-main"
 branch = "ticket/0071-open-editor-should-split-editor-visual-o"
 created_at = "2026-03-29T23:40:38.875035Z"
-updated_at = "2026-03-29T23:41:36.539888Z"
+updated_at = "2026-03-29T23:41:38.175271Z"
 +++
 
 ## Spec
