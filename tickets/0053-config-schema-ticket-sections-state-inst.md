@@ -30,20 +30,20 @@ None of these properties are parsed today. The Rust structs `StateConfig` and `T
 
 ### Acceptance criteria
 
-- [ ] `TicketSection` struct exists in `apm-core/src/config.rs` with fields: `name: String`, `type_: SectionType` (deserialized from `"type"`), `required: bool` (default false), `placeholder: Option<String>`
-- [ ] `SectionType` enum exists with variants `Free`, `Tasks`, `Qa`; deserializes from `"free"`, `"tasks"`, `"qa"`; derives `Debug, Clone, PartialEq, Deserialize`
-- [ ] `TicketConfig` struct exists with field `sections: Vec<TicketSection>` (default empty vec)
-- [ ] `Config` struct has field `ticket: TicketConfig` with `#[serde(default)]`
-- [ ] A `[[ticket.sections]]` block in `apm.toml` with all four fields present parses without error
-- [ ] A `[[ticket.sections]]` block with only `name` and `type` present (omitting `required` and `placeholder`) parses without error, defaulting `required = false` and `placeholder = None`
-- [ ] `StateConfig` has field `instructions: Option<String>` (default None); an `[[workflow.states]]` entry with `instructions = "apm.worker.md"` parses correctly
-- [ ] `TransitionConfig` has field `completion: CompletionStrategy` (default `CompletionStrategy::None`); values `"pr"`, `"merge"`, `"none"` deserialize to the correct variants
-- [ ] `CompletionStrategy` enum exists with variants `Pr`, `Merge`, `None`; derives `Default` (default = `None`), `Debug, Clone, PartialEq, Deserialize`
-- [ ] `TransitionConfig` has field `focus_section: Option<String>` (default None); a transition with `focus_section = "Code review"` parses correctly
-- [ ] `TransitionConfig` has field `context_section: Option<String>` (default None); a transition with `context_section = "Problem"` parses correctly
-- [ ] All new fields are additive: existing `apm.toml` files that omit all new fields continue to parse without error
-- [ ] Unit tests in `apm-core/src/config.rs` cover: round-trip parse of a full `[[ticket.sections]]` block; `SectionType` deserialization for all three variants; `CompletionStrategy` deserialization for all three variants and default; `StateConfig` with `instructions`; `TransitionConfig` with `focus_section` and `context_section`
-- [ ] `cargo test --workspace` passes
+- [x] `TicketSection` struct exists in `apm-core/src/config.rs` with fields: `name: String`, `type_: SectionType` (deserialized from `"type"`), `required: bool` (default false), `placeholder: Option<String>`
+- [x] `SectionType` enum exists with variants `Free`, `Tasks`, `Qa`; deserializes from `"free"`, `"tasks"`, `"qa"`; derives `Debug, Clone, PartialEq, Deserialize`
+- [x] `TicketConfig` struct exists with field `sections: Vec<TicketSection>` (default empty vec)
+- [x] `Config` struct has field `ticket: TicketConfig` with `#[serde(default)]`
+- [x] A `[[ticket.sections]]` block in `apm.toml` with all four fields present parses without error
+- [x] A `[[ticket.sections]]` block with only `name` and `type` present (omitting `required` and `placeholder`) parses without error, defaulting `required = false` and `placeholder = None`
+- [x] `StateConfig` has field `instructions: Option<String>` (default None); an `[[workflow.states]]` entry with `instructions = "apm.worker.md"` parses correctly
+- [x] `TransitionConfig` has field `completion: CompletionStrategy` (default `CompletionStrategy::None`); values `"pr"`, `"merge"`, `"none"` deserialize to the correct variants
+- [x] `CompletionStrategy` enum exists with variants `Pr`, `Merge`, `None`; derives `Default` (default = `None`), `Debug, Clone, PartialEq, Deserialize`
+- [x] `TransitionConfig` has field `focus_section: Option<String>` (default None); a transition with `focus_section = "Code review"` parses correctly
+- [x] `TransitionConfig` has field `context_section: Option<String>` (default None); a transition with `context_section = "Problem"` parses correctly
+- [x] All new fields are additive: existing `apm.toml` files that omit all new fields continue to parse without error
+- [x] Unit tests in `apm-core/src/config.rs` cover: round-trip parse of a full `[[ticket.sections]]` block; `SectionType` deserialization for all three variants; `CompletionStrategy` deserialization for all three variants and default; `StateConfig` with `instructions`; `TransitionConfig` with `focus_section` and `context_section`
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
