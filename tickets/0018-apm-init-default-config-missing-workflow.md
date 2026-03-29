@@ -7,7 +7,7 @@ effort = 2
 risk = 1
 agent = "claude-0326-2222-8071"
 branch = "ticket/0018-apm-init-default-config-missing-workflow"
-updated_at = "2026-03-29T20:19:42.374044Z"
+updated_at = "2026-03-29T20:46:09.354423Z"
 +++
 
 ## Spec
@@ -46,4 +46,4 @@ block matching the ticker workflow defined in `initial_specs/SPEC.md §6`.
 | 2026-03-27T05:23Z | ready | in_progress | claude-0326-2222-8071 |
 | 2026-03-27T05:30Z | in_progress | implemented | claude-0326-2222-8071 |
 | 2026-03-27T06:33Z | implemented | accepted | apm sync |
-| 2026-03-29T20:19Z | accepted | closed | apm-sync |
+| 2026-03-29T20:46Z | accepted | closed | apm-sync |
