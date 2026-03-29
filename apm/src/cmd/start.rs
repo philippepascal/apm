@@ -56,9 +56,14 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         .or_else(|| git::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id:04}"));
 
+    let default_branch = &config.project.default_branch;
+
     if aggressive {
         if let Err(e) = git::fetch_branch(root, &branch) {
             eprintln!("warning: fetch failed: {e:#}");
+        }
+        if let Err(e) = git::fetch_branch(root, default_branch) {
+            eprintln!("warning: fetch {} failed: {e:#}", default_branch);
         }
     }
 
@@ -79,7 +84,6 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         .unwrap_or(wt_path);
 
     // Merge the default branch into the ticket branch so the agent starts from current code.
-    let default_branch = &config.project.default_branch;
     let remote_ref = format!("origin/{default_branch}");
     let merge_ref = if std::process::Command::new("git")
         .args(["rev-parse", "--verify", &remote_ref])
