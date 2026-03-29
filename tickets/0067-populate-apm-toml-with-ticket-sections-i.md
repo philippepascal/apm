@@ -4,11 +4,11 @@ title = "Populate apm.toml with ticket.sections, instructions, context_section, 
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "claude-0329-1430-main"
 branch = "ticket/0067-populate-apm-toml-with-ticket-sections-i"
 created_at = "2026-03-29T23:26:16.251460Z"
-updated_at = "2026-03-29T23:30:53.622070Z"
+updated_at = "2026-03-29T23:30:55.148051Z"
 +++
 
 ## Spec
