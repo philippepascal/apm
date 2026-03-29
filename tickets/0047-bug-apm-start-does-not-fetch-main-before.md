@@ -25,13 +25,13 @@ merge brings in an outdated base even in aggressive mode.
 
 ### Acceptance criteria
 
-- [ ] When `sync.aggressive = true`, `apm start` fetches `origin/<default_branch>`
+- [x] When `sync.aggressive = true`, `apm start` fetches `origin/<default_branch>`
   before merging it into the ticket branch
-- [ ] When `sync.aggressive = false` (or `--no-aggressive` is passed), the fetch
+- [x] When `sync.aggressive = false` (or `--no-aggressive` is passed), the fetch
   is skipped (existing behaviour — no regression)
-- [ ] If the fetch fails, a warning is printed and the merge proceeds with the
+- [x] If the fetch fails, a warning is printed and the merge proceeds with the
   locally-cached ref (same fail-soft pattern used elsewhere)
-- [ ] The fetch of the ticket branch and the fetch of the default branch are both
+- [x] The fetch of the ticket branch and the fetch of the default branch are both
   present in aggressive mode (neither replaces the other)
 
 ### Out of scope
