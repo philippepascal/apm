@@ -37,17 +37,17 @@ ticket #53).
 - [x] `completion` on a transition supports three values: `"pr"`, `"merge"`, `"none"`
   (already added to the config schema in ticket #53 — this ticket implements
   the runtime behaviour)
-- [ ] When `apm state <id> <to>` is called and the matching transition has
+- [x] When `apm state <id> <to>` is called and the matching transition has
   `completion = "pr"`: push the ticket branch and open (or update) a GitHub PR
   targeting the default branch
-- [ ] When `apm state <id> <to>` has `completion = "merge"`: push the ticket
+- [x] When `apm state <id> <to>` has `completion = "merge"`: push the ticket
   branch, then merge it into the default branch locally and push the default
   branch; transition succeeds immediately; if the merge produces a conflict,
   abort and print a clear message (ticket stays in current state)
-- [ ] When `completion = "none"` (or absent): `apm state` does only the state
+- [x] When `completion = "none"` (or absent): `apm state` does only the state
   change — no push, no PR (existing behaviour, no regression)
-- [ ] Default is `"none"` if `completion` is omitted from a transition
-- [ ] `apm verify` reports the `completion` value for each transition that has
+- [x] Default is `"none"` if `completion` is omitted from a transition
+- [x] `apm verify` reports the `completion` value for each transition that has
   one set
 
 ### Out of scope
