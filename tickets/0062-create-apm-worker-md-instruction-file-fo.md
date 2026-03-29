@@ -22,10 +22,10 @@ This leads to inconsistent agent behaviour and requires the supervisor to give r
 
 ### Acceptance criteria
 
-- [ ] A file `apm.worker.md` exists at the repo root with implementation-phase guidance for worker agents
-- [ ] `apm.toml` references `apm.worker.md` as the `instructions` for the `ready` and `in_progress` states (requires the `instructions` field added in ticket #61)
-- [ ] The content of `apm.worker.md` covers: reading the spec before coding, minimal-change discipline, commit message format, test requirements, PR creation, when to open side tickets, how to transition to `blocked`, and the `apm.agents.md` shell discipline rules
-- [ ] `apm-core` config parsing continues to work if `instructions` is absent on any state (already addressed by ticket #61)
+- [x] A file `apm.worker.md` exists at the repo root with implementation-phase guidance for worker agents
+- [x] `apm.toml` references `apm.worker.md` as the `instructions` for the `ready` and `in_progress` states (requires the `instructions` field added in ticket #61)
+- [x] The content of `apm.worker.md` covers: reading the spec before coding, minimal-change discipline, commit message format, test requirements, PR creation, when to open side tickets, how to transition to `blocked`, and the `apm.agents.md` shell discipline rules
+- [x] `apm-core` config parsing continues to work if `instructions` is absent on any state (already addressed by ticket #61)
 
 ### Out of scope
 
