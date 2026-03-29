@@ -105,6 +105,9 @@ enum Command {
         /// Automatically close accepted/stale tickets without prompting
         #[arg(long)]
         auto_close: bool,
+        /// Automatically accept merged tickets without prompting
+        #[arg(long)]
+        auto_accept: bool,
     },
     /// Take over a ticket from another agent
     Take {
@@ -230,7 +233,7 @@ fn main() -> Result<()> {
                 (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
             }
         }
-        Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
+        Command::Sync { offline, quiet, no_aggressive, auto_close, auto_accept } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close, auto_accept),
         Command::Take { id, no_aggressive } => cmd::take::run(&root, id, no_aggressive),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, id, to, no_aggressive),
