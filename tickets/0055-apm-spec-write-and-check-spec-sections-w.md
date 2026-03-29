@@ -29,26 +29,26 @@ validates required sections programmatically.
 
 ### Acceptance criteria
 
-- [ ] `apm spec 42` pretty-prints all `### ...` sections of ticket #42 with
+- [x] `apm spec 42` pretty-prints all `### ...` sections of ticket #42 with
       the section name as a header and its content below.
-- [ ] `apm spec 42 --section Problem` prints only the body of the Problem
+- [x] `apm spec 42 --section Problem` prints only the body of the Problem
       section and exits 0.
-- [ ] `apm spec 42 --section Problem --set "New problem text"` replaces the
+- [x] `apm spec 42 --section Problem --set "New problem text"` replaces the
       Problem section body with the given text, commits to the ticket branch
       (via `git::commit_to_branch`), and prints a confirmation line.
-- [ ] `apm spec 42 --section Problem --set -` reads replacement text from
+- [x] `apm spec 42 --section Problem --set -` reads replacement text from
       stdin (useful for piping multi-line content without shell quoting issues).
-- [ ] `apm spec 42 --check` exits 1 and prints the failing section names when
+- [x] `apm spec 42 --check` exits 1 and prints the failing section names when
       any required section is empty or Acceptance criteria has no items.
-- [ ] `apm spec 42 --check` exits 0 and prints a success message when all
+- [x] `apm spec 42 --check` exits 0 and prints a success message when all
       required sections are non-empty and Acceptance criteria has at least
       one item.
-- [ ] `apm spec 42 --section NonExistent` exits non-zero and prints an error
+- [x] `apm spec 42 --section NonExistent` exits non-zero and prints an error
       naming the unknown section.
-- [ ] `apm spec 999` (non-existent ticket) exits non-zero and prints
+- [x] `apm spec 999` (non-existent ticket) exits non-zero and prints
       "ticket #999 not found".
-- [ ] `--section` without `--set` is read-only and makes no commit.
-- [ ] `--set` without `--section` is reported as a usage error.
+- [x] `--section` without `--set` is read-only and makes no commit.
+- [x] `--set` without `--section` is reported as a usage error.
 
 ### Out of scope
 
