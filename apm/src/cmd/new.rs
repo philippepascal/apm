@@ -7,8 +7,13 @@ use apm_core::{
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+
+    if context_section.is_some() && context.is_none() {
+        anyhow::bail!("--context-section requires --context");
+    }
+
     let aggressive = config.sync.aggressive && !no_aggressive;
     if side_note && !config.agents.side_tickets {
         anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
@@ -41,13 +46,23 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         focus_section: None,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
-    let problem_section = match &context {
-        Some(ctx) => format!("### Problem\n\n{ctx}\n\n"),
-        None => "### Problem\n\n".to_string(),
-    };
-    let body = format!(
-        "## Spec\n\n{problem_section}### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
+    let body_template = format!(
+        "## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
     );
+    let body = if let Some(ctx) = &context {
+        let section = context_section
+            .as_deref()
+            .map(|s| s.to_string())
+            .or_else(|| config.tickets.sections.first().cloned())
+            .unwrap_or_else(|| "Problem".to_string());
+        let heading = format!("### {section}\n\n");
+        if !body_template.contains(&heading) {
+            anyhow::bail!("section '### {section}' not found in ticket body template");
+        }
+        body_template.replacen(&heading, &format!("### {section}\n\n{ctx}\n\n"), 1)
+    } else {
+        body_template
+    };
     let path = tickets_dir.join(&filename);
     let t = Ticket { frontmatter: fm, body, path };
     let content = t.serialize()?;
