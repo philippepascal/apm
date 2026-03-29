@@ -39,13 +39,13 @@ ticket.
 
 ### Acceptance criteria
 
-- [ ] `apm start --next` with no actionable ticket exits 0 and prints "No actionable tickets."
-- [ ] `apm start --next` claims the highest-priority actionable ticket: sets state → `in_progress`, assigns `APM_AGENT_NAME`, provisions the worktree, and merges the default branch (same behavior as `apm start <id>`)
-- [ ] When the claimed ticket's state config has `instructions = "path/to/file"`, the contents of that file are read from the repo root and included in the composed output
-- [ ] When a `focus_section` field is present in the ticket's frontmatter, `apm start --next` injects the hint "Pay special attention to section: <name>" into the composed output, then writes the ticket back with that field removed and commits the change
-- [ ] `apm start --next --spawn` launches a `claude` subprocess with the composed prompt as the system prompt and the ticket content as the user message (same spawn behavior as `apm start --spawn`)
-- [ ] `apm start --next` without `--spawn` prints the worktree path and the composed agent prompt to stdout
-- [ ] `apm start --next -P` (skip permissions) works when combined with `--spawn`
+- [x] `apm start --next` with no actionable ticket exits 0 and prints "No actionable tickets."
+- [x] `apm start --next` claims the highest-priority actionable ticket: sets state → `in_progress`, assigns `APM_AGENT_NAME`, provisions the worktree, and merges the default branch (same behavior as `apm start <id>`)
+- [x] When the claimed ticket's state config has `instructions = "path/to/file"`, the contents of that file are read from the repo root and included in the composed output
+- [x] When a `focus_section` field is present in the ticket's frontmatter, `apm start --next` injects the hint "Pay special attention to section: <name>" into the composed output, then writes the ticket back with that field removed and commits the change
+- [x] `apm start --next --spawn` launches a `claude` subprocess with the composed prompt as the system prompt and the ticket content as the user message (same spawn behavior as `apm start --spawn`)
+- [x] `apm start --next` without `--spawn` prints the worktree path and the composed agent prompt to stdout
+- [x] `apm start --next -P` (skip permissions) works when combined with `--spawn`
 
 ### Out of scope
 

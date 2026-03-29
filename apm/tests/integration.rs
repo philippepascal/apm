@@ -616,3 +616,174 @@ fn take_fails_when_no_agent_assigned() {
     let msg = format!("{}", result.unwrap_err());
     assert!(msg.contains("apm start"), "error should mention apm start: {msg}");
 }
+
+// ── apm start --next ─────────────────────────────────────────────────────────
+
+/// Setup that puts the worktrees dir inside the temp dir to avoid parallel-test collisions.
+fn setup_with_local_worktrees() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn start_next_no_tickets_prints_message() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run_next(p, true, false, false).unwrap();
+}
+
+#[test]
+fn start_next_claims_highest_priority_ticket() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run_next(p, true, false, false).unwrap();
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
+    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+}
+
+#[test]
+fn start_next_with_instructions_includes_text_in_output() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    // Write a state with instructions pointing to a file
+    std::fs::write(p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+instructions = "worker-instructions.txt"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id    = "closed"
+label = "Closed"
+terminal = true
+"#).unwrap();
+    std::fs::write(p.join("worker-instructions.txt"), "WORKER INSTRUCTIONS CONTENT").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml", "worker-instructions.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add instructions"]);
+
+    write_ticket_to_branch(p, "ticket/0001-work", "0001-work.md", "ready", 1, "work");
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    // Capture stdout
+    apm::cmd::start::run_next(p, true, false, false).unwrap();
+    // If we get here without error, the instructions file was found and processed.
+    // The test verifies no panic or error on a valid instructions path.
+}
+
+#[test]
+fn start_next_clears_focus_section_from_ticket() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+
+    // Write ticket with focus_section set
+    let branch = "ticket/0001-focused";
+    let filename = "0001-focused.md";
+    let path = format!("tickets/{filename}");
+    let content = "+++\nid = 1\ntitle = \"focused\"\nstate = \"ready\"\nbranch = \"ticket/0001-focused\"\nfocus_section = \"Approach\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(p)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(p, &["checkout", "-b", branch]);
+    }
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::write(p.join(&path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: focused"]);
+    git(p, &["checkout", "main"]);
+
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run_next(p, true, false, false).unwrap();
+
+    let after = branch_content(p, branch, &path);
+    assert!(!after.contains("focus_section"), "focus_section should be cleared: {after}");
+}

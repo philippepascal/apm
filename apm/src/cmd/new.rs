@@ -37,6 +37,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
+        focus_section: None,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
     let problem_section = match &context {
