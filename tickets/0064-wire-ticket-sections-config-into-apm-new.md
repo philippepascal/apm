@@ -1,14 +1,15 @@
 +++
 id = 64
 title = "Wire ticket.sections config into apm new and apm spec"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
 author = "claude-0329-1430-main"
+agent = "claude-0329-1430-main"
 branch = "ticket/0064-wire-ticket-sections-config-into-apm-new"
 created_at = "2026-03-29T23:26:06.417584Z"
-updated_at = "2026-03-29T23:43:41.293330Z"
+updated_at = "2026-03-29T23:56:20.333559Z"
 +++
 
 ## Spec
@@ -54,3 +55,4 @@ updated_at = "2026-03-29T23:43:41.293330Z"
 | 2026-03-29T23:26Z | new | in_design | claude-0329-1430-main |
 | 2026-03-29T23:31Z | in_design | specd | claude-0329-1430-main |
 | 2026-03-29T23:43Z | specd | ready | apm |
+| 2026-03-29T23:56Z | ready | in_progress | claude-0329-1430-main |
