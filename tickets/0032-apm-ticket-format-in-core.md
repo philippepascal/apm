@@ -1,7 +1,7 @@
 +++
 id = 32
 title = "apm-ticket-format-in-core"
-state = "in_progress"
+state = "closed"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-1757-391b"
 branch = "ticket/0032-apm-ticket-format-in-core"
 created_at = "2026-03-27T20:49:59.747092Z"
-updated_at = "2026-03-28T01:35:29.057704Z"
+updated_at = "2026-03-29T20:19:19.244283Z"
 +++
 
 ## Spec
@@ -58,3 +58,6 @@ Optional sections (`### Open questions`, `### Amendment requests`) are `Option<S
 | 2026-03-28T01:02Z | new | specd | claude-0327-1757-391b |
 | 2026-03-28T01:04Z | specd | ready | apm |
 | 2026-03-28T01:35Z | ready | in_progress | claude-0327-1757-391b |
+| 2026-03-28T01:52Z | in_progress | implemented | claude-0327-1852-b516 |
+| 2026-03-28T07:31Z | implemented | accepted | apm sync |
+| 2026-03-29T20:19Z | accepted | closed | apm-sync |
