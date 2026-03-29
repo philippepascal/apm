@@ -919,6 +919,8 @@ fn sync_auto_accept_transitions_implemented_ticket_to_accepted() {
     // The ticket branch should now have state = "accepted".
     let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
     assert!(content.contains("state = \"accepted\""), "ticket should be accepted: {content}");
+}
+
 // --- context-section ---
 
 #[test]
