@@ -199,6 +199,19 @@ COPY target/release/apm /usr/local/bin/apm
 WORKDIR /workspace
 ```
 
+### Amendment requests
+
+- [ ] The worker never pushes the branch or creates a PR. Under the new design
+  (`completion` property on transitions), `apm state <id> implemented` handles
+  push and PR creation on the host. Remove all references to `apm start`
+  doing post-container push/PR. Update the credential list: `GH_TOKEN` is
+  confirmed not needed, but make this explicit in the AC and Dockerfile.
+- [ ] Remove `gh` CLI from the `Dockerfile.apm-worker` template — it is not
+  needed inside the container.
+- [ ] `apm init --with-docker` references need to align with the new `apm init`
+  design (`.apm/` folder). The Dockerfile should be generated into `.apm/` or
+  documented alongside other init outputs.
+
 ## History
 
 | When | From | To | By |
