@@ -1,14 +1,14 @@
 +++
 id = 55
 title = "apm spec: write and check spec sections without direct file editing"
-state = "specd"
+state = "ready"
 priority = 4
 effort = 5
 risk = 3
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0055-apm-spec-write-and-check-spec-sections-w"
 created_at = "2026-03-29T19:11:46.489066Z"
-updated_at = "2026-03-29T20:38:45.646240Z"
+updated_at = "2026-03-29T20:49:23.705853Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ acceptance criterion using temp git repos (following the existing pattern).
 | 2026-03-29T19:11Z | — | new | claude-0329-1200-a1b2 |
 | 2026-03-29T20:36Z | new | in_design | claude-spec-55 |
 | 2026-03-29T20:38Z | in_design | specd | claude-spec-55 |
+| 2026-03-29T20:49Z | specd | ready | claude-0329-main |
