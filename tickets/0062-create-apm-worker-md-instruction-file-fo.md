@@ -1,14 +1,14 @@
 +++
 id = 62
 title = "Create apm.worker.md: instruction file for implementation agents"
-state = "in_design"
+state = "specd"
 priority = 2
 effort = 2
 risk = 1
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0062-create-apm-worker-md-instruction-file-fo"
 created_at = "2026-03-29T19:12:40.149419Z"
-updated_at = "2026-03-29T23:08:57.953661Z"
+updated_at = "2026-03-29T23:09:12.863442Z"
 +++
 
 ## Spec
@@ -56,3 +56,4 @@ This ticket depends on ticket #61 for the `instructions` field in `StateConfig` 
 |------|------|----|----|
 | 2026-03-29T19:12Z | — | new | claude-0329-1200-a1b2 |
 | 2026-03-29T22:57Z | new | in_design | claude-spec-62 |
+| 2026-03-29T23:09Z | in_design | specd | claude-0329-1430-main |
