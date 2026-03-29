@@ -466,7 +466,7 @@ fn sync_closes_accepted_ticket_auto() {
 
     write_ticket_to_branch(p, "ticket/0001-my-ticket", "0001-my-ticket.md", "accepted", 1, "my ticket");
 
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
 
     let content = branch_content(p, "main", "tickets/0001-my-ticket.md");
     assert!(content.contains("state = \"closed\""), "ticket should be closed on main: {content}");
@@ -485,7 +485,7 @@ fn sync_closes_implemented_ticket_with_no_branch() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add stale ticket"]);
     // No ticket branch exists
 
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
 
     let updated = std::fs::read_to_string(p.join(path)).unwrap();
     assert!(updated.contains("state = \"closed\""), "stale ticket should be closed: {updated}");
@@ -497,7 +497,7 @@ fn sync_no_close_when_nothing_to_close() {
     let p = dir.path();
     // No tickets at all
     let log_before = branch_content(p, "main", "apm.toml"); // just to get a ref point
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
     // main should have no new commits (same HEAD)
     let head = std::process::Command::new("git")
         .args(["log", "--oneline", "-1"])
@@ -524,7 +524,7 @@ fn sync_batches_multiple_closes_into_one_commit() {
         .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
         .unwrap_or(0);
 
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
 
     let commits_after: usize = std::process::Command::new("git")
         .args(["rev-list", "--count", "main"])
@@ -898,4 +898,25 @@ fn work_dry_run_no_tickets() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::work::run(p, false, true).unwrap();
+}
+
+// --- sync accept ---
+
+#[test]
+fn sync_auto_accept_transitions_implemented_ticket_to_accepted() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    // Write a ticket in `implemented` state on its ticket branch.
+    write_ticket_to_branch(p, "ticket/0001-impl", "0001-impl.md", "implemented", 1, "impl ticket");
+
+    // Merge the ticket branch into main so it appears as merged.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-impl", "--no-edit"]);
+
+    // Run sync with auto_accept — no interactive prompt needed.
+    apm::cmd::sync::run(p, true, true, true, false, true).unwrap();
+
+    // The ticket branch should now have state = "accepted".
+    let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
+    assert!(content.contains("state = \"accepted\""), "ticket should be accepted: {content}");
 }
