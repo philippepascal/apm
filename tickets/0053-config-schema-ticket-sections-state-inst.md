@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-impl-53"
 branch = "ticket/0053-config-schema-ticket-sections-state-inst"
 created_at = "2026-03-29T19:11:32.157761Z"
-updated_at = "2026-03-29T20:19:42.374044Z"
+updated_at = "2026-03-29T20:46:09.354423Z"
 +++
 
 ## Spec
@@ -164,4 +164,4 @@ Unit tests go in a `#[cfg(test)]` block at the bottom of `config.rs`, using inli
 | 2026-03-29T19:42Z | ready | in_progress | claude-0329-impl-53 |
 | 2026-03-29T19:45Z | in_progress | implemented | claude-0329-impl-53 |
 | 2026-03-29T19:47Z | implemented | accepted | claude-0329-1200-a1b2 |
-| 2026-03-29T20:19Z | accepted | closed | apm-sync |
+| 2026-03-29T20:46Z | accepted | closed | apm-sync |
