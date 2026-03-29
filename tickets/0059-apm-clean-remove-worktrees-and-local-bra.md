@@ -28,7 +28,10 @@ After tickets are closed and their PRs merged, the permanent git worktrees and l
 
 ### Out of scope
 
-
+- Deleting remote branches on origin.
+- Cleaning worktrees for non-ticket branches.
+- Cleaning tickets in non-terminal states.
+- Any interactive confirmation prompt (safety is handled by the merge check and uncommitted-changes check).
 
 ### Approach
 
