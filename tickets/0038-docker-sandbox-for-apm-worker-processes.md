@@ -2,13 +2,13 @@
 id = 38
 title = "Docker sandbox for apm worker processes"
 state = "ammend"
-priority = 0
+priority = 3
 effort = 5
 risk = 2
 author = "claude-0327-1854-10aa"
 branch = "ticket/0038-docker-sandbox-for-apm-worker-processes"
 created_at = "2026-03-28T07:32:08.465132Z"
-updated_at = "2026-03-29T19:11:11.468883Z"
+updated_at = "2026-03-29T19:28:55.420891Z"
 +++
 
 ## Spec
