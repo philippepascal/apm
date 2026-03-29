@@ -21,9 +21,9 @@ not covered:
 
 - **`apm new`** — creates a ticket and commits it to a new branch; never pushes,
   so the branch only exists locally until manually synced
-- **`apm review`** — reads a ticket (should fetch first), edits it, then calls
-  `apm state` internally (which does push in aggressive mode); the fetch before
-  display is missing
+- **`apm review`** — reads a ticket (should fetch first), opens `$EDITOR`, commits
+  on save, and auto-resolves the state transition; the fetch before opening the
+  editor is missing
 - **`apm take`** — claims a ticket by writing to its branch; no push afterwards
 
 None of these commands have a `--no-aggressive` escape hatch either.
@@ -32,9 +32,11 @@ None of these commands have a `--no-aggressive` escape hatch either.
 
 - [ ] `apm new` pushes the new ticket branch after creating it when
   `sync.aggressive = true`
-- [ ] `apm review` fetches the ticket branch before opening the editor when
-  `sync.aggressive = true`; the post-edit push already happens via the internal
-  `apm state` call (no change needed there)
+- [ ] `apm new --context` (ticket #58) follows the same path — it creates the
+  same branch, so the same push applies
+- [ ] `apm review` fetches the ticket branch before opening `$EDITOR` when
+  `sync.aggressive = true`; the post-edit push happens via the internal
+  `apm state` call triggered on save (no change needed for the push side)
 - [ ] `apm take` pushes the ticket branch after claiming it when
   `sync.aggressive = true`
 - [ ] All three commands accept a `--no-aggressive` flag to opt out
@@ -59,9 +61,13 @@ if aggressive {
     }
 }
 ```
+This covers both the plain `apm new` and `apm new --context` paths since both
+go through the same branch-creation and commit step.
 
-**`apm/src/cmd/review.rs`**: add `no_aggressive: bool` parameter; before opening
-the editor, fetch the ticket branch when aggressive:
+**`apm/src/cmd/review.rs`** (redesigned per ticket #57 — opens `$EDITOR`,
+commits on save, auto-resolves state transition): add `no_aggressive: bool`
+parameter; at the top of `run()`, before reading the ticket for display in the
+editor, fetch when aggressive:
 ```rust
 if aggressive {
     if let Err(e) = git::fetch_branch(root, &branch) {
@@ -69,6 +75,8 @@ if aggressive {
     }
 }
 ```
+The post-save push is handled by the internal `apm state` call, which already
+pushes in aggressive mode — no additional change needed there.
 
 **`apm/src/cmd/take.rs`**: add `no_aggressive: bool` parameter; after writing
 the updated ticket to the branch, push when aggressive.
@@ -78,12 +86,12 @@ the updated ticket to the branch, push when aggressive.
 
 ### Amendment requests
 
-- [ ] `apm review` is being redesigned (see TICKET-LIFECYCLE): it will open
+- [x] `apm review` is being redesigned (see TICKET-LIFECYCLE): it will open
   `$EDITOR`, commit on save, and auto-resolve the state transition (no `--to`
   flag). The aggressive fetch is still needed, but the current approach section
   references the old `apm review` implementation. Update the approach to
   describe where the fetch fits in the redesigned command.
-- [ ] `apm new --context` is a new variant of `apm new` (separate ticket).
+- [x] `apm new --context` is a new variant of `apm new` (separate ticket).
   If aggressive push for `apm new` is addressed here, ensure the `--context`
   path is also covered (it creates the same branch, the same push applies).
 
