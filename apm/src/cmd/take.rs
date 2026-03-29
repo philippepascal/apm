@@ -19,10 +19,6 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         Some(a) => a.clone(),
     };
 
-    if fm.state != "in_progress" && fm.state != "implemented" {
-        bail!("ticket #{id} is in state {:?} — take requires in_progress or implemented", fm.state);
-    }
-
     if old_agent == new_agent {
         // Still ensure worktree exists.
         let branch = t.frontmatter.branch.clone()
