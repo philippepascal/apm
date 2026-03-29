@@ -76,10 +76,8 @@ The ticket's state determines what to do next:
 
 **state = `new`** — write the spec:
 1. `apm show <id>` — read the full ticket
-2. `apm set <id> effort <1-10>` — assess implementation scale
-3. `apm set <id> risk <1-10>` — assess technical risk
-4. `apm state <id> in_design` — claim the ticket before editing (signals you are actively writing the spec)
-5. Provision a worktree and edit the spec file there:
+2. `apm state <id> in_design` — claim the ticket before editing (signals you are actively writing the spec)
+3. Provision a worktree and edit the spec file there:
    ```bash
    wt=$(apm worktrees --add <id>)   # prints the worktree path; reuses it if it already exists
    # edit $wt/tickets/<id>-<slug>.md — fill Problem, Acceptance criteria, Out of scope, Approach
@@ -88,8 +86,10 @@ The ticket's state determines what to do next:
    ```
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
-6. If blocked on an ambiguity: write the question in `### Open questions`,
+4. If blocked on an ambiguity: write the question in `### Open questions`,
    commit it to the worktree, then `apm state <id> question`
+5. `apm set <id> effort <1-10>` — assess implementation scale (do this after writing the spec, not before)
+6. `apm set <id> risk <1-10>` — assess technical risk
 7. `apm state <id> specd` — submit spec for supervisor review
 
 **state = `ammend`** — revise the spec:
@@ -132,6 +132,10 @@ taking it over with `apm take <id>`.
    ```
 4. Update `## Spec` if the approach evolves during implementation
 5. Open a PR targeting `main`; then `apm state <id> implemented`
+6. If blocked mid-implementation (missing information, upstream decision needed):
+   write the question in `### Open questions`, commit it, then
+   `apm state <id> blocked` — **do not use `apm state <id> ready`**, that
+   transition no longer exists from `in_progress`
 
 **state = `blocked`** — implementation is blocked on a supervisor decision:
 1. The previous agent wrote questions in `### Open questions` before blocking
@@ -160,7 +164,7 @@ Do not check acceptance criteria boxes until the implementation is verified.
 
 ## Spec discipline
 
-- Set `effort` and `risk` before writing the spec — these drive prioritization
+- Set `effort` and `risk` after writing the spec, before transitioning to `specd` — you only have enough context once the spec is complete
 - Do not proceed on assumptions: write questions, change state to `question`
 - Once a question is answered, reflect the decision in `### Approach`
 - Do not delete answered questions or checked amendment items — they are the
