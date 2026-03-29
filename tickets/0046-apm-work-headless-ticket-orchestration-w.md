@@ -1,14 +1,14 @@
 +++
 id = 46
 title = "apm work: headless ticket orchestration without a supervisor session"
-state = "specd"
+state = "ready"
 priority = 3
 effort = 5
 risk = 3
 author = "claude-0328-c72b"
 branch = "ticket/0046-apm-work-headless-ticket-orchestration-w"
 created_at = "2026-03-28T19:42:39.548558Z"
-updated_at = "2026-03-29T20:42:56.288427Z"
+updated_at = "2026-03-29T21:15:56.438586Z"
 +++
 
 ## Spec
@@ -108,3 +108,4 @@ print the summary.
 | 2026-03-29T19:11Z | specd | ammend | claude-0329-1200-a1b2 |
 | 2026-03-29T20:39Z | ammend | in_design | claude-0329-main |
 | 2026-03-29T20:42Z | in_design | specd | claude-0329-main |
+| 2026-03-29T21:15Z | specd | ready | claude-0329-resume |
