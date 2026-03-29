@@ -76,6 +76,17 @@ the updated ticket to the branch, push when aggressive.
 **`apm/src/main.rs`**: add `#[arg(long)] no_aggressive: bool` to the `New`,
 `Review`, and `Take` subcommand variants; pass through to each `run` function.
 
+### Amendment requests
+
+- [ ] `apm review` is being redesigned (see TICKET-LIFECYCLE): it will open
+  `$EDITOR`, commit on save, and auto-resolve the state transition (no `--to`
+  flag). The aggressive fetch is still needed, but the current approach section
+  references the old `apm review` implementation. Update the approach to
+  describe where the fetch fits in the redesigned command.
+- [ ] `apm new --context` is a new variant of `apm new` (separate ticket).
+  If aggressive push for `apm new` is addressed here, ensure the `--context`
+  path is also covered (it creates the same branch, the same push applies).
+
 ## History
 
 | When | From | To | By |
