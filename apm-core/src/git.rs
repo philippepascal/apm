@@ -182,6 +182,11 @@ pub fn commit_to_branch(
 
     // If a permanent worktree exists for this branch, commit there directly.
     if let Some(wt_path) = find_worktree_for_branch(root, branch) {
+        // Fast-forward to remote if remote is ahead, so our commit lands on top of it.
+        let remote_ref = format!("origin/{branch}");
+        if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+            let _ = run(&wt_path, &["merge", "--ff-only", &remote_ref]);
+        }
         let full_path = wt_path.join(rel_path);
         if let Some(parent) = full_path.parent() {
             std::fs::create_dir_all(parent)?;

@@ -4,6 +4,7 @@ pub mod cmd {
     pub mod init;
     pub mod start;
     pub mod take;
+    pub mod validate;
     pub mod verify;
     pub mod list;
     pub mod show;
@@ -14,6 +15,8 @@ pub mod cmd {
     pub mod sync;
     pub mod worktrees;
     pub mod review;
+    pub mod spec;
+    pub mod work;
 }
 
 pub use crate::cmd::*;

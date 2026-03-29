@@ -265,13 +265,13 @@ fn full_ticket_lifecycle() {
     // setup() already ran init. Verify the expected files are in place.
 
     assert!(env.root().join("CLAUDE.md").exists(), "CLAUDE.md missing");
-    assert!(env.root().join("apm.agents.md").exists(), "apm.agents.md missing");
-    assert!(env.root().join("apm.toml").exists(), "apm.toml missing");
+    assert!(env.root().join(".apm/agents.md").exists(), ".apm/agents.md missing");
+    assert!(env.root().join(".apm/config.toml").exists(), ".apm/config.toml missing");
     assert!(!env.root().join(".git/hooks/pre-push").exists(), "pre-push hook should not be installed");
     assert!(!env.root().join(".git/hooks/post-merge").exists(), "post-merge hook should not be installed");
 
     let claude = env.read("CLAUDE.md");
-    assert!(claude.contains("@apm.agents.md"), "CLAUDE.md missing @apm.agents.md import");
+    assert!(claude.contains("@.apm/agents.md"), "CLAUDE.md missing @.apm/agents.md import");
 
     // ── Step 2: create a ticket ─────────────────────────────────────────────
     // Agent creates a ticket for the parse_count bug.
