@@ -2,13 +2,13 @@
 id = 69
 title = "apm start --next should dispatch spec-writing agents via command:start trigger"
 state = "in_design"
-priority = 0
+priority = 5
 effort = 0
 risk = 0
 author = "claude-0329-1430-main"
 branch = "ticket/0069-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-29T23:34:47.739616Z"
-updated_at = "2026-03-29T23:34:58.708726Z"
+updated_at = "2026-03-29T23:35:33.028181Z"
 +++
 
 ## Spec
