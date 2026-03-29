@@ -126,10 +126,13 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    // Read apm.worker.md
-    let worker_md_path = root.join("apm.worker.md");
-    let worker_system = std::fs::read_to_string(&worker_md_path)
-        .unwrap_or_else(|_| "You are an APM worker agent.".to_string());
+    // Read worker instructions: prefer .apm/worker.md, fall back to apm.worker.md
+    let worker_system = {
+        let p1 = root.join(".apm/worker.md");
+        let p2 = root.join("apm.worker.md");
+        if p1.exists() { std::fs::read_to_string(p1) } else { std::fs::read_to_string(p2) }
+            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
+    };
 
     // Get ticket content
     let ticket_content = content;
@@ -158,6 +161,154 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
     let child = cmd.spawn()?;
     let pid = child.id();
     // Do not wait — drop child handle, process runs independently
+    std::mem::drop(child);
+
+    println!("Worker spawned: PID={pid}, log={}", log_path.display());
+    println!("Agent name: {worker_name}");
+
+    Ok(())
+}
+
+pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
+    let agent_name = std::env::var("APM_AGENT_NAME")
+        .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
+
+    let config = Config::load(root)?;
+    let pw = config.workflow.prioritization.priority_weight;
+    let ew = config.workflow.prioritization.effort_weight;
+    let rw = config.workflow.prioritization.risk_weight;
+
+    let startable: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
+        .map(|s| s.id.as_str())
+        .collect();
+
+    let actionable = config.actionable_states_for("agent");
+
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let mut candidates: Vec<_> = tickets.iter()
+        .filter(|t| {
+            let fm = &t.frontmatter;
+            fm.agent.is_none()
+                && actionable.contains(&fm.state.as_str())
+                && (startable.is_empty() || startable.contains(&fm.state.as_str()))
+        })
+        .collect();
+
+    candidates.sort_by(|a, b| {
+        b.score(pw, ew, rw)
+            .partial_cmp(&a.score(pw, ew, rw))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let Some(candidate) = candidates.first() else {
+        println!("No actionable tickets.");
+        return Ok(());
+    };
+
+    let id = candidate.frontmatter.id;
+    let old_state = candidate.frontmatter.state.clone();
+
+    // Look up state config for instructions and focus_section before claiming
+    let instructions_text = config.workflow.states.iter()
+        .find(|s| s.id == old_state)
+        .and_then(|sc| sc.instructions.as_ref())
+        .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
+            .or_else(|| { eprintln!("warning: instructions file not found"); None }));
+
+    // Run the normal start flow
+    run(root, id, no_aggressive, false, false)?;
+
+    // Re-read the ticket from branch to get focus_section (it may have been set by supervisor)
+    let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let Some(t) = tickets2.iter().find(|t| t.frontmatter.id == id) else {
+        return Ok(());
+    };
+
+    let focus_hint = if let Some(ref section) = t.frontmatter.focus_section {
+        let hint = format!("Pay special attention to section: {section}");
+        // Clear focus_section from ticket
+        let rel_path = format!(
+            "{}/{}",
+            config.tickets.dir.to_string_lossy(),
+            t.path.file_name().unwrap().to_string_lossy()
+        );
+        let branch = t.frontmatter.branch.clone()
+            .or_else(|| git::branch_name_from_path(&t.path))
+            .unwrap_or_else(|| format!("ticket/{id:04}"));
+        let mut t_mut = t.clone();
+        t_mut.frontmatter.focus_section = None;
+        let cleared = t_mut.serialize()?;
+        git::commit_to_branch(root, &branch, &rel_path, &cleared, &format!("ticket({id}): clear focus_section"))?;
+        Some(hint)
+    } else {
+        None
+    };
+
+    // Compose prompt
+    let mut prompt = String::new();
+    if let Some(ref instr) = instructions_text {
+        prompt.push_str(instr.trim());
+        prompt.push('\n');
+    }
+    if let Some(ref hint) = focus_hint {
+        if !prompt.is_empty() { prompt.push('\n'); }
+        prompt.push_str(hint);
+        prompt.push('\n');
+    }
+
+    if !spawn {
+        if !prompt.is_empty() {
+            println!("Prompt:\n{prompt}");
+        }
+        return Ok(());
+    }
+
+    // Spawn worker
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
+
+    let worker_system = if !prompt.is_empty() {
+        prompt
+    } else {
+        // Fall back to apm.worker.md or .apm/worker.md
+        let wm = root.join(".apm/worker.md");
+        let wm_old = root.join("apm.worker.md");
+        if wm.exists() {
+            std::fs::read_to_string(wm).unwrap_or_default()
+        } else {
+            std::fs::read_to_string(wm_old).unwrap_or_else(|_| "You are an APM worker agent.".to_string())
+        }
+    };
+
+    let ticket_content = t.serialize()?;
+
+    // Find the worktree
+    let branch = t.frontmatter.branch.clone()
+        .or_else(|| git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id:04}"));
+    let wt_name = branch.replace('/', "-");
+    let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
+    let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
+
+    let log_path = wt_display.join(".apm-worker.log");
+    let mut cmd = std::process::Command::new("claude");
+    cmd.arg("--print");
+    cmd.args(["--system-prompt", &worker_system]);
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
+    }
+    cmd.arg(&ticket_content);
+    cmd.env("APM_AGENT_NAME", &worker_name);
+    cmd.current_dir(&wt_display);
+
+    let log_file = std::fs::File::create(&log_path)?;
+    let log_clone = log_file.try_clone()?;
+    cmd.stdout(log_file);
+    cmd.stderr(log_clone);
+
+    let child = cmd.spawn()?;
+    let pid = child.id();
     std::mem::drop(child);
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
