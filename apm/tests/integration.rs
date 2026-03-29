@@ -119,12 +119,12 @@ fn init_creates_expected_files() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
     assert!(p.join("tickets").is_dir());
-    assert!(p.join("apm.toml").exists());
+    assert!(p.join(".apm/config.toml").exists());
     assert!(p.join(".gitignore").exists());
-    assert!(p.join(".git/hooks/pre-push").exists());
-    assert!(p.join(".git/hooks/post-merge").exists());
+    assert!(!p.join(".git/hooks/pre-push").exists());
+    assert!(!p.join(".git/hooks/post-merge").exists());
 }
 
 #[test]
@@ -134,10 +134,10 @@ fn init_is_idempotent() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
-    let toml_before = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    apm::cmd::init::run(p, true).unwrap();
-    let toml_after = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
+    let toml_before = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
+    let toml_after = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
     assert_eq!(toml_before, toml_after);
 }
 
@@ -148,10 +148,10 @@ fn init_generated_config_has_all_workflow_states() {
     git(p, &["init", "-q"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
 
-    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    for state in &["new", "question", "specd", "ammend", "ready", "in_progress", "implemented", "accepted", "closed"] {
+    let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
+    for state in &["new", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "accepted", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
     assert!(toml.contains("terminal = true"), "closed must be terminal");
@@ -364,9 +364,9 @@ fn init_config_has_default_branch_and_parses() {
     git(p, &["init", "-q", "-b", "trunk"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    apm::cmd::init::run(p, true).unwrap();
+    apm::cmd::init::run(p, true, false).unwrap();
 
-    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
     assert!(toml.contains("default_branch = \"trunk\""), "default_branch not written: {toml}");
 
     let config = apm_core::config::Config::load(p).unwrap();
@@ -542,4 +542,77 @@ fn sync_batches_multiple_closes_into_one_commit() {
         .map(|o| String::from_utf8(o.stdout).unwrap())
         .unwrap();
     assert!(msg.contains("#1") && msg.contains("#2"), "commit message should list both tickets: {msg}");
+}
+
+// --- take ---
+
+fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, agent: &str) {
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\nagent = \"{agent}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn take_succeeds_on_ammend_state() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_agent(p, "ticket/0001-ammend-me", "0001-ammend-me.md", "ammend", 1, "ammend me", "old-agent");
+    std::env::set_var("APM_AGENT_NAME", "new-agent");
+    apm::cmd::take::run(p, 1).unwrap();
+    let content = branch_content(p, "ticket/0001-ammend-me", "tickets/0001-ammend-me.md");
+    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+}
+
+#[test]
+fn take_succeeds_on_blocked_state() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_agent(p, "ticket/0001-blocked", "0001-blocked.md", "blocked", 1, "blocked", "old-agent");
+    std::env::set_var("APM_AGENT_NAME", "new-agent");
+    apm::cmd::take::run(p, 1).unwrap();
+    let content = branch_content(p, "ticket/0001-blocked", "tickets/0001-blocked.md");
+    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+}
+
+#[test]
+fn take_appends_handoff_history() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_agent(p, "ticket/0001-handoff", "0001-handoff.md", "in_progress", 1, "handoff", "old-agent");
+    std::env::set_var("APM_AGENT_NAME", "new-agent");
+    apm::cmd::take::run(p, 1).unwrap();
+    let content = branch_content(p, "ticket/0001-handoff", "tickets/0001-handoff.md");
+    assert!(content.contains("handoff"), "handoff history entry should be appended: {content}");
+    assert!(content.contains("old-agent"), "old agent should appear in history: {content}");
+    assert!(content.contains("new-agent"), "new agent should appear in history: {content}");
+}
+
+#[test]
+fn take_fails_when_no_agent_assigned() {
+    let dir = setup();
+    let p = dir.path();
+    // Ticket with no agent field
+    write_ticket_to_branch(p, "ticket/0001-unassigned", "0001-unassigned.md", "new", 1, "unassigned");
+    std::env::set_var("APM_AGENT_NAME", "some-agent");
+    let result = apm::cmd::take::run(p, 1);
+    assert!(result.is_err(), "take should fail when no agent is assigned");
+    let msg = format!("{}", result.unwrap_err());
+    assert!(msg.contains("apm start"), "error should mention apm start: {msg}");
 }

@@ -4,6 +4,7 @@ pub mod cmd {
     pub mod init;
     pub mod start;
     pub mod take;
+    pub mod validate;
     pub mod verify;
     pub mod list;
     pub mod show;

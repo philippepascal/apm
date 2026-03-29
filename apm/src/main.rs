@@ -16,6 +16,9 @@ enum Command {
         /// Skip updating .claude/settings.json allow list
         #[arg(long)]
         no_claude: bool,
+        /// Migrate root-level apm.toml and apm.agents.md to .apm/
+        #[arg(long)]
+        migrate: bool,
     },
     /// List tickets
     List {
@@ -68,6 +71,12 @@ enum Command {
         id: u32,
         #[arg(long)]
         no_aggressive: bool,
+        /// Launch a claude worker subprocess in the background
+        #[arg(long)]
+        spawn: bool,
+        /// Pass --dangerously-skip-permissions to the worker (use with --spawn)
+        #[arg(long, short = 'P')]
+        skip_permissions: bool,
     },
     /// Return the highest-priority actionable ticket
     Next {
@@ -112,6 +121,15 @@ enum Command {
         #[arg(long)]
         fix: bool,
     },
+    /// Validate config and ticket integrity
+    Validate {
+        /// Auto-fix repairable issues (branch field mismatches)
+        #[arg(long)]
+        fix: bool,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
     Hook {
@@ -140,7 +158,10 @@ fn main() -> Result<()> {
     let root = repo_root()?;
     if let Ok(ref config) = apm_core::config::Config::load(&root) {
         if config.logging.enabled {
-            let log_path = apm_core::logger::default_log_path(&config.project.name);
+            let log_path = apm_core::logger::resolve_log_path(
+                &config.project.name,
+                config.logging.file.as_deref(),
+            );
             if let Some(parent) = log_path.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }
@@ -148,20 +169,23 @@ fn main() -> Result<()> {
             apm_core::logger::init(&root, &log_path, &agent);
         }
     }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
-        Command::Init { no_claude } => cmd::init::run(&root, no_claude),
+        Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
         Command::New { title, no_edit, side_note, context } => cmd::new::run(&root, title, no_edit, side_note, context),
         Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
-        Command::Start { id, no_aggressive } => cmd::start::run(&root, id, no_aggressive),
+        Command::Start { id, no_aggressive, spawn, skip_permissions } => cmd::start::run(&root, id, no_aggressive, spawn, skip_permissions),
         Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
         Command::Take { id } => cmd::take::run(&root, id),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to } => cmd::review::run(&root, id, to),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
+        Command::Validate { fix, json } => cmd::validate::run(&root, fix, json),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
     }
