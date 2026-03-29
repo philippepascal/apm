@@ -1,0 +1,136 @@
+# APM Worker Agent Instructions
+
+These instructions apply when you pick up a `ready` ticket via `apm start` or
+resume an `in_progress` ticket.
+
+Read `apm.agents.md` for startup, identity, worktree setup, and shell
+discipline. This file covers the implementation phase only.
+
+---
+
+## Before writing any code
+
+1. `apm show <id>` — read the full ticket, including `## Spec` and `## History`
+2. Check `## History` for prior `in_progress` entries — a worktree and partial
+   work may already exist on the branch; continue from there
+3. Re-read `### Acceptance criteria` — implement exactly those items, nothing more
+
+---
+
+## Minimal-change discipline
+
+- Satisfy each acceptance criterion; do not add features or refactors not listed
+- No docstrings, comments, or type annotations on code you did not change
+- No backwards-compat shims — delete unused code
+- Prefer editing existing files over creating new ones
+- Do not add error handling for cases that cannot happen
+
+---
+
+## Commit format
+
+- Imperative mood, present tense: "Add X", "Fix Y", "Refactor Z"
+- First line ≤ 72 characters
+- Do not add a `Co-Authored-By` trailer
+- Do not amend published commits — create new ones
+
+---
+
+## Tests
+
+- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
+- Integration tests in `apm/tests/integration.rs` — use temp git repos, no
+  fixture files needed
+- Run `cargo test --workspace` before opening a PR
+- All tests must pass before opening a PR
+
+---
+
+## Opening a PR
+
+- Target `main`
+- Title mirrors the ticket title (kept short)
+- Body must include:
+  - `Closes #<n>` (ticket number)
+  - Brief summary of the approach (1–3 bullets)
+  - Test plan (what was run, what to verify manually if anything)
+- Do not push to `main` directly
+- After opening the PR: `apm state <id> implemented`
+
+---
+
+## Side tickets
+
+When you notice an out-of-scope issue during implementation, capture it without
+interrupting your current work:
+
+```bash
+apm new --side-note "Brief title" --context "What you observed and why it matters"
+```
+
+Then immediately resume the current ticket.
+
+---
+
+## Blocked state
+
+If you hit a missing decision or ambiguity mid-implementation:
+
+1. Write the question in `### Open questions` in the ticket spec
+2. Commit the update to the worktree branch
+3. `apm state <id> blocked`
+
+Do not use `apm state <id> ready` — that transition does not exist from
+`in_progress`.
+
+---
+
+## Shell discipline
+
+Claude Code's permission system matches the **start** of the command string.
+Compound calls defeat this matching and generate permission prompts. Keep each
+Bash call to a single operation.
+
+**Do not chain commands:**
+```bash
+# Wrong
+apm sync && apm list --state ready
+
+# Right — one call per operation
+apm sync
+apm list --state ready
+```
+
+**Do not use `$()` subshells:**
+```bash
+# Wrong
+gh pr create --body "$(cat /tmp/body.md)"
+
+# Right — write body with the Write tool, then reference by file
+gh pr create --body-file /tmp/body.md
+```
+
+**Do not use background jobs (`&`):**
+```bash
+# Wrong
+gh pr merge 1 & gh pr merge 2 & wait
+
+# Right — sequential calls
+gh pr merge 1
+gh pr merge 2
+```
+
+**Use `git -C` for all git operations in worktrees:**
+```bash
+# Wrong
+cd "$wt" && git add .
+
+# Right
+git -C "$wt" add <files>
+```
+
+**Use `bash -c` for multi-step commands that must share a directory:**
+```bash
+# Right — single bash call, matches Bash(bash *)
+bash -c "cd $wt && cargo test --workspace 2>&1"
+```

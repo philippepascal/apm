@@ -105,11 +105,12 @@ actionable = ["agent"]
   actor   = "agent"
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-color      = "#10b981"
-layer      = 1
-actionable = ["agent"]
+id           = "ready"
+label        = "Ready"
+color        = "#10b981"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -117,10 +118,11 @@ actionable = ["agent"]
   actor   = "agent"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-color = "#8b5cf6"
-layer = 2
+id           = "in_progress"
+label        = "In Progress"
+color        = "#8b5cf6"
+layer        = 2
+instructions = "apm.worker.md"
 
   [[workflow.states.transitions]]
   to            = "implemented"
