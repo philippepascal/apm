@@ -22,14 +22,14 @@ Existing repos that already have root-level `apm.toml` must keep working without
 
 ### Acceptance criteria
 
-- [ ] `apm init` on a fresh repo creates `.apm/config.toml`, `.apm/agents.md`, `.apm/spec-writer.md`, and `.apm/worker.md`; does not create `apm.toml` or `apm.agents.md` at the root
-- [ ] `CLAUDE.md` import line written by `apm init` references `.apm/agents.md` (i.e. `@.apm/agents.md`)
-- [ ] `Config::load` tries `.apm/config.toml` first; if absent, falls back silently to `apm.toml` at root — no warning, no error on either path
-- [ ] An existing repo with only `apm.toml` at root continues to work with all apm commands after upgrading (fallback is permanent, no deadline)
-- [ ] `apm init --migrate` on a repo that has root-level `apm.toml` moves it to `.apm/config.toml`, moves `apm.agents.md` to `.apm/agents.md` (if present), removes the old root files, updates the `@apm.agents.md` import line in `CLAUDE.md` to `@.apm/agents.md`, and prints each action taken
-- [ ] `apm init --migrate` is a no-op (with a message) when `.apm/config.toml` already exists
-- [ ] `apm init --migrate` is a no-op (with a message) when neither `apm.toml` nor `apm.agents.md` exists at root
-- [ ] `cargo test --workspace` passes
+- [x] `apm init` on a fresh repo creates `.apm/config.toml`, `.apm/agents.md`, `.apm/spec-writer.md`, and `.apm/worker.md`; does not create `apm.toml` or `apm.agents.md` at the root
+- [x] `CLAUDE.md` import line written by `apm init` references `.apm/agents.md` (i.e. `@.apm/agents.md`)
+- [x] `Config::load` tries `.apm/config.toml` first; if absent, falls back silently to `apm.toml` at root — no warning, no error on either path
+- [x] An existing repo with only `apm.toml` at root continues to work with all apm commands after upgrading (fallback is permanent, no deadline)
+- [x] `apm init --migrate` on a repo that has root-level `apm.toml` moves it to `.apm/config.toml`, moves `apm.agents.md` to `.apm/agents.md` (if present), removes the old root files, updates the `@apm.agents.md` import line in `CLAUDE.md` to `@.apm/agents.md`, and prints each action taken
+- [x] `apm init --migrate` is a no-op (with a message) when `.apm/config.toml` already exists
+- [x] `apm init --migrate` is a no-op (with a message) when neither `apm.toml` nor `apm.agents.md` exists at root
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
