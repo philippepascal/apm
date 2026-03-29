@@ -1,14 +1,14 @@
 +++
 id = 57
 title = "apm review redesign: editor-based, auto-resolves transitions"
-state = "in_design"
+state = "specd"
 priority = 1
 effort = 4
 risk = 2
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0057-apm-review-redesign-editor-based-auto-re"
 created_at = "2026-03-29T19:12:01.851314Z"
-updated_at = "2026-03-29T23:08:52.109839Z"
+updated_at = "2026-03-29T23:09:02.716822Z"
 +++
 
 ## Spec
@@ -60,3 +60,4 @@ In `apm/src/cmd/review.rs`:
 |------|------|----|----|
 | 2026-03-29T19:12Z | — | new | claude-0329-1200-a1b2 |
 | 2026-03-29T22:57Z | new | in_design | claude-spec-57 |
+| 2026-03-29T23:09Z | in_design | specd | claude-0329-1430-main |
