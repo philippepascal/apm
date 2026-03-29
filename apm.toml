@@ -22,11 +22,12 @@ webhook_secret_env = "APM_WEBHOOK_SECRET"
 terminal_states = ["closed"]
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-color      = "#6b7280"
-layer      = 1
-actionable = ["agent"]
+id           = "new"
+label        = "New"
+color        = "#6b7280"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
@@ -64,11 +65,12 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-color      = "#ef4444"
-layer      = 1
-actionable = ["agent"]
+id           = "ammend"
+label        = "Ammend"
+color        = "#ef4444"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -105,11 +107,12 @@ actionable = ["agent"]
   actor   = "agent"
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-color      = "#10b981"
-layer      = 1
-actionable = ["agent"]
+id           = "ready"
+label        = "Ready"
+color        = "#10b981"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -127,10 +130,11 @@ actionable = ["agent"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-color = "#8b5cf6"
-layer = 2
+id           = "in_progress"
+label        = "In Progress"
+color        = "#8b5cf6"
+layer        = 2
+instructions = "apm.worker.md"
 
   [[workflow.states.transitions]]
   to            = "implemented"

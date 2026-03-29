@@ -84,12 +84,15 @@ fn default_branch_main() -> String {
 #[derive(Debug, Deserialize)]
 pub struct TicketsConfig {
     pub dir: PathBuf,
+    #[serde(default)]
+    pub sections: Vec<String>,
 }
 
 impl Default for TicketsConfig {
     fn default() -> Self {
         Self {
             dir: PathBuf::from("tickets"),
+            sections: Vec::new(),
         }
     }
 }
