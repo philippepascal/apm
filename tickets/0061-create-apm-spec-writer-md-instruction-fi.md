@@ -1,7 +1,7 @@
 +++
 id = 61
 title = "Create apm.spec-writer.md: instruction file for spec-writing agents"
-state = "implemented"
+state = "accepted"
 priority = 2
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1430-main"
 branch = "ticket/0061-create-apm-spec-writer-md-instruction-fi"
 created_at = "2026-03-29T19:12:34.623619Z"
-updated_at = "2026-03-29T23:39:47.709798Z"
+updated_at = "2026-03-29T23:55:14.320561Z"
 +++
 
 ## Spec
@@ -60,3 +60,4 @@ The spec quality bar documented in `apm.agents.md` is brief. A richer, dedicated
 | 2026-03-29T23:18Z | specd | ready | apm |
 | 2026-03-29T23:37Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-29T23:39Z | in_progress | implemented | claude-0329-1430-main |
+| 2026-03-29T23:55Z | implemented | accepted | apm |
