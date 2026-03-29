@@ -878,3 +878,24 @@ fn start_next_clears_focus_section_from_ticket() {
     let after = branch_content(p, branch, &path);
     assert!(!after.contains("focus_section"), "focus_section should be cleared: {after}");
 }
+
+// ── apm work ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn work_dry_run_lists_actionable_tickets() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "ready", 2, "beta");
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    // dry-run should succeed without touching worktrees or spawning anything
+    apm::cmd::work::run(p, false, true).unwrap();
+}
+
+#[test]
+fn work_dry_run_no_tickets() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::work::run(p, false, true).unwrap();
+}

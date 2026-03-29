@@ -152,6 +152,15 @@ enum Command {
     },
     /// Print agent instructions from apm.agents.md
     Agents,
+    /// Orchestrate workers: dispatch apm start --next --spawn in a loop
+    Work {
+        /// Pass --dangerously-skip-permissions to spawned workers
+        #[arg(long, short = 'P')]
+        skip_permissions: bool,
+        /// Print which tickets would be started without dispatching
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Read or write individual spec sections of a ticket
     Spec {
         id: u32,
@@ -220,6 +229,7 @@ fn main() -> Result<()> {
         Command::Validate { fix, json } => cmd::validate::run(&root, fix, json),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
+        Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
         Command::Spec { id, section, set, check } => cmd::spec::run(&root, id, section, set, check),
     }
 }

@@ -16,6 +16,7 @@ pub mod cmd {
     pub mod worktrees;
     pub mod review;
     pub mod spec;
+    pub mod work;
 }
 
 pub use crate::cmd::*;
