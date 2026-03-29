@@ -1,7 +1,7 @@
 +++
 id = 44
 title = "Bug: no log entries written for most apm commands"
-state = "in_progress"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0328-1000-a1b2"
 agent = "claude-0328-t44a"
 branch = "ticket/0044-bug-no-log-entries-written-for-most-apm-"
 created_at = "2026-03-28T08:58:40.578900Z"
-updated_at = "2026-03-28T19:25:00.127188Z"
+updated_at = "2026-03-29T20:46:09.354423Z"
 +++
 
 ## Spec
@@ -85,3 +85,6 @@ command-entry log plus the existing git-layer logs.
 | 2026-03-28T09:03Z | new | specd | apm |
 | 2026-03-28T19:19Z | specd | ready | apm |
 | 2026-03-28T19:25Z | ready | in_progress | claude-0328-t44a |
+| 2026-03-28T19:26Z | in_progress | implemented | claude-0328-t44a |
+| 2026-03-28T19:29Z | implemented | accepted | apm sync |
+| 2026-03-29T20:46Z | accepted | closed | apm-sync |

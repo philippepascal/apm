@@ -3,11 +3,12 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32) -> Result<()> {
+pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
     let new_agent = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket #{id} not found");
@@ -18,10 +19,6 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         None => bail!("no agent assigned — use `apm start` instead"),
         Some(a) => a.clone(),
     };
-
-    if fm.state != "in_progress" && fm.state != "implemented" {
-        bail!("ticket #{id} is in state {:?} — take requires in_progress or implemented", fm.state);
-    }
 
     if old_agent == new_agent {
         // Still ensure worktree exists.
@@ -54,6 +51,12 @@ pub fn run(root: &Path, id: u32) -> Result<()> {
         &format!("ticket({id}): agent handoff {old_agent} → {new_agent}"))?;
 
     let wt_path = ensure_worktree(root, &config, &branch)?;
+
+    if aggressive {
+        if let Err(e) = git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
 
     println!("#{id}: agent handoff {old_agent} → {new_agent} (branch: {branch})");
     println!("Worktree: {}", wt_path.display());

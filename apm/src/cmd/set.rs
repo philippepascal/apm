@@ -5,6 +5,16 @@ use std::path::Path;
 
 pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
     let config = Config::load(root)?;
+    if config.sync.aggressive {
+        let prefix = format!("ticket/{id:04}-");
+        if let Ok(branches) = git::ticket_branches(root) {
+            if let Some(b) = branches.iter().find(|b| b.starts_with(&prefix)) {
+                if let Err(e) = git::fetch_branch(root, b) {
+                    eprintln!("warning: fetch failed: {e:#}");
+                }
+            }
+        }
+    }
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket #{id} not found");
