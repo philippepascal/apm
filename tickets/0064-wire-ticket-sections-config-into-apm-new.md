@@ -15,11 +15,36 @@ updated_at = "2026-03-29T23:26:34.051310Z"
 
 ### Problem
 
+`[[ticket.sections]]` is fully parsed by `apm-core/src/config.rs` (`TicketSection` with `name`, `type`, `required`, `placeholder`) but nothing uses it at runtime.
+
+**`apm new`** hardcodes the ticket body template — `### Problem`, `### Acceptance criteria`, `### Out of scope`, `### Approach` — regardless of what `[[ticket.sections]]` declares. The `placeholder` field is never shown. Projects with different section layouts get the wrong scaffold.
+
+**`apm spec`** validates section names against a hardcoded `KNOWN_SECTIONS` constant that excludes "Amendment requests" and "Code review". It rejects those sections and hardcodes type behaviour (checkbox formatting, Q&A formatting) in match arms instead of reading from config.
+
 ### Acceptance criteria
+
+- [ ] `apm new` builds the ticket body by iterating `config.ticket.sections`; each section becomes `### <name>\n\n<placeholder or empty>\n\n`
+- [ ] If `config.ticket.sections` is empty, `apm new` falls back to the current hardcoded template (no regression for unconfigured repos)
+- [ ] `apm spec --section <name>` accepts any section name present in `config.ticket.sections`; unknown sections error with "not defined in [ticket.sections]"
+- [ ] `apm spec --section <name> --set <value>` for a `tasks`-type section wraps each non-checkbox line as `- [ ] <line>`
+- [ ] `apm spec --section <name> --set <value>` for a `qa`-type section wraps each line as `**Q:** <line>`
+- [ ] `apm spec --section <name> --set <value>` for a `free`-type section writes prose as-is (current behaviour)
+- [ ] If `config.ticket.sections` is empty, `apm spec` falls back to the current hardcoded KNOWN_SECTIONS behaviour
+- [ ] Unit test: body scaffold matches section definitions from a test config
 
 ### Out of scope
 
+- Precondition enforcement based on `required` (already handled by `apm state` preconditions)
+- Full round-trip of arbitrary sections not in `TicketDocument` struct (deeper refactor)
+- Changing `apm spec --mark` (ticket #66)
+
 ### Approach
+
+1. In `apm/src/cmd/new.rs`, after loading config, if `config.ticket.sections` is non-empty build the body by iterating sections: `### <name>\n\n<placeholder>\n\n`. Keep the existing hardcoded template as fallback.
+
+2. In `apm/src/cmd/spec.rs`, replace `KNOWN_SECTIONS` with a lookup from `config.ticket.sections` when non-empty. Replace hardcoded match arms in `set_section` with a config-driven dispatch: `Tasks` → auto-checkbox, `Qa` → `**Q:**` prefix, `Free` → as-is.
+
+3. For sections not in `TicketDocument` named fields, fall back to raw body manipulation: find `### <name>` heading, replace content up to the next `##` heading.
 
 ## History
 
