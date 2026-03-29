@@ -4,11 +4,11 @@ title = "Wire ticket.sections config into apm new and apm spec"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "claude-0329-1430-main"
 branch = "ticket/0064-wire-ticket-sections-config-into-apm-new"
 created_at = "2026-03-29T23:26:06.417584Z"
-updated_at = "2026-03-29T23:30:44.246448Z"
+updated_at = "2026-03-29T23:30:45.821376Z"
 +++
 
 ## Spec
