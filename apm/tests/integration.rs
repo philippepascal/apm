@@ -786,4 +786,93 @@ fn start_next_clears_focus_section_from_ticket() {
 
     let after = branch_content(p, branch, &path);
     assert!(!after.contains("focus_section"), "focus_section should be cleared: {after}");
+// ── apm spec ────────────────────────────────────────────────────────────────
+
+fn write_spec_ticket(dir: &std::path::Path, id: u32, problem: &str, approach: &str) {
+    let branch = format!("ticket/{id:04}-spec-test");
+    let filename = format!("{id:04}-spec-test.md");
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"spec test\"\nstate = \"in_progress\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\n{problem}\n\n### Acceptance criteria\n\n- [ ] criterion one\n\n### Out of scope\n\nnothing\n\n### Approach\n\n{approach}\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", &branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", &branch]);
+    } else {
+        git(dir, &["checkout", &branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: spec test"]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn spec_prints_all_sections() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    // Should succeed and not error
+    apm::cmd::spec::run(p, 1, None, None, false).unwrap();
+}
+
+#[test]
+fn spec_prints_single_section() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "the problem text", "the approach");
+    apm::cmd::spec::run(p, 1, Some("Problem".into()), None, false).unwrap();
+}
+
+#[test]
+fn spec_set_section_commits() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "old problem", "old approach");
+    apm::cmd::spec::run(p, 1, Some("Problem".into()), Some("new problem text".into()), false).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("new problem text"), "updated problem not found: {content}");
+}
+
+#[test]
+fn spec_check_passes_full_ticket() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    apm::cmd::spec::run(p, 1, None, None, true).unwrap();
+}
+
+#[test]
+fn spec_unknown_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, 1, Some("NonExistent".into()), None, false);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("unknown section"));
+}
+
+#[test]
+fn spec_nonexistent_ticket_errors() {
+    let dir = setup();
+    let p = dir.path();
+    let result = apm::cmd::spec::run(p, 999, None, None, false);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("not found"));
+}
+
+#[test]
+fn spec_set_without_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, 1, None, Some("some value".into()), false);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--set requires --section"));
 }

@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1200-a1b2"
 branch = "ticket/0052-apm-init-create-apm-folder-and-migrate-c"
 created_at = "2026-03-29T19:11:25.479427Z"
-updated_at = "2026-03-29T20:19:42.374044Z"
+updated_at = "2026-03-29T20:46:09.354423Z"
 +++
 
 ## Spec
@@ -84,4 +84,4 @@ Add `--migrate` flag to the `init` subcommand. When set:
 | 2026-03-29T19:51Z | claude-0329-impl-52 | claude-0329-1200-a1b2 | handoff |
 | 2026-03-29T20:16Z | in_progress | implemented | claude-0329-main |
 | 2026-03-29T20:19Z | implemented | accepted | claude-0329-main |
-| 2026-03-29T20:19Z | accepted | closed | apm-sync |
+| 2026-03-29T20:46Z | accepted | closed | apm-sync |
