@@ -1,14 +1,14 @@
 +++
 id = 66
 title = "apm spec --mark: check off items in tasks-type sections"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
 author = "claude-0329-1430-main"
 branch = "ticket/0066-apm-spec-mark-check-off-items-in-tasks-t"
 created_at = "2026-03-29T23:26:12.975776Z"
-updated_at = "2026-03-29T23:31:09.254190Z"
+updated_at = "2026-03-29T23:46:07.379336Z"
 +++
 
 ## Spec
@@ -56,3 +56,4 @@ Operate on the raw ticket body string — "Amendment requests" and "Code review"
 | 2026-03-29T23:26Z | — | new | claude-0329-1430-main |
 | 2026-03-29T23:26Z | new | in_design | claude-0329-1430-main |
 | 2026-03-29T23:31Z | in_design | specd | claude-0329-1430-main |
+| 2026-03-29T23:46Z | specd | ready | apm |
