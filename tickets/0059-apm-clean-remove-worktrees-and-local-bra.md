@@ -15,11 +15,18 @@ updated_at = "2026-03-29T22:56:54.841686Z"
 
 ### Problem
 
+After tickets are closed and their PRs merged, the permanent git worktrees and local branch refs created by `apm start` / `apm worktrees --add` are never cleaned up. Over time this clutters `git worktree list` and `git branch --list ticket/*` with stale entries. There is no command to remove them in bulk.
+
 ### Acceptance criteria
+
 
 ### Out of scope
 
+
+
 ### Approach
+
+
 
 ## History
 
