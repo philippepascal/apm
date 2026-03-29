@@ -31,17 +31,17 @@ None of these commands have a `--no-aggressive` escape hatch either.
 
 ### Acceptance criteria
 
-- [ ] `apm new` pushes the new ticket branch after creating it when
+- [x] `apm new` pushes the new ticket branch after creating it when
   `sync.aggressive = true`
-- [ ] `apm new --context` (ticket #58) follows the same path — it creates the
+- [x] `apm new --context` (ticket #58) follows the same path — it creates the
   same branch, so the same push applies
-- [ ] `apm review` fetches the ticket branch before opening `$EDITOR` when
+- [x] `apm review` fetches the ticket branch before opening `$EDITOR` when
   `sync.aggressive = true`; the post-edit push happens via the internal
   `apm state` call triggered on save (no change needed for the push side)
-- [ ] `apm take` pushes the ticket branch after claiming it when
+- [x] `apm take` pushes the ticket branch after claiming it when
   `sync.aggressive = true`
-- [ ] All three commands accept a `--no-aggressive` flag to opt out
-- [ ] If fetch or push fails, a warning is printed and the command continues
+- [x] All three commands accept a `--no-aggressive` flag to opt out
+- [x] If fetch or push fails, a warning is printed and the command continues
   (same fail-soft pattern as existing commands)
 
 ### Out of scope

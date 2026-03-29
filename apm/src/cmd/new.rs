@@ -7,8 +7,9 @@ use apm_core::{
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>) -> Result<()> {
+pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
     if side_note && !config.agents.side_tickets {
         anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
     }
@@ -57,6 +58,12 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         &content,
         &format!("ticket({id}): create {title}"),
     )?;
+
+    if aggressive {
+        if let Err(e) = git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
 
     println!("Created ticket #{id}: {filename} (branch: {branch})");
 
