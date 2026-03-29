@@ -16,6 +16,9 @@ enum Command {
         /// Skip updating .claude/settings.json allow list
         #[arg(long)]
         no_claude: bool,
+        /// Migrate root-level apm.toml and apm.agents.md to .apm/
+        #[arg(long)]
+        migrate: bool,
     },
     /// List tickets
     List {
@@ -160,7 +163,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
-        Command::Init { no_claude } => cmd::init::run(&root, no_claude),
+        Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
         Command::New { title, no_edit, side_note, context } => cmd::new::run(&root, title, no_edit, side_note, context),
