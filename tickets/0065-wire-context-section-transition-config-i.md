@@ -26,11 +26,11 @@ This is distinct from ticket #58, which adds a `--context-section` CLI override.
 
 ### Acceptance criteria
 
-- [ ] When `apm new --context <text>` is run, `apm` looks up the `new → in_design` transition in `config.workflow` and reads its `context_section` field
-- [ ] If `context_section` is set, `--context` text is placed into that section; if absent, falls back to `"Problem"` (current behaviour preserved)
-- [ ] The `--context-section` CLI flag (ticket #58) takes precedence over the transition config value when both are present
-- [ ] If the resolved section name does not exist in the ticket body, `apm new` returns an error
-- [ ] Unit test: with `context_section = "Approach"` on the `new → in_design` transition, `--context` text lands in `### Approach`
+- [x] When `apm new --context <text>` is run, `apm` looks up the `new → in_design` transition in `config.workflow` and reads its `context_section` field
+- [x] If `context_section` is set, `--context` text is placed into that section; if absent, falls back to `"Problem"` (current behaviour preserved)
+- [x] The `--context-section` CLI flag (ticket #58) takes precedence over the transition config value when both are present
+- [x] If the resolved section name does not exist in the ticket body, `apm new` returns an error
+- [x] Unit test: with `context_section = "Approach"` on the `new → in_design` transition, `--context` text lands in `### Approach`
 
 ### Out of scope
 
