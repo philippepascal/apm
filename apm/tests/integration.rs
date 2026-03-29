@@ -162,8 +162,8 @@ fn init_generated_config_has_all_workflow_states() {
 #[test]
 fn list_excludes_terminal_tickets_by_default() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, true).unwrap();
-    apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, None, true).unwrap();
     apm::cmd::state::run(dir.path(), 2, "closed".into(), false).unwrap();
 
     // Verify indirectly through the filter logic in the library.
@@ -188,7 +188,7 @@ apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, true).un
 #[test]
 fn new_creates_ticket_file() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, None, true).unwrap();
     // File lives on the ticket branch, not in the working tree.
     let content = branch_content(dir.path(), "ticket/0001-my-first-ticket", "tickets/0001-my-first-ticket.md");
     assert!(!content.is_empty());
@@ -197,7 +197,7 @@ apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, true
 #[test]
 fn new_ticket_has_correct_frontmatter() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, None, true).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-hello-world", "tickets/0001-hello-world.md");
     assert!(content.contains("id = 1"));
     assert!(content.contains("title = \"Hello World\""));
@@ -208,8 +208,8 @@ apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, true).un
 #[test]
 fn new_increments_ids() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "First".into(), true, false, None, true).unwrap();
-    apm::cmd::new::run(dir.path(), "Second".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Second".into(), true, false, None, None, true).unwrap();
     let c1 = branch_content(dir.path(), "ticket/0001-first", "tickets/0001-first.md");
     let c2 = branch_content(dir.path(), "ticket/0002-second", "tickets/0002-second.md");
     assert!(c1.contains("id = 1"));
@@ -221,9 +221,9 @@ apm::cmd::new::run(dir.path(), "First".into(), true, false, None, true).unwrap()
 #[test]
 fn list_shows_all_tickets() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
-    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
     apm::cmd::list::run(dir.path(), None, false, false, None, None).unwrap();
 }
@@ -231,9 +231,9 @@ apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, true).unwrap()
 #[test]
 fn list_state_filter() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
-    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-beta", "tickets/0002-beta.md");
     write_valid_spec_to_branch(dir.path(), "ticket/0001-alpha", "tickets/0001-alpha.md");
 apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
@@ -247,7 +247,7 @@ apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
 #[test]
 fn show_existing_ticket() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-show-me", "tickets/0001-show-me.md");
     apm::cmd::show::run(dir.path(), 1, false).unwrap();
 }
@@ -263,7 +263,7 @@ fn show_missing_ticket_errors() {
 #[test]
 fn state_transition_updates_file() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
     write_valid_spec_to_branch(dir.path(), "ticket/0001-transition-test", "tickets/0001-transition-test.md");
 apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
@@ -275,7 +275,7 @@ apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
 #[test]
 fn state_transition_appends_history_row() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "History test".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "History test".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
     write_valid_spec_to_branch(dir.path(), "ticket/0001-history-test", "tickets/0001-history-test.md");
 apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
@@ -286,7 +286,7 @@ apm::cmd::state::run(dir.path(), 1, "specd".into(), false).unwrap();
 #[test]
 fn state_ammend_inserts_amendment_section() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-ammend-test", "tickets/0001-ammend-test.md");
     apm::cmd::state::run(dir.path(), 1, "ammend".into(), false).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-ammend-test", "tickets/0001-ammend-test.md");
@@ -298,7 +298,7 @@ apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, true).un
 #[test]
 fn set_priority_updates_frontmatter() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-set-test", "tickets/0001-set-test.md");
     apm::cmd::set::run(dir.path(), 1, "priority".into(), "7".into()).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-set-test", "tickets/0001-set-test.md");
@@ -310,9 +310,9 @@ apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, true).unwra
 #[test]
 fn next_returns_highest_priority() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-low-priority", "tickets/0001-low-priority.md");
-    apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-high-priority", "tickets/0002-high-priority.md");
     apm::cmd::set::run(dir.path(), 2, "priority".into(), "10".into()).unwrap();
     sync_from_branch(dir.path(), "ticket/0002-high-priority", "tickets/0002-high-priority.md");
@@ -322,7 +322,7 @@ apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, true).u
 #[test]
 fn next_json_is_valid() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, None, true).unwrap();
     sync_from_branch(dir.path(), "ticket/0001-json-test", "tickets/0001-json-test.md");
     apm::cmd::next::run(dir.path(), true).unwrap();
 }
@@ -338,7 +338,7 @@ fn next_null_when_no_actionable() {
 #[test]
 fn new_ticket_creates_branch() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, None, true).unwrap();
     // Branch should exist locally after apm new.
     let out = std::process::Command::new("git")
         .args(["branch", "--list", "ticket/0001-branch-test"])
@@ -352,7 +352,7 @@ apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, true).un
 #[test]
 fn new_ticket_sets_branch_in_frontmatter() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Frontmatter branch".into(), true, false, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Frontmatter branch".into(), true, false, None, None, true).unwrap();
     let content = branch_content(dir.path(), "ticket/0001-frontmatter-branch", "tickets/0001-frontmatter-branch.md");
     assert!(content.contains("branch = \"ticket/0001-frontmatter-branch\""));
 }
@@ -919,4 +919,114 @@ fn sync_auto_accept_transitions_implemented_ticket_to_accepted() {
     // The ticket branch should now have state = "accepted".
     let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
     assert!(content.contains("state = \"accepted\""), "ticket should be accepted: {content}");
+// --- context-section ---
+
+#[test]
+fn context_section_approach_places_text_under_approach() {
+    let dir = setup();
+    apm::cmd::new::run(
+        dir.path(),
+        "Section test".into(),
+        true,
+        false,
+        Some("my approach text".into()),
+        Some("Approach".into()),
+        true,
+    ).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-section-test", "tickets/0001-section-test.md");
+    assert!(content.contains("### Approach\n\nmy approach text\n\n"), "expected context under ### Approach");
+    // Problem section should be empty
+    assert!(content.contains("### Problem\n\n### Acceptance criteria"), "Problem should be empty");
+}
+
+#[test]
+fn context_section_defaults_to_problem_without_config() {
+    let dir = setup();
+    apm::cmd::new::run(
+        dir.path(),
+        "Default section test".into(),
+        true,
+        false,
+        Some("default context".into()),
+        None,
+        true,
+    ).unwrap();
+    let content = branch_content(dir.path(), "ticket/0001-default-section-test", "tickets/0001-default-section-test.md");
+    assert!(content.contains("### Problem\n\ndefault context\n\n"), "expected context under ### Problem");
+}
+
+#[test]
+fn context_section_without_context_is_error() {
+    let dir = setup();
+    let result = apm::cmd::new::run(
+        dir.path(),
+        "Error test".into(),
+        true,
+        false,
+        None,
+        Some("Approach".into()),
+        true,
+    );
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("--context-section requires --context"));
+}
+
+#[test]
+fn context_section_unknown_section_is_error() {
+    let dir = setup();
+    let result = apm::cmd::new::run(
+        dir.path(),
+        "Bad section test".into(),
+        true,
+        false,
+        Some("some text".into()),
+        Some("Nonexistent".into()),
+        true,
+    );
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("not found in ticket body template"));
+}
+
+#[test]
+fn context_section_from_config_tickets_sections() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+sections = ["Approach", "Problem"]
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+"#).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    apm::cmd::new::run(
+        p,
+        "Config sections test".into(),
+        true,
+        false,
+        Some("config driven context".into()),
+        None,
+        true,
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-config-sections-test", "tickets/0001-config-sections-test.md");
+    // First entry in sections is "Approach", so context should land there
+    assert!(content.contains("### Approach\n\nconfig driven context\n\n"), "expected context under ### Approach from config");
 }

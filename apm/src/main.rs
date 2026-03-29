@@ -49,9 +49,12 @@ enum Command {
         /// Mark this ticket as a side-note (out-of-scope observation)
         #[arg(long)]
         side_note: bool,
-        /// Context to insert into the Problem section
+        /// Context to insert into a ticket section
         #[arg(long)]
         context: Option<String>,
+        /// Section to route --context into (defaults to first tickets.sections entry or "Problem")
+        #[arg(long)]
+        context_section: Option<String>,
         #[arg(long)]
         no_aggressive: bool,
     },
@@ -164,6 +167,12 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Remove worktrees and local branches for closed tickets
+    Clean {
+        /// Print what would be removed without modifying anything
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Read or write individual spec sections of a ticket
     Spec {
         id: u32,
@@ -212,7 +221,7 @@ fn main() -> Result<()> {
         Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
-        Command::New { title, no_edit, side_note, context, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, no_aggressive),
+        Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
         Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
@@ -233,6 +242,7 @@ fn main() -> Result<()> {
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
+        Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
         Command::Spec { id, section, set, check } => cmd::spec::run(&root, id, section, set, check),
     }
 }
