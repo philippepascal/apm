@@ -7,7 +7,7 @@ effort = 0
 risk = 0
 author = "claude-0329-1200-a1b2"
 branch = "ticket/0060-apm-sync-interactive-accept-and-close-pr"
-created_at = "2026-03-29T19:12:24.587599Z"
+created_at = "2026-03-29T19:12:24.587299Z"
 updated_at = "2026-03-29T22:57:04.175539Z"
 +++
 
@@ -15,11 +15,48 @@ updated_at = "2026-03-29T22:57:04.175539Z"
 
 ### Problem
 
+When `apm sync` detects a merged ticket branch (state `implemented`, branch merged into main), it only prints:
+
+```
+#N: branch merged — run `apm state N accepted` to accept
+```
+
+The supervisor then has to manually copy-paste and run that command for each ticket. For the common case of accepting all merged tickets at once, this is unnecessary friction.
+
+The batch-close prompt already handles the close step interactively (`prompt_close`). The accept step should be symmetric: offer an interactive prompt to accept each merged ticket immediately, gated on `std::io::IsTerminal` so the prompt is suppressed in non-interactive (script/CI) contexts.
+
 ### Acceptance criteria
+
+- [ ] When `apm sync` detects one or more merged-but-not-accepted tickets and stdout is a terminal, it prints each one and asks the supervisor to accept them (individually or in batch)
+- [ ] The prompt is suppressed (reverts to the current print-only behaviour) when stdout is not a terminal
+- [ ] `--quiet` suppresses the accept prompt (same as it suppresses the close prompt)
+- [ ] An `--auto-accept` flag (mirrors `--auto-close`) accepts all eligible tickets without prompting
+- [ ] Accepting a ticket via the sync prompt is equivalent to running `apm state <id> accepted` — it commits the state transition to the ticket branch
+- [ ] If the `accepted → closed` transition does not exist in the workflow, the ticket is accepted but not auto-closed (the close step remains separate)
+- [ ] Integration test: after a sync that detects a merged ticket, simulating `y` at the accept prompt results in the ticket being in `accepted` state
 
 ### Out of scope
 
+- Accepting tickets that are not in `implemented` state
+- Changing the close prompt or `--auto-close` behaviour
+- Per-ticket accept prompts (batch only, like the existing close prompt)
+- Removing the print message for non-interactive contexts
+
 ### Approach
+
+In `apm/src/cmd/sync.rs`:
+
+1. Collect merged-but-not-accepted tickets into an `AcceptCandidate` struct (similar to `CloseCandidate`) alongside the existing merged-branch detection loop.
+
+2. Add `is_interactive() -> bool` using `std::io::IsTerminal` on stdout.
+
+3. Add `prompt_accept(candidates: &[AcceptCandidate]) -> Result<bool>` modelled on `prompt_close`.
+
+4. Add `--auto-accept` flag to `run` signature and the CLI definition in `main.rs`.
+
+5. After the merged-branch loop, if candidates are non-empty: call `super::state::run` for each accepted ticket when confirmed (either via `--auto-accept` or the interactive prompt).
+
+6. Gate the prompt on `!quiet && is_interactive()`.
 
 ## History
 
