@@ -52,6 +52,8 @@ enum Command {
         /// Context to insert into the Problem section
         #[arg(long)]
         context: Option<String>,
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Transition a ticket's state
     State {
@@ -102,7 +104,11 @@ enum Command {
         auto_close: bool,
     },
     /// Take over a ticket from another agent
-    Take { id: u32 },
+    Take {
+        id: u32,
+        #[arg(long)]
+        no_aggressive: bool,
+    },
     /// List or remove permanent git worktrees
     Worktrees {
         /// Provision a permanent worktree for the given ticket ID (any state)
@@ -118,6 +124,8 @@ enum Command {
         /// Transition to this state after editing (skips interactive prompt)
         #[arg(long, value_name = "STATE")]
         to: Option<String>,
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Check ticket and cache integrity
     Verify {
@@ -192,7 +200,7 @@ fn main() -> Result<()> {
         Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
-        Command::New { title, no_edit, side_note, context } => cmd::new::run(&root, title, no_edit, side_note, context),
+        Command::New { title, no_edit, side_note, context, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, no_aggressive),
         Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
         Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
@@ -205,9 +213,9 @@ fn main() -> Result<()> {
             }
         }
         Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
-        Command::Take { id } => cmd::take::run(&root, id),
+        Command::Take { id, no_aggressive } => cmd::take::run(&root, id, no_aggressive),
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
-        Command::Review { id, to } => cmd::review::run(&root, id, to),
+        Command::Review { id, to, no_aggressive } => cmd::review::run(&root, id, to, no_aggressive),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
         Command::Validate { fix, json } => cmd::validate::run(&root, fix, json),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
