@@ -35,7 +35,23 @@ After tickets are closed and their PRs merged, the permanent git worktrees and l
 
 ### Approach
 
+Add `apm/src/cmd/clean.rs` with a single `pub fn run(root: &Path, dry_run: bool) -> Result<()>`.
 
+Steps inside `run`:
+
+1. Load config (`Config::load`) to get `workflow.terminal_states` and the default branch (`repos.code[0].default_branch`).
+2. Load all tickets (`ticket::load_all_from_git`).
+3. Get the set of branches merged into the default branch (`git::merged_into_main`).
+4. For each ticket whose state is in `terminal_states`:
+   a. Derive the branch name from `frontmatter.branch` or `git::branch_name_from_path`.
+   b. Skip if the branch is not in the merged set, printing `warning: <branch> not merged — skipping`.
+   c. Check for a permanent worktree via `git::find_worktree_for_branch`.
+   d. If a worktree exists: run `git -C <wt_path> status --porcelain`; if output is non-empty, print `warning: <path> has uncommitted changes — skipping` and continue to the next ticket.
+   e. If `--dry-run`: print `would remove worktree <path>` and `would remove branch <branch>`; otherwise call `git::remove_worktree` then delete the local ref with `git branch -d <branch>` via `Command`.
+   f. Print one confirmation line per action taken (`removed worktree <path>`, `removed branch <branch>`).
+5. Wire up in `main.rs`: add a `Clean { #[arg(long)] dry_run: bool }` variant to the `Command` enum and dispatch to `cmd::clean::run`.
+
+The local branch deletion uses `git branch -d` (safe delete — refuses if unmerged); the merged-into-main pre-check above means this should always succeed. If `git branch -d` fails, surface the error and continue to the next ticket rather than aborting the whole run.
 
 ## History
 
