@@ -22,103 +22,86 @@ reviews, but is the wrong default for many workflows:
 
 - A solo developer or small team may want a **direct merge** — push the branch,
   merge it locally, move on — with no PR required.
-- A team that trusts its agents may want an **agent-supervised merge** — apm
-  triggers a review agent that checks the diff, runs tests, and merges if they
-  pass — without a human touching GitHub.
 - A team with its own CI/CD or review tooling may want **none** — apm does
   nothing after `implemented`, and the user's external process handles the rest
   and transitions manually.
 
-The merge strategy should be a first-class config option in `apm.toml`, not
-baked into the precondition list of a workflow state.
+The merge strategy should be a per-transition config option in `apm.toml`, not
+baked into the precondition list of a workflow state. This is already modelled
+by the `completion` property on `[[workflow.states.transitions]]` (added in
+ticket #53).
 
 ### Acceptance criteria
 
-- [ ] `apm.toml` supports `[workers] merge_strategy` with four values:
-  - `"pr"` — current behaviour: open a GitHub PR; `accepted` fires when the PR
-    is merged (requires a GitHub provider)
-  - `"direct"` — `apm start` merges the branch to the default branch locally
-    and pushes after the worker exits; transitions to `accepted` immediately
-  - `"agent"` — after the worker exits, `apm start` spawns a review agent with
-    the diff as context; the review agent approves (merge + `accepted`) or
-    rejects (transitions back to `in_progress` with a note)
-  - `"none"` — `apm start` does nothing after the worker exits beyond pushing
-    the branch; the transition to `accepted` is entirely manual
-- [ ] Default is `"pr"` (no behaviour change for existing users)
-- [ ] `"direct"` aborts and leaves the ticket in `implemented` if the merge
-  produces a conflict; prints a clear message asking the user to resolve manually
-- [ ] `"agent"` review prompt includes: the ticket spec, the full diff, and
-  instructions to approve or reject with a reason
-- [ ] `"none"` suppresses the post-worker push (branch push is also skipped);
-  the user is responsible for everything after `implemented`
-- [ ] `apm verify` prints the configured merge strategy
+- [x] `completion` on a transition supports three values: `"pr"`, `"merge"`, `"none"`
+  (already added to the config schema in ticket #53 — this ticket implements
+  the runtime behaviour)
+- [ ] When `apm state <id> <to>` is called and the matching transition has
+  `completion = "pr"`: push the ticket branch and open (or update) a GitHub PR
+  targeting the default branch
+- [ ] When `apm state <id> <to>` has `completion = "merge"`: push the ticket
+  branch, then merge it into the default branch locally and push the default
+  branch; transition succeeds immediately; if the merge produces a conflict,
+  abort and print a clear message (ticket stays in current state)
+- [ ] When `completion = "none"` (or absent): `apm state` does only the state
+  change — no push, no PR (existing behaviour, no regression)
+- [ ] Default is `"none"` if `completion` is omitted from a transition
+- [ ] `apm verify` reports the `completion` value for each transition that has
+  one set
 
 ### Out of scope
 
 - Squash or rebase merge options (always a standard merge commit for now)
-- Per-ticket override of the merge strategy
-- `"agent"` strategy wiring to specific review models — uses the same `claude`
-  CLI as the worker
+- Per-ticket override of the completion strategy
+- `"agent"` review strategy — deferred to a separate ticket
 - GitLab / Bitbucket MR support (tracked separately)
+- Auto-transitioning to `accepted` after `"merge"` completes — that is handled
+  by `apm sync` detecting the merge
 
 ### Approach
 
-**Config** (`apm-core/src/config.rs`):
+The `completion` field is already parsed by `apm-core/src/config.rs` as
+`CompletionStrategy` on `TransitionConfig` (ticket #53). This ticket wires
+it to runtime behaviour in `apm state`.
+
+**`apm/src/cmd/state.rs`** — after writing the new ticket state to the branch,
+read the matched transition's `completion` field and act:
 
 ```rust
-#[derive(Debug, Clone, Deserialize, Default, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum MergeStrategy {
-    #[default]
-    Pr,
-    Direct,
-    Agent,
-    None,
-}
-
-// Add to WorkersConfig:
-#[serde(default)]
-pub merge_strategy: MergeStrategy,
-```
-
-**`apm/src/cmd/start.rs`** — post-worker dispatch:
-
-```
-match config.workers.merge_strategy {
-    MergeStrategy::Pr     => push_branch_and_create_pr(...),
-    MergeStrategy::Direct => push_and_merge_direct(...),
-    MergeStrategy::Agent  => push_branch_and_spawn_review_agent(...),
-    MergeStrategy::None   => { /* do nothing */ }
+match transition.completion {
+    CompletionStrategy::Pr => {
+        git::push_branch(root, &branch)?;
+        gh_pr_create_or_update(root, &branch, &config.project.default_branch, &ticket)?;
+    }
+    CompletionStrategy::Merge => {
+        git::push_branch(root, &branch)?;
+        merge_into_default(root, &branch, &config.project.default_branch)?;
+    }
+    CompletionStrategy::None => {}
 }
 ```
 
-`push_and_merge_direct`: runs `git fetch`, `git merge --no-ff <branch>`,
-`git push`. On conflict: aborts the merge, prints a message, leaves
-ticket in `implemented`.
+`gh_pr_create_or_update`: checks for an existing open PR (`gh pr list --head <branch>`); creates with `gh pr create` if none exists, otherwise updates with `gh pr edit`. Uses the ticket title as PR title and a body linking to the ticket ID.
 
-`push_branch_and_spawn_review_agent`: pushes the branch, then launches
-`claude --dangerously-skip-permissions --print` with a system prompt from
-`apm.reviewer.md` (created by `apm init`). The review agent runs `apm state
-<id> accepted` or `apm state <id> in_progress` based on its verdict.
+`merge_into_default`: checks out the default branch worktree (or uses `git -C <default-branch-wt>`), runs `git merge --no-ff <branch>`, then `git push`. On non-zero exit from merge: runs `git merge --abort`, prints "merge conflict — resolve manually", returns an error (state change was already committed to the ticket branch so it can be retried).
 
-**`apm/src/cmd/init.rs`**: generate `apm.reviewer.md` when `merge_strategy =
-"agent"` is set, or unconditionally alongside `apm.worker.md`.
+**`apm/src/cmd/verify.rs`** — already iterates transitions; add a line printing `completion = <value>` for any transition where it is set to `pr` or `merge`.
 
 ### Amendment requests
 
-- [ ] The design has changed: merge strategy is no longer a global `[workers]`
+- [x] The design has changed: merge strategy is no longer a global `[workers]`
   config. It is now a `completion` property on individual
   `[[workflow.states.transitions]]` entries (e.g. `completion = "pr"` on
   `in_progress → implemented`). This allows different transitions to use
   different strategies. Rewrite the entire spec around `completion` on
   transitions instead of `[workers] merge_strategy`.
-- [ ] Replace `"pr"` / `"direct"` / `"agent"` / `"none"` values with the
+- [x] Replace `"pr"` / `"direct"` / `"agent"` / `"none"` values with the
   canonical set from TICKET-LIFECYCLE: `"pr"`, `"merge"`, `"none"`. The
   `"agent"` review strategy is deferred to a separate ticket.
-- [ ] The config section `[workers]` is no longer the right home. The
+- [x] The config section `[workers]` is no longer the right home. The
   `completion` property lives on the transition definition in `apm.toml`.
   Update all config structs and field names accordingly.
-- [ ] Update the approach section to reflect that `apm state` (not `apm start`)
+- [x] Update the approach section to reflect that `apm state` (not `apm start`)
   reads `completion` and performs the push/PR when transitioning.
 
 ## History
