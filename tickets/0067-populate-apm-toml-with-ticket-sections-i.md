@@ -1,14 +1,14 @@
 +++
 id = 67
 title = "Populate apm.toml with ticket.sections, instructions, context_section, focus_section"
-state = "specd"
+state = "ready"
 priority = 5
 effort = 1
 risk = 1
 author = "claude-0329-1430-main"
 branch = "ticket/0067-populate-apm-toml-with-ticket-sections-i"
 created_at = "2026-03-29T23:26:16.251460Z"
-updated_at = "2026-03-29T23:34:50.476524Z"
+updated_at = "2026-03-29T23:52:40.934740Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ Edit `apm.toml` directly and commit to `main`:
 | 2026-03-29T23:26Z | — | new | claude-0329-1430-main |
 | 2026-03-29T23:26Z | new | in_design | claude-0329-1430-main |
 | 2026-03-29T23:31Z | in_design | specd | claude-0329-1430-main |
+| 2026-03-29T23:52Z | specd | ready | apm |
