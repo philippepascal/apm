@@ -4,11 +4,11 @@ title = "apm validate: cross-check state machine, ticket sections, and agent ins
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0329-1430-main"
 branch = "ticket/0068-apm-validate-cross-check-state-machine-t"
 created_at = "2026-03-29T23:26:19.627104Z"
-updated_at = "2026-03-29T23:30:56.669365Z"
+updated_at = "2026-03-29T23:30:58.260745Z"
 +++
 
 ## Spec
