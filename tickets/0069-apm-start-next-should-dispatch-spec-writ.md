@@ -1,14 +1,15 @@
 +++
 id = 69
 title = "apm start --next should dispatch spec-writing agents via command:start trigger"
-state = "ready"
+state = "in_progress"
 priority = 5
 effort = 1
 risk = 1
 author = "claude-0329-1430-main"
+agent = "claude-0329-1430-main"
 branch = "ticket/0069-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-29T23:34:47.739616Z"
-updated_at = "2026-03-29T23:54:33.829467Z"
+updated_at = "2026-03-29T23:56:33.486410Z"
 +++
 
 ## Spec
@@ -53,3 +54,4 @@ The fix is two-part: change `new → in_design` and `ammend → in_design` to `t
 | 2026-03-29T23:34Z | new | in_design | claude-0329-1430-main |
 | 2026-03-29T23:35Z | in_design | specd | claude-0329-1430-main |
 | 2026-03-29T23:54Z | specd | ready | apm |
+| 2026-03-29T23:56Z | ready | in_progress | claude-0329-1430-main |
