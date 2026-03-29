@@ -8,7 +8,7 @@ risk = 4
 author = "apm"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-29T19:29:04.166432Z"
+updated_at = "2026-03-29T23:13:39.622065Z"
 +++
 
 ## Spec
@@ -17,6 +17,8 @@ updated_at = "2026-03-29T19:29:04.166432Z"
 add a migration plan or script for all the existing tickets
 migrate script should be a one time thing for this repo. don't implement it as command.
 when you ammend a spec, you need to mark the ammendements as handled with a checkbox. open a ticket if that's a bug or missing feature
+
+why do we need to migrate existing numbers, can't we just assume they have zeros in front of their numbers?
 
 ### Problem
 
