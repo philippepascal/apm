@@ -1,14 +1,14 @@
 +++
 id = 65
 title = "Wire context_section transition config into apm new"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "claude-0329-1430-main"
 branch = "ticket/0065-wire-context-section-transition-config-i"
 created_at = "2026-03-29T23:26:09.699704Z"
-updated_at = "2026-03-29T23:30:48.936707Z"
+updated_at = "2026-03-29T23:31:06.700771Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ In `apm/src/cmd/new.rs`, after loading config, resolve the target section:
 |------|------|----|----|
 | 2026-03-29T23:26Z | — | new | claude-0329-1430-main |
 | 2026-03-29T23:26Z | new | in_design | claude-0329-1430-main |
+| 2026-03-29T23:31Z | in_design | specd | claude-0329-1430-main |
