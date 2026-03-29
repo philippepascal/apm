@@ -15,11 +15,31 @@ updated_at = "2026-03-29T23:40:54.568095Z"
 
 ### Problem
 
+`open_editor` in `apm/src/cmd/review.rs` (and `new.rs`) calls `Command::new(&editor).arg(path)` where `editor` is the raw value of `$VISUAL` or `$EDITOR`. `Command::new` treats the entire string as the binary name, so `EDITOR="zed --wait"` fails with "No such file or directory" because the OS looks for a binary literally named `"zed --wait"`.
+
+The Unix convention is that `$EDITOR` may contain flags. `git`, `less`, and most tools that invoke `$EDITOR` split on whitespace: first token is the binary, the rest are prepended arguments.
+
 ### Acceptance criteria
+
+- [ ] `open_editor` splits `$VISUAL` / `$EDITOR` on whitespace; first token is the binary, remaining tokens are prepended as arguments before the file path
+- [ ] `EDITOR="zed --wait"` launches `zed` with args `["--wait", "<path>"]`
+- [ ] `EDITOR="vim"` (no flags) continues to work unchanged
+- [ ] Fix applies to `open_editor` in both `review.rs` and `new.rs`
 
 ### Out of scope
 
+- Shell expansion (quotes, env vars) inside `$EDITOR` — simple whitespace split matches git and most Unix tools
+
 ### Approach
+
+In both `open_editor` functions, replace `Command::new(&editor).arg(path)` with:
+
+```rust
+let mut parts = editor.split_whitespace();
+let bin = parts.next().unwrap();
+let mut cmd = Command::new(bin);
+cmd.args(parts).arg(path);
+```
 
 ## History
 
