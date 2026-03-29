@@ -20,54 +20,83 @@ session uses to hand individual tickets to background workers. It requires a run
 supervisor to decide which tickets to start and in what order.
 
 For fully automated runs — CI pipelines, overnight batch runs, or cases where the
-user simply wants all ready tickets worked without opening a Claude Code session —
-there is no entry point. A standalone `apm work` command would fill this gap: find
-all actionable tickets, spawn a worker per ticket (up to the configured
-`agents.max_concurrent` limit), and exit when all workers have finished.
+user simply wants all actionable tickets worked without opening a Claude Code session —
+there is no entry point. A standalone `apm work` command would fill this gap: call
+`apm start --next` in a loop, spawning one worker per available ticket up to the
+configured `agents.max_concurrent` limit, and exit when all workers have finished.
 
-This ticket is a placeholder. It depends on #37 (`apm start --spawn`) being
-implemented and proven stable first.
+This ticket depends on #56 (`apm start --next`) being implemented first.
 
 ### Acceptance criteria
 
-- [ ] `apm work` finds all tickets in `ready` state and spawns one worker per ticket via the same mechanism as `apm start --spawn`
-- [ ] Concurrency is capped at `agents.max_concurrent` from `apm.toml`; additional tickets are queued and started as slots free up
-- [ ] `--skip-permissions` / `-P` flag passes through to all spawned workers (same semantics as `apm start --spawn -P`)
-- [ ] `apm work` blocks until all spawned workers have exited, then prints a summary (ticket id, final state, log path)
-- [ ] `apm work --dry-run` prints which tickets would be started without spawning anything
-- [ ] `apm work` exits non-zero if any worker ended in a state other than `implemented`
+- [ ] `apm work` calls `apm start --next --spawn` repeatedly until no more
+  actionable tickets are found, respecting `agents.max_concurrent` from `apm.toml`
+- [ ] Actionable tickets include any state where `actionable = ["agent"]` (or
+  includes `"agent"`) and the ticket has no assigned agent and a
+  `trigger: command:start` transition exists — not just `ready`; this covers
+  spec-writing (`new` → `in_design`) and implementation (`ready` → `in_progress`)
+  as determined by `apm start --next` internally
+- [ ] `apm work` does not decide which type of agent to spawn — that is
+  determined by the `instructions` field in the target state config, read by
+  `apm start --next`
+- [ ] Concurrency is capped at `agents.max_concurrent`; additional tickets are
+  queued and started as slots free up
+- [ ] `--skip-permissions` / `-P` flag passes through to all spawned workers
+- [ ] `apm work` blocks until all spawned workers have exited, then prints a
+  summary (ticket id, final state)
+- [ ] `apm work --dry-run` prints which tickets would be started without
+  spawning anything
+- [ ] `apm work` exits non-zero if any worker ended in a state other than
+  `implemented` or `specd` (the expected terminal states for agent work)
 
 ### Out of scope
 
-- Spec-writing workers (only `ready` tickets are eligible; `new` / `ammend` require supervisor judgment)
 - Worker monitoring UI or live log tailing
 - Automatic retry of blocked or failed workers
 - Any changes to `apm start` itself
+- Deciding what type of agent to spawn — that is `apm start --next`'s job
 
 ### Approach
 
-_To be written once #37 is implemented and the worker model is validated in practice._
+`apm work` is a thin orchestration loop around `apm start --next --spawn`.
 
-Likely: `apm/src/cmd/work.rs` wraps the same spawn logic extracted from
-`start.rs` into a shared helper, loops over `ready` tickets respecting
-`max_concurrent`, and waits for all child processes.
+`apm/src/cmd/work.rs`:
+
+```
+loop:
+    if active_workers < max_concurrent:
+        result = apm start --next --spawn [-P]
+        if no ticket found: break
+        track child process
+    wait for any child to exit, decrement active_workers
+exit when queue empty and all children done
+```
+
+Rather than re-implementing `apm start --next` logic, `work.rs` spawns the
+`apm start --next --spawn` subprocess and inspects its exit code:
+- exit 0, output contains worktree path: worker launched, track pid
+- exit 0, output "no actionable tickets": stop dispatching new workers
+- exit non-zero: print warning, continue
+
+After all workers exit, read each ticket's final state from its branch and
+print the summary.
 
 ### Amendment requests
 
-- [ ] `apm work` is the delegator loop, not just a worker launcher for `ready`
+- [x] `apm work` is the delegator loop, not just a worker launcher for `ready`
   tickets. It should call `apm start --next` in a loop (a separate ticket),
   which internally finds the next actionable ticket across all states with
   `trigger: command:start` — including `new → in_design` (spec-writing) and
   `ready → in_progress` (implementation). Update the acceptance criteria to
   reflect this broader scope.
-- [ ] Remove the "out of scope" exclusion of spec-writing workers. Under the
+- [x] Remove the "out of scope" exclusion of spec-writing workers. Under the
   delegator model, `apm work` does not decide what kind of agent to spawn —
   `apm start --next` does, by reading the `instructions` property from the
   target state config.
-- [ ] The acceptance criteria mention `ready` state specifically; replace with
+- [x] The acceptance criteria mention `ready` state specifically; replace with
   "any state where `actionable = ['agent']` and `agent` is unset and a
   `trigger: command:start` transition exists."
-- [ ] Update the approach section now that `apm start --next` (separate ticket)
+- [x] Update the approach section now that `apm start --next` (separate ticket)
   exists as the primitive. `apm work` is a thin loop around it.
 
 ## History
