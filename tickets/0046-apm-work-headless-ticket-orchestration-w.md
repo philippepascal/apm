@@ -30,24 +30,24 @@ This ticket depends on #56 (`apm start --next`) being implemented first.
 
 ### Acceptance criteria
 
-- [ ] `apm work` calls `apm start --next --spawn` repeatedly until no more
+- [x] `apm work` calls `apm start --next --spawn` repeatedly until no more
   actionable tickets are found, respecting `agents.max_concurrent` from `apm.toml`
-- [ ] Actionable tickets include any state where `actionable = ["agent"]` (or
+- [x] Actionable tickets include any state where `actionable = ["agent"]` (or
   includes `"agent"`) and the ticket has no assigned agent and a
   `trigger: command:start` transition exists — not just `ready`; this covers
   spec-writing (`new` → `in_design`) and implementation (`ready` → `in_progress`)
   as determined by `apm start --next` internally
-- [ ] `apm work` does not decide which type of agent to spawn — that is
+- [x] `apm work` does not decide which type of agent to spawn — that is
   determined by the `instructions` field in the target state config, read by
   `apm start --next`
-- [ ] Concurrency is capped at `agents.max_concurrent`; additional tickets are
+- [x] Concurrency is capped at `agents.max_concurrent`; additional tickets are
   queued and started as slots free up
-- [ ] `--skip-permissions` / `-P` flag passes through to all spawned workers
-- [ ] `apm work` blocks until all spawned workers have exited, then prints a
+- [x] `--skip-permissions` / `-P` flag passes through to all spawned workers
+- [x] `apm work` blocks until all spawned workers have exited, then prints a
   summary (ticket id, final state)
-- [ ] `apm work --dry-run` prints which tickets would be started without
+- [x] `apm work --dry-run` prints which tickets would be started without
   spawning anything
-- [ ] `apm work` exits non-zero if any worker ended in a state other than
+- [x] `apm work` exits non-zero if any worker ended in a state other than
   `implemented` or `specd` (the expected terminal states for agent work)
 
 ### Out of scope
