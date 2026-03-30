@@ -36,7 +36,7 @@ Specifically missing today:
   process exits
 - [x] `apm workers` lists all currently running workers in a table:
   ticket ID, title, PID, elapsed time, current ticket state
-- [ ] `apm workers` shows no output (or "No workers running.") when no
+- [x] `apm workers` shows no output (or "No workers running.") when no
   `.apm-worker.pid` files exist in any active worktree
 - [ ] `apm workers --log <id>` tails the last N lines of the worker log for
   ticket `<id>` and follows new output (like `tail -f`)
