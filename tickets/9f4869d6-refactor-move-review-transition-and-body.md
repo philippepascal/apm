@@ -43,7 +43,7 @@ Moving the document-manipulation functions into apm_core::review gives apm-serve
 - [x] `apm/src/cmd/review.rs` imports and delegates to `apm_core::review` for all five moved functions; no duplicate implementations remain in the CLI crate
 - [x] `apm/src/cmd/review.rs` retains `open_editor`, `build_header`, and `prompt_transition` exclusively
 - [x] `cargo test --workspace` passes with no regressions
-- [ ] Each moved function has at least one unit test in `apm-core/src/review.rs`
+- [x] Each moved function has at least one unit test in `apm-core/src/review.rs`
 
 ### Out of scope
 
