@@ -35,7 +35,19 @@ The other two spawn paths — `run_next()` and `spawn_next_worker()` — already
 
 ### Approach
 
-How the implementation will work.
+In `run()` in `apm-core/src/start.rs`, before the `if !spawn { return ... }` guard (currently around line 215), add a state-aware instructions lookup identical to the pattern already used in `run_next()` and `spawn_next_worker()`:
+
+```rust
+let worker_system = config.workflow.states.iter()
+    .find(|s| s.id == old_state)
+    .and_then(|sc| sc.instructions.as_ref())
+    .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
+        .or_else(|| { eprintln!("warning: instructions file not found"); None }))
+    .or_else(|| std::fs::read_to_string(root.join(".apm/apm.worker.md")).ok())
+    .unwrap_or_else(|| "You are an APM worker agent.".to_string());
+```
+
+This replaces the single hardcoded `std::fs::read_to_string(root.join(".apm/apm.worker.md"))` call at line 233. The rest of the function is unchanged. No other files need editing.
 
 ### Open questions
 
