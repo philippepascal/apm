@@ -66,7 +66,7 @@ Write commands fetch/push the specific ticket branch. Read-only commands use `gi
 - [x] `apm validate` fetches all remote branches before reading ticket state when aggressive mode is on
 - [x] All affected commands accept a `--no-aggressive` flag that suppresses fetch/push behaviour regardless of config
 - [x] Fetch/push failures emit a `warning: fetch/push failed: ...` message to stderr and do not abort the command
-- [ ] When aggressive mode is off, behaviour of all commands is identical to current behaviour
+- [x] When aggressive mode is off, behaviour of all commands is identical to current behaviour
 
 ### Out of scope
 
