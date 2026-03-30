@@ -24,14 +24,76 @@ The target is apm_core::clean::candidates() returning a structured list of branc
 
 ### Acceptance criteria
 
+- [ ] `apm_core::clean::candidates()` exists and is `pub` in apm-core
+- [ ] `apm_core::clean::remove()` exists and is `pub` in apm-core
+- [ ] `candidates()` returns a `CleanCandidate` for each ticket branch that is in a terminal state and merged into the default branch
+- [ ] `candidates()` skips branches where the worktree has uncommitted changes
+- [ ] `candidates()` skips branches where local and remote tips disagree
+- [ ] `candidates()` skips branches where ticket state on the ticket branch differs from state on main
+- [ ] `candidates()` returns an empty list when there is nothing to clean
+- [ ] `remove()` deletes the worktree (if present) and the local branch for a given candidate
+- [ ] `apm clean --dry-run` prints the same output as before, now driven by `candidates()`
+- [ ] `apm clean` (non-dry-run) removes the same set of worktrees and branches as before, now via `remove()`
+- [ ] All six existing clean integration tests pass without modification
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm-serve` integration (a future ticket will consume the new API)
+- New CLI flags, prompting changes, or output format changes
+- Changes to the state machine or how terminal states are configured
+- Squash-merge detection changes (existing `merged_into_main()` logic is unchanged)
+- Any new tests beyond ensuring existing ones still pass
 
 ### Approach
 
-How the implementation will work.
+**1. Create `apm-core/src/clean.rs`**
+
+Define a `CleanCandidate` struct capturing everything needed to describe and act on a cleanup:
+
+```rust
+pub struct CleanCandidate {
+    pub ticket_id: String,
+    pub ticket_title: String,
+    pub branch: String,
+    pub worktree: Option<PathBuf>,   // Some if a worktree exists locally
+    pub reason: String,              // Human-readable: "closed, merged"
+}
+```
+
+Implement `pub fn candidates(root: &Path, config: &Config) -> anyhow::Result<Vec<CleanCandidate>>`:
+- Determine terminal states from `config.workflow.states` (those with `terminal: true`) plus hardcoded `"closed"`
+- Load all tickets with `ticket::load_all_from_git(root)`
+- Get merged branches with `git::merged_into_main(root, &config.project.default_branch)`
+- For each ticket whose state is terminal:
+  - Skip if branch is not in merged set
+  - Skip if branch tip is not an ancestor of default branch (`git::is_ancestor`)
+  - Skip if ticket state on default branch differs from state on ticket branch (`ticket::state_from_branch`)
+  - Warn (log) but skip if local and remote tips disagree (`git::branch_tip` vs `git::remote_branch_tip`)
+  - Skip if worktree has uncommitted changes (check via `git status --porcelain` in the worktree)
+  - Skip if neither a worktree nor a local branch exists
+  - Otherwise, append a `CleanCandidate`
+
+Implement `pub fn remove(root: &Path, candidate: &CleanCandidate) -> anyhow::Result<()>`:
+- If `candidate.worktree` is `Some`, call `git::remove_worktree(root, path)`
+- Delete the local branch with `git branch -d`
+
+**2. Export from `apm-core/src/lib.rs`**
+
+Add `pub mod clean;` to `lib.rs`.
+
+**3. Rewrite `apm/src/cmd/clean.rs`**
+
+Replace the 171-line body with:
+- Call `apm_core::clean::candidates(root, config)?`
+- If `dry_run`: iterate and print each candidate's branch and reason; return
+- Otherwise: for each candidate, print what is being removed, call `apm_core::clean::remove(root, candidate)?`
+- Print "Nothing to clean." if the list is empty
+
+All dirty-check, ancestor-check, state-check logic moves out; `clean.rs` keeps only formatting and the dry-run flag.
+
+**4. Keep integration tests green**
+
+The existing six tests in `apm/tests/integration.rs` test through the CLI (`apm clean`), so they exercise the new core functions transitively. No test changes expected.
 
 ### Open questions
 
