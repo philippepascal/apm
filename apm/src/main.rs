@@ -441,10 +441,17 @@ spawning any subprocesses — useful to preview the work queue.
 
 -P passes --dangerously-skip-permissions to every spawned worker.
 
+--daemon keeps the process alive after the queue is exhausted, polling at
+--interval seconds (default 30) and dispatching new workers as slots open
+or tickets become actionable. Ctrl-C stops the daemon; already-running
+workers continue independently.
+
 Example:
-  apm work --dry-run    # preview
-  apm work              # run with normal permissions
-  apm work -P           # run with skipped permissions")]
+  apm work --dry-run           # preview
+  apm work                     # run with normal permissions
+  apm work -P                  # run with skipped permissions
+  apm work --daemon            # run forever, poll every 30s
+  apm work --daemon --interval 60  # poll every 60s")]
     Work {
         /// Pass --dangerously-skip-permissions to spawned workers
         #[arg(long, short = 'P')]
@@ -452,6 +459,12 @@ Example:
         /// Print which tickets would be started without dispatching
         #[arg(long)]
         dry_run: bool,
+        /// Keep running after the queue is exhausted; re-check as slots open
+        #[arg(long, short = 'd')]
+        daemon: bool,
+        /// Poll interval in seconds when running as a daemon (default: 30)
+        #[arg(long, default_value = "30")]
+        interval: u64,
     },
     /// Force-close a ticket from any state (supervisor only)
     #[command(long_about = "Force-close a ticket from any state (supervisor only).
@@ -594,7 +607,7 @@ fn main() -> Result<()> {
         Command::Validate { fix, json, config_only } => cmd::validate::run(&root, fix, json, config_only),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
-        Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
+        Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
         Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
         Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
         Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
