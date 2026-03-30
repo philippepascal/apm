@@ -1,15 +1,15 @@
 +++
 id = "6051fb6f"
 title = "make skip_permissions configurable in apm.toml for worker spawning"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
-agent = "20197"
+agent = "philippepascal"
 branch = "ticket/6051fb6f-make-skip-permissions-configurable-in-ap"
 created_at = "2026-03-30T21:17:37.548290Z"
-updated_at = "2026-03-30T22:49:31.033727Z"
+updated_at = "2026-03-30T22:49:42.982549Z"
 +++
 
 ## Spec
@@ -61,3 +61,4 @@ For unattended operation — cron jobs, `apm work --daemon`, automated pipelines
 | 2026-03-30T21:17Z | new | in_design | philippepascal |
 | 2026-03-30T21:31Z | in_design | specd | claude-0330-2120-b7f2 |
 | 2026-03-30T22:49Z | specd | ready | apm |
+| 2026-03-30T22:49Z | ready | in_progress | philippepascal |
