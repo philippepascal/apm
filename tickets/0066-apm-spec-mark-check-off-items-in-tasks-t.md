@@ -29,7 +29,7 @@ The `--check` flag in `apm spec` currently means "validate the spec" (check that
 - [x] Works on any section containing checkbox items, including "Amendment requests", "Code review", and "Acceptance criteria"
 - [x] `--mark` without `--section` is an error
 - [x] The existing `--check` flag (validate spec) is unaffected
-- [ ] Integration test: after `apm spec --section "Amendment requests" --mark "Add error handling"`, the matching item is `- [x]` in the committed ticket
+- [x] Integration test: after `apm spec --section "Amendment requests" --mark "Add error handling"`, the matching item is `- [x]` in the committed ticket
 
 ### Out of scope
 
