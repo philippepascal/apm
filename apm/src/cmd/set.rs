@@ -25,19 +25,8 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String) -> Result<()
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");
     };
-    let fm = &mut t.frontmatter;
-    match field.as_str() {
-        "priority" => fm.priority = value.parse().map_err(|_| anyhow::anyhow!("priority must be 0–255"))?,
-        "effort"   => fm.effort   = value.parse().map_err(|_| anyhow::anyhow!("effort must be 0–255"))?,
-        "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
-        "author"     => bail!("author is immutable"),
-        "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.clone()) },
-        "agent"    => fm.agent    = if value == "-" { None } else { Some(value.clone()) },
-        "branch"   => fm.branch   = if value == "-" { None } else { Some(value.clone()) },
-        "title"    => fm.title    = value.clone(),
-        other => bail!("unknown field: {other}"),
-    }
-    fm.updated_at = Some(Utc::now());
+    ticket::set_field(&mut t.frontmatter, &field, &value)?;
+    t.frontmatter.updated_at = Some(Utc::now());
 
     let content = t.serialize()?;
     let rel_path = format!(
