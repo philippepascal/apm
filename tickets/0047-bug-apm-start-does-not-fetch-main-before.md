@@ -9,7 +9,7 @@ author = "claude-0328-c72b"
 agent = "claude-0329-main"
 branch = "ticket/0047-bug-apm-start-does-not-fetch-main-before"
 created_at = "2026-03-28T19:50:04.169100Z"
-updated_at = "2026-03-29T20:46:09.354423Z"
+updated_at = "2026-03-30T00:54:19.872079Z"
 +++
 
 ## Spec
@@ -71,4 +71,4 @@ no other changes needed.
 | 2026-03-29T20:28Z | ready | in_progress | claude-0329-main |
 | 2026-03-29T20:35Z | in_progress | implemented | claude-0329-main |
 | 2026-03-29T20:46Z | implemented | accepted | claude-0329-main |
-| 2026-03-29T20:46Z | accepted | closed | apm-sync |
+| 2026-03-30T00:54Z | accepted | closed | apm-sync |

@@ -1,7 +1,7 @@
 +++
 id = 67
 title = "Populate apm.toml with ticket.sections, instructions, context_section, focus_section"
-state = "implemented"
+state = "closed"
 priority = 5
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0329-1430-main"
 branch = "ticket/0067-populate-apm-toml-with-ticket-sections-i"
 created_at = "2026-03-29T23:26:16.251460Z"
-updated_at = "2026-03-30T00:00:05.321384Z"
+updated_at = "2026-03-30T00:54:19.872079Z"
 +++
 
 ## Spec
@@ -55,3 +55,5 @@ Edit `apm.toml` directly and commit to `main`:
 | 2026-03-29T23:52Z | specd | ready | apm |
 | 2026-03-29T23:56Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-30T00:00Z | in_progress | implemented | claude-0329-1430-main |
+| 2026-03-30T00:50Z | implemented | accepted | apm |
+| 2026-03-30T00:54Z | accepted | closed | apm-sync |

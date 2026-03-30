@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0328-t42a"
 branch = "ticket/0042-need-an-option-on-apm-list-to-show-all-c"
 created_at = "2026-03-28T08:35:04.245019Z"
-updated_at = "2026-03-29T20:46:09.354423Z"
+updated_at = "2026-03-30T00:54:19.872079Z"
 +++
 
 ## Spec
@@ -62,4 +62,4 @@ No CLI argument changes needed. The fix is entirely inside `list.rs`.
 | 2026-03-28T19:24Z | ready | in_progress | claude-0328-t42a |
 | 2026-03-28T19:26Z | in_progress | implemented | claude-0328-t42a |
 | 2026-03-28T19:29Z | implemented | accepted | apm sync |
-| 2026-03-29T20:46Z | accepted | closed | apm-sync |
+| 2026-03-30T00:54Z | accepted | closed | apm-sync |

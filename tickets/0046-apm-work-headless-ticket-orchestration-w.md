@@ -1,7 +1,7 @@
 +++
 id = 46
 title = "apm work: headless ticket orchestration without a supervisor session"
-state = "in_progress"
+state = "closed"
 priority = 3
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0328-c72b"
 agent = "claude-0329-resume"
 branch = "ticket/0046-apm-work-headless-ticket-orchestration-w"
 created_at = "2026-03-28T19:42:39.548558Z"
-updated_at = "2026-03-29T21:15:58.927984Z"
+updated_at = "2026-03-30T00:54:19.872079Z"
 +++
 
 ## Spec
@@ -111,3 +111,6 @@ print the summary.
 | 2026-03-29T20:42Z | in_design | specd | claude-0329-main |
 | 2026-03-29T21:15Z | specd | ready | claude-0329-resume |
 | 2026-03-29T21:15Z | ready | in_progress | claude-0329-resume |
+| 2026-03-29T21:26Z | in_progress | implemented | claude-0329-resume |
+| 2026-03-29T22:35Z | implemented | accepted | apm |
+| 2026-03-30T00:54Z | accepted | closed | apm-sync |
