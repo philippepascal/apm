@@ -25,11 +25,19 @@ worker is handling which ticket.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm start --spawn <id>`, the ticket's `agent` frontmatter field equals the spawned worker's PID (as a decimal string), not the delegator's `APM_AGENT_NAME`
+- [ ] After `apm start --next --spawn`, the ticket's `agent` frontmatter field equals the spawned worker's PID
+- [ ] `apm list --state in_progress` displays the worker PID in the agent column for spawned tickets, not the delegator's name
+- [ ] The PID update is committed to the ticket branch after the child process is successfully spawned
+- [ ] Non-spawn `apm start <id>` continues to set `agent` to `APM_AGENT_NAME` unchanged
+- [ ] If `cmd.spawn()` fails, no PID update commit is attempted and the error propagates normally
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the `APM_AGENT_NAME` environment variable passed to the worker process (it stays as `claude-MMDD-HHMM-XXXX`)
+- The `apm workers` command or any worker management UI (tracked in ticket #84)
+- Adding a `kill <pid>` helper or any process-management subcommand
+- Changing how non-spawn `apm start` sets the agent field
 
 ### Approach
 
