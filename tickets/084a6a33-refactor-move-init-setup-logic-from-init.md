@@ -16,28 +16,14 @@ updated_at = "2026-03-30T16:36:09.071496Z"
 
 ### Problem
 
-`init.rs` is the largest file at 535 lines and mixes interactive CLI setup with
-repository initialization logic that belongs in `apm-core`:
+`init.rs` is the largest file in the CLI crate at 535 lines and conflates two distinct concerns: interactive user-environment setup (Claude settings.json prompts) and repository initialization logic that operates purely on the filesystem and git.
 
-- Default branch detection (`git symbolic-ref`, `git remote show`)
-- `apm.toml` config template generation
-- Migration logic for old config paths (`.apm/config.toml`)
-- `.gitignore` entry management
-- Worktree directory creation
-- Initial git commit for the tickets directory
-- Claude `settings.json` modification (project + user level)
+The repo-level functions — default branch detection, config template generation, .gitignore management, CLAUDE.md maintenance, worktree directory creation, initial commit, and config migration — have no dependency on a TTY and no need for user interaction. Living in the CLI crate they cannot be unit-tested without spinning up the full CLI, and they cannot be reused by other tools or future library consumers.
 
-The Claude settings.json modification is arguably a CLI concern (user-environment
-setup). Everything else — branch detection, config generation, migration, gitignore
-management, initial commit — is repository setup logic that should be testable
-independently of the CLI.
-
-Target: `apm_core::init::setup()` handling all repo-level initialization. CLI
-`init.rs` handles interactive prompts and settings.json updates, then calls it.
+Moving this logic into `apm_core::init` gives the project a clean boundary: `apm-core` owns every filesystem/git operation needed to initialise a repo, and the CLI layer owns only the interactive prompts (`update_claude_settings`, `update_user_claude_settings`) and the call to `apm_core::init::setup()`.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -52,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
