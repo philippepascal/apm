@@ -28,11 +28,11 @@ updated_at = "2026-03-30T06:25:41.568996Z"
 
 ### Acceptance criteria
 
-- [ ] `apm work --dry-run` reports a `ready` ticket whose `agent` field is already set (e.g. by spec authorship) as a candidate — it is not silently skipped
-- [ ] `apm work --dry-run` and `apm next` agree on which ticket would be dispatched first
-- [ ] `run_dry` in `apm/src/cmd/work.rs` contains no inline filter-and-sort loop — it delegates to `ticket::pick_next`
-- [ ] `apm work --dry-run` with no actionable tickets prints "dry-run: no actionable tickets" and exits 0
-- [ ] `apm work --dry-run` with at least one actionable ticket prints the ticket id, state, and title of the candidate that would be dispatched next
+- [x] `apm work --dry-run` reports a `ready` ticket whose `agent` field is already set (e.g. by spec authorship) as a candidate — it is not silently skipped
+- [x] `apm work --dry-run` and `apm next` agree on which ticket would be dispatched first
+- [x] `run_dry` in `apm/src/cmd/work.rs` contains no inline filter-and-sort loop — it delegates to `ticket::pick_next`
+- [x] `apm work --dry-run` with no actionable tickets prints "dry-run: no actionable tickets" and exits 0
+- [x] `apm work --dry-run` with at least one actionable ticket prints the ticket id, state, and title of the candidate that would be dispatched next
 
 ### Out of scope
 
