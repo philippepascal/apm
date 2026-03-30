@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0084-apm-workers-list-and-manage-running-work"
 created_at = "2026-03-30T05:14:13.045392Z"
-updated_at = "2026-03-30T05:15:01.527969Z"
+updated_at = "2026-03-30T05:15:03.747281Z"
 +++
 
 ## Spec
