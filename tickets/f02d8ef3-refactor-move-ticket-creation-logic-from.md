@@ -16,28 +16,24 @@ updated_at = "2026-03-30T16:31:31.237281Z"
 
 ### Problem
 
-`new.rs` contains 158 lines of ticket creation logic that belongs in `apm-core`:
+\`new.rs\` contains ~120 lines of ticket-creation business logic that belongs in \`apm-core\`:
 
-- Hex ID generation (timestamp + random bytes → sha256 → 8-char hex)
-- Slug generation from title
-- Ticket frontmatter construction
-- Template body generation with section placeholders
-- Context injection into spec body (`--context` flag)
-- Git branch creation and initial commit
-- Aggressive push logic
+- Hex ID generation (delegated to \`git::gen_hex_id()\`, already in core)
+- Slug generation (delegated to \`slugify()\`, already in core)
+- Frontmatter construction
+- Body template generation with section placeholders (default or custom from \`config.ticket.sections\`)
+- Context injection into a spec section (\`--context\` flag)
+- Git branch creation and initial commit (via \`git::commit_to_branch\`)
+- Aggressive-push logic (via \`git::push_branch\`)
 
-Only the editor invocation (`$VISUAL` → `$EDITOR` → `vi`) belongs in the CLI.
+Only the editor invocation (\`\$VISUAL\` → \`\$EDITOR\` → \`vi\`) and the \`side_note\` guard are CLI concerns.
 
-`apm-serve` will need to create tickets from the web UI. Without this refactor
-it must shell out to `apm new` and cannot get a structured response (the new
-ticket ID and branch) back from the operation.
+\`apm-serve\` will need to create tickets from its web UI. Without this refactor it must shell out to \`apm new\` and cannot receive a structured response (the new ticket ID and branch).
 
-Target: `apm_core::ticket::create()` returning the new ticket. CLI `new.rs`
-calls it and optionally opens an editor. ~30 lines in CLI.
+Target state: \`apm_core::ticket::create()\` encapsulates all creation logic and returns the new \`Ticket\`. \`new.rs\` becomes ~30 lines: load config, check the side-note guard, call \`create()\`, print output, and optionally open an editor.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -52,10 +48,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
