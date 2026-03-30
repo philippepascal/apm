@@ -30,7 +30,7 @@ For unattended operation — cron jobs, `apm work --daemon`, automated pipelines
 - [x] When `skip_permissions = true` is set, `apm work` daemon mode passes `--dangerously-skip-permissions` to all spawned workers without requiring `-P`
 - [x] Passing `-P` on the CLI continues to work regardless of the config value (logical OR: either source enables the flag)
 - [x] When the field is absent from config, default is `false` and behaviour is unchanged
-- [ ] Unit test: `skip_permissions` parses correctly in `AgentsConfig` and defaults to `false`
+- [x] Unit test: `skip_permissions` parses correctly in `AgentsConfig` and defaults to `false`
 
 ### Out of scope
 
