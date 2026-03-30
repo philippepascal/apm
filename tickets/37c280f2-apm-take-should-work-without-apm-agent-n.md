@@ -24,14 +24,37 @@ The desired behaviour is that `apm take` uses the same `resolve_agent_name()` he
 
 ### Acceptance criteria
 
+- [ ] `apm take <id>` with `APM_AGENT_NAME` unset succeeds (exit 0) and completes the handoff
+- [ ] `apm take <id>` with `APM_AGENT_NAME` unset and `USER=alice` sets the ticket's `agent` field to `alice`
+- [ ] `apm take <id>` with `APM_AGENT_NAME` unset and neither `USER` nor `USERNAME` set falls back to agent name `apm`
+- [ ] `apm take <id>` with `APM_AGENT_NAME=my-agent` still uses `my-agent` (existing behaviour preserved)
+- [ ] `apm take <id>` when already assigned to the resolved agent name prints the no-op message without error
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Making `APM_AGENT_NAME` truly optional across all commands — only `apm take` is addressed here
+- Changing the fallback resolution order (that was established by ticket 69266e2d)
+- Any change to `apm start`, `apm state`, `apm close`, or other commands
 
 ### Approach
 
-How the implementation will work.
+`take.rs` lines 7–8 currently bail if `APM_AGENT_NAME` is unset. Replace that read with a call to `start::resolve_agent_name()`, which already implements the correct fallback chain (`APM_AGENT_NAME` → `$USER` → `$USERNAME` → `"apm"`).
+
+Steps:
+1. In `apm/src/cmd/take.rs`, replace:
+   ```rust
+   let new_agent = std::env::var("APM_AGENT_NAME")
+       .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
+   ```
+   with:
+   ```rust
+   let new_agent = super::start::resolve_agent_name();
+   ```
+2. Add an integration test in `apm/tests/integration.rs` that:
+   - Creates a ticket in `in_design` state with a known agent
+   - Unsets `APM_AGENT_NAME`, `USER`, and `USERNAME` then calls `take::run()`
+   - Asserts the ticket's `agent` field equals `"apm"`
+3. Add a second integration test variant with `USER` set to verify that path resolves correctly.
 
 ### Open questions
 
