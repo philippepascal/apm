@@ -1,7 +1,7 @@
 +++
 id = 70
 title = "Integration tests: take_* tests fail due to stale worktree dirs"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0329-1430-main"
 branch = "ticket/0070-integration-tests-take-tests-fail-due-to"
 created_at = "2026-03-29T23:38:38.394203Z"
-updated_at = "2026-03-30T00:55:25.423977Z"
+updated_at = "2026-03-30T00:56:56.408217Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ Fix: change the three tests to call `setup_with_local_worktrees()` instead of `s
 | 2026-03-30T00:48Z | in_design | specd | claude-0329-1430-main |
 | 2026-03-30T00:51Z | specd | ready | apm |
 | 2026-03-30T00:55Z | ready | in_progress | claude-0329-1430-main |
+| 2026-03-30T00:56Z | in_progress | implemented | claude-0329-1430-main |
