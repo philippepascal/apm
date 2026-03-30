@@ -64,39 +64,80 @@ pub fn ticket_branches(root: &Path) -> Result<Vec<String>> {
     Ok(branches)
 }
 
-/// ticket/* branches that are merged into the default branch (remote or local).
+/// ticket/* branches that are merged into the default branch (remote or local),
+/// including branches that were squash-merged (not detected by `--merged`).
 pub fn merged_into_main(root: &Path, default_branch: &str) -> Result<Vec<String>> {
     let remote_ref = format!("refs/remotes/origin/{default_branch}");
     let remote_merged = format!("origin/{default_branch}");
-    // Try remote branch first.
+
     if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
-        let out = run(
+        // Regular merges via remote.
+        let regular_out = run(
             root,
             &["branch", "-r", "--merged", &remote_merged, "--list", "origin/ticket/*"],
         )
         .unwrap_or_default();
-        return Ok(out
+        let mut merged: Vec<String> = regular_out
             .lines()
             .map(|l| l.trim().trim_start_matches("origin/").to_string())
             .filter(|l| !l.is_empty())
-            .collect());
+            .collect();
+        let merged_set: std::collections::HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
+
+        // Squash-merge detection for branches not caught by --merged.
+        let all_remote = run(root, &["branch", "-r", "--list", "origin/ticket/*"])
+            .unwrap_or_default();
+        let candidates: Vec<String> = all_remote
+            .lines()
+            .map(|l| l.trim().trim_start_matches("origin/").to_string())
+            .filter(|l| !l.is_empty() && !merged_set.contains(l.as_str()))
+            .collect();
+        merged.extend(squash_merged(root, &remote_merged, candidates)?);
+        return Ok(merged);
     }
+
     // Fall back to local branch.
     let local_ref = format!("refs/heads/{default_branch}");
-    let local_exists = run(root, &["rev-parse", "--verify", &local_ref]);
-    if local_exists.is_err() {
+    if run(root, &["rev-parse", "--verify", &local_ref]).is_err() {
         return Ok(vec![]);
     }
-    let out = run(
+    let regular_out = run(
         root,
         &["branch", "--merged", default_branch, "--list", "ticket/*"],
     )
     .unwrap_or_default();
-    Ok(out
+    let mut merged: Vec<String> = regular_out
         .lines()
         .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
         .filter(|l| !l.is_empty())
-        .collect())
+        .collect();
+    let merged_set: std::collections::HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
+
+    let all_local = run(root, &["branch", "--list", "ticket/*"]).unwrap_or_default();
+    let candidates: Vec<String> = all_local
+        .lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
+        .filter(|l| !l.is_empty() && !merged_set.contains(l.as_str()))
+        .collect();
+    merged.extend(squash_merged(root, default_branch, candidates)?);
+    Ok(merged)
+}
+
+/// Detect branches squash-merged into `main_ref`: every commit on the branch
+/// has an equivalent patch already in `main_ref` (via git's patch-id mechanism).
+fn squash_merged(root: &Path, main_ref: &str, candidates: Vec<String>) -> Result<Vec<String>> {
+    let mut result = Vec::new();
+    for branch in candidates {
+        let range = format!("{main_ref}...{branch}");
+        let out = run(root, &[
+            "log", "--cherry-pick", "--right-only", "--no-merges", "--format=%H", &range,
+        ])
+        .unwrap_or_default();
+        if out.trim().is_empty() {
+            result.push(branch);
+        }
+    }
+    Ok(result)
 }
 
 /// Find the directory of an existing permanent worktree for the given branch.
