@@ -34,7 +34,7 @@ The target shape is `apm_core::sync::detect(root, config)` returning a structure
 - [x] `apm_core::sync::apply(root, config, candidates, author)` transitions each accept candidate to `accepted` state and closes each close candidate
 - [x] `apm/src/cmd/sync.rs` no longer defines `AcceptCandidate`, `CloseCandidate`, or `detect_closeable`
 - [x] `apm sync` produces identical output and behaviour to before this refactor
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
