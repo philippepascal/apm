@@ -1,6 +1,7 @@
 pub mod clean;
 pub mod config;
 pub mod git;
+pub mod init;
 pub mod logger;
 pub mod sync;
 pub mod review;
