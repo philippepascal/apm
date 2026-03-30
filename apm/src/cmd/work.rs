@@ -77,28 +77,12 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
     let actionable = config.actionable_states_for("agent");
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let mut candidates: Vec<_> = tickets.iter()
-        .filter(|t| {
-            let fm = &t.frontmatter;
-            fm.agent.is_none()
-                && actionable.contains(&fm.state.as_str())
-                && (startable.is_empty() || startable.contains(&fm.state.as_str()))
-        })
-        .collect();
-    candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-
-    if candidates.is_empty() {
-        println!("dry-run: no actionable tickets");
-        return Ok(());
-    }
-
-    println!("dry-run: would start {} ticket(s):", candidates.len());
-    for t in &candidates {
-        println!("  #{} [{}] {}", t.frontmatter.id, t.frontmatter.state, t.frontmatter.title);
+    match ticket::pick_next(&tickets, &actionable, &startable, pw, ew, rw) {
+        None => println!("dry-run: no actionable tickets"),
+        Some(t) => println!(
+            "dry-run: would start next: #{} [{}] {}",
+            t.frontmatter.id, t.frontmatter.state, t.frontmatter.title
+        ),
     }
     Ok(())
 }
