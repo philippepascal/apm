@@ -126,6 +126,9 @@ Prints a summary of all updated tickets on completion. No branch renaming, no fi
 #### CLI ergonomics note
 
 Engineers will primarily interact with tickets through the UI, where IDs are clickable and never typed. On the CLI, prefix resolution and the disambiguation list cover the common manual-command case. If further sugar is needed in the future (e.g. fuzzy title match: `apm show "login timeout"`), that is a separate ticket.
+
+**Audited 2026-03-29:** Approach still valid. Codebase still uses `u32` IDs with NEXT_ID file counter (`apm-core/src/ticket.rs`). No hex ID generation or prefix resolution implemented yet. All referenced types and file paths are accurate.
+
 ## History
 
 | When | From | To | By |
