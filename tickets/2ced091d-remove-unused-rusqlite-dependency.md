@@ -26,7 +26,7 @@ The bundled feature compiles SQLite from source as part of every build. This add
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Replacing rusqlite with a different storage backend. This ticket is strictly a removal; no alternative caching layer is introduced.
 
 ### Approach
 
