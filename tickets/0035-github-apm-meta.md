@@ -31,16 +31,16 @@ The only sound solution is one that requires no shared state at all.
 
 ### Acceptance criteria
 
-- [ ] Ticket IDs are 8-character hex strings derived from local entropy (timestamp + random bytes); no network access or shared state is required to generate one
-- [ ] The branch name format changes to `ticket/<hex8>-<slug>` (e.g. `ticket/a3f9b2c1-short-title`)
-- [ ] The `id` field in ticket frontmatter stores the 8-char hex string
-- [ ] All `apm` commands that take an ID also accept a unique prefix of at least 4 characters (`apm show a3f9` resolves to `a3f9b2c1` if unambiguous)
-- [ ] If a prefix matches more than one ticket, `apm` prints a disambiguation list and exits non-zero
-- [ ] `apm list` output shows the full 8-char ID; sorting is by creation timestamp (embedded in the ID generation, not the ID itself)
-- [ ] The `apm/meta` branch is no longer created or pushed on `apm new`
-- [ ] Collision probability with 1 000 tickets is documented and acceptable (≤ 0.01% birthday probability at 32 bits)
-- [ ] A one-time migration script (`scripts/migrate-ticket-ids.sh`) updates the `id` field in frontmatter for all existing numeric-ID tickets from integer form (`id = 35`) to zero-padded string form (`id = "0035"`); no branch or file renaming is performed
-- [ ] After the migration script runs, `apm show 0035` and `apm show 35` both resolve correctly (the integer shorthand continues to work as a convenience)
+- [x] Ticket IDs are 8-character hex strings derived from local entropy (timestamp + random bytes); no network access or shared state is required to generate one
+- [x] The branch name format changes to `ticket/<hex8>-<slug>` (e.g. `ticket/a3f9b2c1-short-title`)
+- [x] The `id` field in ticket frontmatter stores the 8-char hex string
+- [x] All `apm` commands that take an ID also accept a unique prefix of at least 4 characters (`apm show a3f9` resolves to `a3f9b2c1` if unambiguous)
+- [x] If a prefix matches more than one ticket, `apm` prints a disambiguation list and exits non-zero
+- [x] `apm list` output shows the full 8-char ID; sorting is by creation timestamp (embedded in the ID generation, not the ID itself)
+- [x] The `apm/meta` branch is no longer created or pushed on `apm new`
+- [x] Collision probability with 1 000 tickets is documented and acceptable (≤ 0.01% birthday probability at 32 bits)
+- [x] A one-time migration script (`scripts/migrate-ticket-ids.sh`) updates the `id` field in frontmatter for all existing numeric-ID tickets from integer form (`id = 35`) to zero-padded string form (`id = "0035"`); no branch or file renaming is performed
+- [x] After the migration script runs, `apm show 0035` and `apm show 35` both resolve correctly (the integer shorthand continues to work as a convenience)
 
 ### Out of scope
 
