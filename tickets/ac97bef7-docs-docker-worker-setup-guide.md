@@ -1,15 +1,15 @@
 +++
 id = "ac97bef7"
 title = "docs: Docker worker setup guide"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
-agent = "46385"
+agent = "philippepascal"
 branch = "ticket/ac97bef7-docs-docker-worker-setup-guide"
 created_at = "2026-03-30T19:55:27.882184Z"
-updated_at = "2026-03-30T20:10:32.374889Z"
+updated_at = "2026-03-30T20:10:46.719292Z"
 +++
 
 ## Spec
@@ -117,3 +117,4 @@ This ticket creates two things: a `docs/` directory at the repo root and a singl
 | 2026-03-30T20:00Z | new | in_design | philippepascal |
 | 2026-03-30T20:06Z | in_design | specd | claude-0330-2000-b7d2 |
 | 2026-03-30T20:10Z | specd | ready | apm |
+| 2026-03-30T20:10Z | ready | in_progress | philippepascal |
