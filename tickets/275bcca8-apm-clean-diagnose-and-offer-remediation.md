@@ -4,12 +4,12 @@ title = "apm clean: diagnose and offer remediation for dirty worktrees"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "philippepascal"
 agent = "56153"
 branch = "ticket/275bcca8-apm-clean-diagnose-and-offer-remediation"
 created_at = "2026-03-30T18:12:35.205840Z"
-updated_at = "2026-03-30T19:21:44.280289Z"
+updated_at = "2026-03-30T19:23:07.979662Z"
 +++
 
 ## Spec
