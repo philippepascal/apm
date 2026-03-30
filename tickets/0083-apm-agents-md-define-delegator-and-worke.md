@@ -38,8 +38,8 @@ master session.
 - [ ] If max workers was not specified by the user, the Delegator must ask
   before starting the loop — it must not assume a default
 - [ ] The Delegator section explicitly prohibits: picking tickets manually,
-  writing specs, implementing code, or taking any action not driven by
-  `apm start --next`
+  writing specs, implementing code, running `apm sync`, closing or transitioning
+  tickets, or taking any action not driven by `apm start --next`
 - [ ] The Delegator section specifies what to do when the queue is empty or
   blocked: report back to the supervisor with a clear status — do not improvise
   or switch to worker behaviour
@@ -75,8 +75,8 @@ a **Worker** (subagent). Read your initial prompt to detect which you are.
 ### Delegator
 
 Your only job is to dispatch work to workers. You must not write specs,
-implement code, choose tickets manually, or take any action not driven by
-`apm start --next`.
+implement code, choose tickets manually, run `apm sync`, close or transition
+tickets, or take any action not driven by `apm start --next`.
 
 **Before dispatching:**
 1. If the user has not specified a maximum number of concurrent workers, ask.
