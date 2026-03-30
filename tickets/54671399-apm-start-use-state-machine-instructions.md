@@ -1,15 +1,15 @@
 +++
 id = "54671399"
 title = "apm start: use state machine instructions field as worker system prompt"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
-agent = "83841"
+agent = "philippepascal"
 branch = "ticket/54671399-apm-start-use-state-machine-instructions"
 created_at = "2026-03-30T22:51:08.077356Z"
-updated_at = "2026-03-30T23:58:07.175920Z"
+updated_at = "2026-03-30T23:58:39.869568Z"
 +++
 
 ## Spec
@@ -65,3 +65,4 @@ This replaces the single hardcoded `std::fs::read_to_string(root.join(".apm/apm.
 | 2026-03-30T22:51Z | new | in_design | philippepascal |
 | 2026-03-30T22:54Z | in_design | specd | claude-0330-2251-b7f2 |
 | 2026-03-30T23:58Z | specd | ready | apm |
+| 2026-03-30T23:58Z | ready | in_progress | philippepascal |
