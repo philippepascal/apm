@@ -47,7 +47,7 @@ blocks `apm-serve` from reusing any of it.
 - [x] `apm list` with no flags produces identical output before and after the refactor
 - [x] `apm list --state <s>`, `--unassigned`, `--all`, `--supervisor`, `--actionable` flags each produce identical output
 - [x] `apm set <id> author foo` still returns error "author is immutable"
-- [ ] `apm set <id> priority 256` still returns a parse error (u8 overflow)
+- [x] `apm set <id> priority 256` still returns a parse error (u8 overflow)
 - [ ] `apm set <id> unknownfield val` still returns error "unknown field: unknownfield"
 - [ ] `apm take <id>` on a ticket with no agent still returns "no agent assigned — use `apm start` instead"
 - [ ] `apm workers list` shows the same columns (ID, TITLE, PID, STATE, ELAPSED) with identical process monitoring behavior
