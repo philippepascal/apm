@@ -44,7 +44,7 @@ format and print results.
 
 ### Acceptance criteria
 
-- [ ] `apm_core::validate::validate_config(config: &Config, root: &Path) -> Vec<String>` exists in `apm-core` and produces identical results to the current implementation in `apm/src/cmd/validate.rs`
+- [x] `apm_core::validate::validate_config(config: &Config, root: &Path) -> Vec<String>` exists in `apm-core` and produces identical results to the current implementation in `apm/src/cmd/validate.rs`
 - [ ] `apm_core::verify::verify_tickets(config: &Config, tickets: &[Ticket], merged: &HashSet<String>) -> Vec<String>` exists in `apm-core` and returns one issue string per consistency problem found
 - [ ] `KNOWN_PRECONDITIONS` and `KNOWN_SIDE_EFFECTS` constants are defined in `apm-core::validate` (not in the CLI crate)
 - [ ] All existing unit tests for `validate_config` pass after relocating them to `apm-core`
