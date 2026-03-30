@@ -16,26 +16,17 @@ updated_at = "2026-03-30T16:37:17.487398Z"
 
 ### Problem
 
-`sync.rs` contains 172 lines of candidate detection logic that belongs in
-`apm-core`:
+The sync candidate detection logic in `apm/src/cmd/sync.rs` is tightly coupled to the CLI despite being pure domain logic. Two responsibilities are currently mixed in 172 lines:
 
-- Merged branch detection (via `git::merged_into_main`)
-- Accept candidate detection: implemented tickets whose branch is merged into main
-- Close candidate detection: tickets in "accepted" state, or "implemented" on
-  main with no ticket branch
-- Squash-merge detection (via `git log --cherry-pick`)
-- Batch accept/close orchestration
+1. **Candidate detection** — deciding which tickets are ready to accept (implemented tickets on merged branches) and which are ready to close (accepted tickets, or implemented tickets whose branch no longer exists). This is algorithmic logic with no user-facing I/O.
+2. **User prompting** — the interactive `[y/N]` prompts and the orchestration of fetch/push and state transitions. This belongs in the CLI.
 
-The interactive prompting (`[y/N]`) belongs in the CLI. The detection logic
-does not. `apm-serve` will want to show a sync preview — "these tickets are
-ready to accept/close" — without shelling out to `apm sync`.
+Because detection lives in the CLI binary, any future server component (`apm-serve`) that wants to preview a sync — "these N tickets would be accepted, these M would be closed" — cannot do so without shelling out to `apm sync`. Moving detection into `apm-core` makes it available to any caller.
 
-Target: `apm_core::sync::detect()` returning structured candidates. CLI prompts
-the user and calls `apm_core::sync::apply()`.
+The target shape is `apm_core::sync::detect(root, config)` returning a structured `Candidates` value, and `apm_core::sync::apply(root, config, candidates, author)` executing the state transitions. The CLI retains only I/O: fetch, push, interactive prompts, and calling `detect`/`apply`.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -50,10 +41,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
