@@ -23,7 +23,7 @@ The `apm work` dispatch loop sets a permanent `no_more` flag the first time `spa
 - [x] When `apm work` has fewer running workers than `max_concurrent` and the current poll finds no actionable ticket, it sleeps for a poll interval and retries—it does not exit or permanently stop polling.
 - [x] When a running worker finishes and the resulting state change makes a previously-blocked ticket actionable, `apm work` picks it up within one poll interval.
 - [x] `apm work` exits only when all workers have drained and the latest poll found no actionable ticket.
-- [ ] Workers are spawned immediately when a ticket is ready, without waiting for the idle poll interval.
+- [x] Workers are spawned immediately when a ticket is ready, without waiting for the idle poll interval.
 - [ ] The idle poll interval (when under `max_concurrent` but no ticket is available) is at least 10 s and distinct from the 500 ms at-capacity reap sleep.
 
 ### Out of scope
