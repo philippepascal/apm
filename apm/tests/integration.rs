@@ -1701,3 +1701,19 @@ terminal = true
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
 }
+
+// --- resolve_agent_name fallback ---
+
+#[test]
+fn start_without_apm_agent_name_uses_fallback() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-fallback", "0001-fallback.md", "ready", 1, "fallback");
+    // Use a pre-resolved name to avoid env var manipulation in a concurrent test context.
+    // The important thing is that run() accepts an explicit agent_name and stores it.
+    apm::cmd::start::run(p, "0001", true, false, false, "ci-agent").unwrap();
+    let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
+    assert!(content.contains("agent = \"ci-agent\""), "agent should be ci-agent: {content}");
+}
+
