@@ -26,7 +26,7 @@ For unattended operation — cron jobs, `apm work --daemon`, automated pipelines
 
 - [x] `[agents]` in `.apm/config.toml` accepts a `skip_permissions = true` field without parse errors
 - [x] When `skip_permissions = true` is set, `apm start --spawn <id>` passes `--dangerously-skip-permissions` to the worker without requiring `-P` on the CLI
-- [ ] When `skip_permissions = true` is set, `apm start --next --spawn` passes `--dangerously-skip-permissions` to spawned workers without requiring `-P`
+- [x] When `skip_permissions = true` is set, `apm start --next --spawn` passes `--dangerously-skip-permissions` to spawned workers without requiring `-P`
 - [ ] When `skip_permissions = true` is set, `apm work` daemon mode passes `--dangerously-skip-permissions` to all spawned workers without requiring `-P`
 - [ ] Passing `-P` on the CLI continues to work regardless of the config value (logical OR: either source enables the flag)
 - [ ] When the field is absent from config, default is `false` and behaviour is unchanged
