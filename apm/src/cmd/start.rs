@@ -25,9 +25,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     };
 
     let fm = &t.frontmatter;
-    if fm.agent.is_some() {
-        bail!("ticket already claimed — run `apm next`");
-    }
     if !startable.is_empty() && !startable.contains(&fm.state.as_str()) {
         bail!(
             "ticket {id:?} is in state {:?} — not startable\n\
@@ -199,8 +196,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let mut candidates: Vec<_> = tickets.iter()
         .filter(|t| {
             let fm = &t.frontmatter;
-            fm.agent.is_none()
-                && actionable.contains(&fm.state.as_str())
+            actionable.contains(&fm.state.as_str())
                 && (startable.is_empty() || startable.contains(&fm.state.as_str()))
         })
         .collect();
@@ -349,8 +345,7 @@ pub fn spawn_next_worker(
     let mut candidates: Vec<_> = tickets.iter()
         .filter(|t| {
             let fm = &t.frontmatter;
-            fm.agent.is_none()
-                && actionable.contains(&fm.state.as_str())
+            actionable.contains(&fm.state.as_str())
                 && (startable.is_empty() || startable.contains(&fm.state.as_str()))
         })
         .collect();
