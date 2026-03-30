@@ -1,7 +1,7 @@
 +++
 id = 76
 title = "Audit open ticket specs against current implementation"
-state = "implemented"
+state = "accepted"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0076-audit-open-ticket-specs-against-current-"
 created_at = "2026-03-30T00:59:24.141610Z"
-updated_at = "2026-03-30T02:49:52.086514Z"
+updated_at = "2026-03-30T04:38:23.698344Z"
 +++
 
 ## Spec
@@ -62,3 +62,4 @@ Current open tickets to audit (as of writing): #35, #38, #51, #57, #63, #70, #75
 | 2026-03-30T01:05Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-30T02:43Z | claude-0329-1430-main | claude-0330-0245-main | handoff |
 | 2026-03-30T02:49Z | in_progress | implemented | claude-0329-1645-impl |
+| 2026-03-30T04:38Z | implemented | accepted | apm |
