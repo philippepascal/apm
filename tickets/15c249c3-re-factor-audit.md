@@ -4,12 +4,12 @@ title = "re-factor audit"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 agent = "claude-0330-0245-main"
 branch = "ticket/15c249c3-re-factor-audit"
 created_at = "2026-03-30T06:01:35.844292Z"
-updated_at = "2026-03-30T06:19:22.519820Z"
+updated_at = "2026-03-30T06:19:28.790263Z"
 +++
 
 ## Spec
