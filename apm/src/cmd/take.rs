@@ -4,8 +4,7 @@ use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
-    let new_agent = std::env::var("APM_AGENT_NAME")
-        .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
+    let new_agent = super::start::resolve_agent_name();
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
