@@ -54,7 +54,7 @@ current native behaviour unchanged.
 
 - [x] `apm.toml` supports a `[workers]` section with `container = "<image>"`;
   when absent or empty, native spawning (ticket #37) is used unchanged
-- [ ] When `container` is set, `apm start` runs the worker via
+- [x] When `container` is set, `apm start` runs the worker via
   `docker run --rm` with only the worktree mounted at `/workspace` (read-write)
   and nothing else from the host filesystem
 - [ ] Credentials are injected as environment variables, never as volume mounts.
