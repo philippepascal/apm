@@ -57,7 +57,7 @@ current native behaviour unchanged.
 - [x] When `container` is set, `apm start` runs the worker via
   `docker run --rm` with only the worktree mounted at `/workspace` (read-write)
   and nothing else from the host filesystem
-- [ ] Credentials are injected as environment variables, never as volume mounts.
+- [x] Credentials are injected as environment variables, never as volume mounts.
   The worker needs only:
   - `ANTHROPIC_API_KEY` — required for the claude CLI
   - `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`,
