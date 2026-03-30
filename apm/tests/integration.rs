@@ -1053,7 +1053,7 @@ fn context_section_unknown_section_is_error() {
 }
 
 #[test]
-fn context_section_from_config_tickets_sections() {
+fn context_section_from_transition_config() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
     git(p, &["init", "-q"]);
@@ -1064,7 +1064,6 @@ name = "test"
 
 [tickets]
 dir = "tickets"
-sections = ["Approach", "Problem"]
 
 [agents]
 max_concurrent = 3
@@ -1078,20 +1077,23 @@ risk_weight = -1.0
 id         = "new"
 label      = "New"
 actionable = ["agent"]
+
+[[workflow.states.transitions]]
+to              = "in_design"
+context_section = "Approach"
 "#).unwrap();
     git(p, &["add", "apm.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
     apm::cmd::new::run(
         p,
-        "Config sections test".into(),
+        "Transition context test".into(),
         true,
         false,
-        Some("config driven context".into()),
+        Some("transition driven context".into()),
         None,
         true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-config-sections-test", "tickets/0001-config-sections-test.md");
-    // First entry in sections is "Approach", so context should land there
-    assert!(content.contains("### Approach\n\nconfig driven context\n\n"), "expected context under ### Approach from config");
+    let content = branch_content(p, "ticket/0001-transition-context-test", "tickets/0001-transition-context-test.md");
+    assert!(content.contains("### Approach\n\ntransition driven context\n\n"), "expected context under ### Approach from transition config");
 }
