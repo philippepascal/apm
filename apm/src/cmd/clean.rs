@@ -69,20 +69,61 @@ pub fn run(root: &Path, dry_run: bool) -> Result<()> {
                 println!("removed worktree {}", path.display());
             }
 
-            let result = Command::new("git")
-                .args(["-C", &root.to_string_lossy(), "branch", "-d", &branch])
-                .output();
-            match result {
-                Ok(o) if o.status.success() => {
-                    println!("removed branch {branch}");
+            // Delete local branch if it exists (-D because we already verified merged status).
+            let local_exists = Command::new("git")
+                .args([
+                    "-C",
+                    &root.to_string_lossy(),
+                    "rev-parse",
+                    "--verify",
+                    &format!("refs/heads/{branch}"),
+                ])
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+            if local_exists {
+                let result = Command::new("git")
+                    .args(["-C", &root.to_string_lossy(), "branch", "-D", &branch])
+                    .output();
+                match result {
+                    Ok(o) if o.status.success() => {
+                        println!("removed local branch {branch}");
+                    }
+                    Ok(o) => {
+                        let msg = String::from_utf8_lossy(&o.stderr);
+                        eprintln!("warning: could not delete local branch {branch}: {}", msg.trim());
+                    }
+                    Err(e) => {
+                        eprintln!("warning: could not delete local branch {branch}: {e}");
+                    }
                 }
-                Ok(o) => {
-                    let msg = String::from_utf8_lossy(&o.stderr);
-                    eprintln!("warning: could not delete branch {branch}: {}", msg.trim());
+            }
+            // Delete remote branch if it exists.
+            let remote_ref = format!("refs/remotes/origin/{branch}");
+            let remote_exists = Command::new("git")
+                .args(["-C", &root.to_string_lossy(), "rev-parse", "--verify", &remote_ref])
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+            if remote_exists {
+                let result = Command::new("git")
+                    .args(["-C", &root.to_string_lossy(), "push", "origin", "--delete", &branch])
+                    .output();
+                match result {
+                    Ok(o) if o.status.success() => {
+                        println!("removed remote branch {branch}");
+                    }
+                    Ok(o) => {
+                        let msg = String::from_utf8_lossy(&o.stderr);
+                        eprintln!("warning: could not delete remote branch {branch}: {}", msg.trim());
+                    }
+                    Err(e) => {
+                        eprintln!("warning: could not delete remote branch {branch}: {e}");
+                    }
                 }
-                Err(e) => {
-                    eprintln!("warning: could not delete branch {branch}: {e}");
-                }
+            }
+            if !local_exists && !remote_exists {
+                println!("branch {branch} already gone");
             }
         }
 
