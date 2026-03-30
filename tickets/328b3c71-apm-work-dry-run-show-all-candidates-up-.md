@@ -24,7 +24,7 @@ The fix is to have `--dry-run` show up to `max_concurrent` candidates in priorit
 
 ### Acceptance criteria
 
-- [ ] `apm work --dry-run` prints one line per candidate, up to `max_concurrent` candidates
+- [x] `apm work --dry-run` prints one line per candidate, up to `max_concurrent` candidates
 - [ ] Each output line identifies the ticket by id, state, and title (matching the format `dry-run: would start next: #<id> [<state>] <title>`)
 - [ ] When fewer actionable tickets exist than `max_concurrent`, only the available tickets are printed (no padding or error)
 - [ ] When there are no actionable tickets, the output is `dry-run: no actionable tickets` (existing behaviour preserved)
