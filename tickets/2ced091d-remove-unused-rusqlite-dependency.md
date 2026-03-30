@@ -22,7 +22,10 @@ The bundled feature compiles SQLite from source as part of every build. This add
 
 ### Acceptance criteria
 
-- [ ] [ ] cargo build succeeds\n[ ] cargo test passes\n[ ] rusqlite removed from Cargo.toml files\n[ ] rusqlite absent from Cargo.lock
+- [x] cargo build succeeds
+- [x] cargo test passes
+- [x] rusqlite removed from Cargo.toml files
+- [x] rusqlite absent from Cargo.lock
 
 ### Out of scope
 
