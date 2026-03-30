@@ -1,7 +1,7 @@
 +++
 id = "34794616"
 title = "apm serve: local web interface for APM"
-state = "specd"
+state = "closed"
 priority = 0
 effort = 7
 risk = 4
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "92477"
 branch = "ticket/34794616-apm-serve-local-web-interface-for-apm"
 created_at = "2026-03-30T06:46:19.342367Z"
-updated_at = "2026-03-30T16:33:08.652740Z"
+updated_at = "2026-03-30T18:09:23.097640Z"
 +++
 
 ## Spec
@@ -153,3 +153,4 @@ token = ""          # required when auth = true
 | 2026-03-30T06:46Z | — | new | claude-0330-0245-main |
 | 2026-03-30T16:31Z | new | in_design | philippepascal |
 | 2026-03-30T16:33Z | in_design | specd | claude-0330-1631-spec9 |
+| 2026-03-30T18:09Z | specd | closed | philippepascal |
