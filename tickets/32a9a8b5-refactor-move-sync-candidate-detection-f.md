@@ -31,7 +31,7 @@ The target shape is `apm_core::sync::detect(root, config)` returning a structure
 - [x] `apm_core::sync::detect(root, config)` returns a `Candidates` value containing separate `Vec<AcceptCandidate>` and `Vec<CloseCandidate>`
 - [x] `AcceptCandidate` holds the `Ticket` for an implemented ticket whose branch is merged into main
 - [x] `CloseCandidate` holds the `Ticket` and a `reason` string for a ticket that is either in `accepted` state or in `implemented` state with its branch gone
-- [ ] `apm_core::sync::apply(root, config, candidates, author)` transitions each accept candidate to `accepted` state and closes each close candidate
+- [x] `apm_core::sync::apply(root, config, candidates, author)` transitions each accept candidate to `accepted` state and closes each close candidate
 - [ ] `apm/src/cmd/sync.rs` no longer defines `AcceptCandidate`, `CloseCandidate`, or `detect_closeable`
 - [ ] `apm sync` produces identical output and behaviour to before this refactor
 - [ ] `cargo test --workspace` passes with no regressions
