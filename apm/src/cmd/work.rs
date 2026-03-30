@@ -73,6 +73,7 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
     let pw = config.workflow.prioritization.priority_weight;
     let ew = config.workflow.prioritization.effort_weight;
     let rw = config.workflow.prioritization.risk_weight;
+    let max_concurrent = config.agents.max_concurrent.max(1);
 
     let startable: Vec<&str> = config.workflow.states.iter()
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
@@ -81,12 +82,28 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
     let actionable = config.actionable_states_for("agent");
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    match ticket::pick_next(&tickets, &actionable, &startable, pw, ew, rw) {
-        None => println!("dry-run: no actionable tickets"),
-        Some(t) => println!(
-            "dry-run: would start next: #{} [{}] {}",
-            t.frontmatter.id, t.frontmatter.state, t.frontmatter.title
-        ),
+    let mut candidates: Vec<&ticket::Ticket> = tickets
+        .iter()
+        .filter(|t| {
+            let state = t.frontmatter.state.as_str();
+            actionable.contains(&state) && (startable.is_empty() || startable.contains(&state))
+        })
+        .collect();
+    candidates.sort_by(|a, b| {
+        b.score(pw, ew, rw)
+            .partial_cmp(&a.score(pw, ew, rw))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    if candidates.is_empty() {
+        println!("dry-run: no actionable tickets");
+    } else {
+        for t in candidates.into_iter().take(max_concurrent) {
+            println!(
+                "dry-run: would start next: #{} [{}] {}",
+                t.frontmatter.id, t.frontmatter.state, t.frontmatter.title
+            );
+        }
     }
     Ok(())
 }
