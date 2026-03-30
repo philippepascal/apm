@@ -1214,3 +1214,57 @@ context_section = "Approach"
     let content = branch_content(p, "ticket/0001-transition-context-test", "tickets/0001-transition-context-test.md");
     assert!(content.contains("### Approach\n\ntransition driven context\n\n"), "expected context under ### Approach from transition config");
 }
+
+#[test]
+fn new_body_scaffold_from_ticket_sections_config() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[ticket.sections]]
+name        = "Summary"
+type        = "free"
+placeholder = "What does this do?"
+
+[[ticket.sections]]
+name     = "Tasks"
+type     = "tasks"
+required = true
+
+[[ticket.sections]]
+name = "Notes"
+type = "free"
+"#).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    apm::cmd::new::run(p, "Scaffold test".into(), true, false, None, None, true).unwrap();
+
+    let content = branch_content(p, "ticket/0001-scaffold-test", "tickets/0001-scaffold-test.md");
+    assert!(content.contains("### Summary\n\nWhat does this do?\n\n"), "placeholder should appear");
+    assert!(content.contains("### Tasks\n\n\n\n"), "empty section should appear");
+    assert!(content.contains("### Notes\n\n\n\n"), "Notes section should appear");
+    assert!(!content.contains("### Problem\n"), "hardcoded Problem should not appear");
+    assert!(!content.contains("### Acceptance criteria\n"), "hardcoded AC should not appear");
+}

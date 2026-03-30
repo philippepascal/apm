@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::{Config, SectionType}, git, ticket};
 use std::io::Read;
 use std::path::Path;
 
@@ -70,8 +70,14 @@ pub fn run(
         std::process::exit(1);
     }
 
+    let config_active = !config.ticket.sections.is_empty();
+
     if let Some(ref name) = section {
-        if !KNOWN_SECTIONS.iter().any(|s| s.eq_ignore_ascii_case(name)) {
+        if config_active {
+            if !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name)) {
+                bail!("unknown section {:?}; not defined in [ticket.sections]", name);
+            }
+        } else if !KNOWN_SECTIONS.iter().any(|s| s.eq_ignore_ascii_case(name)) {
             bail!(
                 "unknown section {:?}; valid sections: {}",
                 name,
@@ -89,10 +95,24 @@ pub fn run(
             };
 
             let trimmed = text.trim().to_string();
-            let canon = canon_section(name);
-            set_section(&mut doc, canon, trimmed);
 
-            t.body = doc.serialize();
+            if config_active {
+                let section_cfg = config.ticket.sections.iter()
+                    .find(|s| s.name.eq_ignore_ascii_case(name))
+                    .unwrap();
+                let formatted = apply_section_type(&section_cfg.type_, trimmed);
+                if is_doc_field(name) {
+                    set_section_doc(&mut doc, name, formatted);
+                    t.body = doc.serialize();
+                } else {
+                    set_section_body(&mut t.body, name, &formatted);
+                }
+            } else {
+                let canon = canon_section(name);
+                set_section(&mut doc, canon, trimmed);
+                t.body = doc.serialize();
+            }
+
             let new_content = t.serialize()?;
             git::commit_to_branch(
                 root,
@@ -103,8 +123,19 @@ pub fn run(
             )?;
             println!("ticket #{id}: section {name:?} updated");
         } else {
-            let canon = canon_section(name);
-            print_section(&doc, canon);
+            if config_active {
+                let section_cfg = config.ticket.sections.iter()
+                    .find(|s| s.name.eq_ignore_ascii_case(name))
+                    .unwrap();
+                if is_doc_field(&section_cfg.name) {
+                    print_section(&doc, &section_cfg.name);
+                } else {
+                    print_section_body(&t.body, &section_cfg.name);
+                }
+            } else {
+                let canon = canon_section(name);
+                print_section(&doc, canon);
+            }
         }
     } else {
         print_all(&doc);
@@ -113,8 +144,122 @@ pub fn run(
     Ok(())
 }
 
+fn is_doc_field(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    matches!(lower.as_str(),
+        "problem" | "acceptance criteria" | "out of scope" | "approach"
+        | "open questions" | "amendment requests")
+}
+
+fn apply_section_type(type_: &SectionType, value: String) -> String {
+    match type_ {
+        SectionType::Tasks => {
+            value.lines()
+                .map(|line| {
+                    let l = line.trim();
+                    if l.is_empty() {
+                        String::new()
+                    } else if l.starts_with("- [ ] ") || l.starts_with("- [x] ") || l.starts_with("- [X] ") {
+                        l.to_string()
+                    } else {
+                        format!("- [ ] {l}")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        SectionType::Qa => {
+            value.lines()
+                .map(|line| {
+                    let l = line.trim();
+                    if l.is_empty() {
+                        String::new()
+                    } else {
+                        format!("**Q:** {l}")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        SectionType::Free => value,
+    }
+}
+
+fn set_section_doc(doc: &mut ticket::TicketDocument, name: &str, value: String) {
+    match name.to_lowercase().as_str() {
+        "problem" => doc.problem = value,
+        "acceptance criteria" => {
+            doc.acceptance_criteria = value.lines()
+                .filter_map(|line| {
+                    let l = line.trim();
+                    if l.starts_with("- [ ] ") {
+                        Some(ticket::ChecklistItem { checked: false, text: l[6..].to_string() })
+                    } else if l.starts_with("- [x] ") || l.starts_with("- [X] ") {
+                        Some(ticket::ChecklistItem { checked: true, text: l[6..].to_string() })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+        }
+        "out of scope" => doc.out_of_scope = value,
+        "approach" => doc.approach = value,
+        "open questions" => doc.open_questions = Some(value),
+        "amendment requests" => {
+            doc.amendment_requests = Some(value.lines()
+                .filter_map(|line| {
+                    let l = line.trim();
+                    if l.starts_with("- [ ] ") {
+                        Some(ticket::ChecklistItem { checked: false, text: l[6..].to_string() })
+                    } else if l.starts_with("- [x] ") || l.starts_with("- [X] ") {
+                        Some(ticket::ChecklistItem { checked: true, text: l[6..].to_string() })
+                    } else {
+                        None
+                    }
+                })
+                .collect());
+        }
+        _ => {}
+    }
+}
+
+fn set_section_body(body: &mut String, name: &str, value: &str) {
+    let heading = format!("### {name}\n");
+    if let Some(pos) = body.find(&heading) {
+        let after_heading = pos + heading.len();
+        let skip = body[after_heading..].len() - body[after_heading..].trim_start_matches('\n').len();
+        let content_start = after_heading + skip;
+        let rest = &body[content_start..];
+        let end = rest.find("\n## ")
+            .or_else(|| rest.find("\n### "))
+            .map(|p| content_start + p + 1)
+            .unwrap_or(body.len());
+        let before = body[..after_heading].to_string();
+        let after = body[end..].to_string();
+        if value.is_empty() {
+            *body = format!("{}\n{}", before, after);
+        } else {
+            *body = format!("{}\n{}\n\n{}", before, value, after);
+        }
+    }
+}
+
+fn print_section_body(body: &str, name: &str) {
+    let heading = format!("### {name}\n");
+    if let Some(pos) = body.find(&heading) {
+        let after_heading = pos + heading.len();
+        let skip = body[after_heading..].len() - body[after_heading..].trim_start_matches('\n').len();
+        let content_start = after_heading + skip;
+        let rest = &body[content_start..];
+        let end = rest.find("\n## ")
+            .or_else(|| rest.find("\n### "))
+            .map(|p| p)
+            .unwrap_or(rest.len());
+        println!("{}", rest[..end].trim());
+    }
+}
+
 fn canon_section<'a>(name: &'a str) -> &'a str {
-    // Return the matching known section with its canonical casing.
     KNOWN_SECTIONS
         .iter()
         .find(|s| s.eq_ignore_ascii_case(name))
@@ -123,16 +268,16 @@ fn canon_section<'a>(name: &'a str) -> &'a str {
 }
 
 fn print_section(doc: &ticket::TicketDocument, name: &str) {
-    match name {
-        "Problem" => println!("{}", doc.problem),
-        "Acceptance criteria" => {
+    match name.to_lowercase().as_str() {
+        "problem" => println!("{}", doc.problem),
+        "acceptance criteria" => {
             for item in &doc.acceptance_criteria {
                 println!("- [{}] {}", if item.checked { "x" } else { " " }, item.text);
             }
         }
-        "Out of scope" => println!("{}", doc.out_of_scope),
-        "Approach" => println!("{}", doc.approach),
-        "Open questions" => {
+        "out of scope" => println!("{}", doc.out_of_scope),
+        "approach" => println!("{}", doc.approach),
+        "open questions" => {
             if let Some(oq) = &doc.open_questions {
                 println!("{oq}");
             }
