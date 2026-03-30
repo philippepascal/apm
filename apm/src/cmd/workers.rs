@@ -1,13 +1,6 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, ticket, worker};
 use std::path::{Path, PathBuf};
-
-#[derive(serde::Deserialize, serde::Serialize)]
-pub struct WorkerPid {
-    pub pid: u32,
-    pub ticket_id: String,
-    pub started_at: String,
-}
 
 pub fn run(root: &Path, log_id: Option<&str>, kill_id: Option<&str>) -> Result<()> {
     if let Some(id_arg) = kill_id {
@@ -40,12 +33,12 @@ fn list(root: &Path) -> Result<()> {
             continue;
         }
 
-        let wpid = match read_pid_file(&pid_path) {
+        let (pid, pidfile) = match worker::read_pid_file(&pid_path) {
             Ok(w) => w,
             Err(_) => continue,
         };
 
-        let alive = is_alive(wpid.pid);
+        let alive = worker::is_alive(pid);
 
         let t = tickets.iter().find(|t| {
             t.frontmatter.branch.as_deref() == Some(branch.as_str())
@@ -60,19 +53,19 @@ fn list(root: &Path) -> Result<()> {
         };
 
         let pid_col = if alive {
-            wpid.pid.to_string()
+            pid.to_string()
         } else {
             "—".to_string()
         };
 
         let elapsed = if alive {
-            elapsed_since(&wpid.started_at)
+            worker::elapsed_since(&pidfile.started_at)
         } else {
             "—".to_string()
         };
 
         rows.push(Row {
-            id: wpid.ticket_id.clone(),
+            id: pidfile.ticket_id.clone(),
             title,
             pid: pid_col,
             state,
@@ -137,19 +130,19 @@ fn kill(root: &Path, id_arg: &str) -> Result<()> {
     if !pid_path.exists() {
         bail!("worker for ticket {id} is not running (no .apm-worker.pid)");
     }
-    let wpid = read_pid_file(&pid_path)?;
-    if !is_alive(wpid.pid) {
+    let (pid, _) = worker::read_pid_file(&pid_path)?;
+    if !worker::is_alive(pid) {
         let _ = std::fs::remove_file(&pid_path);
-        bail!("worker for ticket {id} is not running (stale PID {})", wpid.pid);
+        bail!("worker for ticket {id} is not running (stale PID {})", pid);
     }
     let status = std::process::Command::new("kill")
-        .args(["-TERM", &wpid.pid.to_string()])
+        .args(["-TERM", &pid.to_string()])
         .status()?;
     if !status.success() {
-        bail!("failed to send SIGTERM to PID {}", wpid.pid);
+        bail!("failed to send SIGTERM to PID {}", pid);
     }
     let _ = std::fs::remove_file(&pid_path);
-    println!("killed worker for ticket #{id} (PID {})", wpid.pid);
+    println!("killed worker for ticket #{id} (PID {})", pid);
     Ok(())
 }
 
@@ -170,107 +163,4 @@ fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String)> {
     let wt = git::find_worktree_for_branch(root, &branch)
         .ok_or_else(|| anyhow::anyhow!("no worktree for ticket {id:?}"))?;
     Ok((wt, id))
-}
-
-pub fn read_pid_file(path: &Path) -> Result<WorkerPid> {
-    let content = std::fs::read_to_string(path)?;
-    Ok(serde_json::from_str(&content)?)
-}
-
-pub fn is_alive(pid: u32) -> bool {
-    std::process::Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-pub fn elapsed_since(started_at: &str) -> String {
-    let Ok(started) = chrono::DateTime::parse_from_rfc3339(started_at)
-        .or_else(|_| {
-            // Try our truncated format: 2026-03-30T05:14Z
-            chrono::DateTime::parse_from_rfc3339(&started_at.replace('Z', "+00:00"))
-        })
-    else {
-        return "—".to_string();
-    };
-    let now = chrono::Utc::now();
-    let secs = (now.timestamp() - started.timestamp()).max(0) as u64;
-    if secs < 60 {
-        format!("{secs}s")
-    } else if secs < 3600 {
-        format!("{}m", secs / 60)
-    } else {
-        let h = secs / 3600;
-        let m = (secs % 3600) / 60;
-        if m == 0 {
-            format!("{h}h")
-        } else {
-            format!("{h}h {m}m")
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn is_alive_returns_true_for_current_process() {
-        assert!(is_alive(std::process::id()));
-    }
-
-    #[test]
-    fn is_alive_returns_false_for_dead_pid() {
-        // PID 0 is never a valid user process on Unix; kill -0 0 checks the
-        // process group, but using a very large unlikely PID is safer.
-        // PID 1 is init/launchd and kill -0 1 may fail due to permissions, but
-        // a large PID like 99999999 is almost certainly not running.
-        assert!(!is_alive(99999999));
-    }
-
-    #[test]
-    fn read_pid_file_parses_json() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("test.pid");
-        std::fs::write(&path, r#"{"pid":12345,"ticket_id":"0042","started_at":"2026-01-01T00:00Z"}"#).unwrap();
-        let wp = read_pid_file(&path).unwrap();
-        assert_eq!(wp.pid, 12345);
-        assert_eq!(wp.ticket_id, "0042");
-    }
-
-    #[test]
-    fn elapsed_since_seconds() {
-        let now = chrono::Utc::now();
-        let started = (now - chrono::Duration::seconds(30))
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
-            .to_string();
-        let s = elapsed_since(&started);
-        assert!(s.ends_with('s'), "expected seconds, got: {s}");
-    }
-
-    #[test]
-    fn elapsed_since_minutes() {
-        let now = chrono::Utc::now();
-        let started = (now - chrono::Duration::minutes(42))
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
-            .to_string();
-        let s = elapsed_since(&started);
-        assert_eq!(s, "42m");
-    }
-
-    #[test]
-    fn elapsed_since_hours() {
-        let now = chrono::Utc::now();
-        let started = (now - chrono::Duration::hours(2) - chrono::Duration::minutes(15))
-            .format("%Y-%m-%dT%H:%M:%S+00:00")
-            .to_string();
-        let s = elapsed_since(&started);
-        assert_eq!(s, "2h 15m");
-    }
-
-    #[test]
-    fn elapsed_since_invalid_returns_dash() {
-        assert_eq!(elapsed_since("not-a-date"), "—");
-    }
 }
