@@ -16,28 +16,25 @@ updated_at = "2026-03-30T16:31:26.876353Z"
 
 ### Problem
 
-`spec.rs` contains 394 lines of spec document manipulation logic that belongs in
-`apm-core`:
+spec.rs contains 394 lines of spec-document manipulation logic that belongs in apm-core:
 
-- Section name validation against config-defined sections
-- Section format validation (tasks/checkboxes, QA format, free text)
-- Document parsing and serialization (section get/set by heading)
-- Acceptance criteria checkbox parsing and toggling (`mark` subcommand)
-- Required section presence validation
-- Body manipulation utilities shared with other commands but duplicated
+- Section format enforcement based on SectionType (tasks/checkboxes, QA format, free text)
+- Setting named sections on TicketDocument fields (Problem, Acceptance criteria, Out of scope, Approach, Open questions, Amendment requests)
+- Acceptance criteria checkbox parsing and toggling (the `mark` subcommand)
+- Raw body section get/set for custom sections not mapped to TicketDocument fields
+- Section printing helpers shared by multiple code paths
 
-This logic is not CLI-specific — it operates on ticket document structure.
-`apm-serve` will need to read and write spec sections from the browser (e.g.
+None of this is CLI-specific — it all operates on ticket document structure.
+apm-serve will need to read and write spec sections from the browser (e.g.
 checking off acceptance criteria). Without this refactor it must shell out to
-`apm spec` or duplicate all the parsing.
+`apm spec` or duplicate all the parsing logic.
 
-Target: `apm_core::spec` module exposing `get_section()`, `set_section()`,
-`mark_item()`, `validate_sections()`. CLI `spec.rs` becomes a thin wrapper
-of ~50 lines.
+Target: a new `apm_core::spec` module exposing `get_section()`, `set_section()`,
+`apply_section_type()`, `mark_item()`, `get_section_body()`, and `set_section_body()`.
+CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -52,10 +49,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
