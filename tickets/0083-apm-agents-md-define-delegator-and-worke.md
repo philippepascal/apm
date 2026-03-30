@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0083-apm-agents-md-define-delegator-and-worke"
 created_at = "2026-03-30T05:10:20.442934Z"
-updated_at = "2026-03-30T05:11:46.932019Z"
+updated_at = "2026-03-30T05:11:49.077483Z"
 +++
 
 ## Spec
