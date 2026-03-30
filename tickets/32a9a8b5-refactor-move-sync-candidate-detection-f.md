@@ -15,7 +15,22 @@ updated_at = "2026-03-30T14:27:39.762926Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`sync.rs` contains 172 lines of candidate detection logic that belongs in
+`apm-core`:
+
+- Merged branch detection (via `git::merged_into_main`)
+- Accept candidate detection: implemented tickets whose branch is merged into main
+- Close candidate detection: tickets in "accepted" state, or "implemented" on
+  main with no ticket branch
+- Squash-merge detection (via `git log --cherry-pick`)
+- Batch accept/close orchestration
+
+The interactive prompting (`[y/N]`) belongs in the CLI. The detection logic
+does not. `apm-serve` will want to show a sync preview — "these tickets are
+ready to accept/close" — without shelling out to `apm sync`.
+
+Target: `apm_core::sync::detect()` returning structured candidates. CLI prompts
+the user and calls `apm_core::sync::apply()`.
 
 ### Acceptance criteria
 
