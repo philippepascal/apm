@@ -1,14 +1,15 @@
 +++
 id = "1d122a6a"
 title = "fetch before read in close, state, take, next, list when aggressive"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/1d122a6a-fetch-before-read-in-close-state-take-ne"
 created_at = "2026-03-30T19:50:51.401850Z"
-updated_at = "2026-03-30T19:50:51.401850Z"
+updated_at = "2026-03-30T20:00:23.114115Z"
 +++
 
 ## Spec
@@ -76,3 +77,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T19:50Z | — | new | philippepascal |
+| 2026-03-30T20:00Z | new | in_design | philippepascal |
