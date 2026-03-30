@@ -40,9 +40,9 @@ enum Command {
     },
     /// Show a ticket
     Show {
-        /// Ticket ID
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: u32,
+        id: String,
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
@@ -70,9 +70,9 @@ enum Command {
     },
     /// Transition a ticket's state
     State {
-        /// Ticket ID
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: u32,
+        id: String,
         /// Target state (e.g. in_design, specd, ready, in_progress, implemented, closed)
         #[arg(value_name = "STATE")]
         state: String,
@@ -82,9 +82,9 @@ enum Command {
     },
     /// Set a field on a ticket
     Set {
-        /// Ticket ID
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: u32,
+        id: String,
         /// Field to update: priority, effort, risk, title, agent, supervisor, branch
         #[arg(value_name = "FIELD")]
         field: String,
@@ -94,8 +94,8 @@ enum Command {
     },
     /// Claim a ticket and check out its branch
     Start {
-        /// Ticket ID; omit when using --next
-        id: Option<u32>,
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer); omit when using --next
+        id: Option<String>,
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
@@ -135,9 +135,9 @@ enum Command {
     },
     /// Take over a ticket from another agent
     Take {
-        /// Ticket ID to take over (must already have an agent assigned)
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: u32,
+        id: String,
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
@@ -146,16 +146,16 @@ enum Command {
     Worktrees {
         /// Provision a permanent worktree for the given ticket ID (any state)
         #[arg(long, value_name = "ID")]
-        add: Option<u32>,
+        add: Option<String>,
         /// Remove the worktree for the given ticket ID
         #[arg(long, value_name = "ID")]
-        remove: Option<u32>,
+        remove: Option<String>,
     },
     /// Supervisor: edit ticket spec and optionally transition state
     Review {
-        /// Ticket ID to review
+        /// Ticket ID to review (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: u32,
+        id: String,
         /// Transition to this state after editing (skips interactive prompt)
         #[arg(long, value_name = "STATE")]
         to: Option<String>,
@@ -204,7 +204,8 @@ enum Command {
     },
     /// Force-close a ticket from any state (supervisor only)
     Close {
-        id: u32,
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+        id: String,
         /// Optional reason appended to the history entry
         #[arg(long)]
         reason: Option<String>,
@@ -217,9 +218,9 @@ enum Command {
     },
     /// Read or write individual spec sections of a ticket
     Spec {
-        /// Ticket ID
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: u32,
+        id: String,
         /// Section name (e.g. "Problem", "Approach")
         #[arg(long)]
         section: Option<String>,
@@ -267,31 +268,31 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
-        Command::Show { id, no_aggressive } => cmd::show::run(&root, id, no_aggressive),
+        Command::Show { id, no_aggressive } => cmd::show::run(&root, &id, no_aggressive),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
-        Command::State { id, state, no_aggressive } => cmd::state::run(&root, id, state, no_aggressive),
-        Command::Set { id, field, value } => cmd::set::run(&root, id, field, value),
+        Command::State { id, state, no_aggressive } => cmd::state::run(&root, &id, state, no_aggressive),
+        Command::Set { id, field, value } => cmd::set::run(&root, &id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
         Command::Start { id, no_aggressive, spawn, skip_permissions, next } => {
             match (next, id) {
                 (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
                 (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
-                (false, Some(id)) => cmd::start::run(&root, id, no_aggressive, spawn, skip_permissions),
+                (false, Some(id)) => cmd::start::run(&root, &id, no_aggressive, spawn, skip_permissions),
                 (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
             }
         }
         Command::Sync { offline, quiet, no_aggressive, auto_close, auto_accept } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close, auto_accept),
-        Command::Take { id, no_aggressive } => cmd::take::run(&root, id, no_aggressive),
-        Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
-        Command::Review { id, to, no_aggressive } => cmd::review::run(&root, id, to, no_aggressive),
+        Command::Take { id, no_aggressive } => cmd::take::run(&root, &id, no_aggressive),
+        Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add.as_deref(), remove.as_deref()),
+        Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
         Command::Validate { fix, json, config_only } => cmd::validate::run(&root, fix, json, config_only),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
-        Command::Close { id, reason } => cmd::close::run(&root, id, reason),
+        Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
         Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
-        Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, id, section, set, check, mark),
+        Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
     }
 }
 

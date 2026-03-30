@@ -14,7 +14,7 @@ pub fn run(root: &Path, json: bool) -> Result<()> {
         .iter()
         .filter(|t| {
             let fm = &t.frontmatter;
-            actionable.contains(&fm.state.as_str()) && fm.agent.is_none()
+            actionable.contains(&fm.state.as_str())
         })
         .collect();
 
@@ -36,11 +36,11 @@ pub fn run(root: &Path, json: bool) -> Result<()> {
             let fm = &t.frontmatter;
             if json {
                 println!(
-                    r#"{{"id":{}, "title":{:?}, "state":{:?}, "score":{}}}"#,
+                    r#"{{"id":{:?}, "title":{:?}, "state":{:?}, "score":{}}}"#,
                     fm.id, fm.title, fm.state, t.score(pw, ew, rw)
                 );
             } else {
-                println!("#{} [{}] {}", fm.id, fm.state, fm.title);
+                println!("{} [{}] {}", fm.id, fm.state, fm.title);
             }
         }
     }

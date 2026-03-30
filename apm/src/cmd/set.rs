@@ -3,21 +3,27 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, field: String, value: String) -> Result<()> {
     let config = Config::load(root)?;
+    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+
     if config.sync.aggressive {
-        let prefix = format!("ticket/{id:04}-");
-        if let Ok(branches) = git::ticket_branches(root) {
-            if let Some(b) = branches.iter().find(|b| b.starts_with(&prefix)) {
-                if let Err(e) = git::fetch_branch(root, b) {
-                    eprintln!("warning: fetch failed: {e:#}");
-                }
+        let branches = git::ticket_branches(root).unwrap_or_default();
+        if let Some(b) = branches.iter().find(|b| {
+            b.strip_prefix("ticket/")
+                .and_then(|s| s.split('-').next())
+                .map(|bid| bid == id.as_str())
+                .unwrap_or(false)
+        }) {
+            if let Err(e) = git::fetch_branch(root, b) {
+                eprintln!("warning: fetch failed: {e:#}");
             }
         }
     }
-    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
     let fm = &mut t.frontmatter;
     match field.as_str() {
@@ -44,7 +50,7 @@ pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
         .branch
         .clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(
         root,
@@ -54,6 +60,6 @@ pub fn run(root: &Path, id: u32, field: String, value: String) -> Result<()> {
         &format!("ticket({id}): set {field} = {value}"),
     )?;
 
-    println!("#{id}: {field} = {value}");
+    println!("{id}: {field} = {value}");
     Ok(())
 }

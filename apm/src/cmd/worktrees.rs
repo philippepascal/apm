@@ -2,23 +2,24 @@ use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, add_id: Option<u32>, remove_id: Option<u32>) -> Result<()> {
+pub fn run(root: &Path, add_id: Option<&str>, remove_id: Option<&str>) -> Result<()> {
     let config = Config::load(root)?;
 
-    if let Some(id) = add_id {
-        return add(root, &config, id);
+    if let Some(id_arg) = add_id {
+        return add(root, &config, id_arg);
     }
-    if let Some(id) = remove_id {
-        return remove(root, &config, id);
+    if let Some(id_arg) = remove_id {
+        return remove(root, &config, id_arg);
     }
 
     list(root, &config)
 }
 
-fn add(root: &Path, config: &Config, id: u32) -> Result<()> {
+fn add(root: &Path, config: &Config, id_arg: &str) -> Result<()> {
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
     let Some(t) = tickets.iter().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
 
     let branch = t
@@ -26,7 +27,7 @@ fn add(root: &Path, config: &Config, id: u32) -> Result<()> {
         .branch
         .clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     let wt_path = if let Some(existing) = git::find_worktree_for_branch(root, &branch) {
         existing
@@ -76,18 +77,19 @@ fn list(root: &Path, config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn remove(root: &Path, config: &Config, id: u32) -> Result<()> {
+fn remove(root: &Path, config: &Config, id_arg: &str) -> Result<()> {
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
     let Some(t) = tickets.iter().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
 
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     let Some(wt_path) = git::find_worktree_for_branch(root, &branch) else {
-        bail!("no worktree found for ticket #{id} (branch: {branch})");
+        bail!("no worktree found for ticket {id:?} (branch: {branch})");
     };
 
     git::remove_worktree(root, &wt_path)?;
