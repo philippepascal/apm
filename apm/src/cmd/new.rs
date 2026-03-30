@@ -1,10 +1,5 @@
 use anyhow::Result;
-use apm_core::{
-    config::Config,
-    git,
-    ticket::{slugify, Frontmatter, Ticket},
-};
-use chrono::Utc;
+use apm_core::{config::Config, ticket};
 use std::path::Path;
 
 pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool) -> Result<()> {
@@ -18,85 +13,21 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     if side_note && !config.agents.side_tickets {
         anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
     }
-    let tickets_dir = root.join(&config.tickets.dir);
-    std::fs::create_dir_all(&tickets_dir)?;
 
-    let id = git::gen_hex_id();
-    let slug = slugify(&title);
-    let filename = format!("{id}-{slug}.md");
-    let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
-    let branch = format!("ticket/{id}-{slug}");
-    let now = Utc::now();
     let author = std::env::var("APM_AGENT_NAME")
         .ok()
         .unwrap_or_else(|| "apm".into());
-    let fm = Frontmatter {
-        id: id.clone(),
-        title: title.clone(),
-        state: "new".into(),
-        priority: 0,
-        effort: 0,
-        risk: 0,
-        author: Some(author.clone()),
-        supervisor: None,
-        agent: None,
-        branch: Some(branch.clone()),
-        created_at: Some(now),
-        updated_at: Some(now),
-        focus_section: None,
-    };
-    let when = now.format("%Y-%m-%dT%H:%MZ");
-    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
-    let body_template = if config.ticket.sections.is_empty() {
-        format!("## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n{history_footer}")
-    } else {
-        let mut s = String::from("## Spec\n\n");
-        for sec in &config.ticket.sections {
-            let placeholder = sec.placeholder.as_deref().unwrap_or("");
-            s.push_str(&format!("### {}\n\n{}\n\n", sec.name, placeholder));
-        }
-        s.push_str(&history_footer);
-        s
-    };
-    let body = if let Some(ctx) = &context {
-        let transition_section = config.workflow.states.iter()
-            .find(|s| s.id == "new")
-            .and_then(|s| s.transitions.iter().find(|tr| tr.to == "in_design"))
-            .and_then(|tr| tr.context_section.clone());
-        let section = context_section
-            .clone()
-            .or(transition_section)
-            .unwrap_or_else(|| "Problem".to_string());
-        let heading = format!("### {section}\n\n");
-        if !body_template.contains(&heading) {
-            anyhow::bail!("section '### {section}' not found in ticket body template");
-        }
-        body_template.replacen(&heading, &format!("### {section}\n\n{ctx}\n\n"), 1)
-    } else {
-        body_template
-    };
-    let path = tickets_dir.join(&filename);
-    let t = Ticket { frontmatter: fm, body, path };
-    let content = t.serialize()?;
 
-    git::commit_to_branch(
-        root,
-        &branch,
-        &rel_path,
-        &content,
-        &format!("ticket({id}): create {title}"),
-    )?;
-
-    if aggressive {
-        if let Err(e) = git::push_branch(root, &branch) {
-            eprintln!("warning: push failed: {e:#}");
-        }
-    }
+    let t = ticket::create(root, &config, title, author, context, context_section, aggressive)?;
+    let id = &t.frontmatter.id;
+    let branch = t.frontmatter.branch.as_deref().unwrap_or("");
+    let filename = t.path.file_name().unwrap().to_string_lossy();
+    let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
 
     println!("Created ticket {id}: {filename} (branch: {branch})");
 
     if !no_edit {
-        open_editor(root, &config, &branch, &rel_path)?;
+        open_editor(root, &config, branch, &rel_path)?;
     }
 
     Ok(())
