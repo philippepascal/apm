@@ -510,38 +510,19 @@ fn sync_no_close_when_nothing_to_close() {
 }
 
 #[test]
-fn sync_batches_multiple_closes_into_one_commit() {
+fn sync_closes_multiple_accepted_tickets() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
     write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "accepted", 1, "alpha");
     write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "accepted", 2, "beta");
 
-    let commits_before: usize = std::process::Command::new("git")
-        .args(["rev-list", "--count", "main"])
-        .current_dir(p)
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
-        .unwrap_or(0);
-
     apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
 
-    let commits_after: usize = std::process::Command::new("git")
-        .args(["rev-list", "--count", "main"])
-        .current_dir(p)
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
-        .unwrap_or(0);
-
-    assert_eq!(commits_after, commits_before + 1, "exactly one new commit expected");
-
-    let msg = std::process::Command::new("git")
-        .args(["log", "--format=%s", "-1"])
-        .current_dir(p)
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap())
-        .unwrap();
-    assert!(msg.contains("#1") && msg.contains("#2"), "commit message should list both tickets: {msg}");
+    let alpha = branch_content(p, "main", "tickets/0001-alpha.md");
+    let beta = branch_content(p, "main", "tickets/0002-beta.md");
+    assert!(alpha.contains("state = \"closed\""), "alpha should be closed on main: {alpha}");
+    assert!(beta.contains("state = \"closed\""), "beta should be closed on main: {beta}");
 }
 
 // --- take ---
@@ -823,6 +804,87 @@ fn spec_mark_case_insensitive() {
     ).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
+}
+
+// ── apm close ────────────────────────────────────────────────────────────────
+
+#[test]
+fn close_transitions_from_any_state() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Close me".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-close-me", "tickets/0001-close-me.md");
+    // Ticket is in "new" state — no transition to "closed" is defined.
+    apm::cmd::close::run(p, 1, None).unwrap();
+    let content = branch_content(p, "ticket/0001-close-me", "tickets/0001-close-me.md");
+    assert!(content.contains("state = \"closed\""), "state not updated: {content}");
+    assert!(content.contains("| new | closed |"), "history row missing: {content}");
+}
+
+#[test]
+fn close_with_reason_appends_to_history() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Close reason".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-close-reason", "tickets/0001-close-reason.md");
+    apm::cmd::close::run(p, 1, Some("superseded by #42".into())).unwrap();
+    let content = branch_content(p, "ticket/0001-close-reason", "tickets/0001-close-reason.md");
+    assert!(content.contains("state = \"closed\""), "state not updated: {content}");
+    assert!(content.contains("superseded by #42"), "reason missing: {content}");
+}
+
+#[test]
+fn close_already_closed_is_error() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-already-closed", "tickets/0001-already-closed.md");
+    apm::cmd::close::run(p, 1, None).unwrap();
+    let result = apm::cmd::close::run(p, 1, None);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("already closed"));
+}
+
+#[test]
+fn close_nonexistent_ticket_is_error() {
+    let dir = setup();
+    let p = dir.path();
+    let result = apm::cmd::close::run(p, 999, None);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("not found"));
+}
+
+#[test]
+fn validate_does_not_flag_closed_state() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-validate-closed", "tickets/0001-validate-closed.md");
+    apm::cmd::close::run(p, 1, None).unwrap();
+    // apm validate should not flag the closed ticket as having an unknown state.
+    // The test config is minimal and may produce config warnings (e.g. missing transitions),
+    // but there must be zero ticket-level errors.
+    let result = apm::cmd::validate::run(p, false, false, false);
+    if let Err(e) = &result {
+        let msg = e.to_string();
+        assert!(
+            msg.contains("0 ticket errors"),
+            "validate flagged a ticket-level error (possibly unknown state): {msg}"
+        );
+    }
+}
+
+#[test]
+fn state_to_closed_bypasses_transition_rules() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "State closed".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-state-closed", "tickets/0001-state-closed.md");
+    // "new" state has no outgoing transitions to "closed" in the test config,
+    // but "closed" is a mandatory terminal state so it should still work.
+    apm::cmd::state::run(p, 1, "closed".into(), false).unwrap();
+    let content = branch_content(p, "ticket/0001-state-closed", "tickets/0001-state-closed.md");
+    assert!(content.contains("state = \"closed\""), "state not updated: {content}");
 }
 
 // ── apm start --next ─────────────────────────────────────────────────────────

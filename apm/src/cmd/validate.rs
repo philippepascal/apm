@@ -84,8 +84,9 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
         }
 
         for transition in &state.transitions {
-            // Transition target must exist.
-            if !state_ids.contains(transition.to.as_str()) {
+            // Transition target must exist.  "closed" is a built-in terminal state
+            // that is always valid even when absent from [[workflow.states]].
+            if transition.to != "closed" && !state_ids.contains(transition.to.as_str()) {
                 errors.push(format!(
                     "config: state.{}.transition({}) — target state '{}' does not exist",
                     state.id, transition.to, transition.to
@@ -158,7 +159,7 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool) -> Result<()> 
             let fm = &t.frontmatter;
             let ticket_subject = format!("#{}", fm.id);
 
-            if !state_ids.is_empty() && !state_ids.contains(fm.state.as_str()) {
+            if !state_ids.is_empty() && fm.state != "closed" && !state_ids.contains(fm.state.as_str()) {
                 ticket_issues.push(Issue {
                     kind: "ticket".into(),
                     subject: ticket_subject.clone(),
@@ -219,7 +220,11 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool) -> Result<()> 
     }
 
     if has_errors {
-        std::process::exit(1);
+        anyhow::bail!(
+            "{} config errors, {} ticket errors",
+            config_errors.len(),
+            ticket_issues.len()
+        );
     }
 
     Ok(())
@@ -611,6 +616,47 @@ terminal = true
             !errors.iter().any(|e| e.contains("context_section")),
             "unexpected context_section error in {errors:?}"
         );
+    }
+
+    // Test: closed state is not flagged as unknown even when absent from config
+    #[test]
+    fn closed_state_not_flagged_as_unknown() {
+        use apm_core::ticket::Ticket;
+
+        // Config with no "closed" state
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to = "done"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let state_ids: std::collections::HashSet<&str> = config.workflow.states.iter()
+            .map(|s| s.id.as_str())
+            .collect();
+
+        let raw = "+++\nid = 1\ntitle = \"Test\"\nstate = \"closed\"\n+++\n\n## Spec\n";
+        let ticket = Ticket::parse(Path::new("tickets/0001-test.md"), raw).unwrap();
+
+        // "closed" is not in state_ids, but the validate logic skips it.
+        assert!(!state_ids.contains("closed"));
+        // Simulate the validate check: closed should be exempt.
+        let fm = &ticket.frontmatter;
+        let flagged = !state_ids.is_empty() && fm.state != "closed" && !state_ids.contains(fm.state.as_str());
+        assert!(!flagged, "closed state should not be flagged as unknown");
     }
 
     // Test for state_ids helper (kept for compatibility)

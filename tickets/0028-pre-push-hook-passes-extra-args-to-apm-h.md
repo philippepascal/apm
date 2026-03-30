@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-1854-10aa"
 branch = "ticket/0028-pre-push-hook-passes-extra-args-to-apm-h"
 created_at = "2026-03-27T05:42:59.348405Z"
-updated_at = "2026-03-29T20:46:09.354423Z"
+updated_at = "2026-03-30T00:54:19.872079Z"
 +++
 
 ## Spec
@@ -51,4 +51,4 @@ the hook template string in `cmd/init.rs` `write_hooks()`.
 | 2026-03-28T01:54Z | ready | in_progress | claude-0327-1854-10aa |
 | 2026-03-28T01:56Z | in_progress | implemented | claude-0327-1854-10aa |
 | 2026-03-28T07:31Z | implemented | accepted | apm sync |
-| 2026-03-29T20:46Z | accepted | closed | apm-sync |
+| 2026-03-30T00:54Z | accepted | closed | apm-sync |

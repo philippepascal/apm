@@ -1,5 +1,6 @@
 pub mod cmd {
     pub mod agents;
+    pub mod close;
     pub mod hook;
     pub mod init;
     pub mod start;
