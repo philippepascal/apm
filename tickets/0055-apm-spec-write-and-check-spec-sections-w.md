@@ -1,7 +1,7 @@
 +++
 id = 55
 title = "apm spec: write and check spec sections without direct file editing"
-state = "accepted"
+state = "closed"
 priority = 4
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-main"
 branch = "ticket/0055-apm-spec-write-and-check-spec-sections-w"
 created_at = "2026-03-29T19:11:46.489066Z"
-updated_at = "2026-03-29T22:47:46.253891Z"
+updated_at = "2026-03-30T02:04:27.454426Z"
 +++
 
 ## Spec
@@ -118,3 +118,4 @@ acceptance criterion using temp git repos (following the existing pattern).
 | 2026-03-29T20:49Z | ready | in_progress | claude-0329-main |
 | 2026-03-29T20:53Z | in_progress | implemented | claude-0329-main |
 | 2026-03-29T22:47Z | implemented | accepted | apm |
+| 2026-03-30T02:04Z | accepted | closed | apm-sync |
