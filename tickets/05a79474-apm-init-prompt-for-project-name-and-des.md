@@ -20,6 +20,7 @@ When a user runs `apm init` for the first time, the project name is silently der
 
 ### Acceptance criteria
 
+- [ ] hello
 
 ### Out of scope
 
