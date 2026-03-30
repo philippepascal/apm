@@ -148,7 +148,7 @@ fn ensure_claude_md(root: &Path, agents_path: &str) -> Result<()> {
 }
 
 fn default_agents_md() -> &'static str {
-    include_str!("../../apm.agents.md")
+    include_str!("apm.agents.md")
 }
 
 #[cfg(target_os = "macos")]
