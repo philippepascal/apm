@@ -25,7 +25,7 @@ The `--check` flag in `apm spec` currently means "validate the spec" (check that
 - [x] `apm spec <id> --section <name> --mark <item-text>` finds the first unchecked item (`- [ ]`) in `### <name>` whose text matches `<item-text>` (case-insensitive substring) and marks it `- [x]`
 - [x] If no unchecked matching item is found, the command exits non-zero with a clear error
 - [x] If multiple unchecked items match, the command exits non-zero and lists the ambiguous matches
-- [ ] The commit message is `ticket(<id>): mark "<item-text>" in <section>`
+- [x] The commit message is `ticket(<id>): mark "<item-text>" in <section>`
 - [ ] Works on any section containing checkbox items, including "Amendment requests", "Code review", and "Acceptance criteria"
 - [ ] `--mark` without `--section` is an error
 - [ ] The existing `--check` flag (validate spec) is unaffected
