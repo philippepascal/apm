@@ -18,9 +18,13 @@ updated_at = "2026-03-30T20:35:09.388789Z"
 
 This was previously ticket #0063 (closed), but the implementation was never merged — the PR was itself squash-merged, which the detection bug caused to be missed, so the fix never landed.
 
-`apm sync` detects merged branches via `git branch --merged`, which only identifies branches whose tip commit is an ancestor of the default branch. Squash merges produce a single new commit in main; the original branch commits are not ancestors, so `merged_into_main()` in `git.rs` misses them. Squash-merged tickets are never transitioned to `accepted` and accumulate indefinitely in the branch list, also blocking `apm clean`.
+`apm sync` detects merged branches via `git branch --merged`, which only identifies branches whose tip commit is an ancestor of the default branch. Squash merges produce a single new commit in main; the original branch commits are not ancestors, so `merged_into_main()` in `git.rs` misses them.
 
-GitHub's default merge strategy for most repos is squash merge, making this a common failure mode.
+The existing `squash_merged()` helper in `apm-core/src/git.rs` was added to close this gap, but it uses the wrong algorithm. It runs `git log --cherry-pick --right-only --no-merges origin/main...branch` and treats an empty result as proof that the branch was squash-merged. The `--cherry-pick` flag matches commits by **individual patch-id**. A squash merge creates one combined commit whose patch-id is the aggregate diff of all branch commits — not equal to any individual branch commit's patch-id. So the output is never empty for an actual squash merge, and detection always fails.
+
+Additionally, in the remote path of `merged_into_main()`, candidates are collected only from `origin/ticket/*`. Branches that exist locally but whose remote tracking ref has been deleted (e.g. GitHub auto-deletes the branch after merging) are never checked at all.
+
+Squash-merged tickets are never transitioned to `accepted` and accumulate indefinitely in the branch list, also blocking `apm clean`. GitHub's default merge strategy for most repos is squash merge, making this a near-universal failure mode.
 
 ### Acceptance criteria
 
