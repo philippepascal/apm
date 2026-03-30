@@ -4,12 +4,12 @@ title = "apm state: add escape hatch from in_design back to new"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 agent = "57170"
 branch = "ticket/8b3fc691-apm-state-add-escape-hatch-from-in-desig"
 created_at = "2026-03-30T14:44:59.243807Z"
-updated_at = "2026-03-30T16:10:41.456855Z"
+updated_at = "2026-03-30T16:10:43.812653Z"
 +++
 
 ## Spec
