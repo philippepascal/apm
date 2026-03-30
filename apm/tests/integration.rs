@@ -1328,3 +1328,39 @@ terminal = true
     });
     assert!(has_bad_section, "expected context_section mismatch error in {errors:?}");
 }
+
+// --- review ---
+
+#[test]
+fn review_ammend_normalises_plain_bullets_to_checkboxes() {
+    let dir = setup();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "Review checkbox test".into(), true, false, None, None, true).unwrap();
+
+    let branch = "ticket/0001-review-checkbox-test";
+    let ticket_path = "tickets/0001-review-checkbox-test.md";
+
+    // Write a spec with a ### Amendment requests section containing plain bullets.
+    let existing = branch_content(p, branch, ticket_path);
+    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let frontmatter = &existing[..fm_end];
+    let body = "\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] AC one\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- plain item\n- [ ] already a checkbox\n- [x] already checked\n\n## History\n\n| When | From | To | By |\n|------|------|----|-----|\n| 2026-01-01T00:00Z | — | new | test-agent |\n";
+    let content = format!("{frontmatter}{body}");
+    git(p, &["checkout", branch]);
+    std::fs::write(p.join(ticket_path), &content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ticket_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add amendment requests"]);
+    git(p, &["checkout", "-"]);
+
+    // Use a no-op editor so the spec is not modified interactively.
+    std::env::set_var("EDITOR", "true");
+    apm::cmd::review::run(p, 1, Some("ammend".to_string()), true).unwrap();
+    std::env::remove_var("EDITOR");
+
+    let committed = branch_content(p, branch, ticket_path);
+    assert!(committed.contains("- [ ] plain item"), "plain bullet should be converted to checkbox");
+    assert!(!committed.contains("\n- plain item\n"), "plain bullet should no longer appear as-is");
+    assert!(committed.contains("- [ ] already a checkbox"), "existing checkbox should be unchanged");
+    assert!(committed.contains("- [x] already checked"), "checked item should be unchanged");
+}
