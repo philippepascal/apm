@@ -1,7 +1,7 @@
 +++
 id = 77
 title = "Audit and update CLI help text for consistency and completeness"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0077-audit-and-update-cli-help-text-for-consi"
 created_at = "2026-03-30T00:59:27.415791Z"
-updated_at = "2026-03-30T02:43:59.488138Z"
+updated_at = "2026-03-30T02:48:53.096438Z"
 +++
 
 ## Spec
@@ -64,3 +64,4 @@ Work file by file: `main.rs`, then each cmd in alphabetical order.
 | 2026-03-30T01:05Z | specd | ready | claude-0329-1430-main |
 | 2026-03-30T01:05Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-30T02:43Z | claude-0329-1430-main | claude-0330-0245-main | handoff |
+| 2026-03-30T02:48Z | in_progress | implemented | claude-0330-0245-main |
