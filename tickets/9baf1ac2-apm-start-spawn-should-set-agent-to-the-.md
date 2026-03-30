@@ -15,7 +15,12 @@ updated_at = "2026-03-30T05:56:35.911177Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When `apm start --spawn` claims a ticket, it sets `agent` to the delegator's
+`APM_AGENT_NAME`. The spawned worker runs under its own agent name (visible in
+the worker log as `Agent name: claude-MMDD-HHMM-XXXX`) but the ticket
+frontmatter is never updated to reflect that. As a result, `apm list` shows all
+spawned tickets as owned by the delegator, making it impossible to tell which
+worker is handling which ticket.
 
 ### Acceptance criteria
 
