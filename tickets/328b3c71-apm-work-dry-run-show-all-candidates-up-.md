@@ -1,7 +1,7 @@
 +++
 id = "328b3c71"
 title = "apm work --dry-run: show all candidates up to max-workers"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "44156"
 branch = "ticket/328b3c71-apm-work-dry-run-show-all-candidates-up-"
 created_at = "2026-03-30T16:31:01.147894Z"
-updated_at = "2026-03-30T17:02:35.295368Z"
+updated_at = "2026-03-30T17:14:52.306100Z"
 +++
 
 ## Spec
@@ -69,3 +69,4 @@ Files changed:
 | 2026-03-30T16:43Z | in_design | specd | claude-0330-1640-b3f2 |
 | 2026-03-30T17:01Z | specd | ready | philippepascal |
 | 2026-03-30T17:02Z | ready | in_progress | philippepascal |
+| 2026-03-30T17:14Z | in_progress | implemented | claude-0330-1702-d640 |
