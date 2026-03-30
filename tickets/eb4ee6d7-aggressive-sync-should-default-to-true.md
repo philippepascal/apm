@@ -15,11 +15,14 @@ updated_at = "2026-03-30T19:53:26.019513Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The `sync.aggressive` flag controls whether commands fetch before reading and push after writing. It defaults to `false` because `bool` fields in Rust/serde default to false when absent.
+
+This is the wrong default. Aggressive mode is the safe, correct behaviour for any team or single-user workflow where GitHub is the source of truth. Without it, commands silently operate on stale local state — a footgun that only manifests when things go wrong (merge conflicts, double-transitions, stale PR detection).
+
+The fix is a one-liner: add `#[serde(default = "default_true")]` to the `aggressive` field in `SyncConfig` so that new repos and repos without an explicit `aggressive` line in `config.toml` get `true` automatically. Existing repos with `aggressive = false` explicitly set are unaffected.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +37,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
