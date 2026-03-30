@@ -3,8 +3,8 @@ id = 84
 title = "apm workers: list and manage running worker processes"
 state = "in_design"
 priority = 0
-effort = 0
-risk = 0
+effort = 3
+risk = 2
 author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0084-apm-workers-list-and-manage-running-work"
@@ -16,31 +16,93 @@ updated_at = "2026-03-30T05:14:18.595578Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm start --spawn` launches worker processes but provides no way to observe or
+manage them afterward. The only way to check on a worker is to run `ps aux |
+grep claude`, inspect the ticket state with `apm show`, and guess at the log
+location. There is no way to tail a worker's output, kill a stuck worker, or
+see how long it has been running.
+
+Specifically missing today:
+- No registry of which workers are running and which tickets they own
+- No way to tail a worker's log from the CLI
+- No way to kill a worker cleanly without digging up the PID manually
+- Log file exists (`.apm-worker.log` in the worktree) but its path is not
+  surfaced anywhere after `apm start --spawn` prints it
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm start --spawn` writes a `.apm-worker.pid` file to the worktree
+  containing the worker PID and ticket ID, deleted automatically when the
+  process exits
+- [ ] `apm workers` lists all currently running workers in a table:
+  ticket ID, title, PID, elapsed time, current ticket state
+- [ ] `apm workers` shows no output (or "No workers running.") when no
+  `.apm-worker.pid` files exist in any active worktree
+- [ ] `apm workers --log <id>` tails the last N lines of the worker log for
+  ticket `<id>` and follows new output (like `tail -f`)
+- [ ] `apm workers --kill <id>` sends SIGTERM to the worker for ticket `<id>`
+  and removes the `.apm-worker.pid` file; prints a confirmation
+- [ ] `apm workers --kill <id>` exits non-zero with a clear message if the
+  worker is not running
+- [ ] Stale `.apm-worker.pid` files (PID no longer alive) are detected and
+  reported as "crashed" in `apm workers` output rather than silently skipped
+  or treated as running
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Re-attaching to a worker's interactive session
+- Worker resource limits (CPU, memory)
+- Remote workers (all workers are local processes)
 
 ### Approach
 
-How the implementation will work.
+**PID file**
 
-### Open questions
+When `apm start --spawn` forks the worker, write a JSON file to the worktree:
 
+```json
+{ "pid": 85291, "ticket_id": 35, "started_at": "2026-03-30T05:14Z" }
+```
 
+at `<worktree>/.apm-worker.pid`. Use a wrapper script or a `std::process::Command`
+post-spawn hook to delete the file on exit. Since `claude --print` is a
+foreground process, the simplest approach: write the PID file before exec,
+then in a cleanup handler (or a small wrapper) delete it when the process
+exits. A shell wrapper works well:
 
-### Amendment requests
+```bash
+claude --print ... ; rm -f .apm-worker.pid
+```
 
+**`apm workers` — list**
 
+Scan all registered worktrees (`git worktree list --porcelain`) for
+`.apm-worker.pid` files. For each:
 
-### Code review
+1. Parse PID and ticket ID from JSON
+2. Check if PID is alive (`kill -0 <pid>`)
+   - Alive → show as running with elapsed time
+   - Dead → show as "crashed" (stale pid file)
+3. Load ticket state via `apm show <id>` for the current state column
 
+Output format:
 
+```
+ID    TITLE                        PID    STATE        ELAPSED
+35    github-apm-meta              85291  in_progress  42m
+77    help text audit              —      crashed      —
+```
+
+**`apm workers --log <id>`**
+
+Locate the worktree for ticket `<id>`, then exec `tail -f
+<worktree>/.apm-worker.log`. Exit with an error if the log file doesn't exist.
+
+**`apm workers --kill <id>`**
+
+Locate the `.apm-worker.pid` for ticket `<id>`, send SIGTERM to the PID,
+remove the file, print `"killed worker for ticket #<id> (PID <pid>)"`.
 
 ## History
 
