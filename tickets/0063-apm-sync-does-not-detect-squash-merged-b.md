@@ -16,13 +16,60 @@ updated_at = "2026-03-30T01:08:31.191681Z"
 
 ### Problem
 
-git branch --merged only detects regular merges. Squash-merged PRs leave the branch tip as a non-ancestor of main, so merged_into_main() in git.rs misses them. apm sync therefore does not transition squash-merged tickets to accepted.
+`apm sync` detects merged branches via `git branch --merged`, which only identifies branches whose tip commit is an ancestor of the default branch. Squash merges produce a single new commit in main; the original branch commits are not ancestors, so `merged_into_main()` in `git.rs` misses them. Squash-merged tickets are never transitioned to `accepted` and accumulate indefinitely in the branch list.
+
+GitHub's default merge strategy for most repos is squash merge, making this a common failure case.
 
 ### Acceptance criteria
 
+- [ ] `apm sync` detects branches that have been squash-merged into the default branch and treats them identically to regular merges (offers to transition the ticket to `accepted`)
+- [ ] Regular (non-squash) merge detection is unchanged
+- [ ] Branches with no commits yet merged are not falsely detected
+- [ ] `cargo test --workspace` passes
+
 ### Out of scope
 
+- Rebase-merge detection (similar problem, separate ticket if needed)
+- Changing the interactive accept prompt or auto-accept behaviour
+
 ### Approach
+
+In `apm-core/src/git.rs`, extend `merged_into_main` with a second pass for branches not caught by `--merged`.
+
+For each ticket branch not already in the `--merged` results, run:
+
+```
+git log --cherry-pick --right-only --no-merges <default_branch>...<branch>
+```
+
+Git's `--cherry-pick` flag suppresses commits whose patch-id already appears on the other side of the `...`. `--right-only` shows only commits from `<branch>`. If the output is empty, every commit in the branch has an equivalent patch already in `<default_branch>` — the branch was squash-merged.
+
+Implementation sketch:
+
+```rust
+pub fn merged_into_main(root: &Path, default_branch: &str) -> Result<Vec<String>> {
+    // ... existing --merged logic ...
+    let already_merged: HashSet<String> = /* existing result */;
+
+    // Second pass: squash-merge detection for remaining ticket branches.
+    let mut squash_merged = Vec::new();
+    for branch in ticket_branches(root)? {
+        if already_merged.contains(&branch) { continue; }
+        let range = format!("{default_branch}...{branch}");
+        let out = run(root, &[
+            "log", "--cherry-pick", "--right-only", "--no-merges",
+            "--format=%H", &range,
+        ]).unwrap_or_default();
+        if out.trim().is_empty() {
+            squash_merged.push(branch);
+        }
+    }
+
+    Ok(already_merged.into_iter().chain(squash_merged).collect())
+}
+```
+
+Use the remote ref (`origin/<default_branch>`) if available, same as the existing logic.
 
 ## History
 
