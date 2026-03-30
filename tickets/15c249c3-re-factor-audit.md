@@ -1,7 +1,7 @@
 +++
 id = "15c249c3"
 title = "re-factor audit"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0330-0245-main"
 branch = "ticket/15c249c3-re-factor-audit"
 created_at = "2026-03-30T06:01:35.844292Z"
-updated_at = "2026-03-30T06:19:36.259608Z"
+updated_at = "2026-03-30T06:23:59.308531Z"
 +++
 
 ## Spec
@@ -121,3 +121,4 @@ apm new --no-edit "Move rand_u16 utility to apm-core"
 | 2026-03-30T06:01Z | — | new | apm |
 | 2026-03-30T06:16Z | new | in_design | claude-0330-0245-main |
 | 2026-03-30T06:19Z | in_design | specd | claude-0330-0245-main |
+| 2026-03-30T06:23Z | specd | ready | apm |
