@@ -30,7 +30,12 @@ Replacing rusqlite with a different storage backend. This ticket is strictly a r
 
 ### Approach
 
-How the implementation will work.
+1. In Cargo.toml (workspace root): delete the rusqlite line from [workspace.dependencies].
+2. In apm-core/Cargo.toml: delete the rusqlite line from [dependencies].
+3. Run cargo build --workspace to confirm compilation succeeds and Cargo.lock is regenerated without rusqlite.
+4. Run cargo test --workspace to confirm all tests still pass.
+
+No source files need to change because rusqlite was never imported or used in any .rs file.
 
 ### Open questions
 
