@@ -1,7 +1,7 @@
 +++
 id = 36
 title = "push-pull-agressive-mode"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-2000-36ff"
 branch = "ticket/0036-push-pull-agressive-mode"
 created_at = "2026-03-28T00:45:49.063412Z"
-updated_at = "2026-03-28T07:31:54.116146Z"
+updated_at = "2026-03-30T02:03:45.660379Z"
 +++
 
 ## Spec
@@ -49,3 +49,4 @@ Add `AggressiveSync: bool` to a `[sync]` section in `apm-core/src/config.rs`. Th
 | 2026-03-28T02:09Z | ready | in_progress | claude-0327-2000-36ff |
 | 2026-03-28T02:12Z | in_progress | implemented | claude-0327-2000-36ff |
 | 2026-03-28T07:31Z | implemented | accepted | apm sync |
+| 2026-03-30T02:03Z | accepted | closed | apm-sync |
