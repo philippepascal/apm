@@ -28,7 +28,7 @@ The only way to close a ticket today is via `apm sync`, which detects merged bra
 - [x] `apm close` writes `closed` to the ticket branch, pushes it, then merges it into the default branch — so the branch is a true git ancestor of main and `apm clean` can detect and remove it
 - [x] `apm sync`'s `batch_close` function is removed; `apm sync` calls the same close logic for each candidate instead
 - [x] After `apm sync` closes tickets, their branches are merged into main and `apm clean` removes their worktrees correctly
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
