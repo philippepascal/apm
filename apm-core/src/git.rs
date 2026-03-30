@@ -181,6 +181,19 @@ pub fn list_ticket_worktrees(root: &Path) -> Result<Vec<(std::path::PathBuf, Str
     Ok(result)
 }
 
+/// Find the worktree for `branch` or create one under `worktrees_base`.
+/// Returns the canonical worktree path. Idempotent.
+pub fn ensure_worktree(root: &Path, worktrees_base: &Path, branch: &str) -> Result<std::path::PathBuf> {
+    if let Some(existing) = find_worktree_for_branch(root, branch) {
+        return Ok(existing);
+    }
+    let wt_name = branch.replace('/', "-");
+    std::fs::create_dir_all(worktrees_base)?;
+    let wt_path = worktrees_base.join(&wt_name);
+    add_worktree(root, &wt_path, branch)?;
+    Ok(find_worktree_for_branch(root, branch).unwrap_or(wt_path))
+}
+
 /// Add a permanent worktree for the given branch at wt_path.
 /// Fetches the branch locally first if needed.
 pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()> {

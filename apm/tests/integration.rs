@@ -108,7 +108,8 @@ fn find_ticket_branch(dir: &std::path::Path, slug: &str) -> String {
     stdout
         .lines()
         .find(|l| !l.trim().is_empty())
-        .map(|l| l.trim().trim_start_matches("* ").to_string())
+        // strip "* " (current branch) and "+ " (branch in another worktree)
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim_start_matches(' ').to_string())
         .unwrap_or_else(|| panic!("no branch found for slug: {slug}"))
 }
 
@@ -197,7 +198,7 @@ fn list_excludes_terminal_tickets_by_default() {
 apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true).unwrap();
     apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, None, true).unwrap();
     let closed_id = find_ticket_id(dir.path(), "closed-ticket");
-    apm::cmd::state::run(dir.path(), &closed_id, "closed".into(), false).unwrap();
+    apm::cmd::state::run(dir.path(), &closed_id, "closed".into(), false, false).unwrap();
 
     // Verify indirectly through the filter logic in the library.
     let config = apm_core::config::Config::load(dir.path()).unwrap();
@@ -280,7 +281,7 @@ fn list_state_filter() {
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
     write_valid_spec_to_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false).unwrap();
+    apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
     apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None).unwrap();
@@ -312,7 +313,7 @@ fn state_transition_updates_file() {
     let id = find_ticket_id(dir.path(), "transition-test");
     let rel = ticket_rel_path(&branch);
     write_valid_spec_to_branch(dir.path(), &branch, &rel);
-    apm::cmd::state::run(dir.path(), &id, "specd".into(), false).unwrap();
+    apm::cmd::state::run(dir.path(), &id, "specd".into(), false, false).unwrap();
     // Read the updated state from the ticket branch (not the working tree).
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("state = \"specd\""));
@@ -326,7 +327,7 @@ fn state_transition_appends_history_row() {
     let id = find_ticket_id(dir.path(), "history-test");
     let rel = ticket_rel_path(&branch);
     write_valid_spec_to_branch(dir.path(), &branch, &rel);
-    apm::cmd::state::run(dir.path(), &id, "specd".into(), false).unwrap();
+    apm::cmd::state::run(dir.path(), &id, "specd".into(), false, false).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("| new | specd |"));
 }
@@ -338,7 +339,7 @@ fn state_ammend_inserts_amendment_section() {
     let branch = find_ticket_branch(dir.path(), "ammend-test");
     let id = find_ticket_id(dir.path(), "ammend-test");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::state::run(dir.path(), &id, "ammend".into(), false).unwrap();
+    apm::cmd::state::run(dir.path(), &id, "ammend".into(), false, false).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Amendment requests"));
 }
@@ -941,7 +942,7 @@ fn state_to_closed_bypasses_transition_rules() {
     let rel = ticket_rel_path(&branch);
     // "new" state has no outgoing transitions to "closed" in the test config,
     // but "closed" is a mandatory terminal state so it should still work.
-    apm::cmd::state::run(p, &id, "closed".into(), false).unwrap();
+    apm::cmd::state::run(p, &id, "closed".into(), false, false).unwrap();
     let content = branch_content(p, &branch, &rel);
     assert!(content.contains("state = \"closed\""), "state not updated: {content}");
 }
@@ -1178,6 +1179,87 @@ terminal = true
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
     assert!(content.contains("state = \"in_design\""), "ticket should be in_design: {content}");
     assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+}
+
+// ── apm start --spawn ────────────────────────────────────────────────────────
+
+/// Write a minimal fake `claude` executable to `bin_dir` and prepend it to PATH.
+/// Returns the old PATH so the caller can restore it.
+fn fake_claude_in_path(bin_dir: &std::path::Path) -> String {
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    let script = "#!/bin/sh\nexit 0\n";
+    let exe = bin_dir.join("claude");
+    std::fs::write(&exe, script).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let new_path = format!("{}:{old_path}", bin_dir.display());
+    std::env::set_var("PATH", &new_path);
+    old_path
+}
+
+#[test]
+fn start_spawn_sets_agent_to_worker_pid() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "delegator-agent");
+    apm::cmd::start::run(p, "1", true, true, false, "delegator-agent").unwrap();
+
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    // agent must be a decimal PID, not the delegator name
+    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator: {content}");
+    let agent_val = content.lines()
+        .find(|l| l.starts_with("agent = "))
+        .and_then(|l| l.strip_prefix("agent = \""))
+        .and_then(|l| l.strip_suffix('"'))
+        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
+    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+}
+
+#[test]
+fn start_non_spawn_keeps_agent_name() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    std::env::set_var("APM_AGENT_NAME", "delegator-agent");
+    apm::cmd::start::run(p, "1", true, false, false, "delegator-agent").unwrap();
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(content.contains("agent = \"delegator-agent\""), "non-spawn should keep APM_AGENT_NAME: {content}");
+}
+
+#[test]
+fn start_next_spawn_sets_agent_to_worker_pid() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "delegator-agent");
+    apm::cmd::start::run_next(p, true, true, false).unwrap();
+
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator after spawn: {content}");
+    let agent_val = content.lines()
+        .find(|l| l.starts_with("agent = "))
+        .and_then(|l| l.strip_prefix("agent = \""))
+        .and_then(|l| l.strip_suffix('"'))
+        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
+    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
 }
 
 // ── apm work ─────────────────────────────────────────────────────────────────
@@ -1700,4 +1782,324 @@ terminal = true
     apm::cmd::clean::run(p, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
+}
+
+// --- resolve_agent_name fallback ---
+
+#[test]
+fn start_without_apm_agent_name_uses_fallback() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-fallback", "0001-fallback.md", "ready", 1, "fallback");
+    // Use a pre-resolved name to avoid env var manipulation in a concurrent test context.
+    // The important thing is that run() accepts an explicit agent_name and stores it.
+    apm::cmd::start::run(p, "0001", true, false, false, "ci-agent").unwrap();
+    let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
+    assert!(content.contains("agent = \"ci-agent\""), "agent should be ci-agent: {content}");
+}
+
+// ---------------------------------------------------------------------------
+// workers
+// ---------------------------------------------------------------------------
+
+fn setup_with_worktrees() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    // worktrees dir inside the tempdir to keep tests self-contained.
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &[
+        "-c", "commit.gpgsign=false",
+        "commit", "-m", "init", "--allow-empty",
+    ]);
+
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn workers_no_worktrees_returns_ok() {
+    let dir = setup();
+    let p = dir.path();
+    // No ticket worktrees, so workers list should succeed (and print nothing).
+    apm::cmd::workers::run(p, None, None).unwrap();
+}
+
+#[test]
+fn workers_kill_no_pid_file_errors() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    apm::cmd::new::run(p, "kill test ticket".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "kill-test-ticket");
+    apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
+
+    // Provision a worktree without writing a pid file.
+    apm_core::git::ensure_worktree(p, &p.join("worktrees"), &find_ticket_branch(p, "kill-test-ticket")).unwrap();
+
+    // --kill should return an error since there is no pid file.
+    let result = apm::cmd::workers::run(p, None, Some(&id));
+    assert!(result.is_err(), "expected error when no pid file present");
+    let msg = format!("{:#}", result.unwrap_err());
+    assert!(
+        msg.contains("not running") || msg.contains(".apm-worker.pid"),
+        "unexpected error message: {msg}"
+    );
+}
+
+#[test]
+fn workers_stale_pid_file_detected() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    apm::cmd::new::run(p, "stale pid ticket".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "stale-pid-ticket");
+    apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
+    let branch = find_ticket_branch(p, "stale-pid-ticket");
+    apm_core::git::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
+    let wt_name = branch.replace('/', "-");
+    let wt_path = p.join("worktrees").join(&wt_name);
+    std::fs::create_dir_all(&wt_path).unwrap();
+
+    // Write a stale pid file (PID 99999999 is almost certainly not running).
+    let pid_file = wt_path.join(".apm-worker.pid");
+    std::fs::write(
+        &pid_file,
+        r#"{"pid":99999999,"ticket_id":"XXXX","started_at":"2026-01-01T00:00:00+00:00"}"#,
+    )
+    .unwrap();
+
+    // workers list should succeed (stale entry is shown as "crashed", not an error).
+    apm::cmd::workers::run(p, None, None).unwrap();
+}
+
+#[test]
+fn workers_kill_stale_pid_errors() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    apm::cmd::new::run(p, "kill stale ticket".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "kill-stale-ticket");
+    apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
+    let branch = find_ticket_branch(p, "kill-stale-ticket");
+    apm_core::git::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
+    let wt_name = branch.replace('/', "-");
+    let wt_dir = p.join("worktrees").join(&wt_name);
+    std::fs::create_dir_all(&wt_dir).unwrap();
+    let pid_file = wt_dir.join(".apm-worker.pid");
+    std::fs::write(
+        &pid_file,
+        r#"{"pid":99999999,"ticket_id":"XXXX","started_at":"2026-01-01T00:00:00+00:00"}"#,
+    )
+    .unwrap();
+
+    // --kill on a stale pid should return an error.
+    let result = apm::cmd::workers::run(p, None, Some(&id));
+    let err_msg = match &result {
+        Err(e) => format!("{e:#}"),
+        Ok(_) => String::new(),
+    };
+    assert!(result.is_err(), "expected error when pid is stale");
+    assert!(
+        err_msg.contains("not running"),
+        "unexpected error (expected 'not running'): {err_msg}"
+    );
+    // The stale pid file should be cleaned up.  Check via git's recorded path
+    // to handle macOS symlink resolution (/var -> /private/var).
+    let real_wt = apm_core::git::find_worktree_for_branch(p, &branch)
+        .expect("worktree must still be registered");
+    assert!(
+        !real_wt.join(".apm-worker.pid").exists(),
+        "stale pid file should be removed on failed kill"
+    );
+}
+
+fn setup_with_strict_transitions() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn state_force_bypasses_transition_rules() {
+    let dir = setup_with_strict_transitions();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "force test".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "force-test");
+
+    // Advance to in_progress (new → in_progress is valid).
+    apm::cmd::state::run(p, &id, "in_progress".into(), true, false).unwrap();
+
+    // Without --force, going back to new from in_progress should fail (not in allowed transitions).
+    let result = apm::cmd::state::run(p, &id, "new".into(), true, false);
+    assert!(result.is_err(), "expected transition rejection without --force");
+
+    // With --force, the same transition must succeed.
+    apm::cmd::state::run(p, &id, "new".into(), true, true).unwrap();
+
+    // Verify the ticket is back in "new".
+    let tickets = apm_core::ticket::load_all_from_git(p, std::path::Path::new("tickets")).unwrap();
+    let t = tickets.iter().find(|t| t.frontmatter.id == id).unwrap();
+    assert_eq!(t.frontmatter.state, "new");
+}
+
+#[test]
+fn state_force_implemented_from_in_progress() {
+    let dir = setup_with_strict_transitions();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "force progress".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "force-progress");
+
+    // Advance to in_progress.
+    apm::cmd::state::run(p, &id, "in_progress".into(), true, false).unwrap();
+
+    // Without --force, going to new from in_progress should fail.
+    let result = apm::cmd::state::run(p, &id, "new".into(), true, false);
+    assert!(result.is_err(), "expected transition rejection without --force");
+
+    // With --force, new is reachable from in_progress.
+    apm::cmd::state::run(p, &id, "new".into(), true, true).unwrap();
+
+    let tickets = apm_core::ticket::load_all_from_git(p, std::path::Path::new("tickets")).unwrap();
+    let t = tickets.iter().find(|t| t.frontmatter.id == id).unwrap();
+    assert_eq!(t.frontmatter.state, "new");
+}
+
+#[test]
+fn state_force_still_rejects_unknown_state() {
+    let dir = setup();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "force unknown".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "force-unknown");
+
+    // --force does not allow transitioning to a state that doesn't exist in config.
+    let result = apm::cmd::state::run(p, &id, "nonexistent_state".into(), true, true);
+    assert!(result.is_err(), "expected error for unknown state even with --force");
+}
+
+#[test]
+fn state_force_does_not_skip_doc_validation() {
+    let dir = setup();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "force doc valid".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "force-doc-valid");
+
+    // Transitioning to "specd" without a valid spec should still fail even with --force.
+    let result = apm::cmd::state::run(p, &id, "specd".into(), true, true);
+    assert!(result.is_err(), "expected spec validation to still fail with --force");
 }

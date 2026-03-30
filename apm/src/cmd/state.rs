@@ -3,7 +3,7 @@ use apm_core::{config::{CompletionStrategy, Config}, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool, force: bool) -> Result<()> {
     let config = Config::load(root)?;
     let valid_states: std::collections::HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
@@ -38,11 +38,14 @@ pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool) ->
 
     // Enforce transition rules if the current state defines any.
     // Terminal states (e.g. "closed") are always reachable regardless of rules.
+    // --force bypasses the transition check entirely.
     let target_is_terminal = config.workflow.states.iter()
         .find(|s| s.id == new_state)
         .map(|s| s.terminal)
         .unwrap_or(false);
-    let completion = if !target_is_terminal {
+    let completion = if force {
+        CompletionStrategy::None
+    } else if !target_is_terminal {
         if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
             if !state_cfg.transitions.is_empty() {
                 let tr = state_cfg.transitions.iter().find(|tr| tr.to == new_state);
@@ -145,6 +148,13 @@ pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool) ->
     }
 
     println!("{id}: {old_state} → {new_state}");
+
+    if new_state == "in_design" {
+        let worktrees_base = root.join(&config.worktrees.dir);
+        let wt = git::ensure_worktree(root, &worktrees_base, &branch)?;
+        println!("{}", wt.display());
+    }
+
     Ok(())
 }
 

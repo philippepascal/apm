@@ -109,7 +109,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
 
     // Apply the state transition (state::run re-reads from git, handles history etc.).
     if let Some(target) = chosen_state {
-        super::state::run(root, &id, target, false)?;
+        super::state::run(root, &id, target, false, false)?;
     }
 
     Ok(())
@@ -221,8 +221,10 @@ fn build_header(
 
 fn open_editor(path: &Path) -> Result<()> {
     let editor = std::env::var("VISUAL")
-        .or_else(|_| std::env::var("EDITOR"))
-        .unwrap_or_else(|_| "vi".to_string());
+        .ok()
+        .filter(|e| !e.is_empty())
+        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
+        .unwrap_or_else(|| "vi".to_string());
 
     let mut parts = editor.split_whitespace();
     let bin = parts.next().unwrap();

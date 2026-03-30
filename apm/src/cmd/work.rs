@@ -10,14 +10,18 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
         return run_dry(root, &config);
     }
 
-    let mut workers: Vec<(String, std::process::Child)> = Vec::new();
+    let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut started_ids: Vec<String> = Vec::new();
     let mut no_more = false;
 
     loop {
         // Reap finished workers.
-        workers.retain_mut(|(_, child)| {
-            !matches!(child.try_wait(), Ok(Some(_)))
+        workers.retain_mut(|(_, child, pid_path)| {
+            let done = matches!(child.try_wait(), Ok(Some(_)));
+            if done {
+                let _ = std::fs::remove_file(pid_path);
+            }
+            !done
         });
 
         if no_more && workers.is_empty() {
@@ -27,9 +31,9 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
         if !no_more && workers.len() < max_concurrent {
             match super::start::spawn_next_worker(root, true, skip_permissions) {
                 Ok(None) => { no_more = true; }
-                Ok(Some((id, child))) => {
+                Ok(Some((id, child, pid_path))) => {
                     started_ids.push(id.clone());
-                    workers.push((id, child));
+                    workers.push((id, child, pid_path));
                 }
                 Err(e) => {
                     eprintln!("warning: dispatch failed: {e:#}");
@@ -77,28 +81,12 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
     let actionable = config.actionable_states_for("agent");
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let mut candidates: Vec<_> = tickets.iter()
-        .filter(|t| {
-            let fm = &t.frontmatter;
-            fm.agent.is_none()
-                && actionable.contains(&fm.state.as_str())
-                && (startable.is_empty() || startable.contains(&fm.state.as_str()))
-        })
-        .collect();
-    candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-
-    if candidates.is_empty() {
-        println!("dry-run: no actionable tickets");
-        return Ok(());
-    }
-
-    println!("dry-run: would start {} ticket(s):", candidates.len());
-    for t in &candidates {
-        println!("  #{} [{}] {}", t.frontmatter.id, t.frontmatter.state, t.frontmatter.title);
+    match ticket::pick_next(&tickets, &actionable, &startable, pw, ew, rw) {
+        None => println!("dry-run: no actionable tickets"),
+        Some(t) => println!(
+            "dry-run: would start next: #{} [{}] {}",
+            t.frontmatter.id, t.frontmatter.state, t.frontmatter.title
+        ),
     }
     Ok(())
 }

@@ -3,9 +3,14 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
-    let agent_name = std::env::var("APM_AGENT_NAME")
-        .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
+pub fn resolve_agent_name() -> String {
+    std::env::var("APM_AGENT_NAME")
+        .or_else(|_| std::env::var("USER"))
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_else(|_| "apm".to_string())
+}
+
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<()> {
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -44,7 +49,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .map(|tr| tr.to.clone())
         .unwrap_or_else(|| "in_progress".into());
 
-    t.frontmatter.agent = Some(agent_name.clone());
+    t.frontmatter.agent = Some(agent_name.to_string());
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
@@ -77,18 +82,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
 
     // Provision permanent worktree.
-    // Worktree dir name: ticket-<id>-<slug> (branch name with / replaced by -)
-    let wt_name = branch.replace('/', "-");
     let worktrees_base = root.join(&config.worktrees.dir);
-    std::fs::create_dir_all(&worktrees_base)?;
-    let wt_path = worktrees_base.join(&wt_name);
-
-    if git::find_worktree_for_branch(root, &branch).is_none() {
-        git::add_worktree(root, &wt_path, &branch)?;
-    }
-
-    let wt_display = git::find_worktree_for_branch(root, &branch)
-        .unwrap_or(wt_path);
+    let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
 
     // Merge the default branch into the ticket branch so the agent starts from current code.
     let remote_ref = format!("origin/{default_branch}");
@@ -141,8 +136,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
     };
 
-    // Get ticket content
-    let ticket_content = content;
+    // Get ticket content, prepend role line
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{content}");
 
     // Build log path
     let log_path = wt_display.join(".apm-worker.log");
@@ -165,10 +160,22 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     cmd.stderr(log_clone);
 
     // Spawn detached
-    let child = cmd.spawn()?;
+    let mut child = cmd.spawn()?;
     let pid = child.id();
-    // Do not wait — drop child handle, process runs independently
-    std::mem::drop(child);
+
+    // Write PID file; background thread waits for exit and removes it.
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+    let pid_path_cleanup = pid_path.clone();
+    std::thread::spawn(move || {
+        let _ = child.wait();
+        let _ = std::fs::remove_file(&pid_path_cleanup);
+    });
+
+    // Update ticket agent to worker PID and commit
+    t.frontmatter.agent = Some(pid.to_string());
+    let pid_content = t.serialize()?;
+    git::commit_to_branch(root, &branch, &rel_path, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
@@ -177,9 +184,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 }
 
 pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
-    let agent_name = std::env::var("APM_AGENT_NAME")
-        .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
-
     let config = Config::load(root)?;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
@@ -205,7 +209,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
 
     // Run the normal start flow
-    run(root, &id, no_aggressive, false, false)?;
+    let agent_name = resolve_agent_name();
+    run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     // Re-read the ticket from branch to get focus_section (it may have been set by supervisor)
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -269,7 +274,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         }
     };
 
-    let ticket_content = t.serialize()?;
+    let raw = t.serialize()?;
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
 
     // Find the worktree
     let branch = t.frontmatter.branch.clone()
@@ -295,9 +301,27 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     cmd.stdout(log_file);
     cmd.stderr(log_clone);
 
-    let child = cmd.spawn()?;
+    let mut child = cmd.spawn()?;
     let pid = child.id();
-    std::mem::drop(child);
+
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+    let pid_path_cleanup = pid_path.clone();
+    std::thread::spawn(move || {
+        let _ = child.wait();
+        let _ = std::fs::remove_file(&pid_path_cleanup);
+    });
+
+    // Update ticket agent to worker PID and commit
+    let mut t_pid = t.clone();
+    t_pid.frontmatter.agent = Some(pid.to_string());
+    let pid_content = t_pid.serialize()?;
+    let rel_path_pid = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
@@ -307,11 +331,12 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
 /// Like `run_next` with spawn=true, but returns the spawned `Child` handle so
 /// the caller can wait for it.  Returns `None` if no actionable tickets exist.
+/// Also returns the path to the PID file for cleanup on exit.
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
     skip_permissions: bool,
-) -> Result<Option<(String, std::process::Child)>> {
+) -> Result<Option<(String, std::process::Child, std::path::PathBuf)>> {
     let config = Config::load(root)?;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
@@ -334,7 +359,8 @@ pub fn spawn_next_worker(
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
 
-    run(root, &id, no_aggressive, false, false)?;
+    let agent_name = resolve_agent_name();
+    run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets2.iter().find(|t| t.frontmatter.id == id) else {
@@ -388,7 +414,8 @@ pub fn spawn_next_worker(
         }
     };
 
-    let ticket_content = t.serialize()?;
+    let raw = t.serialize()?;
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
@@ -414,13 +441,74 @@ pub fn spawn_next_worker(
 
     let child = cmd.spawn()?;
     let pid = child.id();
+
+    // Update ticket agent to worker PID and commit
+    let mut t_pid = t.clone();
+    t_pid.frontmatter.agent = Some(pid.to_string());
+    let pid_content = t_pid.serialize()?;
+    let rel_path_pid = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
-    Ok(Some((id, child)))
+    Ok(Some((id, child, pid_path)))
+}
+
+fn write_pid_file(path: &std::path::Path, pid: u32, ticket_id: &str) -> Result<()> {
+    let started_at = chrono::Utc::now().format("%Y-%m-%dT%H:%MZ").to_string();
+    let content = serde_json::json!({
+        "pid": pid,
+        "ticket_id": ticket_id,
+        "started_at": started_at,
+    })
+    .to_string();
+    std::fs::write(path, content)?;
+    Ok(())
 }
 
 fn rand_u16() -> u16 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().subsec_nanos() as u16
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_agent_name;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn prefers_apm_agent_name() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::set_var("APM_AGENT_NAME", "explicit-agent");
+        assert_eq!(resolve_agent_name(), "explicit-agent");
+        std::env::remove_var("APM_AGENT_NAME");
+    }
+
+    #[test]
+    fn falls_back_to_user() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::set_var("USER", "unix-user");
+        std::env::remove_var("USERNAME");
+        assert_eq!(resolve_agent_name(), "unix-user");
+        std::env::remove_var("USER");
+    }
+
+    #[test]
+    fn falls_back_to_apm_literal() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::remove_var("USER");
+        std::env::remove_var("USERNAME");
+        assert_eq!(resolve_agent_name(), "apm");
+    }
 }
