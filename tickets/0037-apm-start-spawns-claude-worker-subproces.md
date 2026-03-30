@@ -1,7 +1,7 @@
 +++
 id = 37
 title = "apm start spawns claude worker subprocess"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 6
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0327-1854-10aa"
 agent = "claude-0328-c72b"
 branch = "ticket/0037-apm-start-spawns-claude-worker-subproces"
 created_at = "2026-03-28T02:28:59.787975Z"
-updated_at = "2026-03-28T20:48:18.435350Z"
+updated_at = "2026-03-30T02:03:48.586469Z"
 +++
 
 ## Spec
@@ -151,3 +151,4 @@ If `--spawn` is not set, exit after printing the worktree path as today.
 | 2026-03-28T20:22Z | ready | in_progress | claude-0328-c72b |
 | 2026-03-28T20:25Z | in_progress | implemented | claude-0328-c72b |
 | 2026-03-28T20:48Z | implemented | accepted | apm |
+| 2026-03-30T02:03Z | accepted | closed | apm-sync |
