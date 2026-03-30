@@ -1,7 +1,7 @@
 +++
 id = "4223716a"
 title = "apm start --next should dispatch spec-writer agent for new/ammend tickets"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "68595"
 branch = "ticket/4223716a-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-30T20:52:32.229319Z"
-updated_at = "2026-03-30T21:09:20.198911Z"
+updated_at = "2026-03-30T21:10:22.970408Z"
 +++
 
 ## Spec
@@ -112,3 +112,4 @@ fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
 | 2026-03-30T21:04Z | specd | ammend | apm |
 | 2026-03-30T21:05Z | ammend | in_design | philippepascal |
 | 2026-03-30T21:09Z | in_design | specd | claude-0330-2145-f8c2 |
+| 2026-03-30T21:10Z | specd | ammend | philippepascal |
