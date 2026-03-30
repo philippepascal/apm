@@ -1,7 +1,7 @@
 +++
 id = 78
 title = "apm close: force-close a ticket from any state"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0329-1430-main"
 branch = "ticket/0078-apm-close-force-close-a-ticket-from-any-"
 created_at = "2026-03-30T01:01:02.690350Z"
-updated_at = "2026-03-30T01:05:53.295133Z"
+updated_at = "2026-03-30T01:52:52.337050Z"
 +++
 
 ## Spec
@@ -70,3 +70,4 @@ Skip `closed` in the "unknown state" check in `validate.rs`.
 | 2026-03-30T01:03Z | in_design | specd | claude-0329-1430-main |
 | 2026-03-30T01:05Z | specd | ready | claude-0329-1430-main |
 | 2026-03-30T01:05Z | ready | in_progress | claude-0329-1430-main |
+| 2026-03-30T01:52Z | in_progress | implemented | apm |
