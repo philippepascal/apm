@@ -69,9 +69,9 @@ actionable   = ["agent"]
 instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
-  to              = "in_design"
-  trigger         = "manual"
-  actor           = "agent"
+  to      = "in_design"
+  trigger = "command:start"
+  actor   = "agent"
   context_section = "Problem"
 
 [[workflow.states]]
@@ -125,7 +125,7 @@ instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
-  trigger = "manual"
+  trigger = "command:start"
   actor   = "agent"
 
 [[workflow.states]]

@@ -879,6 +879,69 @@ fn start_next_clears_focus_section_from_ticket() {
     assert!(!after.contains("focus_section"), "focus_section should be cleared: {after}");
 }
 
+#[test]
+fn start_next_claims_new_ticket_when_no_ready_tickets() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_design"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id    = "in_design"
+label = "In Design"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run_next(p, true, false, false).unwrap();
+
+    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    assert!(content.contains("state = \"in_design\""), "ticket should be in_design: {content}");
+    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+}
+
 // ── apm work ─────────────────────────────────────────────────────────────────
 
 #[test]
