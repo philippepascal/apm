@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/69266e2d-apm-work-requires-apm-agent-name-but-sho"
 created_at = "2026-03-30T06:11:19.569472Z"
-updated_at = "2026-03-30T06:23:31.064260Z"
+updated_at = "2026-03-30T06:27:49.836161Z"
 +++
 
 ## Spec
@@ -71,12 +71,10 @@ No changes to `work.rs`.
 
 ### Amendment requests
 
+Why would apm start without APM_AGENT_NAME fail? what is the alternative for a supervisor that wants to start a specific ticket or just the next?
 
 
 ### Code review
-
-
-
 ## History
 
 | When | From | To | By |
