@@ -6,6 +6,41 @@ _Fill in your project's structure here._
 
 State machine: transitions defined in `apm.toml` under `[[workflow.states]]`
 
+## Roles
+
+Every Claude session in this repo is either a **Delegator** (master agent) or
+a **Worker** (subagent). Read your initial prompt to detect which you are.
+
+**Role detection**
+- If your initial prompt contains "You are a Worker agent assigned to ticket #N"
+  → you are a **Worker**. Skip to the Worker section below.
+- Otherwise → you are the **Delegator**. Follow the Delegator section below.
+
+### Delegator
+
+Your only job is to dispatch work to workers. You must not write specs,
+implement code, choose tickets manually, run `apm sync`, close or transition
+tickets, or take any action not driven by `apm start --next`.
+
+**Before dispatching:**
+1. If the user has not specified a maximum number of concurrent workers, ask.
+   Do not assume a default.
+
+**Dispatch loop:**
+2. Call `apm start --next --spawn` (or `--spawn -P` for permissionless workers).
+3. Repeat until `apm next` returns null (nothing ready) or max workers are running.
+
+**When the queue is empty or all ready tickets are blocked:**
+4. Report back to the supervisor with a clear status summary:
+   - How many workers were spawned
+   - Which tickets are blocking (specd/new/blocked) and why they can't be dispatched
+   Do not improvise. Do not switch to worker behaviour.
+
+### Worker
+
+You have been assigned a single ticket. Implement it, run tests, open a PR,
+and mark it implemented. Do not spawn further workers or act as delegator.
+
 ## Ticket format
 
 Tickets are Markdown files with TOML frontmatter (between `+++` delimiters):
@@ -57,7 +92,7 @@ The main directory is always on `main`. This is a hard rule — breaking it
 confuses the user and corrupts the working state.
 
 All branch work — spec editing, code changes, everything — happens inside a
-**permanent git worktree** provisioned by `apm worktrees --add <id>` or
+**permanent git worktree** provisioned by `apm state <id> in_design` or
 `apm start <id>`. Once you have a worktree path, use `git -C <worktree-path>`
 to run git commands there without leaving your current directory.
 
@@ -76,13 +111,13 @@ The ticket's state determines what to do next:
 
 **state = `new`** — write the spec:
 1. `apm show <id>` — read the full ticket
-2. `apm state <id> in_design` — claim the ticket before editing (signals you are actively writing the spec)
-3. Provision a worktree and edit the spec file there:
+2. `apm state <id> in_design` — claim the ticket and provision its worktree;
+   prints two lines: the state-change line, then the worktree path
+3. Edit the spec file in the worktree printed above:
    ```bash
-   wt=$(apm worktrees --add <id>)   # prints the worktree path; reuses it if it already exists
-   # edit $wt/tickets/<id>-<slug>.md — fill Problem, Acceptance criteria, Out of scope, Approach
-   git -C "$wt" add tickets/<id>-<slug>.md
-   git -C "$wt" commit -m "ticket(<id>): write spec"
+   # use the path printed by apm state <id> in_design
+   git -C <printed-path> add tickets/<id>-<slug>.md
+   git -C <printed-path> commit -m "ticket(<id>): write spec"
    ```
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
@@ -94,13 +129,13 @@ The ticket's state determines what to do next:
 
 **state = `ammend`** — revise the spec:
 1. `apm show <id>` — read the Amendment requests carefully
-2. `apm state <id> in_design` — claim the ticket before editing (signals you are actively revising the spec)
-3. Provision a worktree, address each item, check its box, update `### Approach`:
+2. `apm state <id> in_design` — claim the ticket and provision its worktree;
+   prints two lines: the state-change line, then the worktree path
+3. Address each item, check its box, update `### Approach`:
    ```bash
-   wt=$(apm worktrees --add <id>)
-   # edit $wt/tickets/<id>-<slug>.md
-   git -C "$wt" add tickets/<id>-<slug>.md
-   git -C "$wt" commit -m "ticket(<id>): address amendments"
+   # use the path printed by apm state <id> in_design
+   git -C <printed-path> add tickets/<id>-<slug>.md
+   git -C <printed-path> commit -m "ticket(<id>): address amendments"
    ```
 4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
 
@@ -147,7 +182,7 @@ taking it over with `apm take <id>`.
 
 1. `apm show <id>` — read the full ticket including history
 2. `apm take <id>` — sets agent = your name on the ticket branch
-3. `apm worktrees --add <id>` if the worktree doesn't exist yet
+3. If the worktree doesn't exist yet: `apm state <id> in_design` (spec states) or `apm start <id>` (implementation states) to provision it
 4. Continue from where the previous agent left off
 5. Do not discard or overwrite previous spec work or open questions
 

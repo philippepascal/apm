@@ -221,8 +221,10 @@ fn build_header(
 
 fn open_editor(path: &Path) -> Result<()> {
     let editor = std::env::var("VISUAL")
-        .or_else(|_| std::env::var("EDITOR"))
-        .unwrap_or_else(|_| "vi".to_string());
+        .ok()
+        .filter(|e| !e.is_empty())
+        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
+        .unwrap_or_else(|| "vi".to_string());
 
     let mut parts = editor.split_whitespace();
     let bin = parts.next().unwrap();
