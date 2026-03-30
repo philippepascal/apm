@@ -23,21 +23,83 @@ A `docs/` folder should be established in the repo, and a `docs/docker-workers.m
 1. Prerequisites (Docker installed, `apm init --with-docker` to generate the Dockerfile)
 2. Customising `Dockerfile.apm-worker` for the project's language/toolchain
 3. Building the image
-4. Configuring `[workers]` and `[workers.keychain]` in `apm.toml`
+4. Configuring `[workers]` and `[workers.keychain]` in `.apm/config.toml`
 5. Verifying the setup with `apm validate`
 6. Running workers with `apm work` or `apm start --spawn`
 7. Troubleshooting (credential not found, docker not in PATH, container exits immediately)
 
+Note: the Problem section mentions `apm.toml` but the actual config file is `.apm/config.toml` (with `apm.toml` as a legacy fallback). The guide should use `.apm/config.toml`.
+
 ### Acceptance criteria
 
+- [ ] A `docs/` directory exists at the repo root
+- [ ] `docs/docker-workers.md` exists inside that directory
+- [ ] The guide opens with a prerequisites section listing Docker and the `apm init --with-docker` command
+- [ ] The guide explains what `apm init --with-docker` creates (`.apm/Dockerfile.apm-worker`) and that it is idempotent
+- [ ] The guide shows how to customise `Dockerfile.apm-worker` for a project's language/toolchain with at least one concrete example (e.g. adding Node.js or Python packages)
+- [ ] The guide shows the exact `docker build` command to build the image
+- [ ] The guide shows a complete `.apm/config.toml` example with both `[workers]` and `[workers.keychain]` sections
+- [ ] The guide explains that `[workers.keychain]` values are macOS Keychain service names
+- [ ] The guide explains that Linux users must supply credentials via environment variables instead of Keychain
+- [ ] The guide shows how to run `apm validate` and what passing and failing Docker checks look like
+- [ ] The guide explains the difference between `apm start --spawn` (dispatch a single ticket) and `apm work` (batch orchestration loop)
+- [ ] The troubleshooting section addresses: credential not found, docker not in PATH, container exits immediately
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Documentation for non-Docker (native) worker setup
+- Documentation for `apm work --daemon` mode beyond a brief mention
+- Windows support (Docker Desktop on Windows is not tested)
+- CI/CD pipeline integration (e.g. running workers in GitHub Actions)
+- The underlying implementation of the Docker sandbox feature (covered by ticket #0038)
 
 ### Approach
 
-How the implementation will work.
+This ticket creates two things: a `docs/` directory at the repo root and a single `docs/docker-workers.md` file. No code changes.
+
+**File to create:** `docs/docker-workers.md`
+
+**Document structure:**
+
+1. **Prerequisites** — Docker installed and in PATH; `apm` installed; run `apm init --with-docker` to generate `.apm/Dockerfile.apm-worker` (note: idempotent, will not overwrite)
+
+2. **Customise the Dockerfile** — show the generated template and add a concrete before/after example for a project using Node.js (adding `RUN apt-get install -y nodejs npm`) and Python (adding `RUN apt-get install -y python3`)
+
+3. **Build the image** — show the exact command:
+   ```
+   docker build -f .apm/Dockerfile.apm-worker -t apm-worker .
+   ```
+   Explain the tag name is what goes in `config.toml`.
+
+4. **Configure `.apm/config.toml`** — show a complete example:
+   ```toml
+   [workers]
+   container = "apm-worker:latest"
+
+   [workers.keychain]
+   ANTHROPIC_API_KEY = "anthropic-api-key"
+   GIT_AUTHOR_NAME = "git-user-name-keychain-service"
+   ```
+   Explain that `[workers.keychain]` maps env var names to Keychain service names (macOS only). Linux users: set env vars directly (`ANTHROPIC_API_KEY=...`) instead of using `[workers.keychain]`.
+
+5. **Verify with `apm validate`** — show what passing output looks like (`✓ docker: image apm-worker:latest found`) and what failing looks like (docker not in PATH warning, or image not found).
+
+6. **Run workers** — explain:
+   - `apm start --spawn <id>` — dispatches a single ticket to a container
+   - `apm start --next --spawn` — picks the highest-priority ready ticket
+   - `apm work` — runs the dispatch loop up to `[agents] max_concurrent` (default 3) workers in parallel
+
+7. **Troubleshooting** — three subsections:
+   - *Credential not found*: `security find-generic-password` returns nothing; check the Keychain service name with `security find-generic-password -s <service> -w`; or switch to env var
+   - *docker not in PATH*: `apm validate` warns; ensure Docker Desktop is running and `/usr/local/bin/docker` (or equivalent) is in the shell PATH that apm uses
+   - *Container exits immediately*: run `docker run --rm apm-worker:latest` manually to see the error output; common cause is missing `claude` binary in the image
+
+**Implementation steps:**
+1. `mkdir docs` in the worktree
+2. Write `docs/docker-workers.md` with the above structure
+3. Commit: `git -C <wt> add docs/docker-workers.md && git -C <wt> commit -m "docs: add Docker worker setup guide"`
+4. Open a PR targeting `main`
+5. `apm state ac97bef7 implemented`
 
 ### Open questions
 
