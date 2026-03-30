@@ -53,7 +53,7 @@ CLI wrappers of ~30 lines each.
 - [x] `resolve_agent_name()` is a public function in `apm_core::start` (no longer in the CLI layer)
 - [x] `apm/src/cmd/state.rs` contains no business logic — it parses CLI args and delegates entirely to `apm_core::state::transition()`
 - [x] `apm/src/cmd/start.rs` contains no business logic — it parses CLI args and delegates entirely to the corresponding `apm_core::start` functions
-- [ ] `apm state <id> <new_state>` produces identical output to before the refactor
+- [x] `apm state <id> <new_state>` produces identical output to before the refactor
 - [ ] `apm start <id>` produces identical output to before the refactor
 - [ ] `apm start --next --spawn` produces identical output to before the refactor
 - [ ] `cargo test --workspace` passes after the refactor
