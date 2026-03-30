@@ -31,7 +31,7 @@ Moving the document-manipulation functions into apm_core::review gives apm-serve
 
 - [x] `apm_core::review` is a public module exported from `apm-core/src/lib.rs`
 - [x] `apm_core::review::split_body` splits a body at `\n## History` (or `## History` at line start) into a `(spec, history)` tuple
-- [ ] `apm_core::review::split_body` returns `(full_body, "")` when no History section is present
+- [x] `apm_core::review::split_body` returns `(full_body, "")` when no History section is present
 - [ ] `apm_core::review::extract_spec` returns everything after the sentinel line when the sentinel is present
 - [ ] `apm_core::review::extract_spec` strips leading `# ` comment lines as fallback when the sentinel was deleted
 - [ ] `apm_core::review::available_transitions` returns only transitions whose `trigger` does not start with `event:`
