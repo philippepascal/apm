@@ -79,10 +79,16 @@ pub struct Config {
     pub workers: WorkersConfig,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SyncConfig {
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub aggressive: bool,
+}
+
+impl Default for SyncConfig {
+    fn default() -> Self {
+        Self { aggressive: true }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -382,5 +388,29 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
+    }
+
+    #[test]
+    fn sync_aggressive_defaults_to_true() {
+        let base = "[project]\nname = \"test\"\n[tickets]\ndir = \"tickets\"\n";
+
+        // no [sync] section
+        let config: Config = toml::from_str(base).unwrap();
+        assert!(config.sync.aggressive, "no [sync] section should default to true");
+
+        // [sync] section with no aggressive key
+        let with_sync = format!("{base}[sync]\n");
+        let config: Config = toml::from_str(&with_sync).unwrap();
+        assert!(config.sync.aggressive, "[sync] without aggressive key should default to true");
+
+        // explicit false
+        let explicit_false = format!("{base}[sync]\naggressive = false\n");
+        let config: Config = toml::from_str(&explicit_false).unwrap();
+        assert!(!config.sync.aggressive, "explicit aggressive = false should be false");
+
+        // explicit true
+        let explicit_true = format!("{base}[sync]\naggressive = true\n");
+        let config: Config = toml::from_str(&explicit_true).unwrap();
+        assert!(config.sync.aggressive, "explicit aggressive = true should be true");
     }
 }
