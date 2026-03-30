@@ -1,7 +1,7 @@
 +++
 id = "0084"
 title = "apm workers: list and manage running worker processes"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0084-apm-workers-list-and-manage-running-work"
 created_at = "2026-03-30T05:14:13.045392Z"
-updated_at = "2026-03-30T05:53:06.679656Z"
+updated_at = "2026-03-30T06:12:24.244307Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ remove the file, print `"killed worker for ticket #<id> (PID <pid>)"`.
 | 2026-03-30T05:15Z | in_design | specd | claude-0330-0245-main |
 | 2026-03-30T05:18Z | specd | ready | apm |
 | 2026-03-30T05:53Z | ready | in_progress | claude-0330-0245-main |
+| 2026-03-30T06:12Z | in_progress | implemented | claude-0329-1200-b4e7 |
