@@ -20,11 +20,11 @@ Several tickets in `specd`, `ready`, and `ammend` states had their specs written
 
 ### Acceptance criteria
 
-- [ ] Every ticket in `specd`, `ready`, `ammend`, and `question` state has been reviewed against the current codebase
-- [ ] Each ticket's `### Approach` section reflects the actual current API (types, function signatures, file locations)
-- [ ] Acceptance criteria that are already satisfied by existing code are noted as such (or the ticket is closed if fully done)
-- [ ] No acceptance criteria silently contradict each other or the state machine config in `apm.toml`
-- [ ] A brief audit note is appended to each reviewed ticket's `### Approach` (e.g. "Audited 2026-03-30: approach still valid") so the implementing agent knows the spec is current
+- [x] Every ticket in `specd`, `ready`, `ammend`, and `question` state has been reviewed against the current codebase
+- [x] Each ticket's `### Approach` section reflects the actual current API (types, function signatures, file locations)
+- [x] Acceptance criteria that are already satisfied by existing code are noted as such (or the ticket is closed if fully done)
+- [x] No acceptance criteria silently contradict each other or the state machine config in `apm.toml`
+- [x] A brief audit note is appended to each reviewed ticket's `### Approach` (e.g. "Audited 2026-03-30: approach still valid") so the implementing agent knows the spec is current
 
 ### Out of scope
 
@@ -47,7 +47,9 @@ For each open ticket in `specd`, `ready`, `ammend`, or `question`:
 
 Current open tickets to audit (as of writing): #35, #38, #51, #57, #63, #70, #75, #76, #77, #78.
 
-**Audited 2026-03-30:** #35 current, #57 current, #63 no spec yet (out of scope), #38 had one stale reference (`apm verify` → `apm validate`) — corrected. #51 and #70 in progress (workers running), not audited. #76–#78 are the polish tickets just created, not applicable.
+**Audited 2026-03-30 (session 1):** #35 current, #57 current, #63 no spec yet (out of scope), #38 had one stale reference (`apm verify` → `apm validate`) — corrected. #51 and #70 in progress (workers running), not audited. #76–#78 are the polish tickets just created, not applicable.
+
+**Audited 2026-03-29 (session 2):** #51, #70, #75, #78 are now closed — no audit needed. #35, #38, #57 verified against current codebase; all approaches still valid; audit notes appended to each ticket's `### Approach` section. No acceptance criteria in these tickets are pre-satisfied by existing code.
 
 ## History
 
