@@ -29,26 +29,26 @@ master session.
 
 ### Acceptance criteria
 
-- [ ] `apm.agents.md` has a `## Roles` section that appears before any other
+- [x] `apm.agents.md` has a `## Roles` section that appears before any other
   behavioural instructions, defining the two roles and how to detect them
-- [ ] The role detection rule is explicit: if the session was started with a
+- [x] The role detection rule is explicit: if the session was started with a
   ticket assignment in the initial prompt → Worker; otherwise → Delegator
-- [ ] The Delegator section specifies the loop: call `apm start --next --spawn`
+- [x] The Delegator section specifies the loop: call `apm start --next --spawn`
   repeatedly until it returns null (nothing ready) or max workers is reached
-- [ ] If max workers was not specified by the user, the Delegator must ask
+- [x] If max workers was not specified by the user, the Delegator must ask
   before starting the loop — it must not assume a default
-- [ ] The Delegator section explicitly prohibits: picking tickets manually,
+- [x] The Delegator section explicitly prohibits: picking tickets manually,
   writing specs, implementing code, running `apm sync`, closing or transitioning
   tickets, or taking any action not driven by `apm start --next`
-- [ ] The Delegator section specifies what to do when the queue is empty or
+- [x] The Delegator section specifies what to do when the queue is empty or
   blocked: report back to the supervisor with a clear status — do not improvise
   or switch to worker behaviour
-- [ ] The Worker section specifies that the worker implements exactly one ticket
+- [x] The Worker section specifies that the worker implements exactly one ticket
   and must not spawn further workers or act as delegator
-- [ ] The spawn prompt emitted by `apm start --spawn` includes a clear role
+- [x] The spawn prompt emitted by `apm start --spawn` includes a clear role
   line at the top: "You are a Worker agent assigned to ticket #<id>." so the
   worker can detect its role unambiguously
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
