@@ -1,7 +1,7 @@
 +++
 id = "f5bee9f9"
 title = "refactor: move cleanup logic from clean.rs into apm-core"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "47523"
 branch = "ticket/f5bee9f9-refactor-move-cleanup-logic-from-clean-r"
 created_at = "2026-03-30T14:27:36.851282Z"
-updated_at = "2026-03-30T17:29:22.794802Z"
+updated_at = "2026-03-30T18:09:08.816339Z"
 +++
 
 ## Spec
@@ -113,3 +113,5 @@ The existing six tests in `apm/tests/integration.rs` test through the CLI (`apm 
 | 2026-03-30T16:58Z | specd | ready | philippepascal |
 | 2026-03-30T17:25Z | ready | in_progress | philippepascal |
 | 2026-03-30T17:29Z | in_progress | implemented | claude-0330-1725-87d0 |
+| 2026-03-30T18:04Z | implemented | accepted | philippepascal |
+| 2026-03-30T18:09Z | accepted | closed | apm-sync |
