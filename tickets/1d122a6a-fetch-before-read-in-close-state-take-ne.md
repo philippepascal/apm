@@ -55,14 +55,81 @@ Write commands fetch/push the specific ticket branch. Read-only commands use `gi
 
 ### Acceptance criteria
 
+- [ ] `apm next` fetches all remote branches before reading ticket state when aggressive mode is on
+- [ ] `apm list` fetches all remote branches before reading ticket state when aggressive mode is on
+- [ ] `apm close` fetches the ticket branch before reading and pushes after writing when aggressive mode is on
+- [ ] `apm take` fetches the ticket branch before reading (in addition to the existing push after write) when aggressive mode is on
+- [ ] `apm spec` fetches the ticket branch before reading and pushes after writing when aggressive mode is on
+- [ ] `apm set` pushes the ticket branch after writing field changes when aggressive mode is on (fetch before is already implemented)
+- [ ] `apm review` pushes the ticket branch after writing amendments when aggressive mode is on (fetch before is already implemented)
+- [ ] `apm verify` fetches all remote branches before reading ticket state when aggressive mode is on
+- [ ] `apm validate` fetches all remote branches before reading ticket state when aggressive mode is on
+- [ ] All affected commands accept a `--no-aggressive` flag that suppresses fetch/push behaviour regardless of config
+- [ ] Fetch/push failures emit a `warning: fetch/push failed: ...` message to stderr and do not abort the command
+- [ ] When aggressive mode is off, behaviour of all commands is identical to current behaviour
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm sync` — already manages its own fetch/push logic
+- `apm start` — already has aggressive fetch/push support
+- `apm show` — already has aggressive fetch support
+- `apm new` — already has aggressive push support
+- Retry logic on fetch/push failure — warnings are sufficient
+- Atomic fetch-then-write (optimistic concurrency) — not in scope; warnings on stale state are sufficient
 
 ### Approach
 
-How the implementation will work.
+All changes follow the same pattern already used in `show`, `start`, `take` (push half), and `review` (fetch half). No new git functions are needed — `git::fetch_branch`, `git::push_branch`, and `git::fetch_all` already exist in `apm-core/src/git.rs`.
+
+**1. `apm/src/main.rs`** — Add `no_aggressive: bool` (with `#[arg(long)]`) to the `Close`, `Spec`, `Next`, `List`, `Verify`, and `Validate` subcommand structs. `Set` and `Review` already have it but need the push-after change below.
+
+**2. `apm/src/cmd/close.rs`**
+- Accept `no_aggressive: bool` parameter
+- Resolve ticket branch name
+- Before calling `ticket::close`: if aggressive, `git::fetch_branch(root, &branch)` (warn on error)
+- After `ticket::close` completes: if aggressive, `git::push_branch(root, &branch)` (warn on error)
+- Note: `apm-core/src/ticket.rs::close` already pushes unconditionally — either move the push here and make it conditional, or add a `no_push` flag; prefer moving the push out of `ticket::close` to keep the pattern consistent.
+
+**3. `apm/src/cmd/take.rs`**
+- Aggressive flag is already computed but unused for fetch
+- Add fetch before the agent-field write: if aggressive, `git::fetch_branch(root, &branch)` before reading the ticket from git
+
+**4. `apm/src/cmd/spec.rs`**
+- Accept `no_aggressive: bool`
+- Resolve ticket branch name from ticket ID
+- Before reading the section: if aggressive, `git::fetch_branch(root, &branch)` (warn on error)
+- After committing the section: if aggressive, `git::push_branch(root, &branch)` (warn on error)
+
+**5. `apm/src/cmd/set.rs`**
+- Already fetches before read
+- After committing field changes: if aggressive, `git::push_branch(root, &branch)` (warn on error)
+
+**6. `apm/src/cmd/review.rs`**
+- Already fetches before opening the editor
+- After committing amendments (after the editor closes and changes are committed): if aggressive, `git::push_branch(root, &branch)` (warn on error)
+- The subsequent `state::transition` call may also push (aggressive already flows there) — that is acceptable; a redundant push is harmless
+
+**7. `apm/src/cmd/next.rs`**
+- Accept `no_aggressive: bool`
+- Before loading tickets: if aggressive, `git::fetch_all(root)` (warn on error)
+
+**8. `apm/src/cmd/list.rs`**
+- Accept `no_aggressive: bool`
+- Before loading tickets: if aggressive, `git::fetch_all(root)` (warn on error)
+
+**9. `apm/src/cmd/verify.rs`**
+- Accept `no_aggressive: bool`
+- Before running checks: if aggressive, `git::fetch_all(root)` (warn on error)
+
+**10. `apm/src/cmd/validate.rs`**
+- Accept `no_aggressive: bool`
+- Before running checks: if aggressive, `git::fetch_all(root)` (warn on error)
+
+**Order of changes:** Work command-by-command. The pattern is mechanical — no design decisions. Start with the lowest-risk read-only commands (`next`, `list`, `verify`, `validate`), then the write commands (`set`, `review`, `spec`, `take`, `close`).
+
+**Gotcha — `ticket::close` unconditional push:** `apm-core/src/ticket.rs` lines ~316-320 push unconditionally. The push should move to the CLI layer (`cmd/close.rs`) where the aggressive flag is available. This avoids double-push and keeps the pattern consistent. Change `ticket::close` to not push, and handle push in `cmd/close.rs`.
+
+**Tests:** Add integration tests in `apm/tests/integration.rs` that verify: (a) the `--no-aggressive` flag suppresses fetch/push even when config has `aggressive = true`; and (b) the commands do not fail when there is no remote configured (fetch/push warnings are non-fatal).
 
 ### Open questions
 
