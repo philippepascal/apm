@@ -106,6 +106,7 @@ fn spawn_container_worker(
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
+    let skip_permissions = skip_permissions || config.agents.skip_permissions;
 
     let startable: Vec<&str> = config.workflow.states.iter()
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
@@ -296,6 +297,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
 pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let skip_permissions = skip_permissions || config.agents.skip_permissions;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
@@ -448,6 +450,7 @@ pub fn spawn_next_worker(
     skip_permissions: bool,
 ) -> Result<Option<(String, std::process::Child, PathBuf)>> {
     let config = Config::load(root)?;
+    let skip_permissions = skip_permissions || config.agents.skip_permissions;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
