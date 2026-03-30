@@ -1702,9 +1702,26 @@ fn clean_skips_state_mismatch_between_branch_and_main() {
     git(p, &["-c", "commit.gpgsign=false", "add", &rel_path]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "update ticket state on main"]);
 
-    apm::cmd::clean::run(p, false, false).unwrap();
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["clean"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — state mismatch");
+    assert!(
+        stderr.contains("state mismatch") && stderr.contains("branch=closed") && stderr.contains("main=new"),
+        "expected state-mismatch warning with branch/main states in stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("apm sync"),
+        "expected `apm sync` reconciliation advice in stderr: {stderr}"
+    );
+    assert!(
+        !stderr.contains("apm close"),
+        "should not suggest `apm close` in stderr: {stderr}"
+    );
 }
 
 #[test]
