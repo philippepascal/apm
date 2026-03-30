@@ -1,7 +1,7 @@
 +++
 id = "f02d8ef3"
 title = "refactor: move ticket creation logic from new.rs into apm-core"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "86899"
 branch = "ticket/f02d8ef3-refactor-move-ticket-creation-logic-from"
 created_at = "2026-03-30T14:27:32.493841Z"
-updated_at = "2026-03-30T17:20:32.192317Z"
+updated_at = "2026-03-30T17:24:43.614034Z"
 +++
 
 ## Spec
@@ -124,3 +124,4 @@ Integration test using a temp git repo:
 | 2026-03-30T16:34Z | in_design | specd | claude-0330-1635-spec1 |
 | 2026-03-30T16:57Z | specd | ready | philippepascal |
 | 2026-03-30T17:20Z | ready | in_progress | philippepascal |
+| 2026-03-30T17:24Z | in_progress | implemented | claude-0330-1800-w1f0 |
