@@ -8,7 +8,7 @@ risk = 2
 author = "apm"
 branch = "ticket/0080-apm-clean-robust-consistency-checks-befo"
 created_at = "2026-03-30T02:40:07.826350Z"
-updated_at = "2026-03-30T02:40:13.291530Z"
+updated_at = "2026-03-30T02:41:04.311845Z"
 +++
 
 ## Spec
