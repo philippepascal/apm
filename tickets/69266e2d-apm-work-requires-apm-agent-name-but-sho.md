@@ -1,7 +1,7 @@
 +++
 id = "69266e2d"
 title = "apm work requires APM_AGENT_NAME but should not"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/69266e2d-apm-work-requires-apm-agent-name-but-sho"
 created_at = "2026-03-30T06:11:19.569472Z"
-updated_at = "2026-03-30T06:35:13.569629Z"
+updated_at = "2026-03-30T06:35:23.685764Z"
 +++
 
 ## Spec
@@ -111,3 +111,4 @@ No changes to `work.rs`. No changes to the spawn-path worker naming.
 | 2026-03-30T06:30Z | ammend | in_design | claude-0330-0245-main |
 | 2026-03-30T06:33Z | in_design | specd | claude-0329-1200-spec1 |
 | 2026-03-30T06:35Z | specd | ready | apm |
+| 2026-03-30T06:35Z | ready | in_progress | claude-0330-0245-main |
