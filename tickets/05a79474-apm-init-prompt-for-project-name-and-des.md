@@ -16,11 +16,10 @@ updated_at = "2026-03-30T23:56:56.569437Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a user runs `apm init` for the first time, the project name is silently derived from the directory name and no description is ever collected. The generated `.apm/config.toml` always contains an empty `description` field. This means every new APM project starts with a generic, directory-derived name and no human-readable description — both of which are useful for `apm list`, reporting, and context given to agents.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -35,10 +34,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
