@@ -16,11 +16,14 @@ updated_at = "2026-03-30T16:39:13.296143Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Currently, `apm work --dry-run` shows only the single highest-priority ticket that the work loop would dispatch next. When a project has `max_concurrent > 1`, the work loop actually starts multiple workers in parallel — but the dry-run output gives no indication of which tickets those would be.
+
+This makes dry-run nearly useless as a preview tool. Users who want to sanity-check what `apm work` would do before running it for real cannot see the full picture: they only see the first dispatch, not the second or third.
+
+The fix is to have `--dry-run` show up to `max_concurrent` candidates in priority order — matching what the actual work loop would start.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -35,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
