@@ -1,14 +1,15 @@
 +++
 id = "69266e2d"
 title = "apm work requires APM_AGENT_NAME but should not"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "claude-0330-0245-main"
+agent = "claude-0330-0245-main"
 branch = "ticket/69266e2d-apm-work-requires-apm-agent-name-but-sho"
 created_at = "2026-03-30T06:11:19.569472Z"
-updated_at = "2026-03-30T06:11:19.569472Z"
+updated_at = "2026-03-30T06:20:24.465866Z"
 +++
 
 ## Spec
@@ -55,3 +56,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T06:11Z | — | new | claude-0330-0245-main |
+| 2026-03-30T06:20Z | new | in_design | claude-0330-0245-main |
