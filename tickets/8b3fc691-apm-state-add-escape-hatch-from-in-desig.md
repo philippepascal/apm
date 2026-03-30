@@ -23,17 +23,17 @@ cannot reset the ticket without directly editing the branch blob.
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> new --force` succeeds when the ticket is in `in_design`,
+- [x] `apm state <id> new --force` succeeds when the ticket is in `in_design`,
       bypassing the normal transition check
-- [ ] `apm state <id> ready --force` succeeds when the ticket is in `in_progress`,
+- [x] `apm state <id> ready --force` succeeds when the ticket is in `in_progress`,
       bypassing the normal transition check
-- [ ] `apm state <id> <state> --force` works from any non-terminal state to any
+- [x] `apm state <id> <state> --force` works from any non-terminal state to any
       valid state (the target state must still exist in the config)
-- [ ] Without `--force`, the normal transition rules continue to be enforced
-- [ ] `--force` does not bypass the document-level validations (`specd` must still
+- [x] Without `--force`, the normal transition rules continue to be enforced
+- [x] `--force` does not bypass the document-level validations (`specd` must still
       have a valid spec; `implemented` must still have all criteria checked)
-- [ ] The history row is appended as normal
-- [ ] `apm state --help` mentions the `--force` flag
+- [x] The history row is appended as normal
+- [x] `apm state --help` mentions the `--force` flag
 
 ### Out of scope
 
