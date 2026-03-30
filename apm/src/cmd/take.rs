@@ -3,15 +3,17 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
     let new_agent = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
 
     let fm = &t.frontmatter;
@@ -24,9 +26,9 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
         // Still ensure worktree exists.
         let branch = t.frontmatter.branch.clone()
             .or_else(|| git::branch_name_from_path(&t.path))
-            .unwrap_or_else(|| format!("ticket/{id:04}"));
+            .unwrap_or_else(|| format!("ticket/{id}"));
         let wt_path = ensure_worktree(root, &config, &branch)?;
-        println!("#{id}: already assigned to {new_agent}");
+        println!("{id}: already assigned to {new_agent}");
         println!("Worktree: {}", wt_path.display());
         return Ok(());
     }
@@ -45,7 +47,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
     );
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(root, &branch, &rel_path, &content,
         &format!("ticket({id}): agent handoff {old_agent} → {new_agent}"))?;
@@ -58,7 +60,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
         }
     }
 
-    println!("#{id}: agent handoff {old_agent} → {new_agent} (branch: {branch})");
+    println!("{id}: agent handoff {old_agent} → {new_agent} (branch: {branch})");
     println!("Worktree: {}", wt_path.display());
     Ok(())
 }

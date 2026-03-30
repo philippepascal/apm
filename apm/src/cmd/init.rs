@@ -49,7 +49,6 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool) -> Result<()> {
     ensure_gitignore(&gitignore)?;
     update_claude_settings(root, no_claude)?;
     maybe_initial_commit(root)?;
-    maybe_create_meta_branch(root)?;
     ensure_worktrees_dir(root)?;
     update_user_claude_settings()?;
     warn_if_settings_untracked(root);
@@ -533,31 +532,3 @@ fn maybe_initial_commit(root: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Create the apm/meta branch with NEXT_ID = 1 if it doesn't exist yet.
-fn maybe_create_meta_branch(root: &Path) -> Result<()> {
-    // Only attempt if the repo has commits.
-    let has_commits = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(root)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
-    if !has_commits {
-        return Ok(());
-    }
-
-    let meta_exists = Command::new("git")
-        .args(["rev-parse", "--verify", "refs/heads/apm/meta"])
-        .current_dir(root)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
-    if meta_exists {
-        return Ok(());
-    }
-
-    apm_core::git::init_meta_branch(root);
-    Ok(())
-}

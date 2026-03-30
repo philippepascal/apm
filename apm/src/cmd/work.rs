@@ -10,8 +10,8 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
         return run_dry(root, &config);
     }
 
-    let mut workers: Vec<(u32, std::process::Child)> = Vec::new();
-    let mut started_ids: Vec<u32> = Vec::new();
+    let mut workers: Vec<(String, std::process::Child)> = Vec::new();
+    let mut started_ids: Vec<String> = Vec::new();
     let mut no_more = false;
 
     loop {
@@ -28,7 +28,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
             match super::start::spawn_next_worker(root, true, skip_permissions) {
                 Ok(None) => { no_more = true; }
                 Ok(Some((id, child))) => {
-                    started_ids.push(id);
+                    started_ids.push(id.clone());
                     workers.push((id, child));
                 }
                 Err(e) => {
@@ -51,7 +51,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
     let mut any_bad = false;
     println!("\nSummary:");
     for id in &started_ids {
-        if let Some(t) = tickets.iter().find(|t| &t.frontmatter.id == id) {
+        if let Some(t) = tickets.iter().find(|t| t.frontmatter.id == *id) {
             let state = &t.frontmatter.state;
             let ok = good_states.contains(&state.as_str());
             if !ok { any_bad = true; }

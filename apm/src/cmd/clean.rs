@@ -34,9 +34,9 @@ pub fn run(root: &Path, dry_run: bool) -> Result<()> {
             .branch
             .clone()
             .or_else(|| git::branch_name_from_path(&t.path))
-            .unwrap_or_else(|| format!("ticket/{:04}", t.frontmatter.id));
+            .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
 
-        let id = t.frontmatter.id;
+        let id = t.frontmatter.id.clone();
         let branch_state = &t.frontmatter.state;
 
         if !merged_set.contains(branch.as_str()) {

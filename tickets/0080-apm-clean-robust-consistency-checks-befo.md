@@ -1,7 +1,7 @@
 +++
 id = 80
 title = "apm clean: robust consistency checks before acting"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0330-0245-main"
 branch = "ticket/0080-apm-clean-robust-consistency-checks-befo"
 created_at = "2026-03-30T02:40:07.826350Z"
-updated_at = "2026-03-30T02:52:19.175762Z"
+updated_at = "2026-03-30T05:24:26.579800Z"
 +++
 
 ## Spec
@@ -128,3 +128,5 @@ id. Use this for the cross-check.
 | 2026-03-30T02:42Z | specd | ready | apm |
 | 2026-03-30T02:46Z | ready | in_progress | claude-0330-0245-main |
 | 2026-03-30T02:52Z | in_progress | implemented | claude-0329-1200-a7f2 |
+| 2026-03-30T04:38Z | implemented | accepted | apm |
+| 2026-03-30T05:24Z | accepted | closed | apm-sync |
