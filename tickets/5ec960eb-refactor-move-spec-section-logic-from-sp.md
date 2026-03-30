@@ -48,7 +48,7 @@ CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 - [x] `apm_core::spec::mark_item` replaces the matching unchecked item with a checked one
 - [x] `apm_core::spec::mark_item` returns an error when no unchecked item matches the text
 - [x] `apm_core::spec::mark_item` returns an error when multiple unchecked items match (ambiguous)
-- [ ] `apm/src/cmd/spec.rs` is 50 lines or fewer after the refactor
+- [x] `apm/src/cmd/spec.rs` is 50 lines or fewer after the refactor
 - [ ] All existing `apm spec` integration tests pass without behavior change
 
 ### Out of scope
