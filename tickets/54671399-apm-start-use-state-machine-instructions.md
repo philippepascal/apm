@@ -29,7 +29,9 @@ The other two spawn paths — `run_next()` and `spawn_next_worker()` — already
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `run_next()` and `spawn_next_worker()` already handle state-specific instructions correctly — no changes needed there
+- Adding new fields to `apm.toml` or changing the config schema
+- Changing how `focus_hint` is assembled or printed
 
 ### Approach
 
