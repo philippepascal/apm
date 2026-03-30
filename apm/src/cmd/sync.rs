@@ -1,16 +1,7 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket, ticket::Ticket};
+use apm_core::{config::Config, git, sync::{self, Candidates}};
 use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::Path;
-
-struct CloseCandidate {
-    ticket: Ticket,
-    reason: &'static str,
-}
-
-struct AcceptCandidate {
-    ticket: Ticket,
-}
 
 pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool, auto_accept: bool) -> Result<()> {
     let config = Config::load(root)?;
@@ -25,37 +16,19 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         }
     }
 
-    // Detect merged branches and suggest manual transition to accepted.
-    let branches = git::ticket_branches(root)?;
-    let merged = git::merged_into_main(root, &config.project.default_branch)?;
+    let candidates = sync::detect(root, &config)?;
 
-    let mut accept_candidates: Vec<AcceptCandidate> = Vec::new();
-    for branch in &merged {
-        let suffix = branch.trim_start_matches("ticket/");
-        let filename = format!("{suffix}.md");
-        let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
-
-        let content = match git::read_from_branch(root, branch, &rel_path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        let dummy_path = root.join(&rel_path);
-        let t = match Ticket::parse(&dummy_path, &content) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        if t.frontmatter.state != "implemented" { continue; }
-
+    for c in &candidates.accept {
         if !quiet {
-            println!("#{}: branch merged — run `apm state {} accepted` to accept", t.frontmatter.id, t.frontmatter.id);
+            println!("#{}: branch merged — run `apm state {} accepted` to accept", c.ticket.frontmatter.id, c.ticket.frontmatter.id);
         }
-        accept_candidates.push(AcceptCandidate { ticket: t });
     }
 
     if !offline || aggressive {
         git::push_ticket_branches(root);
     }
 
+    let branches = git::ticket_branches(root)?;
     if !quiet {
         println!(
             "sync: {} ticket branch{} visible",
@@ -64,28 +37,19 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         );
     }
 
-    // Prompt to accept merged tickets.
-    if !accept_candidates.is_empty() {
-        let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_candidates)?);
+    let Candidates { accept: accept_cands, close: close_cands } = candidates;
+
+    if !accept_cands.is_empty() {
+        let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_cands)?);
         if confirmed {
-            for c in &accept_candidates {
-                super::state::run(root, &c.ticket.frontmatter.id, "accepted".into(), no_aggressive, false)?;
-            }
+            sync::apply(root, &config, &Candidates { accept: accept_cands, close: vec![] }, "apm-sync")?;
         }
     }
 
-    // Detect tickets ready to close and close each via the shared close logic.
-    let branch_set: std::collections::HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-    let candidates = detect_closeable(root, &config, &branches, &branch_set)?;
-    if !candidates.is_empty() {
-        let confirmed = auto_close || (!quiet && prompt_close(&candidates)?);
+    if !close_cands.is_empty() {
+        let confirmed = auto_close || (!quiet && prompt_close(&close_cands)?);
         if confirmed {
-            for c in candidates {
-                let id = c.ticket.frontmatter.id.clone();
-                if let Err(e) = ticket::close(root, &config, &id, None, "apm-sync") {
-                    eprintln!("warning: could not close {id:?}: {e:#}");
-                }
-            }
+            sync::apply(root, &config, &Candidates { accept: vec![], close: close_cands }, "apm-sync")?;
         }
     }
 
@@ -96,7 +60,7 @@ fn is_interactive() -> bool {
     io::stdout().is_terminal()
 }
 
-fn prompt_accept(candidates: &[AcceptCandidate]) -> Result<bool> {
+fn prompt_accept(candidates: &[sync::AcceptCandidate]) -> Result<bool> {
     println!("\nTickets ready to accept:");
     for c in candidates {
         println!("  #{}  {}", c.ticket.frontmatter.id, c.ticket.frontmatter.title);
@@ -108,56 +72,7 @@ fn prompt_accept(candidates: &[AcceptCandidate]) -> Result<bool> {
     Ok(line.trim().eq_ignore_ascii_case("y"))
 }
 
-fn detect_closeable(
-    root: &Path,
-    config: &Config,
-    branches: &[String],
-    branch_set: &std::collections::HashSet<&str>,
-) -> Result<Vec<CloseCandidate>> {
-    let mut candidates = Vec::new();
-
-    // Case 1: tickets in `accepted` state on any ticket branch.
-    for branch in branches {
-        let suffix = branch.trim_start_matches("ticket/");
-        let rel_path = format!("{}/{suffix}.md", config.tickets.dir.to_string_lossy());
-        let content = match git::read_from_branch(root, branch, &rel_path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        let t = match Ticket::parse(&root.join(&rel_path), &content) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        if t.frontmatter.state == "accepted" {
-            candidates.push(CloseCandidate { ticket: t, reason: "accepted" });
-        }
-    }
-
-    // Case 2: tickets on main in `implemented` state with no surviving branch.
-    let default_branch = &config.project.default_branch;
-    let ticket_files = git::list_files_on_branch(root, default_branch, &config.tickets.dir.to_string_lossy()).unwrap_or_default();
-    for rel_path in ticket_files {
-        if !rel_path.ends_with(".md") { continue; }
-        let content = match git::read_from_branch(root, default_branch, &rel_path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        let t = match Ticket::parse(&root.join(&rel_path), &content) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        if t.frontmatter.state == "implemented" {
-            let branch = t.frontmatter.branch.as_deref().unwrap_or("");
-            if !branch.is_empty() && !branch_set.contains(branch) {
-                candidates.push(CloseCandidate { ticket: t, reason: "implemented, branch gone" });
-            }
-        }
-    }
-
-    Ok(candidates)
-}
-
-fn prompt_close(candidates: &[CloseCandidate]) -> Result<bool> {
+fn prompt_close(candidates: &[sync::CloseCandidate]) -> Result<bool> {
     println!("\nTickets ready to close:");
     for c in candidates {
         println!("  #{}  {}  ({})", c.ticket.frontmatter.id, c.ticket.frontmatter.title, c.reason);
@@ -168,4 +83,3 @@ fn prompt_close(candidates: &[CloseCandidate]) -> Result<bool> {
     io::stdin().lock().read_line(&mut line)?;
     Ok(line.trim().eq_ignore_ascii_case("y"))
 }
-
