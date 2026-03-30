@@ -3,13 +3,13 @@ id = "37c280f2"
 title = "apm take should work without APM_AGENT_NAME set"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 agent = "20089"
 branch = "ticket/37c280f2-apm-take-should-work-without-apm-agent-n"
 created_at = "2026-03-30T14:41:58.874046Z"
-updated_at = "2026-03-30T16:37:04.724336Z"
+updated_at = "2026-03-30T16:38:49.623731Z"
 +++
 
 ## Spec
