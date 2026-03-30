@@ -1,7 +1,7 @@
 +++
 id = 48
 title = "Extend aggressive mode to apm new, review, and take"
-state = "accepted"
+state = "closed"
 priority = 2
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0328-c72b"
 agent = "claude-0329-main"
 branch = "ticket/0048-extend-aggressive-mode-to-apm-new-review"
 created_at = "2026-03-28T19:50:06.625320Z"
-updated_at = "2026-03-29T22:47:06.633704Z"
+updated_at = "2026-03-30T02:04:10.814050Z"
 +++
 
 ## Spec
@@ -109,3 +109,4 @@ the updated ticket to the branch, push when aggressive.
 | 2026-03-29T21:02Z | ready | in_progress | claude-0329-main |
 | 2026-03-29T21:05Z | in_progress | implemented | claude-0329-main |
 | 2026-03-29T22:47Z | implemented | accepted | apm |
+| 2026-03-30T02:04Z | accepted | closed | apm-sync |
