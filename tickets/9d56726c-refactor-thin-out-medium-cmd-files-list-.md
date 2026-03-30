@@ -134,18 +134,19 @@ pub fn list_worktrees_with_tickets(
 ```
 Calls `git::list_ticket_worktrees(root)?`, loads tickets, then matches each `(wt_path, branch)` to a ticket by `frontmatter.branch` or `branch_name_from_path`. Returns `(wt_path, branch, Option<Ticket>)` triples. `cmd/worktrees.rs` replaces its inline loop with a call to this function.
 
-**6. work.rs — minimal tidy**
+**6. work.rs — fix hardcoded states**
 
-The worker-pool spawn loop calls `super::start::spawn_next_worker()` across cmd modules. This cannot cleanly move to apm-core without also moving the spawn logic. Instead:
-- Extract the result-state validation into an `apm-core` function:
-  ```rust
-  // in ticket.rs or config.rs
-  pub fn is_success_state(state: &str) -> bool {
-      matches!(state, "implemented" | "specd")
-  }
-  ```
-- `cmd/work.rs` calls `apm_core::ticket::is_success_state()` instead of the inline slice check.
-- The spawn loop itself stays in cmd.
+The worker-pool spawn loop and the result-state check both stay in cmd — they cannot move to apm-core without also moving the spawn logic. However, the hardcoded `["implemented", "specd"]` slice must be replaced with a config-derived set:
+
+```rust
+// Instead of: let good_states = ["implemented", "specd"];
+let good_states: Vec<&str> = config.workflow.states.iter()
+    .filter(|s| s.terminal)
+    .map(|s| s.id.as_str())
+    .collect();
+```
+
+`StateConfig` already has `terminal: bool` — no schema change needed. Nothing moves to apm-core for this step; the fix is entirely within `cmd/work.rs`.
 
 **Order of changes**
 1. Add `list_filtered()` + tests → update list.rs
@@ -153,7 +154,7 @@ The worker-pool spawn loop calls `super::start::spawn_next_worker()` across cmd 
 3. Add `handoff()` + append_history_row helper + tests → update take.rs
 4. Create worker.rs + tests → update workers.rs imports
 5. Add `list_worktrees_with_tickets()` + tests → update worktrees.rs
-6. Add `is_success_state()` → update work.rs
+6. Fix hardcoded states in work.rs using `config.workflow.states`
 7. Run `cargo test --workspace`; confirm all green
 
 ### Open questions
@@ -162,7 +163,7 @@ The worker-pool spawn loop calls `super::start::spawn_next_worker()` across cmd 
 
 ### Amendment requests
 
-6. work.rs: we don't want to hard code states that are defined in configuration. If this can't be done, maybe some part of work.rs can't move to apm-core. 
+- [x] 6. work.rs: we don't want to hard code states that are defined in configuration. If this can't be done, maybe some part of work.rs can't move to apm-core.
 
 
 ### Code review
