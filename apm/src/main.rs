@@ -147,6 +147,9 @@ enum Command {
         /// Output results as JSON
         #[arg(long)]
         json: bool,
+        /// Run only config cross-checks, skip ticket integrity checks
+        #[arg(long)]
+        config_only: bool,
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
@@ -238,7 +241,7 @@ fn main() -> Result<()> {
         Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add, remove),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, id, to, no_aggressive),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
-        Command::Validate { fix, json } => cmd::validate::run(&root, fix, json),
+        Command::Validate { fix, json, config_only } => cmd::validate::run(&root, fix, json, config_only),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),

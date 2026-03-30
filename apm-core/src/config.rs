@@ -43,6 +43,12 @@ pub struct LoggingConfig {
     pub file: Option<std::path::PathBuf>,
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct ProviderConfig {
+    #[serde(rename = "type", default)]
+    pub type_: String,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
@@ -60,6 +66,8 @@ pub struct Config {
     pub sync: SyncConfig,
     #[serde(default)]
     pub logging: LoggingConfig,
+    #[serde(default)]
+    pub provider: Option<ProviderConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

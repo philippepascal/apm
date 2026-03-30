@@ -919,6 +919,8 @@ fn sync_auto_accept_transitions_implemented_ticket_to_accepted() {
     // The ticket branch should now have state = "accepted".
     let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
     assert!(content.contains("state = \"accepted\""), "ticket should be accepted: {content}");
+}
+
 // --- context-section ---
 
 #[test]
@@ -1029,4 +1031,64 @@ actionable = ["agent"]
     let content = branch_content(p, "ticket/0001-config-sections-test", "tickets/0001-config-sections-test.md");
     // First entry in sections is "Approach", so context should land there
     assert!(content.contains("### Approach\n\nconfig driven context\n\n"), "expected context under ### Approach from config");
+}
+
+// --- validate ---
+
+#[test]
+fn validate_config_missing_instructions_and_bad_context_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    // Init a minimal git repo.
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    // Config with:
+    //   - state `new` with instructions pointing to a non-existent file
+    //   - transition with context_section that doesn't exist in ticket.sections
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[ticket.sections]]
+name = "Problem"
+type = "free"
+
+[[workflow.states]]
+id           = "new"
+label        = "New"
+instructions = "missing-file.md"
+
+[[workflow.states.transitions]]
+to              = "closed"
+context_section = "NonExistentSection"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let errors = apm::cmd::validate::validate_config(&config, p);
+
+    assert_eq!(errors.len(), 2, "expected exactly 2 errors, got: {errors:?}");
+
+    let has_missing_file = errors.iter().any(|e| {
+        e.contains("state.new.instructions") && e.contains("file not found")
+    });
+    assert!(has_missing_file, "expected missing instructions error in {errors:?}");
+
+    let has_bad_section = errors.iter().any(|e| {
+        e.contains("context_section") && e.contains("NonExistentSection")
+    });
+    assert!(has_bad_section, "expected context_section mismatch error in {errors:?}");
 }
