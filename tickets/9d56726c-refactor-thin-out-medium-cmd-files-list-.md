@@ -3,13 +3,13 @@ id = "9d56726c"
 title = "refactor: thin out medium cmd files (list, set, take, workers, worktrees, work)"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "claude-0330-0245-main"
 agent = "3852"
 branch = "ticket/9d56726c-refactor-thin-out-medium-cmd-files-list-"
 created_at = "2026-03-30T14:27:53.108961Z"
-updated_at = "2026-03-30T16:36:13.835668Z"
+updated_at = "2026-03-30T16:41:22.344109Z"
 +++
 
 ## Spec
