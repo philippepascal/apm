@@ -19,9 +19,21 @@ The take_succeeds_on_ammend_state, take_succeeds_on_blocked_state, and take_appe
 
 ### Acceptance criteria
 
+- [ ] `take_succeeds_on_ammend_state` passes reliably on repeated runs without manual cleanup
+- [ ] `take_succeeds_on_blocked_state` passes reliably on repeated runs without manual cleanup
+- [ ] `take_appends_handoff_history` passes reliably on repeated runs without manual cleanup
+- [ ] All other integration tests continue to pass
+
 ### Out of scope
 
+- Changing `setup()` or `setup_with_local_worktrees()` beyond what is needed
+- Fixing any other flaky tests
+
 ### Approach
+
+`setup_with_local_worktrees()` already exists in `integration.rs` and places the worktrees directory inside the tempdir (so it is cleaned up automatically by `TempDir` drop). The three failing tests currently call `setup()`, which places worktrees at `../worktrees/` relative to the temp repo — outside the tempdir, so they persist across runs and cause `git worktree add` to fail with "already exists" on the second run.
+
+Fix: change the three tests to call `setup_with_local_worktrees()` instead of `setup()`.
 
 ## History
 
