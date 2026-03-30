@@ -6,10 +6,10 @@ priority = 0
 effort = 3
 risk = 1
 author = "claude-0329-1430-main"
-agent = "claude-0329-1430-main"
+agent = "claude-0330-0245-main"
 branch = "ticket/0077-audit-and-update-cli-help-text-for-consi"
 created_at = "2026-03-30T00:59:27.415791Z"
-updated_at = "2026-03-30T01:05:50.631145Z"
+updated_at = "2026-03-30T02:43:59.488138Z"
 +++
 
 ## Spec
@@ -63,3 +63,4 @@ Work file by file: `main.rs`, then each cmd in alphabetical order.
 | 2026-03-30T01:03Z | in_design | specd | claude-0329-1430-main |
 | 2026-03-30T01:05Z | specd | ready | claude-0329-1430-main |
 | 2026-03-30T01:05Z | ready | in_progress | claude-0329-1430-main |
+| 2026-03-30T02:43Z | claude-0329-1430-main | claude-0330-0245-main | handoff |
