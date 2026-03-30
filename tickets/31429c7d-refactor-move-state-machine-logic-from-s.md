@@ -1,7 +1,7 @@
 +++
 id = "31429c7d"
 title = "refactor: move state machine logic from state.rs and start.rs into apm-core"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "95554"
 branch = "ticket/31429c7d-refactor-move-state-machine-logic-from-s"
 created_at = "2026-03-30T14:27:29.706701Z"
-updated_at = "2026-03-30T17:29:40.284709Z"
+updated_at = "2026-03-30T17:38:03.223720Z"
 +++
 
 ## Spec
@@ -140,3 +140,4 @@ pub mod start;
 | 2026-03-30T16:35Z | in_design | specd | claude-0330-1640-b7e2 |
 | 2026-03-30T16:56Z | specd | ready | philippepascal |
 | 2026-03-30T17:29Z | ready | in_progress | philippepascal |
+| 2026-03-30T17:38Z | in_progress | implemented | claude-0330-1800-w4rk |
