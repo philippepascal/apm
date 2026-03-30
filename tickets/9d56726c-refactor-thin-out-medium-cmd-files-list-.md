@@ -1,15 +1,15 @@
 +++
 id = "9d56726c"
 title = "refactor: thin out medium cmd files (list, set, take, workers, worktrees, work)"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 5
 risk = 2
 author = "claude-0330-0245-main"
-agent = "3852"
+agent = "philippepascal"
 branch = "ticket/9d56726c-refactor-thin-out-medium-cmd-files-list-"
 created_at = "2026-03-30T14:27:53.108961Z"
-updated_at = "2026-03-30T16:50:37.168480Z"
+updated_at = "2026-03-30T17:29:45.031480Z"
 +++
 
 ## Spec
@@ -174,3 +174,4 @@ The worker-pool spawn loop calls `super::start::spawn_next_worker()` across cmd 
 | 2026-03-30T16:36Z | new | in_design | philippepascal |
 | 2026-03-30T16:41Z | in_design | specd | claude-0330-1640-sp01 |
 | 2026-03-30T16:50Z | specd | ammend | philippepascal |
+| 2026-03-30T17:29Z | ammend | in_design | philippepascal |
