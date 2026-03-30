@@ -28,6 +28,11 @@ Squash-merged tickets are never transitioned to `accepted` and accumulate indefi
 
 ### Acceptance criteria
 
+- [ ] `apm sync` offers to accept a ticket whose branch was squash-merged into the default branch (remote path, remote tracking ref still present)
+- [ ] `apm sync` offers to accept a ticket whose branch was squash-merged and the remote tracking ref was subsequently deleted (local branch only remains)
+- [ ] `apm sync` does not falsely detect a branch as squash-merged when it has commits not yet present in main
+- [ ] `apm sync` continues to detect regular (non-squash) merges as before
+- [ ] `cargo test --workspace` passes, including at least one integration test that creates a squash-merge scenario and verifies detection
 
 ### Out of scope
 
