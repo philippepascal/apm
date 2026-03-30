@@ -28,15 +28,40 @@ updated_at = "2026-03-30T06:17:05.071419Z"
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm work --dry-run` reports a `ready` ticket whose `agent` field is already set (e.g. by spec authorship) as a candidate — it is not silently skipped
+- [ ] `apm work --dry-run` and `apm next` agree on which ticket would be dispatched first
+- [ ] `run_dry` in `apm/src/cmd/work.rs` contains no inline filter-and-sort loop — it delegates to `ticket::pick_next`
+- [ ] `apm work --dry-run` with no actionable tickets prints "dry-run: no actionable tickets" and exits 0
+- [ ] `apm work --dry-run` with at least one actionable ticket prints the ticket id, state, and title of the candidate that would be dispatched next
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing how `apm work` (non-dry-run) dispatches tickets
+- Respecting `max_concurrent` in the dry-run output (the command currently shows all candidates; this ticket changes to showing only the next one)
+- Any changes to `ticket::pick_next` signature or behaviour
+- Adding a `pick_all` / `candidates_sorted` helper to `apm-core`
 
 ### Approach
 
-How the implementation will work.
+**File changed:** `apm/src/cmd/work.rs` — `run_dry` function only.
+
+Replace the current inline filter + sort + collect with a single call to
+`ticket::pick_next`, matching the pattern used in `next.rs` and `start.rs`:
+
+1. Build `startable` and `actionable` the same way as today (no change).
+2. Load tickets with `ticket::load_all_from_git` (no change).
+3. Call `ticket::pick_next(&tickets, &actionable, &startable, pw, ew, rw)`
+   instead of the hand-rolled filter/sort loop.
+4. Match on `Some(t)` / `None`:
+   - `None` → print "dry-run: no actionable tickets" and return `Ok(())`.
+   - `Some(t)` → print "dry-run: would start next: #id [state] title".
+
+The `fm.agent.is_none()` guard disappears automatically because `pick_next`
+does not include it.
+
+Output format changes from listing *all* candidates to listing *the single
+next* candidate, consistent with what `apm work` would actually dispatch on
+its first iteration.
 
 ### Open questions
 
