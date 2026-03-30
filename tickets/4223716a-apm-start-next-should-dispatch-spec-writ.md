@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "11764"
 branch = "ticket/4223716a-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-30T20:52:32.229319Z"
-updated_at = "2026-03-30T21:00:10.847450Z"
+updated_at = "2026-03-30T21:04:50.153169Z"
 +++
 
 ## Spec
@@ -104,9 +104,7 @@ fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
 
 
 ### Amendment requests
-
-
-
+The proper name for the files are apm.worker.md and apm.spec-writer.md.
 ## History
 
 | When | From | To | By |
