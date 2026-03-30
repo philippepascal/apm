@@ -43,7 +43,7 @@ Target state: \`apm_core::ticket::create()\` encapsulates all creation logic and
 - [x] When `context` is `Some`, the text is injected into the correct section (resolved via `context_section`, then workflow config, then defaulting to "Problem")
 - [x] When `config.ticket.sections` is non-empty, the body uses those custom sections instead of the default four
 - [x] `apm new` still works end-to-end after the refactor (same observable output)
-- [ ] `cargo test --workspace` passes after the refactor
+- [x] `cargo test --workspace` passes after the refactor
 
 ### Out of scope
 
