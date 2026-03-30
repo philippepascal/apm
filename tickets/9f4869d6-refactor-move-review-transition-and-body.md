@@ -15,7 +15,23 @@ updated_at = "2026-03-30T14:27:50.402284Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`review.rs` contains 321 lines mixing editor orchestration (CLI concern) with
+business logic that belongs in `apm-core`:
+
+- Manual transition detection from config (which transitions are supervisor-only)
+- Spec body splitting (content vs history)
+- Amendment section extraction from edited file
+- Amendment section normalization (plain bullets → checkboxes)
+- Transition validation against config
+- Amendment request injection into ticket body
+
+Only editor temp-file management and the `$VISUAL`/`$EDITOR`/`vi` invocation
+belong in the CLI. Everything else is document manipulation that `apm-serve`
+will need when a supervisor approves or requests amendments via the web UI —
+without opening a local editor.
+
+Target: `apm_core::review` module with `available_transitions()`,
+`apply_review()`, `normalize_amendments()`. CLI handles editor and calls these.
 
 ### Acceptance criteria
 
