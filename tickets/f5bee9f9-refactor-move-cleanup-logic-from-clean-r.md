@@ -30,7 +30,7 @@ The target is apm_core::clean::candidates() returning a structured list of branc
 - [x] `candidates()` skips branches where the worktree has uncommitted changes
 - [x] `candidates()` skips branches where local and remote tips disagree
 - [x] `candidates()` skips branches where ticket state on the ticket branch differs from state on main
-- [ ] `candidates()` returns an empty list when there is nothing to clean
+- [x] `candidates()` returns an empty list when there is nothing to clean
 - [ ] `remove()` deletes the worktree (if present) and the local branch for a given candidate
 - [ ] `apm clean --dry-run` prints the same output as before, now driven by `candidates()`
 - [ ] `apm clean` (non-dry-run) removes the same set of worktrees and branches as before, now via `remove()`
