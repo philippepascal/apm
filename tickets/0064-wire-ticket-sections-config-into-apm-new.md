@@ -24,14 +24,14 @@ updated_at = "2026-03-29T23:56:20.333559Z"
 
 ### Acceptance criteria
 
-- [ ] `apm new` builds the ticket body by iterating `config.ticket.sections`; each section becomes `### <name>\n\n<placeholder or empty>\n\n`
-- [ ] If `config.ticket.sections` is empty, `apm new` falls back to the current hardcoded template (no regression for unconfigured repos)
-- [ ] `apm spec --section <name>` accepts any section name present in `config.ticket.sections`; unknown sections error with "not defined in [ticket.sections]"
-- [ ] `apm spec --section <name> --set <value>` for a `tasks`-type section wraps each non-checkbox line as `- [ ] <line>`
-- [ ] `apm spec --section <name> --set <value>` for a `qa`-type section wraps each line as `**Q:** <line>`
-- [ ] `apm spec --section <name> --set <value>` for a `free`-type section writes prose as-is (current behaviour)
-- [ ] If `config.ticket.sections` is empty, `apm spec` falls back to the current hardcoded KNOWN_SECTIONS behaviour
-- [ ] Unit test: body scaffold matches section definitions from a test config
+- [x] `apm new` builds the ticket body by iterating `config.ticket.sections`; each section becomes `### <name>\n\n<placeholder or empty>\n\n`
+- [x] If `config.ticket.sections` is empty, `apm new` falls back to the current hardcoded template (no regression for unconfigured repos)
+- [x] `apm spec --section <name>` accepts any section name present in `config.ticket.sections`; unknown sections error with "not defined in [ticket.sections]"
+- [x] `apm spec --section <name> --set <value>` for a `tasks`-type section wraps each non-checkbox line as `- [ ] <line>`
+- [x] `apm spec --section <name> --set <value>` for a `qa`-type section wraps each line as `**Q:** <line>`
+- [x] `apm spec --section <name> --set <value>` for a `free`-type section writes prose as-is (current behaviour)
+- [x] If `config.ticket.sections` is empty, `apm spec` falls back to the current hardcoded KNOWN_SECTIONS behaviour
+- [x] Unit test: body scaffold matches section definitions from a test config
 
 ### Out of scope
 
