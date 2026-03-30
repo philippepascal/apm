@@ -1,7 +1,7 @@
 +++
 id = "8c5dc732"
 title = "apm edit"
-state = "specd"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "14429"
 branch = "ticket/8c5dc732-apm-edit"
 created_at = "2026-03-30T16:11:04.170762Z"
-updated_at = "2026-03-30T16:15:51.798486Z"
+updated_at = "2026-03-30T16:21:32.322788Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ and `edit.rs`, or simply re-expose them from `spec.rs` as `pub(super)` functions
 | 2026-03-30T16:11Z | — | new | philippepascal |
 | 2026-03-30T16:12Z | new | in_design | philippepascal |
 | 2026-03-30T16:15Z | in_design | specd | claude-0330-1615-b7e2 |
+| 2026-03-30T16:21Z | specd | closed | philippepascal |
