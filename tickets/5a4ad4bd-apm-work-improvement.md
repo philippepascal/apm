@@ -3,13 +3,13 @@ id = "5a4ad4bd"
 title = "apm work improvement"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "apm"
 agent = "93102"
 branch = "ticket/5a4ad4bd-apm-work-improvement"
 created_at = "2026-03-30T19:21:34.679718Z"
-updated_at = "2026-03-30T19:23:51.068491Z"
+updated_at = "2026-03-30T19:27:18.559964Z"
 +++
 
 ## Spec
