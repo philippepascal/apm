@@ -16,23 +16,9 @@ updated_at = "2026-03-30T22:51:25.248845Z"
 
 ### Problem
 
-Each state in `apm.toml` has an `instructions` field naming the markdown file that should be used as the system prompt when an agent works that state. For example:
+In `apm-core/src/start.rs`, the `run()` function (used by `apm start <id> --spawn`) hardcodes `.apm/apm.worker.md` as the worker system prompt (line 233), ignoring the `instructions` field on each state in `apm.toml`.
 
-```toml
-[[workflow.states]]
-id = "new"
-instructions = "apm.spec-writer.md"
-
-[[workflow.states]]
-id = "ready"
-instructions = "apm.worker.md"
-```
-
-These files live in `.apm/` (e.g. `.apm/apm.spec-writer.md`, `.apm/apm.worker.md`).
-
-`apm start` currently ignores the `instructions` field entirely. It hardcodes `.apm/apm.worker.md` as the system prompt for every spawned worker subprocess, regardless of which state the ticket is in.
-
-The fix is mechanical: in `apm-core/src/start.rs`, at each of the three spawn sites (`run()`, `run_next()`, `spawn_next_worker()`), look up the ticket's pre-transition state in `config.workflow.states`, read the `instructions` field, and load `.apm/<instructions>` as the system prompt. Fall back to `.apm/apm.worker.md` if the field is absent or the file cannot be read. No state names should be hardcoded in `start.rs`.
+The other two spawn paths — `run_next()` and `spawn_next_worker()` — already look up the ticket's pre-transition state in `config.workflow.states`, read its `instructions` field, and load the referenced file. `run()` has no equivalent lookup.
 
 ### Acceptance criteria
 
