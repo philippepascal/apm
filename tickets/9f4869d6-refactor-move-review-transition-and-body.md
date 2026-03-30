@@ -1,7 +1,7 @@
 +++
 id = "9f4869d6"
 title = "refactor: move review transition and body manipulation logic into apm-core"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "85310"
 branch = "ticket/9f4869d6-refactor-move-review-transition-and-body"
 created_at = "2026-03-30T14:27:50.402284Z"
-updated_at = "2026-03-30T16:40:34.234376Z"
+updated_at = "2026-03-30T17:00:30.232230Z"
 +++
 
 ## Spec
@@ -88,3 +88,4 @@ Moving the document-manipulation functions into apm_core::review gives apm-serve
 | 2026-03-30T14:27Z | — | new | claude-0330-0245-main |
 | 2026-03-30T16:35Z | new | in_design | philippepascal |
 | 2026-03-30T16:40Z | in_design | specd | claude-0330-1700-sp01 |
+| 2026-03-30T17:00Z | specd | ready | philippepascal |
