@@ -38,7 +38,7 @@ Specifically missing today:
   ticket ID, title, PID, elapsed time, current ticket state
 - [x] `apm workers` shows no output (or "No workers running.") when no
   `.apm-worker.pid` files exist in any active worktree
-- [ ] `apm workers --log <id>` tails the last N lines of the worker log for
+- [x] `apm workers --log <id>` tails the last N lines of the worker log for
   ticket `<id>` and follows new output (like `tail -f`)
 - [ ] `apm workers --kill <id>` sends SIGTERM to the worker for ticket `<id>`
   and removes the `.apm-worker.pid` file; prints a confirmation
