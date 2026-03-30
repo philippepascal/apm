@@ -27,14 +27,44 @@ The target shape is `apm_core::sync::detect(root, config)` returning a structure
 
 ### Acceptance criteria
 
+- [ ] `apm_core::sync` is a public module in `apm-core` and re-exported from `apm-core/src/lib.rs`
+- [ ] `apm_core::sync::detect(root, config)` returns a `Candidates` value containing separate `Vec<AcceptCandidate>` and `Vec<CloseCandidate>`
+- [ ] `AcceptCandidate` holds the `Ticket` for an implemented ticket whose branch is merged into main
+- [ ] `CloseCandidate` holds the `Ticket` and a `reason` string for a ticket that is either in `accepted` state or in `implemented` state with its branch gone
+- [ ] `apm_core::sync::apply(root, config, candidates, author)` transitions each accept candidate to `accepted` state and closes each close candidate
+- [ ] `apm/src/cmd/sync.rs` no longer defines `AcceptCandidate`, `CloseCandidate`, or `detect_closeable`
+- [ ] `apm sync` produces identical output and behaviour to before this refactor
+- [ ] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Interactive prompting logic (`prompt_accept`, `prompt_close`, `is_interactive`) — stays in the CLI
+- The `run()` orchestration in `sync.rs` (git fetch, push, flag handling) — stays in the CLI
+- Any changes to the sync workflow's observable behaviour or flags
+- Building `apm-serve` — this ticket only prepares the library API for it
+- Adding new sync capabilities (e.g. dry-run mode, filtering by state)
 
 ### Approach
 
-How the implementation will work.
+1. **Create `apm-core/src/sync.rs`** with the following public API:
+   - `pub struct AcceptCandidate { pub ticket: Ticket }`
+   - `pub struct CloseCandidate { pub ticket: Ticket, pub reason: &'static str }`
+   - `pub struct Candidates { pub accept: Vec<AcceptCandidate>, pub close: Vec<CloseCandidate> }`
+   - `pub fn detect(root: &Path, config: &Config) -> Result<Candidates>` — lift the merged-branch loop (lines 33–53 of current `sync.rs`) and the full body of `detect_closeable` (lines 111–158) verbatim; the only difference is calling `git::` and `Ticket::` functions that are already in `apm-core`
+   - `pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str) -> Result<()>` — for each accept candidate call a new `ticket::accept(root, config, id, author)` function; for each close candidate call the existing `ticket::close(root, config, id, None, author)`
+
+2. **Add `ticket::accept`** to `apm-core/src/ticket.rs`: a minimal function that transitions a ticket from `implemented` to `accepted`, following the same pattern as `ticket::close` (read from branch, update state field, append history row, commit to branch). No merge or push — those stay in the CLI.
+
+3. **Add `pub mod sync;`** to `apm-core/src/lib.rs`
+
+4. **Update `apm/src/cmd/sync.rs`**:
+   - Remove the `AcceptCandidate`, `CloseCandidate` struct definitions and `detect_closeable`
+   - Import `apm_core::sync::{Candidates, detect, apply}`
+   - Replace the inline accept-candidate detection loop and `detect_closeable` call with `let candidates = apm_core::sync::detect(root, &config)?;`
+   - Replace the per-candidate `super::state::run(...)` and `ticket::close(...)` calls with `apm_core::sync::apply(root, &config, &candidates, "apm-sync")?`
+   - Keep `prompt_accept`, `prompt_close`, `is_interactive`, and all flag handling unchanged
+
+5. **Run `cargo test --workspace`** before committing
 
 ### Open questions
 
