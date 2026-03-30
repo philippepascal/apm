@@ -83,7 +83,7 @@ current native behaviour unchanged.
   commented sections for users to add project-specific dependencies
 - [x] The worker container is ephemeral: started with `--rm`, no persistent
   volumes or named containers
-- [ ] `apm validate` checks: if `[workers] container` is set but `docker` is not
+- [x] `apm validate` checks: if `[workers] container` is set but `docker` is not
   in PATH, print a warning
 
 ### Out of scope
