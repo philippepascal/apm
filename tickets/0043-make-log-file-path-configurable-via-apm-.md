@@ -1,7 +1,7 @@
 +++
 id = 43
 title = "Make log file path configurable via apm.toml file key"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0328-1000-a1b2"
 agent = "claude-0328-t43a"
 branch = "ticket/0043-make-log-file-path-configurable-via-apm-"
 created_at = "2026-03-28T08:58:38.222881Z"
-updated_at = "2026-03-28T19:29:01.823598Z"
+updated_at = "2026-03-30T02:03:56.936679Z"
 +++
 
 ## Spec
@@ -102,3 +102,4 @@ path reflects any `file` override from config.
 | 2026-03-28T19:24Z | ready | in_progress | claude-0328-t43a |
 | 2026-03-28T19:26Z | in_progress | implemented | claude-0328-t43a |
 | 2026-03-28T19:29Z | implemented | accepted | apm sync |
+| 2026-03-30T02:03Z | accepted | closed | apm-sync |
