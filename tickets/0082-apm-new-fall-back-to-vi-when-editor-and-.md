@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0082-apm-new-fall-back-to-vi-when-editor-and-"
 created_at = "2026-03-30T04:49:04.279707Z"
-updated_at = "2026-03-30T04:52:42.683863Z"
+updated_at = "2026-03-30T04:53:35.640506Z"
 +++
 
 ## Spec
