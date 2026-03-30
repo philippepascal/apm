@@ -32,7 +32,9 @@ description = "Git-native, agent-first project management tool"
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- No changes to `apm new`, `apm show`, or any other command
+- No support for non-interactive flags (e.g. `--name`/`--description`) at this time
+- No changes to the config schema — `description` already exists in `ProjectConfig`
 
 ### Approach
 
