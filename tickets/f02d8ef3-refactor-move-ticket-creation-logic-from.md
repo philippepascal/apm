@@ -3,13 +3,13 @@ id = "f02d8ef3"
 title = "refactor: move ticket creation logic from new.rs into apm-core"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0330-0245-main"
 agent = "3975"
 branch = "ticket/f02d8ef3-refactor-move-ticket-creation-logic-from"
 created_at = "2026-03-30T14:27:32.493841Z"
-updated_at = "2026-03-30T16:31:31.237281Z"
+updated_at = "2026-03-30T16:34:26.196027Z"
 +++
 
 ## Spec
