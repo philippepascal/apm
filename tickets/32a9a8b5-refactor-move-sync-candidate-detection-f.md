@@ -1,15 +1,15 @@
 +++
 id = "32a9a8b5"
 title = "refactor: move sync candidate detection from sync.rs into apm-core"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
 author = "claude-0330-0245-main"
-agent = "claude-0330-1640-spec1"
+agent = "philippepascal"
 branch = "ticket/32a9a8b5-refactor-move-sync-candidate-detection-f"
 created_at = "2026-03-30T14:27:39.762926Z"
-updated_at = "2026-03-30T16:59:30.116867Z"
+updated_at = "2026-03-30T17:22:24.388366Z"
 +++
 
 ## Spec
@@ -83,3 +83,4 @@ The target shape is `apm_core::sync::detect(root, config)` returning a structure
 | 2026-03-30T16:37Z | 65590 | claude-0330-1640-spec1 | handoff |
 | 2026-03-30T16:41Z | in_design | specd | claude-0330-1640-spec1 |
 | 2026-03-30T16:59Z | specd | ready | philippepascal |
+| 2026-03-30T17:22Z | ready | in_progress | philippepascal |
