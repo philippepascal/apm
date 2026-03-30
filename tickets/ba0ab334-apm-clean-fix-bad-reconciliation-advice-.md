@@ -3,13 +3,13 @@ id = "ba0ab334"
 title = "apm clean: fix bad reconciliation advice for state mismatch"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 agent = "51664"
 branch = "ticket/ba0ab334-apm-clean-fix-bad-reconciliation-advice-"
 created_at = "2026-03-30T19:59:52.991650Z"
-updated_at = "2026-03-30T20:00:41.112157Z"
+updated_at = "2026-03-30T20:01:49.147826Z"
 +++
 
 ## Spec
