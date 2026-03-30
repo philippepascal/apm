@@ -16,11 +16,10 @@ updated_at = "2026-03-30T19:23:51.068491Z"
 
 ### Problem
 
-apm work wait for worker it started to finish even if it's using less workers than max. if it's using less worker than max, it should poll regularly in case more tickets have become actionable
+The `apm work` dispatch loop sets a permanent `no_more` flag the first time `spawn_next_worker` returns `None` (no actionable ticket found). Once that flag is set, the loop stops trying to spawn new workers and merely waits for existing workers to drain. This means that if a running worker finishes and its ticket transitions unblock another ticket—making it newly actionable—the loop will never pick it up. The result: `apm work` under-utilises available worker slots after the initial burst, and newly-unblocked tickets are silently ignored until a completely new `apm work` invocation is run by the user.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -35,10 +34,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
