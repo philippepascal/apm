@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "3852"
 branch = "ticket/9d56726c-refactor-thin-out-medium-cmd-files-list-"
 created_at = "2026-03-30T14:27:53.108961Z"
-updated_at = "2026-03-30T16:41:32.571917Z"
+updated_at = "2026-03-30T16:50:34.756793Z"
 +++
 
 ## Spec
@@ -162,12 +162,10 @@ The worker-pool spawn loop calls `super::start::spawn_next_worker()` across cmd 
 
 ### Amendment requests
 
+6. work.rs: we don't want to hard code states that are defined in configuration. If this can't be done, maybe some part of work.rs can't move to apm-core. 
 
 
 ### Code review
-
-
-
 ## History
 
 | When | From | To | By |
