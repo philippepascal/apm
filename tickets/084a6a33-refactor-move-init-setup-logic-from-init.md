@@ -1,15 +1,15 @@
 +++
 id = "084a6a33"
 title = "refactor: move init setup logic from init.rs into apm-core"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
 author = "claude-0330-0245-main"
-agent = "110"
+agent = "philippepascal"
 branch = "ticket/084a6a33-refactor-move-init-setup-logic-from-init"
 created_at = "2026-03-30T14:27:51.779466Z"
-updated_at = "2026-03-30T16:53:51.927730Z"
+updated_at = "2026-03-30T17:26:01.182909Z"
 +++
 
 ## Spec
@@ -126,3 +126,4 @@ Add a `#[cfg(test)]` block using `tempfile::TempDir`. Each test creates a bare t
 | 2026-03-30T16:36Z | new | in_design | philippepascal |
 | 2026-03-30T16:40Z | in_design | specd | claude-0330-1640-spec7 |
 | 2026-03-30T16:53Z | specd | ready | philippepascal |
+| 2026-03-30T17:26Z | ready | in_progress | philippepascal |
