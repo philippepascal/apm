@@ -82,17 +82,45 @@ pub fn merged_into_main(root: &Path, default_branch: &str) -> Result<Vec<String>
             .map(|l| l.trim().trim_start_matches("origin/").to_string())
             .filter(|l| !l.is_empty())
             .collect();
-        let merged_set: std::collections::HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
+        let merged_set: std::collections::HashSet<String> = merged.iter().cloned().collect();
 
-        // Squash-merge detection for branches not caught by --merged.
+        // Squash-merge detection for remote branches not caught by --merged.
+        // Pass full origin/ refs so merge-base resolution works even without a local branch.
         let all_remote = run(root, &["branch", "-r", "--list", "origin/ticket/*"])
             .unwrap_or_default();
-        let candidates: Vec<String> = all_remote
+        let remote_candidates: Vec<String> = all_remote
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| {
+                let stripped = l.strip_prefix("origin/").unwrap_or(l.as_str());
+                !l.is_empty() && !merged_set.contains(stripped)
+            })
+            .collect();
+        let remote_squashed = squash_merged(root, &remote_merged, remote_candidates)?;
+        // Strip origin/ prefix before adding to merged.
+        merged.extend(remote_squashed.into_iter().map(|b| {
+            b.strip_prefix("origin/").unwrap_or(&b).to_string()
+        }));
+
+        // Also check local-only ticket branches whose remote tracking ref was deleted
+        // (e.g. GitHub auto-deletes the branch after squash merge).
+        let remote_stripped: std::collections::HashSet<String> = all_remote
             .lines()
             .map(|l| l.trim().trim_start_matches("origin/").to_string())
-            .filter(|l| !l.is_empty() && !merged_set.contains(l.as_str()))
+            .filter(|l| !l.is_empty())
             .collect();
-        merged.extend(squash_merged(root, &remote_merged, candidates)?);
+        let merged_now: std::collections::HashSet<String> = merged.iter().cloned().collect();
+        let all_local = run(root, &["branch", "--list", "ticket/*"]).unwrap_or_default();
+        let local_only: Vec<String> = all_local
+            .lines()
+            .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
+            .filter(|l| {
+                !l.is_empty()
+                    && !remote_stripped.contains(l)
+                    && !merged_now.contains(l)
+            })
+            .collect();
+        merged.extend(squash_merged(root, &remote_merged, local_only)?);
         return Ok(merged);
     }
 
@@ -123,17 +151,42 @@ pub fn merged_into_main(root: &Path, default_branch: &str) -> Result<Vec<String>
     Ok(merged)
 }
 
-/// Detect branches squash-merged into `main_ref`: every commit on the branch
-/// has an equivalent patch already in `main_ref` (via git's patch-id mechanism).
+/// Detect branches squash-merged into `main_ref` using the commit-tree + cherry algorithm.
+///
+/// For each candidate ref, we create a virtual squash commit whose tree equals
+/// the branch tip's tree and whose parent is the merge-base with main. Then
+/// `git cherry` compares that squash commit's patch-id against commits already
+/// in main. A `-` prefix means main has a commit with the same aggregate diff.
 fn squash_merged(root: &Path, main_ref: &str, candidates: Vec<String>) -> Result<Vec<String>> {
     let mut result = Vec::new();
     for branch in candidates {
-        let range = format!("{main_ref}...{branch}");
-        let out = run(root, &[
-            "log", "--cherry-pick", "--right-only", "--no-merges", "--format=%H", &range,
-        ])
-        .unwrap_or_default();
-        if out.trim().is_empty() {
+        let merge_base = match run(root, &["merge-base", main_ref, &branch]) {
+            Ok(mb) => mb,
+            Err(_) => continue,
+        };
+        let branch_tip = match run(root, &["rev-parse", &format!("{branch}^{{commit}}")]) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        // Already an ancestor — caught by --merged.
+        if branch_tip == merge_base {
+            continue;
+        }
+        // Virtual squash commit: aggregate diff from merge_base to branch tip.
+        let squash_commit = match run(root, &[
+            "commit-tree", &format!("{branch}^{{tree}}"),
+            "-p", &merge_base,
+            "-m", "squash",
+        ]) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        // `git cherry main squash_commit`: prints `- sha` when main already has that patch.
+        let cherry_out = match run(root, &["cherry", main_ref, &squash_commit]) {
+            Ok(o) => o,
+            Err(_) => continue,
+        };
+        if cherry_out.trim().starts_with('-') {
             result.push(branch);
         }
     }
