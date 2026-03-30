@@ -100,6 +100,100 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
     Ok(tickets)
 }
 
+/// Close a ticket from any state.  Commits the change to the ticket branch,
+/// pushes it (non-fatal if no remote), then merges into the default branch
+/// so that `apm clean` can detect and remove the worktree.
+pub fn close(
+    root: &Path,
+    config: &crate::config::Config,
+    id: u32,
+    reason: Option<&str>,
+    agent: &str,
+) -> Result<()> {
+    let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
+
+    // If not found on ticket branches, search the default branch.
+    // This handles stale "implemented" tickets whose branch was deleted.
+    let mut from_default: Option<Ticket> = None;
+    if !tickets.iter().any(|t| t.frontmatter.id == id) {
+        let default_branch = &config.project.default_branch;
+        if let Ok(files) = crate::git::list_files_on_branch(root, default_branch, &config.tickets.dir.to_string_lossy()) {
+            for rel_path in files {
+                if !rel_path.ends_with(".md") { continue; }
+                if let Ok(content) = crate::git::read_from_branch(root, default_branch, &rel_path) {
+                    let dummy = root.join(&rel_path);
+                    if let Ok(t) = Ticket::parse(&dummy, &content) {
+                        if t.frontmatter.id == id {
+                            from_default = Some(t);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let ticket_pos = tickets.iter().position(|t| t.frontmatter.id == id);
+    let t: &mut Ticket = match ticket_pos {
+        Some(pos) => &mut tickets[pos],
+        None => from_default.as_mut().ok_or_else(|| anyhow::anyhow!("ticket #{id} not found"))?,
+    };
+
+    if t.frontmatter.state == "closed" {
+        anyhow::bail!("ticket #{id} is already closed");
+    }
+
+    let now = chrono::Utc::now();
+    let prev = t.frontmatter.state.clone();
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    let by = match reason {
+        Some(r) => format!("{agent} (reason: {r})"),
+        None => agent.to_string(),
+    };
+
+    t.frontmatter.state = "closed".into();
+    t.frontmatter.updated_at = Some(now);
+
+    let row = format!("| {when} | {prev} | closed | {by} |");
+    if t.body.contains("## History") {
+        if !t.body.ends_with('\n') {
+            t.body.push('\n');
+        }
+        t.body.push_str(&row);
+        t.body.push('\n');
+    } else {
+        t.body.push_str(&format!(
+            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
+        ));
+    }
+
+    let content = t.serialize()?;
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    let branch = t.frontmatter.branch.clone()
+        .or_else(|| crate::git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id:04}"));
+
+    crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
+    crate::logger::log("state_transition", &format!("#{id} {prev} -> closed"));
+
+    if crate::git::has_remote(root) {
+        if let Err(e) = crate::git::push_branch(root, &branch) {
+            eprintln!("warning: push {branch} failed: {e:#}");
+        }
+    }
+
+    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch) {
+        eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
+    }
+
+    println!("#{id}: {prev} → closed");
+    Ok(())
+}
+
 pub fn slugify(s: &str) -> String {
     s.chars()
         .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })

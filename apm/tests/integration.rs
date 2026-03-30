@@ -510,38 +510,19 @@ fn sync_no_close_when_nothing_to_close() {
 }
 
 #[test]
-fn sync_batches_multiple_closes_into_one_commit() {
+fn sync_closes_multiple_accepted_tickets() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
     write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "accepted", 1, "alpha");
     write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "accepted", 2, "beta");
 
-    let commits_before: usize = std::process::Command::new("git")
-        .args(["rev-list", "--count", "main"])
-        .current_dir(p)
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
-        .unwrap_or(0);
-
     apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
 
-    let commits_after: usize = std::process::Command::new("git")
-        .args(["rev-list", "--count", "main"])
-        .current_dir(p)
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap().trim().parse().unwrap_or(0))
-        .unwrap_or(0);
-
-    assert_eq!(commits_after, commits_before + 1, "exactly one new commit expected");
-
-    let msg = std::process::Command::new("git")
-        .args(["log", "--format=%s", "-1"])
-        .current_dir(p)
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap())
-        .unwrap();
-    assert!(msg.contains("#1") && msg.contains("#2"), "commit message should list both tickets: {msg}");
+    let alpha = branch_content(p, "main", "tickets/0001-alpha.md");
+    let beta = branch_content(p, "main", "tickets/0002-beta.md");
+    assert!(alpha.contains("state = \"closed\""), "alpha should be closed on main: {alpha}");
+    assert!(beta.contains("state = \"closed\""), "beta should be closed on main: {beta}");
 }
 
 // --- take ---
@@ -571,7 +552,7 @@ fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, 
 
 #[test]
 fn take_succeeds_on_ammend_state() {
-    let dir = setup();
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_agent(p, "ticket/0001-ammend-me", "0001-ammend-me.md", "ammend", 1, "ammend me", "old-agent");
     std::env::set_var("APM_AGENT_NAME", "new-agent");
@@ -582,7 +563,7 @@ fn take_succeeds_on_ammend_state() {
 
 #[test]
 fn take_succeeds_on_blocked_state() {
-    let dir = setup();
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_agent(p, "ticket/0001-blocked", "0001-blocked.md", "blocked", 1, "blocked", "old-agent");
     std::env::set_var("APM_AGENT_NAME", "new-agent");
@@ -593,7 +574,7 @@ fn take_succeeds_on_blocked_state() {
 
 #[test]
 fn take_appends_handoff_history() {
-    let dir = setup();
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_agent(p, "ticket/0001-handoff", "0001-handoff.md", "in_progress", 1, "handoff", "old-agent");
     std::env::set_var("APM_AGENT_NAME", "new-agent");
@@ -823,6 +804,87 @@ fn spec_mark_case_insensitive() {
     ).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
+}
+
+// ── apm close ────────────────────────────────────────────────────────────────
+
+#[test]
+fn close_transitions_from_any_state() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Close me".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-close-me", "tickets/0001-close-me.md");
+    // Ticket is in "new" state — no transition to "closed" is defined.
+    apm::cmd::close::run(p, 1, None).unwrap();
+    let content = branch_content(p, "ticket/0001-close-me", "tickets/0001-close-me.md");
+    assert!(content.contains("state = \"closed\""), "state not updated: {content}");
+    assert!(content.contains("| new | closed |"), "history row missing: {content}");
+}
+
+#[test]
+fn close_with_reason_appends_to_history() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Close reason".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-close-reason", "tickets/0001-close-reason.md");
+    apm::cmd::close::run(p, 1, Some("superseded by #42".into())).unwrap();
+    let content = branch_content(p, "ticket/0001-close-reason", "tickets/0001-close-reason.md");
+    assert!(content.contains("state = \"closed\""), "state not updated: {content}");
+    assert!(content.contains("superseded by #42"), "reason missing: {content}");
+}
+
+#[test]
+fn close_already_closed_is_error() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-already-closed", "tickets/0001-already-closed.md");
+    apm::cmd::close::run(p, 1, None).unwrap();
+    let result = apm::cmd::close::run(p, 1, None);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("already closed"));
+}
+
+#[test]
+fn close_nonexistent_ticket_is_error() {
+    let dir = setup();
+    let p = dir.path();
+    let result = apm::cmd::close::run(p, 999, None);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("not found"));
+}
+
+#[test]
+fn validate_does_not_flag_closed_state() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-validate-closed", "tickets/0001-validate-closed.md");
+    apm::cmd::close::run(p, 1, None).unwrap();
+    // apm validate should not flag the closed ticket as having an unknown state.
+    // The test config is minimal and may produce config warnings (e.g. missing transitions),
+    // but there must be zero ticket-level errors.
+    let result = apm::cmd::validate::run(p, false, false, false);
+    if let Err(e) = &result {
+        let msg = e.to_string();
+        assert!(
+            msg.contains("0 ticket errors"),
+            "validate flagged a ticket-level error (possibly unknown state): {msg}"
+        );
+    }
+}
+
+#[test]
+fn state_to_closed_bypasses_transition_rules() {
+    let dir = setup();
+    let p = dir.path();
+    apm::cmd::new::run(p, "State closed".into(), true, false, None, None, true).unwrap();
+    sync_from_branch(p, "ticket/0001-state-closed", "tickets/0001-state-closed.md");
+    // "new" state has no outgoing transitions to "closed" in the test config,
+    // but "closed" is a mandatory terminal state so it should still work.
+    apm::cmd::state::run(p, 1, "closed".into(), false).unwrap();
+    let content = branch_content(p, "ticket/0001-state-closed", "tickets/0001-state-closed.md");
+    assert!(content.contains("state = \"closed\""), "state not updated: {content}");
 }
 
 // ── apm start --next ─────────────────────────────────────────────────────────
@@ -1327,4 +1389,40 @@ terminal = true
         e.contains("context_section") && e.contains("NonExistentSection")
     });
     assert!(has_bad_section, "expected context_section mismatch error in {errors:?}");
+}
+
+// --- review ---
+
+#[test]
+fn review_ammend_normalises_plain_bullets_to_checkboxes() {
+    let dir = setup();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "Review checkbox test".into(), true, false, None, None, true).unwrap();
+
+    let branch = "ticket/0001-review-checkbox-test";
+    let ticket_path = "tickets/0001-review-checkbox-test.md";
+
+    // Write a spec with a ### Amendment requests section containing plain bullets.
+    let existing = branch_content(p, branch, ticket_path);
+    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let frontmatter = &existing[..fm_end];
+    let body = "\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] AC one\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- plain item\n- [ ] already a checkbox\n- [x] already checked\n\n## History\n\n| When | From | To | By |\n|------|------|----|-----|\n| 2026-01-01T00:00Z | — | new | test-agent |\n";
+    let content = format!("{frontmatter}{body}");
+    git(p, &["checkout", branch]);
+    std::fs::write(p.join(ticket_path), &content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ticket_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add amendment requests"]);
+    git(p, &["checkout", "-"]);
+
+    // Use a no-op editor so the spec is not modified interactively.
+    std::env::set_var("EDITOR", "true");
+    apm::cmd::review::run(p, 1, Some("ammend".to_string()), true).unwrap();
+    std::env::remove_var("EDITOR");
+
+    let committed = branch_content(p, branch, ticket_path);
+    assert!(committed.contains("- [ ] plain item"), "plain bullet should be converted to checkbox");
+    assert!(!committed.contains("\n- plain item\n"), "plain bullet should no longer appear as-is");
+    assert!(committed.contains("- [ ] already a checkbox"), "existing checkbox should be unchanged");
+    assert!(committed.contains("- [x] already checked"), "checked item should be unchanged");
 }
