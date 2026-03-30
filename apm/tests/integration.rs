@@ -2373,3 +2373,196 @@ fn state_force_does_not_skip_doc_validation() {
     let result = apm::cmd::state::run(p, &id, "specd".into(), true, true);
     assert!(result.is_err(), "expected spec validation to still fail with --force");
 }
+
+// --- squash-merge detection ---
+
+/// Minimal apm.toml with implemented + accepted states for squash-merge tests.
+fn squash_merge_config() -> &'static str {
+    r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 1
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "accepted"
+label = "Accepted"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#
+}
+
+/// Set up a bare remote + local clone for squash-merge tests.
+/// Returns (bare_dir, local_dir). Both TempDirs must be kept alive.
+fn setup_squash_remote() -> (TempDir, TempDir) {
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let local = tempfile::tempdir().unwrap();
+    let p = local.path();
+    git(p, &["clone", &bp.to_string_lossy(), "."]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(p.join("apm.toml"), squash_merge_config()).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    git(p, &["push", "origin", "main"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    (bare, local)
+}
+
+/// Write an "implemented" ticket to a branch and return the branch name.
+fn write_implemented_ticket(dir: &std::path::Path, branch: &str, filename: &str) {
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = 1\ntitle = \"Squash test\"\nstate = \"implemented\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists_locally = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists_locally {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "implement ticket"]);
+    git(dir, &["checkout", "main"]);
+}
+
+/// Squash-merge `branch` into main: `git merge --squash` + `git commit`.
+fn squash_merge_into_main(dir: &std::path::Path, branch: &str) {
+    git(dir, &["-c", "commit.gpgsign=false", "merge", "--squash", branch]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("squash merge {branch}")]);
+}
+
+#[test]
+fn sync_detect_squash_merged_branch_remote_ref_present() {
+    let (_bare, local) = setup_squash_remote();
+    let p = local.path();
+
+    let branch = "ticket/0001-squash-test";
+    write_implemented_ticket(p, branch, "0001-squash-test.md");
+    git(p, &["push", "origin", branch]);
+
+    // Squash-merge into main locally and push main.
+    squash_merge_into_main(p, branch);
+    git(p, &["push", "origin", "main"]);
+
+    // Fetch so local has up-to-date origin/main.
+    git(p, &["fetch", "--all", "--quiet"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    let accept_branches: Vec<&str> = candidates.accept.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        accept_branches.contains(&branch),
+        "squash-merged ticket should appear in accept candidates; got: {accept_branches:?}"
+    );
+}
+
+#[test]
+fn sync_detect_squash_merged_branch_remote_ref_deleted() {
+    let (_bare, local) = setup_squash_remote();
+    let p = local.path();
+
+    let branch = "ticket/0001-squash-gone";
+    write_implemented_ticket(p, branch, "0001-squash-gone.md");
+    git(p, &["push", "origin", branch]);
+
+    squash_merge_into_main(p, branch);
+    git(p, &["push", "origin", "main"]);
+
+    // Delete the remote branch (GitHub does this automatically after merge).
+    git(p, &["push", "origin", "--delete", branch]);
+    // Prune the deleted remote tracking ref.
+    git(p, &["fetch", "--all", "--prune", "--quiet"]);
+
+    // Local branch still exists; remote tracking ref is gone.
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    let accept_branches: Vec<&str> = candidates.accept.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        accept_branches.contains(&branch),
+        "squash-merged ticket with deleted remote ref should appear in accept candidates; got: {accept_branches:?}"
+    );
+}
+
+#[test]
+fn sync_detect_does_not_falsely_detect_unmerged_branch() {
+    let (_bare, local) = setup_squash_remote();
+    let p = local.path();
+
+    let branch = "ticket/0001-not-merged";
+    write_implemented_ticket(p, branch, "0001-not-merged.md");
+    git(p, &["push", "origin", branch]);
+
+    // Do NOT merge into main — branch has commits not in main.
+    git(p, &["fetch", "--all", "--quiet"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    let accept_branches: Vec<&str> = candidates.accept.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        !accept_branches.contains(&branch),
+        "unmerged ticket should NOT appear in accept candidates; got: {accept_branches:?}"
+    );
+}
+
+#[test]
+fn sync_detect_regular_merge_still_detected() {
+    let (_bare, local) = setup_squash_remote();
+    let p = local.path();
+
+    let branch = "ticket/0001-regular-merge";
+    write_implemented_ticket(p, branch, "0001-regular-merge.md");
+    git(p, &["push", "origin", branch]);
+
+    // Regular (non-squash) merge.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch, "--no-edit"]);
+    git(p, &["push", "origin", "main"]);
+    git(p, &["fetch", "--all", "--quiet"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    let accept_branches: Vec<&str> = candidates.accept.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        accept_branches.contains(&branch),
+        "regular-merged ticket should appear in accept candidates; got: {accept_branches:?}"
+    );
+}
