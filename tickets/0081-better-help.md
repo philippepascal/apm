@@ -1,7 +1,7 @@
 +++
-id = 81
+id = "0081"
 title = "better help"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0330-0245-main"
 branch = "ticket/0081-better-help"
 created_at = "2026-03-30T04:47:00.345986Z"
-updated_at = "2026-03-30T05:22:17.154564Z"
+updated_at = "2026-03-30T05:40:52.757411Z"
 +++
 
 ## Spec
@@ -127,3 +127,4 @@ Add `#[command(hide = true)]` to the `Hook` variant so it does not appear in
 | 2026-03-30T04:47Z | — | new | apm |
 | 2026-03-30T05:19Z | new | in_design | claude-0330-0245-main |
 | 2026-03-30T05:22Z | in_design | specd | claude-0330-0245-main |
+| 2026-03-30T05:40Z | specd | ready | apm |
