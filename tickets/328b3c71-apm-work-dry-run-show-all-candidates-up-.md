@@ -24,14 +24,33 @@ The fix is to have `--dry-run` show up to `max_concurrent` candidates in priorit
 
 ### Acceptance criteria
 
+- [ ] `apm work --dry-run` prints one line per candidate, up to `max_concurrent` candidates
+- [ ] Each output line identifies the ticket by id, state, and title (matching the format `dry-run: would start next: #<id> [<state>] <title>`)
+- [ ] When fewer actionable tickets exist than `max_concurrent`, only the available tickets are printed (no padding or error)
+- [ ] When there are no actionable tickets, the output is `dry-run: no actionable tickets` (existing behaviour preserved)
+- [ ] Candidates are printed in priority order (highest score first), matching the order the work loop would start them
+- [ ] The command exits 0 in all cases above
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `apm next` — it continues to return a single ticket
+- Changes to the non-dry-run `apm work` behaviour
+- Filtering by currently running workers (dry-run does not check for live processes)
+- New output formats (JSON, table, etc.)
 
 ### Approach
 
-How the implementation will work.
+Modify `run_dry` in `apm/src/cmd/work.rs`:
+
+1. Read `max_concurrent` from `config.agents.max_concurrent` (already available via the `config` argument).
+2. Collect all candidates matching `actionable` + `startable` filters, sort by score descending, then take the first `max_concurrent` entries. This avoids calling `pick_next` in a loop.
+3. If the resulting list is empty, print `dry-run: no actionable tickets`.
+4. Otherwise, print one line per candidate using the existing format string.
+
+The sorting + filtering logic mirrors what `ticket::pick_next` already does internally; inline it rather than calling `pick_next` repeatedly and removing tickets between calls.
+
+Files changed:
+- `apm/src/cmd/work.rs` — `run_dry` function only; no other files need to change
 
 ### Open questions
 
