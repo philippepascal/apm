@@ -2,6 +2,8 @@ use anyhow::Result;
 use apm_core::{config::Config, ticket};
 use std::path::Path;
 
+const IDLE_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
+
 pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
     let config = Config::load(root)?;
     let max_concurrent = config.agents.max_concurrent.max(1);
@@ -12,10 +14,11 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
 
     let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut started_ids: Vec<String> = Vec::new();
-    let mut no_more = false;
+    let mut last_poll_empty = false;
 
     loop {
         // Reap finished workers.
+        let before = workers.len();
         workers.retain_mut(|(_, child, pid_path)| {
             let done = matches!(child.try_wait(), Ok(Some(_)));
             if done {
@@ -23,21 +26,29 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
             }
             !done
         });
+        if workers.len() < before {
+            last_poll_empty = false;
+        }
 
-        if no_more && workers.is_empty() {
+        if workers.is_empty() && last_poll_empty {
             break;
         }
 
-        if !no_more && workers.len() < max_concurrent {
+        if workers.len() < max_concurrent {
             match super::start::spawn_next_worker(root, true, skip_permissions) {
-                Ok(None) => { no_more = true; }
                 Ok(Some((id, child, pid_path))) => {
                     started_ids.push(id.clone());
                     workers.push((id, child, pid_path));
+                    last_poll_empty = false;
+                }
+                Ok(None) => {
+                    last_poll_empty = true;
+                    std::thread::sleep(IDLE_POLL_INTERVAL);
                 }
                 Err(e) => {
                     eprintln!("warning: dispatch failed: {e:#}");
-                    no_more = true;
+                    last_poll_empty = true;
+                    std::thread::sleep(IDLE_POLL_INTERVAL);
                 }
             }
         } else {
