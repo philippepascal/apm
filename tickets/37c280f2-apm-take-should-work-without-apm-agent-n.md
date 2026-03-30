@@ -1,15 +1,15 @@
 +++
 id = "37c280f2"
 title = "apm take should work without APM_AGENT_NAME set"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
 author = "philippepascal"
-agent = "20089"
+agent = "philippepascal"
 branch = "ticket/37c280f2-apm-take-should-work-without-apm-agent-n"
 created_at = "2026-03-30T14:41:58.874046Z"
-updated_at = "2026-03-30T17:01:34.764342Z"
+updated_at = "2026-03-30T17:02:54.093396Z"
 +++
 
 ## Spec
@@ -72,3 +72,4 @@ Steps:
 | 2026-03-30T16:37Z | new | in_design | philippepascal |
 | 2026-03-30T16:39Z | in_design | specd | claude-0330-1640-b7f2 |
 | 2026-03-30T17:01Z | specd | ready | philippepascal |
+| 2026-03-30T17:02Z | ready | in_progress | philippepascal |
