@@ -22,7 +22,7 @@ GitHub's default merge strategy for most repos is squash merge, making this a co
 
 ### Acceptance criteria
 
-- [ ] `apm sync` detects branches that have been squash-merged into the default branch and treats them identically to regular merges (offers to transition the ticket to `accepted`)
+- [x] `apm sync` detects branches that have been squash-merged into the default branch and treats them identically to regular merges (offers to transition the ticket to `accepted`)
 - [ ] Regular (non-squash) merge detection is unchanged
 - [ ] Branches with no commits yet merged are not falsely detected
 - [ ] `cargo test --workspace` passes
