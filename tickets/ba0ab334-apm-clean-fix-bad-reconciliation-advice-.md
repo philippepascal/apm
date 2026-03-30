@@ -31,7 +31,7 @@ The warning message should be corrected to suggest `apm sync` instead of `apm cl
 ### Acceptance criteria
 
 - [x] `apm clean` state-mismatch warning suggests `apm sync` instead of `apm close <id>`
-- [ ] The warning message still identifies the branch, the branch state, and the main state
+- [x] The warning message still identifies the branch, the branch state, and the main state
 
 ### Out of scope
 
