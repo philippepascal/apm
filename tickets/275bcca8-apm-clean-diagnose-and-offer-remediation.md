@@ -1,15 +1,15 @@
 +++
 id = "275bcca8"
 title = "apm clean: diagnose and offer remediation for dirty worktrees"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 5
 risk = 3
 author = "philippepascal"
-agent = "56153"
+agent = "philippepascal"
 branch = "ticket/275bcca8-apm-clean-diagnose-and-offer-remediation"
 created_at = "2026-03-30T18:12:35.205840Z"
-updated_at = "2026-03-30T19:24:31.896966Z"
+updated_at = "2026-03-30T19:26:52.683550Z"
 +++
 
 ## Spec
@@ -124,3 +124,4 @@ The desired behaviour: `apm clean` diagnoses each blocked worktree, explains wha
 | 2026-03-30T19:16Z | new | in_design | philippepascal |
 | 2026-03-30T19:23Z | in_design | specd | claude-0330-1920-b7f2 |
 | 2026-03-30T19:24Z | specd | ready | apm |
+| 2026-03-30T19:26Z | ready | in_progress | philippepascal |
