@@ -261,7 +261,7 @@ risk_weight     = -1.0
 
 [agents]
 instructions   = "apm.agents.md"
-max_concurrent = 3
+max_concurrent = 5
 
 [sync]
 aggressive = true
