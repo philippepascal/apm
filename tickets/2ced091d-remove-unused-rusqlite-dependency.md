@@ -16,11 +16,12 @@ updated_at = "2026-03-30T17:20:23.037641Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The workspace Cargo.toml declares rusqlite (version 0.31, bundled feature) as a workspace dependency, and apm-core/Cargo.toml pulls it in. The dependency is never imported or used in any .rs source file.
+
+The bundled feature compiles SQLite from source as part of every build. This adds significant C compilation time and binary weight for zero benefit. Removing it speeds up clean builds and removes a transitive C dependency from the project.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -35,10 +36,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
