@@ -1,14 +1,15 @@
 +++
 id = "328b3c71"
 title = "apm work --dry-run: show all candidates up to max-workers"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/328b3c71-apm-work-dry-run-show-all-candidates-up-"
 created_at = "2026-03-30T16:31:01.147894Z"
-updated_at = "2026-03-30T16:31:01.147894Z"
+updated_at = "2026-03-30T16:39:13.296143Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T16:31Z | — | new | philippepascal |
+| 2026-03-30T16:39Z | new | in_design | philippepascal |
