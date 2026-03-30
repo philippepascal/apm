@@ -34,14 +34,14 @@ the worktree path (mirroring `apm start`), and remove `--add` from the public
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> in_design` provisions a worktree for the ticket's branch if one does not yet exist
-- [ ] `apm state <id> in_design` reuses the existing worktree if one already exists for the branch
-- [ ] `apm state <id> in_design` prints the worktree path to stdout as the last line of output (after the state-change line)
-- [ ] `apm state <id> in_design` prints the worktree path for both the `new → in_design` and `ammend → in_design` transitions
-- [ ] `apm worktrees --add <id>` is no longer a recognised flag; passing it exits with a non-zero status and an error message
-- [ ] `apm worktrees` (list) and `apm worktrees --remove <id>` continue to work unchanged
-- [ ] `apm start <id>` continues to provision worktrees and print the path, with no behaviour change
-- [ ] `apm.agents.md` no longer references `apm worktrees --add`; the spec-writing workflow shows `apm state <id> in_design` as the single command that both transitions and provisions
+- [x] `apm state <id> in_design` provisions a worktree for the ticket's branch if one does not yet exist
+- [x] `apm state <id> in_design` reuses the existing worktree if one already exists for the branch
+- [x] `apm state <id> in_design` prints the worktree path to stdout as the last line of output (after the state-change line)
+- [x] `apm state <id> in_design` prints the worktree path for both the `new → in_design` and `ammend → in_design` transitions
+- [x] `apm worktrees --add <id>` is no longer a recognised flag; passing it exits with a non-zero status and an error message
+- [x] `apm worktrees` (list) and `apm worktrees --remove <id>` continue to work unchanged
+- [x] `apm start <id>` continues to provision worktrees and print the path, with no behaviour change
+- [x] `apm.agents.md` no longer references `apm worktrees --add`; the spec-writing workflow shows `apm state <id> in_design` as the single command that both transitions and provisions
 
 ### Out of scope
 
