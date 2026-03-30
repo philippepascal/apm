@@ -3,13 +3,13 @@ id = "328b3c71"
 title = "apm work --dry-run: show all candidates up to max-workers"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 agent = "61054"
 branch = "ticket/328b3c71-apm-work-dry-run-show-all-candidates-up-"
 created_at = "2026-03-30T16:31:01.147894Z"
-updated_at = "2026-03-30T16:39:13.296143Z"
+updated_at = "2026-03-30T16:42:26.208092Z"
 +++
 
 ## Spec
