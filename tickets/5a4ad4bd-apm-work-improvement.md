@@ -1,7 +1,7 @@
 +++
 id = "5a4ad4bd"
 title = "apm work improvement"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "93102"
 branch = "ticket/5a4ad4bd-apm-work-improvement"
 created_at = "2026-03-30T19:21:34.679718Z"
-updated_at = "2026-03-30T19:27:45.034164Z"
+updated_at = "2026-03-30T19:28:24.722463Z"
 +++
 
 ## Spec
@@ -71,3 +71,4 @@ No changes are needed to the summary, dry-run, or exit-code logic.
 |------|------|----|----|
 | 2026-03-30T19:21Z | — | new | apm |
 | 2026-03-30T19:23Z | new | in_design | philippepascal |
+| 2026-03-30T19:28Z | in_design | specd | claude-0330-1930-b7f2 |
