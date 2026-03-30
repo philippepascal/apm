@@ -44,7 +44,7 @@ Specifically missing today:
   and removes the `.apm-worker.pid` file; prints a confirmation
 - [x] `apm workers --kill <id>` exits non-zero with a clear message if the
   worker is not running
-- [ ] Stale `.apm-worker.pid` files (PID no longer alive) are detected and
+- [x] Stale `.apm-worker.pid` files (PID no longer alive) are detected and
   reported as "crashed" in `apm workers` output rather than silently skipped
   or treated as running
 - [ ] `cargo test --workspace` passes
