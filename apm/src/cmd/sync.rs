@@ -69,7 +69,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_candidates)?);
         if confirmed {
             for c in &accept_candidates {
-                super::state::run(root, &c.ticket.frontmatter.id, "accepted".into(), no_aggressive)?;
+                super::state::run(root, &c.ticket.frontmatter.id, "accepted".into(), no_aggressive, false)?;
             }
         }
     }
