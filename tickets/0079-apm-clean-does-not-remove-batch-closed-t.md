@@ -1,14 +1,14 @@
 +++
 id = 79
 title = "apm clean does not remove batch-closed ticket worktrees"
-state = "new"
+state = "closed"
 priority = 0
 effort = 0
 risk = 0
 author = "claude-0329-1430-main"
 branch = "ticket/0079-apm-clean-does-not-remove-batch-closed-t"
 created_at = "2026-03-30T01:20:28.276937Z"
-updated_at = "2026-03-30T01:20:28.276937Z"
+updated_at = "2026-03-30T02:52:09.450116Z"
 +++
 
 ## Spec
@@ -28,3 +28,4 @@ batch_close in sync commits closed state to main but does not update or delete t
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T01:20Z | — | new | claude-0329-1430-main |
+| 2026-03-30T02:52Z | new | closed | apm |
