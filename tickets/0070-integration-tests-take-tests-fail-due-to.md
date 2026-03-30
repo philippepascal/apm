@@ -20,10 +20,10 @@ The take_succeeds_on_ammend_state, take_succeeds_on_blocked_state, and take_appe
 
 ### Acceptance criteria
 
-- [ ] `take_succeeds_on_ammend_state` passes reliably on repeated runs without manual cleanup
-- [ ] `take_succeeds_on_blocked_state` passes reliably on repeated runs without manual cleanup
-- [ ] `take_appends_handoff_history` passes reliably on repeated runs without manual cleanup
-- [ ] All other integration tests continue to pass
+- [x] `take_succeeds_on_ammend_state` passes reliably on repeated runs without manual cleanup
+- [x] `take_succeeds_on_blocked_state` passes reliably on repeated runs without manual cleanup
+- [x] `take_appends_handoff_history` passes reliably on repeated runs without manual cleanup
+- [x] All other integration tests continue to pass
 
 ### Out of scope
 
