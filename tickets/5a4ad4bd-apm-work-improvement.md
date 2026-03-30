@@ -1,21 +1,22 @@
 +++
 id = "5a4ad4bd"
 title = "apm work improvement"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/5a4ad4bd-apm-work-improvement"
 created_at = "2026-03-30T19:21:34.679718Z"
-updated_at = "2026-03-30T19:21:34.679718Z"
+updated_at = "2026-03-30T19:23:51.068491Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+apm work wait for worker it started to finish even if it's using less workers than max. if it's using less worker than max, it should poll regularly in case more tickets have become actionable
 
 ### Acceptance criteria
 
@@ -46,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T19:21Z | — | new | apm |
+| 2026-03-30T19:23Z | new | in_design | philippepascal |
