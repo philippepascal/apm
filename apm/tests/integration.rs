@@ -1268,3 +1268,63 @@ type = "free"
     assert!(!content.contains("### Problem\n"), "hardcoded Problem should not appear");
     assert!(!content.contains("### Acceptance criteria\n"), "hardcoded AC should not appear");
 }
+
+// --- validate ---
+
+#[test]
+fn validate_config_missing_instructions_and_bad_context_section() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    // Init a minimal git repo.
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    // Config with:
+    //   - state `new` with instructions pointing to a non-existent file
+    //   - transition with context_section that doesn't exist in ticket.sections
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[ticket.sections]]
+name = "Problem"
+type = "free"
+
+[[workflow.states]]
+id           = "new"
+label        = "New"
+instructions = "missing-file.md"
+
+[[workflow.states.transitions]]
+to              = "closed"
+context_section = "NonExistentSection"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let errors = apm::cmd::validate::validate_config(&config, p);
+
+    assert_eq!(errors.len(), 2, "expected exactly 2 errors, got: {errors:?}");
+
+    let has_missing_file = errors.iter().any(|e| {
+        e.contains("state.new.instructions") && e.contains("file not found")
+    });
+    assert!(has_missing_file, "expected missing instructions error in {errors:?}");
+
+    let has_bad_section = errors.iter().any(|e| {
+        e.contains("context_section") && e.contains("NonExistentSection")
+    });
+    assert!(has_bad_section, "expected context_section mismatch error in {errors:?}");
+}
