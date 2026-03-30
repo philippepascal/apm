@@ -3,7 +3,7 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
     let agent_name = std::env::var("APM_AGENT_NAME")
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
@@ -18,8 +18,10 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         .collect();
 
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
 
     let fm = &t.frontmatter;
@@ -28,7 +30,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
     }
     if !startable.is_empty() && !startable.contains(&fm.state.as_str()) {
         bail!(
-            "ticket #{id} is in state {:?} — not startable\n\
+            "ticket {id:?} is in state {:?} — not startable\n\
              Use `apm start` only from: {}",
             fm.state,
             startable.join(", ")
@@ -62,7 +64,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         .branch
         .clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     let default_branch = &config.project.default_branch;
 
@@ -123,7 +125,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         Err(e) => eprintln!("warning: merge failed: {e}"),
     }
 
-    println!("#{id}: {old_state} → {new_state} (agent: {agent_name}, branch: {branch})");
+    println!("{id}: {old_state} → {new_state} (agent: {agent_name}, branch: {branch})");
     println!("Worktree: {}", wt_display.display());
 
     if !spawn {
@@ -214,7 +216,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         return Ok(());
     };
 
-    let id = candidate.frontmatter.id;
+    let id = candidate.frontmatter.id.clone();
     let old_state = candidate.frontmatter.state.clone();
 
     // Look up state config for instructions and focus_section before claiming
@@ -225,7 +227,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
 
     // Run the normal start flow
-    run(root, id, no_aggressive, false, false)?;
+    run(root, &id, no_aggressive, false, false)?;
 
     // Re-read the ticket from branch to get focus_section (it may have been set by supervisor)
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -243,7 +245,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         );
         let branch = t.frontmatter.branch.clone()
             .or_else(|| git::branch_name_from_path(&t.path))
-            .unwrap_or_else(|| format!("ticket/{id:04}"));
+            .unwrap_or_else(|| format!("ticket/{id}"));
         let mut t_mut = t.clone();
         t_mut.frontmatter.focus_section = None;
         let cleared = t_mut.serialize()?;
@@ -294,7 +296,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     // Find the worktree
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
     let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
@@ -331,7 +333,7 @@ pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
     skip_permissions: bool,
-) -> Result<Option<(u32, std::process::Child)>> {
+) -> Result<Option<(String, std::process::Child)>> {
     let config = Config::load(root)?;
     let pw = config.workflow.prioritization.priority_weight;
     let ew = config.workflow.prioritization.effort_weight;
@@ -362,7 +364,7 @@ pub fn spawn_next_worker(
         return Ok(None);
     };
 
-    let id = candidate.frontmatter.id;
+    let id = candidate.frontmatter.id.clone();
     let old_state = candidate.frontmatter.state.clone();
 
     let instructions_text = config.workflow.states.iter()
@@ -371,7 +373,7 @@ pub fn spawn_next_worker(
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
 
-    run(root, id, no_aggressive, false, false)?;
+    run(root, &id, no_aggressive, false, false)?;
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets2.iter().find(|t| t.frontmatter.id == id) else {
@@ -387,7 +389,7 @@ pub fn spawn_next_worker(
         );
         let branch = t.frontmatter.branch.clone()
             .or_else(|| git::branch_name_from_path(&t.path))
-            .unwrap_or_else(|| format!("ticket/{id:04}"));
+            .unwrap_or_else(|| format!("ticket/{id}"));
         let mut t_mut = t.clone();
         t_mut.frontmatter.focus_section = None;
         let cleared = t_mut.serialize()?;
@@ -428,7 +430,7 @@ pub fn spawn_next_worker(
     let ticket_content = t.serialize()?;
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
     let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);

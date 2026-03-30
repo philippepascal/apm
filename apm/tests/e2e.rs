@@ -252,6 +252,30 @@ fn stderr(out: &Output) -> String {
     String::from_utf8_lossy(&out.stderr).into_owned()
 }
 
+/// Parse the ticket ID from `apm new` output.
+/// Output format: "Created ticket {id}: {filename} (branch: {branch})"
+fn parse_new_ticket_id(out: &Output) -> String {
+    let s = stdout(out);
+    s.lines()
+        .find(|l| l.starts_with("Created ticket "))
+        .and_then(|l| l.strip_prefix("Created ticket "))
+        .and_then(|s| s.split(':').next())
+        .unwrap_or_else(|| panic!("could not parse ticket ID from: {s}"))
+        .trim()
+        .to_string()
+}
+
+/// Parse the branch name from `apm new` output.
+fn parse_new_ticket_branch(out: &Output) -> String {
+    let s = stdout(out);
+    s.lines()
+        .find(|l| l.starts_with("Created ticket "))
+        .and_then(|l| l.split("(branch: ").nth(1))
+        .and_then(|s| s.strip_suffix(')').or_else(|| s.trim_end_matches('\n').strip_suffix(')')))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| panic!("could not parse branch from: {s}"))
+}
+
 // ---------------------------------------------------------------------------
 // Full ticket lifecycle: new → specd → ready → in_progress → implemented →
 //                        (sync detects merge) → accepted
@@ -278,17 +302,22 @@ fn full_ticket_lifecycle() {
 
     let out = env.apm_as("test-agent", &["new", "Fix parse_count off-by-one"]);
     assert!(out.status.success(), "apm new failed:\n{}", stderr(&out));
-    assert!(stdout(&out).contains("Created ticket #1"), "unexpected output: {}", stdout(&out));
+    let out_text = stdout(&out);
+    assert!(out_text.contains("Created ticket "), "unexpected output: {out_text}");
+    assert!(out_text.contains("fix-parse-count-off-by-one"), "slug missing: {out_text}");
 
-    let branch = "ticket/0001-fix-parse-count-off-by-one";
-    let ticket_path = "tickets/0001-fix-parse-count-off-by-one.md";
+    let ticket_id = parse_new_ticket_id(&out);
+    let branch = parse_new_ticket_branch(&out);
+    let ticket_suffix = branch.strip_prefix("ticket/").unwrap().to_string();
+    let ticket_path = format!("tickets/{ticket_suffix}.md");
 
     // Branch exists locally.
-    assert!(env.branch_exists(branch), "ticket branch not created");
+    assert!(env.branch_exists(&branch), "ticket branch not created");
 
     // Frontmatter is correct — read from the branch, not the working tree.
-    let ticket = env.branch_content(branch, ticket_path);
-    assert!(ticket.contains("id = 1"), "wrong id");
+    let ticket = env.branch_content(&branch, &ticket_path);
+    // id is now an 8-char hex string
+    assert!(ticket.contains(&format!("id = \"{ticket_id}\"")), "wrong id in frontmatter");
     assert!(ticket.contains("state = \"new\""), "wrong state");
     assert!(ticket.contains("author = \"test-agent\""), "author not set");
     assert!(ticket.contains(&format!("branch = \"{branch}\"")), "branch not set");
@@ -306,11 +335,11 @@ fn full_ticket_lifecycle() {
     // ── Step 3: agent writes the spec ───────────────────────────────────────
     // Simulate: git checkout <branch>, edit ticket, commit, checkout main.
 
-    git_ok(env.root(), &["checkout", branch]);
+    git_ok(env.root(), &["checkout", &branch]);
     assert_eq!(env.current_branch(), branch);
 
     // Preserve the frontmatter written by apm new; replace only the body.
-    let existing = env.read(ticket_path);
+    let existing = env.read(&ticket_path);
     let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
     let frontmatter = &existing[..fm_end];
 
@@ -347,14 +376,14 @@ immediately. Update the existing tests to cover the single-item case.
 | 2026-03-26T00:00Z | — | new | test-agent |
 "#;
 
-    env.write(ticket_path, &format!("{frontmatter}{new_body}"));
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "add", ticket_path]);
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): write spec"]);
+    env.write(&ticket_path, &format!("{frontmatter}{new_body}"));
+    git_ok(env.root(), &["-c", "commit.gpgsign=false", "add", &ticket_path]);
+    git_ok(env.root(), &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({ticket_id}): write spec")]);
     git_ok(env.root(), &["checkout", "main"]);
     assert_eq!(env.current_branch(), "main");
 
     // Spec commit is on the ticket branch but not on main.
-    let branch_commits = env.commits_on_branch(branch, "main");
+    let branch_commits = env.commits_on_branch(&branch, "main");
     assert!(
         branch_commits.iter().any(|c| c.contains("write spec")),
         "spec commit not found on ticket branch"
@@ -363,28 +392,28 @@ immediately. Update the existing tests to cover the single-item case.
     // ── Step 4: apm state new → specd ───────────────────────────────────────
     // apm state reads from git blobs — no working-tree prep needed.
 
-    let out = env.apm_as("test-agent", &["state", "1", "specd"]);
+    let out = env.apm_as("test-agent", &["state", &ticket_id, "specd"]);
     assert!(out.status.success(), "apm state specd failed:\n{}", stderr(&out));
     assert!(stdout(&out).contains("new → specd"), "unexpected output: {}", stdout(&out));
 
-    let ticket = env.branch_content(branch, ticket_path);
+    let ticket = env.branch_content(&branch, &ticket_path);
     assert!(ticket.contains("state = \"specd\""), "state not updated to specd");
     assert!(ticket.contains("| new | specd |"), "history row missing");
     assert!(ticket.contains("updated_at"), "updated_at not refreshed");
 
     // ── Step 5: supervisor approves — apm state specd → ready ───────────────
 
-    let out = env.apm_as("philippe", &["state", "1", "ready"]);
+    let out = env.apm_as("philippe", &["state", &ticket_id, "ready"]);
     assert!(out.status.success(), "apm state ready failed:\n{}", stderr(&out));
 
-    let ticket = env.branch_content(branch, ticket_path);
+    let ticket = env.branch_content(&branch, &ticket_path);
     assert!(ticket.contains("state = \"ready\""), "state not updated to ready");
     assert!(ticket.contains("| specd | ready |"), "history row missing");
 
     // ── Step 6: agent claims ticket — apm start ──────────────────────────────
     // apm start transitions ready → in_progress, sets agent, provisions worktree.
 
-    let out = env.apm_as("test-agent", &["start", "1"]);
+    let out = env.apm_as("test-agent", &["start", &ticket_id]);
     assert!(out.status.success(), "apm start failed:\n{}", stderr(&out));
     let start_out = stdout(&out);
     assert!(start_out.contains("in_progress"), "unexpected output: {}", start_out);
@@ -393,7 +422,7 @@ immediately. Update the existing tests to cover the single-item case.
     // Main worktree is still on main — agent works in the provisioned worktree.
     assert_eq!(env.current_branch(), "main", "main worktree should stay on main");
 
-    let ticket = env.branch_content(branch, ticket_path);
+    let ticket = env.branch_content(&branch, &ticket_path);
     assert!(ticket.contains("state = \"in_progress\""), "state not in_progress");
     assert!(ticket.contains("agent = \"test-agent\""), "agent not set");
     assert!(ticket.contains("| ready | in_progress |"), "history row missing");
@@ -444,10 +473,10 @@ mod tests {
     std::fs::create_dir_all(wt_path.join("src")).unwrap();
     std::fs::write(wt_path.join("src/parser.rs"), fixed).unwrap();
     git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", "src/parser.rs"]);
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): fix parse_count off-by-one"]);
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({ticket_id}): fix parse_count off-by-one")]);
 
     // Code fix commit is on the ticket branch.
-    let branch_commits = env.commits_on_branch(branch, "main");
+    let branch_commits = env.commits_on_branch(&branch, "main");
     assert!(
         branch_commits.iter().any(|c| c.contains("fix parse_count")),
         "code fix commit not found on ticket branch"
@@ -461,27 +490,27 @@ mod tests {
     // ── Step 8: agent checks acceptance criteria boxes ───────────────────────
     // Work in the worktree.
 
-    let ticket_content = std::fs::read_to_string(wt_path.join(ticket_path)).unwrap();
+    let ticket_content = std::fs::read_to_string(wt_path.join(&ticket_path)).unwrap();
     let checked = ticket_content
         .replace("- [ ] `parse_count(\"\")` returns 0 without panicking", "- [x] `parse_count(\"\")` returns 0 without panicking")
         .replace("- [ ] `parse_count(\"a\")` returns 1", "- [x] `parse_count(\"a\")` returns 1")
         .replace("- [ ] `parse_count(\"a,b,c\")` returns 3", "- [x] `parse_count(\"a,b,c\")` returns 3")
         .replace("- [ ] Existing `parse_items` behaviour is unchanged", "- [x] Existing `parse_items` behaviour is unchanged");
-    std::fs::write(wt_path.join(ticket_path), &checked).unwrap();
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", ticket_path]);
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket(1): check acceptance criteria"]);
+    std::fs::write(wt_path.join(&ticket_path), &checked).unwrap();
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", &ticket_path]);
+    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({ticket_id}): check acceptance criteria")]);
 
     // All boxes checked.
-    let ticket = env.branch_content(branch, ticket_path);
+    let ticket = env.branch_content(&branch, &ticket_path);
     assert!(!ticket.contains("- [ ]"), "unchecked boxes remain");
     assert_eq!(ticket.matches("- [x]").count(), 4, "expected 4 checked boxes");
 
     // ── Step 9: apm state in_progress → implemented ─────────────────────────
 
-    let out = env.apm_as("test-agent", &["state", "1", "implemented"]);
+    let out = env.apm_as("test-agent", &["state", &ticket_id, "implemented"]);
     assert!(out.status.success(), "apm state implemented failed:\n{}", stderr(&out));
 
-    let ticket = env.branch_content(branch, ticket_path);
+    let ticket = env.branch_content(&branch, &ticket_path);
     assert!(ticket.contains("state = \"implemented\""), "state not implemented");
     assert!(ticket.contains("| in_progress | implemented |"), "history row missing");
 
@@ -491,8 +520,8 @@ mod tests {
     git_ok(env.root(), &["checkout", "main"]);
     git_ok(env.root(), &[
         "-c", "commit.gpgsign=false",
-        "merge", "--no-ff", branch,
-        "-m", "Merge ticket/0001 — Fix parse_count off-by-one",
+        "merge", "--no-ff", &branch,
+        "-m", &format!("Merge {branch} — Fix parse_count off-by-one"),
     ]);
 
     // After merge: main has the fixed parser.rs.
@@ -512,13 +541,13 @@ mod tests {
         stdout(&out)
     );
     assert!(
-        stdout(&out).contains("apm state 1 accepted"),
+        stdout(&out).contains(&format!("apm state {ticket_id} accepted")),
         "apm state suggestion missing:\n{}",
         stdout(&out)
     );
 
     // Ticket is still in implemented — no auto-transition.
-    let ticket_after = env.branch_content(branch, ticket_path);
+    let ticket_after = env.branch_content(&branch, &ticket_path);
     assert!(ticket_after.contains("state = \"implemented\""), "state should still be implemented after sync");
 }
 
@@ -587,14 +616,17 @@ terminal = true
     // Create a ticket and write a valid spec body before transitioning to specd.
     let out = apm_env(p, "test-agent", &["new", "Enforcement test"]);
     assert!(out.status.success());
-    write_valid_spec_for_test(p, "ticket/0001-enforcement-test", "tickets/0001-enforcement-test.md");
+    let id1 = parse_new_ticket_id(&out);
+    let branch1 = parse_new_ticket_branch(&out);
+    let path1 = format!("tickets/{}.md", branch1.strip_prefix("ticket/").unwrap());
+    write_valid_spec_for_test(p, &branch1, &path1);
 
     // new → specd is allowed.
-    let out = apm_env(p, "test-agent", &["state", "1", "specd"]);
+    let out = apm_env(p, "test-agent", &["state", &id1, "specd"]);
     assert!(out.status.success(), "new → specd should be allowed:\n{}", stderr(&out));
 
     // specd → new is NOT allowed (no such transition defined, and new is not terminal).
-    let out = apm_env(p, "test-agent", &["state", "1", "new"]);
+    let out = apm_env(p, "test-agent", &["state", &id1, "new"]);
     assert!(!out.status.success(), "specd → new should be rejected");
     let err = stderr(&out);
     assert!(err.contains("no transition"), "expected transition error, got: {err}");
@@ -602,16 +634,19 @@ terminal = true
     assert!(err.contains("new"), "error should mention target state");
 
     // Terminal states are always reachable regardless of transition rules.
-    let out = apm_env(p, "test-agent", &["state", "1", "closed"]);
+    let out = apm_env(p, "test-agent", &["state", &id1, "closed"]);
     assert!(out.status.success(), "specd → closed should be allowed (terminal state)");
 
     // new → specd → ready via defined transitions (need a fresh ticket since #1 is now closed).
     let out = apm_env(p, "test-agent", &["new", "Second enforcement test"]);
     assert!(out.status.success());
-    write_valid_spec_for_test(p, "ticket/0002-second-enforcement-test", "tickets/0002-second-enforcement-test.md");
-    let out = apm_env(p, "test-agent", &["state", "2", "specd"]);
+    let id2 = parse_new_ticket_id(&out);
+    let branch2 = parse_new_ticket_branch(&out);
+    let path2 = format!("tickets/{}.md", branch2.strip_prefix("ticket/").unwrap());
+    write_valid_spec_for_test(p, &branch2, &path2);
+    let out = apm_env(p, "test-agent", &["state", &id2, "specd"]);
     assert!(out.status.success(), "new → specd should be allowed");
-    let out = apm_env(p, "test-agent", &["state", "2", "ready"]);
+    let out = apm_env(p, "test-agent", &["state", &id2, "ready"]);
     assert!(out.status.success(), "specd → ready should be allowed");
 }
 
@@ -626,28 +661,40 @@ fn next_respects_priority_and_actionable_states() {
     // Create three tickets with different priorities.
     let out = env.apm_as("test-agent", &["new", "Low priority task"]);
     assert!(out.status.success());
+    let id1 = parse_new_ticket_id(&out);
     let out = env.apm_as("test-agent", &["new", "High priority task"]);
     assert!(out.status.success());
+    let id2 = parse_new_ticket_id(&out);
+    let branch2 = parse_new_ticket_branch(&out);
+    let path2 = format!("tickets/{}.md", branch2.strip_prefix("ticket/").unwrap());
     let out = env.apm_as("test-agent", &["new", "Medium priority task"]);
     assert!(out.status.success());
+    let id3 = parse_new_ticket_id(&out);
 
     // Set priorities (apm set/next/state read from git blobs — no working-tree prep needed).
-    env.apm(&["set", "1", "priority", "1"]);
-    env.apm(&["set", "2", "priority", "9"]);
-    env.apm(&["set", "3", "priority", "5"]);
+    env.apm(&["set", &id1, "priority", "1"]);
+    env.apm(&["set", &id2, "priority", "9"]);
+    env.apm(&["set", &id3, "priority", "5"]);
 
     // apm next --json should return the highest-priority actionable ticket.
     let out = env.apm(&["next", "--json"]);
     assert!(out.status.success(), "apm next failed:\n{}", stderr(&out));
     let json = stdout(&out);
-    assert!(json.contains("\"id\":2") || json.contains("\"id\": 2"), "expected ticket #2 (highest priority), got: {json}");
+    // id is now a hex string
+    assert!(
+        json.contains(&format!("\"id\":\"{id2}\"")) || json.contains(&format!("\"id\": \"{id2}\"")),
+        "expected ticket id2 (highest priority), got: {json}"
+    );
 
-    // Move #2 to specd (not actionable) — next should now return #3.
-    write_valid_spec_for_test(env.root(), "ticket/0002-high-priority-task", "tickets/0002-high-priority-task.md");
-    env.apm(&["state", "2", "specd"]);
+    // Move id2 to specd (not actionable) — next should now return id3.
+    write_valid_spec_for_test(env.root(), &branch2, &path2);
+    env.apm(&["state", &id2, "specd"]);
 
     let out = env.apm(&["next", "--json"]);
     assert!(out.status.success());
     let json = stdout(&out);
-    assert!(json.contains("\"id\":3") || json.contains("\"id\": 3"), "expected ticket #3 after #2 moved to specd, got: {json}");
+    assert!(
+        json.contains(&format!("\"id\":\"{id3}\"")) || json.contains(&format!("\"id\": \"{id3}\"")),
+        "expected ticket id3 after id2 moved to specd, got: {json}"
+    );
 }

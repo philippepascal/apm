@@ -12,24 +12,23 @@ struct TransitionOption {
     hint: String,
 }
 
-pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
-    let prefix = format!("ticket/{id:04}-");
     let branches = git::ticket_branches(root)?;
-    let branch = branches.into_iter().find(|b| b.starts_with(&prefix));
-    if let Some(ref b) = branch {
-        if aggressive {
-            if let Err(e) = git::fetch_branch(root, b) {
-                eprintln!("warning: fetch failed: {e:#}");
-            }
+    let branch_name = git::resolve_ticket_branch(&branches, id_arg)?;
+
+    if aggressive {
+        if let Err(e) = git::fetch_branch(root, &branch_name) {
+            eprintln!("warning: fetch failed: {e:#}");
         }
     }
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
     let Some(mut t) = tickets.into_iter().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
 
     let current_state = t.frontmatter.state.clone();
@@ -54,7 +53,7 @@ pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Res
     let (spec_body, history_section) = split_body(&t.body);
 
     // Write temp file: header + sentinel + spec body.
-    let header = build_header(id, &t.frontmatter.title, &current_state, &transitions, to.as_deref());
+    let header = build_header(&id, &t.frontmatter.title, &current_state, &transitions, to.as_deref());
     let tmp_path = {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -73,7 +72,7 @@ pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Res
     // Determine transition.
     let chosen_state = match to {
         Some(s) => Some(s),
-        None => prompt_transition(id, &current_state, &transitions)?,
+        None => prompt_transition(&id, &current_state, &transitions)?,
     };
 
     // Normalise plain bullets → checkboxes in the amendment section when transitioning to ammend.
@@ -95,7 +94,7 @@ pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Res
     );
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     // Commit the spec edit if the body changed.
     if changed {
@@ -105,12 +104,12 @@ pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Res
         let content = t.serialize()?;
         git::commit_to_branch(root, &branch, &rel_path, &content,
             &format!("ticket({id}): review edit"))?;
-        println!("#{id}: spec updated");
+        println!("{id}: spec updated");
     }
 
     // Apply the state transition (state::run re-reads from git, handles history etc.).
     if let Some(target) = chosen_state {
-        super::state::run(root, id, target, false)?;
+        super::state::run(root, &id, target, false)?;
     }
 
     Ok(())
@@ -186,14 +185,14 @@ fn manual_transitions(
 }
 
 fn build_header(
-    id: u32,
+    id: &str,
     title: &str,
     state: &str,
     transitions: &[TransitionOption],
     fixed_to: Option<&str>,
 ) -> String {
     let mut lines = Vec::new();
-    lines.push(format!("# Reviewing ticket #{id} · state: {state}"));
+    lines.push(format!("# Reviewing ticket {id} · state: {state}"));
     lines.push(format!("# \"{title}\""));
     lines.push("#".to_string());
 
@@ -281,7 +280,7 @@ fn normalise_amendment_checkboxes(spec: String) -> String {
 }
 
 fn prompt_transition(
-    id: u32,
+    id: &str,
     current_state: &str,
     transitions: &[TransitionOption],
 ) -> Result<Option<String>> {
@@ -291,7 +290,7 @@ fn prompt_transition(
 
     let options: Vec<&str> = transitions.iter().map(|t| t.to.as_str()).collect();
     print!(
-        "#{id} {current_state} → ?   {} / [keep]  > ",
+        "{id} {current_state} → ?   {} / [keep]  > ",
         options.join(" / ")
     );
     io::stdout().flush()?;

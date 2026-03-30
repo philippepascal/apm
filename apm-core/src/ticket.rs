@@ -3,9 +3,34 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+fn deserialize_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    use serde::de::{self, Visitor};
+    struct IdVisitor;
+    impl<'de> Visitor<'de> for IdVisitor {
+        type Value = String;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("an integer or hex string")
+        }
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
+            Ok(format!("{v:04}"))
+        }
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<String, E> {
+            Ok(format!("{v:04}"))
+        }
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<String, E> {
+            Ok(v.to_string())
+        }
+        fn visit_string<E: de::Error>(self, v: String) -> Result<String, E> {
+            Ok(v)
+        }
+    }
+    d.deserialize_any(IdVisitor)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Frontmatter {
-    pub id: u32,
+    #[serde(deserialize_with = "deserialize_id")]
+    pub id: String,
     pub title: String,
     pub state: String,
     #[serde(default)]
@@ -96,7 +121,7 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
             Err(e) => eprintln!("warning: cannot read {branch}: {e:#}"),
         }
     }
-    tickets.sort_by_key(|t| t.frontmatter.id);
+    tickets.sort_by_key(|t| t.frontmatter.created_at);
     Ok(tickets)
 }
 
@@ -107,47 +132,103 @@ pub fn state_from_branch(root: &Path, branch: &str, rel_path: &str) -> Option<St
     Ticket::parse(&dummy, &content).ok().map(|t| t.frontmatter.state)
 }
 
+/// Normalize a user-supplied ID argument to a canonical prefix string.
+/// Accepts: plain integer (zero-padded to 4 chars), or 4–8 hex char string.
+pub fn normalize_id_arg(arg: &str) -> Result<String> {
+    if !arg.is_empty() && arg.chars().all(|c| c.is_ascii_digit()) {
+        let n: u64 = arg.parse().context("invalid integer ID")?;
+        return Ok(format!("{n:04}"));
+    }
+    if arg.len() < 4 || arg.len() > 8 {
+        bail!("invalid ticket ID {:?}: use 4–8 hex chars or a plain integer", arg);
+    }
+    if !arg.chars().all(|c| c.is_ascii_hexdigit()) {
+        bail!("invalid ticket ID {:?}: not a hex string", arg);
+    }
+    Ok(arg.to_lowercase())
+}
+
+/// Resolve a user-supplied ID argument to a unique ticket ID from a loaded list.
+pub fn resolve_id_in_slice(tickets: &[Ticket], arg: &str) -> Result<String> {
+    let prefix = normalize_id_arg(arg)?;
+    let matches: Vec<&Ticket> = tickets.iter()
+        .filter(|t| t.frontmatter.id.starts_with(&prefix))
+        .collect();
+    match matches.len() {
+        0 => bail!("no ticket matches '{prefix}'"),
+        1 => Ok(matches[0].frontmatter.id.clone()),
+        _ => {
+            let mut msg = format!("error: prefix '{prefix}' is ambiguous");
+            for t in &matches {
+                msg.push_str(&format!("\n  {}  {}", t.frontmatter.id, t.frontmatter.title));
+            }
+            bail!("{msg}")
+        }
+    }
+}
+
 /// Close a ticket from any state.  Commits the change to the ticket branch,
 /// pushes it (non-fatal if no remote), then merges into the default branch
 /// so that `apm clean` can detect and remove the worktree.
 pub fn close(
     root: &Path,
     config: &crate::config::Config,
-    id: u32,
+    id_arg: &str,
     reason: Option<&str>,
     agent: &str,
 ) -> Result<()> {
     let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
+    let prefix = normalize_id_arg(id_arg)?;
 
-    // If not found on ticket branches, search the default branch.
+    // Search ticket branches first, then fall back to the default branch.
     // This handles stale "implemented" tickets whose branch was deleted.
+    let branch_matches: Vec<usize> = tickets.iter()
+        .enumerate()
+        .filter(|(_, t)| t.frontmatter.id.starts_with(prefix.as_str()))
+        .map(|(i, _)| i)
+        .collect();
+
     let mut from_default: Option<Ticket> = None;
-    if !tickets.iter().any(|t| t.frontmatter.id == id) {
-        let default_branch = &config.project.default_branch;
-        if let Ok(files) = crate::git::list_files_on_branch(root, default_branch, &config.tickets.dir.to_string_lossy()) {
-            for rel_path in files {
-                if !rel_path.ends_with(".md") { continue; }
-                if let Ok(content) = crate::git::read_from_branch(root, default_branch, &rel_path) {
-                    let dummy = root.join(&rel_path);
-                    if let Ok(t) = Ticket::parse(&dummy, &content) {
-                        if t.frontmatter.id == id {
-                            from_default = Some(t);
-                            break;
+    let id: String = match branch_matches.len() {
+        1 => tickets[branch_matches[0]].frontmatter.id.clone(),
+        0 => {
+            let default_branch = &config.project.default_branch;
+            let mut found: Option<Ticket> = None;
+            if let Ok(files) = crate::git::list_files_on_branch(root, default_branch, &config.tickets.dir.to_string_lossy()) {
+                for rel_path in files {
+                    if !rel_path.ends_with(".md") { continue; }
+                    if let Ok(content) = crate::git::read_from_branch(root, default_branch, &rel_path) {
+                        let dummy = root.join(&rel_path);
+                        if let Ok(t) = Ticket::parse(&dummy, &content) {
+                            if t.frontmatter.id.starts_with(prefix.as_str()) {
+                                found = Some(t);
+                                break;
+                            }
                         }
                     }
                 }
             }
+            match found {
+                Some(t) => { let id = t.frontmatter.id.clone(); from_default = Some(t); id }
+                None => bail!("no ticket matches '{prefix}'"),
+            }
         }
-    }
+        _ => {
+            let names: Vec<String> = branch_matches.iter()
+                .map(|&i| tickets[i].frontmatter.id.clone())
+                .collect();
+            bail!("ambiguous prefix '{}', matches: {}", prefix, names.join(", "));
+        }
+    };
 
     let ticket_pos = tickets.iter().position(|t| t.frontmatter.id == id);
     let t: &mut Ticket = match ticket_pos {
         Some(pos) => &mut tickets[pos],
-        None => from_default.as_mut().ok_or_else(|| anyhow::anyhow!("ticket #{id} not found"))?,
+        None => from_default.as_mut().ok_or_else(|| anyhow::anyhow!("ticket {id:?} not found"))?,
     };
 
     if t.frontmatter.state == "closed" {
-        anyhow::bail!("ticket #{id} is already closed");
+        anyhow::bail!("ticket {id:?} is already closed");
     }
 
     let now = chrono::Utc::now();
@@ -182,10 +263,10 @@ pub fn close(
     );
     let branch = t.frontmatter.branch.clone()
         .or_else(|| crate::git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
-    crate::logger::log("state_transition", &format!("#{id} {prev} -> closed"));
+    crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
 
     if crate::git::has_remote(root) {
         if let Err(e) = crate::git::push_branch(root, &branch) {
@@ -197,7 +278,7 @@ pub fn close(
         eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
     }
 
-    println!("#{id}: {prev} → closed");
+    println!("{id}: {prev} → closed");
     Ok(())
 }
 
@@ -212,17 +293,6 @@ pub fn slugify(s: &str) -> String {
         .chars()
         .take(40)
         .collect()
-}
-
-pub fn next_id(tickets_dir: &Path) -> Result<u32> {
-    let path = tickets_dir.join("NEXT_ID");
-    let id: u32 = if path.exists() {
-        std::fs::read_to_string(&path)?.trim().parse().context("invalid NEXT_ID")?
-    } else {
-        1
-    };
-    std::fs::write(&path, format!("{}\n", id + 1))?;
-    Ok(id)
 }
 
 // ── TicketDocument ─────────────────────────────────────────────────────────
@@ -436,6 +506,12 @@ mod tests {
 
     fn minimal_raw(extra_fm: &str, body: &str) -> String {
         format!(
+            "+++\nid = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n{extra_fm}+++\n\n{body}"
+        )
+    }
+
+    fn minimal_raw_int(extra_fm: &str, body: &str) -> String {
+        format!(
             "+++\nid = 1\ntitle = \"Test\"\nstate = \"new\"\n{extra_fm}+++\n\n{body}"
         )
     }
@@ -446,11 +522,18 @@ mod tests {
     fn parse_well_formed() {
         let raw = minimal_raw("priority = 5\n", "## Spec\n\nHello\n");
         let t = Ticket::parse(dummy_path(), &raw).unwrap();
-        assert_eq!(t.frontmatter.id, 1);
+        assert_eq!(t.frontmatter.id, "0001");
         assert_eq!(t.frontmatter.title, "Test");
         assert_eq!(t.frontmatter.state, "new");
         assert_eq!(t.frontmatter.priority, 5);
         assert_eq!(t.body, "## Spec\n\nHello\n");
+    }
+
+    #[test]
+    fn parse_integer_id_is_zero_padded() {
+        let raw = minimal_raw_int("", "");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.id, "0001");
     }
 
     #[test]
@@ -466,14 +549,14 @@ mod tests {
 
     #[test]
     fn parse_missing_opening_delimiter() {
-        let raw = "id = 1\ntitle = \"Test\"\nstate = \"new\"\n+++\n\nbody\n";
+        let raw = "id = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n+++\n\nbody\n";
         let err = Ticket::parse(dummy_path(), raw).unwrap_err();
         assert!(err.to_string().contains("missing frontmatter"));
     }
 
     #[test]
     fn parse_unclosed_frontmatter() {
-        let raw = "+++\nid = 1\ntitle = \"Test\"\nstate = \"new\"\n\nbody\n";
+        let raw = "+++\nid = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n\nbody\n";
         let err = Ticket::parse(dummy_path(), raw).unwrap_err();
         assert!(err.to_string().contains("unclosed frontmatter"));
     }
@@ -524,15 +607,29 @@ mod tests {
         assert_eq!(slugify("foo  --  bar"), "foo-bar");
     }
 
-    // --- next_id ---
+    // --- normalize_id_arg ---
 
     #[test]
-    fn next_id_creates_and_increments() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path();
-        assert_eq!(next_id(p).unwrap(), 1);
-        assert_eq!(next_id(p).unwrap(), 2);
-        assert_eq!(next_id(p).unwrap(), 3);
+    fn normalize_integer_pads_to_four() {
+        assert_eq!(normalize_id_arg("35").unwrap(), "0035");
+        assert_eq!(normalize_id_arg("1").unwrap(), "0001");
+        assert_eq!(normalize_id_arg("9999").unwrap(), "9999");
+    }
+
+    #[test]
+    fn normalize_hex_passthrough() {
+        assert_eq!(normalize_id_arg("a3f9b2c1").unwrap(), "a3f9b2c1");
+        assert_eq!(normalize_id_arg("a3f9").unwrap(), "a3f9");
+    }
+
+    #[test]
+    fn normalize_too_short_errors() {
+        assert!(normalize_id_arg("abc").is_err());
+    }
+
+    #[test]
+    fn normalize_non_hex_errors() {
+        assert!(normalize_id_arg("gggg").is_err());
     }
 
     // ── TicketDocument ────────────────────────────────────────────────────
