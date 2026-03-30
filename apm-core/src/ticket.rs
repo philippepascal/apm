@@ -307,6 +307,139 @@ pub fn close(
     Ok(())
 }
 
+pub fn accept(
+    root: &Path,
+    config: &crate::config::Config,
+    id_arg: &str,
+    agent: &str,
+) -> Result<()> {
+    let tickets = load_all_from_git(root, &config.tickets.dir)?;
+    let prefix = normalize_id_arg(id_arg)?;
+
+    let idx = tickets.iter().position(|t| t.frontmatter.id.starts_with(prefix.as_str()))
+        .ok_or_else(|| anyhow::anyhow!("no ticket matches '{prefix}'"))?;
+
+    let mut t = tickets[idx].clone();
+    let id = t.frontmatter.id.clone();
+    let prev = t.frontmatter.state.clone();
+    let now = chrono::Utc::now();
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+
+    t.frontmatter.state = "accepted".into();
+    t.frontmatter.updated_at = Some(now);
+
+    let row = format!("| {when} | {prev} | accepted | {agent} |");
+    if t.body.contains("## History") {
+        if !t.body.ends_with('\n') {
+            t.body.push('\n');
+        }
+        t.body.push_str(&row);
+        t.body.push('\n');
+    } else {
+        t.body.push_str(&format!(
+            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
+        ));
+    }
+
+    let content = t.serialize()?;
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    let branch = t.frontmatter.branch.clone()
+        .or_else(|| crate::git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id}"));
+
+    crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): {prev} → accepted"))?;
+    crate::logger::log("state_transition", &format!("{id:?} {prev} -> accepted"));
+
+    println!("{id}: {prev} → accepted");
+    Ok(())
+pub fn create(
+    root: &std::path::Path,
+    config: &crate::config::Config,
+    title: String,
+    author: String,
+    context: Option<String>,
+    context_section: Option<String>,
+    aggressive: bool,
+) -> Result<Ticket> {
+    let tickets_dir = root.join(&config.tickets.dir);
+    std::fs::create_dir_all(&tickets_dir)?;
+
+    let id = crate::git::gen_hex_id();
+    let slug = slugify(&title);
+    let filename = format!("{id}-{slug}.md");
+    let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
+    let branch = format!("ticket/{id}-{slug}");
+    let now = chrono::Utc::now();
+    let fm = Frontmatter {
+        id: id.clone(),
+        title: title.clone(),
+        state: "new".into(),
+        priority: 0,
+        effort: 0,
+        risk: 0,
+        author: Some(author.clone()),
+        supervisor: None,
+        agent: None,
+        branch: Some(branch.clone()),
+        created_at: Some(now),
+        updated_at: Some(now),
+        focus_section: None,
+    };
+    let when = now.format("%Y-%m-%dT%H:%MZ");
+    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
+    let body_template = if config.ticket.sections.is_empty() {
+        format!("## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n{history_footer}")
+    } else {
+        let mut s = String::from("## Spec\n\n");
+        for sec in &config.ticket.sections {
+            let placeholder = sec.placeholder.as_deref().unwrap_or("");
+            s.push_str(&format!("### {}\n\n{}\n\n", sec.name, placeholder));
+        }
+        s.push_str(&history_footer);
+        s
+    };
+    let body = if let Some(ctx) = &context {
+        let transition_section = config.workflow.states.iter()
+            .find(|s| s.id == "new")
+            .and_then(|s| s.transitions.iter().find(|tr| tr.to == "in_design"))
+            .and_then(|tr| tr.context_section.clone());
+        let section = context_section
+            .clone()
+            .or(transition_section)
+            .unwrap_or_else(|| "Problem".to_string());
+        let heading = format!("### {section}\n\n");
+        if !body_template.contains(&heading) {
+            anyhow::bail!("section '### {section}' not found in ticket body template");
+        }
+        body_template.replacen(&heading, &format!("### {section}\n\n{ctx}\n\n"), 1)
+    } else {
+        body_template
+    };
+    let path = tickets_dir.join(&filename);
+    let t = Ticket { frontmatter: fm, body, path };
+    let content = t.serialize()?;
+
+    crate::git::commit_to_branch(
+        root,
+        &branch,
+        &rel_path,
+        &content,
+        &format!("ticket({id}): create {title}"),
+    )?;
+
+    if aggressive {
+        if let Err(e) = crate::git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
+
+    Ok(t)
+}
+
 pub fn slugify(s: &str) -> String {
     s.chars()
         .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })

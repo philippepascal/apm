@@ -8,78 +8,10 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
     let config = Config::load(root)?;
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
-    let valid_states: HashSet<&str> = config.workflow.states.iter()
-        .map(|s| s.id.as_str())
-        .collect();
-    let terminal: HashSet<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
-
     let merged = git::merged_into_main(root, &config.project.default_branch).unwrap_or_default();
-    let merged_set: HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
+    let merged_set: HashSet<String> = merged.into_iter().collect();
 
-    let in_progress_states: HashSet<&str> = ["in_progress", "implemented", "accepted"].iter().copied().collect();
-
-    let mut issues: Vec<String> = Vec::new();
-
-    for t in &tickets {
-        let fm = &t.frontmatter;
-
-        // Skip terminal-state tickets.
-        if terminal.contains(fm.state.as_str()) { continue; }
-
-        let prefix = format!("#{} [{}]", fm.id, fm.state);
-
-        // State value not in config.
-        if !valid_states.is_empty() && !valid_states.contains(fm.state.as_str()) {
-            issues.push(format!("{prefix}: unknown state {:?}", fm.state));
-        }
-
-        // Frontmatter id doesn't match filename numeric prefix.
-        if let Some(name) = t.path.file_name().and_then(|n| n.to_str()) {
-            let expected_prefix = format!("{:04}", fm.id);
-            if !name.starts_with(&expected_prefix) {
-                issues.push(format!("{prefix}: id {} does not match filename {name}", fm.id));
-            }
-        }
-
-        // in_progress/implemented/accepted with no branch.
-        if in_progress_states.contains(fm.state.as_str()) && fm.branch.is_none() {
-            issues.push(format!("{prefix}: state requires branch but none set"));
-        }
-
-        // Branch merged but ticket not yet accepted.
-        if let Some(branch) = &fm.branch {
-            if (fm.state == "in_progress" || fm.state == "implemented")
-                && merged_set.contains(branch.as_str())
-            {
-                issues.push(format!("{prefix}: branch {branch} is merged but ticket not accepted"));
-            }
-        }
-
-        // Agent set but state is not in in_progress/implemented/accepted.
-        if fm.agent.is_some() && !in_progress_states.contains(fm.state.as_str()) {
-            issues.push(format!("{prefix}: agent is set but state is not in_progress/implemented/accepted"));
-        }
-
-        // Missing ## Spec section.
-        if !t.body.contains("## Spec") {
-            issues.push(format!("{prefix}: missing ## Spec section"));
-        }
-
-        // Missing ## History section.
-        if !t.body.contains("## History") {
-            issues.push(format!("{prefix}: missing ## History section"));
-        }
-
-        // Validate document structure (required sections non-empty, AC items present).
-        if let Ok(doc) = t.document() {
-            for err in doc.validate() {
-                issues.push(format!("{prefix}: {err}"));
-            }
-        }
-    }
+    let issues = apm_core::verify::verify_tickets(&config, &tickets, &merged_set);
 
     // Report completion strategies configured on transitions.
     for state in &config.workflow.states {
@@ -111,7 +43,8 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
     }
 
     if fix {
-        apply_fixes(root, &config, &tickets, &merged_set)?;
+        let merged_refs: HashSet<&str> = merged_set.iter().map(|s| s.as_str()).collect();
+        apply_fixes(root, &config, &tickets, &merged_refs)?;
     }
 
     std::process::exit(1);

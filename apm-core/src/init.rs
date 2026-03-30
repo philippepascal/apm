@@ -1,0 +1,448 @@
+use anyhow::Result;
+use std::path::Path;
+use std::process::Command;
+
+pub fn setup(root: &Path) -> Result<()> {
+    let tickets_dir = root.join("tickets");
+    if !tickets_dir.exists() {
+        std::fs::create_dir_all(&tickets_dir)?;
+        println!("Created tickets/");
+    }
+
+    let apm_dir = root.join(".apm");
+    std::fs::create_dir_all(&apm_dir)?;
+
+    let config_path = apm_dir.join("config.toml");
+    if !config_path.exists() {
+        let name = root
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("project");
+        let branch = detect_default_branch(root);
+        std::fs::write(&config_path, default_config(name, &branch))?;
+        println!("Created .apm/config.toml");
+    }
+    let agents_path = apm_dir.join("agents.md");
+    if !agents_path.exists() {
+        std::fs::write(&agents_path, default_agents_md())?;
+        println!("Created .apm/agents.md");
+    }
+    let spec_writer_path = apm_dir.join("spec-writer.md");
+    if !spec_writer_path.exists() {
+        std::fs::write(
+            &spec_writer_path,
+            "# APM Spec-Writer Agent\n\n_Fill in spec-writing instructions here._\n",
+        )?;
+        println!("Created .apm/spec-writer.md");
+    }
+    let worker_md_path = apm_dir.join("worker.md");
+    if !worker_md_path.exists() {
+        std::fs::write(&worker_md_path, include_str!("apm.worker.md"))?;
+        println!("Created .apm/worker.md");
+    }
+    ensure_claude_md(root, ".apm/agents.md")?;
+    let gitignore = root.join(".gitignore");
+    ensure_gitignore(&gitignore)?;
+    maybe_initial_commit(root)?;
+    ensure_worktrees_dir(root)?;
+    Ok(())
+}
+
+pub fn migrate(root: &Path) -> Result<()> {
+    let apm_dir = root.join(".apm");
+    let new_config = apm_dir.join("config.toml");
+
+    if new_config.exists() {
+        println!("Already migrated.");
+        return Ok(());
+    }
+
+    let old_config = root.join("apm.toml");
+    let old_agents = root.join("apm.agents.md");
+
+    if !old_config.exists() && !old_agents.exists() {
+        println!("Nothing to migrate.");
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(&apm_dir)?;
+
+    if old_config.exists() {
+        std::fs::rename(&old_config, &new_config)?;
+        println!("Moved apm.toml → .apm/config.toml");
+    }
+
+    if old_agents.exists() {
+        let new_agents = apm_dir.join("agents.md");
+        std::fs::rename(&old_agents, &new_agents)?;
+        println!("Moved apm.agents.md → .apm/agents.md");
+    }
+
+    let claude_path = root.join("CLAUDE.md");
+    if claude_path.exists() {
+        let contents = std::fs::read_to_string(&claude_path)?;
+        if contents.contains("@apm.agents.md") {
+            let updated = contents.replace("@apm.agents.md", "@.apm/agents.md");
+            std::fs::write(&claude_path, updated)?;
+            println!("Updated CLAUDE.md (@apm.agents.md → @.apm/agents.md)");
+        }
+    }
+
+    Ok(())
+}
+
+pub fn detect_default_branch(root: &Path) -> String {
+    Command::new("git")
+        .args(["symbolic-ref", "--short", "HEAD"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "main".to_string())
+}
+
+pub fn ensure_gitignore(path: &Path) -> Result<()> {
+    let entries = ["tickets/NEXT_ID"];
+    if path.exists() {
+        let mut contents = std::fs::read_to_string(path)?;
+        let mut changed = false;
+        for entry in &entries {
+            if !contents.contains(entry) {
+                if !contents.ends_with('\n') {
+                    contents.push('\n');
+                }
+                contents.push_str(entry);
+                contents.push('\n');
+                changed = true;
+            }
+        }
+        if changed {
+            std::fs::write(path, &contents)?;
+            println!("Updated .gitignore");
+        }
+    } else {
+        std::fs::write(path, entries.join("\n") + "\n")?;
+        println!("Created .gitignore");
+    }
+    Ok(())
+}
+
+fn ensure_claude_md(root: &Path, agents_path: &str) -> Result<()> {
+    let import_line = format!("@{agents_path}");
+    let claude_path = root.join("CLAUDE.md");
+    if claude_path.exists() {
+        let contents = std::fs::read_to_string(&claude_path)?;
+        if contents.contains(&import_line) {
+            return Ok(());
+        }
+        std::fs::write(&claude_path, format!("{import_line}\n\n{contents}"))?;
+        println!("Updated CLAUDE.md (added {import_line} import).");
+    } else {
+        std::fs::write(&claude_path, format!("{import_line}\n"))?;
+        println!("Created CLAUDE.md.");
+    }
+    Ok(())
+}
+
+fn default_agents_md() -> &'static str {
+    include_str!("../../apm.agents.md")
+}
+
+#[cfg(target_os = "macos")]
+fn default_log_file(name: &str) -> String {
+    format!("~/Library/Logs/apm/{name}.log")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn default_log_file(name: &str) -> String {
+    format!("~/.local/state/apm/{name}.log")
+}
+
+fn default_config(name: &str, default_branch: &str) -> String {
+    let log_file = default_log_file(name);
+    format!(
+        r##"[project]
+name = "{name}"
+default_branch = "{default_branch}"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "../{name}--worktrees"
+
+[agents]
+max_concurrent = 3
+instructions = "apm.agents.md"
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+color      = "#6b7280"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "question"
+label      = "Question"
+color      = "#f59e0b"
+actionable = ["supervisor"]
+
+[[workflow.states]]
+id         = "specd"
+label      = "Specd"
+color      = "#3b82f6"
+actionable = ["supervisor"]
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+color      = "#ef4444"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "in_design"
+label      = "In Design"
+color      = "#f97316"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+color      = "#10b981"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+color = "#8b5cf6"
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+  actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to      = "blocked"
+  trigger = "command:block"
+  actor   = "agent"
+
+[[workflow.states]]
+id         = "blocked"
+label      = "Blocked"
+color      = "#dc2626"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "ready"
+  trigger = "command:unblock"
+  actor   = "supervisor"
+
+[[workflow.states]]
+id         = "implemented"
+label      = "Implemented"
+color      = "#06b6d4"
+actionable = ["supervisor"]
+
+[[workflow.states]]
+id         = "accepted"
+label      = "Accepted"
+color      = "#84cc16"
+actionable = ["supervisor"]
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+color    = "#374151"
+terminal = true
+
+[logging]
+enabled = false
+file = "{log_file}"
+"##
+    )
+}
+
+fn maybe_initial_commit(root: &Path) -> Result<()> {
+    let has_commits = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if has_commits {
+        return Ok(());
+    }
+
+    Command::new("git")
+        .args(["add", ".apm/config.toml", ".gitignore"])
+        .current_dir(root)
+        .status()?;
+
+    let out = Command::new("git")
+        .args(["commit", "-m", "apm: initialize project"])
+        .current_dir(root)
+        .output()?;
+
+    if out.status.success() {
+        println!("Created initial commit.");
+    }
+    Ok(())
+}
+
+fn ensure_worktrees_dir(root: &Path) -> Result<()> {
+    if let Ok(config) = crate::config::Config::load(root) {
+        let wt_dir = root.join(&config.worktrees.dir);
+        if !wt_dir.exists() {
+            std::fs::create_dir_all(&wt_dir)?;
+            println!("Created worktrees dir: {}", wt_dir.display());
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use tempfile::TempDir;
+
+    fn git_init(dir: &Path) {
+        Command::new("git")
+            .args(["init", "-b", "main"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+    }
+
+    #[test]
+    fn detect_default_branch_fresh_repo() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        let branch = detect_default_branch(tmp.path());
+        assert_eq!(branch, "main");
+    }
+
+    #[test]
+    fn detect_default_branch_non_git() {
+        let tmp = TempDir::new().unwrap();
+        let branch = detect_default_branch(tmp.path());
+        assert_eq!(branch, "main");
+    }
+
+    #[test]
+    fn ensure_gitignore_creates_file() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join(".gitignore");
+        ensure_gitignore(&path).unwrap();
+        let contents = std::fs::read_to_string(&path).unwrap();
+        assert!(contents.contains("tickets/NEXT_ID"));
+    }
+
+    #[test]
+    fn ensure_gitignore_appends_missing_entry() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join(".gitignore");
+        std::fs::write(&path, "node_modules\n").unwrap();
+        ensure_gitignore(&path).unwrap();
+        let contents = std::fs::read_to_string(&path).unwrap();
+        assert!(contents.contains("node_modules"));
+        assert!(contents.contains("tickets/NEXT_ID"));
+    }
+
+    #[test]
+    fn ensure_gitignore_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join(".gitignore");
+        ensure_gitignore(&path).unwrap();
+        let before = std::fs::read_to_string(&path).unwrap();
+        ensure_gitignore(&path).unwrap();
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(before, after);
+    }
+
+    #[test]
+    fn setup_creates_expected_files() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path()).unwrap();
+
+        assert!(tmp.path().join("tickets").exists());
+        assert!(tmp.path().join(".apm/config.toml").exists());
+        assert!(tmp.path().join(".apm/agents.md").exists());
+        assert!(tmp.path().join(".apm/spec-writer.md").exists());
+        assert!(tmp.path().join(".apm/worker.md").exists());
+        assert!(tmp.path().join(".gitignore").exists());
+        assert!(tmp.path().join("CLAUDE.md").exists());
+    }
+
+    #[test]
+    fn setup_is_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path()).unwrap();
+
+        // Write sentinel content to config
+        let config_path = tmp.path().join(".apm/config.toml");
+        let original = std::fs::read_to_string(&config_path).unwrap();
+
+        setup(tmp.path()).unwrap();
+        let after = std::fs::read_to_string(&config_path).unwrap();
+        assert_eq!(original, after);
+    }
+
+    #[test]
+    fn migrate_moves_files_and_updates_claude_md() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"x\"\n").unwrap();
+        std::fs::write(tmp.path().join("apm.agents.md"), "# agents\n").unwrap();
+        std::fs::write(tmp.path().join("CLAUDE.md"), "@apm.agents.md\n\nContent\n").unwrap();
+
+        migrate(tmp.path()).unwrap();
+
+        assert!(tmp.path().join(".apm/config.toml").exists());
+        assert!(tmp.path().join(".apm/agents.md").exists());
+        assert!(!tmp.path().join("apm.toml").exists());
+        assert!(!tmp.path().join("apm.agents.md").exists());
+
+        let claude = std::fs::read_to_string(tmp.path().join("CLAUDE.md")).unwrap();
+        assert!(claude.contains("@.apm/agents.md"));
+        assert!(!claude.contains("@apm.agents.md"));
+    }
+
+    #[test]
+    fn migrate_already_migrated() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        std::fs::create_dir_all(tmp.path().join(".apm")).unwrap();
+        std::fs::write(tmp.path().join(".apm/config.toml"), "").unwrap();
+
+        // Should not panic or error
+        migrate(tmp.path()).unwrap();
+    }
+}
