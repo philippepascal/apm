@@ -1,7 +1,7 @@
 +++
 id = 42
 title = "need an option on apm list to show all closed tickets"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0328-t42a"
 branch = "ticket/0042-need-an-option-on-apm-list-to-show-all-c"
 created_at = "2026-03-28T08:35:04.245019Z"
-updated_at = "2026-03-28T19:29:01.749002Z"
+updated_at = "2026-03-30T02:03:54.189446Z"
 +++
 
 ## Spec
@@ -62,3 +62,4 @@ No CLI argument changes needed. The fix is entirely inside `list.rs`.
 | 2026-03-28T19:24Z | ready | in_progress | claude-0328-t42a |
 | 2026-03-28T19:26Z | in_progress | implemented | claude-0328-t42a |
 | 2026-03-28T19:29Z | implemented | accepted | apm sync |
+| 2026-03-30T02:03Z | accepted | closed | apm-sync |
