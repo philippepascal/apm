@@ -652,6 +652,31 @@ fn take_fails_when_no_agent_assigned() {
     assert!(msg.contains("apm start"), "error should mention apm start: {msg}");
 }
 
+#[test]
+fn take_without_apm_agent_name_falls_back_to_apm() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_with_agent(p, "ticket/0001-fallback", "0001-fallback.md", "in_design", 1, "fallback", "old-agent");
+    std::env::remove_var("APM_AGENT_NAME");
+    std::env::remove_var("USER");
+    std::env::remove_var("USERNAME");
+    apm::cmd::take::run(p, "1", true).unwrap();
+    let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
+    assert!(content.contains("agent = \"apm\""), "agent should fall back to 'apm': {content}");
+}
+
+#[test]
+fn take_without_apm_agent_name_uses_user_env() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_with_agent(p, "ticket/0001-user-env", "0001-user-env.md", "in_design", 1, "user env", "old-agent");
+    std::env::remove_var("APM_AGENT_NAME");
+    std::env::set_var("USER", "alice");
+    apm::cmd::take::run(p, "1", true).unwrap();
+    let content = branch_content(p, "ticket/0001-user-env", "tickets/0001-user-env.md");
+    assert!(content.contains("agent = \"alice\""), "agent should be resolved from USER: {content}");
+}
+
 // ── apm spec ────────────────────────────────────────────────────────────────
 
 fn write_spec_ticket(dir: &std::path::Path, id: u32, problem: &str, approach: &str) {
