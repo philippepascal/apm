@@ -165,10 +165,17 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     cmd.stderr(log_clone);
 
     // Spawn detached
-    let child = cmd.spawn()?;
+    let mut child = cmd.spawn()?;
     let pid = child.id();
-    // Do not wait — drop child handle, process runs independently
-    std::mem::drop(child);
+
+    // Write PID file; background thread waits for exit and removes it.
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+    let pid_path_cleanup = pid_path.clone();
+    std::thread::spawn(move || {
+        let _ = child.wait();
+        let _ = std::fs::remove_file(&pid_path_cleanup);
+    });
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
@@ -295,9 +302,16 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     cmd.stdout(log_file);
     cmd.stderr(log_clone);
 
-    let child = cmd.spawn()?;
+    let mut child = cmd.spawn()?;
     let pid = child.id();
-    std::mem::drop(child);
+
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+    let pid_path_cleanup = pid_path.clone();
+    std::thread::spawn(move || {
+        let _ = child.wait();
+        let _ = std::fs::remove_file(&pid_path_cleanup);
+    });
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
@@ -307,11 +321,12 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
 /// Like `run_next` with spawn=true, but returns the spawned `Child` handle so
 /// the caller can wait for it.  Returns `None` if no actionable tickets exist.
+/// Also returns the path to the PID file for cleanup on exit.
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
     skip_permissions: bool,
-) -> Result<Option<(String, std::process::Child)>> {
+) -> Result<Option<(String, std::process::Child, std::path::PathBuf)>> {
     let config = Config::load(root)?;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
@@ -414,10 +429,26 @@ pub fn spawn_next_worker(
 
     let child = cmd.spawn()?;
     let pid = child.id();
+
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
-    Ok(Some((id, child)))
+    Ok(Some((id, child, pid_path)))
+}
+
+fn write_pid_file(path: &std::path::Path, pid: u32, ticket_id: &str) -> Result<()> {
+    let started_at = chrono::Utc::now().format("%Y-%m-%dT%H:%MZ").to_string();
+    let content = serde_json::json!({
+        "pid": pid,
+        "ticket_id": ticket_id,
+        "started_at": started_at,
+    })
+    .to_string();
+    std::fs::write(path, content)?;
+    Ok(())
 }
 
 fn rand_u16() -> u16 {

@@ -216,6 +216,15 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    /// List and manage running worker processes
+    Workers {
+        /// Tail the worker log for the given ticket ID
+        #[arg(long, value_name = "ID")]
+        log: Option<String>,
+        /// Kill the worker for the given ticket ID
+        #[arg(long, value_name = "ID")]
+        kill: Option<String>,
+    },
     /// Read or write individual spec sections of a ticket
     Spec {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
@@ -293,6 +302,7 @@ fn main() -> Result<()> {
         Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
         Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
         Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
+        Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
     }
 }
 
