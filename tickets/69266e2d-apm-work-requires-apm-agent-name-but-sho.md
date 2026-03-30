@@ -24,46 +24,69 @@ set the ticket's `agent` field.
 `apm work` is designed to run headlessly (e.g. in CI or a background session)
 where there is no human agent name. Requiring `APM_AGENT_NAME` breaks that use
 case. This will be fully resolved by ticket `9baf1ac2` (workers use PID as
-agent), but until then `apm work` should auto-set a fallback name (e.g.
-`apm-work`) rather than failing silently with a warning.
+agent), but until then `apm work` should auto-set a fallback name rather than
+failing.
+
+The same problem applies to `apm start <id>` and `apm start --next` for a
+supervisor who hasn't exported `APM_AGENT_NAME`. These commands have no
+inherent reason to require it: a sensible fallback (e.g. `$USER`) is better
+than a hard failure. The env var remains the preferred way to set a name, but
+it should not be mandatory.
 
 ### Acceptance criteria
 
 - [ ] `apm work` with `APM_AGENT_NAME` unset does not print `warning: dispatch failed: APM_AGENT_NAME is not set`
 - [ ] `apm work` with `APM_AGENT_NAME` unset dispatches workers for actionable tickets without error
 - [ ] Tickets started via `apm work` without `APM_AGENT_NAME` have a non-empty `agent` field in their frontmatter
-- [ ] `apm start <id>` without `APM_AGENT_NAME` still fails with `APM_AGENT_NAME is not set`
-- [ ] `apm start --next` without `APM_AGENT_NAME` still fails with `APM_AGENT_NAME is not set`
+- [ ] `apm start <id>` with `APM_AGENT_NAME` unset succeeds and sets a non-empty `agent` field in the ticket
+- [ ] `apm start --next` with `APM_AGENT_NAME` unset succeeds and sets a non-empty `agent` field in the ticket
+- [ ] When `APM_AGENT_NAME` is set, all three commands (`apm work`, `apm start <id>`, `apm start --next`) use it as the agent name
 
 ### Out of scope
 
 - Using PID as agent name for workers (covered by ticket `9baf1ac2`)
-- Changing `apm start` or `apm start --next` behaviour for interactive callers
 - Any UI for surfacing the fallback name beyond the existing `Agent name: <name>` print
+- Making `APM_AGENT_NAME` truly optional as a long-term design choice — the env var remains the expected way to set identity; this ticket only adds a fallback to remove hard failures
 
 ### Approach
 
-**Root cause:** `start::run()` reads `APM_AGENT_NAME` from the environment unconditionally (lines 7–8 in `start.rs`). It is called from three paths: CLI (`main.rs`), `run_next()`, and `spawn_next_worker()`. Only the third path is headless — `spawn_next_worker` already generates a `worker_name` (line 376) but does so *after* calling `run()`, so `run()` fails before that point.
+**Root cause:** `start::run()` reads `APM_AGENT_NAME` from the environment unconditionally (lines 7–8 in `start.rs`), bailing if unset. It is called from three paths: CLI (`main.rs`), `run_next()`, and `spawn_next_worker()` in `work.rs`. All three paths fail hard today if the env var is absent.
 
-**Fix:** Remove the `APM_AGENT_NAME` read from inside `run()` and instead accept `agent_name: &str` as an explicit parameter. Each call site supplies it:
+**Fix in two parts:**
+
+**Part 1 — shared fallback helper** (`apm/src/cmd/start.rs`)
+
+Add a small free function that centralises agent-name resolution:
+
+```rust
+fn resolve_agent_name() -> String {
+    std::env::var("APM_AGENT_NAME")
+        .or_else(|_| std::env::var("USER"))
+        .or_else(|_| std::env::var("USERNAME"))   // Windows compat
+        .unwrap_or_else(|_| "apm".to_string())
+}
+```
+
+Priority: `APM_AGENT_NAME` → `$USER` → `$USERNAME` → literal `"apm"`.
+
+**Part 2 — thread `agent_name` as an explicit parameter through `run()`**
 
 1. **`start::run()` signature change** (`apm/src/cmd/start.rs`)
-   - Remove `let agent_name = std::env::var("APM_AGENT_NAME").map_err(…)?;` from the top of `run()`
+   - Remove `let agent_name = std::env::var("APM_AGENT_NAME").map_err(…)?;` from line 7–8
    - Add `agent_name: &str` as the last parameter
 
-2. **`spawn_next_worker()`** (`apm/src/cmd/start.rs`)
-   - Move the `worker_name` generation (currently line 376, after the `run()` call) to *before* the `run()` call
-   - Pass `&worker_name` to `run()`
-   - Remove the now-duplicate generation further down; reuse the same binding
+2. **CLI dispatch** (`apm/src/main.rs`)
+   - For `Command::Start { id: Some(id), … }`: call `resolve_agent_name()` and pass the result to `cmd::start::run()`
 
 3. **`run_next()`** (`apm/src/cmd/start.rs`)
-   - Already reads `APM_AGENT_NAME` at line 180 — keep that check, pass `&agent_name` explicitly to `run()`
+   - Replace the hard `APM_AGENT_NAME` read at line 180 with a call to `resolve_agent_name()`
+   - Pass the result to `run()`
 
-4. **CLI dispatch** (`apm/src/main.rs`)
-   - For `Command::Start { id: Some(id), … }`: read `APM_AGENT_NAME` from env (bail if missing) and pass to `cmd::start::run()`
-   - The `--next` path delegates entirely to `run_next()`, which handles its own env read
+4. **`spawn_next_worker()`** (inside `run()` when `spawn = true`)
+   - The spawn path already generates its own `worker_name` at line 133 (`format!("claude-{}-{:04x}", …)`), which is set on `cmd.env("APM_AGENT_NAME", &worker_name)` before launching the subprocess — this is correct and unchanged
+   - The `agent_name` passed in from the call site is used for the ticket frontmatter (the *orchestrator's* identity); the worker gets its own generated name
 
-No changes to `work.rs`.
+No changes to `work.rs`. No changes to the spawn-path worker naming.
 
 ### Open questions
 
@@ -71,7 +94,9 @@ No changes to `work.rs`.
 
 ### Amendment requests
 
-Why would apm start without APM_AGENT_NAME fail? what is the alternative for a supervisor that wants to start a specific ticket or just the next?
+- [x] Why would apm start without APM_AGENT_NAME fail? what is the alternative for a supervisor that wants to start a specific ticket or just the next?
+
+  **Addressed:** There is no good reason for the hard failure. The spec now extends the fallback to all `apm start` paths via a shared `resolve_agent_name()` helper (`APM_AGENT_NAME` → `$USER` → `$USERNAME` → `"apm"`). A supervisor who hasn't exported the env var gets a sensible agent name automatically. `APM_AGENT_NAME` remains the preferred mechanism but is no longer required.
 
 
 ### Code review
