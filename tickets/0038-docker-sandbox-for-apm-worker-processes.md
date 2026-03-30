@@ -64,7 +64,7 @@ current native behaviour unchanged.
     `GIT_COMMITTER_EMAIL` — so commits have the right identity
   (`GH_TOKEN` is NOT injected — the worker never pushes or creates PRs;
   those are handled by `apm start` on the host after the container exits)
-- [ ] `apm start` resolves each credential at spawn time using this priority:
+- [x] `apm start` resolves each credential at spawn time using this priority:
   1. Environment variable already set in the caller's shell
   2. macOS Keychain (`security find-generic-password -s "<service>" -w`)
      using configurable service names in `[workers.keychain]`
