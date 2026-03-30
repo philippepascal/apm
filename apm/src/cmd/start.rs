@@ -3,9 +3,14 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
-    let agent_name = std::env::var("APM_AGENT_NAME")
-        .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
+pub fn resolve_agent_name() -> String {
+    std::env::var("APM_AGENT_NAME")
+        .or_else(|_| std::env::var("USER"))
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_else(|_| "apm".to_string())
+}
+
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<()> {
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -44,7 +49,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .map(|tr| tr.to.clone())
         .unwrap_or_else(|| "in_progress".into());
 
-    t.frontmatter.agent = Some(agent_name.clone());
+    t.frontmatter.agent = Some(agent_name.to_string());
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
@@ -179,9 +184,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 }
 
 pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
-    let agent_name = std::env::var("APM_AGENT_NAME")
-        .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
-
     let config = Config::load(root)?;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
@@ -207,7 +209,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
 
     // Run the normal start flow
-    run(root, &id, no_aggressive, false, false)?;
+    let agent_name = resolve_agent_name();
+    run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     // Re-read the ticket from branch to get focus_section (it may have been set by supervisor)
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -356,7 +359,8 @@ pub fn spawn_next_worker(
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
 
-    run(root, &id, no_aggressive, false, false)?;
+    let agent_name = resolve_agent_name();
+    run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets2.iter().find(|t| t.frontmatter.id == id) else {
@@ -472,4 +476,33 @@ fn write_pid_file(path: &std::path::Path, pid: u32, ticket_id: &str) -> Result<(
 fn rand_u16() -> u16 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().subsec_nanos() as u16
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_agent_name;
+
+    #[test]
+    fn prefers_apm_agent_name() {
+        std::env::set_var("APM_AGENT_NAME", "explicit-agent");
+        assert_eq!(resolve_agent_name(), "explicit-agent");
+        std::env::remove_var("APM_AGENT_NAME");
+    }
+
+    #[test]
+    fn falls_back_to_user() {
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::set_var("USER", "unix-user");
+        std::env::remove_var("USERNAME");
+        assert_eq!(resolve_agent_name(), "unix-user");
+        std::env::remove_var("USER");
+    }
+
+    #[test]
+    fn falls_back_to_apm_literal() {
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::remove_var("USER");
+        std::env::remove_var("USERNAME");
+        assert_eq!(resolve_agent_name(), "apm");
+    }
 }
