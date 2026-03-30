@@ -27,7 +27,7 @@ The desired behaviour is that `apm take` uses the same `resolve_agent_name()` he
 - [x] `apm take <id>` with `APM_AGENT_NAME` unset succeeds (exit 0) and completes the handoff
 - [x] `apm take <id>` with `APM_AGENT_NAME` unset and `USER=alice` sets the ticket's `agent` field to `alice`
 - [x] `apm take <id>` with `APM_AGENT_NAME` unset and neither `USER` nor `USERNAME` set falls back to agent name `apm`
-- [ ] `apm take <id>` with `APM_AGENT_NAME=my-agent` still uses `my-agent` (existing behaviour preserved)
+- [x] `apm take <id>` with `APM_AGENT_NAME=my-agent` still uses `my-agent` (existing behaviour preserved)
 - [ ] `apm take <id>` when already assigned to the resolved agent name prints the no-op message without error
 
 ### Out of scope
