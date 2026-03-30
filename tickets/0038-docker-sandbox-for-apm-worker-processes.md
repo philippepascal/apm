@@ -69,7 +69,7 @@ current native behaviour unchanged.
   2. macOS Keychain (`security find-generic-password -s "<service>" -w`)
      using configurable service names in `[workers.keychain]`
   3. Hard failure with a clear error if a required credential cannot be found
-- [ ] `apm.toml` `[workers.keychain]` lets users map credential names to
+- [x] `apm.toml` `[workers.keychain]` lets users map credential names to
   Keychain service names, e.g.:
   ```toml
   [workers.keychain]
