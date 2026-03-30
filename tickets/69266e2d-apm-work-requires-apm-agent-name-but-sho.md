@@ -15,7 +15,16 @@ updated_at = "2026-03-30T06:11:19.569472Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm work` fails with `warning: dispatch failed: APM_AGENT_NAME is not set`
+when the env var is not exported. `apm work` itself never uses `APM_AGENT_NAME`
+— the error originates in `spawn_next_worker` → `apm start`, which reads it to
+set the ticket's `agent` field.
+
+`apm work` is designed to run headlessly (e.g. in CI or a background session)
+where there is no human agent name. Requiring `APM_AGENT_NAME` breaks that use
+case. This will be fully resolved by ticket `9baf1ac2` (workers use PID as
+agent), but until then `apm work` should auto-set a fallback name (e.g.
+`apm-work`) rather than failing silently with a warning.
 
 ### Acceptance criteria
 
