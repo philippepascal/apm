@@ -326,9 +326,6 @@ Examples:
   apm worktrees --add 42     # provision worktree for ticket 42, print path
   apm worktrees --remove 42  # remove the worktree for ticket 42")]
     Worktrees {
-        /// Provision a permanent worktree for the given ticket ID (any state)
-        #[arg(long, value_name = "ID")]
-        add: Option<String>,
         /// Remove the worktree for the given ticket ID
         #[arg(long, value_name = "ID")]
         remove: Option<String>,
@@ -579,7 +576,7 @@ fn main() -> Result<()> {
         }
         Command::Sync { offline, quiet, no_aggressive, auto_close, auto_accept } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close, auto_accept),
         Command::Take { id, no_aggressive } => cmd::take::run(&root, &id, no_aggressive),
-        Command::Worktrees { add, remove } => cmd::worktrees::run(&root, add.as_deref(), remove.as_deref()),
+        Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
         Command::Verify { fix } => cmd::verify::run(&root, fix),
         Command::Validate { fix, json, config_only } => cmd::validate::run(&root, fix, json, config_only),
