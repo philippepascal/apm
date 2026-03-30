@@ -1,7 +1,7 @@
 +++
 id = 29
 title = "warn if .claude/settings.json is not git-tracked during init"
-state = "accepted"
+state = "closed"
 priority = 4
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-1854-10aa"
 branch = "ticket/0029-warn-if-claude-settings-json-is-not-git-"
 created_at = "2026-03-27T05:57:10.499993Z"
-updated_at = "2026-03-28T07:31:53.884383Z"
+updated_at = "2026-03-30T02:03:28.265446Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ In `cmd/init.rs` `run()`, after the existing setup steps, check:
 | 2026-03-28T01:56Z | ready | in_progress | claude-0327-1854-10aa |
 | 2026-03-28T01:58Z | in_progress | implemented | claude-0327-1854-10aa |
 | 2026-03-28T07:31Z | implemented | accepted | apm sync |
+| 2026-03-30T02:03Z | accepted | closed | apm-sync |
