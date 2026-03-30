@@ -50,7 +50,7 @@ format and print results.
 - [x] All existing unit tests for `validate_config` pass after relocating them to `apm-core`
 - [x] `apm/src/cmd/validate.rs` calls `apm_core::validate::validate_config` and contains no duplicated validation logic
 - [x] `apm/src/cmd/verify.rs` calls `apm_core::verify::verify_tickets` for issue collection; `apply_fixes` and all output formatting stay in the CLI crate
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
