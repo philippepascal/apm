@@ -24,14 +24,42 @@ The fix is a one-liner: add `#[serde(default = "default_true")]` to the `aggress
 
 ### Acceptance criteria
 
+- [ ] When `apm.toml` has no `[sync]` section, `sync.aggressive` resolves to `true`
+- [ ] When `apm.toml` has `[sync]` with no `aggressive` key, `sync.aggressive` resolves to `true`
+- [ ] When `apm.toml` has `aggressive = false` explicitly, `sync.aggressive` resolves to `false`
+- [ ] When `apm.toml` has `aggressive = true` explicitly, `sync.aggressive` resolves to `true`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to how the `--no-aggressive` CLI flag works on any command
+- Adding new tests beyond what is needed to verify the serde default behaviour
+- Documentation updates
 
 ### Approach
 
-How the implementation will work.
+In `apm-core/src/config.rs`, change the `SyncConfig` struct from:
+
+```rust
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct SyncConfig {
+    #[serde(default)]
+    pub aggressive: bool,
+}
+```
+
+to:
+
+```rust
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct SyncConfig {
+    #[serde(default = "default_true")]
+    pub aggressive: bool,
+}
+```
+
+The `default_true` helper function already exists in the same file (used by `AgentsConfig::side_tickets`), so no new function is needed.
+
+Add a unit test in `apm-core/src/config.rs` (or its existing test module) covering all four acceptance criteria: no section, section without key, explicit `false`, and explicit `true`.
 
 ### Open questions
 
