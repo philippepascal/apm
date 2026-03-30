@@ -29,7 +29,7 @@ Moving the document-manipulation functions into apm_core::review gives apm-serve
 
 ### Acceptance criteria
 
-- [ ] `apm_core::review` is a public module exported from `apm-core/src/lib.rs`
+- [x] `apm_core::review` is a public module exported from `apm-core/src/lib.rs`
 - [ ] `apm_core::review::split_body` splits a body at `\n## History` (or `## History` at line start) into a `(spec, history)` tuple
 - [ ] `apm_core::review::split_body` returns `(full_body, "")` when no History section is present
 - [ ] `apm_core::review::extract_spec` returns everything after the sentinel line when the sentinel is present
