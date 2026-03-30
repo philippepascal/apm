@@ -32,18 +32,18 @@ Note: the Problem section mentions `apm.toml` but the actual config file is `.ap
 
 ### Acceptance criteria
 
-- [ ] A `docs/` directory exists at the repo root
-- [ ] `docs/docker-workers.md` exists inside that directory
-- [ ] The guide opens with a prerequisites section listing Docker and the `apm init --with-docker` command
-- [ ] The guide explains what `apm init --with-docker` creates (`.apm/Dockerfile.apm-worker`) and that it is idempotent
-- [ ] The guide shows how to customise `Dockerfile.apm-worker` for a project's language/toolchain with at least one concrete example (e.g. adding Node.js or Python packages)
-- [ ] The guide shows the exact `docker build` command to build the image
-- [ ] The guide shows a complete `.apm/config.toml` example with both `[workers]` and `[workers.keychain]` sections
-- [ ] The guide explains that `[workers.keychain]` values are macOS Keychain service names
-- [ ] The guide explains that Linux users must supply credentials via environment variables instead of Keychain
-- [ ] The guide shows how to run `apm validate` and what passing and failing Docker checks look like
-- [ ] The guide explains the difference between `apm start --spawn` (dispatch a single ticket) and `apm work` (batch orchestration loop)
-- [ ] The troubleshooting section addresses: credential not found, docker not in PATH, container exits immediately
+- [x] A `docs/` directory exists at the repo root
+- [x] `docs/docker-workers.md` exists inside that directory
+- [x] The guide opens with a prerequisites section listing Docker and the `apm init --with-docker` command
+- [x] The guide explains what `apm init --with-docker` creates (`.apm/Dockerfile.apm-worker`) and that it is idempotent
+- [x] The guide shows how to customise `Dockerfile.apm-worker` for a project's language/toolchain with at least one concrete example (e.g. adding Node.js or Python packages)
+- [x] The guide shows the exact `docker build` command to build the image
+- [x] The guide shows a complete `.apm/config.toml` example with both `[workers]` and `[workers.keychain]` sections
+- [x] The guide explains that `[workers.keychain]` values are macOS Keychain service names
+- [x] The guide explains that Linux users must supply credentials via environment variables instead of Keychain
+- [x] The guide shows how to run `apm validate` and what passing and failing Docker checks look like
+- [x] The guide explains the difference between `apm start --spawn` (dispatch a single ticket) and `apm work` (batch orchestration loop)
+- [x] The troubleshooting section addresses: credential not found, docker not in PATH, container exits immediately
 
 ### Out of scope
 
