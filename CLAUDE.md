@@ -1,6 +1,6 @@
 # Claude Code — APM Project
 
-@apm.agents.md
+@.apm/agents.md
 
 ## Commits
 
