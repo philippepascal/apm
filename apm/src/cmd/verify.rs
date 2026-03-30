@@ -68,7 +68,7 @@ fn apply_fixes(
             t.frontmatter.state = "accepted".into();
             t.frontmatter.updated_at = Some(now);
             let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-            crate::cmd::state::append_history(&mut t.body, &old_state, "accepted", &when, "verify --fix");
+            apm_core::state::append_history(&mut t.body, &old_state, "accepted", &when, "verify --fix");
             let content = t.serialize()?;
             let id = fm.id.clone();
             let filename = t.path.file_name().unwrap().to_string_lossy().to_string();
