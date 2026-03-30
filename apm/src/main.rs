@@ -486,11 +486,15 @@ The remote branch is not deleted.
 Always run --dry-run first to see exactly what would be removed before
 committing to the operation:
   apm clean --dry-run    # preview
-  apm clean              # actually remove")]
+  apm clean              # actually remove
+  apm clean --yes        # auto-confirm all removal prompts (for scripts)")]
     Clean {
         /// Print what would be removed without modifying anything
         #[arg(long)]
         dry_run: bool,
+        /// Auto-confirm all removal prompts without reading stdin
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
     /// List and manage running worker processes
     Workers {
@@ -596,7 +600,7 @@ fn main() -> Result<()> {
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
         Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
-        Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
+        Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
         Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
     }
