@@ -3,7 +3,7 @@ use apm_core::{config::{CompletionStrategy, Config}, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
     let valid_states: std::collections::HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
@@ -13,19 +13,26 @@ pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Resu
         bail!("unknown state {:?} — valid states: {}", new_state, list.join(", "));
     }
     let aggressive = config.sync.aggressive && !no_aggressive;
+
+    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+
     if aggressive {
-        let prefix = format!("ticket/{id:04}-");
-        if let Ok(branches) = git::ticket_branches(root) {
-            if let Some(b) = branches.iter().find(|b| b.starts_with(&prefix)) {
-                if let Err(e) = git::fetch_branch(root, b) {
-                    eprintln!("warning: fetch failed: {e:#}");
-                }
+        let branches = git::ticket_branches(root).unwrap_or_default();
+        if let Some(b) = branches.iter().find(|b| {
+            b.strip_prefix("ticket/")
+                .and_then(|s| s.split('-').next())
+                .map(|bid| bid == id.as_str())
+                .unwrap_or(false)
+        }) {
+            if let Err(e) = git::fetch_branch(root, b) {
+                eprintln!("warning: fetch failed: {e:#}");
             }
         }
     }
-    let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket #{id} not found");
+        bail!("ticket {id:?} not found");
     };
     let old_state = t.frontmatter.state.clone();
 
@@ -107,7 +114,7 @@ pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Resu
         .branch
         .clone()
         .or_else(|| git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id:04}"));
+        .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(
         root,
@@ -116,13 +123,13 @@ pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Resu
         &content,
         &format!("ticket({id}): {old_state} → {new_state}"),
     )?;
-    apm_core::logger::log("state_transition", &format!("#{id} {old_state} -> {new_state}"));
+    apm_core::logger::log("state_transition", &format!("{id:?} {old_state} -> {new_state}"));
 
 
     match completion {
         CompletionStrategy::Pr => {
             git::push_branch(root, &branch)?;
-            gh_pr_create_or_update(root, &branch, &config.project.default_branch, id, &t.frontmatter.title)?;
+            gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
         }
         CompletionStrategy::Merge => {
             git::push_branch(root, &branch)?;
@@ -137,11 +144,11 @@ pub fn run(root: &Path, id: u32, new_state: String, no_aggressive: bool) -> Resu
         }
     }
 
-    println!("#{id}: {old_state} → {new_state}");
+    println!("{id}: {old_state} → {new_state}");
     Ok(())
 }
 
-fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: u32, title: &str) -> Result<()> {
+fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str) -> Result<()> {
     // Check for an existing open PR on this branch.
     let existing = std::process::Command::new("gh")
         .args(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--jq", ".[0].number"])

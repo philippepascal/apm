@@ -1,7 +1,7 @@
 +++
 id = 63
 title = "apm sync does not detect squash-merged branches"
-state = "implemented"
+state = "closed"
 priority = 1
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "claude-0329-1430-main"
 branch = "ticket/0063-apm-sync-does-not-detect-squash-merged-b"
 created_at = "2026-03-29T22:50:59.530523Z"
-updated_at = "2026-03-30T01:29:35.831965Z"
+updated_at = "2026-03-30T05:24:13.847237Z"
 +++
 
 ## Spec
@@ -78,3 +78,5 @@ Use the remote ref (`origin/<default_branch>`) if available, same as the existin
 | 2026-03-29T22:50Z | — | new | philippepascal |
 | 2026-03-30T01:08Z | new | in_progress | claude-0329-1430-main |
 | 2026-03-30T01:29Z | in_progress | implemented | claude-0329-1430-main |
+| 2026-03-30T04:38Z | implemented | accepted | apm |
+| 2026-03-30T05:24Z | accepted | closed | apm-sync |

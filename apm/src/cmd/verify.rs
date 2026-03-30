@@ -137,13 +137,13 @@ fn apply_fixes(
             let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
             crate::cmd::state::append_history(&mut t.body, &old_state, "accepted", &when, "verify --fix");
             let content = t.serialize()?;
-            let id = fm.id;
+            let id = fm.id.clone();
             let filename = t.path.file_name().unwrap().to_string_lossy().to_string();
             let rel_path = format!("{}/{filename}", config.tickets.dir.to_string_lossy());
             match git::commit_to_branch(root, branch, &rel_path, &content,
                 &format!("ticket({id}): {} → accepted (verify --fix)", fm.state)) {
-                Ok(_) => println!("  fixed #{id}: {} → accepted", fm.state),
-                Err(e) => eprintln!("  warning: could not fix #{id}: {e:#}"),
+                Ok(_) => println!("  fixed {id}: {} → accepted", fm.state),
+                Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
             }
         }
     }
