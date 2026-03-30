@@ -35,7 +35,7 @@ The desired behaviour: `apm clean` diagnoses each blocked worktree, explains wha
 ### Acceptance criteria
 
 - [x] When `apm clean` finds a dirty worktree whose only dirty files are known temp files (`pr-body.md`, `body.md`, `ac.txt`, `.apm-worker.pid`, `.apm-worker.log`), it lists those files and prompts `Remove N file(s) and clean? [y/N]`
-- [ ] Confirming the prompt deletes the listed temp files, then removes the worktree and branch as normal
+- [x] Confirming the prompt deletes the listed temp files, then removes the worktree and branch as normal
 - [ ] Declining the prompt skips that worktree with a one-line "skipping" message
 - [ ] When a dirty worktree contains modified tracked files, `apm clean` lists each file with an `M` prefix, prints "manual cleanup required — skipping", and does not prompt
 - [ ] When a dirty worktree has both modified tracked files and untracked files, the modified-tracked gate applies: no prompt, skip with message
