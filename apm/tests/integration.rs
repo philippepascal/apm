@@ -1428,6 +1428,179 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
 }
 
+// ── system prompt dispatch ───────────────────────────────────────────────────
+
+/// A config with new/ammend/ready all startable, plus in_design/in_progress destinations.
+fn setup_for_prompt_dispatch() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_design"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id    = "in_design"
+label = "In Design"
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_design"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+  actor   = "agent"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    dir
+}
+
+#[test]
+fn spawn_new_ticket_transitions_to_in_design() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    assert!(content.contains("state = \"in_design\""), "new ticket should transition to in_design: {content}");
+}
+
+#[test]
+fn spawn_ammend_ticket_transitions_to_in_design() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
+    write_ticket_to_branch(p, "ticket/0001-fix-spec", "0001-fix-spec.md", "ammend", 1, "fix spec");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-fix-spec", "tickets/0001-fix-spec.md");
+    assert!(content.contains("state = \"in_design\""), "ammend ticket should transition to in_design: {content}");
+}
+
+#[test]
+fn spawn_ready_ticket_transitions_to_in_progress() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
+    write_ticket_to_branch(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-implement-me", "tickets/0001-implement-me.md");
+    assert!(content.contains("state = \"in_progress\""), "ready ticket should transition to in_progress: {content}");
+}
+
+#[test]
+fn start_next_spawn_new_ticket_transitions_correctly() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run_next(p, true, true, false).unwrap();
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    assert!(content.contains("state = \"in_design\""), "run_next on new ticket should go to in_design: {content}");
+}
+
+#[test]
+fn start_next_spawn_ready_ticket_transitions_correctly() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
+    write_ticket_to_branch(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    apm::cmd::start::run_next(p, true, true, false).unwrap();
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-implement-me", "tickets/0001-implement-me.md");
+    assert!(content.contains("state = \"in_progress\""), "run_next on ready ticket should go to in_progress: {content}");
+}
+
 // ── apm work ─────────────────────────────────────────────────────────────────
 
 #[test]
