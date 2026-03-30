@@ -194,6 +194,8 @@ pub struct AgentsConfig {
     pub instructions: Option<PathBuf>,
     #[serde(default = "default_true")]
     pub side_tickets: bool,
+    #[serde(default)]
+    pub skip_permissions: bool,
 }
 
 fn default_max_concurrent() -> usize { 3 }
@@ -216,6 +218,7 @@ impl Default for AgentsConfig {
             max_concurrent: default_max_concurrent(),
             instructions: None,
             side_tickets: true,
+            skip_permissions: false,
         }
     }
 }
@@ -388,6 +391,30 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
+    }
+
+    #[test]
+    fn agents_skip_permissions_parses_and_defaults() {
+        let base = "[project]\nname = \"test\"\n[tickets]\ndir = \"tickets\"\n";
+
+        // absent → false
+        let config: Config = toml::from_str(base).unwrap();
+        assert!(!config.agents.skip_permissions, "absent skip_permissions should default to false");
+
+        // [agents] section without the key → still false
+        let with_agents = format!("{base}[agents]\n");
+        let config: Config = toml::from_str(&with_agents).unwrap();
+        assert!(!config.agents.skip_permissions, "[agents] without skip_permissions should default to false");
+
+        // explicit true
+        let explicit_true = format!("{base}[agents]\nskip_permissions = true\n");
+        let config: Config = toml::from_str(&explicit_true).unwrap();
+        assert!(config.agents.skip_permissions, "explicit skip_permissions = true should be true");
+
+        // explicit false
+        let explicit_false = format!("{base}[agents]\nskip_permissions = false\n");
+        let config: Config = toml::from_str(&explicit_false).unwrap();
+        assert!(!config.agents.skip_permissions, "explicit skip_permissions = false should be false");
     }
 
     #[test]
