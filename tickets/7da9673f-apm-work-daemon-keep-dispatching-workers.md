@@ -44,7 +44,53 @@ The daemon should be interruptible with Ctrl-C and should log each dispatch cycl
 
 ### Approach
 
-How the implementation will work.
+**Files changed:** `apm/src/main.rs`, `apm/src/cmd/work.rs`, `apm/Cargo.toml`
+
+1. **`apm/Cargo.toml`** — add `ctrlc = "3"` dependency for SIGINT handling.
+
+2. **`apm/src/main.rs`** — add two flags to the `Work` subcommand variant:
+   ```
+   --daemon / -d   bool   keep dispatching in a continuous loop
+   --interval <N>  u64    poll interval in seconds (default 30, only meaningful with --daemon)
+   ```
+   Pass both to `cmd::work::run()`.
+
+3. **`apm/src/cmd/work.rs`** — modify `run()` signature to accept `daemon: bool` and `interval_secs: u64`.
+
+   **Guard:** if `daemon && dry_run`, print error and return `Err(...)` immediately.
+
+   **Signal flag:** before entering the loop, register a ctrlc handler that sets an `Arc<AtomicBool>` (`interrupted`).
+
+   **Loop changes** — the existing loop already has the right skeleton. Two changes:
+   - Replace the `no_more` early-exit condition with daemon-aware logic:
+     - Non-daemon: keep `no_more` flag; when set and workers empty, break as today.
+     - Daemon: never set `no_more`; instead, when `spawn_next_worker()` returns `None`, record `next_poll = Instant::now() + Duration::from_secs(interval_secs)` and log the "no tickets found, next check in Ns" message.
+   - On each iteration, check `interrupted.load(Relaxed)` and break if true.
+
+   **Slot-open fast-path:** track whether at least one worker was reaped in the current iteration (`reaped` bool). If `reaped`, reset `next_poll = Instant::now()` so the next dispatch attempt happens immediately rather than waiting out the interval.
+
+   **Loop sleep:** the existing 500ms sleep when at capacity is fine. When in daemon mode with no active workers and waiting for the next poll, keep sleeping 500ms per tick and check `interrupted` and `Instant::now() >= next_poll` each tick.
+
+   **Timestamped logging** — add a small `log(msg: &str)` helper that prints `[HH:MM:SS] {msg}` using `chrono::Local::now()` (already a workspace dep). Call it at:
+   - Worker dispatched: `[HH:MM:SS] Dispatched worker for ticket #<id> "<title>"`
+   - Worker reaped: `[HH:MM:SS] Worker for ticket #<id> finished`
+   - No tickets: `[HH:MM:SS] No actionable tickets; next check in <N>s`
+   - Daemon stopping: `[HH:MM:SS] Daemon interrupted, stopping`
+
+   **Non-daemon path** is unchanged except for the log helper calls (optional — can keep existing println! there to minimise diff).
+
+4. **Order of steps:**
+   1. Add `ctrlc` dep and compile-check.
+   2. Add CLI flags and thread them through.
+   3. Add guard for `--daemon --dry-run`.
+   4. Add `log()` helper.
+   5. Add signal handler + `interrupted` flag.
+   6. Refactor loop: extract `reaped` tracking, add `next_poll` / daemon branch.
+   7. Write tests (see below).
+
+5. **Tests** — add to `apm/src/cmd/work.rs` or `apm-core/tests/`:
+   - A unit test that the `--daemon --dry-run` combination returns an error.
+   - An integration test (temp git repo, fake tickets) is not needed for the polling loop itself since it involves timing; rely on manual verification. Document in the PR test plan.
 
 ### Open questions
 
