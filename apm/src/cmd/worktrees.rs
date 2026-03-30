@@ -13,26 +13,19 @@ pub fn run(root: &Path, remove_id: Option<&str>) -> Result<()> {
 }
 
 fn list(root: &Path, config: &Config) -> Result<()> {
-    let worktrees = git::list_ticket_worktrees(root)?;
-    if worktrees.is_empty() {
+    let wt_tickets = ticket::list_worktrees_with_tickets(root, &config.tickets.dir)?;
+    if wt_tickets.is_empty() {
         println!("No ticket worktrees provisioned.");
         return Ok(());
     }
 
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir).unwrap_or_default();
-
-    for (wt_path, branch) in &worktrees {
-        let ticket = tickets.iter().find(|t| {
-            t.frontmatter.branch.as_deref() == Some(branch.as_str())
-                || git::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
-        });
-
+    for (wt_path, branch, t) in &wt_tickets {
         let wt_name = wt_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(branch.as_str());
 
-        match ticket {
+        match t {
             Some(t) => println!(
                 "{}  {}  agent={}",
                 wt_name,

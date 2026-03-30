@@ -51,7 +51,10 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
     }
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let good_states = ["implemented", "specd"];
+    let good_states: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
     let mut any_bad = false;
     println!("\nSummary:");
     for id in &started_ids {
