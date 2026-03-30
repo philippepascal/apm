@@ -47,6 +47,8 @@ For each open ticket in `specd`, `ready`, `ammend`, or `question`:
 
 Current open tickets to audit (as of writing): #35, #38, #51, #57, #63, #70, #75, #76, #77, #78.
 
+**Audited 2026-03-30:** #35 current, #57 current, #63 no spec yet (out of scope), #38 had one stale reference (`apm verify` → `apm validate`) — corrected. #51 and #70 in progress (workers running), not audited. #76–#78 are the polish tickets just created, not applicable.
+
 ## History
 
 | When | From | To | By |
