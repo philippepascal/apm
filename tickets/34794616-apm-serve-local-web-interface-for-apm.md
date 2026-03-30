@@ -4,12 +4,12 @@ title = "apm serve: local web interface for APM"
 state = "in_design"
 priority = 0
 effort = 7
-risk = 0
+risk = 4
 author = "claude-0330-0245-main"
 agent = "92477"
 branch = "ticket/34794616-apm-serve-local-web-interface-for-apm"
 created_at = "2026-03-30T06:46:19.342367Z"
-updated_at = "2026-03-30T16:32:38.984424Z"
+updated_at = "2026-03-30T16:32:44.448055Z"
 +++
 
 ## Spec
