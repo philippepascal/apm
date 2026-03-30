@@ -44,12 +44,12 @@ reviews the script, deletes entries they don't want, then runs it.
 
 ### Acceptance criteria
 
-- [ ] `refactor-tickets.sh` exists at the repo root and is executable
-- [ ] Running the script with `bash -n refactor-tickets.sh` (syntax check) exits 0
-- [ ] The script contains exactly one `apm new --no-edit` call per identified refactoring item (minimum 6, one per pattern listed in the Problem section)
-- [ ] Each `apm new` call has a title that identifies the crate move and the function/pattern being relocated (e.g. `"Move append_history to apm-core"`)
-- [ ] The script is plain `sh`-compatible (no bash-isms beyond `#!/usr/bin/env bash` shebang) and has no external dependencies beyond `apm`
-- [ ] A comment above each `apm new` line gives one sentence explaining why the move matters
+- [x] `refactor-tickets.sh` exists at the repo root and is executable
+- [x] Running the script with `bash -n refactor-tickets.sh` (syntax check) exits 0
+- [x] The script contains exactly one `apm new --no-edit` call per identified refactoring item (minimum 6, one per pattern listed in the Problem section)
+- [x] Each `apm new` call has a title that identifies the crate move and the function/pattern being relocated (e.g. `"Move append_history to apm-core"`)
+- [x] The script is plain `sh`-compatible (no bash-isms beyond `#!/usr/bin/env bash` shebang) and has no external dependencies beyond `apm`
+- [x] A comment above each `apm new` line gives one sentence explaining why the move matters
 
 ### Out of scope
 
