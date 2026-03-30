@@ -109,7 +109,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
 
     // Apply the state transition (state::run re-reads from git, handles history etc.).
     if let Some(target) = chosen_state {
-        super::state::run(root, &id, target, false)?;
+        super::state::run(root, &id, target, false, false)?;
     }
 
     Ok(())
