@@ -25,14 +25,15 @@ The only way to close a ticket today is via `apm sync`, which detects merged bra
 - [ ] `closed` is treated as a mandatory terminal state: it is always a valid target regardless of what transitions are defined in `apm.toml` (analogous to `new` being a mandatory initial state)
 - [ ] The `apm validate` command recognises `closed` as a built-in state and does not flag it as unknown even if it is absent from `[[workflow.states]]`
 - [ ] `apm close` is not triggerable via `command:start` — it is a supervisor-only operation
-- [ ] `apm state <id> closed` continues to work for the normal `accepted → closed` path defined in `apm.toml`; `apm close` is the escape hatch for all other states
+- [ ] `apm close` writes `closed` to the ticket branch, pushes it, then merges it into the default branch — so the branch is a true git ancestor of main and `apm clean` can detect and remove it
+- [ ] `apm sync`'s `batch_close` function is removed; `apm sync` calls the same close logic for each candidate instead
+- [ ] After `apm sync` closes tickets, their branches are merged into main and `apm clean` removes their worktrees correctly
 - [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
 - Bulk close (`apm close --all --state blocked`)
 - Undo / reopen (a separate ticket if needed)
-- Changing how `apm sync` closes accepted tickets
 
 ### Approach
 
@@ -46,10 +47,15 @@ Add `apm/src/cmd/close.rs`. The command:
 
 1. Loads the ticket from the branch
 2. Sets `state = "closed"` in frontmatter
-3. Appends a history row: `| <timestamp> | <prev_state> | closed | <agent> |` and optionally `(reason: <text>)` in the By column or as a note row
-4. Commits to the ticket branch and pushes
+3. Appends a history row: `| <timestamp> | <prev_state> | closed | <agent_name> |` and optionally appends `(reason: <text>)` if `--reason` was provided
+4. Commits the change to the ticket branch and pushes
+5. Merges the ticket branch into the default branch (fast-forward if possible, merge commit otherwise) — this is what makes `apm clean` work correctly
 
 Wire it into `apm/src/main.rs` as a new `Commands::Close` variant.
+
+**Replace `batch_close` in `apm sync`**
+
+Extract the close logic from `close.rs` into a reusable function in `apm-core` (e.g. `ticket::close`). Remove `batch_close` from `sync.rs` and replace the call site with a loop over candidates that calls `ticket::close` for each one. The interactive prompt (`prompt_close`) stays in `sync.rs`.
 
 **`apm validate` change**
 
