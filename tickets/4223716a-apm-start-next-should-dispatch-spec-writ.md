@@ -100,7 +100,7 @@ fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
 
 ### Amendment requests
 
-
+- [ ] The Approach hardcodes `["new", "ammend"]` as the spec-writer states, but the config already encodes this via the `instructions` field on each `[[workflow.states]]` entry. Replace the hardcoded array with a config lookup: find the state matching `pre_transition_state` in `config.workflow.states`, read its `instructions` field, and load `.apm/<instructions>` as the system prompt. This way adding a new spec-writing state only requires a config change, not a code change.
 
 ## History
 
