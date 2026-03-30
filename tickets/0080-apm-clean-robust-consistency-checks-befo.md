@@ -32,23 +32,23 @@ Observed failures:
 
 ### Acceptance criteria
 
-- [ ] Before removing anything, `apm clean` cross-checks: the ticket state on
+- [x] Before removing anything, `apm clean` cross-checks: the ticket state on
   its branch AND on main must both be `closed`; a mismatch is flagged as
   inconsistent and skipped with a clear message
-- [ ] `apm clean` checks that the branch tip is a git ancestor of main via
+- [x] `apm clean` checks that the branch tip is a git ancestor of main via
   `git merge-base --is-ancestor`, not just via tracking-ref reachability
-- [ ] Tickets whose branch is reachable from main but whose state disagrees
+- [x] Tickets whose branch is reachable from main but whose state disagrees
   between branch and main produce an actionable warning naming the exact
   inconsistency and suggesting a manual fix (e.g. `apm close <id>`)
-- [ ] Tickets whose local branch tip differs from the remote tracking ref tip
+- [x] Tickets whose local branch tip differs from the remote tracking ref tip
   produce a warning and are skipped
-- [ ] `--dry-run` output includes the ticket state alongside the branch name so
+- [x] `--dry-run` output includes the ticket state alongside the branch name so
   it is auditable: `would remove ticket/0080 (state: closed)`
-- [ ] `closed` is treated as terminal unconditionally, regardless of whether it
+- [x] `closed` is treated as terminal unconditionally, regardless of whether it
   appears in `[[workflow.states]]` in `apm.toml`
-- [ ] All existing `apm clean` integration tests continue to pass; new tests
+- [x] All existing `apm clean` integration tests continue to pass; new tests
   cover the inconsistency detection cases
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
