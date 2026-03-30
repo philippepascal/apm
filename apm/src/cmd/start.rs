@@ -141,8 +141,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
     };
 
-    // Get ticket content
-    let ticket_content = content;
+    // Get ticket content, prepend role line
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{content}");
 
     // Build log path
     let log_path = wt_display.join(".apm-worker.log");
@@ -165,10 +165,17 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     cmd.stderr(log_clone);
 
     // Spawn detached
-    let child = cmd.spawn()?;
+    let mut child = cmd.spawn()?;
     let pid = child.id();
-    // Do not wait — drop child handle, process runs independently
-    std::mem::drop(child);
+
+    // Write PID file; background thread waits for exit and removes it.
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+    let pid_path_cleanup = pid_path.clone();
+    std::thread::spawn(move || {
+        let _ = child.wait();
+        let _ = std::fs::remove_file(&pid_path_cleanup);
+    });
 
     // Update ticket agent to worker PID and commit
     t.frontmatter.agent = Some(pid.to_string());
@@ -274,7 +281,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         }
     };
 
-    let ticket_content = t.serialize()?;
+    let raw = t.serialize()?;
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
 
     // Find the worktree
     let branch = t.frontmatter.branch.clone()
@@ -300,9 +308,16 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     cmd.stdout(log_file);
     cmd.stderr(log_clone);
 
-    let child = cmd.spawn()?;
+    let mut child = cmd.spawn()?;
     let pid = child.id();
-    std::mem::drop(child);
+
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
+    let pid_path_cleanup = pid_path.clone();
+    std::thread::spawn(move || {
+        let _ = child.wait();
+        let _ = std::fs::remove_file(&pid_path_cleanup);
+    });
 
     // Update ticket agent to worker PID and commit
     let mut t_pid = t.clone();
@@ -323,11 +338,12 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
 /// Like `run_next` with spawn=true, but returns the spawned `Child` handle so
 /// the caller can wait for it.  Returns `None` if no actionable tickets exist.
+/// Also returns the path to the PID file for cleanup on exit.
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
     skip_permissions: bool,
-) -> Result<Option<(String, std::process::Child)>> {
+) -> Result<Option<(String, std::process::Child, std::path::PathBuf)>> {
     let config = Config::load(root)?;
     let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
@@ -404,7 +420,8 @@ pub fn spawn_next_worker(
         }
     };
 
-    let ticket_content = t.serialize()?;
+    let raw = t.serialize()?;
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
@@ -441,11 +458,25 @@ pub fn spawn_next_worker(
         t.path.file_name().unwrap().to_string_lossy()
     );
     git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
+    let pid_path = wt_display.join(".apm-worker.pid");
+    write_pid_file(&pid_path, pid, &id)?;
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
-    Ok(Some((id, child)))
+    Ok(Some((id, child, pid_path)))
+}
+
+fn write_pid_file(path: &std::path::Path, pid: u32, ticket_id: &str) -> Result<()> {
+    let started_at = chrono::Utc::now().format("%Y-%m-%dT%H:%MZ").to_string();
+    let content = serde_json::json!({
+        "pid": pid,
+        "ticket_id": ticket_id,
+        "started_at": started_at,
+    })
+    .to_string();
+    std::fs::write(path, content)?;
+    Ok(())
 }
 
 fn rand_u16() -> u16 {

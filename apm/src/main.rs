@@ -3,7 +3,32 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "apm", about = "Agent Project Manager")]
+#[command(
+    name = "apm",
+    about = "Agent Project Manager",
+    long_about = "Agent Project Manager — a git-native ticket system for human+AI teams.
+
+Tickets live as Markdown files on per-ticket branches. State is stored in
+TOML frontmatter; the state machine is defined in .apm/apm.toml.
+
+Workflow states (typical path):
+  new → in_design → specd → ready → in_progress → implemented → closed
+
+Side paths:
+  * ammend  — supervisor requests spec changes (from specd)
+  * blocked — agent is stuck, needs a supervisor decision (from in_progress)
+  * question — spec author needs clarification (from in_design)
+
+Actors:
+  * agent      — autonomous worker; picks up `ready` tickets via `apm next`
+  * supervisor — human reviewer; approves specs, reviews implementations
+  * engineer   — human developer; may do either role
+
+Common entry points:
+  apm next       — for agents: find the highest-priority actionable ticket
+  apm list       — for humans: browse all tickets
+  apm start <id> — claim a ticket and provision its worktree"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -12,6 +37,20 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Initialize apm in the current repository
+    #[command(long_about = "Initialize apm in the current repository.
+
+Creates the .apm/ directory containing:
+  * apm.toml      — project config and state-machine definition
+  * apm.agents.md — agent onboarding instructions
+
+Also installs git hooks (.git/hooks/post-merge, post-checkout) so apm can
+detect branch merges automatically.
+
+Unless --no-claude is passed, adds apm commands to .claude/settings.json
+so that Claude Code's allow list does not prompt for every apm call.
+
+Use --migrate if you have an existing root-level apm.toml and apm.agents.md
+that need to be moved into .apm/.")]
     Init {
         /// Skip updating .claude/settings.json allow list
         #[arg(long)]
@@ -21,6 +60,17 @@ enum Command {
         migrate: bool,
     },
     /// List tickets
+    #[command(long_about = "List tickets (read-only query).
+
+All filter flags are combinable. By default, tickets in terminal states
+(closed, etc.) are hidden; pass --all to include them.
+
+Examples:
+  apm list                          # all non-closed tickets
+  apm list --state ready            # only tickets awaiting an agent
+  apm list --unassigned             # no agent assigned yet
+  apm list --actionable agent       # tickets an agent can act on now
+  apm list --all                    # everything including closed")]
     List {
         /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
@@ -39,6 +89,18 @@ enum Command {
         actionable: Option<String>,
     },
     /// Show a ticket
+    #[command(long_about = "Show the full content of a ticket.
+
+Reads the ticket file directly from its branch blob in the git object store,
+so the working tree does not need to be checked out on that branch.
+
+By default, `apm show` fetches the latest remote state first. Pass
+--no-aggressive to skip the fetch (faster for scripts or offline use).
+
+The ticket ID can be supplied as:
+  * a plain integer (e.g. 42 → pads to 0042)
+  * a 4+ char hex prefix (e.g. 00ab)
+  * the full 8-char hex ID")]
     Show {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -48,6 +110,20 @@ enum Command {
         no_aggressive: bool,
     },
     /// Create a new ticket
+    #[command(long_about = "Create a new ticket and its branch.
+
+Creates a ticket Markdown file on a new branch (ticket/<id>-<slug>) and
+opens $EDITOR so you can fill in the spec immediately.
+
+Agents must always pass --no-edit to skip the interactive editor:
+  apm new --no-edit \"Short title\"
+
+Use --side-note during implementation to capture an out-of-scope observation
+without interrupting the current ticket:
+  apm new --side-note \"Spotted issue\" --context \"What was observed\"
+
+After creating a ticket the typical next step is:
+  apm state <id> in_design   # claim the spec for writing")]
     New {
         /// Short title for the ticket
         #[arg(value_name = "TITLE")]
@@ -69,6 +145,19 @@ enum Command {
         no_aggressive: bool,
     },
     /// Transition a ticket's state
+    #[command(long_about = "Transition a ticket to a new state.
+
+Valid target states depend on the ticket's current state. The allowed
+transitions are defined in .apm/apm.toml under [[workflow.states]].
+Illegal transitions are rejected with an error.
+
+Run `apm show <id>` first to check the current state, then choose a
+target from the edges listed for that state in apm.toml.
+
+Examples:
+  apm state 42 in_design       # claim a new ticket for spec writing
+  apm state 42 specd           # submit spec for supervisor review
+  apm state 42 implemented     # mark implementation done (open PR first)")]
     State {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -81,6 +170,21 @@ enum Command {
         no_aggressive: bool,
     },
     /// Set a field on a ticket
+    #[command(long_about = "Set a metadata field on a ticket.
+
+Valid field names:
+  priority    — integer; higher = picked first by `apm next`
+  effort      — integer 1-10; implementation scale estimate
+  risk        — integer 1-10; technical risk estimate
+  title       — short human-readable summary
+  agent       — name of the assigned agent (use \"-\" to clear)
+  supervisor  — name of the assigned supervisor (use \"-\" to clear)
+  branch      — override the ticket's branch name (use \"-\" to clear)
+
+Examples:
+  apm set 42 priority 5
+  apm set 42 agent alice
+  apm set 42 agent -          # clear agent field")]
     Set {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -93,6 +197,25 @@ enum Command {
         value: String,
     },
     /// Claim a ticket and check out its branch
+    #[command(long_about = "Claim a ticket and provision its permanent worktree.
+
+Sets the ticket's agent field to $APM_AGENT_NAME and transitions state to
+in_progress, then provisions (or reuses) a permanent git worktree for the
+ticket branch. Prints the worktree path so the caller can cd into it or use
+`git -C <path>` for all subsequent git operations.
+
+--spawn launches a Claude Code subprocess that picks up the ticket
+autonomously. The subprocess receives the project allow list by default;
+add -P to also pass --dangerously-skip-permissions.
+
+--next auto-selects the highest-priority actionable ticket; mutually
+exclusive with an explicit ID.
+
+Examples:
+  apm start 42                   # claim ticket 42
+  apm start --next               # claim whatever apm next would return
+  apm start --spawn 42           # hand ticket 42 to a background agent
+  apm start --spawn --next -P    # background agent, skip permissions")]
     Start {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer); omit when using --next
         id: Option<String>,
@@ -110,12 +233,44 @@ enum Command {
         next: bool,
     },
     /// Return the highest-priority actionable ticket
+    #[command(long_about = "Return the highest-priority ticket actionable right now.
+
+Considers only tickets in states that the current actor can act on (agent
+by default). Selects by priority descending, then by id ascending as a
+tiebreaker.
+
+Returns nothing (exit 0, empty output) when there is no actionable ticket.
+
+--json outputs the result as a JSON object — useful in agent startup loops:
+  apm next --json   # {\"id\": \"0042\", \"title\": \"...\", \"state\": \"ready\", ...}
+
+Typical agent startup sequence:
+  apm sync
+  apm next --json   # check for work
+  apm start --next  # claim and provision in one step")]
     Next {
         /// Output result as JSON instead of human-readable text
         #[arg(long)]
         json: bool,
     },
     /// Sync with remote (poll events, detect merges)
+    #[command(long_about = "Fetch from remote and reconcile the local ticket cache.
+
+What sync does:
+  1. git fetch (unless --offline)
+  2. Detects ticket branches that have been merged into main
+  3. For each merged branch, prompts to accept (mark implemented → closed)
+     or skip; use --auto-accept / --auto-close to skip the prompts in CI
+  4. Updates the local branch cache
+
+Run sync at the start of each agent session to ensure local state reflects
+what has happened on the remote since last time.
+
+Examples:
+  apm sync                    # interactive, fetch from remote
+  apm sync --offline          # re-process local branches only
+  apm sync --auto-accept      # accept all merged tickets silently
+  apm sync --quiet            # suppress non-error output")]
     Sync {
         /// Skip git fetch; re-process local branches only
         #[arg(long)]
@@ -134,6 +289,18 @@ enum Command {
         auto_accept: bool,
     },
     /// Take over a ticket from another agent
+    #[command(long_about = "Reassign a ticket to yourself (takeover scenario).
+
+Use this when a previous agent has crashed, gone away, or is otherwise
+unreachable and the ticket is stuck in in_progress or in_design.
+
+`apm take` sets the ticket's agent field to $APM_AGENT_NAME without
+changing the state. The ticket's branch and any existing worktree are left
+as-is — continue from wherever the previous agent left off.
+
+After taking over:
+  apm worktrees --add <id>   # provision/reuse the worktree
+  apm show <id>              # read history to understand prior work")]
     Take {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -143,6 +310,21 @@ enum Command {
         no_aggressive: bool,
     },
     /// List or remove permanent git worktrees
+    #[command(long_about = "Manage permanent git worktrees for ticket branches.
+
+APM uses permanent worktrees (in the apm--worktrees/ sibling directory by
+default) so that agents can work on a ticket branch without disturbing the
+main working tree. These worktrees survive `apm sync` and are reused across
+sessions.
+
+--add is idempotent: if the worktree already exists it just prints the path.
+Always use `apm worktrees --add <id>` rather than `git worktree add` by hand,
+so the path is recorded in the ticket's metadata.
+
+Examples:
+  apm worktrees              # list all known worktrees
+  apm worktrees --add 42     # provision worktree for ticket 42, print path
+  apm worktrees --remove 42  # remove the worktree for ticket 42")]
     Worktrees {
         /// Provision a permanent worktree for the given ticket ID (any state)
         #[arg(long, value_name = "ID")]
@@ -152,6 +334,20 @@ enum Command {
         remove: Option<String>,
     },
     /// Supervisor: edit ticket spec and optionally transition state
+    #[command(long_about = "Supervisor command: review and edit a ticket spec, then transition state.
+
+Opens $EDITOR on the ticket file so the supervisor can read the spec, leave
+feedback in amendment-request boxes, or update acceptance criteria. After
+the editor closes, prompts for a state transition unless --to is supplied.
+
+Common review flows:
+  apm review 42 --to specd      # approve spec as-is
+  apm review 42 --to ammend     # request changes (fill in amendment boxes first)
+  apm review 42 --to ready      # approve and queue for implementation
+  apm review 42 --to implemented  # accept implementation
+
+--to skips the interactive prompt — useful in scripts or when the transition
+is already decided before opening the editor.")]
     Review {
         /// Ticket ID to review (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -164,12 +360,38 @@ enum Command {
         no_aggressive: bool,
     },
     /// Check ticket and cache integrity
+    #[command(long_about = "Check ticket and local cache integrity.
+
+Scans for inconsistencies between the local branch cache and what is on
+disk: dangling worktrees, branches missing ticket files, cache entries that
+do not match the branch blob, etc.
+
+--fix attempts automatic repairs where safe (removing stale cache entries,
+re-indexing branches). Anything it cannot fix is reported for manual
+attention.
+
+Run this if `apm list` or `apm show` is behaving unexpectedly.")]
     Verify {
         /// Auto-fix issues where possible
         #[arg(long)]
         fix: bool,
     },
     /// Validate config and ticket integrity
+    #[command(long_about = "Validate apm.toml correctness and cross-ticket integrity.
+
+Checks performed:
+  * apm.toml parses without errors
+  * All state transitions reference known states
+  * Every ticket's branch field matches its actual branch name
+  * No two tickets share the same branch
+
+--fix repairs branch-field mismatches automatically and re-commits the
+ticket file on its branch.
+
+--json outputs the full results as JSON — useful in CI pipelines:
+  apm validate --json | jq '.errors'
+
+--config-only skips per-ticket checks and validates only the config file.")]
     Validate {
         /// Auto-fix repairable issues (branch field mismatches)
         #[arg(long)]
@@ -182,7 +404,7 @@ enum Command {
         config_only: bool,
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
-    #[command(name = "_hook")]
+    #[command(name = "_hook", hide = true)]
     Hook {
         /// Name of the git hook being dispatched (e.g. post-merge)
         #[arg(value_name = "HOOK")]
@@ -192,8 +414,31 @@ enum Command {
         _extra: Vec<String>,
     },
     /// Print agent instructions from apm.agents.md
+    #[command(long_about = "Print the contents of apm.agents.md to stdout.
+
+Useful for onboarding a new agent subprocess: pipe or paste the output into
+the agent's context so it knows the workflow, branch conventions, and shell
+discipline rules without needing file-system access to the repo.
+
+Example:
+  apm agents | pbcopy          # copy to clipboard
+  apm agents > /tmp/agents.md  # write to a temp file for injection")]
     Agents,
     /// Orchestrate workers: dispatch apm start --next --spawn in a loop
+    #[command(long_about = "Orchestration loop: repeatedly dispatch agents until no work remains.
+
+Calls `apm start --next --spawn` in a loop, launching one Claude subprocess
+per actionable ticket, until `apm next` returns null (no more tickets).
+
+--dry-run prints the ticket IDs that would be started without actually
+spawning any subprocesses — useful to preview the work queue.
+
+-P passes --dangerously-skip-permissions to every spawned worker.
+
+Example:
+  apm work --dry-run    # preview
+  apm work              # run with normal permissions
+  apm work -P           # run with skipped permissions")]
     Work {
         /// Pass --dangerously-skip-permissions to spawned workers
         #[arg(long, short = 'P')]
@@ -203,6 +448,19 @@ enum Command {
         dry_run: bool,
     },
     /// Force-close a ticket from any state (supervisor only)
+    #[command(long_about = "Force-close a ticket from any state (supervisor only).
+
+Bypasses the normal state machine and closes the ticket immediately,
+regardless of current state. An optional reason is appended to the ticket's
+## History section for the record.
+
+This is an escape hatch for tickets that are abandoned, duplicated, or
+otherwise need to be removed from the active queue without following the
+normal flow. Prefer the standard `apm state <id> closed` transition when
+the ticket has been properly resolved.
+
+Example:
+  apm close 42 --reason \"duplicate of #38\"")]
     Close {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         id: String,
@@ -211,12 +469,50 @@ enum Command {
         reason: Option<String>,
     },
     /// Remove worktrees and local branches for closed tickets
+    #[command(long_about = "Remove worktrees and local branches for closed tickets.
+
+Scans all tickets in terminal states (closed, etc.) and removes:
+  * The permanent worktree under apm--worktrees/ (if it exists)
+  * The local git branch (ticket/<id>-<slug>)
+
+The remote branch is not deleted.
+
+Always run --dry-run first to see exactly what would be removed before
+committing to the operation:
+  apm clean --dry-run    # preview
+  apm clean              # actually remove")]
     Clean {
         /// Print what would be removed without modifying anything
         #[arg(long)]
         dry_run: bool,
     },
+    /// List and manage running worker processes
+    Workers {
+        /// Tail the worker log for the given ticket ID
+        #[arg(long, value_name = "ID")]
+        log: Option<String>,
+        /// Kill the worker for the given ticket ID
+        #[arg(long, value_name = "ID")]
+        kill: Option<String>,
+    },
     /// Read or write individual spec sections of a ticket
+    #[command(long_about = "Read or write individual sections of a ticket's spec.
+
+--section alone reads the named section and prints it to stdout:
+  apm spec 42 --section Problem
+
+--section combined with --set writes new content to that section (use \"-\"
+to read the new content from stdin):
+  apm spec 42 --section Approach --set \"New approach text\"
+  echo \"text\" | apm spec 42 --section Approach --set -
+
+--check validates that all required sections defined in apm.toml are
+present and non-empty:
+  apm spec 42 --check
+
+--mark checks off the first unchecked item in --section whose text contains
+the given substring:
+  apm spec 42 --section \"Acceptance criteria\" --mark \"output is JSON\"")]
     Spec {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -293,6 +589,7 @@ fn main() -> Result<()> {
         Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
         Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
         Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
+        Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
     }
 }
 

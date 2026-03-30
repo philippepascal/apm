@@ -194,6 +194,7 @@ fn apm(dir: &Path, _name: &str, args: &[&str]) -> Output {
         .env("GIT_COMMITTER_EMAIL", "test@test.com")
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("HOME", dir) // isolate git config
+        .env("VISUAL", "true") // prevent vi from blocking in tests
         .output()
         .unwrap()
 }
@@ -209,6 +210,7 @@ fn apm_env(dir: &Path, agent: &str, args: &[&str]) -> Output {
         .env("GIT_COMMITTER_EMAIL", "test@test.com")
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("HOME", dir)
+        .env("VISUAL", "true") // prevent vi from blocking in tests
         .output()
         .unwrap()
 }

@@ -108,7 +108,8 @@ fn find_ticket_branch(dir: &std::path::Path, slug: &str) -> String {
     stdout
         .lines()
         .find(|l| !l.trim().is_empty())
-        .map(|l| l.trim().trim_start_matches("* ").to_string())
+        // strip "* " (current branch) and "+ " (branch in another worktree)
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim_start_matches(' ').to_string())
         .unwrap_or_else(|| panic!("no branch found for slug: {slug}"))
 }
 
@@ -1781,4 +1782,179 @@ terminal = true
     apm::cmd::clean::run(p, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
+}
+
+// ---------------------------------------------------------------------------
+// workers
+// ---------------------------------------------------------------------------
+
+fn setup_with_worktrees() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    // worktrees dir inside the tempdir to keep tests self-contained.
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &[
+        "-c", "commit.gpgsign=false",
+        "commit", "-m", "init", "--allow-empty",
+    ]);
+
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn workers_no_worktrees_returns_ok() {
+    let dir = setup();
+    let p = dir.path();
+    // No ticket worktrees, so workers list should succeed (and print nothing).
+    apm::cmd::workers::run(p, None, None).unwrap();
+}
+
+#[test]
+fn workers_kill_no_pid_file_errors() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    apm::cmd::new::run(p, "kill test ticket".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "kill-test-ticket");
+    apm::cmd::state::run(p, &id, "ready".into(), true).unwrap();
+
+    // Provision a worktree without writing a pid file.
+    apm::cmd::worktrees::run(p, Some(&id), None).unwrap();
+
+    // --kill should return an error since there is no pid file.
+    let result = apm::cmd::workers::run(p, None, Some(&id));
+    assert!(result.is_err(), "expected error when no pid file present");
+    let msg = format!("{:#}", result.unwrap_err());
+    assert!(
+        msg.contains("not running") || msg.contains(".apm-worker.pid"),
+        "unexpected error message: {msg}"
+    );
+}
+
+#[test]
+fn workers_stale_pid_file_detected() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    apm::cmd::new::run(p, "stale pid ticket".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "stale-pid-ticket");
+    apm::cmd::state::run(p, &id, "ready".into(), true).unwrap();
+    apm::cmd::worktrees::run(p, Some(&id), None).unwrap();
+
+    let branch = find_ticket_branch(p, "stale-pid-ticket");
+    let wt_name = branch.replace('/', "-");
+    let wt_path = p.join("worktrees").join(&wt_name);
+    std::fs::create_dir_all(&wt_path).unwrap();
+
+    // Write a stale pid file (PID 99999999 is almost certainly not running).
+    let pid_file = wt_path.join(".apm-worker.pid");
+    std::fs::write(
+        &pid_file,
+        r#"{"pid":99999999,"ticket_id":"XXXX","started_at":"2026-01-01T00:00:00+00:00"}"#,
+    )
+    .unwrap();
+
+    // workers list should succeed (stale entry is shown as "crashed", not an error).
+    apm::cmd::workers::run(p, None, None).unwrap();
+}
+
+#[test]
+fn workers_kill_stale_pid_errors() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    apm::cmd::new::run(p, "kill stale ticket".into(), true, false, None, None, true).unwrap();
+    let id = find_ticket_id(p, "kill-stale-ticket");
+    apm::cmd::state::run(p, &id, "ready".into(), true).unwrap();
+    apm::cmd::worktrees::run(p, Some(&id), None).unwrap();
+
+    let branch = find_ticket_branch(p, "kill-stale-ticket");
+    let wt_name = branch.replace('/', "-");
+    let wt_dir = p.join("worktrees").join(&wt_name);
+    std::fs::create_dir_all(&wt_dir).unwrap();
+    let pid_file = wt_dir.join(".apm-worker.pid");
+    std::fs::write(
+        &pid_file,
+        r#"{"pid":99999999,"ticket_id":"XXXX","started_at":"2026-01-01T00:00:00+00:00"}"#,
+    )
+    .unwrap();
+
+    // --kill on a stale pid should return an error.
+    let result = apm::cmd::workers::run(p, None, Some(&id));
+    let err_msg = match &result {
+        Err(e) => format!("{e:#}"),
+        Ok(_) => String::new(),
+    };
+    assert!(result.is_err(), "expected error when pid is stale");
+    assert!(
+        err_msg.contains("not running"),
+        "unexpected error (expected 'not running'): {err_msg}"
+    );
+    // The stale pid file should be cleaned up.  Check via git's recorded path
+    // to handle macOS symlink resolution (/var -> /private/var).
+    let real_wt = apm_core::git::find_worktree_for_branch(p, &branch)
+        .expect("worktree must still be registered");
+    assert!(
+        !real_wt.join(".apm-worker.pid").exists(),
+        "stale pid file should be removed on failed kill"
+    );
 }
