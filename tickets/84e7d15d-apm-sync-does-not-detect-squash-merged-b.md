@@ -4,12 +4,12 @@ title = "apm sync does not detect squash-merged branches"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "philippepascal"
 agent = "97190"
 branch = "ticket/84e7d15d-apm-sync-does-not-detect-squash-merged-b"
 created_at = "2026-03-30T20:34:55.205183Z"
-updated_at = "2026-03-30T20:42:09.725918Z"
+updated_at = "2026-03-30T20:42:15.939050Z"
 +++
 
 ## Spec
