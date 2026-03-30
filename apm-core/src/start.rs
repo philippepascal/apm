@@ -230,7 +230,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let worker_system = std::fs::read_to_string(root.join(".apm/worker.md"))
+    let worker_system = std::fs::read_to_string(root.join(".apm/apm.worker.md"))
         .unwrap_or_else(|_| "You are an APM worker agent.".to_string());
 
     let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{content}");
@@ -376,13 +376,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let worker_system = if !prompt.is_empty() {
         prompt
     } else {
-        let wm = root.join(".apm/worker.md");
-        let wm_old = root.join("apm.worker.md");
-        if wm.exists() {
-            std::fs::read_to_string(wm).unwrap_or_default()
-        } else {
-            std::fs::read_to_string(wm_old).unwrap_or_else(|_| "You are an APM worker agent.".to_string())
-        }
+        std::fs::read_to_string(root.join(".apm/apm.worker.md"))
+            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
     };
 
     let raw = t.serialize()?;
@@ -531,14 +526,8 @@ pub fn spawn_next_worker(
     let worker_system = if !prompt.is_empty() {
         prompt
     } else {
-        let wm = root.join(".apm/worker.md");
-        let wm_old = root.join("apm.worker.md");
-        if wm.exists() {
-            std::fs::read_to_string(wm).unwrap_or_default()
-        } else {
-            std::fs::read_to_string(wm_old)
-                .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
-        }
+        std::fs::read_to_string(root.join(".apm/apm.worker.md"))
+            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
     };
 
     let raw = t.serialize()?;
