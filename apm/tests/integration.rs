@@ -1652,7 +1652,7 @@ fn clean_happy_path_removes_closed_branch() {
     let (branch, _) = write_closed_ticket(p, 1, "done");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false).unwrap();
+    apm::cmd::clean::run(p, false, false).unwrap();
 
     assert!(!branch_exists(p, &branch), "branch should have been removed");
 }
@@ -1665,7 +1665,7 @@ fn clean_dry_run_includes_state_in_output() {
     merge_into_main(p, &branch);
 
     // dry_run=true should not actually delete anything
-    apm::cmd::clean::run(p, true).unwrap();
+    apm::cmd::clean::run(p, true, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
 }
@@ -1681,7 +1681,7 @@ fn clean_skips_ticket_not_on_main() {
     // -s ours: makes branch tip reachable from main without bringing content
     git(p, &["-c", "commit.gpgsign=false", "merge", "-s", "ours", &branch, "-m", "ours merge"]);
 
-    apm::cmd::clean::run(p, false).unwrap();
+    apm::cmd::clean::run(p, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — ticket not on main");
 }
@@ -1702,7 +1702,7 @@ fn clean_skips_state_mismatch_between_branch_and_main() {
     git(p, &["-c", "commit.gpgsign=false", "add", &rel_path]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "update ticket state on main"]);
 
-    apm::cmd::clean::run(p, false).unwrap();
+    apm::cmd::clean::run(p, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — state mismatch");
 }
@@ -1744,7 +1744,7 @@ label = "New"
     let (branch, _) = write_closed_ticket(p, 1, "no-terminal-config");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false).unwrap();
+    apm::cmd::clean::run(p, false, false).unwrap();
 
     assert!(!branch_exists(p, &branch), "closed should be treated as terminal even without config entry");
 }
@@ -1804,9 +1804,96 @@ terminal = true
     git(p, &["checkout", "main"]);
 
     // Local tip ≠ remote tip → should skip
-    apm::cmd::clean::run(p, false).unwrap();
+    apm::cmd::clean::run(p, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
+}
+
+#[test]
+fn clean_yes_removes_known_temp_files_and_cleans() {
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "tempfiles");
+    merge_into_main(p, &branch);
+
+    // Create a linked worktree for the branch
+    let wt_path = p.join("worktrees").join("ticket-0001-tempfiles");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Drop a known temp file into the worktree
+    std::fs::write(wt_path.join("pr-body.md"), "pr body content").unwrap();
+
+    apm::cmd::clean::run(p, false, true).unwrap();
+
+    assert!(!branch_exists(p, &branch), "branch should have been removed");
+    assert!(!wt_path.exists(), "worktree should have been removed");
+}
+
+#[test]
+fn clean_skips_modified_tracked_files() {
+    let dir = setup();
+    let p = dir.path();
+    let (branch, rel_path) = write_closed_ticket(p, 1, "modtracked");
+    merge_into_main(p, &branch);
+
+    // Create a linked worktree for the branch
+    let wt_path = p.join("worktrees").join("ticket-0001-modtracked");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Modify a tracked file without committing
+    std::fs::write(wt_path.join(&rel_path), "modified content").unwrap();
+
+    apm::cmd::clean::run(p, false, true).unwrap();
+
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed — modified tracked file");
+    assert!(wt_path.exists(), "worktree should NOT have been removed");
+}
+
+#[test]
+fn clean_dry_run_diagnoses_dirty_worktree() {
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "drydiagnose");
+    merge_into_main(p, &branch);
+
+    // Create a linked worktree for the branch
+    let wt_path = p.join("worktrees").join("ticket-0001-drydiagnose");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Drop a known temp file into the worktree
+    let temp_file = wt_path.join("pr-body.md");
+    std::fs::write(&temp_file, "pr body").unwrap();
+
+    apm::cmd::clean::run(p, true, false).unwrap();
+
+    // dry-run: nothing removed
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
+    assert!(wt_path.exists(), "worktree should NOT have been removed in dry-run");
+    assert!(temp_file.exists(), "temp file should NOT have been removed in dry-run");
+}
+
+#[test]
+fn clean_yes_removes_other_untracked_files() {
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "otheruntracked");
+    merge_into_main(p, &branch);
+
+    // Create a linked worktree for the branch
+    let wt_path = p.join("worktrees").join("ticket-0001-otheruntracked");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Drop an unrecognised untracked file into the worktree
+    std::fs::write(wt_path.join("notes.txt"), "my notes").unwrap();
+
+    apm::cmd::clean::run(p, false, true).unwrap();
+
+    assert!(!branch_exists(p, &branch), "branch should have been removed");
+    assert!(!wt_path.exists(), "worktree should have been removed");
 }
 
 // --- resolve_agent_name fallback ---
