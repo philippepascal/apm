@@ -44,7 +44,62 @@ The correct behaviour:
 
 ### Approach
 
-How the implementation will work.
+**Root cause of Bug 1**
+
+`normalize_id_arg` converts any all-digit input to a zero-padded 4-char string.
+For inputs shorter than 4 digits (e.g. `314`), this produces `0314`, which does
+not match a hex ticket ID like `314abcde`. Four-digit inputs happen to be
+unchanged by padding (e.g. `3142` → `3142`), which is why they already work.
+
+**Root cause of Bug 2**
+
+`resolve_id_in_slice` already formats a candidate list in its ambiguous-prefix
+error. `resolve_ticket_branch` also does this (with branch names). If this
+behaviour is absent in the version being implemented, add it; if present,
+confirm it is not regressed by the Bug 1 fix.
+
+**Fix**
+
+Add a helper `id_arg_prefixes(arg: &str) -> Result<Vec<String>>` in
+`apm-core/src/ticket.rs`:
+
+- Calls `normalize_id_arg(arg)` for validation and the canonical prefix.
+- For all-digit inputs of length 1–3, also includes the raw digit string as a
+  second candidate (since digits are valid hex and the raw string is the correct
+  hex prefix). Example: `"314"` → `["0314", "314"]`.
+- For all-digit inputs of length ≥ 4, the zero-padded form equals the raw form,
+  so only one prefix is returned. Example: `"3142"` → `["3142"]`.
+- For hex-only inputs (letters present), delegates entirely to `normalize_id_arg`
+  and returns a single-element vec. Example: `"a3f9"` → `["a3f9"]`.
+
+Update `resolve_id_in_slice` (`apm-core/src/ticket.rs`):
+
+- Replace the single `prefix` string with the `Vec<String>` from `id_arg_prefixes`.
+- Filter tickets where `id.starts_with` any of the candidate prefixes.
+- Deduplicate matches by ticket ID (a ticket could theoretically satisfy both
+  `0314` and `314` if its ID were `03140000`, though that is contrived).
+- Error messages: keep the existing format ("no ticket matches …" / ambiguous
+  list with ID and title).
+
+Update `resolve_ticket_branch` (`apm-core/src/git.rs`) in the same way.
+
+Update the `close()` function in `apm-core/src/ticket.rs`, which currently calls
+`normalize_id_arg` directly — change it to use `id_arg_prefixes` and match
+against all candidates.
+
+**Tests to add** (inline in `apm-core/src/ticket.rs`):
+
+- `id_arg_prefixes("314")` returns two prefixes: `"0314"` and `"314"`.
+- `id_arg_prefixes("3142")` returns one prefix: `"3142"`.
+- `id_arg_prefixes("a3f9")` returns one prefix: `"a3f9"`.
+- `resolve_id_in_slice` with one ticket ID `314abcde` and input `"314"` resolves correctly.
+- `resolve_id_in_slice` with ticket `0001` and input `"1"` still resolves correctly.
+- `resolve_id_in_slice` with two tickets `314abcde` and `3142xxxx` and input `"314"` returns ambiguous error listing both.
+
+**Files changed**
+
+- `apm-core/src/ticket.rs` — add `id_arg_prefixes`, update `resolve_id_in_slice` and `close`
+- `apm-core/src/git.rs` — update `resolve_ticket_branch`
 
 ### Open questions
 
