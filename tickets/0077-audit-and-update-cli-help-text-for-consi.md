@@ -3,12 +3,12 @@ id = 77
 title = "Audit and update CLI help text for consistency and completeness"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0329-1430-main"
 branch = "ticket/0077-audit-and-update-cli-help-text-for-consi"
 created_at = "2026-03-30T00:59:27.415791Z"
-updated_at = "2026-03-30T01:01:12.678423Z"
+updated_at = "2026-03-30T01:03:10.248871Z"
 +++
 
 ## Spec
