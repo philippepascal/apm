@@ -1,7 +1,7 @@
 +++
 id = 82
 title = "apm new: fall back to vi when EDITOR and VISUAL are unset"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0082-apm-new-fall-back-to-vi-when-editor-and-"
 created_at = "2026-03-30T04:49:04.279707Z"
-updated_at = "2026-03-30T04:53:37.721559Z"
+updated_at = "2026-03-30T04:53:39.756579Z"
 +++
 
 ## Spec
@@ -69,3 +69,4 @@ Apply the same change to `open_editor` in `apm/src/cmd/review.rs`.
 |------|------|----|----|
 | 2026-03-30T04:49Z | — | new | claude-0330-0245-main |
 | 2026-03-30T04:52Z | new | in_design | claude-0330-0245-main |
+| 2026-03-30T04:53Z | in_design | specd | claude-0330-0245-main |
