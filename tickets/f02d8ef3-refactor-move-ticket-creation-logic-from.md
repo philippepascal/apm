@@ -47,7 +47,11 @@ Target state: \`apm_core::ticket::create()\` encapsulates all creation logic and
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Editor invocation (`$VISUAL` / `$EDITOR` / `vi`) — stays in CLI `new.rs`
+- `side_note` / `side_tickets` guard — stays in CLI `new.rs` (not a creation concern)
+- Any new `apm-serve` code or web UI
+- Behavior changes: `apm new` must produce identical output before and after
+- Adding new flags or options to `apm new`
 
 ### Approach
 
