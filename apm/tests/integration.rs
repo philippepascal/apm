@@ -571,7 +571,7 @@ fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, 
 
 #[test]
 fn take_succeeds_on_ammend_state() {
-    let dir = setup();
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_agent(p, "ticket/0001-ammend-me", "0001-ammend-me.md", "ammend", 1, "ammend me", "old-agent");
     std::env::set_var("APM_AGENT_NAME", "new-agent");
@@ -582,7 +582,7 @@ fn take_succeeds_on_ammend_state() {
 
 #[test]
 fn take_succeeds_on_blocked_state() {
-    let dir = setup();
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_agent(p, "ticket/0001-blocked", "0001-blocked.md", "blocked", 1, "blocked", "old-agent");
     std::env::set_var("APM_AGENT_NAME", "new-agent");
@@ -593,7 +593,7 @@ fn take_succeeds_on_blocked_state() {
 
 #[test]
 fn take_appends_handoff_history() {
-    let dir = setup();
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_agent(p, "ticket/0001-handoff", "0001-handoff.md", "in_progress", 1, "handoff", "old-agent");
     std::env::set_var("APM_AGENT_NAME", "new-agent");
