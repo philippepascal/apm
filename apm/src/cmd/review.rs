@@ -68,14 +68,20 @@ pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Res
 
     let edited_raw = std::fs::read_to_string(&tmp_path)?;
     let _ = std::fs::remove_file(&tmp_path);
-    let new_spec = extract_spec(&edited_raw);
-    let changed = new_spec.trim_end() != spec_body.trim_end();
+    let mut new_spec = extract_spec(&edited_raw);
 
     // Determine transition.
     let chosen_state = match to {
         Some(s) => Some(s),
         None => prompt_transition(id, &current_state, &transitions)?,
     };
+
+    // Normalise plain bullets → checkboxes in the amendment section when transitioning to ammend.
+    if chosen_state.as_deref() == Some("ammend") {
+        new_spec = normalise_amendment_checkboxes(new_spec);
+    }
+
+    let changed = new_spec.trim_end() != spec_body.trim_end();
 
     if !changed && chosen_state.is_none() {
         println!("No changes.");
@@ -219,7 +225,10 @@ fn open_editor(path: &Path) -> Result<()> {
         .or_else(|_| std::env::var("EDITOR"))
         .unwrap_or_else(|_| "vi".to_string());
 
-    let status = std::process::Command::new(&editor)
+    let mut parts = editor.split_whitespace();
+    let bin = parts.next().unwrap();
+    let status = std::process::Command::new(bin)
+        .args(parts)
         .arg(path)
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
@@ -231,6 +240,44 @@ fn open_editor(path: &Path) -> Result<()> {
         bail!("editor exited with non-zero status");
     }
     Ok(())
+}
+
+/// Convert plain `- ` bullets in `### Amendment requests` to `- [ ] ` checkboxes.
+/// Lines already formatted as `- [ ]` or `- [x]` are left unchanged.
+/// Only lines inside the section (up to the next `##` heading) are affected.
+fn normalise_amendment_checkboxes(spec: String) -> String {
+    const SECTION: &str = "### Amendment requests";
+
+    let parts: Vec<&str> = spec.split('\n').collect();
+    let Some(sec_pos) = parts.iter().position(|l| *l == SECTION) else {
+        return spec;
+    };
+
+    let mut result: Vec<String> = Vec::with_capacity(parts.len());
+    let mut in_section = false;
+
+    for (i, line) in parts.iter().enumerate() {
+        if i < sec_pos {
+            result.push((*line).to_string());
+        } else if i == sec_pos {
+            in_section = true;
+            result.push((*line).to_string());
+        } else if in_section && line.starts_with("##") {
+            in_section = false;
+            result.push((*line).to_string());
+        } else if in_section
+            && line.starts_with("- ")
+            && !line.starts_with("- [ ]")
+            && !line.starts_with("- [x]")
+            && !line.starts_with("- [X]")
+        {
+            result.push(format!("- [ ]{}", &line[1..]));
+        } else {
+            result.push((*line).to_string());
+        }
+    }
+
+    result.join("\n")
 }
 
 fn prompt_transition(
