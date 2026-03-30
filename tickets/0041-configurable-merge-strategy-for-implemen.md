@@ -1,7 +1,7 @@
 +++
 id = 41
 title = "Configurable merge strategy for implemented→accepted"
-state = "accepted"
+state = "closed"
 priority = 4
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0328-1000-a1b2"
 agent = "claude-0329-main"
 branch = "ticket/0041-configurable-merge-strategy-for-implemen"
 created_at = "2026-03-28T08:14:53.494909Z"
-updated_at = "2026-03-29T22:35:47.174185Z"
+updated_at = "2026-03-30T02:03:51.425489Z"
 +++
 
 ## Spec
@@ -118,3 +118,4 @@ match transition.completion {
 | 2026-03-29T21:02Z | ready | in_progress | claude-0329-main |
 | 2026-03-29T21:15Z | in_progress | implemented | claude-0329-resume |
 | 2026-03-29T22:35Z | implemented | accepted | apm |
+| 2026-03-30T02:03Z | accepted | closed | apm-sync |
