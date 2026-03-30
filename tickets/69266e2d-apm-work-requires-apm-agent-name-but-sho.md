@@ -1,7 +1,7 @@
 +++
 id = "69266e2d"
 title = "apm work requires APM_AGENT_NAME but should not"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/69266e2d-apm-work-requires-apm-agent-name-but-sho"
 created_at = "2026-03-30T06:11:19.569472Z"
-updated_at = "2026-03-30T06:23:26.927266Z"
+updated_at = "2026-03-30T06:23:31.064260Z"
 +++
 
 ## Spec
@@ -83,3 +83,4 @@ No changes to `work.rs`.
 |------|------|----|----|
 | 2026-03-30T06:11Z | — | new | claude-0330-0245-main |
 | 2026-03-30T06:20Z | new | in_design | claude-0330-0245-main |
+| 2026-03-30T06:23Z | in_design | specd | claude-0329-spec-writer |
