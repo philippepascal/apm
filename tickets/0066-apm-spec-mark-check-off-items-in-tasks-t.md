@@ -22,7 +22,7 @@ The `--check` flag in `apm spec` currently means "validate the spec" (check that
 
 ### Acceptance criteria
 
-- [ ] `apm spec <id> --section <name> --mark <item-text>` finds the first unchecked item (`- [ ]`) in `### <name>` whose text matches `<item-text>` (case-insensitive substring) and marks it `- [x]`
+- [x] `apm spec <id> --section <name> --mark <item-text>` finds the first unchecked item (`- [ ]`) in `### <name>` whose text matches `<item-text>` (case-insensitive substring) and marks it `- [x]`
 - [ ] If no unchecked matching item is found, the command exits non-zero with a clear error
 - [ ] If multiple unchecked items match, the command exits non-zero and lists the ambiguous matches
 - [ ] The commit message is `ticket(<id>): mark "<item-text>" in <section>`
