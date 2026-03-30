@@ -481,9 +481,13 @@ fn rand_u16() -> u16 {
 #[cfg(test)]
 mod tests {
     use super::resolve_agent_name;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn prefers_apm_agent_name() {
+        let _g = ENV_LOCK.lock().unwrap();
         std::env::set_var("APM_AGENT_NAME", "explicit-agent");
         assert_eq!(resolve_agent_name(), "explicit-agent");
         std::env::remove_var("APM_AGENT_NAME");
@@ -491,6 +495,7 @@ mod tests {
 
     #[test]
     fn falls_back_to_user() {
+        let _g = ENV_LOCK.lock().unwrap();
         std::env::remove_var("APM_AGENT_NAME");
         std::env::set_var("USER", "unix-user");
         std::env::remove_var("USERNAME");
@@ -500,6 +505,7 @@ mod tests {
 
     #[test]
     fn falls_back_to_apm_literal() {
+        let _g = ENV_LOCK.lock().unwrap();
         std::env::remove_var("APM_AGENT_NAME");
         std::env::remove_var("USER");
         std::env::remove_var("USERNAME");
