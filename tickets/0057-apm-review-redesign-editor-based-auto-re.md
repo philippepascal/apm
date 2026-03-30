@@ -54,6 +54,8 @@ In `apm/src/cmd/review.rs`:
 
 4. Delete `prompt_transition` and its helper code.
 
+**Audited 2026-03-29:** Approach still valid. `prompt_transition` and `build_header` both exist in `apm/src/cmd/review.rs`. No `extract_transition` function present yet. All referenced file paths and function names are accurate.
+
 ## History
 
 | When | From | To | By |
