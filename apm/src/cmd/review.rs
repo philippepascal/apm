@@ -12,8 +12,21 @@ struct TransitionOption {
     hint: String,
 }
 
-pub fn run(root: &Path, id: u32, to: Option<String>) -> Result<()> {
+pub fn run(root: &Path, id: u32, to: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
+
+    let prefix = format!("ticket/{id:04}-");
+    let branches = git::ticket_branches(root)?;
+    let branch = branches.into_iter().find(|b| b.starts_with(&prefix));
+    if let Some(ref b) = branch {
+        if aggressive {
+            if let Err(e) = git::fetch_branch(root, b) {
+                eprintln!("warning: fetch failed: {e:#}");
+            }
+        }
+    }
+
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(mut t) = tickets.into_iter().find(|t| t.frontmatter.id == id) else {
         bail!("ticket #{id} not found");
@@ -206,7 +219,10 @@ fn open_editor(path: &Path) -> Result<()> {
         .or_else(|_| std::env::var("EDITOR"))
         .unwrap_or_else(|_| "vi".to_string());
 
-    let status = std::process::Command::new(&editor)
+    let mut parts = editor.split_whitespace();
+    let bin = parts.next().unwrap();
+    let status = std::process::Command::new(bin)
+        .args(parts)
         .arg(path)
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())

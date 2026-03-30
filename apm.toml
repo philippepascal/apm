@@ -5,6 +5,45 @@ description = "Git-native, agent-first project management tool"
 [tickets]
 dir = "tickets"
 
+[[ticket.sections]]
+name        = "Problem"
+type        = "free"
+required    = true
+placeholder = "What is broken or missing, and why it matters."
+
+[[ticket.sections]]
+name        = "Acceptance criteria"
+type        = "tasks"
+required    = true
+placeholder = "Checkboxes; each one independently testable."
+
+[[ticket.sections]]
+name        = "Out of scope"
+type        = "free"
+required    = true
+placeholder = "Explicit list of what this ticket does not cover."
+
+[[ticket.sections]]
+name        = "Approach"
+type        = "free"
+required    = true
+placeholder = "How the implementation will work."
+
+[[ticket.sections]]
+name     = "Open questions"
+type     = "qa"
+required = false
+
+[[ticket.sections]]
+name     = "Amendment requests"
+type     = "tasks"
+required = false
+
+[[ticket.sections]]
+name     = "Code review"
+type     = "tasks"
+required = false
+
 [worktrees]
 dir = "../apm--worktrees"
 
@@ -22,27 +61,18 @@ webhook_secret_env = "APM_WEBHOOK_SECRET"
 terminal_states = ["closed"]
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-color      = "#6b7280"
-layer      = 1
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to            = "specd"
-  trigger       = "manual"
-  actor         = "agent"
-  preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
-
-  [[workflow.states.transitions]]
-  to      = "question"
-  trigger = "manual"
-  actor   = "agent"
+id           = "new"
+label        = "New"
+color        = "#6b7280"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
-  trigger = "manual"
+  trigger = "command:start"
   actor   = "agent"
+  context_section = "Problem"
 
 [[workflow.states]]
 id         = "question"
@@ -56,12 +86,6 @@ actionable = ["supervisor"]
   trigger = "manual"
   actor   = "any"
 
-  [[workflow.states.transitions]]
-  to            = "specd"
-  trigger       = "manual"
-  actor         = "agent"
-  preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
-
 [[workflow.states]]
 id         = "specd"
 label      = "Specd"
@@ -70,9 +94,10 @@ layer      = 1
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "ready"
-  trigger = "manual"
-  actor   = "supervisor"
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
 
   [[workflow.states.transitions]]
   to      = "ammend"
@@ -80,11 +105,12 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-color      = "#ef4444"
-layer      = 1
-actionable = ["agent"]
+id           = "ammend"
+label        = "Ammend"
+color        = "#ef4444"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -99,15 +125,16 @@ actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to      = "in_design"
-  trigger = "manual"
+  trigger = "command:start"
   actor   = "agent"
 
 [[workflow.states]]
-id         = "in_design"
-label      = "In Design"
-color      = "#f97316"
-layer      = 1
-actionable = ["agent"]
+id           = "in_design"
+label        = "In Design"
+color        = "#f97316"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -121,22 +148,34 @@ actionable = ["agent"]
   actor   = "agent"
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-color      = "#10b981"
-layer      = 1
-actionable = ["agent"]
+id           = "ready"
+label        = "Ready"
+color        = "#10b981"
+layer        = 1
+actionable   = ["agent"]
+instructions = "apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "command:start"
   actor   = "agent"
 
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "specd"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-color = "#8b5cf6"
-layer = 2
+id           = "in_progress"
+label        = "In Progress"
+color        = "#8b5cf6"
+layer        = 2
+instructions = "apm.worker.md"
 
   [[workflow.states.transitions]]
   to            = "implemented"
@@ -150,12 +189,6 @@ layer = 2
   actor   = "agent"
   label   = "Agent is blocked — wrote questions in ### Open questions"
 
-  [[workflow.states.transitions]]
-  to           = "ready"
-  trigger      = "manual"
-  actor        = "any"
-  side_effects = ["set_agent_null", "set_branch_null"]
-
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"
@@ -164,10 +197,11 @@ layer      = 2
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "ready"
-  trigger = "manual"
-  actor   = "supervisor"
-  label   = "Supervisor answered questions — agent can resume"
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  label        = "Supervisor answered questions — agent can resume"
+  side_effects = ["set_agent_null"]
 
 [[workflow.states]]
 id         = "implemented"
@@ -181,6 +215,19 @@ actionable = ["supervisor"]
   trigger       = "manual"
   actor         = "engineer"
   preconditions = ["pr_all_closing_merged"]
+
+  [[workflow.states.transitions]]
+  to             = "ready"
+  trigger        = "manual"
+  actor          = "supervisor"
+  side_effects   = ["set_agent_null"]
+  focus_section  = "Code review"
+
+  [[workflow.states.transitions]]
+  to           = "ammend"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
 
   [[workflow.states.transitions]]
   to      = "in_progress"

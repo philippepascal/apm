@@ -26,6 +26,8 @@ pub struct Frontmatter {
     pub created_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focus_section: Option<String>,
 }
 
 #[derive(Debug, Clone)]
