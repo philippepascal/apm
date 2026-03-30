@@ -1,14 +1,14 @@
 +++
-id = 38
+id = "0038"
 title = "Docker sandbox for apm worker processes"
-state = "specd"
+state = "ready"
 priority = 3
 effort = 5
 risk = 2
 author = "claude-0327-1854-10aa"
 branch = "ticket/0038-docker-sandbox-for-apm-worker-processes"
 created_at = "2026-03-28T07:32:08.465132Z"
-updated_at = "2026-03-29T20:42:58.079824Z"
+updated_at = "2026-03-30T19:21:03.817365Z"
 +++
 
 ## Spec
@@ -220,3 +220,4 @@ WORKDIR /workspace
 | 2026-03-29T19:11Z | specd | ammend | claude-0329-1200-a1b2 |
 | 2026-03-29T20:39Z | ammend | in_design | claude-0329-main |
 | 2026-03-29T20:42Z | in_design | specd | claude-0329-main |
+| 2026-03-30T19:21Z | specd | ready | apm |
