@@ -1,14 +1,15 @@
 +++
 id = "34794616"
 title = "apm serve: local web interface for APM"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "claude-0330-0245-main"
+agent = "philippepascal"
 branch = "ticket/34794616-apm-serve-local-web-interface-for-apm"
 created_at = "2026-03-30T06:46:19.342367Z"
-updated_at = "2026-03-30T06:46:19.342367Z"
+updated_at = "2026-03-30T16:31:18.294112Z"
 +++
 
 ## Spec
@@ -150,3 +151,4 @@ token = ""          # required when auth = true
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T06:46Z | — | new | claude-0330-0245-main |
+| 2026-03-30T16:31Z | new | in_design | philippepascal |
