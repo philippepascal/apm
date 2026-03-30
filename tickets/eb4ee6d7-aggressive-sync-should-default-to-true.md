@@ -3,13 +3,13 @@ id = "eb4ee6d7"
 title = "aggressive sync should default to true"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 agent = "41011"
 branch = "ticket/eb4ee6d7-aggressive-sync-should-default-to-true"
 created_at = "2026-03-30T19:53:26.019513Z"
-updated_at = "2026-03-30T20:00:29.090064Z"
+updated_at = "2026-03-30T20:02:15.312612Z"
 +++
 
 ## Spec
