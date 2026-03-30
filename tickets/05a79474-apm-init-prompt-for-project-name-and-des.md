@@ -16,7 +16,15 @@ updated_at = "2026-03-30T23:56:56.569437Z"
 
 ### Problem
 
-When a user runs `apm init` for the first time, the project name is silently derived from the directory name and no description is ever collected. The generated `.apm/config.toml` always contains an empty `description` field. This means every new APM project starts with a generic, directory-derived name and no human-readable description — both of which are useful for `apm list`, reporting, and context given to agents.
+apm init generates a [project] section in apm.toml with empty name and description fields. Users must manually edit the file after init to fill these in.
+
+apm init should interactively prompt for project name and description when stdin is a TTY. If the user presses Enter without input, or if stdin is not a TTY (e.g. piped or scripted), the fields are left empty. No input is required — the prompts are optional.
+
+Example generated config with user input:
+
+[project]
+name = "apm"
+description = "Git-native, agent-first project management tool"
 
 ### Acceptance criteria
 
