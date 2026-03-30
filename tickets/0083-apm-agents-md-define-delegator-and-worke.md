@@ -1,7 +1,7 @@
 +++
-id = 83
+id = "0083"
 title = "apm.agents.md: define Delegator and Worker roles clearly"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/0083-apm-agents-md-define-delegator-and-worke"
 created_at = "2026-03-30T05:10:20.442934Z"
-updated_at = "2026-03-30T05:18:00.319619Z"
+updated_at = "2026-03-30T05:52:47.733762Z"
 +++
 
 ## Spec
@@ -119,3 +119,4 @@ started.
 | 2026-03-30T05:10Z | new | in_design | claude-0330-0245-main |
 | 2026-03-30T05:11Z | in_design | specd | claude-0330-0245-main |
 | 2026-03-30T05:18Z | specd | ready | apm |
+| 2026-03-30T05:52Z | ready | in_progress | claude-0330-0245-main |
