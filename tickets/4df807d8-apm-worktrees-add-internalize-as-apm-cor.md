@@ -1,7 +1,7 @@
 +++
 id = "4df807d8"
 title = "apm worktrees --add: internalize as apm-core function, remove from public CLI"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/4df807d8-apm-worktrees-add-internalize-as-apm-cor"
 created_at = "2026-03-30T06:15:20.855321Z"
-updated_at = "2026-03-30T06:24:16.543639Z"
+updated_at = "2026-03-30T06:24:21.080496Z"
 +++
 
 ## Spec
@@ -137,3 +137,4 @@ Also remove or update the "Startup" section note that mentions `apm worktrees --
 |------|------|----|----|
 | 2026-03-30T06:15Z | — | new | claude-0330-0245-main |
 | 2026-03-30T06:20Z | new | in_design | claude-0330-0245-main |
+| 2026-03-30T06:24Z | in_design | specd | claude-0330-0245-main |
