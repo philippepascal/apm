@@ -55,7 +55,7 @@ blocks `apm-serve` from reusing any of it.
 - [x] `apm work --dry-run` produces identical output
 - [x] `ticket::list_filtered()` exists in apm-core and is unit-tested for state, terminal-visibility, agent, supervisor, and actionable-actor filtering
 - [x] `ticket::set_field()` exists in apm-core and is unit-tested for valid mutations and all error cases (author immutability, invalid u8, unknown field)
-- [ ] `ticket::handoff()` exists in apm-core and is unit-tested: rejects missing agent, is idempotent when already assigned, and appends a history row on successful transfer
+- [x] `ticket::handoff()` exists in apm-core and is unit-tested: rejects missing agent, is idempotent when already assigned, and appends a history row on successful transfer
 - [ ] apm-core exposes a `worker` module with `PidFile`, `read_pid_file()`, `is_alive()`, and `elapsed_since()`, each unit-tested
 - [ ] `ticket::list_worktrees_with_tickets()` exists in apm-core and is called by `cmd/worktrees.rs`
 - [ ] `cargo test --workspace` passes with no regressions
