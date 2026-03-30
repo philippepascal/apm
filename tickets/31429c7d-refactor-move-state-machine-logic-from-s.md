@@ -55,7 +55,7 @@ CLI wrappers of ~30 lines each.
 - [x] `apm/src/cmd/start.rs` contains no business logic — it parses CLI args and delegates entirely to the corresponding `apm_core::start` functions
 - [x] `apm state <id> <new_state>` produces identical output to before the refactor
 - [x] `apm start <id>` produces identical output to before the refactor
-- [ ] `apm start --next --spawn` produces identical output to before the refactor
+- [x] `apm start --next --spawn` produces identical output to before the refactor
 - [ ] `cargo test --workspace` passes after the refactor
 
 ### Out of scope
