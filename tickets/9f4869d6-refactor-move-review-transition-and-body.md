@@ -16,27 +16,19 @@ updated_at = "2026-03-30T16:35:41.862437Z"
 
 ### Problem
 
-`review.rs` contains 321 lines mixing editor orchestration (CLI concern) with
-business logic that belongs in `apm-core`:
+review.rs (321 lines) mixes editor orchestration — a CLI concern — with document-manipulation logic that belongs in apm-core:
 
-- Manual transition detection from config (which transitions are supervisor-only)
-- Spec body splitting (content vs history)
-- Amendment section extraction from edited file
-- Amendment section normalization (plain bullets → checkboxes)
-- Transition validation against config
-- Amendment request injection into ticket body
+- split_body: splits a ticket body into editable spec and preserved history
+- extract_spec: strips the editor-header from a saved temp file to recover the spec text
+- manual_transitions (aka available_transitions): reads the config to determine which transitions a supervisor can trigger manually (filters out event: auto-triggers)
+- normalise_amendment_checkboxes: rewrites plain - bullets in ### Amendment requests to - [ ] checkboxes when a ticket is transitioning to ammend state
 
-Only editor temp-file management and the `$VISUAL`/`$EDITOR`/`vi` invocation
-belong in the CLI. Everything else is document manipulation that `apm-serve`
-will need when a supervisor approves or requests amendments via the web UI —
-without opening a local editor.
+Currently all four live in apm/src/cmd/review.rs alongside editor temp-file management, the $VISUAL/$EDITOR/vi invocation, and the interactive stdin prompt. This coupling means apm-serve — which will let a supervisor approve or request amendments via a web UI without a local editor — cannot reuse the logic without depending on the CLI crate.
 
-Target: `apm_core::review` module with `available_transitions()`,
-`apply_review()`, `normalize_amendments()`. CLI handles editor and calls these.
+Moving the document-manipulation functions into apm_core::review gives apm-serve (and tests) a stable, editor-free API surface. The CLI keeps open_editor, build_header, and prompt_transition; it calls into apm_core::review for everything else.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -51,10 +43,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
