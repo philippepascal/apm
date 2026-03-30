@@ -1,7 +1,7 @@
 +++
 id = "ebf77230"
 title = "refactor: move validation logic from validate.rs and verify.rs into apm-core"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "90879"
 branch = "ticket/ebf77230-refactor-move-validation-logic-from-vali"
 created_at = "2026-03-30T14:27:38.346647Z"
-updated_at = "2026-03-30T17:20:36.673619Z"
+updated_at = "2026-03-30T17:24:53.971367Z"
 +++
 
 ## Spec
@@ -137,3 +137,4 @@ Export the module from `apm-core/src/lib.rs`: `pub mod verify;`
 | 2026-03-30T16:36Z | in_design | specd | claude-0330-1645-b2e7 |
 | 2026-03-30T16:58Z | specd | ready | philippepascal |
 | 2026-03-30T17:20Z | ready | in_progress | philippepascal |
+| 2026-03-30T17:24Z | in_progress | implemented | claude-0330-1720-4f20 |
