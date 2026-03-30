@@ -1,7 +1,7 @@
 +++
 id = "37c280f2"
 title = "apm take should work without APM_AGENT_NAME set"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "50164"
 branch = "ticket/37c280f2-apm-take-should-work-without-apm-agent-n"
 created_at = "2026-03-30T14:41:58.874046Z"
-updated_at = "2026-03-30T17:09:10.530344Z"
+updated_at = "2026-03-30T18:08:21.719693Z"
 +++
 
 ## Spec
@@ -75,3 +75,4 @@ Steps:
 | 2026-03-30T17:02Z | ready | in_progress | philippepascal |
 | 2026-03-30T17:05Z | in_progress | implemented | claude-0330-1702-b9d0 |
 | 2026-03-30T17:09Z | implemented | accepted | philippepascal |
+| 2026-03-30T18:08Z | accepted | closed | apm-sync |
