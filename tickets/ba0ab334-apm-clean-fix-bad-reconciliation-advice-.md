@@ -1,15 +1,15 @@
 +++
 id = "ba0ab334"
 title = "apm clean: fix bad reconciliation advice for state mismatch"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
 author = "philippepascal"
-agent = "51664"
+agent = "philippepascal"
 branch = "ticket/ba0ab334-apm-clean-fix-bad-reconciliation-advice-"
 created_at = "2026-03-30T19:59:52.991650Z"
-updated_at = "2026-03-30T20:10:57.118385Z"
+updated_at = "2026-03-30T20:11:28.970769Z"
 +++
 
 ## Spec
@@ -71,3 +71,4 @@ Update the integration test `clean_skips_state_mismatch_between_branch_and_main`
 | 2026-03-30T20:00Z | new | in_design | philippepascal |
 | 2026-03-30T20:02Z | in_design | specd | claude-0330-2005-b4f2 |
 | 2026-03-30T20:10Z | specd | ready | apm |
+| 2026-03-30T20:11Z | ready | in_progress | philippepascal |
