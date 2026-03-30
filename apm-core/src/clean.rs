@@ -146,7 +146,7 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
             Some(ms) if ms != branch_state => {
                 eprintln!(
                     "warning: {branch} state mismatch — branch={branch_state} \
-                     main={ms} — run `apm close {id}` to reconcile"
+                     main={ms} — run `apm sync` to reconcile"
                 );
                 continue;
             }
