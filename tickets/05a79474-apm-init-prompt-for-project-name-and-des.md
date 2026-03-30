@@ -4,12 +4,12 @@ title = "apm init: prompt for project name and description"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 agent = "25666"
 branch = "ticket/05a79474-apm-init-prompt-for-project-name-and-des"
 created_at = "2026-03-30T23:56:25.325030Z"
-updated_at = "2026-03-30T23:59:34.902701Z"
+updated_at = "2026-03-30T23:59:40.972749Z"
 +++
 
 ## Spec
