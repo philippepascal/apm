@@ -209,6 +209,8 @@ WORKDIR /workspace
   design (`.apm/` folder). The Dockerfile should be generated into `.apm/` or
   documented alongside other init outputs.
 
+**Audited 2026-03-29:** Approach still valid. `apm-core/src/config.rs` has no `WorkersConfig` yet. `apm/src/cmd/start.rs` has native spawn support but no Docker path. `apm-core/src/credentials.rs` does not exist yet. All file paths and function names referenced in the approach are accurate. Previous audit corrected `apm verify` → `apm validate` throughout.
+
 ## History
 
 | When | From | To | By |
