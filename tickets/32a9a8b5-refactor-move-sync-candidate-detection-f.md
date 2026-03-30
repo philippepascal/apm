@@ -1,14 +1,15 @@
 +++
 id = "32a9a8b5"
 title = "refactor: move sync candidate detection from sync.rs into apm-core"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "claude-0330-0245-main"
+agent = "philippepascal"
 branch = "ticket/32a9a8b5-refactor-move-sync-candidate-detection-f"
 created_at = "2026-03-30T14:27:39.762926Z"
-updated_at = "2026-03-30T14:27:39.762926Z"
+updated_at = "2026-03-30T16:34:49.391451Z"
 +++
 
 ## Spec
@@ -61,3 +62,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T14:27Z | — | new | claude-0330-0245-main |
+| 2026-03-30T16:34Z | new | in_design | philippepascal |
