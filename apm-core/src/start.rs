@@ -230,12 +230,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let worker_system = {
-        let p1 = root.join(".apm/worker.md");
-        let p2 = root.join("apm.worker.md");
-        if p1.exists() { std::fs::read_to_string(p1) } else { std::fs::read_to_string(p2) }
-            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
-    };
+    let worker_system = std::fs::read_to_string(root.join(".apm/worker.md"))
+        .unwrap_or_else(|_| "You are an APM worker agent.".to_string());
 
     let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{content}");
 
