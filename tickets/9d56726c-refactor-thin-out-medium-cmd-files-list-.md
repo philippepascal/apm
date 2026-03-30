@@ -52,7 +52,7 @@ blocks `apm-serve` from reusing any of it.
 - [x] `apm take <id>` on a ticket with no agent still returns "no agent assigned — use `apm start` instead"
 - [x] `apm workers list` shows the same columns (ID, TITLE, PID, STATE, ELAPSED) with identical process monitoring behavior
 - [x] `apm worktrees` produces identical output
-- [ ] `apm work --dry-run` produces identical output
+- [x] `apm work --dry-run` produces identical output
 - [ ] `ticket::list_filtered()` exists in apm-core and is unit-tested for state, terminal-visibility, agent, supervisor, and actionable-actor filtering
 - [ ] `ticket::set_field()` exists in apm-core and is unit-tested for valid mutations and all error cases (author immutability, invalid u8, unknown field)
 - [ ] `ticket::handoff()` exists in apm-core and is unit-tested: rejects missing agent, is idempotent when already assigned, and appends a history row on successful transfer
