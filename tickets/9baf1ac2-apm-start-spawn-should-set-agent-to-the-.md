@@ -1,7 +1,7 @@
 +++
 id = "9baf1ac2"
 title = "apm start --spawn should set agent to the worker's name, not the delegator's"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/9baf1ac2-apm-start-spawn-should-set-agent-to-the-"
 created_at = "2026-03-30T05:56:35.911177Z"
-updated_at = "2026-03-30T06:18:23.089466Z"
+updated_at = "2026-03-30T06:18:28.151497Z"
 +++
 
 ## Spec
@@ -87,3 +87,4 @@ the process is spawned. To write the worker's PID instead:
 |------|------|----|----|
 | 2026-03-30T05:56Z | — | new | claude-0330-0245-main |
 | 2026-03-30T06:16Z | new | in_design | claude-0330-0245-main |
+| 2026-03-30T06:18Z | in_design | specd | claude-0329-spec-writer |
