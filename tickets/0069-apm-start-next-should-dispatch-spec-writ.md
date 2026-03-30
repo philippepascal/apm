@@ -24,13 +24,13 @@ The fix is two-part: change `new → in_design` and `ammend → in_design` to `t
 
 ### Acceptance criteria
 
-- [ ] `new → in_design` transition in `apm.toml` has `trigger = "command:start"`
-- [ ] `ammend → in_design` transition in `apm.toml` has `trigger = "command:start"`
-- [ ] `apm start --next` returns a `new` ticket when no `ready` tickets exist and a `new` ticket is available
-- [ ] `apm start --next` returns an `ammend` ticket when it is the highest-priority actionable ticket
-- [ ] Priority ordering still holds: a `ready` ticket with higher score beats a `new` ticket with lower score
-- [ ] `apm state <id> in_design` (manual transition) still works for supervisors claiming tickets directly — changing the trigger does not remove the manual path
-- [ ] Integration test: a repo with one `new` ticket and no `ready` tickets — `apm start --next` transitions the `new` ticket to `in_design` and returns it
+- [x] `new → in_design` transition in `apm.toml` has `trigger = "command:start"`
+- [x] `ammend → in_design` transition in `apm.toml` has `trigger = "command:start"`
+- [x] `apm start --next` returns a `new` ticket when no `ready` tickets exist and a `new` ticket is available
+- [x] `apm start --next` returns an `ammend` ticket when it is the highest-priority actionable ticket
+- [x] Priority ordering still holds: a `ready` ticket with higher score beats a `new` ticket with lower score
+- [x] `apm state <id> in_design` (manual transition) still works for supervisors claiming tickets directly — changing the trigger does not remove the manual path
+- [x] Integration test: a repo with one `new` ticket and no `ready` tickets — `apm start --next` transitions the `new` ticket to `in_design` and returns it
 
 ### Out of scope
 
