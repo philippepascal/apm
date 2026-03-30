@@ -236,7 +236,7 @@ fn apply_branch_fixes(
     fixes: Vec<(ticket::Ticket, String, String)>,
 ) -> Result<()> {
     for (mut t, expected_branch, _old_branch) in fixes {
-        let id = t.frontmatter.id;
+        let id = t.frontmatter.id.clone();
         t.frontmatter.branch = Some(expected_branch.clone());
         let content = t.serialize()?;
         let filename = t.path.file_name().unwrap().to_string_lossy().to_string();
@@ -248,8 +248,8 @@ fn apply_branch_fixes(
             &content,
             &format!("ticket({id}): fix branch field (validate --fix)"),
         ) {
-            Ok(_) => println!("  fixed #{id}: branch -> {expected_branch}"),
-            Err(e) => eprintln!("  warning: could not fix #{id}: {e:#}"),
+            Ok(_) => println!("  fixed {id}: branch -> {expected_branch}"),
+            Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
         }
     }
     Ok(())
