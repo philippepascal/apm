@@ -15,7 +15,24 @@ updated_at = "2026-03-30T14:27:32.493841Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`new.rs` contains 158 lines of ticket creation logic that belongs in `apm-core`:
+
+- Hex ID generation (timestamp + random bytes → sha256 → 8-char hex)
+- Slug generation from title
+- Ticket frontmatter construction
+- Template body generation with section placeholders
+- Context injection into spec body (`--context` flag)
+- Git branch creation and initial commit
+- Aggressive push logic
+
+Only the editor invocation (`$VISUAL` → `$EDITOR` → `vi`) belongs in the CLI.
+
+`apm-serve` will need to create tickets from the web UI. Without this refactor
+it must shell out to `apm new` and cannot get a structured response (the new
+ticket ID and branch) back from the operation.
+
+Target: `apm_core::ticket::create()` returning the new ticket. CLI `new.rs`
+calls it and optionally opens an editor. ~30 lines in CLI.
 
 ### Acceptance criteria
 
