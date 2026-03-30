@@ -47,7 +47,7 @@ Specifically missing today:
 - [x] Stale `.apm-worker.pid` files (PID no longer alive) are detected and
   reported as "crashed" in `apm workers` output rather than silently skipped
   or treated as running
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
