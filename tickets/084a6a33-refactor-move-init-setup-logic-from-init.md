@@ -55,7 +55,63 @@ Moving this logic into `apm_core::init` gives the project a clean boundary: `apm
 
 ### Approach
 
-How the implementation will work.
+**New file: `apm-core/src/init.rs`**
+
+Move the following functions verbatim from `apm/src/cmd/init.rs`, adjusting visibility to `pub`:
+
+- `detect_default_branch(root: &Path) -> String` — no changes needed
+- `default_config(name: &str, default_branch: &str) -> String` — no changes needed; keep the `#[cfg(target_os)]` `default_log_file` helper alongside it
+- `ensure_gitignore(path: &Path) -> Result<()>` — change signature from `&PathBuf` to `&Path`
+- `ensure_claude_md(root: &Path, agents_path: &str) -> Result<()>` — no changes needed
+- `maybe_initial_commit(root: &Path) -> Result<()>` — no changes needed
+- `migrate(root: &Path) -> Result<()>` — renamed from `run_migrate`; same body
+
+Add a top-level `pub fn setup(root: &Path) -> Result<()>` that contains the repo-setup steps currently inlined in `apm/src/cmd/init.rs::run()`:
+1. Create `tickets/`
+2. Create `.apm/` and write the four files (`config.toml`, `agents.md`, `spec-writer.md`, `worker.md`) if absent
+3. Call `ensure_claude_md(root, ".apm/agents.md")`
+4. Call `ensure_gitignore(&root.join(".gitignore"))`
+5. Call `maybe_initial_commit(root)`
+6. Call `ensure_worktrees_dir(root)` (moved from CLI as well)
+
+The `default_agents_md()` helper uses `include_str!("../../../apm.agents.md")` (relative to `apm/src/cmd/init.rs`). In `apm-core/src/init.rs` the path becomes `include_str!("../../apm.agents.md")`. Verify the relative path at compile time.
+
+The `include_str!("../apm.worker.md")` for `worker.md` references `apm/src/apm.worker.md`. Options:
+- Copy `apm.worker.md` to `apm-core/src/apm.worker.md` and use `include_str!("apm.worker.md")`
+- Or keep the file in `apm/src/` and use a cross-crate path `include_str!("../../apm/src/apm.worker.md")` from `apm-core/src/init.rs`
+
+Prefer the first option (copy into `apm-core/src/`) to keep `apm-core` self-contained. Delete the copy in `apm/src/` only if nothing else references it.
+
+**Update `apm-core/src/lib.rs`**
+
+Add `pub mod init;`
+
+**Update `apm/src/cmd/init.rs`**
+
+Replace the bodies of `run()` and `run_migrate()` with calls to `apm_core::init::setup(root)?` and `apm_core::init::migrate(root)?`. Delete all moved functions from `init.rs`. Keep `update_claude_settings`, `update_user_claude_settings`, `warn_if_settings_untracked`, `APM_ALLOW_ENTRIES`, `APM_USER_ALLOW_ENTRIES`.
+
+**Cargo.toml changes**
+
+`apm-core` does not currently use `std::process::Command` via a crate dep — this is stdlib so no new deps needed. No Cargo.toml changes expected.
+
+**Tests in `apm-core/src/init.rs`**
+
+Add a `#[cfg(test)]` block using `tempfile::TempDir`. Each test creates a bare temp dir, runs `git init`, and calls the function under test:
+- `detect_default_branch` on a fresh repo (expect "main" or current branch)
+- `detect_default_branch` with a non-git dir (expect "main")
+- `ensure_gitignore` creates the file when absent
+- `ensure_gitignore` appends only the missing entry when file exists
+- `ensure_gitignore` is idempotent
+- `setup` creates all expected files and dirs
+- `migrate` moves files and updates CLAUDE.md import
+- `migrate` is a no-op when already migrated
+
+**Order of steps**
+1. Create `apm-core/src/init.rs` with moved functions + `setup()`
+2. Update `apm-core/src/lib.rs`
+3. Update `apm/src/cmd/init.rs`
+4. Run `cargo test --workspace` and fix any compile errors
+5. Delete temp spec files from repo root before committing
 
 ### Open questions
 
