@@ -1,7 +1,7 @@
 +++
 id = "4223716a"
 title = "apm start --next should dispatch spec-writer agent for new/ammend tickets"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "11764"
 branch = "ticket/4223716a-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-30T20:52:32.229319Z"
-updated_at = "2026-03-30T21:04:50.153169Z"
+updated_at = "2026-03-30T21:04:54.091132Z"
 +++
 
 ## Spec
@@ -112,3 +112,4 @@ The proper name for the files are apm.worker.md and apm.spec-writer.md.
 | 2026-03-30T20:52Z | — | new | philippepascal |
 | 2026-03-30T20:52Z | new | in_design | philippepascal |
 | 2026-03-30T21:00Z | in_design | specd | claude-0330-2100-b7f2 |
+| 2026-03-30T21:04Z | specd | ammend | apm |
