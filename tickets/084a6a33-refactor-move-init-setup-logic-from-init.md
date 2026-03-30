@@ -15,7 +15,24 @@ updated_at = "2026-03-30T14:27:51.779466Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`init.rs` is the largest file at 535 lines and mixes interactive CLI setup with
+repository initialization logic that belongs in `apm-core`:
+
+- Default branch detection (`git symbolic-ref`, `git remote show`)
+- `apm.toml` config template generation
+- Migration logic for old config paths (`.apm/config.toml`)
+- `.gitignore` entry management
+- Worktree directory creation
+- Initial git commit for the tickets directory
+- Claude `settings.json` modification (project + user level)
+
+The Claude settings.json modification is arguably a CLI concern (user-environment
+setup). Everything else — branch detection, config generation, migration, gitignore
+management, initial commit — is repository setup logic that should be testable
+independently of the CLI.
+
+Target: `apm_core::init::setup()` handling all repo-level initialization. CLI
+`init.rs` handles interactive prompts and settings.json updates, then calls it.
 
 ### Acceptance criteria
 
