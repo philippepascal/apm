@@ -356,6 +356,8 @@ pub fn accept(
 
     println!("{id}: {prev} → accepted");
     Ok(())
+}
+
 pub fn create(
     root: &std::path::Path,
     config: &crate::config::Config,

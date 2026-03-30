@@ -17,10 +17,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
 
     let now = Utc::now();
     let result = ticket::handoff(t, &new_agent, now)?;
-    t.frontmatter.agent = Some(new_agent.clone());
-    t.frontmatter.updated_at = Some(now);
-    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    apm_core::state::append_history(&mut t.body, &old_agent, &new_agent, &when, "handoff");
 
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
