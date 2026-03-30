@@ -30,7 +30,7 @@ The daemon should be interruptible with Ctrl-C and should log each dispatch cycl
 - [x] `apm work --daemon --interval <N>` sets the poll interval to N seconds; default is 30
 - [x] Each dispatch cycle logs a timestamped line: ticket dispatched, worker finished, or no tickets found with seconds until next check
 - [x] Ctrl-C stops the daemon; workers already running continue to completion as independent processes
-- [ ] `apm work` without `--daemon` retains existing behaviour: exits when the queue is exhausted and all workers finish
+- [x] `apm work` without `--daemon` retains existing behaviour: exits when the queue is exhausted and all workers finish
 - [ ] `apm work --daemon --dry-run` exits immediately with an error message
 
 ### Out of scope
