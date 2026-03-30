@@ -1,10 +1,20 @@
 use anyhow::Result;
 use apm_core::{config::Config, ticket};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-const IDLE_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
+fn log(msg: &str) {
+    let ts = chrono::Local::now().format("%H:%M:%S");
+    println!("[{ts}] {msg}");
+}
 
-pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
+pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, interval_secs: u64) -> Result<()> {
+    if daemon && dry_run {
+        anyhow::bail!("--daemon and --dry-run cannot be used together");
+    }
+
     let config = Config::load(root)?;
     let max_concurrent = config.agents.max_concurrent.max(1);
 
@@ -12,52 +22,99 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool) -> Result<()> {
         return run_dry(root, &config);
     }
 
+    let interrupted = Arc::new(AtomicBool::new(false));
+    let interrupted_clone = Arc::clone(&interrupted);
+    let _ = ctrlc::set_handler(move || {
+        interrupted_clone.store(true, Ordering::Relaxed);
+    });
+
     let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut started_ids: Vec<String> = Vec::new();
-    let mut last_poll_empty = false;
+    let mut no_more = false;
+    // next_poll only used in daemon mode
+    let mut next_poll = Instant::now();
 
     loop {
-        // Reap finished workers.
-        let before = workers.len();
-        workers.retain_mut(|(_, child, pid_path)| {
-            let done = matches!(child.try_wait(), Ok(Some(_)));
-            if done {
-                let _ = std::fs::remove_file(pid_path);
+        if interrupted.load(Ordering::Relaxed) {
+            if daemon {
+                log("Daemon interrupted, stopping");
             }
-            !done
-        });
-        if workers.len() < before {
-            last_poll_empty = false;
-        }
-
-        if workers.is_empty() && last_poll_empty {
             break;
         }
 
-        if workers.len() < max_concurrent {
+        // Reap finished workers.
+        let mut reaped = false;
+        workers.retain_mut(|(id, child, pid_path)| {
+            let done = matches!(child.try_wait(), Ok(Some(_)));
+            if done {
+                log(&format!("Worker for ticket #{id} finished"));
+                let _ = std::fs::remove_file(pid_path);
+                reaped = true;
+            }
+            !done
+        });
+
+        // In daemon mode: a reaped worker opens a slot — check immediately.
+        if daemon && reaped {
+            next_poll = Instant::now();
+            no_more = false;
+        }
+
+        if !daemon && no_more && workers.is_empty() {
+            break;
+        }
+
+        // In daemon mode: if no_more and not yet time to poll again, sleep and continue.
+        if daemon && no_more {
+            let now = Instant::now();
+            if now < next_poll {
+                std::thread::sleep(Duration::from_millis(500));
+                continue;
+            }
+            // Poll interval elapsed — try again.
+            no_more = false;
+        }
+
+        if !no_more && workers.len() < max_concurrent {
             match super::start::spawn_next_worker(root, true, skip_permissions) {
+                Ok(None) => {
+                    if daemon {
+                        let secs = interval_secs;
+                        log(&format!("No actionable tickets; next check in {secs}s"));
+                        next_poll = Instant::now() + Duration::from_secs(interval_secs);
+                    }
+                    no_more = true;
+                }
                 Ok(Some((id, child, pid_path))) => {
+                    log(&format!(
+                        "Dispatched worker for ticket #{id}"
+                    ));
                     started_ids.push(id.clone());
                     workers.push((id, child, pid_path));
-                    last_poll_empty = false;
-                }
-                Ok(None) => {
-                    last_poll_empty = true;
-                    std::thread::sleep(IDLE_POLL_INTERVAL);
+                    no_more = false;
                 }
                 Err(e) => {
                     eprintln!("warning: dispatch failed: {e:#}");
-                    last_poll_empty = true;
-                    std::thread::sleep(IDLE_POLL_INTERVAL);
+                    no_more = true;
+                    std::thread::sleep(Duration::from_secs(30));
                 }
             }
         } else {
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            std::thread::sleep(Duration::from_millis(500));
         }
     }
 
+    // Wait for all remaining workers in non-daemon mode (they were already
+    // reaped in the loop above for daemon mode; non-daemon exits when empty).
+    // In daemon mode workers run independently — we just stop dispatching.
+
     if started_ids.is_empty() {
         println!("No tickets to work.");
+        return Ok(());
+    }
+
+    if daemon {
+        // Don't print summary — workers are still running independently.
         return Ok(());
     }
 
@@ -120,4 +177,29 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn daemon_dry_run_is_error() {
+        // We can't call run() against a real git repo here, but we can verify
+        // the guard fires before any I/O by passing a non-existent path and
+        // ensuring the error message mentions the flag combination.
+        let result = run(
+            std::path::Path::new("/nonexistent"),
+            false,
+            true,  // dry_run
+            true,  // daemon
+            30,
+        );
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("--daemon") && msg.contains("--dry-run"),
+            "unexpected error: {msg}"
+        );
+    }
 }

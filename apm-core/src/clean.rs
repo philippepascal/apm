@@ -3,6 +3,14 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const KNOWN_TEMP_FILES: &[&str] = &[
+    "pr-body.md",
+    "body.md",
+    "ac.txt",
+    ".apm-worker.pid",
+    ".apm-worker.log",
+];
+
 pub struct CleanCandidate {
     pub ticket_id: String,
     pub ticket_title: String,
@@ -12,7 +20,78 @@ pub struct CleanCandidate {
     pub local_branch_exists: bool,
 }
 
-pub fn candidates(root: &Path, config: &Config) -> Result<Vec<CleanCandidate>> {
+pub struct DirtyWorktree {
+    pub ticket_id: String,
+    pub ticket_title: String,
+    pub branch: String,
+    pub path: PathBuf,
+    pub local_branch_exists: bool,
+    pub known_temp: Vec<PathBuf>,
+    pub other_untracked: Vec<PathBuf>,
+    pub modified_tracked: Vec<PathBuf>,
+}
+
+pub fn diagnose_worktree(
+    path: &Path,
+    ticket_id: &str,
+    ticket_title: &str,
+    branch: &str,
+    local_branch_exists: bool,
+) -> Result<DirtyWorktree> {
+    let out = Command::new("git")
+        .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
+        .output()?;
+    let stdout = String::from_utf8_lossy(&out.stdout);
+
+    let mut known_temp = Vec::new();
+    let mut other_untracked = Vec::new();
+    let mut modified_tracked = Vec::new();
+
+    for line in stdout.lines() {
+        if line.len() < 3 {
+            continue;
+        }
+        let xy = &line[..2];
+        let file = line[3..].trim();
+        let filename = std::path::Path::new(file)
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+
+        if xy == "??" {
+            if KNOWN_TEMP_FILES.contains(&filename.as_str()) {
+                known_temp.push(PathBuf::from(file));
+            } else {
+                other_untracked.push(PathBuf::from(file));
+            }
+        } else {
+            modified_tracked.push(PathBuf::from(file));
+        }
+    }
+
+    Ok(DirtyWorktree {
+        ticket_id: ticket_id.to_string(),
+        ticket_title: ticket_title.to_string(),
+        branch: branch.to_string(),
+        path: path.to_path_buf(),
+        local_branch_exists,
+        known_temp,
+        other_untracked,
+        modified_tracked,
+    })
+}
+
+pub fn remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()> {
+    for file in files {
+        let full_path = wt_path.join(file);
+        if full_path.exists() {
+            std::fs::remove_file(&full_path)?;
+        }
+    }
+    Ok(())
+}
+
+pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
     let mut terminal_states: std::collections::HashSet<String> = config
         .workflow
         .states
@@ -28,6 +107,7 @@ pub fn candidates(root: &Path, config: &Config) -> Result<Vec<CleanCandidate>> {
     let merged_set: std::collections::HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
 
     let mut result = Vec::new();
+    let mut dirty_result = Vec::new();
 
     for t in &tickets {
         if !terminal_states.contains(t.frontmatter.state.as_str()) {
@@ -97,14 +177,24 @@ pub fn candidates(root: &Path, config: &Config) -> Result<Vec<CleanCandidate>> {
                 .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
                 .output();
             let dirty = match out {
-                Ok(o) => !o.stdout.is_empty(),
+                Ok(ref o) => !o.stdout.is_empty(),
                 Err(_) => false,
             };
             if dirty {
-                eprintln!(
-                    "warning: {} has uncommitted changes — skipping",
-                    path.display()
-                );
+                let lbe = Command::new("git")
+                    .args([
+                        "-C",
+                        &root.to_string_lossy(),
+                        "rev-parse",
+                        "--verify",
+                        &format!("refs/heads/{branch}"),
+                    ])
+                    .output()
+                    .map(|o| o.status.success())
+                    .unwrap_or(false);
+                let diagnosis =
+                    diagnose_worktree(path, &id, &t.frontmatter.title, &branch, lbe)?;
+                dirty_result.push(diagnosis);
                 continue;
             }
         }
@@ -135,7 +225,7 @@ pub fn candidates(root: &Path, config: &Config) -> Result<Vec<CleanCandidate>> {
         });
     }
 
-    Ok(result)
+    Ok((result, dirty_result))
 }
 
 pub fn remove(root: &Path, candidate: &CleanCandidate) -> Result<()> {

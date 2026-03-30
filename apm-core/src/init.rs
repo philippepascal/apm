@@ -314,6 +314,53 @@ fn ensure_worktrees_dir(root: &Path) -> Result<()> {
     Ok(())
 }
 
+pub fn setup_docker(root: &Path) -> Result<()> {
+    let apm_dir = root.join(".apm");
+    std::fs::create_dir_all(&apm_dir)?;
+    let dockerfile_path = apm_dir.join("Dockerfile.apm-worker");
+    if dockerfile_path.exists() {
+        println!(".apm/Dockerfile.apm-worker already exists — not overwriting.");
+        return Ok(());
+    }
+    std::fs::write(&dockerfile_path, DOCKERFILE_TEMPLATE)?;
+    println!("Created .apm/Dockerfile.apm-worker");
+    println!();
+    println!("Next steps:");
+    println!("  1. Review .apm/Dockerfile.apm-worker and add project-specific dependencies.");
+    println!("  2. Build the image:");
+    println!("       docker build -f .apm/Dockerfile.apm-worker -t apm-worker .");
+    println!("  3. Add to .apm/config.toml:");
+    println!("       [workers]");
+    println!("       container = \"apm-worker\"");
+    println!("  4. Configure credential lookup (optional, macOS only):");
+    println!("       [workers.keychain]");
+    println!("       ANTHROPIC_API_KEY = \"anthropic-api-key\"");
+    Ok(())
+}
+
+const DOCKERFILE_TEMPLATE: &str = r#"FROM rust:1.82-slim
+
+# System tools
+RUN apt-get update && apt-get install -y \
+    curl git unzip ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Claude CLI
+RUN curl -fsSL https://storage.googleapis.com/anthropic-claude-cli/install.sh | sh
+
+# apm binary (replace with your version or a downloaded release)
+COPY target/release/apm /usr/local/bin/apm
+
+# Add project-specific dependencies here:
+# RUN apt-get install -y nodejs npm   # for Node projects
+# RUN pip install -r requirements.txt # for Python projects
+
+# gh CLI is NOT needed — the worker only runs local git commits;
+# push and PR creation happen on the host via apm state <id> implemented.
+
+WORKDIR /workspace
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -444,5 +491,30 @@ mod tests {
 
         // Should not panic or error
         migrate(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn setup_docker_creates_dockerfile() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup_docker(tmp.path()).unwrap();
+        let dockerfile = tmp.path().join(".apm/Dockerfile.apm-worker");
+        assert!(dockerfile.exists());
+        let contents = std::fs::read_to_string(&dockerfile).unwrap();
+        assert!(contents.contains("FROM rust:1.82-slim"));
+        assert!(contents.contains("claude"));
+        assert!(!contents.contains("gh CLI") || contents.contains("NOT needed"));
+    }
+
+    #[test]
+    fn setup_docker_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup_docker(tmp.path()).unwrap();
+        let before = std::fs::read_to_string(tmp.path().join(".apm/Dockerfile.apm-worker")).unwrap();
+        // Second call should not overwrite
+        setup_docker(tmp.path()).unwrap();
+        let after = std::fs::read_to_string(tmp.path().join(".apm/Dockerfile.apm-worker")).unwrap();
+        assert_eq!(before, after);
     }
 }

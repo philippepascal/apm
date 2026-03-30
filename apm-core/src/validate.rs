@@ -127,6 +127,25 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     errors
 }
 
+pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if let Some(container) = &config.workers.container {
+        if !container.is_empty() {
+            let docker_ok = std::process::Command::new("docker")
+                .arg("--version")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+            if !docker_ok {
+                warnings.push(
+                    "workers.container is set but 'docker' is not in PATH".to_string()
+                );
+            }
+        }
+    }
+    warnings
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -548,5 +567,36 @@ label = "New"
         let config = load_config(toml);
         let ids = state_ids(&config);
         assert!(ids.contains("new"));
+    }
+
+    #[test]
+    fn validate_warnings_no_container() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        let warnings = super::validate_warnings(&config);
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn validate_warnings_empty_container() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+container = ""
+"#;
+        let config = load_config(toml);
+        let warnings = super::validate_warnings(&config);
+        assert!(warnings.is_empty(), "empty container string should not warn");
     }
 }

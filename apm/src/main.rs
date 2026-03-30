@@ -58,6 +58,9 @@ that need to be moved into .apm/.")]
         /// Migrate root-level apm.toml and apm.agents.md to .apm/
         #[arg(long)]
         migrate: bool,
+        /// Generate .apm/Dockerfile.apm-worker and print build instructions
+        #[arg(long)]
+        with_docker: bool,
     },
     /// List tickets
     #[command(long_about = "List tickets (read-only query).
@@ -441,10 +444,17 @@ spawning any subprocesses — useful to preview the work queue.
 
 -P passes --dangerously-skip-permissions to every spawned worker.
 
+--daemon keeps the process alive after the queue is exhausted, polling at
+--interval seconds (default 30) and dispatching new workers as slots open
+or tickets become actionable. Ctrl-C stops the daemon; already-running
+workers continue independently.
+
 Example:
-  apm work --dry-run    # preview
-  apm work              # run with normal permissions
-  apm work -P           # run with skipped permissions")]
+  apm work --dry-run           # preview
+  apm work                     # run with normal permissions
+  apm work -P                  # run with skipped permissions
+  apm work --daemon            # run forever, poll every 30s
+  apm work --daemon --interval 60  # poll every 60s")]
     Work {
         /// Pass --dangerously-skip-permissions to spawned workers
         #[arg(long, short = 'P')]
@@ -452,6 +462,12 @@ Example:
         /// Print which tickets would be started without dispatching
         #[arg(long)]
         dry_run: bool,
+        /// Keep running after the queue is exhausted; re-check as slots open
+        #[arg(long, short = 'd')]
+        daemon: bool,
+        /// Poll interval in seconds when running as a daemon (default: 30)
+        #[arg(long, default_value = "30")]
+        interval: u64,
     },
     /// Force-close a ticket from any state (supervisor only)
     #[command(long_about = "Force-close a ticket from any state (supervisor only).
@@ -486,11 +502,15 @@ The remote branch is not deleted.
 Always run --dry-run first to see exactly what would be removed before
 committing to the operation:
   apm clean --dry-run    # preview
-  apm clean              # actually remove")]
+  apm clean              # actually remove
+  apm clean --yes        # auto-confirm all removal prompts (for scripts)")]
     Clean {
         /// Print what would be removed without modifying anything
         #[arg(long)]
         dry_run: bool,
+        /// Auto-confirm all removal prompts without reading stdin
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
     /// List and manage running worker processes
     Workers {
@@ -568,7 +588,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
-        Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
+        Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, &id, no_aggressive),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
@@ -594,9 +614,9 @@ fn main() -> Result<()> {
         Command::Validate { fix, json, config_only } => cmd::validate::run(&root, fix, json, config_only),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
-        Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
+        Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
         Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
-        Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
+        Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
         Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
     }

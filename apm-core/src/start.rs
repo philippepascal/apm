@@ -23,6 +23,86 @@ pub fn resolve_agent_name() -> String {
         .unwrap_or_else(|_| "apm".to_string())
 }
 
+fn git_config_value(root: &Path, key: &str) -> Option<String> {
+    std::process::Command::new("git")
+        .args(["config", key])
+        .current_dir(root)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+fn spawn_container_worker(
+    root: &Path,
+    wt: &Path,
+    image: &str,
+    keychain: &std::collections::HashMap<String, String>,
+    worker_name: &str,
+    worker_system: &str,
+    ticket_content: &str,
+    skip_permissions: bool,
+    log_path: &Path,
+) -> anyhow::Result<std::process::Child> {
+    let api_key = crate::credentials::resolve(
+        "ANTHROPIC_API_KEY",
+        keychain.get("ANTHROPIC_API_KEY").map(|s| s.as_str()),
+    )?;
+
+    let author_name = std::env::var("GIT_AUTHOR_NAME").ok()
+        .filter(|v| !v.is_empty())
+        .or_else(|| git_config_value(root, "user.name"))
+        .unwrap_or_default();
+    let author_email = std::env::var("GIT_AUTHOR_EMAIL").ok()
+        .filter(|v| !v.is_empty())
+        .or_else(|| git_config_value(root, "user.email"))
+        .unwrap_or_default();
+    let committer_name = std::env::var("GIT_COMMITTER_NAME").ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| author_name.clone());
+    let committer_email = std::env::var("GIT_COMMITTER_EMAIL").ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| author_email.clone());
+
+    let mut cmd = std::process::Command::new("docker");
+    cmd.arg("run");
+    cmd.arg("--rm");
+    cmd.args(["--volume", &format!("{}:/workspace", wt.display())]);
+    cmd.args(["--workdir", "/workspace"]);
+    cmd.args(["--env", &format!("ANTHROPIC_API_KEY={api_key}")]);
+    if !author_name.is_empty() {
+        cmd.args(["--env", &format!("GIT_AUTHOR_NAME={author_name}")]);
+    }
+    if !author_email.is_empty() {
+        cmd.args(["--env", &format!("GIT_AUTHOR_EMAIL={author_email}")]);
+    }
+    if !committer_name.is_empty() {
+        cmd.args(["--env", &format!("GIT_COMMITTER_NAME={committer_name}")]);
+    }
+    if !committer_email.is_empty() {
+        cmd.args(["--env", &format!("GIT_COMMITTER_EMAIL={committer_email}")]);
+    }
+    cmd.args(["--env", &format!("APM_AGENT_NAME={worker_name}")]);
+    cmd.arg(image);
+    cmd.arg("claude");
+    cmd.arg("--print");
+    cmd.args(["--system-prompt", worker_system]);
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
+    }
+    cmd.arg(ticket_content);
+
+    let log_file = std::fs::File::create(log_path)?;
+    let log_clone = log_file.try_clone()?;
+    cmd.stdout(log_file);
+    cmd.stderr(log_clone);
+
+    let child = cmd.spawn()?;
+    Ok(child)
+}
+
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -161,22 +241,36 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let log_path = wt_display.join(".apm-worker.log");
 
-    let mut cmd = std::process::Command::new("claude");
-    cmd.arg("--print");
-    cmd.args(["--system-prompt", &worker_system]);
-    if skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-    cmd.arg(&ticket_content);
-    cmd.env("APM_AGENT_NAME", &worker_name);
-    cmd.current_dir(&wt_display);
+    let mut child = if let Some(image) = &config.workers.container {
+        spawn_container_worker(
+            root,
+            &wt_display,
+            image,
+            &config.workers.keychain,
+            &worker_name,
+            &worker_system,
+            &ticket_content,
+            skip_permissions,
+            &log_path,
+        )?
+    } else {
+        let mut cmd = std::process::Command::new("claude");
+        cmd.arg("--print");
+        cmd.args(["--system-prompt", &worker_system]);
+        if skip_permissions {
+            cmd.arg("--dangerously-skip-permissions");
+        }
+        cmd.arg(&ticket_content);
+        cmd.env("APM_AGENT_NAME", &worker_name);
+        cmd.current_dir(&wt_display);
 
-    let log_file = std::fs::File::create(&log_path)?;
-    let log_clone = log_file.try_clone()?;
-    cmd.stdout(log_file);
-    cmd.stderr(log_clone);
+        let log_file = std::fs::File::create(&log_path)?;
+        let log_clone = log_file.try_clone()?;
+        cmd.stdout(log_file);
+        cmd.stderr(log_clone);
 
-    let mut child = cmd.spawn()?;
+        cmd.spawn()?
+    };
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -306,22 +400,37 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
-    let mut cmd = std::process::Command::new("claude");
-    cmd.arg("--print");
-    cmd.args(["--system-prompt", &worker_system]);
-    if skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-    cmd.arg(&ticket_content);
-    cmd.env("APM_AGENT_NAME", &worker_name);
-    cmd.current_dir(&wt_display);
 
-    let log_file = std::fs::File::create(&log_path)?;
-    let log_clone = log_file.try_clone()?;
-    cmd.stdout(log_file);
-    cmd.stderr(log_clone);
+    let mut child = if let Some(image) = &config.workers.container {
+        spawn_container_worker(
+            root,
+            &wt_display,
+            image,
+            &config.workers.keychain,
+            &worker_name,
+            &worker_system,
+            &ticket_content,
+            skip_permissions,
+            &log_path,
+        )?
+    } else {
+        let mut cmd = std::process::Command::new("claude");
+        cmd.arg("--print");
+        cmd.args(["--system-prompt", &worker_system]);
+        if skip_permissions {
+            cmd.arg("--dangerously-skip-permissions");
+        }
+        cmd.arg(&ticket_content);
+        cmd.env("APM_AGENT_NAME", &worker_name);
+        cmd.current_dir(&wt_display);
 
-    let mut child = cmd.spawn()?;
+        let log_file = std::fs::File::create(&log_path)?;
+        let log_clone = log_file.try_clone()?;
+        cmd.stdout(log_file);
+        cmd.stderr(log_clone);
+
+        cmd.spawn()?
+    };
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -446,22 +555,37 @@ pub fn spawn_next_worker(
     let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
-    let mut cmd = std::process::Command::new("claude");
-    cmd.arg("--print");
-    cmd.args(["--system-prompt", &worker_system]);
-    if skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-    cmd.arg(&ticket_content);
-    cmd.env("APM_AGENT_NAME", &worker_name);
-    cmd.current_dir(&wt_display);
 
-    let log_file = std::fs::File::create(&log_path)?;
-    let log_clone = log_file.try_clone()?;
-    cmd.stdout(log_file);
-    cmd.stderr(log_clone);
+    let child = if let Some(image) = &config.workers.container {
+        spawn_container_worker(
+            root,
+            &wt_display,
+            image,
+            &config.workers.keychain,
+            &worker_name,
+            &worker_system,
+            &ticket_content,
+            skip_permissions,
+            &log_path,
+        )?
+    } else {
+        let mut cmd = std::process::Command::new("claude");
+        cmd.arg("--print");
+        cmd.args(["--system-prompt", &worker_system]);
+        if skip_permissions {
+            cmd.arg("--dangerously-skip-permissions");
+        }
+        cmd.arg(&ticket_content);
+        cmd.env("APM_AGENT_NAME", &worker_name);
+        cmd.current_dir(&wt_display);
 
-    let child = cmd.spawn()?;
+        let log_file = std::fs::File::create(&log_path)?;
+        let log_clone = log_file.try_clone()?;
+        cmd.stdout(log_file);
+        cmd.stderr(log_clone);
+
+        cmd.spawn()?
+    };
     let pid = child.id();
 
     let mut t_pid = t.clone();
