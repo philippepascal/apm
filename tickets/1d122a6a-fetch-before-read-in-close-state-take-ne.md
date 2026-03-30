@@ -55,7 +55,7 @@ Write commands fetch/push the specific ticket branch. Read-only commands use `gi
 
 ### Acceptance criteria
 
-- [ ] `apm next` fetches all remote branches before reading ticket state when aggressive mode is on
+- [x] `apm next` fetches all remote branches before reading ticket state when aggressive mode is on
 - [ ] `apm list` fetches all remote branches before reading ticket state when aggressive mode is on
 - [ ] `apm close` fetches the ticket branch before reading and pushes after writing when aggressive mode is on
 - [ ] `apm take` fetches the ticket branch before reading (in addition to the existing push after write) when aggressive mode is on
