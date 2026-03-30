@@ -100,6 +100,13 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
     Ok(tickets)
 }
 
+/// Read a ticket's state from a specific branch by relative path.
+pub fn state_from_branch(root: &Path, branch: &str, rel_path: &str) -> Option<String> {
+    let content = crate::git::read_from_branch(root, branch, rel_path).ok()?;
+    let dummy = root.join(rel_path);
+    Ticket::parse(&dummy, &content).ok().map(|t| t.frontmatter.state)
+}
+
 /// Close a ticket from any state.  Commits the change to the ticket branch,
 /// pushes it (non-fatal if no remote), then merges into the default branch
 /// so that `apm clean` can detect and remove the worktree.

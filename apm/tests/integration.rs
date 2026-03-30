@@ -1426,3 +1426,210 @@ fn review_ammend_normalises_plain_bullets_to_checkboxes() {
     assert!(committed.contains("- [ ] already a checkbox"), "existing checkbox should be unchanged");
     assert!(committed.contains("- [x] already checked"), "checked item should be unchanged");
 }
+
+// ── apm clean ────────────────────────────────────────────────────────────────
+
+/// Write a closed ticket to a branch. Returns the branch name and rel_path.
+fn write_closed_ticket(dir: &std::path::Path, id: u32, slug: &str) -> (String, String) {
+    let branch = format!("ticket/{id:04}-{slug}");
+    let filename = format!("{id:04}-{slug}.md");
+    let rel_path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"{slug}\"\nstate = \"closed\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", &branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", &branch]);
+    } else {
+        git(dir, &["checkout", &branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&rel_path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({id}): close")]);
+    git(dir, &["checkout", "main"]);
+    (branch, rel_path)
+}
+
+/// Merge a branch into main via --no-ff.
+fn merge_into_main(dir: &std::path::Path, branch: &str) {
+    git(dir, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch, "-m", &format!("Merge {branch}")]);
+}
+
+fn branch_exists(dir: &std::path::Path, branch: &str) -> bool {
+    std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[test]
+fn clean_happy_path_removes_closed_branch() {
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "done");
+    merge_into_main(p, &branch);
+
+    apm::cmd::clean::run(p, false).unwrap();
+
+    assert!(!branch_exists(p, &branch), "branch should have been removed");
+}
+
+#[test]
+fn clean_dry_run_includes_state_in_output() {
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "dry");
+    merge_into_main(p, &branch);
+
+    // dry_run=true should not actually delete anything
+    apm::cmd::clean::run(p, true).unwrap();
+
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
+}
+
+#[test]
+fn clean_skips_ticket_not_on_main() {
+    // Ticket branch is "merged" via -s ours (tip reachable from main),
+    // but the ticket file is NOT present on main — should warn and skip.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "ghost");
+
+    // -s ours: makes branch tip reachable from main without bringing content
+    git(p, &["-c", "commit.gpgsign=false", "merge", "-s", "ours", &branch, "-m", "ours merge"]);
+
+    apm::cmd::clean::run(p, false).unwrap();
+
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed — ticket not on main");
+}
+
+#[test]
+fn clean_skips_state_mismatch_between_branch_and_main() {
+    // Ticket is closed on branch and merged into main. Then main's copy
+    // gets updated to a different state (simulating a buggy sync). Clean should
+    // detect the mismatch and skip.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, rel_path) = write_closed_ticket(p, 1, "mismatch");
+    merge_into_main(p, &branch);
+
+    // Overwrite the ticket on main to a different state
+    let main_content = "+++\nid = 1\ntitle = \"mismatch\"\nstate = \"new\"\nbranch = \"ticket/0001-mismatch\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+    std::fs::write(p.join(&rel_path), main_content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "update ticket state on main"]);
+
+    apm::cmd::clean::run(p, false).unwrap();
+
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed — state mismatch");
+}
+
+#[test]
+fn clean_treats_closed_as_terminal_without_config_entry() {
+    // Config has no "closed" state entry at all, but clean should still treat it as terminal.
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    // Config with no terminal states defined
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 1
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+"#,
+    ).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    let (branch, _) = write_closed_ticket(p, 1, "no-terminal-config");
+    merge_into_main(p, &branch);
+
+    apm::cmd::clean::run(p, false).unwrap();
+
+    assert!(!branch_exists(p, &branch), "closed should be treated as terminal even without config entry");
+}
+
+#[test]
+fn clean_skips_local_tip_ahead_of_remote() {
+    // Set up a bare remote, clone from it, merge a closed ticket, then make an
+    // extra local commit so local tip ≠ remote tip. Clean should skip.
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["clone", &bp.to_string_lossy(), "."]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 1
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    ).unwrap();
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    git(p, &["push", "origin", "main"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    // Create closed ticket branch, merge into main, push both
+    let (branch, _) = write_closed_ticket(p, 1, "diverged");
+    git(p, &["push", "origin", &branch]);
+    merge_into_main(p, &branch);
+    git(p, &["push", "origin", "main"]);
+
+    // Now make an extra commit on the ticket branch (without pushing)
+    git(p, &["checkout", &branch]);
+    std::fs::write(p.join("tickets/0001-diverged.md"), "extra change").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "tickets/0001-diverged.md"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "extra local commit"]);
+    git(p, &["checkout", "main"]);
+
+    // Local tip ≠ remote tip → should skip
+    apm::cmd::clean::run(p, false).unwrap();
+
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
+}

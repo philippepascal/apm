@@ -552,6 +552,27 @@ pub fn commit_files_to_branch(
     result
 }
 
+/// Get the commit SHA at the tip of a local branch.
+pub fn branch_tip(root: &Path, branch: &str) -> Option<String> {
+    run(root, &["rev-parse", &format!("refs/heads/{branch}")]).ok()
+}
+
+/// Get the commit SHA at the tip of the remote tracking ref for a branch.
+pub fn remote_branch_tip(root: &Path, branch: &str) -> Option<String> {
+    run(root, &["rev-parse", &format!("refs/remotes/origin/{branch}")]).ok()
+}
+
+/// Check if `commit` is a git ancestor of `of_ref` (i.e. reachable from `of_ref`).
+/// Uses `git merge-base --is-ancestor`.
+pub fn is_ancestor(root: &Path, commit: &str, of_ref: &str) -> bool {
+    Command::new("git")
+        .current_dir(root)
+        .args(["merge-base", "--is-ancestor", commit, of_ref])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
     let status = std::process::Command::new("git")
         .args(["fetch", "origin", branch])
