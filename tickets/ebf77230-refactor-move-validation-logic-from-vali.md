@@ -1,14 +1,15 @@
 +++
 id = "ebf77230"
 title = "refactor: move validation logic from validate.rs and verify.rs into apm-core"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "claude-0330-0245-main"
+agent = "claude-0330-0245-main"
 branch = "ticket/ebf77230-refactor-move-validation-logic-from-vali"
 created_at = "2026-03-30T14:27:38.346647Z"
-updated_at = "2026-03-30T14:27:38.346647Z"
+updated_at = "2026-03-30T14:29:08.315734Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T14:27Z | — | new | claude-0330-0245-main |
+| 2026-03-30T14:29Z | new | in_design | claude-0330-0245-main |
