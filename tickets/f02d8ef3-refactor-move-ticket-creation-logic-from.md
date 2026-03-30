@@ -55,7 +55,57 @@ Target state: \`apm_core::ticket::create()\` encapsulates all creation logic and
 
 ### Approach
 
-How the implementation will work.
+**1. Add `create()` to `apm-core/src/ticket.rs`**
+
+```rust
+pub fn create(
+    root: &Path,
+    config: &Config,
+    title: String,
+    author: String,
+    context: Option<String>,
+    context_section: Option<String>,
+    aggressive: bool,
+) -> Result<Ticket>
+```
+
+Move the following logic verbatim from `new.rs` into this function:
+- `id = git::gen_hex_id()`
+- `slug = slugify(&title)`
+- `branch = format!("ticket/{id}-{slug}")`
+- Frontmatter construction (`Frontmatter { ... }`)
+- `body_template` generation (default four sections or custom `config.ticket.sections`)
+- Context injection (resolve section → inject into template)
+- `Ticket { frontmatter, body, path }` construction and `serialize()`
+- `git::commit_to_branch(root, &branch, &rel_path, &content, ...)`
+- `if aggressive { git::push_branch(...) }`
+
+Return the constructed `Ticket` (before the push, since push is non-fatal).
+
+**2. Rewrite `apm/src/cmd/new.rs`**
+
+Replace the ~100-line body with ~30 lines:
+- Load config
+- Check `side_note` guard (`config.agents.side_tickets`)
+- Resolve `aggressive = config.sync.aggressive && !no_aggressive`
+- Resolve `author` from `APM_AGENT_NAME` env var
+- Call `apm_core::ticket::create(root, &config, title, author, context, context_section, aggressive)?`
+- Print `Created ticket {id}: {filename} (branch: {branch})`
+- Optionally call `open_editor(...)` unchanged
+
+**3. Add a test in `apm-core/tests/`** (or inline in `ticket.rs`)
+
+Integration test using a temp git repo:
+- Call `create()` with a title and verify the returned `Ticket` has the expected state/branch
+- Verify the branch exists in the repo (`git branch --list ticket/*`)
+- Verify `context` injection: call with `context = Some("the context")` and confirm the Problem section contains it
+
+**Order of steps**: Write the core function first, update `new.rs` second, add tests third, run `cargo test --workspace`.
+
+**Constraints**:
+- Do not change `open_editor` in `new.rs` — it is CLI-only and correct as-is
+- `create()` must not depend on `APM_AGENT_NAME` — the caller passes `author` explicitly
+- No new public types needed; return the existing `Ticket` struct
 
 ### Open questions
 
