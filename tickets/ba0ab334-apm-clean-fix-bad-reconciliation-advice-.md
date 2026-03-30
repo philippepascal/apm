@@ -35,7 +35,7 @@ The warning message should be corrected to suggest `apm sync` instead of `apm cl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+The `None` case (ticket not found on main at all) is a separate, distinct scenario not covered by this ticket.
 
 ### Approach
 
