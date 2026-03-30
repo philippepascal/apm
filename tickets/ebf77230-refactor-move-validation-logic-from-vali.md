@@ -48,7 +48,7 @@ format and print results.
 - [x] `apm_core::verify::verify_tickets(config: &Config, tickets: &[Ticket], merged: &HashSet<String>) -> Vec<String>` exists in `apm-core` and returns one issue string per consistency problem found
 - [x] `KNOWN_PRECONDITIONS` and `KNOWN_SIDE_EFFECTS` constants are defined in `apm-core::validate` (not in the CLI crate)
 - [x] All existing unit tests for `validate_config` pass after relocating them to `apm-core`
-- [ ] `apm/src/cmd/validate.rs` calls `apm_core::validate::validate_config` and contains no duplicated validation logic
+- [x] `apm/src/cmd/validate.rs` calls `apm_core::validate::validate_config` and contains no duplicated validation logic
 - [ ] `apm/src/cmd/verify.rs` calls `apm_core::verify::verify_tickets` for issue collection; `apply_fixes` and all output formatting stay in the CLI crate
 - [ ] `cargo test --workspace` passes with no regressions
 
