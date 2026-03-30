@@ -42,7 +42,7 @@ CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 - [x] `apm_core::spec::set_section` parses checklist lines into doc.acceptance_criteria when called with "acceptance criteria"
 - [x] `apm_core::spec::set_section` parses checklist lines into doc.amendment_requests when called with "amendment requests"
 - [x] `apm_core::spec::apply_section_type` with Tasks wraps a bare line in `- [ ] ` prefix
-- [ ] `apm_core::spec::apply_section_type` with Tasks leaves a pre-formatted `- [ ] ` line unchanged
+- [x] `apm_core::spec::apply_section_type` with Tasks leaves a pre-formatted `- [ ] ` line unchanged
 - [ ] `apm_core::spec::apply_section_type` with Qa prefixes a bare line with `**Q:** `
 - [ ] `apm_core::spec::apply_section_type` with Free returns the value unchanged
 - [ ] `apm_core::spec::mark_item` replaces the matching unchecked item with a checked one
