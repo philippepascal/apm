@@ -1,7 +1,7 @@
 +++
 id = 49
 title = "Remove all auto-transitions: state advances via explicit commands only"
-state = "in_progress"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
