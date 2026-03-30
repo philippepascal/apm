@@ -1,7 +1,7 @@
 +++
 id = "18c00750"
 title = "apm work --dry-run: fix agent.is_none() filter and use pick_next"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/18c00750-apm-work-dry-run-fix-agent-is-none-filte"
 created_at = "2026-03-30T06:11:15.954147Z"
-updated_at = "2026-03-30T14:26:40.642217Z"
+updated_at = "2026-03-30T18:08:02.881671Z"
 +++
 
 ## Spec
@@ -86,3 +86,4 @@ its first iteration.
 | 2026-03-30T06:25Z | ready | in_progress | claude-0330-0245-main |
 | 2026-03-30T06:27Z | in_progress | implemented | claude-0329-1200-wkr1 |
 | 2026-03-30T14:26Z | implemented | accepted | apm |
+| 2026-03-30T18:08Z | accepted | closed | apm-sync |
