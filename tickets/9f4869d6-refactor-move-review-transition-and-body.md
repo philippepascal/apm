@@ -29,14 +29,49 @@ Moving the document-manipulation functions into apm_core::review gives apm-serve
 
 ### Acceptance criteria
 
+- [ ] `apm_core::review` is a public module exported from `apm-core/src/lib.rs`
+- [ ] `apm_core::review::split_body` splits a body at `\n## History` (or `## History` at line start) into a `(spec, history)` tuple
+- [ ] `apm_core::review::split_body` returns `(full_body, "")` when no History section is present
+- [ ] `apm_core::review::extract_spec` returns everything after the sentinel line when the sentinel is present
+- [ ] `apm_core::review::extract_spec` strips leading `# ` comment lines as fallback when the sentinel was deleted
+- [ ] `apm_core::review::available_transitions` returns only transitions whose `trigger` does not start with `event:`
+- [ ] `apm_core::review::available_transitions` falls back to all non-terminal, non-current states when no explicit transitions are configured for a state
+- [ ] `apm_core::review::normalize_amendments` converts plain `- ` bullet lines inside `### Amendment requests` to `- [ ] ` checkboxes
+- [ ] `apm_core::review::normalize_amendments` leaves `- [ ]`, `- [x]`, and `- [X]` lines unchanged
+- [ ] `apm_core::review::normalize_amendments` leaves lines outside `### Amendment requests` unchanged
+- [ ] `apm_core::review::apply_review` returns `new_spec` trimmed of trailing whitespace concatenated with `history_section`
+- [ ] `apm/src/cmd/review.rs` imports and delegates to `apm_core::review` for all five moved functions; no duplicate implementations remain in the CLI crate
+- [ ] `apm/src/cmd/review.rs` retains `open_editor`, `build_header`, and `prompt_transition` exclusively
+- [ ] `cargo test --workspace` passes with no regressions
+- [ ] Each moved function has at least one unit test in `apm-core/src/review.rs`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the behaviour of any moved function — this is a pure structural refactor
+- Moving `build_header`, `open_editor`, or `prompt_transition` (these are CLI-only concerns)
+- Adding a public `ReviewTransition` type; callers receive `(to, label, hint)` tuples and can wrap them locally
+- `apm-serve` integration — this ticket only creates the library surface; wiring it into a web handler is a separate ticket
 
 ### Approach
 
-How the implementation will work.
+1. **Create `apm-core/src/review.rs`** with five public functions:
+   - `split_body(body: &str) -> (String, String)` — moved verbatim from `review.rs`
+   - `extract_spec(content: &str) -> String` — moved verbatim; keep the `SENTINEL` constant here too
+   - `available_transitions(config: &Config, current_state: &str) -> Vec<(String, String, String)>` — refactored from `manual_transitions`; returns `(to, label, hint)` tuples so the CLI needs no exported struct
+   - `normalize_amendments(spec: String) -> String` — moved verbatim from `normalise_amendment_checkboxes` (renamed to drop British spelling)
+   - `apply_review(new_spec: &str, history_section: &str) -> String` — thin helper: `format!("{}{}", new_spec.trim_end(), history_section)`
+
+2. **Expose the module**: add `pub mod review;` to `apm-core/src/lib.rs`.
+
+3. **Update `apm/src/cmd/review.rs`**:
+   - Remove the four functions that moved and the `TransitionOption` struct
+   - Keep `TransitionOption` as a private CLI struct built from the tuples returned by `available_transitions`
+   - Replace all call sites to use the `apm_core::review::*` equivalents
+   - Remove the local `SENTINEL` constant; import it from `apm_core::review::SENTINEL` (make it `pub const`)
+
+4. **Add unit tests** in `apm-core/src/review.rs` (inline `#[cfg(test)]` block) covering the happy path and key edge cases for each of the five functions.
+
+5. **Run `cargo test --workspace`** and confirm no regressions before committing.
 
 ### Open questions
 
