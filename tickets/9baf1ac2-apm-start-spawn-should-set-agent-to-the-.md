@@ -25,12 +25,12 @@ worker is handling which ticket.
 
 ### Acceptance criteria
 
-- [ ] After `apm start --spawn <id>`, the ticket's `agent` frontmatter field equals the spawned worker's PID (as a decimal string), not the delegator's `APM_AGENT_NAME`
-- [ ] After `apm start --next --spawn`, the ticket's `agent` frontmatter field equals the spawned worker's PID
-- [ ] `apm list --state in_progress` displays the worker PID in the agent column for spawned tickets, not the delegator's name
-- [ ] The PID update is committed to the ticket branch after the child process is successfully spawned
-- [ ] Non-spawn `apm start <id>` continues to set `agent` to `APM_AGENT_NAME` unchanged
-- [ ] If `cmd.spawn()` fails, no PID update commit is attempted and the error propagates normally
+- [x] After `apm start --spawn <id>`, the ticket's `agent` frontmatter field equals the spawned worker's PID (as a decimal string), not the delegator's `APM_AGENT_NAME`
+- [x] After `apm start --next --spawn`, the ticket's `agent` frontmatter field equals the spawned worker's PID
+- [x] `apm list --state in_progress` displays the worker PID in the agent column for spawned tickets, not the delegator's name
+- [x] The PID update is committed to the ticket branch after the child process is successfully spawned
+- [x] Non-spawn `apm start <id>` continues to set `agent` to `APM_AGENT_NAME` unchanged
+- [x] If `cmd.spawn()` fails, no PID update commit is attempted and the error propagates normally
 
 ### Out of scope
 
