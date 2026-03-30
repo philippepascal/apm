@@ -15,11 +15,18 @@ updated_at = "2026-03-30T16:56:24.264985Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When resolving a ticket ID from a short prefix, APM has two bugs:
+
+1. **Unique prefix not resolved**: `apm review 314` fails with "no ticket matches '0314'" even when exactly one ticket has an ID starting with `314`. The prefix is unique — there is no ambiguity — but APM rejects it instead of resolving it.
+
+2. **Ambiguous prefix error is unhelpful**: When multiple tickets share the same prefix, the error message does not list the candidates. The user has no way to disambiguate without running `apm list` separately and scanning manually.
+
+The correct behaviour:
+- Unique prefix → resolve silently (already works for longer prefixes like `3142`, broken for shorter ones like `314`)
+- Ambiguous prefix → list all matching ticket IDs and titles, ask the user to be more specific
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +41,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
