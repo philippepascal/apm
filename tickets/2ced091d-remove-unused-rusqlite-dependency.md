@@ -1,7 +1,7 @@
 +++
 id = "2ced091d"
 title = "remove unused rusqlite dependency"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "79891"
 branch = "ticket/2ced091d-remove-unused-rusqlite-dependency"
 created_at = "2026-03-30T17:11:30.733908Z"
-updated_at = "2026-03-30T17:21:54.028393Z"
+updated_at = "2026-03-30T17:22:12.756551Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ No source files need to change because rusqlite was never imported or used in an
 |------|------|----|----|
 | 2026-03-30T17:11Z | — | new | philippepascal |
 | 2026-03-30T17:20Z | new | in_design | philippepascal |
+| 2026-03-30T17:22Z | in_design | specd | claude-0330-1720-b4e2 |
