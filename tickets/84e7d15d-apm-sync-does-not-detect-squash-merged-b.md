@@ -36,7 +36,10 @@ Squash-merged tickets are never transitioned to `accepted` and accumulate indefi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Detecting rebase-merged branches (each commit is replayed; `--cherry-pick` already handles this case)
+- Changing how accepted or closed tickets are processed after detection
+- Handling merge conflicts or partial squash merges
+- Performance optimisation of the detection loop
 
 ### Approach
 
