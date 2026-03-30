@@ -49,7 +49,7 @@ blocks `apm-serve` from reusing any of it.
 - [x] `apm set <id> author foo` still returns error "author is immutable"
 - [x] `apm set <id> priority 256` still returns a parse error (u8 overflow)
 - [x] `apm set <id> unknownfield val` still returns error "unknown field: unknownfield"
-- [ ] `apm take <id>` on a ticket with no agent still returns "no agent assigned — use `apm start` instead"
+- [x] `apm take <id>` on a ticket with no agent still returns "no agent assigned — use `apm start` instead"
 - [ ] `apm workers list` shows the same columns (ID, TITLE, PID, STATE, ELAPSED) with identical process monitoring behavior
 - [ ] `apm worktrees` produces identical output
 - [ ] `apm work --dry-run` produces identical output
