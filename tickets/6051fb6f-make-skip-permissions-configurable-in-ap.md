@@ -24,14 +24,26 @@ For unattended operation — cron jobs, `apm work --daemon`, automated pipelines
 
 ### Acceptance criteria
 
+- [ ] `[agents]` in `.apm/config.toml` accepts a `skip_permissions = true` field without parse errors
+- [ ] When `skip_permissions = true` is set, `apm start --spawn <id>` passes `--dangerously-skip-permissions` to the worker without requiring `-P` on the CLI
+- [ ] When `skip_permissions = true` is set, `apm start --next --spawn` passes `--dangerously-skip-permissions` to spawned workers without requiring `-P`
+- [ ] When `skip_permissions = true` is set, `apm work` daemon mode passes `--dangerously-skip-permissions` to all spawned workers without requiring `-P`
+- [ ] Passing `-P` on the CLI continues to work regardless of the config value (logical OR: either source enables the flag)
+- [ ] When the field is absent from config, default is `false` and behaviour is unchanged
+- [ ] Unit test: `skip_permissions` parses correctly in `AgentsConfig` and defaults to `false`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-ticket `skip_permissions` overrides in ticket frontmatter
+- Any change to the semantics of `--dangerously-skip-permissions` itself
+- Interaction with the container/Docker worker path (container workers already bypass the Claude permission model)
 
 ### Approach
 
-How the implementation will work.
+1. Add `skip_permissions: bool` field with `#[serde(default)]` to `AgentsConfig` in `apm-core/src/config.rs`
+2. Update `AgentsConfig::default()` to set `skip_permissions: false`
+3. In `apm-core/src/start.rs`, load `config.agents.skip_permissions` and OR it with the `skip_permissions` parameter in `run()`, `run_next()`, and `spawn_next_worker()` — the effective value is `cli_flag || config.agents.skip_permissions`
+4. Add a unit test in `config.rs` that verifies the field parses to `true` when set and defaults to `false` when absent
 
 ### Open questions
 
