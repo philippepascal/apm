@@ -77,18 +77,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
 
     // Provision permanent worktree.
-    // Worktree dir name: ticket-<id>-<slug> (branch name with / replaced by -)
-    let wt_name = branch.replace('/', "-");
     let worktrees_base = root.join(&config.worktrees.dir);
-    std::fs::create_dir_all(&worktrees_base)?;
-    let wt_path = worktrees_base.join(&wt_name);
-
-    if git::find_worktree_for_branch(root, &branch).is_none() {
-        git::add_worktree(root, &wt_path, &branch)?;
-    }
-
-    let wt_display = git::find_worktree_for_branch(root, &branch)
-        .unwrap_or(wt_path);
+    let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
 
     // Merge the default branch into the ticket branch so the agent starts from current code.
     let remote_ref = format!("origin/{default_branch}");

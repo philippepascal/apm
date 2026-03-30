@@ -145,6 +145,13 @@ pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool) ->
     }
 
     println!("{id}: {old_state} → {new_state}");
+
+    if new_state == "in_design" {
+        let worktrees_base = root.join(&config.worktrees.dir);
+        let wt = git::ensure_worktree(root, &worktrees_base, &branch)?;
+        println!("{}", wt.display());
+    }
+
     Ok(())
 }
 
