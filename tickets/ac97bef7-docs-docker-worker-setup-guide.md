@@ -1,14 +1,15 @@
 +++
 id = "ac97bef7"
 title = "docs: Docker worker setup guide"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/ac97bef7-docs-docker-worker-setup-guide"
 created_at = "2026-03-30T19:55:27.882184Z"
-updated_at = "2026-03-30T19:55:27.882184Z"
+updated_at = "2026-03-30T20:00:35.089582Z"
 +++
 
 ## Spec
@@ -51,3 +52,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T19:55Z | — | new | philippepascal |
+| 2026-03-30T20:00Z | new | in_design | philippepascal |
