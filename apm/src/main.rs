@@ -22,13 +22,16 @@ enum Command {
     },
     /// List tickets
     List {
+        /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
         state: Option<String>,
+        /// Show only tickets with no agent assigned
         #[arg(long)]
         unassigned: bool,
         /// Include terminal-state tickets (e.g. closed)
         #[arg(long)]
         all: bool,
+        /// Filter by supervisor name
         #[arg(long)]
         supervisor: Option<String>,
         /// Show only tickets actionable by this actor (agent, supervisor, engineer)
@@ -37,13 +40,19 @@ enum Command {
     },
     /// Show a ticket
     Show {
+        /// Ticket ID
+        #[arg(value_name = "ID")]
         id: u32,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
     },
     /// Create a new ticket
     New {
+        /// Short title for the ticket
+        #[arg(value_name = "TITLE")]
         title: String,
+        /// Skip opening $EDITOR after creation
         #[arg(long)]
         no_edit: bool,
         /// Mark this ticket as a side-note (out-of-scope observation)
@@ -55,26 +64,39 @@ enum Command {
         /// Section to route --context into (defaults to first tickets.sections entry or "Problem")
         #[arg(long)]
         context_section: Option<String>,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
     },
     /// Transition a ticket's state
     State {
+        /// Ticket ID
+        #[arg(value_name = "ID")]
         id: u32,
+        /// Target state (e.g. in_design, specd, ready, in_progress, implemented, closed)
+        #[arg(value_name = "STATE")]
         state: String,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
     },
     /// Set a field on a ticket
     Set {
+        /// Ticket ID
+        #[arg(value_name = "ID")]
         id: u32,
+        /// Field to update: priority, effort, risk, title, agent, supervisor, branch
+        #[arg(value_name = "FIELD")]
         field: String,
+        /// New value for the field (use "-" to clear agent/supervisor/branch)
+        #[arg(value_name = "VALUE")]
         value: String,
     },
     /// Claim a ticket and check out its branch
     Start {
         /// Ticket ID; omit when using --next
         id: Option<u32>,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
         /// Launch a claude worker subprocess in the background
@@ -89,6 +111,7 @@ enum Command {
     },
     /// Return the highest-priority actionable ticket
     Next {
+        /// Output result as JSON instead of human-readable text
         #[arg(long)]
         json: bool,
     },
@@ -100,6 +123,7 @@ enum Command {
         /// Suppress non-error output
         #[arg(long)]
         quiet: bool,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
         /// Automatically close accepted/stale tickets without prompting
@@ -111,7 +135,10 @@ enum Command {
     },
     /// Take over a ticket from another agent
     Take {
+        /// Ticket ID to take over (must already have an agent assigned)
+        #[arg(value_name = "ID")]
         id: u32,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
     },
@@ -126,10 +153,13 @@ enum Command {
     },
     /// Supervisor: edit ticket spec and optionally transition state
     Review {
+        /// Ticket ID to review
+        #[arg(value_name = "ID")]
         id: u32,
         /// Transition to this state after editing (skips interactive prompt)
         #[arg(long, value_name = "STATE")]
         to: Option<String>,
+        /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
     },
@@ -154,6 +184,8 @@ enum Command {
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook")]
     Hook {
+        /// Name of the git hook being dispatched (e.g. post-merge)
+        #[arg(value_name = "HOOK")]
         hook_name: String,
         /// Extra args passed by git (remote, url) — ignored
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -178,6 +210,8 @@ enum Command {
     },
     /// Read or write individual spec sections of a ticket
     Spec {
+        /// Ticket ID
+        #[arg(value_name = "ID")]
         id: u32,
         /// Section name (e.g. "Problem", "Approach")
         #[arg(long)]
