@@ -35,7 +35,7 @@ CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 
 ### Acceptance criteria
 
-- [ ] `apm_core::spec::get_section` returns the problem text when called with "Problem"
+- [x] `apm_core::spec::get_section` returns the problem text when called with "Problem"
 - [ ] `apm_core::spec::get_section` returns the checklist serialized as markdown when called with "Acceptance criteria"
 - [ ] `apm_core::spec::get_section` returns None when the section name is unknown
 - [ ] `apm_core::spec::set_section` sets doc.problem when called with "problem" (case-insensitive)
