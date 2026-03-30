@@ -15,11 +15,20 @@ updated_at = "2026-03-30T19:55:27.882184Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The Docker sandbox feature (ticket #0038) adds worker isolation via Docker containers, but there is no user-facing documentation explaining how to set it up. The feature involves several manual steps — building an image, configuring `apm.toml`, optionally setting up macOS Keychain entries — that are not obvious from the CLI help text alone.
+
+A `docs/` folder should be established in the repo, and a `docs/docker-workers.md` guide should walk users through the full setup end-to-end:
+
+1. Prerequisites (Docker installed, `apm init --with-docker` to generate the Dockerfile)
+2. Customising `Dockerfile.apm-worker` for the project's language/toolchain
+3. Building the image
+4. Configuring `[workers]` and `[workers.keychain]` in `apm.toml`
+5. Verifying the setup with `apm validate`
+6. Running workers with `apm work` or `apm start --spawn`
+7. Troubleshooting (credential not found, docker not in PATH, container exits immediately)
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +43,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
