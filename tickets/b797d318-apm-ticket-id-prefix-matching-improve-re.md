@@ -37,7 +37,10 @@ The correct behaviour:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Fuzzy or edit-distance matching
+- Changes to the ticket ID format itself
+- Handling of hex-only inputs (4–8 char strings with non-digit hex chars) — those already work correctly
+- New CLI flags or interactive disambiguation prompts
 
 ### Approach
 
