@@ -39,7 +39,7 @@ CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 - [x] `apm_core::spec::get_section` returns the checklist serialized as markdown when called with "Acceptance criteria"
 - [x] `apm_core::spec::get_section` returns None when the section name is unknown
 - [x] `apm_core::spec::set_section` sets doc.problem when called with "problem" (case-insensitive)
-- [ ] `apm_core::spec::set_section` parses checklist lines into doc.acceptance_criteria when called with "acceptance criteria"
+- [x] `apm_core::spec::set_section` parses checklist lines into doc.acceptance_criteria when called with "acceptance criteria"
 - [ ] `apm_core::spec::set_section` parses checklist lines into doc.amendment_requests when called with "amendment requests"
 - [ ] `apm_core::spec::apply_section_type` with Tasks wraps a bare line in `- [ ] ` prefix
 - [ ] `apm_core::spec::apply_section_type` with Tasks leaves a pre-formatted `- [ ] ` line unchanged
