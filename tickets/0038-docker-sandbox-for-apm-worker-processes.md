@@ -81,7 +81,7 @@ current native behaviour unchanged.
   and `apm` (from the project's own binary or a downloaded release); it does
   NOT include `gh` — the worker never pushes or creates PRs; it includes
   commented sections for users to add project-specific dependencies
-- [ ] The worker container is ephemeral: started with `--rm`, no persistent
+- [x] The worker container is ephemeral: started with `--rm`, no persistent
   volumes or named containers
 - [ ] `apm validate` checks: if `[workers] container` is set but `docker` is not
   in PATH, print a warning
