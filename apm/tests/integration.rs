@@ -1297,7 +1297,7 @@ fn work_dry_run_lists_actionable_tickets() {
     write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "ready", 2, "beta");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     // dry-run should succeed without touching worktrees or spawning anything
-    apm::cmd::work::run(p, false, true).unwrap();
+    apm::cmd::work::run(p, false, true, false, 30).unwrap();
 }
 
 #[test]
@@ -1305,7 +1305,7 @@ fn work_dry_run_no_tickets() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::work::run(p, false, true).unwrap();
+    apm::cmd::work::run(p, false, true, false, 30).unwrap();
 }
 
 // --- sync accept ---
