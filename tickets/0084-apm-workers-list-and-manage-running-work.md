@@ -40,7 +40,7 @@ Specifically missing today:
   `.apm-worker.pid` files exist in any active worktree
 - [x] `apm workers --log <id>` tails the last N lines of the worker log for
   ticket `<id>` and follows new output (like `tail -f`)
-- [ ] `apm workers --kill <id>` sends SIGTERM to the worker for ticket `<id>`
+- [x] `apm workers --kill <id>` sends SIGTERM to the worker for ticket `<id>`
   and removes the `.apm-worker.pid` file; prints a confirmation
 - [ ] `apm workers --kill <id>` exits non-zero with a clear message if the
   worker is not running
