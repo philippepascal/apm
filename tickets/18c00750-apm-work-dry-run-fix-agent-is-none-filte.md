@@ -15,7 +15,15 @@ updated_at = "2026-03-30T06:11:15.954147Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`run_dry` in `apm/src/cmd/work.rs` has two issues:
+
+1. It still has the `fm.agent.is_none()` filter that was removed from `next.rs`
+   and `start.rs` — causing it to skip `ready` tickets whose `agent` field was
+   set by spec authorship, and report fewer candidates than will actually be
+   dispatched.
+
+2. It duplicates the candidate-filtering and sorting logic instead of calling
+   `ticket::pick_next`, which was extracted specifically to avoid this drift.
 
 ### Acceptance criteria
 
