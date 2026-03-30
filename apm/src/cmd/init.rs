@@ -4,12 +4,15 @@ use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(root: &Path, no_claude: bool, migrate: bool) -> Result<()> {
+pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool) -> Result<()> {
     if migrate {
         return apm_core::init::migrate(root);
     }
 
     apm_core::init::setup(root)?;
+    if with_docker {
+        apm_core::init::setup_docker(root)?;
+    }
     update_claude_settings(root, no_claude)?;
     update_user_claude_settings()?;
     warn_if_settings_untracked(root);

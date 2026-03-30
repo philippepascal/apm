@@ -1,6 +1,7 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, ticket};
 pub use apm_core::validate::validate_config;
+pub use apm_core::validate::validate_warnings;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::path::Path;
@@ -16,6 +17,7 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool) -> Result<()> 
     let config = Config::load(root)?;
 
     let config_errors = validate_config(&config, root);
+    let config_warnings = validate_warnings(&config);
     let mut ticket_issues: Vec<Issue> = Vec::new();
     let mut tickets_checked = 0usize;
 
@@ -75,6 +77,7 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool) -> Result<()> 
         let out = serde_json::json!({
             "tickets_checked": tickets_checked,
             "config_errors": config_errors,
+            "warnings": config_warnings,
             "errors": ticket_issues,
         });
         println!("{}", serde_json::to_string_pretty(&out)?);
@@ -82,13 +85,17 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool) -> Result<()> 
         for e in &config_errors {
             eprintln!("{e}");
         }
+        for w in &config_warnings {
+            eprintln!("warning: {w}");
+        }
         for e in &ticket_issues {
             println!("error [{}] {}: {}", e.kind, e.subject, e.message);
         }
         println!(
-            "{} tickets checked, {} config errors, {} ticket errors",
+            "{} tickets checked, {} config errors, {} warnings, {} ticket errors",
             tickets_checked,
             config_errors.len(),
+            config_warnings.len(),
             ticket_issues.len(),
         );
     }

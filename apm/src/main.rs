@@ -58,6 +58,9 @@ that need to be moved into .apm/.")]
         /// Migrate root-level apm.toml and apm.agents.md to .apm/
         #[arg(long)]
         migrate: bool,
+        /// Generate .apm/Dockerfile.apm-worker and print build instructions
+        #[arg(long)]
+        with_docker: bool,
     },
     /// List tickets
     #[command(long_about = "List tickets (read-only query).
@@ -568,7 +571,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
-        Command::Init { no_claude, migrate } => cmd::init::run(&root, no_claude, migrate),
+        Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, &id, no_aggressive),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),

@@ -49,6 +49,13 @@ pub struct ProviderConfig {
     pub type_: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct WorkersConfig {
+    pub container: Option<String>,
+    #[serde(default)]
+    pub keychain: std::collections::HashMap<String, String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
@@ -68,6 +75,8 @@ pub struct Config {
     pub logging: LoggingConfig,
     #[serde(default)]
     pub provider: Option<ProviderConfig>,
+    #[serde(default)]
+    pub workers: WorkersConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -339,5 +348,39 @@ actor   = "supervisor"
         assert_eq!(t.completion, CompletionStrategy::None);
         assert!(t.focus_section.is_none());
         assert!(t.context_section.is_none());
+    }
+
+    #[test]
+    fn workers_config_parses() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+container = "apm-worker:latest"
+
+[workers.keychain]
+ANTHROPIC_API_KEY = "anthropic-api-key"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.workers.container.as_deref(), Some("apm-worker:latest"));
+        assert_eq!(config.workers.keychain.get("ANTHROPIC_API_KEY").map(|s| s.as_str()), Some("anthropic-api-key"));
+    }
+
+    #[test]
+    fn workers_config_default() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.workers.container.is_none());
+        assert!(config.workers.keychain.is_empty());
     }
 }
