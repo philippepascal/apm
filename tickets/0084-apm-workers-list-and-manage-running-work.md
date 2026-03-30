@@ -42,7 +42,7 @@ Specifically missing today:
   ticket `<id>` and follows new output (like `tail -f`)
 - [x] `apm workers --kill <id>` sends SIGTERM to the worker for ticket `<id>`
   and removes the `.apm-worker.pid` file; prints a confirmation
-- [ ] `apm workers --kill <id>` exits non-zero with a clear message if the
+- [x] `apm workers --kill <id>` exits non-zero with a clear message if the
   worker is not running
 - [ ] Stale `.apm-worker.pid` files (PID no longer alive) are detected and
   reported as "crashed" in `apm workers` output rather than silently skipped
