@@ -4,12 +4,12 @@ title = "apm edit"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 agent = "14429"
 branch = "ticket/8c5dc732-apm-edit"
 created_at = "2026-03-30T16:11:04.170762Z"
-updated_at = "2026-03-30T16:15:43.948923Z"
+updated_at = "2026-03-30T16:15:46.273111Z"
 +++
 
 ## Spec
