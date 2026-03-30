@@ -4,7 +4,7 @@ use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
-    let new_agent = super::start::resolve_agent_name();
+    let new_agent = apm_core::start::resolve_agent_name();
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -17,6 +17,10 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
 
     let now = Utc::now();
     let result = ticket::handoff(t, &new_agent, now)?;
+    t.frontmatter.agent = Some(new_agent.clone());
+    t.frontmatter.updated_at = Some(now);
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    apm_core::state::append_history(&mut t.body, &old_agent, &new_agent, &when, "handoff");
 
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
