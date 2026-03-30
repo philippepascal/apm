@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "110"
 branch = "ticket/084a6a33-refactor-move-init-setup-logic-from-init"
 created_at = "2026-03-30T14:27:51.779466Z"
-updated_at = "2026-03-30T16:40:34.233829Z"
+updated_at = "2026-03-30T16:53:49.564758Z"
 +++
 
 ## Spec
@@ -80,7 +80,7 @@ The `include_str!("../apm.worker.md")` for `worker.md` references `apm/src/apm.w
 - Copy `apm.worker.md` to `apm-core/src/apm.worker.md` and use `include_str!("apm.worker.md")`
 - Or keep the file in `apm/src/` and use a cross-crate path `include_str!("../../apm/src/apm.worker.md")` from `apm-core/src/init.rs`
 
-Prefer the first option (copy into `apm-core/src/`) to keep `apm-core` self-contained. Delete the copy in `apm/src/` only if nothing else references it.
+Use the first option (copy into `apm-core/src/`) to keep `apm-core` self-contained. Delete the copy in `apm/src/` only if nothing else references it.
 
 **Update `apm-core/src/lib.rs`**
 
@@ -118,9 +118,6 @@ Add a `#[cfg(test)]` block using `tempfile::TempDir`. Each test creates a bare t
 
 
 ### Amendment requests
-
-
-
 ## History
 
 | When | From | To | By |
