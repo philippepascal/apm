@@ -29,15 +29,41 @@ agent), but until then `apm work` should auto-set a fallback name (e.g.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm work` with `APM_AGENT_NAME` unset does not print `warning: dispatch failed: APM_AGENT_NAME is not set`
+- [ ] `apm work` with `APM_AGENT_NAME` unset dispatches workers for actionable tickets without error
+- [ ] Tickets started via `apm work` without `APM_AGENT_NAME` have a non-empty `agent` field in their frontmatter
+- [ ] `apm start <id>` without `APM_AGENT_NAME` still fails with `APM_AGENT_NAME is not set`
+- [ ] `apm start --next` without `APM_AGENT_NAME` still fails with `APM_AGENT_NAME is not set`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Using PID as agent name for workers (covered by ticket `9baf1ac2`)
+- Changing `apm start` or `apm start --next` behaviour for interactive callers
+- Any UI for surfacing the fallback name beyond the existing `Agent name: <name>` print
 
 ### Approach
 
-How the implementation will work.
+**Root cause:** `start::run()` reads `APM_AGENT_NAME` from the environment unconditionally (lines 7–8 in `start.rs`). It is called from three paths: CLI (`main.rs`), `run_next()`, and `spawn_next_worker()`. Only the third path is headless — `spawn_next_worker` already generates a `worker_name` (line 376) but does so *after* calling `run()`, so `run()` fails before that point.
+
+**Fix:** Remove the `APM_AGENT_NAME` read from inside `run()` and instead accept `agent_name: &str` as an explicit parameter. Each call site supplies it:
+
+1. **`start::run()` signature change** (`apm/src/cmd/start.rs`)
+   - Remove `let agent_name = std::env::var("APM_AGENT_NAME").map_err(…)?;` from the top of `run()`
+   - Add `agent_name: &str` as the last parameter
+
+2. **`spawn_next_worker()`** (`apm/src/cmd/start.rs`)
+   - Move the `worker_name` generation (currently line 376, after the `run()` call) to *before* the `run()` call
+   - Pass `&worker_name` to `run()`
+   - Remove the now-duplicate generation further down; reuse the same binding
+
+3. **`run_next()`** (`apm/src/cmd/start.rs`)
+   - Already reads `APM_AGENT_NAME` at line 180 — keep that check, pass `&agent_name` explicitly to `run()`
+
+4. **CLI dispatch** (`apm/src/main.rs`)
+   - For `Command::Start { id: Some(id), … }`: read `APM_AGENT_NAME` from env (bail if missing) and pass to `cmd::start::run()`
+   - The `--next` path delegates entirely to `run_next()`, which handles its own env read
+
+No changes to `work.rs`.
 
 ### Open questions
 
