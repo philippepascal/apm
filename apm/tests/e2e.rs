@@ -231,6 +231,19 @@ fn git_ok(dir: &Path, args: &[&str]) {
     assert!(out.status.success(), "git {:?} failed:\n{}", args, stderr(&out));
 }
 
+/// Check out ticket branch, write a valid spec body, commit, return to main.
+fn write_valid_spec_for_test(dir: &Path, branch: &str, ticket_path: &str) {
+    git_ok(dir, &["checkout", branch]);
+    let existing = std::fs::read_to_string(dir.join(ticket_path)).unwrap();
+    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let frontmatter = &existing[..fm_end];
+    let body = "\n## Spec\n\n### Problem\n\nTest problem.\n\n### Acceptance criteria\n\n- [ ] One criterion\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDirect approach.\n\n## History\n\n| When | From | To | By |\n|------|------|----|-----|\n| 2026-01-01T00:00Z | — | new | test-agent |\n";
+    std::fs::write(dir.join(ticket_path), format!("{frontmatter}{body}")).unwrap();
+    git_ok(dir, &["-c", "commit.gpgsign=false", "add", ticket_path]);
+    git_ok(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "write spec"]);
+    git_ok(dir, &["checkout", "main"]);
+}
+
 fn stdout(out: &Output) -> String {
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
@@ -252,13 +265,13 @@ fn full_ticket_lifecycle() {
     // setup() already ran init. Verify the expected files are in place.
 
     assert!(env.root().join("CLAUDE.md").exists(), "CLAUDE.md missing");
-    assert!(env.root().join("apm.agents.md").exists(), "apm.agents.md missing");
-    assert!(env.root().join("apm.toml").exists(), "apm.toml missing");
-    assert!(env.root().join(".git/hooks/pre-push").exists(), "pre-push hook missing");
-    assert!(env.root().join(".git/hooks/post-merge").exists(), "post-merge hook missing");
+    assert!(env.root().join(".apm/agents.md").exists(), ".apm/agents.md missing");
+    assert!(env.root().join(".apm/config.toml").exists(), ".apm/config.toml missing");
+    assert!(!env.root().join(".git/hooks/pre-push").exists(), "pre-push hook should not be installed");
+    assert!(!env.root().join(".git/hooks/post-merge").exists(), "post-merge hook should not be installed");
 
     let claude = env.read("CLAUDE.md");
-    assert!(claude.contains("@apm.agents.md"), "CLAUDE.md missing @apm.agents.md import");
+    assert!(claude.contains("@.apm/agents.md"), "CLAUDE.md missing @.apm/agents.md import");
 
     // ── Step 2: create a ticket ─────────────────────────────────────────────
     // Agent creates a ticket for the parse_count bug.
@@ -487,22 +500,26 @@ mod tests {
     assert!(!src.contains("- 1"), "merged main still has the bug");
     assert!(src.contains("if input.is_empty()"), "fix not in main after merge");
 
-    // ── Step 11: apm sync detects merged branch → accepted ──────────────────
+    // ── Step 11: apm sync detects merged branch and suggests manual accept ──────
     // --offline skips the remote fetch/push.
     // sync reads tickets from git blobs directly — no working-tree prep needed.
 
     let out = env.apm(&["sync", "--offline"]);
     assert!(out.status.success(), "apm sync failed:\n{}", stderr(&out));
     assert!(
-        stdout(&out).contains("implemented → accepted"),
-        "auto-transition not reported:\n{}",
+        stdout(&out).contains("branch merged"),
+        "merge suggestion not reported:\n{}",
+        stdout(&out)
+    );
+    assert!(
+        stdout(&out).contains("apm state 1 accepted"),
+        "apm state suggestion missing:\n{}",
         stdout(&out)
     );
 
-    // Ticket on main now has state = accepted (committed by sync).
-    let accepted = env.branch_content("main", ticket_path);
-    assert!(accepted.contains("state = \"accepted\""), "main branch ticket not updated to accepted");
-    assert!(accepted.contains("| implemented | accepted |"), "history row missing");
+    // Ticket is still in implemented — no auto-transition.
+    let ticket_after = env.branch_content(branch, ticket_path);
+    assert!(ticket_after.contains("state = \"implemented\""), "state should still be implemented after sync");
 }
 
 // ---------------------------------------------------------------------------
@@ -567,9 +584,10 @@ terminal = true
     git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    // Create a ticket (apm state reads from git blobs — no working-tree prep needed).
+    // Create a ticket and write a valid spec body before transitioning to specd.
     let out = apm_env(p, "test-agent", &["new", "Enforcement test"]);
     assert!(out.status.success());
+    write_valid_spec_for_test(p, "ticket/0001-enforcement-test", "tickets/0001-enforcement-test.md");
 
     // new → specd is allowed.
     let out = apm_env(p, "test-agent", &["state", "1", "specd"]);
@@ -590,6 +608,7 @@ terminal = true
     // new → specd → ready via defined transitions (need a fresh ticket since #1 is now closed).
     let out = apm_env(p, "test-agent", &["new", "Second enforcement test"]);
     assert!(out.status.success());
+    write_valid_spec_for_test(p, "ticket/0002-second-enforcement-test", "tickets/0002-second-enforcement-test.md");
     let out = apm_env(p, "test-agent", &["state", "2", "specd"]);
     assert!(out.status.success(), "new → specd should be allowed");
     let out = apm_env(p, "test-agent", &["state", "2", "ready"]);
@@ -624,6 +643,7 @@ fn next_respects_priority_and_actionable_states() {
     assert!(json.contains("\"id\":2") || json.contains("\"id\": 2"), "expected ticket #2 (highest priority), got: {json}");
 
     // Move #2 to specd (not actionable) — next should now return #3.
+    write_valid_spec_for_test(env.root(), "ticket/0002-high-priority-task", "tickets/0002-high-priority-task.md");
     env.apm(&["state", "2", "specd"]);
 
     let out = env.apm(&["next", "--json"]);

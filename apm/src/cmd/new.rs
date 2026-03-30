@@ -7,8 +7,17 @@ use apm_core::{
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, title: String) -> Result<()> {
+pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+
+    if context_section.is_some() && context.is_none() {
+        anyhow::bail!("--context-section requires --context");
+    }
+
+    let aggressive = config.sync.aggressive && !no_aggressive;
+    if side_note && !config.agents.side_tickets {
+        anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
+    }
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
 
@@ -34,11 +43,38 @@ pub fn run(root: &Path, title: String) -> Result<()> {
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
+        focus_section: None,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
-    let body = format!(
-        "## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
-    );
+    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
+    let body_template = if config.ticket.sections.is_empty() {
+        format!("## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n{history_footer}")
+    } else {
+        let mut s = String::from("## Spec\n\n");
+        for sec in &config.ticket.sections {
+            let placeholder = sec.placeholder.as_deref().unwrap_or("");
+            s.push_str(&format!("### {}\n\n{}\n\n", sec.name, placeholder));
+        }
+        s.push_str(&history_footer);
+        s
+    };
+    let body = if let Some(ctx) = &context {
+        let transition_section = config.workflow.states.iter()
+            .find(|s| s.id == "new")
+            .and_then(|s| s.transitions.iter().find(|tr| tr.to == "in_design"))
+            .and_then(|tr| tr.context_section.clone());
+        let section = context_section
+            .clone()
+            .or(transition_section)
+            .unwrap_or_else(|| "Problem".to_string());
+        let heading = format!("### {section}\n\n");
+        if !body_template.contains(&heading) {
+            anyhow::bail!("section '### {section}' not found in ticket body template");
+        }
+        body_template.replacen(&heading, &format!("### {section}\n\n{ctx}\n\n"), 1)
+    } else {
+        body_template
+    };
     let path = tickets_dir.join(&filename);
     let t = Ticket { frontmatter: fm, body, path };
     let content = t.serialize()?;
@@ -51,6 +87,73 @@ pub fn run(root: &Path, title: String) -> Result<()> {
         &format!("ticket({id}): create {title}"),
     )?;
 
+    if aggressive {
+        if let Err(e) = git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
+
     println!("Created ticket #{id}: {filename} (branch: {branch})");
+
+    if !no_edit {
+        open_editor(root, &config, &branch, &rel_path)?;
+    }
+
+    Ok(())
+}
+
+fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> Result<()> {
+    let editor = match std::env::var("EDITOR") {
+        Ok(e) if !e.is_empty() => e,
+        _ => {
+            eprintln!("warning: $EDITOR is not set, skipping editor open");
+            return Ok(());
+        }
+    };
+
+    // Check out the ticket branch, open editor, commit result, return to previous branch.
+    let prev_branch = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| "main".to_string());
+
+    let _ = std::process::Command::new("git")
+        .args(["checkout", branch])
+        .current_dir(root)
+        .status();
+
+    let file_path = root.join(rel_path);
+    let mut parts = editor.split_whitespace();
+    let bin = parts.next().unwrap();
+    let status = std::process::Command::new(bin)
+        .args(parts)
+        .arg(&file_path)
+        .status();
+
+    // Commit whatever the user wrote, even if editor exited non-zero.
+    let _ = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "add", rel_path])
+        .current_dir(root)
+        .status();
+    let _ = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "write spec"])
+        .current_dir(root)
+        .status();
+
+    let _ = std::process::Command::new("git")
+        .args(["checkout", &prev_branch])
+        .current_dir(root)
+        .status();
+
+    if let Ok(s) = status {
+        if !s.success() {
+            eprintln!("warning: editor exited with non-zero status");
+        }
+    }
+
     Ok(())
 }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::{CompletionStrategy, Config}, git, ticket};
 use chrono::Utc;
 use std::collections::HashSet;
 use std::path::Path;
@@ -16,7 +16,7 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
         .map(|s| s.id.as_str())
         .collect();
 
-    let merged = git::merged_into_main(root).unwrap_or_default();
+    let merged = git::merged_into_main(root, &config.project.default_branch).unwrap_or_default();
     let merged_set: HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
 
     let in_progress_states: HashSet<&str> = ["in_progress", "implemented", "accepted"].iter().copied().collect();
@@ -72,6 +72,33 @@ pub fn run(root: &Path, fix: bool) -> Result<()> {
         if !t.body.contains("## History") {
             issues.push(format!("{prefix}: missing ## History section"));
         }
+
+        // Validate document structure (required sections non-empty, AC items present).
+        if let Ok(doc) = t.document() {
+            for err in doc.validate() {
+                issues.push(format!("{prefix}: {err}"));
+            }
+        }
+    }
+
+    // Report completion strategies configured on transitions.
+    for state in &config.workflow.states {
+        for tr in &state.transitions {
+            let label = match &tr.completion {
+                CompletionStrategy::Pr => "pr",
+                CompletionStrategy::Merge => "merge",
+                CompletionStrategy::None => continue,
+            };
+            println!("completion: {} → {} = {label}", state.id, tr.to);
+        }
+    }
+
+    if config.logging.enabled {
+        let log_path = apm_core::logger::resolve_log_path(
+            &config.project.name,
+            config.logging.file.as_deref(),
+        );
+        println!("logging: {}", log_path.display());
     }
 
     if issues.is_empty() {
@@ -113,7 +140,7 @@ fn apply_fixes(
             let id = fm.id;
             let filename = t.path.file_name().unwrap().to_string_lossy().to_string();
             let rel_path = format!("{}/{filename}", config.tickets.dir.to_string_lossy());
-            match git::commit_to_branch(root, "main", &rel_path, &content,
+            match git::commit_to_branch(root, branch, &rel_path, &content,
                 &format!("ticket({id}): {} → accepted (verify --fix)", fm.state)) {
                 Ok(_) => println!("  fixed #{id}: {} → accepted", fm.state),
                 Err(e) => eprintln!("  warning: could not fix #{id}: {e:#}"),

@@ -2,14 +2,45 @@ use anyhow::{bail, Result};
 use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, remove_id: Option<u32>) -> Result<()> {
+pub fn run(root: &Path, add_id: Option<u32>, remove_id: Option<u32>) -> Result<()> {
     let config = Config::load(root)?;
 
+    if let Some(id) = add_id {
+        return add(root, &config, id);
+    }
     if let Some(id) = remove_id {
         return remove(root, &config, id);
     }
 
     list(root, &config)
+}
+
+fn add(root: &Path, config: &Config, id: u32) -> Result<()> {
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let Some(t) = tickets.iter().find(|t| t.frontmatter.id == id) else {
+        bail!("ticket #{id} not found");
+    };
+
+    let branch = t
+        .frontmatter
+        .branch
+        .clone()
+        .or_else(|| git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id:04}"));
+
+    let wt_path = if let Some(existing) = git::find_worktree_for_branch(root, &branch) {
+        existing
+    } else {
+        let wt_name = branch.replace('/', "-");
+        let worktrees_base = root.join(&config.worktrees.dir);
+        std::fs::create_dir_all(&worktrees_base)?;
+        let wt_path = worktrees_base.join(&wt_name);
+        git::add_worktree(root, &wt_path, &branch)?;
+        wt_path
+    };
+
+    println!("{}", wt_path.display());
+    Ok(())
 }
 
 fn list(root: &Path, config: &Config) -> Result<()> {

@@ -2,14 +2,29 @@
 
 ## Repo structure
 
-Rust workspace:
+_Fill in your project's structure here._
 
-- `apm-core/` — library: data model, config parsing, ticket storage, state machine
-- `apm/` — CLI binary (thin wrapper over `apm-core`)
-- `initial_specs/` — design docs (SPEC.md, STATE-MACHINE.md, TICKET-SPEC.md, USECASES.md)
+State machine: transitions defined in `apm.toml` under `[[workflow.states]]`
 
-State machine reference: `initial_specs/STATE-MACHINE.md`
-Ticket document format: `initial_specs/TICKET-SPEC.md`
+## Ticket format
+
+Tickets are Markdown files with TOML frontmatter (between `+++` delimiters):
+
+```toml
+id = 1
+title = "Short title"
+state = "new"
+branch = "ticket/0001-short-title"
+author = "agent-name"
+created_at = "2026-01-01T00:00Z"
+```
+
+Body sections (`## Spec` required):
+- `### Problem` — what is broken or missing
+- `### Acceptance criteria` — checkbox list, each independently testable
+- `### Out of scope` — explicit exclusions
+- `### Approach` — implementation plan
+- `## History` — auto-managed transition log
 
 ## Development workflow
 
@@ -21,23 +36,36 @@ Ticket document format: `initial_specs/TICKET-SPEC.md`
 
 ## Identity
 
-Generate a unique session name at the start of every session and export it
-before running any apm command:
+Generate a unique session name at the start of every session. Use a fixed
+string — do not use `$()` substitution inline, as it triggers permission
+prompts. Pick a name of the form `claude-MMDD-HHMM-XXXX` (e.g.
+`claude-0325-1430-a3f9`) and export it before running any apm command:
 
 ```bash
-export APM_AGENT_NAME=claude-$(date +%m%d-%H%M)-$(openssl rand -hex 2)
-# example: claude-0325-1430-a3f9
+export APM_AGENT_NAME=claude-0325-1430-a3f9
 ```
 
 Hold the same name for the entire session. Do not regenerate mid-session.
 
 Engineers set `APM_AGENT_NAME` to their own username when working directly.
 
+## MAIN WORKTREE RULE
+
+**Never run `git checkout` in the main working directory.**
+
+The main directory is always on `main`. This is a hard rule — breaking it
+confuses the user and corrupts the working state.
+
+All branch work — spec editing, code changes, everything — happens inside a
+**permanent git worktree** provisioned by `apm worktrees --add <id>` or
+`apm start <id>`. Once you have a worktree path, use `git -C <worktree-path>`
+to run git commands there without leaving your current directory.
+
 ## Startup
 
 1. `apm sync` — refresh local cache from all `ticket/*` branches
 2. `apm next --json` — find the highest-priority ticket you can act on now
-3. `apm list --working` — tickets where you are the active agent (resume if any)
+3. `apm list --state in_progress` — check for in-progress tickets (resume if any match your agent name)
 
 If `apm next` returns null and you have no in-progress tickets, there is nothing
 to do. Report back to the supervisor.
@@ -48,42 +76,66 @@ The ticket's state determines what to do next:
 
 **state = `new`** — write the spec:
 1. `apm show <id>` — read the full ticket
-2. `apm set <id> effort <1-10>` — assess implementation scale
-3. `apm set <id> risk <1-10>` — assess technical risk
-4. Check out the ticket branch to edit the spec file directly:
+2. `apm state <id> in_design` — claim the ticket before editing (signals you are actively writing the spec)
+3. Provision a worktree and edit the spec file there:
    ```bash
-   git checkout <branch>   # branch name is in the frontmatter
-   # edit tickets/<id>-<slug>.md — fill Problem, Acceptance criteria, Out of scope, Approach
-   git add tickets/<id>-<slug>.md
-   git commit -m "ticket(<id>): write spec"
-   git checkout -        # return to previous branch
+   wt=$(apm worktrees --add <id>)   # prints the worktree path; reuses it if it already exists
+   # edit $wt/tickets/<id>-<slug>.md — fill Problem, Acceptance criteria, Out of scope, Approach
+   git -C "$wt" add tickets/<id>-<slug>.md
+   git -C "$wt" commit -m "ticket(<id>): write spec"
    ```
-5. If blocked on an ambiguity: write the question in `### Open questions`,
-   commit it to the ticket branch, then `apm state <id> question`
-6. `apm state <id> specd` — submit spec for supervisor review
+   Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
+   pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
+4. If blocked on an ambiguity: write the question in `### Open questions`,
+   commit it to the worktree, then `apm state <id> question`
+5. `apm set <id> effort <1-10>` — assess implementation scale (do this after writing the spec, not before)
+6. `apm set <id> risk <1-10>` — assess technical risk
+7. `apm state <id> specd` — submit spec for supervisor review
 
 **state = `ammend`** — revise the spec:
 1. `apm show <id>` — read the Amendment requests carefully
-2. Check out the ticket branch, address each item, check its box, update
-   `### Approach`, then commit and return:
+2. `apm state <id> in_design` — claim the ticket before editing (signals you are actively revising the spec)
+3. Provision a worktree, address each item, check its box, update `### Approach`:
    ```bash
-   git checkout <branch>
-   # edit tickets/<id>-<slug>.md
-   git add tickets/<id>-<slug>.md
-   git commit -m "ticket(<id>): address amendments"
-   git checkout -
+   wt=$(apm worktrees --add <id>)
+   # edit $wt/tickets/<id>-<slug>.md
+   git -C "$wt" add tickets/<id>-<slug>.md
+   git -C "$wt" commit -m "ticket(<id>): address amendments"
    ```
-3. `apm state <id> specd` — resubmit only when all amendment boxes are checked
+4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
+
+**state = `in_design`** — spec is actively being written or revised:
+The ticket is claimed by an agent. This state mirrors `in_progress` for the
+implementation phase. Do not pick up an `in_design` ticket unless you are
+taking it over with `apm take <id>`.
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
    - Check `## History`: if the ticket was previously `in_progress`, a worktree
      and partial work already exist on the branch — pick up from there
 2. `apm start <id>` — claims the ticket (sets `agent` = your name, state →
-   `in_progress`), provisions or reuses the permanent worktree
-3. Commit all code changes to the ticket branch inside the worktree
+   `in_progress`), provisions or reuses the permanent worktree; prints its path
+
+   To hand the ticket to an autonomous background worker instead:
+   ```
+   apm start --spawn <id>          # worker runs under project allow list
+   apm start --spawn -P <id>       # worker runs with --dangerously-skip-permissions
+   ```
+   The worker provisions the worktree, implements, pushes, and opens a PR autonomously.
+   The supervisor gets control back immediately.
+3. Commit all code changes to the ticket branch inside the worktree:
+   ```bash
+   # apm start prints the worktree path — use git -C to work there
+   wt=<path printed by apm start>
+   git -C "$wt" add <files>
+   git -C "$wt" commit -m "<message>"
+   ```
 4. Update `## Spec` if the approach evolves during implementation
 5. Open a PR targeting `main`; then `apm state <id> implemented`
+6. If blocked mid-implementation (missing information, upstream decision needed):
+   write the question in `### Open questions`, commit it, then
+   `apm state <id> blocked` — **do not use `apm state <id> ready`**, that
+   transition no longer exists from `in_progress`
 
 **state = `blocked`** — implementation is blocked on a supervisor decision:
 1. The previous agent wrote questions in `### Open questions` before blocking
@@ -94,9 +146,10 @@ The ticket's state determines what to do next:
 ## Taking over another agent's ticket
 
 1. `apm show <id>` — read the full ticket including history
-2. `apm take <id>` — checks out the ticket branch, sets agent = your name
-3. Continue from where the previous agent left off
-4. Do not discard or overwrite previous spec work or open questions
+2. `apm take <id>` — sets agent = your name on the ticket branch
+3. `apm worktrees --add <id>` if the worktree doesn't exist yet
+4. Continue from where the previous agent left off
+5. Do not discard or overwrite previous spec work or open questions
 
 ## Spec quality bar
 
@@ -111,7 +164,7 @@ Do not check acceptance criteria boxes until the implementation is verified.
 
 ## Spec discipline
 
-- Set `effort` and `risk` before writing the spec — these drive prioritization
+- Set `effort` and `risk` after writing the spec, before transitioning to `specd` — you only have enough context once the spec is complete
 - Do not proceed on assumptions: write questions, change state to `question`
 - Once a question is answered, reflect the decision in `### Approach`
 - Do not delete answered questions or checked amendment items — they are the
@@ -123,8 +176,8 @@ Every ticket has a single branch — `ticket/<id>-<slug>` — for its entire
 lifecycle, created automatically by `apm new`. Never create or rename branches
 manually.
 
-- All spec edits and code changes go to `ticket/<id>-<slug>`
-- `apm start <id>` checks out this branch; you are on it after a successful start
+- All spec edits and code changes go to `ticket/<id>-<slug>` via the worktree
+- `apm start <id>` provisions the permanent worktree; use `git -C <wt>` to commit
 - APM manages frontmatter and `## History` — never edit them directly
 - Do not delete the ticket branch until the ticket is `closed` — APM uses
   branch presence to detect merge state
@@ -134,3 +187,62 @@ manually.
 Work one ticket at a time per agent process. For parallelism, use separate
 agent processes with separate clones or worktrees.
 
+## Shell discipline
+
+Claude Code's permission system matches the **start** of the command string.
+Compound calls defeat this matching and generate permission prompts. Keep each
+Bash call to a single operation.
+
+**Do not chain commands:**
+```bash
+# Wrong — && chains defeat allow-list matching
+apm sync && apm list --state ready
+
+# Right — one call per operation
+apm sync
+apm list --state ready
+```
+
+**Do not use `$()` subshells:**
+```bash
+# Wrong — triggers "command substitution" security check
+gh pr create --body "$(cat /tmp/body.md)"
+
+# Right — write body with the Write tool, then reference by file
+gh pr create --body-file /tmp/body.md
+```
+
+**Do not use background jobs (`&`):**
+```bash
+# Wrong — & defeats pattern matching
+gh pr merge 1 & gh pr merge 2 & wait
+
+# Right — sequential calls
+gh pr merge 1
+gh pr merge 2
+```
+
+**Use `git -C` for all git operations in worktrees:**
+```bash
+# Wrong — cd && git triggers "bare repository attack" check
+cd "$wt" && git add .
+
+# Right
+git -C "$wt" add <files>
+```
+
+**Use `bash -c` for multi-step commands that must share a directory:**
+```bash
+# Right — single bash call, matches Bash(bash *)
+bash -c "cd $wt && cargo test --workspace 2>&1"
+```
+
+## Side tickets
+
+When you notice an out-of-scope issue during implementation, capture it without interrupting your current work:
+
+```bash
+apm new --side-note "Brief title" --context "What you observed and why it matters"
+```
+
+Then immediately resume the current ticket. The supervisor will triage the side ticket separately.
