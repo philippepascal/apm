@@ -21,7 +21,7 @@ The only way to close a ticket today is via `apm sync`, which detects merged bra
 ### Acceptance criteria
 
 - [x] `apm close <id>` transitions a ticket to `closed` from any current state
-- [ ] An optional `--reason <text>` flag appends the reason to the `## History` entry
+- [x] An optional `--reason <text>` flag appends the reason to the `## History` entry
 - [ ] `closed` is treated as a mandatory terminal state: it is always a valid target regardless of what transitions are defined in `apm.toml` (analogous to `new` being a mandatory initial state)
 - [ ] The `apm validate` command recognises `closed` as a built-in state and does not flag it as unknown even if it is absent from `[[workflow.states]]`
 - [ ] `apm close` is not triggerable via `command:start` — it is a supervisor-only operation
