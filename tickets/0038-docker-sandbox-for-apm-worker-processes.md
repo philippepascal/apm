@@ -1,7 +1,7 @@
 +++
 id = "0038"
 title = "Docker sandbox for apm worker processes"
-state = "accepted"
+state = "closed"
 priority = 3
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0327-1854-10aa"
 agent = "88722"
 branch = "ticket/0038-docker-sandbox-for-apm-worker-processes"
 created_at = "2026-03-28T07:32:08.465132Z"
-updated_at = "2026-03-30T19:47:57.226712Z"
+updated_at = "2026-03-30T19:54:40.308264Z"
 +++
 
 ## Spec
@@ -225,3 +225,4 @@ WORKDIR /workspace
 | 2026-03-30T19:23Z | ready | in_progress | philippepascal |
 | 2026-03-30T19:34Z | in_progress | implemented | claude-0330-1930-b7e2 |
 | 2026-03-30T19:47Z | implemented | accepted | apm-sync |
+| 2026-03-30T19:54Z | accepted | closed | apm-sync |
