@@ -34,6 +34,16 @@ Target state: \`apm_core::ticket::create()\` encapsulates all creation logic and
 
 ### Acceptance criteria
 
+- [ ] `apm_core::ticket::create()` is callable with: `root`, `config`, `title`, `author`, `context`, `context_section`, `aggressive`
+- [ ] The returned `Ticket` has `id`, `title`, `state = "new"`, `branch`, `created_at`, and `author` set correctly
+- [ ] `create()` creates a git branch named `ticket/{id}-{slug}` and commits the ticket file to it
+- [ ] When `aggressive = true` and a remote exists, the branch is pushed after the commit (push failure is non-fatal)
+- [ ] When `aggressive = false`, no push is attempted
+- [ ] When `context` is `None`, the body uses empty section placeholders
+- [ ] When `context` is `Some`, the text is injected into the correct section (resolved via `context_section`, then workflow config, then defaulting to "Problem")
+- [ ] When `config.ticket.sections` is non-empty, the body uses those custom sections instead of the default four
+- [ ] `apm new` still works end-to-end after the refactor (same observable output)
+- [ ] `cargo test --workspace` passes after the refactor
 
 ### Out of scope
 
