@@ -61,7 +61,7 @@ Write commands fetch/push the specific ticket branch. Read-only commands use `gi
 - [x] `apm take` fetches the ticket branch before reading (in addition to the existing push after write) when aggressive mode is on
 - [x] `apm spec` fetches the ticket branch before reading and pushes after writing when aggressive mode is on
 - [x] `apm set` pushes the ticket branch after writing field changes when aggressive mode is on (fetch before is already implemented)
-- [ ] `apm review` pushes the ticket branch after writing amendments when aggressive mode is on (fetch before is already implemented)
+- [x] `apm review` pushes the ticket branch after writing amendments when aggressive mode is on (fetch before is already implemented)
 - [ ] `apm verify` fetches all remote branches before reading ticket state when aggressive mode is on
 - [ ] `apm validate` fetches all remote branches before reading ticket state when aggressive mode is on
 - [ ] All affected commands accept a `--no-aggressive` flag that suppresses fetch/push behaviour regardless of config
