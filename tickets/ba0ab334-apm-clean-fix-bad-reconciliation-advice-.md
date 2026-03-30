@@ -39,7 +39,21 @@ The `None` case (ticket not found on main at all) is a separate, distinct scenar
 
 ### Approach
 
-How the implementation will work.
+In `apm-core/src/clean.rs`, change the warning message at the `Some(ms) if ms != branch_state` arm (line ~149) from:
+
+```
+run `apm close {id}` to reconcile
+```
+
+to:
+
+```
+run `apm sync` to reconcile
+```
+
+The `None` arm (ticket not found on main) keeps its existing message unchanged — that case is different and may warrant a separate decision.
+
+Update the integration test `clean_skips_state_mismatch_between_branch_and_main` to assert the new message text appears in stderr.
 
 ### Open questions
 
