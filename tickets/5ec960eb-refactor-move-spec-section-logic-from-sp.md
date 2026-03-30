@@ -1,7 +1,7 @@
 +++
 id = "5ec960eb"
 title = "refactor: move spec section logic from spec.rs into apm-core"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "83352"
 branch = "ticket/5ec960eb-refactor-move-spec-section-logic-from-sp"
 created_at = "2026-03-30T14:27:31.109323Z"
-updated_at = "2026-03-30T18:04:37.845263Z"
+updated_at = "2026-03-30T18:08:30.948576Z"
 +++
 
 ## Spec
@@ -102,3 +102,4 @@ CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 | 2026-03-30T17:20Z | ready | in_progress | philippepascal |
 | 2026-03-30T17:29Z | in_progress | implemented | claude-0330-1730-w5ec9 |
 | 2026-03-30T18:04Z | implemented | accepted | philippepascal |
+| 2026-03-30T18:08Z | accepted | closed | apm-sync |
