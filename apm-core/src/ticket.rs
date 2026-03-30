@@ -173,17 +173,35 @@ pub fn normalize_id_arg(arg: &str) -> Result<String> {
     Ok(arg.to_lowercase())
 }
 
+/// Return all candidate prefix strings for a user-supplied ID argument.
+///
+/// For all-digit inputs shorter than 4 chars, both the zero-padded form and
+/// the raw digit string are returned (the raw string is the correct hex prefix).
+/// For all other inputs a single-element vec is returned.
+pub fn id_arg_prefixes(arg: &str) -> Result<Vec<String>> {
+    let canonical = normalize_id_arg(arg)?;
+    if arg.chars().all(|c| c.is_ascii_digit()) && arg.len() < 4 {
+        Ok(vec![canonical, arg.to_string()])
+    } else {
+        Ok(vec![canonical])
+    }
+}
+
 /// Resolve a user-supplied ID argument to a unique ticket ID from a loaded list.
 pub fn resolve_id_in_slice(tickets: &[Ticket], arg: &str) -> Result<String> {
-    let prefix = normalize_id_arg(arg)?;
+    let prefixes = id_arg_prefixes(arg)?;
+    let mut seen = std::collections::HashSet::new();
     let matches: Vec<&Ticket> = tickets.iter()
-        .filter(|t| t.frontmatter.id.starts_with(&prefix))
+        .filter(|t| {
+            let id = &t.frontmatter.id;
+            prefixes.iter().any(|p| id.starts_with(p.as_str())) && seen.insert(id.clone())
+        })
         .collect();
     match matches.len() {
-        0 => bail!("no ticket matches '{prefix}'"),
+        0 => bail!("no ticket matches '{arg}'"),
         1 => Ok(matches[0].frontmatter.id.clone()),
         _ => {
-            let mut msg = format!("error: prefix '{prefix}' is ambiguous");
+            let mut msg = format!("error: prefix '{arg}' is ambiguous");
             for t in &matches {
                 msg.push_str(&format!("\n  {}  {}", t.frontmatter.id, t.frontmatter.title));
             }
@@ -203,15 +221,20 @@ pub fn close(
     agent: &str,
 ) -> Result<()> {
     let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
-    let prefix = normalize_id_arg(id_arg)?;
+    let prefixes = id_arg_prefixes(id_arg)?;
 
     // Search ticket branches first, then fall back to the default branch.
     // This handles stale "implemented" tickets whose branch was deleted.
     let branch_matches: Vec<usize> = tickets.iter()
         .enumerate()
-        .filter(|(_, t)| t.frontmatter.id.starts_with(prefix.as_str()))
+        .filter(|(_, t)| prefixes.iter().any(|p| t.frontmatter.id.starts_with(p.as_str())))
         .map(|(i, _)| i)
         .collect();
+    // Deduplicate in case both prefixes matched the same ticket.
+    let branch_matches: Vec<usize> = {
+        let mut seen = std::collections::HashSet::new();
+        branch_matches.into_iter().filter(|&i| seen.insert(tickets[i].frontmatter.id.clone())).collect()
+    };
 
     let mut from_default: Option<Ticket> = None;
     let id: String = match branch_matches.len() {
@@ -225,7 +248,7 @@ pub fn close(
                     if let Ok(content) = crate::git::read_from_branch(root, default_branch, &rel_path) {
                         let dummy = root.join(&rel_path);
                         if let Ok(t) = Ticket::parse(&dummy, &content) {
-                            if t.frontmatter.id.starts_with(prefix.as_str()) {
+                            if prefixes.iter().any(|p| t.frontmatter.id.starts_with(p.as_str())) {
                                 found = Some(t);
                                 break;
                             }
@@ -235,14 +258,14 @@ pub fn close(
             }
             match found {
                 Some(t) => { let id = t.frontmatter.id.clone(); from_default = Some(t); id }
-                None => bail!("no ticket matches '{prefix}'"),
+                None => bail!("no ticket matches '{id_arg}'"),
             }
         }
         _ => {
             let names: Vec<String> = branch_matches.iter()
                 .map(|&i| tickets[i].frontmatter.id.clone())
                 .collect();
-            bail!("ambiguous prefix '{}', matches: {}", prefix, names.join(", "));
+            bail!("ambiguous prefix '{}', matches: {}", id_arg, names.join(", "));
         }
     };
 
@@ -314,10 +337,10 @@ pub fn accept(
     agent: &str,
 ) -> Result<()> {
     let tickets = load_all_from_git(root, &config.tickets.dir)?;
-    let prefix = normalize_id_arg(id_arg)?;
+    let prefixes = id_arg_prefixes(id_arg)?;
 
-    let idx = tickets.iter().position(|t| t.frontmatter.id.starts_with(prefix.as_str()))
-        .ok_or_else(|| anyhow::anyhow!("no ticket matches '{prefix}'"))?;
+    let idx = tickets.iter().position(|t| prefixes.iter().any(|p| t.frontmatter.id.starts_with(p.as_str())))
+        .ok_or_else(|| anyhow::anyhow!("no ticket matches '{id_arg}'"))?;
 
     let mut t = tickets[idx].clone();
     let id = t.frontmatter.id.clone();
@@ -883,6 +906,66 @@ mod tests {
     #[test]
     fn normalize_non_hex_errors() {
         assert!(normalize_id_arg("gggg").is_err());
+    }
+
+    // --- id_arg_prefixes ---
+
+    #[test]
+    fn prefixes_short_digit_returns_two() {
+        let p = id_arg_prefixes("314").unwrap();
+        assert_eq!(p, vec!["0314", "314"]);
+    }
+
+    #[test]
+    fn prefixes_four_digit_returns_one() {
+        let p = id_arg_prefixes("3142").unwrap();
+        assert_eq!(p, vec!["3142"]);
+    }
+
+    #[test]
+    fn prefixes_hex_returns_one() {
+        let p = id_arg_prefixes("a3f9").unwrap();
+        assert_eq!(p, vec!["a3f9"]);
+    }
+
+    // --- resolve_id_in_slice ---
+
+    fn make_ticket_with_title(id: &str, title: &str) -> Ticket {
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"{title}\"\nstate = \"new\"\n+++\n\nbody\n"
+        );
+        let path = std::path::PathBuf::from(format!("tickets/{id}.md"));
+        Ticket::parse(&path, &raw).unwrap()
+    }
+
+    #[test]
+    fn resolve_short_digit_prefix_unique() {
+        let tickets = vec![make_ticket_with_title("314abcde", "Alpha")];
+        assert_eq!(resolve_id_in_slice(&tickets, "314").unwrap(), "314abcde");
+    }
+
+    #[test]
+    fn resolve_integer_one_matches_0001() {
+        let tickets = vec![make_ticket_with_title("0001", "One")];
+        assert_eq!(resolve_id_in_slice(&tickets, "1").unwrap(), "0001");
+    }
+
+    #[test]
+    fn resolve_four_digit_prefix() {
+        let tickets = vec![make_ticket_with_title("3142abcd", "Beta")];
+        assert_eq!(resolve_id_in_slice(&tickets, "3142").unwrap(), "3142abcd");
+    }
+
+    #[test]
+    fn resolve_ambiguous_prefix_lists_candidates() {
+        let tickets = vec![
+            make_ticket_with_title("314abcde", "Alpha"),
+            make_ticket_with_title("3142xxxx", "Beta"),
+        ];
+        let err = resolve_id_in_slice(&tickets, "314").unwrap_err().to_string();
+        assert!(err.contains("ambiguous"), "expected 'ambiguous' in: {err}");
+        assert!(err.contains("314abcde"), "expected first id in: {err}");
+        assert!(err.contains("3142xxxx"), "expected second id in: {err}");
     }
 
     // ── TicketDocument ────────────────────────────────────────────────────

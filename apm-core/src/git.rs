@@ -343,20 +343,21 @@ pub fn gen_hex_id() -> String {
 /// Find a ticket branch matching a user-supplied ID argument (prefix or full hex).
 /// Normalizes plain integers (e.g. 35 → 0035) via `ticket::normalize_id_arg`.
 pub fn resolve_ticket_branch(branches: &[String], arg: &str) -> Result<String> {
-    let prefix = crate::ticket::normalize_id_arg(arg)?;
+    let prefixes = crate::ticket::id_arg_prefixes(arg)?;
+    let mut seen = std::collections::HashSet::new();
     let matches: Vec<&String> = branches.iter()
         .filter(|b| {
-            b.strip_prefix("ticket/")
+            let id = b.strip_prefix("ticket/")
                 .and_then(|s| s.split('-').next())
-                .map(|id| id.starts_with(prefix.as_str()))
-                .unwrap_or(false)
+                .unwrap_or("");
+            prefixes.iter().any(|p| id.starts_with(p.as_str())) && seen.insert(id.to_string())
         })
         .collect();
     match matches.len() {
-        0 => anyhow::bail!("no ticket matches '{prefix}'"),
+        0 => anyhow::bail!("no ticket matches '{arg}'"),
         1 => Ok(matches[0].clone()),
         _ => {
-            let mut msg = format!("error: prefix '{prefix}' is ambiguous");
+            let mut msg = format!("error: prefix '{arg}' is ambiguous");
             for b in &matches {
                 let id = b.strip_prefix("ticket/")
                     .and_then(|s| s.split('-').next())
