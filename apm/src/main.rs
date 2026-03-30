@@ -154,10 +154,16 @@ Illegal transitions are rejected with an error.
 Run `apm show <id>` first to check the current state, then choose a
 target from the edges listed for that state in apm.toml.
 
+Use --force to bypass the transition rules (escape hatch for stuck tickets).
+The target state must still exist in the config; document-level validations
+(spec completeness, unchecked criteria) are still enforced.
+
 Examples:
   apm state 42 in_design       # claim a new ticket for spec writing
   apm state 42 specd           # submit spec for supervisor review
-  apm state 42 implemented     # mark implementation done (open PR first)")]
+  apm state 42 implemented     # mark implementation done (open PR first)
+  apm state 42 new --force     # reset a stuck in_design ticket
+  apm state 42 ready --force   # reset a stuck in_progress ticket")]
     State {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -168,6 +174,9 @@ Examples:
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
+        /// Bypass transition rules (escape hatch for stuck tickets)
+        #[arg(long)]
+        force: bool,
     },
     /// Set a field on a ticket
     #[command(long_about = "Set a metadata field on a ticket.
@@ -563,7 +572,7 @@ fn main() -> Result<()> {
         Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, &id, no_aggressive),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
-        Command::State { id, state, no_aggressive } => cmd::state::run(&root, &id, state, no_aggressive),
+        Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
         Command::Set { id, field, value } => cmd::set::run(&root, &id, field, value),
         Command::Next { json } => cmd::next::run(&root, json),
         Command::Start { id, no_aggressive, spawn, skip_permissions, next } => {
