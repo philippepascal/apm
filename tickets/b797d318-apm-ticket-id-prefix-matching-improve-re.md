@@ -28,7 +28,7 @@ The correct behaviour:
 
 ### Acceptance criteria
 
-- [ ] `apm show 314` resolves a ticket whose ID starts with `314` (e.g. `314abcde`) when that is the only match
+- [x] `apm show 314` resolves a ticket whose ID starts with `314` (e.g. `314abcde`) when that is the only match
 - [ ] `apm show 1` still resolves ticket `0001` (integer zero-padding kept for backward compat)
 - [ ] `apm show 3142` still resolves a ticket whose ID starts with `3142` (4-digit input, no regression)
 - [ ] When multiple tickets share a short prefix, the error message lists each matching ID and title
