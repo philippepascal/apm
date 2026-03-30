@@ -4,12 +4,12 @@ title = "refactor: move cleanup logic from clean.rs into apm-core"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "claude-0330-0245-main"
 agent = "7492"
 branch = "ticket/f5bee9f9-refactor-move-cleanup-logic-from-clean-r"
 created_at = "2026-03-30T14:27:36.851282Z"
-updated_at = "2026-03-30T16:35:15.203932Z"
+updated_at = "2026-03-30T16:35:20.036682Z"
 +++
 
 ## Spec
