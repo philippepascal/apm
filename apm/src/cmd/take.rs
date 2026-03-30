@@ -4,7 +4,7 @@ use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
-    let new_agent = super::start::resolve_agent_name();
+    let new_agent = apm_core::start::resolve_agent_name();
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -36,7 +36,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
     t.frontmatter.agent = Some(new_agent.clone());
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    super::state::append_history(&mut t.body, &old_agent, &new_agent, &when, "handoff");
+    apm_core::state::append_history(&mut t.body, &old_agent, &new_agent, &when, "handoff");
 
     let content = t.serialize()?;
     let rel_path = format!(
