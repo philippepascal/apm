@@ -3,13 +3,13 @@ id = "9baf1ac2"
 title = "apm start --spawn should set agent to the worker's name, not the delegator's"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/9baf1ac2-apm-start-spawn-should-set-agent-to-the-"
 created_at = "2026-03-30T05:56:35.911177Z"
-updated_at = "2026-03-30T06:16:44.728622Z"
+updated_at = "2026-03-30T06:18:17.551307Z"
 +++
 
 ## Spec
