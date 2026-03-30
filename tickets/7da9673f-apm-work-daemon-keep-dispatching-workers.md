@@ -4,12 +4,12 @@ title = "apm work --daemon: keep dispatching workers as tickets become actionabl
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 agent = "91785"
 branch = "ticket/7da9673f-apm-work-daemon-keep-dispatching-workers"
 created_at = "2026-03-30T17:27:51.137680Z"
-updated_at = "2026-03-30T17:33:19.103924Z"
+updated_at = "2026-03-30T17:33:21.431345Z"
 +++
 
 ## Spec
