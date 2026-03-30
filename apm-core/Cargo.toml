@@ -8,7 +8,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }
 anyhow = { workspace = true }
-rusqlite = { workspace = true }
 chrono = { workspace = true }
 
 [dev-dependencies]
