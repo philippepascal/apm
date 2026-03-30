@@ -58,30 +58,37 @@ pub fn run(root: &Path, dry_run: bool) -> Result<()> {
             }
         }
 
+        let local_branch_exists = Command::new("git")
+            .args([
+                "-C",
+                &root.to_string_lossy(),
+                "rev-parse",
+                "--verify",
+                &format!("refs/heads/{branch}"),
+            ])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+
+        // Nothing to do locally — branch and worktree are already gone.
+        if wt_path.is_none() && !local_branch_exists {
+            continue;
+        }
+
         if dry_run {
             if let Some(ref path) = wt_path {
                 println!("would remove worktree {}", path.display());
             }
-            println!("would remove branch {branch}");
+            if local_branch_exists {
+                println!("would remove branch {branch}");
+            }
         } else {
             if let Some(ref path) = wt_path {
                 git::remove_worktree(root, path)?;
                 println!("removed worktree {}", path.display());
             }
 
-            // Delete local branch if it exists (-D because we already verified merged status).
-            let local_exists = Command::new("git")
-                .args([
-                    "-C",
-                    &root.to_string_lossy(),
-                    "rev-parse",
-                    "--verify",
-                    &format!("refs/heads/{branch}"),
-                ])
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false);
-            if local_exists {
+            if local_branch_exists {
                 let result = Command::new("git")
                     .args(["-C", &root.to_string_lossy(), "branch", "-D", &branch])
                     .output();
