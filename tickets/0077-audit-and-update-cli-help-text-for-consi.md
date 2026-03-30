@@ -30,12 +30,12 @@ Current gaps (representative sample):
 
 ### Acceptance criteria
 
-- [ ] Every subcommand has a non-empty `about` string that describes what it does in one sentence
-- [ ] Every positional argument has a `.help("...")` annotation
-- [ ] Every `--flag` / `--option` has a `.help("...")` annotation
-- [ ] `apm --help` top-level output gives a one-line description of each subcommand that is accurate and consistent with the command's own `--help`
-- [ ] Valid values for enum-like arguments (e.g. `--state`, `FIELD` in `apm set`) are listed or described in the help text
-- [ ] `cargo test --workspace` passes after the changes
+- [x] Every subcommand has a non-empty `about` string that describes what it does in one sentence
+- [x] Every positional argument has a `.help("...")` annotation
+- [x] Every `--flag` / `--option` has a `.help("...")` annotation
+- [x] `apm --help` top-level output gives a one-line description of each subcommand that is accurate and consistent with the command's own `--help`
+- [x] Valid values for enum-like arguments (e.g. `--state`, `FIELD` in `apm set`) are listed or described in the help text
+- [x] `cargo test --workspace` passes after the changes
 
 ### Out of scope
 
