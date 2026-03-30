@@ -16,7 +16,31 @@ updated_at = "2026-03-30T14:29:08.315734Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`validate.rs` (257 lines) and `verify.rs` (152 lines) contain validation logic
+that belongs in `apm-core`:
+
+**validate.rs** — config integrity checks:
+- State ID reference validation (transitions reference valid states)
+- Transition precondition and side-effect validation
+- Instructions file existence checks
+- Provider type validation for PR/Merge completion strategies
+- Non-terminal dead-end detection
+
+**verify.rs** — ticket consistency checks:
+- Ticket state vs config state validation
+- Filename/ID consistency
+- Branch requirements by state
+- Branch merge status checks
+- Agent assignment validation
+- Spec section presence checks
+- Auto-fix for merged branches (state → accepted)
+
+Both operate purely on data — config structs and ticket structs. `apm-serve`
+will want to surface validation errors and consistency warnings in the UI
+without shelling out.
+
+Target: `apm_core::validate` and `apm_core::verify` modules. CLI wrappers
+format and print results.
 
 ### Acceptance criteria
 
