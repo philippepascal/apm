@@ -2,18 +2,31 @@ use anyhow::{bail, Result};
 use apm_core::{config::Config, git, spec, ticket};
 use std::{io::Read, path::Path};
 const KNOWN_SECTIONS: &[&str] = &["Problem", "Acceptance criteria", "Out of scope", "Approach", "Open questions"];
-pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<String>, check: bool, mark: Option<String>) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<String>, check: bool, mark: Option<String>, no_aggressive: bool) -> Result<()> {
     if set.is_some() && section.is_none() { bail!("--set requires --section"); }
     if mark.is_some() && section.is_none() { bail!("--mark requires --section"); }
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
     let branches = git::ticket_branches(root)?;
     let branch = git::resolve_ticket_branch(&branches, id_arg)?;
     let id = branch.strip_prefix("ticket/").and_then(|s| s.split('-').next()).unwrap_or(id_arg).to_string();
     let rel_path = format!("{}/{}.md", config.tickets.dir.to_string_lossy(), branch.trim_start_matches("ticket/"));
+
+    if aggressive {
+        if let Err(e) = git::fetch_branch(root, &branch) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
+
     let content = git::read_from_branch(root, &branch, &rel_path)?;
     if let (Some(ref name), Some(ref item)) = (&section, &mark) {
         let new = spec::mark_item(&content, name, item)?;
         git::commit_to_branch(root, &branch, &rel_path, &new, &format!("ticket({id}): mark \"{item}\" in {name}"))?;
+        if aggressive {
+            if let Err(e) = git::push_branch(root, &branch) {
+                eprintln!("warning: push failed: {e:#}");
+            }
+        }
         println!("ticket #{id}: marked \"{item}\" in {name:?}"); return Ok(());
     }
     let mut t = ticket::Ticket::parse(&root.join(&rel_path), &content)?;
@@ -40,6 +53,11 @@ pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<Strin
             else { spec::set_section_body(&mut t.body, name, &formatted); }
         } else { spec::set_section(&mut doc, name, trimmed); t.body = doc.serialize(); }
         git::commit_to_branch(root, &branch, &rel_path, &t.serialize()?, &format!("ticket({id}): set section {name}"))?;
+        if aggressive {
+            if let Err(e) = git::push_branch(root, &branch) {
+                eprintln!("warning: push failed: {e:#}");
+            }
+        }
         println!("ticket #{id}: section {name:?} updated");
     } else {
         let display = if config_active { config.ticket.sections.iter().find(|s| s.name.eq_ignore_ascii_case(name)).unwrap().name.clone() } else { name.clone() };

@@ -13,8 +13,15 @@ struct Issue {
     message: String,
 }
 
-pub fn run(root: &Path, fix: bool, json: bool, config_only: bool) -> Result<()> {
+pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
+
+    if aggressive {
+        if let Err(e) = git::fetch_all(root) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
 
     let config_errors = validate_config(&config, root);
     let config_warnings = validate_warnings(&config);
