@@ -1,14 +1,15 @@
 +++
 id = 63
 title = "apm sync does not detect squash-merged branches"
-state = "new"
+state = "in_progress"
 priority = 1
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "claude-0329-1430-main"
 branch = "ticket/0063-apm-sync-does-not-detect-squash-merged-b"
 created_at = "2026-03-29T22:50:59.530523Z"
-updated_at = "2026-03-29T22:51:06.059168Z"
+updated_at = "2026-03-30T01:08:31.191681Z"
 +++
 
 ## Spec
@@ -28,3 +29,4 @@ git branch --merged only detects regular merges. Squash-merged PRs leave the bra
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-29T22:50Z | — | new | philippepascal |
+| 2026-03-30T01:08Z | new | in_progress | claude-0329-1430-main |
