@@ -30,7 +30,7 @@ The correct behaviour:
 
 - [x] `apm show 314` resolves a ticket whose ID starts with `314` (e.g. `314abcde`) when that is the only match
 - [x] `apm show 1` still resolves ticket `0001` (integer zero-padding kept for backward compat)
-- [ ] `apm show 3142` still resolves a ticket whose ID starts with `3142` (4-digit input, no regression)
+- [x] `apm show 3142` still resolves a ticket whose ID starts with `3142` (4-digit input, no regression)
 - [ ] When multiple tickets share a short prefix, the error message lists each matching ID and title
 - [ ] When no ticket matches the supplied prefix, the error message includes the prefix that was tried
 - [ ] All of the above apply equally to commands using `resolve_ticket_branch` (e.g. `apm show`, `apm spec`)
