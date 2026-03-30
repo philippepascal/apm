@@ -35,12 +35,12 @@ it should not be mandatory.
 
 ### Acceptance criteria
 
-- [ ] `apm work` with `APM_AGENT_NAME` unset does not print `warning: dispatch failed: APM_AGENT_NAME is not set`
-- [ ] `apm work` with `APM_AGENT_NAME` unset dispatches workers for actionable tickets without error
-- [ ] Tickets started via `apm work` without `APM_AGENT_NAME` have a non-empty `agent` field in their frontmatter
-- [ ] `apm start <id>` with `APM_AGENT_NAME` unset succeeds and sets a non-empty `agent` field in the ticket
-- [ ] `apm start --next` with `APM_AGENT_NAME` unset succeeds and sets a non-empty `agent` field in the ticket
-- [ ] When `APM_AGENT_NAME` is set, all three commands (`apm work`, `apm start <id>`, `apm start --next`) use it as the agent name
+- [x] `apm work` with `APM_AGENT_NAME` unset does not print `warning: dispatch failed: APM_AGENT_NAME is not set`
+- [x] `apm work` with `APM_AGENT_NAME` unset dispatches workers for actionable tickets without error
+- [x] Tickets started via `apm work` without `APM_AGENT_NAME` have a non-empty `agent` field in their frontmatter
+- [x] `apm start <id>` with `APM_AGENT_NAME` unset succeeds and sets a non-empty `agent` field in the ticket
+- [x] `apm start --next` with `APM_AGENT_NAME` unset succeeds and sets a non-empty `agent` field in the ticket
+- [x] When `APM_AGENT_NAME` is set, all three commands (`apm work`, `apm start <id>`, `apm start --next`) use it as the agent name
 
 ### Out of scope
 
