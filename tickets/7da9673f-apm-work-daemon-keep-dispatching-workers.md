@@ -1,7 +1,7 @@
 +++
 id = "7da9673f"
 title = "apm work --daemon: keep dispatching workers as tickets become actionable"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "91785"
 branch = "ticket/7da9673f-apm-work-daemon-keep-dispatching-workers"
 created_at = "2026-03-30T17:27:51.137680Z"
-updated_at = "2026-03-30T17:33:58.373101Z"
+updated_at = "2026-03-30T19:19:36.175584Z"
 +++
 
 ## Spec
@@ -107,3 +107,4 @@ The daemon should be interruptible with Ctrl-C and should log each dispatch cycl
 | 2026-03-30T17:27Z | — | new | philippepascal |
 | 2026-03-30T17:29Z | new | in_design | philippepascal |
 | 2026-03-30T17:33Z | in_design | specd | claude-0330-1730-b4e1 |
+| 2026-03-30T19:19Z | specd | ready | apm |
