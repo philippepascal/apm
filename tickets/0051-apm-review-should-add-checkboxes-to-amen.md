@@ -24,12 +24,12 @@ The problem is that `apm state <id> specd` (the agent's resubmit command) calls 
 
 ### Acceptance criteria
 
-- [ ] When `apm review` transitions a ticket to `ammend`, plain list items (`^- ` lines that are not already `- [ ]` or `- [x]`) inside `### Amendment requests` are converted to `- [ ] `
-- [ ] Items already formatted as `- [ ]` or `- [x]` are left unchanged
-- [ ] Lines that are not list items (blank lines, prose, HTML comments) are left unchanged
-- [ ] If `### Amendment requests` is absent or contains only the placeholder comment, no conversion is attempted
-- [ ] Transitions to any state other than `ammend` are not affected
-- [ ] Integration test: after a `review` call targeting `ammend`, a plain bullet in the amendment section appears as `- [ ]` in the committed ticket
+- [x] When `apm review` transitions a ticket to `ammend`, plain list items (`^- ` lines that are not already `- [ ]` or `- [x]`) inside `### Amendment requests` are converted to `- [ ] `
+- [x] Items already formatted as `- [ ]` or `- [x]` are left unchanged
+- [x] Lines that are not list items (blank lines, prose, HTML comments) are left unchanged
+- [x] If `### Amendment requests` is absent or contains only the placeholder comment, no conversion is attempted
+- [x] Transitions to any state other than `ammend` are not affected
+- [x] Integration test: after a `review` call targeting `ammend`, a plain bullet in the amendment section appears as `- [ ]` in the committed ticket
 
 ### Out of scope
 
