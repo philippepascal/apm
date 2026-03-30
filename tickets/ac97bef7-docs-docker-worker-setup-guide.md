@@ -3,13 +3,13 @@ id = "ac97bef7"
 title = "docs: Docker worker setup guide"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 agent = "46385"
 branch = "ticket/ac97bef7-docs-docker-worker-setup-guide"
 created_at = "2026-03-30T19:55:27.882184Z"
-updated_at = "2026-03-30T20:00:35.089582Z"
+updated_at = "2026-03-30T20:05:53.498276Z"
 +++
 
 ## Spec
