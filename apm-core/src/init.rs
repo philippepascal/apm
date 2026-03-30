@@ -176,7 +176,7 @@ dir = "../{name}--worktrees"
 
 [agents]
 max_concurrent = 3
-instructions = "apm.agents.md"
+instructions = ".apm/agents.md"
 
 [workflow.prioritization]
 priority_weight = 10.0
