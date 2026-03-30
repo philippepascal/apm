@@ -41,7 +41,7 @@ The desired behaviour: `apm clean` diagnoses each blocked worktree, explains wha
 - [x] When a dirty worktree has both modified tracked files and untracked files, the modified-tracked gate applies: no prompt, skip with message
 - [x] When a dirty worktree contains untracked files not in the known-temp list, `apm clean` lists them labelled `[user]`, distinct from known-temp files labelled `[temp]`, and includes all of them in the removal prompt
 - [x] In `--dry-run` mode, `apm clean` prints a categorised diagnosis of each dirty worktree (file labels and names) without prompting or removing anything
-- [ ] A `--yes` flag auto-confirms all removal prompts without reading stdin, enabling scripted use
+- [x] A `--yes` flag auto-confirms all removal prompts without reading stdin, enabling scripted use
 
 ### Out of scope
 
