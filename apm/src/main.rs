@@ -185,6 +185,9 @@ enum Command {
         /// Check that all required sections are non-empty
         #[arg(long)]
         check: bool,
+        /// Mark the first unchecked item matching this text in --section as done
+        #[arg(long)]
+        mark: Option<String>,
     },
 }
 
@@ -243,7 +246,7 @@ fn main() -> Result<()> {
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run } => cmd::work::run(&root, skip_permissions, dry_run),
         Command::Clean { dry_run } => cmd::clean::run(&root, dry_run),
-        Command::Spec { id, section, set, check } => cmd::spec::run(&root, id, section, set, check),
+        Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, id, section, set, check, mark),
     }
 }
 

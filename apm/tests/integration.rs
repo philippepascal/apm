@@ -650,7 +650,7 @@ fn spec_prints_all_sections() {
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
     // Should succeed and not error
-    apm::cmd::spec::run(p, 1, None, None, false).unwrap();
+    apm::cmd::spec::run(p, 1, None, None, false, None).unwrap();
 }
 
 #[test]
@@ -658,7 +658,7 @@ fn spec_prints_single_section() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "the problem text", "the approach");
-    apm::cmd::spec::run(p, 1, Some("Problem".into()), None, false).unwrap();
+    apm::cmd::spec::run(p, 1, Some("Problem".into()), None, false, None).unwrap();
 }
 
 #[test]
@@ -666,7 +666,7 @@ fn spec_set_section_commits() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, 1, Some("Problem".into()), Some("new problem text".into()), false).unwrap();
+    apm::cmd::spec::run(p, 1, Some("Problem".into()), Some("new problem text".into()), false, None).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("new problem text"), "updated problem not found: {content}");
 }
@@ -676,7 +676,7 @@ fn spec_check_passes_full_ticket() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    apm::cmd::spec::run(p, 1, None, None, true).unwrap();
+    apm::cmd::spec::run(p, 1, None, None, true, None).unwrap();
 }
 
 #[test]
@@ -684,7 +684,7 @@ fn spec_unknown_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, 1, Some("NonExistent".into()), None, false);
+    let result = apm::cmd::spec::run(p, 1, Some("NonExistent".into()), None, false, None);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("unknown section"));
 }
@@ -693,7 +693,7 @@ fn spec_unknown_section_errors() {
 fn spec_nonexistent_ticket_errors() {
     let dir = setup();
     let p = dir.path();
-    let result = apm::cmd::spec::run(p, 999, None, None, false);
+    let result = apm::cmd::spec::run(p, 999, None, None, false, None);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("not found"));
 }
@@ -703,9 +703,126 @@ fn spec_set_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, 1, None, Some("some value".into()), false);
+    let result = apm::cmd::spec::run(p, 1, None, Some("some value".into()), false, None);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set requires --section"));
+}
+
+fn write_ticket_with_amendment_requests(dir: &std::path::Path, id: u32) {
+    let branch = format!("ticket/{id:04}-spec-test");
+    let filename = format!("{id:04}-spec-test.md");
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"spec test\"\nstate = \"ammend\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] criterion one\n\n### Out of scope\n\nnothing\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- [ ] Add error handling\n- [ ] Fix the bug\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", &branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", &branch]);
+    } else {
+        git(dir, &["checkout", &branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: spec test with amendments"]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn spec_mark_checks_off_item_in_amendment_requests() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_amendment_requests(p, 1);
+    apm::cmd::spec::run(
+        p,
+        1,
+        Some("Amendment requests".into()),
+        None,
+        false,
+        Some("Add error handling".into()),
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
+    assert!(content.contains("- [ ] Fix the bug"), "other item should remain unchecked: {content}");
+}
+
+#[test]
+fn spec_mark_no_match_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_amendment_requests(p, 1);
+    let result = apm::cmd::spec::run(
+        p,
+        1,
+        Some("Amendment requests".into()),
+        None,
+        false,
+        Some("nonexistent item".into()),
+    );
+    assert!(result.is_err());
+    let msg = format!("{}", result.unwrap_err());
+    assert!(msg.contains("no unchecked item"), "unexpected error: {msg}");
+}
+
+#[test]
+fn spec_mark_ambiguous_errors() {
+    let dir = setup();
+    let p = dir.path();
+    // "error" matches both "Add error handling" and "Fix the error"
+    let branch = "ticket/0001-spec-test";
+    let filename = "0001-spec-test.md";
+    let path = format!("tickets/{filename}");
+    let content = "+++\nid = 1\ntitle = \"spec test\"\nstate = \"ammend\"\nbranch = \"ticket/0001-spec-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] one\n\n### Out of scope\n\nnothing\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- [ ] Add error handling\n- [ ] Fix the error\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::write(p.join(&path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: ambiguous"]);
+    git(p, &["checkout", "main"]);
+
+    let result = apm::cmd::spec::run(
+        p,
+        1,
+        Some("Amendment requests".into()),
+        None,
+        false,
+        Some("error".into()),
+    );
+    assert!(result.is_err());
+    let msg = format!("{}", result.unwrap_err());
+    assert!(msg.contains("ambiguous"), "unexpected error: {msg}");
+}
+
+#[test]
+fn spec_mark_without_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_amendment_requests(p, 1);
+    let result = apm::cmd::spec::run(p, 1, None, None, false, Some("Add error handling".into()));
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--mark requires --section"));
+}
+
+#[test]
+fn spec_mark_case_insensitive() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_amendment_requests(p, 1);
+    apm::cmd::spec::run(
+        p,
+        1,
+        Some("Amendment requests".into()),
+        None,
+        false,
+        Some("ADD ERROR".into()),
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
 }
 
 // ── apm start --next ─────────────────────────────────────────────────────────

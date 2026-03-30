@@ -17,9 +17,13 @@ pub fn run(
     section: Option<String>,
     set: Option<String>,
     check: bool,
+    mark: Option<String>,
 ) -> Result<()> {
     if set.is_some() && section.is_none() {
         bail!("--set requires --section");
+    }
+    if mark.is_some() && section.is_none() {
+        bail!("--mark requires --section");
     }
 
     let config = Config::load(root)?;
@@ -37,6 +41,20 @@ pub fn run(
     let dummy_path = root.join(&rel_path);
 
     let content = git::read_from_branch(root, &branch, &rel_path)?;
+
+    if let (Some(ref name), Some(ref item_text)) = (&section, &mark) {
+        let new_content = mark_item(&content, name, item_text)?;
+        git::commit_to_branch(
+            root,
+            &branch,
+            &rel_path,
+            &new_content,
+            &format!("ticket({id}): mark \"{item_text}\" in {name}"),
+        )?;
+        println!("ticket #{id}: marked \"{item_text}\" in {name:?}");
+        return Ok(());
+    }
+
     let mut t = ticket::Ticket::parse(&dummy_path, &content)?;
     let mut doc = t.document()?;
 
@@ -144,6 +162,63 @@ fn print_all(doc: &ticket::TicketDocument) {
     if let Some(oq) = &doc.open_questions {
         println!("### Open questions\n");
         println!("{oq}\n");
+    }
+}
+
+fn mark_item(content: &str, section: &str, item_text: &str) -> Result<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let section_lower = section.to_lowercase();
+
+    let header_idx = lines.iter().position(|line| {
+        line.strip_prefix("### ")
+            .map(|rest| rest.to_lowercase() == section_lower)
+            .unwrap_or(false)
+    });
+
+    let Some(header_idx) = header_idx else {
+        bail!("section {:?} not found", section);
+    };
+
+    let mut matches: Vec<usize> = Vec::new();
+    for (i, line) in lines.iter().enumerate().skip(header_idx + 1) {
+        if line.starts_with("##") {
+            break;
+        }
+        if let Some(text) = line.strip_prefix("- [ ] ") {
+            if text.to_lowercase().contains(&item_text.to_lowercase()) {
+                matches.push(i);
+            }
+        }
+    }
+
+    match matches.len() {
+        0 => bail!(
+            "no unchecked item matching {:?} found in section {:?}",
+            item_text,
+            section
+        ),
+        1 => {
+            let mut new_lines: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+            new_lines[matches[0]] = new_lines[matches[0]].replacen("- [ ] ", "- [x] ", 1);
+            let joined = new_lines.join("\n");
+            if content.ends_with('\n') {
+                Ok(joined + "\n")
+            } else {
+                Ok(joined)
+            }
+        }
+        _ => {
+            let mut msg = format!(
+                "ambiguous: {} unchecked items match {:?} in section {:?}:",
+                matches.len(),
+                item_text,
+                section
+            );
+            for i in &matches {
+                msg.push_str(&format!("\n  {}", lines[*i]));
+            }
+            bail!("{}", msg);
+        }
     }
 }
 
