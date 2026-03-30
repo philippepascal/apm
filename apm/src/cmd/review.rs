@@ -1,10 +1,8 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, review as core_review, ticket};
 use chrono::Utc;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
-
-const SENTINEL: &str = "# --- edit the ticket spec below this line ---";
 
 struct TransitionOption {
     to: String,
@@ -32,8 +30,10 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
     };
 
     let current_state = t.frontmatter.state.clone();
-    let state_cfg = config.workflow.states.iter().find(|s| s.id == current_state);
-    let transitions = manual_transitions(&config, state_cfg, &current_state);
+    let raw_transitions = core_review::available_transitions(&config, &current_state);
+    let transitions: Vec<TransitionOption> = raw_transitions.into_iter()
+        .map(|(to, label, hint)| TransitionOption { to, label, hint })
+        .collect();
 
     // Pre-validate --to before opening editor.
     if let Some(ref target) = to {
@@ -50,7 +50,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
     }
 
     // Split body into editable spec and preserved history.
-    let (spec_body, history_section) = split_body(&t.body);
+    let (spec_body, history_section) = core_review::split_body(&t.body);
 
     // Write temp file: header + sentinel + spec body.
     let header = build_header(&id, &t.frontmatter.title, &current_state, &transitions, to.as_deref());
@@ -61,13 +61,13 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
             .unwrap_or(0);
         std::env::temp_dir().join(format!("apm-review-{id}-{unique}.md"))
     };
-    std::fs::write(&tmp_path, format!("{header}\n{SENTINEL}\n\n{spec_body}"))?;
+    std::fs::write(&tmp_path, format!("{header}\n{}\n\n{spec_body}", core_review::SENTINEL))?;
 
     open_editor(&tmp_path)?;
 
     let edited_raw = std::fs::read_to_string(&tmp_path)?;
     let _ = std::fs::remove_file(&tmp_path);
-    let mut new_spec = extract_spec(&edited_raw);
+    let mut new_spec = core_review::extract_spec(&edited_raw);
 
     // Determine transition.
     let chosen_state = match to {
@@ -77,7 +77,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
 
     // Normalise plain bullets → checkboxes in the amendment section when transitioning to ammend.
     if chosen_state.as_deref() == Some("ammend") {
-        new_spec = normalise_amendment_checkboxes(new_spec);
+        new_spec = core_review::normalize_amendments(new_spec);
     }
 
     let changed = new_spec.trim_end() != spec_body.trim_end();
@@ -99,7 +99,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
     // Commit the spec edit if the body changed.
     if changed {
         // Splice: trimmed new spec + original history section.
-        t.body = format!("{}{}", new_spec.trim_end(), history_section);
+        t.body = core_review::apply_review(&new_spec, &history_section);
         t.frontmatter.updated_at = Some(Utc::now());
         let content = t.serialize()?;
         git::commit_to_branch(root, &branch, &rel_path, &content,
@@ -113,75 +113,6 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
     }
 
     Ok(())
-}
-
-/// Extract the editable spec from the saved temp file.
-/// Everything after the sentinel line (or after leading `# ` comment lines
-/// if the sentinel was deleted) is the spec content.
-fn extract_spec(content: &str) -> String {
-    if let Some(idx) = content.find(SENTINEL) {
-        let after = &content[idx + SENTINEL.len()..];
-        after.trim_start_matches('\n').to_string()
-    } else {
-        // Sentinel was deleted — strip leading comment lines as fallback.
-        let mut lines = content.lines().peekable();
-        let mut out = Vec::new();
-        let mut past_header = false;
-        for line in lines.by_ref() {
-            if !past_header && (line == "#" || line.starts_with("# ")) {
-                continue;
-            }
-            past_header = true;
-            out.push(line);
-        }
-        out.join("\n")
-    }
-}
-
-/// Split ticket body into (spec_part, history_section).
-/// `history_section` starts with `\n## History` so it can be spliced back directly.
-fn split_body(body: &str) -> (String, String) {
-    if let Some(idx) = body.find("\n## History") {
-        (body[..idx].to_string(), body[idx..].to_string())
-    } else if body.starts_with("## History") {
-        (String::new(), body.to_string())
-    } else {
-        (body.to_string(), String::new())
-    }
-}
-
-/// Returns the manual (non-auto) transitions available from the current state.
-fn manual_transitions(
-    config: &Config,
-    state_cfg: Option<&apm_core::config::StateConfig>,
-    current_state: &str,
-) -> Vec<TransitionOption> {
-    let terminal_ids: Vec<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
-
-    if let Some(sc) = state_cfg {
-        if !sc.transitions.is_empty() {
-            return sc.transitions.iter()
-                .filter(|tr| {
-                    // Include manual and command:* triggers; exclude event:* auto-triggers.
-                    !tr.trigger.starts_with("event:")
-                })
-                .map(|tr| TransitionOption {
-                    to: tr.to.clone(),
-                    label: tr.label.clone(),
-                    hint: tr.hint.clone(),
-                })
-                .collect();
-        }
-    }
-
-    // No explicit transitions: all non-terminal, non-current states are valid.
-    config.workflow.states.iter()
-        .filter(|s| s.id != current_state && !terminal_ids.contains(&s.id.as_str()))
-        .map(|s| TransitionOption { to: s.id.clone(), label: s.label.clone(), hint: String::new() })
-        .collect()
 }
 
 fn build_header(
@@ -241,44 +172,6 @@ fn open_editor(path: &Path) -> Result<()> {
         bail!("editor exited with non-zero status");
     }
     Ok(())
-}
-
-/// Convert plain `- ` bullets in `### Amendment requests` to `- [ ] ` checkboxes.
-/// Lines already formatted as `- [ ]` or `- [x]` are left unchanged.
-/// Only lines inside the section (up to the next `##` heading) are affected.
-fn normalise_amendment_checkboxes(spec: String) -> String {
-    const SECTION: &str = "### Amendment requests";
-
-    let parts: Vec<&str> = spec.split('\n').collect();
-    let Some(sec_pos) = parts.iter().position(|l| *l == SECTION) else {
-        return spec;
-    };
-
-    let mut result: Vec<String> = Vec::with_capacity(parts.len());
-    let mut in_section = false;
-
-    for (i, line) in parts.iter().enumerate() {
-        if i < sec_pos {
-            result.push((*line).to_string());
-        } else if i == sec_pos {
-            in_section = true;
-            result.push((*line).to_string());
-        } else if in_section && line.starts_with("##") {
-            in_section = false;
-            result.push((*line).to_string());
-        } else if in_section
-            && line.starts_with("- ")
-            && !line.starts_with("- [ ]")
-            && !line.starts_with("- [x]")
-            && !line.starts_with("- [X]")
-        {
-            result.push(format!("- [ ]{}", &line[1..]));
-        } else {
-            result.push((*line).to_string());
-        }
-    }
-
-    result.join("\n")
 }
 
 fn prompt_transition(
