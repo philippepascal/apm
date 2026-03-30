@@ -45,7 +45,7 @@ blocks `apm-serve` from reusing any of it.
 ### Acceptance criteria
 
 - [x] `apm list` with no flags produces identical output before and after the refactor
-- [ ] `apm list --state <s>`, `--unassigned`, `--all`, `--supervisor`, `--actionable` flags each produce identical output
+- [x] `apm list --state <s>`, `--unassigned`, `--all`, `--supervisor`, `--actionable` flags each produce identical output
 - [ ] `apm set <id> author foo` still returns error "author is immutable"
 - [ ] `apm set <id> priority 256` still returns a parse error (u8 overflow)
 - [ ] `apm set <id> unknownfield val` still returns error "unknown field: unknownfield"
