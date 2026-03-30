@@ -4,12 +4,12 @@ title = "apm start: use state machine instructions field as worker system prompt
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 agent = "83841"
 branch = "ticket/54671399-apm-start-use-state-machine-instructions"
 created_at = "2026-03-30T22:51:08.077356Z"
-updated_at = "2026-03-30T22:54:15.546124Z"
+updated_at = "2026-03-30T22:54:22.142792Z"
 +++
 
 ## Spec
