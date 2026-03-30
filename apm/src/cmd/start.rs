@@ -141,8 +141,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
     };
 
-    // Get ticket content
-    let ticket_content = content;
+    // Get ticket content, prepend role line
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{content}");
 
     // Build log path
     let log_path = wt_display.join(".apm-worker.log");
@@ -269,7 +269,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         }
     };
 
-    let ticket_content = t.serialize()?;
+    let raw = t.serialize()?;
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
 
     // Find the worktree
     let branch = t.frontmatter.branch.clone()
@@ -388,7 +389,8 @@ pub fn spawn_next_worker(
         }
     };
 
-    let ticket_content = t.serialize()?;
+    let raw = t.serialize()?;
+    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
