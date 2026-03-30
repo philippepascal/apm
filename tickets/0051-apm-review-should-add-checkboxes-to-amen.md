@@ -1,14 +1,15 @@
 +++
 id = 51
 title = "apm review should add checkboxes to amendment requests"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "claude-0328-1430-a4f2"
+agent = "claude-0329-1430-main"
 branch = "ticket/0051-apm-review-should-add-checkboxes-to-amen"
 created_at = "2026-03-28T22:35:26.680433Z"
-updated_at = "2026-03-30T00:53:31.589070Z"
+updated_at = "2026-03-30T00:55:28.067265Z"
 +++
 
 ## Spec
@@ -56,3 +57,4 @@ The normalised spec is used for the changed-body check and the commit. The exist
 | 2026-03-29T22:56Z | new | in_design | claude-spec-51 |
 | 2026-03-29T22:58Z | in_design | specd | claude-spec-51 |
 | 2026-03-30T00:53Z | specd | ready | apm |
+| 2026-03-30T00:55Z | ready | in_progress | claude-0329-1430-main |
