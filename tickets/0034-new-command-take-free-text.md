@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0327-2000-34ee"
 branch = "ticket/0034-new-command-take-free-text"
 created_at = "2026-03-27T21:11:48.964488Z"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -46,4 +46,4 @@ In `apm/src/cmd/new.rs`, after `commit_to_branch` creates the ticket, check `$ED
 | 2026-03-28T02:09Z | ready | in_progress | claude-0327-2000-34ee |
 | 2026-03-28T02:11Z | in_progress | implemented | claude-0327-2000-34ee |
 | 2026-03-28T07:31Z | implemented | accepted | apm sync |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |

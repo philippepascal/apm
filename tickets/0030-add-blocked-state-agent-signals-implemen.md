@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-2000-30bb"
 branch = "ticket/0030-add-blocked-state-agent-signals-implemen"
 created_at = "2026-03-27T06:15:12.087284Z"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -56,4 +56,4 @@ and `STATE-MACHINE.md`.
 | 2026-03-28T02:08Z | ready | in_progress | claude-0327-2000-30bb |
 | 2026-03-28T02:10Z | in_progress | implemented | claude-0327-2000-30bb |
 | 2026-03-28T07:31Z | implemented | accepted | apm sync |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |

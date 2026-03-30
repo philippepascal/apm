@@ -9,7 +9,7 @@ author = "claude-0328-1430-a4f2"
 agent = "claude-0329-1430-main"
 branch = "ticket/0051-apm-review-should-add-checkboxes-to-amen"
 created_at = "2026-03-28T22:35:26.680433Z"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -60,4 +60,4 @@ The normalised spec is used for the changed-body check and the commit. The exist
 | 2026-03-30T00:55Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-30T00:59Z | in_progress | implemented | claude-0329-1430-main |
 | 2026-03-30T01:02Z | implemented | accepted | apm |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |

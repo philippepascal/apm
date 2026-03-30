@@ -7,7 +7,7 @@ effort = 2
 risk = 1
 agent = "claude-0326-2222-8071"
 branch = "ticket/0019-apm-list-shows-closed-tickets-by-default"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -45,4 +45,4 @@ unless `--all` is passed. Add `--all: bool` to the `List` variant in `main.rs`.
 | 2026-03-27T05:30Z | ready | in_progress | claude-0326-2222-8071 |
 | 2026-03-27T05:32Z | in_progress | implemented | claude-0326-2222-8071 |
 | 2026-03-27T06:33Z | implemented | accepted | apm sync |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |

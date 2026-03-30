@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-impl-54"
 branch = "ticket/0054-apm-validate-config-and-ticket-integrity"
 created_at = "2026-03-29T19:11:40.144856Z"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -98,4 +98,4 @@ For each ticket where `branch` is set but wrong: rewrite `frontmatter.branch` to
 | 2026-03-29T19:48Z | ready | in_progress | claude-0329-impl-54 |
 | 2026-03-29T19:56Z | in_progress | implemented | claude-0329-impl-54 |
 | 2026-03-29T20:19Z | implemented | accepted | claude-0329-main |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |

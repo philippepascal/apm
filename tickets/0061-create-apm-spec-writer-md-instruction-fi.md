@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1430-main"
 branch = "ticket/0061-create-apm-spec-writer-md-instruction-fi"
 created_at = "2026-03-29T19:12:34.623619Z"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -61,4 +61,4 @@ The spec quality bar documented in `apm.agents.md` is brief. A richer, dedicated
 | 2026-03-29T23:37Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-29T23:39Z | in_progress | implemented | claude-0329-1430-main |
 | 2026-03-29T23:55Z | implemented | accepted | apm |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |

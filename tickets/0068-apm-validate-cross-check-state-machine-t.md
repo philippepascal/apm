@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0329-1430-main"
 branch = "ticket/0068-apm-validate-cross-check-state-machine-t"
 created_at = "2026-03-29T23:26:19.627104Z"
-updated_at = "2026-03-30T01:17:49.888575Z"
+updated_at = "2026-03-30T02:02:46.501095Z"
 +++
 
 ## Spec
@@ -67,4 +67,4 @@ Add `--config-only` flag to the `Validate` subcommand in `main.rs`. In `run`, al
 | 2026-03-29T23:56Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-30T00:12Z | in_progress | implemented | claude-0329-1430-main |
 | 2026-03-30T00:50Z | implemented | accepted | apm |
-| 2026-03-30T01:17Z | accepted | closed | apm-sync |
+| 2026-03-30T02:02Z | accepted | closed | apm-sync |
