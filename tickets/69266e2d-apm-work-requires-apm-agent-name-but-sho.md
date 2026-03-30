@@ -4,12 +4,12 @@ title = "apm work requires APM_AGENT_NAME but should not"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "claude-0330-0245-main"
 agent = "claude-0330-0245-main"
 branch = "ticket/69266e2d-apm-work-requires-apm-agent-name-but-sho"
 created_at = "2026-03-30T06:11:19.569472Z"
-updated_at = "2026-03-30T06:22:44.811051Z"
+updated_at = "2026-03-30T06:23:26.927266Z"
 +++
 
 ## Spec
