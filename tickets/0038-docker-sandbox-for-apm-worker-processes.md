@@ -52,7 +52,7 @@ current native behaviour unchanged.
 
 ### Acceptance criteria
 
-- [ ] `apm.toml` supports a `[workers]` section with `container = "<image>"`;
+- [x] `apm.toml` supports a `[workers]` section with `container = "<image>"`;
   when absent or empty, native spawning (ticket #37) is used unchanged
 - [ ] When `container` is set, `apm start` runs the worker via
   `docker run --rm` with only the worktree mounted at `/workspace` (read-write)
