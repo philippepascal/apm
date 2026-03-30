@@ -1,21 +1,23 @@
 +++
 id = 81
 title = "better help"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "claude-0330-0245-main"
 branch = "ticket/0081-better-help"
 created_at = "2026-03-30T04:47:00.345986Z"
-updated_at = "2026-03-30T04:47:00.345986Z"
+updated_at = "2026-03-30T05:19:47.022596Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+-h documentation is extremely sparse. it should go beyond the current short summary and add explanation of command in the overal process.
+that is for all commands.
 
 ### Acceptance criteria
 
@@ -38,11 +40,9 @@ How the implementation will work.
 
 
 ### Code review
-
-
-
 ## History
 
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T04:47Z | — | new | apm |
+| 2026-03-30T05:19Z | new | in_design | claude-0330-0245-main |
