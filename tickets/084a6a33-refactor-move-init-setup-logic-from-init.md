@@ -46,7 +46,12 @@ Moving this logic into `apm_core::init` gives the project a clean boundary: `apm
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the behaviour of `apm init` — this is a pure refactor; no new features
+- Moving `update_claude_settings()` or `update_user_claude_settings()` to apm-core (they read stdin and belong in the CLI)
+- Moving `warn_if_settings_untracked()` to apm-core (it is a UX warning, not repo setup)
+- Changing the config template format or the default workflow states
+- Adding a `--dry-run` flag or any other new CLI options
+- Removing the `--migrate` subcommand behaviour
 
 ### Approach
 
