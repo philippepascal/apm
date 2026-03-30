@@ -103,13 +103,11 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
 }
 
 fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> Result<()> {
-    let editor = match std::env::var("EDITOR") {
-        Ok(e) if !e.is_empty() => e,
-        _ => {
-            eprintln!("warning: $EDITOR is not set, skipping editor open");
-            return Ok(());
-        }
-    };
+    let editor = std::env::var("VISUAL")
+        .ok()
+        .filter(|e| !e.is_empty())
+        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
+        .unwrap_or_else(|| "vi".to_string());
 
     // Check out the ticket branch, open editor, commit result, return to previous branch.
     let prev_branch = std::process::Command::new("git")
