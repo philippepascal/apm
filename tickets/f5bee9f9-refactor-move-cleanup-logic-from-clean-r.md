@@ -25,7 +25,7 @@ The target is apm_core::clean::candidates() returning a structured list of branc
 ### Acceptance criteria
 
 - [x] `apm_core::clean::candidates()` exists and is `pub` in apm-core
-- [ ] `apm_core::clean::remove()` exists and is `pub` in apm-core
+- [x] `apm_core::clean::remove()` exists and is `pub` in apm-core
 - [ ] `candidates()` returns a `CleanCandidate` for each ticket branch that is in a terminal state and merged into the default branch
 - [ ] `candidates()` skips branches where the worktree has uncommitted changes
 - [ ] `candidates()` skips branches where local and remote tips disagree
