@@ -3,13 +3,13 @@ id = "1d122a6a"
 title = "fetch before read in close, state, take, next, list when aggressive"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 agent = "35767"
 branch = "ticket/1d122a6a-fetch-before-read-in-close-state-take-ne"
 created_at = "2026-03-30T19:50:51.401850Z"
-updated_at = "2026-03-30T20:00:23.114115Z"
+updated_at = "2026-03-30T20:04:00.485241Z"
 +++
 
 ## Spec
