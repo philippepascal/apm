@@ -1,17 +1,12 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
 
-    let prefix = format!("ticket/{id:04}-");
     let branches = git::ticket_branches(root)?;
-    let branch = branches.into_iter().find(|b| b.starts_with(&prefix));
-
-    let Some(branch) = branch else {
-        bail!("ticket #{id} not found");
-    };
+    let branch = git::resolve_ticket_branch(&branches, id_arg)?;
 
     let aggressive = config.sync.aggressive && !no_aggressive;
     if aggressive {
@@ -29,7 +24,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool) -> Result<()> {
     let t = ticket::Ticket::parse(&dummy_path, &content)?;
 
     let fm = &t.frontmatter;
-    println!("#{} — {}", fm.id, fm.title);
+    println!("{} — {}", fm.id, fm.title);
     println!("state:    {}", fm.state);
     println!("priority: {}  effort: {}  risk: {}", fm.priority, fm.effort, fm.risk);
     if let Some(a) = &fm.agent { println!("agent:    {a}"); }

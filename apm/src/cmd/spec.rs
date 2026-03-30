@@ -13,7 +13,7 @@ const KNOWN_SECTIONS: &[&str] = &[
 
 pub fn run(
     root: &Path,
-    id: u32,
+    id_arg: &str,
     section: Option<String>,
     set: Option<String>,
     check: bool,
@@ -28,12 +28,12 @@ pub fn run(
 
     let config = Config::load(root)?;
 
-    let prefix = format!("ticket/{id:04}-");
     let branches = git::ticket_branches(root)?;
-    let branch = branches.into_iter().find(|b| b.starts_with(&prefix));
-    let Some(branch) = branch else {
-        bail!("ticket #{id} not found");
-    };
+    let branch = git::resolve_ticket_branch(&branches, id_arg)?;
+    let id = branch.strip_prefix("ticket/")
+        .and_then(|s| s.split('-').next())
+        .unwrap_or(id_arg)
+        .to_string();
 
     let suffix = branch.trim_start_matches("ticket/");
     let filename = format!("{suffix}.md");

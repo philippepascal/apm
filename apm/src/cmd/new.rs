@@ -21,17 +21,17 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
 
-    let id = git::next_ticket_id(root, &tickets_dir)?;
+    let id = git::gen_hex_id();
     let slug = slugify(&title);
-    let filename = format!("{id:04}-{slug}.md");
+    let filename = format!("{id}-{slug}.md");
     let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
-    let branch = format!("ticket/{id:04}-{slug}");
+    let branch = format!("ticket/{id}-{slug}");
     let now = Utc::now();
     let author = std::env::var("APM_AGENT_NAME")
         .ok()
         .unwrap_or_else(|| "apm".into());
     let fm = Frontmatter {
-        id,
+        id: id.clone(),
         title: title.clone(),
         state: "new".into(),
         priority: 0,
@@ -93,7 +93,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         }
     }
 
-    println!("Created ticket #{id}: {filename} (branch: {branch})");
+    println!("Created ticket {id}: {filename} (branch: {branch})");
 
     if !no_edit {
         open_editor(root, &config, &branch, &rel_path)?;

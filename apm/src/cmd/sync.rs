@@ -69,7 +69,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_candidates)?);
         if confirmed {
             for c in &accept_candidates {
-                super::state::run(root, c.ticket.frontmatter.id, "accepted".into(), no_aggressive)?;
+                super::state::run(root, &c.ticket.frontmatter.id, "accepted".into(), no_aggressive)?;
             }
         }
     }
@@ -81,9 +81,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         let confirmed = auto_close || (!quiet && prompt_close(&candidates)?);
         if confirmed {
             for c in candidates {
-                let id = c.ticket.frontmatter.id;
-                if let Err(e) = ticket::close(root, &config, id, None, "apm-sync") {
-                    eprintln!("warning: could not close #{id}: {e:#}");
+                let id = c.ticket.frontmatter.id.clone();
+                if let Err(e) = ticket::close(root, &config, &id, None, "apm-sync") {
+                    eprintln!("warning: could not close {id:?}: {e:#}");
                 }
             }
         }

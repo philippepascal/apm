@@ -34,7 +34,7 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
     for t in filtered {
         let fm = &t.frontmatter;
         let agent = fm.agent.as_deref().unwrap_or("-");
-        println!("#{:<4} [{:<12}] {:<40} agent={}", fm.id, fm.state, fm.title, agent);
+        println!("{:<8} [{:<12}] {:<40} agent={}", fm.id, fm.state, fm.title, agent);
     }
     Ok(())
 }
