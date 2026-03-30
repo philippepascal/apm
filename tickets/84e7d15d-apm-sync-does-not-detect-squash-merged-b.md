@@ -43,7 +43,40 @@ Squash-merged tickets are never transitioned to `accepted` and accumulate indefi
 
 ### Approach
 
-How the implementation will work.
+**File changed:** `apm-core/src/git.rs`
+
+**Replace the `squash_merged` helper with a correct algorithm.**
+
+The current implementation uses `git log --cherry-pick --right-only --no-merges main...branch`, which matches individual commit patch-ids. A squash merge creates one combined commit whose patch-id is the aggregate diff of all branch commits — not equal to any individual commit patch-id — so the check always fails for real squash merges.
+
+The correct algorithm (used by git-town and similar tools):
+
+1. Find the merge base: `git merge-base <main_ref> <branch>`
+2. If the branch tip equals the merge base, skip (already caught by `--merged`).
+3. Create a virtual squash commit: `git commit-tree <branch>^{tree} -p <merge_base> -m squash`. This produces a commit object whose patch-id equals the aggregate diff from merge_base to branch tip.
+4. Run `git cherry <main_ref> <squash_commit>`. If the output line starts with `-`, main contains a commit with the same aggregate patch-id — the branch was squash-merged.
+
+**Fix ref resolution in the remote path.**
+
+In `merged_into_main()`, the remote path builds candidates from `origin/ticket/*` but strips the `origin/` prefix before passing them to `squash_merged`. When git resolves bare `ticket/foo`, it may not find a local branch and the `merge-base` call fails silently. Pass the full `origin/ticket/foo` ref to `squash_merged`, and strip `origin/` only when adding to the returned list.
+
+**Handle local-only branches in the remote path.**
+
+When GitHub auto-deletes the remote branch after a squash merge, `origin/ticket/foo` disappears but the local `ticket/foo` remains. The remote path currently skips local-only branches entirely. After collecting remote candidates, also collect any local `ticket/*` branches not already in `merged_set` and not already in the remote candidate list. Pass them as bare `ticket/foo` refs (no `origin/` prefix).
+
+**Implementation steps:**
+
+1. Rewrite `squash_merged(root, main_ref, candidates)` with the `commit-tree + cherry` approach. Keep the same function signature; adjust the inner logic only.
+2. In `merged_into_main()` remote path:
+   a. Pass `origin/ticket/foo` refs (not stripped) to `squash_merged`; strip `origin/` in the returned values before extending `merged`.
+   b. After building remote candidates, collect local-only ticket branches and pass them in a second `squash_merged` call with the same `main_ref`.
+3. Add integration tests in `apm/tests/integration.rs`:
+   - Init a bare "remote" repo and a local clone with the standard `setup()` helper pattern.
+   - Create a ticket branch with one commit that puts the ticket in `implemented` state.
+   - Squash-merge it into main on the remote side (`git merge --squash` + `git commit`), without merging the original branch commits.
+   - Fetch in the local clone (`git fetch`).
+   - Call `sync::detect()` and assert the ticket appears in `candidates.accept`.
+   - Add a negative test: a ticket branch with commits NOT yet in main should NOT appear in `candidates.accept`.
 
 ### Open questions
 
