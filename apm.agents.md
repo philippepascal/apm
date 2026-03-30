@@ -113,16 +113,23 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the full ticket
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Edit the spec file in the worktree printed above:
+3. Write each spec section using `apm spec`:
    ```bash
-   # use the path printed by apm state <id> in_design
+   apm spec <id> --section Problem --set "..."
+   apm spec <id> --section "Acceptance criteria" --set "- [ ] ..."
+   apm spec <id> --section "Out of scope" --set "..."
+   apm spec <id> --section Approach --set "..."
+   ```
+   Then commit via the worktree path printed in step 2:
+   ```bash
    git -C <printed-path> add tickets/<id>-<slug>.md
    git -C <printed-path> commit -m "ticket(<id>): write spec"
    ```
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
-4. If blocked on an ambiguity: write the question in `### Open questions`,
-   commit it to the worktree, then `apm state <id> question`
+4. If blocked on an ambiguity: write the question in `### Open questions` with
+   `apm spec <id> --section "Open questions" --set "..."`, commit it to the
+   worktree, then `apm state <id> question`
 5. `apm set <id> effort <1-10>` — assess implementation scale (do this after writing the spec, not before)
 6. `apm set <id> risk <1-10>` — assess technical risk
 7. `apm state <id> specd` — submit spec for supervisor review
@@ -131,9 +138,10 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the Amendment requests carefully
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Address each item, check its box, update `### Approach`:
+3. Address each item using `apm spec` to update sections, then mark each
+   amendment checkbox off with `apm spec <id> --section "Amendment requests" --mark "..."`.
+   Commit via the worktree path printed in step 2:
    ```bash
-   # use the path printed by apm state <id> in_design
    git -C <printed-path> add tickets/<id>-<slug>.md
    git -C <printed-path> commit -m "ticket(<id>): address amendments"
    ```
