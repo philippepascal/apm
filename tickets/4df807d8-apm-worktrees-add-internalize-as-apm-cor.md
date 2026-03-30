@@ -1,14 +1,15 @@
 +++
 id = "4df807d8"
 title = "apm worktrees --add: internalize as apm-core function, remove from public CLI"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "claude-0330-0245-main"
+agent = "claude-0330-0245-main"
 branch = "ticket/4df807d8-apm-worktrees-add-internalize-as-apm-cor"
 created_at = "2026-03-30T06:15:20.855321Z"
-updated_at = "2026-03-30T06:15:20.855321Z"
+updated_at = "2026-03-30T06:20:32.203764Z"
 +++
 
 ## Spec
@@ -60,3 +61,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-30T06:15Z | — | new | claude-0330-0245-main |
+| 2026-03-30T06:20Z | new | in_design | claude-0330-0245-main |
