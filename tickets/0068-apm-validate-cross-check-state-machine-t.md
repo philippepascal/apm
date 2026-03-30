@@ -28,15 +28,15 @@ These problems are all detectable statically from `apm.toml` before any agent ru
 
 ### Acceptance criteria
 
-- [ ] `apm validate` checks that every `instructions` path on a state exists on disk relative to the repo root; reports each missing file as `config: state.<id>.instructions — file not found: <path>`
-- [ ] `apm validate` checks that every `context_section` value on a transition matches a `name` in `[[ticket.sections]]` (when sections are non-empty); reports mismatches
-- [ ] `apm validate` checks that every `focus_section` value on a transition matches a `name` in `[[ticket.sections]]` (when sections are non-empty); reports mismatches
-- [ ] `apm validate` reports non-terminal states with no outgoing transitions as `config: state.<id> — no outgoing transitions (tickets will be stranded)`
-- [ ] `apm validate` reports if `completion = "pr"` or `completion = "merge"` appears on any transition but `[provider]` is absent or has no `type`
-- [ ] All config errors are printed to stderr in the format `config: <location> — <message>`
-- [ ] Exit code 1 if any config errors are found (combined with existing ticket errors)
-- [ ] `apm validate --config-only` skips ticket integrity checks and runs only config cross-checks
-- [ ] Integration test: a config with a missing instructions file and a mismatched `context_section` produces the expected two error lines and exits 1
+- [x] `apm validate` checks that every `instructions` path on a state exists on disk relative to the repo root; reports each missing file as `config: state.<id>.instructions — file not found: <path>`
+- [x] `apm validate` checks that every `context_section` value on a transition matches a `name` in `[[ticket.sections]]` (when sections are non-empty); reports mismatches
+- [x] `apm validate` checks that every `focus_section` value on a transition matches a `name` in `[[ticket.sections]]` (when sections are non-empty); reports mismatches
+- [x] `apm validate` reports non-terminal states with no outgoing transitions as `config: state.<id> — no outgoing transitions (tickets will be stranded)`
+- [x] `apm validate` reports if `completion = "pr"` or `completion = "merge"` appears on any transition but `[provider]` is absent or has no `type`
+- [x] All config errors are printed to stderr in the format `config: <location> — <message>`
+- [x] Exit code 1 if any config errors are found (combined with existing ticket errors)
+- [x] `apm validate --config-only` skips ticket integrity checks and runs only config cross-checks
+- [x] Integration test: a config with a missing instructions file and a mismatched `context_section` produces the expected two error lines and exits 1
 
 ### Out of scope
 
