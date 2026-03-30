@@ -28,12 +28,12 @@ The fix: in `start.rs`, after resolving the ticket's current state, look up that
 
 ### Acceptance criteria
 
-- [ ] `apm start <id> --spawn` on a ticket in `new` state spawns a subprocess using `.apm/spec-writer.md` as the system prompt
-- [ ] `apm start <id> --spawn` on a ticket in `ammend` state spawns a subprocess using `.apm/spec-writer.md` as the system prompt
+- [ ] `apm start <id> --spawn` on a ticket in `new` state spawns a subprocess using `.apm/apm.spec-writer.md` as the system prompt
+- [ ] `apm start <id> --spawn` on a ticket in `ammend` state spawns a subprocess using `.apm/apm.spec-writer.md` as the system prompt
 - [ ] `apm start --next --spawn` dispatches a spec-writer subprocess when the next ticket is in `new` state
 - [ ] `apm start --next --spawn` dispatches a spec-writer subprocess when the next ticket is in `ammend` state
-- [ ] `apm start --next --spawn` dispatches a worker subprocess (using `worker.md`) when the next ticket is in `ready` state
-- [ ] When `.apm/spec-writer.md` is absent, all spec-writer dispatch paths fall back to `.apm/worker.md`
+- [ ] `apm start --next --spawn` dispatches a worker subprocess (using `apm.worker.md`) when the next ticket is in `ready` state
+- [ ] When `.apm/apm.spec-writer.md` is absent, all spec-writer dispatch paths fall back to `.apm/apm.worker.md`
 - [ ] The initial user message to a spec-writer subprocess begins with "You are a Spec-Writer agent assigned to ticket #<id>."
 - [ ] The initial user message to a worker subprocess continues to begin with "You are a Worker agent assigned to ticket #<id>."
 
@@ -104,7 +104,9 @@ fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
 
 
 ### Amendment requests
-The proper name for the files are apm.worker.md and apm.spec-writer.md.
+
+
+
 ## History
 
 | When | From | To | By |
