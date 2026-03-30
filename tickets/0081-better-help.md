@@ -31,27 +31,27 @@ without changing any runtime behaviour.
 
 ### Acceptance criteria
 
-- [ ] `apm --help` shows a multi-paragraph description of the tool and the overall workflow (new → specd → ready → in_progress → implemented → closed)
-- [ ] `apm -h` still shows the current terse one-liner for the tool
-- [ ] `apm list --help` output is longer than `apm list -h` output
-- [ ] `apm new --help` describes where `new` fits in the lifecycle and mentions `--no-edit` for agent use
-- [ ] `apm state --help` explains that valid target states depend on the current state and refers the user to `apm.toml`
-- [ ] `apm start --help` explains the claim-and-worktree semantics and `--spawn` option
-- [ ] `apm sync --help` explains what sync does (fetch, detect merges, close stale tickets)
-- [ ] `apm review --help` explains the supervisor role and the `--to` flag
-- [ ] `apm worktrees --help` explains permanent worktrees and the `--add`/`--remove` flags
-- [ ] `apm next --help` explains priority ordering and the `--json` flag for agent use
-- [ ] `apm take --help` explains the takeover scenario (agent crashed, reassignment)
-- [ ] `apm work --help` explains the orchestration loop and `--dry-run`
-- [ ] `apm spec --help` explains the section read/write model and `--mark`
-- [ ] `apm close --help` clarifies this is a supervisor-only force-close
-- [ ] `apm clean --help` explains what is removed and the safety of `--dry-run`
-- [ ] `apm show --help` is longer than the current single-line description
-- [ ] `apm set --help` lists the valid field names in its long description
-- [ ] `apm init --help` explains what init creates (`.apm/` directory, `apm.toml`, hooks)
-- [ ] `apm agents --help` explains what the command prints and when to use it
-- [ ] `apm validate --help` describes the checks performed and the `--fix` behaviour
-- [ ] The internal `_hook` command is hidden from the top-level command list (users should not see it)
+- [x] `apm --help` shows a multi-paragraph description of the tool and the overall workflow (new → specd → ready → in_progress → implemented → closed)
+- [x] `apm -h` still shows the current terse one-liner for the tool
+- [x] `apm list --help` output is longer than `apm list -h` output
+- [x] `apm new --help` describes where `new` fits in the lifecycle and mentions `--no-edit` for agent use
+- [x] `apm state --help` explains that valid target states depend on the current state and refers the user to `apm.toml`
+- [x] `apm start --help` explains the claim-and-worktree semantics and `--spawn` option
+- [x] `apm sync --help` explains what sync does (fetch, detect merges, close stale tickets)
+- [x] `apm review --help` explains the supervisor role and the `--to` flag
+- [x] `apm worktrees --help` explains permanent worktrees and the `--add`/`--remove` flags
+- [x] `apm next --help` explains priority ordering and the `--json` flag for agent use
+- [x] `apm take --help` explains the takeover scenario (agent crashed, reassignment)
+- [x] `apm work --help` explains the orchestration loop and `--dry-run`
+- [x] `apm spec --help` explains the section read/write model and `--mark`
+- [x] `apm close --help` clarifies this is a supervisor-only force-close
+- [x] `apm clean --help` explains what is removed and the safety of `--dry-run`
+- [x] `apm show --help` is longer than the current single-line description
+- [x] `apm set --help` lists the valid field names in its long description
+- [x] `apm init --help` explains what init creates (`.apm/` directory, `apm.toml`, hooks)
+- [x] `apm agents --help` explains what the command prints and when to use it
+- [x] `apm validate --help` describes the checks performed and the `--fix` behaviour
+- [x] The internal `_hook` command is hidden from the top-level command list (users should not see it)
 
 ### Out of scope
 
