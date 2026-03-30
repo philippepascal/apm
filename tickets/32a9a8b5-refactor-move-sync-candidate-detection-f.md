@@ -6,10 +6,10 @@ priority = 0
 effort = 0
 risk = 0
 author = "claude-0330-0245-main"
-agent = "65590"
+agent = "claude-0330-1640-spec1"
 branch = "ticket/32a9a8b5-refactor-move-sync-candidate-detection-f"
 created_at = "2026-03-30T14:27:39.762926Z"
-updated_at = "2026-03-30T16:34:49.391451Z"
+updated_at = "2026-03-30T16:37:17.487398Z"
 +++
 
 ## Spec
@@ -63,3 +63,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-03-30T14:27Z | — | new | claude-0330-0245-main |
 | 2026-03-30T16:34Z | new | in_design | philippepascal |
+| 2026-03-30T16:37Z | 65590 | claude-0330-1640-spec1 | handoff |
