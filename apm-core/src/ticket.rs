@@ -103,6 +103,31 @@ impl Ticket {
     }
 }
 
+/// Return the highest-scoring ticket from `tickets` whose state is in
+/// `actionable` and (if `startable` is non-empty) also in `startable`.
+pub fn pick_next<'a>(
+    tickets: &'a [Ticket],
+    actionable: &[&str],
+    startable: &[&str],
+    pw: f64,
+    ew: f64,
+    rw: f64,
+) -> Option<&'a Ticket> {
+    let mut candidates: Vec<&Ticket> = tickets
+        .iter()
+        .filter(|t| {
+            let state = t.frontmatter.state.as_str();
+            actionable.contains(&state) && (startable.is_empty() || startable.contains(&state))
+        })
+        .collect();
+    candidates.sort_by(|a, b| {
+        b.score(pw, ew, rw)
+            .partial_cmp(&a.score(pw, ew, rw))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    candidates.into_iter().next()
+}
+
 /// Load all tickets by reading directly from their git branches.
 /// No filesystem cache is involved.
 pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Result<Vec<Ticket>> {

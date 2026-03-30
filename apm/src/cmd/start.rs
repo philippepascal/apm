@@ -181,33 +181,15 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .map_err(|_| anyhow::anyhow!("APM_AGENT_NAME is not set"))?;
 
     let config = Config::load(root)?;
-    let pw = config.workflow.prioritization.priority_weight;
-    let ew = config.workflow.prioritization.effort_weight;
-    let rw = config.workflow.prioritization.risk_weight;
-
+    let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
-
     let actionable = config.actionable_states_for("agent");
-
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let mut candidates: Vec<_> = tickets.iter()
-        .filter(|t| {
-            let fm = &t.frontmatter;
-            actionable.contains(&fm.state.as_str())
-                && (startable.is_empty() || startable.contains(&fm.state.as_str()))
-        })
-        .collect();
 
-    candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-
-    let Some(candidate) = candidates.first() else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight) else {
         println!("No actionable tickets.");
         return Ok(());
     };
@@ -331,31 +313,15 @@ pub fn spawn_next_worker(
     skip_permissions: bool,
 ) -> Result<Option<(String, std::process::Child)>> {
     let config = Config::load(root)?;
-    let pw = config.workflow.prioritization.priority_weight;
-    let ew = config.workflow.prioritization.effort_weight;
-    let rw = config.workflow.prioritization.risk_weight;
-
+    let p = &config.workflow.prioritization;
     let startable: Vec<&str> = config.workflow.states.iter()
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
     let actionable = config.actionable_states_for("agent");
-
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let mut candidates: Vec<_> = tickets.iter()
-        .filter(|t| {
-            let fm = &t.frontmatter;
-            actionable.contains(&fm.state.as_str())
-                && (startable.is_empty() || startable.contains(&fm.state.as_str()))
-        })
-        .collect();
-    candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
 
-    let Some(candidate) = candidates.first() else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight) else {
         return Ok(None);
     };
 
