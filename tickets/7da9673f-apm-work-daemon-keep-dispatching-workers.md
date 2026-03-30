@@ -35,7 +35,12 @@ The daemon should be interruptible with Ctrl-C and should log each dispatch cycl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Daemonizing (fork/detach, systemd/launchd integration, PID files for the daemon process itself)
+- Auto-restarting crashed workers
+- Persistent dispatch state across daemon restarts
+- SIGHUP config reload
+- Configuring the default poll interval in `apm.toml` (CLI flag only)
+- Stopping or reaping workers that are already running when the daemon exits
 
 ### Approach
 
