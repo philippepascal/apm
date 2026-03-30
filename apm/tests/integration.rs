@@ -1180,6 +1180,87 @@ terminal = true
     assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
 }
 
+// ── apm start --spawn ────────────────────────────────────────────────────────
+
+/// Write a minimal fake `claude` executable to `bin_dir` and prepend it to PATH.
+/// Returns the old PATH so the caller can restore it.
+fn fake_claude_in_path(bin_dir: &std::path::Path) -> String {
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    let script = "#!/bin/sh\nexit 0\n";
+    let exe = bin_dir.join("claude");
+    std::fs::write(&exe, script).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let new_path = format!("{}:{old_path}", bin_dir.display());
+    std::env::set_var("PATH", &new_path);
+    old_path
+}
+
+#[test]
+fn start_spawn_sets_agent_to_worker_pid() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "delegator-agent");
+    apm::cmd::start::run(p, "1", true, true, false).unwrap();
+
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    // agent must be a decimal PID, not the delegator name
+    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator: {content}");
+    let agent_val = content.lines()
+        .find(|l| l.starts_with("agent = "))
+        .and_then(|l| l.strip_prefix("agent = \""))
+        .and_then(|l| l.strip_suffix('"'))
+        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
+    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+}
+
+#[test]
+fn start_non_spawn_keeps_agent_name() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    std::env::set_var("APM_AGENT_NAME", "delegator-agent");
+    apm::cmd::start::run(p, "1", true, false, false).unwrap();
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(content.contains("agent = \"delegator-agent\""), "non-spawn should keep APM_AGENT_NAME: {content}");
+}
+
+#[test]
+fn start_next_spawn_sets_agent_to_worker_pid() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    let bin_dir = tempfile::tempdir().unwrap();
+    let old_path = fake_claude_in_path(bin_dir.path());
+
+    std::env::set_var("APM_AGENT_NAME", "delegator-agent");
+    apm::cmd::start::run_next(p, true, true, false).unwrap();
+
+    std::env::set_var("PATH", &old_path);
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator after spawn: {content}");
+    let agent_val = content.lines()
+        .find(|l| l.starts_with("agent = "))
+        .and_then(|l| l.strip_prefix("agent = \""))
+        .and_then(|l| l.strip_suffix('"'))
+        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
+    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+}
+
 // ── apm work ─────────────────────────────────────────────────────────────────
 
 #[test]

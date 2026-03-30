@@ -170,6 +170,11 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     // Do not wait — drop child handle, process runs independently
     std::mem::drop(child);
 
+    // Update ticket agent to worker PID and commit
+    t.frontmatter.agent = Some(pid.to_string());
+    let pid_content = t.serialize()?;
+    git::commit_to_branch(root, &branch, &rel_path, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
+
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
@@ -299,6 +304,17 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let pid = child.id();
     std::mem::drop(child);
 
+    // Update ticket agent to worker PID and commit
+    let mut t_pid = t.clone();
+    t_pid.frontmatter.agent = Some(pid.to_string());
+    let pid_content = t_pid.serialize()?;
+    let rel_path_pid = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
+
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
@@ -414,6 +430,18 @@ pub fn spawn_next_worker(
 
     let child = cmd.spawn()?;
     let pid = child.id();
+
+    // Update ticket agent to worker PID and commit
+    let mut t_pid = t.clone();
+    t_pid.frontmatter.agent = Some(pid.to_string());
+    let pid_content = t_pid.serialize()?;
+    let rel_path_pid = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
+
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
