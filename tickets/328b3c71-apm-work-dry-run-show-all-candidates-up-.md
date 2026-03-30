@@ -28,7 +28,7 @@ The fix is to have `--dry-run` show up to `max_concurrent` candidates in priorit
 - [x] Each output line identifies the ticket by id, state, and title (matching the format `dry-run: would start next: #<id> [<state>] <title>`)
 - [x] When fewer actionable tickets exist than `max_concurrent`, only the available tickets are printed (no padding or error)
 - [x] When there are no actionable tickets, the output is `dry-run: no actionable tickets` (existing behaviour preserved)
-- [ ] Candidates are printed in priority order (highest score first), matching the order the work loop would start them
+- [x] Candidates are printed in priority order (highest score first), matching the order the work loop would start them
 - [ ] The command exits 0 in all cases above
 
 ### Out of scope
