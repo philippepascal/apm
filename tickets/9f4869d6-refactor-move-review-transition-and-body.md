@@ -40,7 +40,7 @@ Moving the document-manipulation functions into apm_core::review gives apm-serve
 - [x] `apm_core::review::normalize_amendments` leaves `- [ ]`, `- [x]`, and `- [X]` lines unchanged
 - [x] `apm_core::review::normalize_amendments` leaves lines outside `### Amendment requests` unchanged
 - [x] `apm_core::review::apply_review` returns `new_spec` trimmed of trailing whitespace concatenated with `history_section`
-- [ ] `apm/src/cmd/review.rs` imports and delegates to `apm_core::review` for all five moved functions; no duplicate implementations remain in the CLI crate
+- [x] `apm/src/cmd/review.rs` imports and delegates to `apm_core::review` for all five moved functions; no duplicate implementations remain in the CLI crate
 - [ ] `apm/src/cmd/review.rs` retains `open_editor`, `build_header`, and `prompt_transition` exclusively
 - [ ] `cargo test --workspace` passes with no regressions
 - [ ] Each moved function has at least one unit test in `apm-core/src/review.rs`
