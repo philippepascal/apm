@@ -1,7 +1,7 @@
 +++
 id = 62
 title = "Create apm.worker.md: instruction file for implementation agents"
-state = "in_progress"
+state = "implemented"
 priority = 2
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0329-1200-a1b2"
 agent = "claude-0329-1430-main"
 branch = "ticket/0062-create-apm-worker-md-instruction-file-fo"
 created_at = "2026-03-29T19:12:40.149419Z"
-updated_at = "2026-03-29T23:37:05.417682Z"
+updated_at = "2026-03-29T23:39:50.817469Z"
 +++
 
 ## Spec
@@ -22,10 +22,10 @@ This leads to inconsistent agent behaviour and requires the supervisor to give r
 
 ### Acceptance criteria
 
-- [ ] A file `apm.worker.md` exists at the repo root with implementation-phase guidance for worker agents
-- [ ] `apm.toml` references `apm.worker.md` as the `instructions` for the `ready` and `in_progress` states (requires the `instructions` field added in ticket #61)
-- [ ] The content of `apm.worker.md` covers: reading the spec before coding, minimal-change discipline, commit message format, test requirements, PR creation, when to open side tickets, how to transition to `blocked`, and the `apm.agents.md` shell discipline rules
-- [ ] `apm-core` config parsing continues to work if `instructions` is absent on any state (already addressed by ticket #61)
+- [x] A file `apm.worker.md` exists at the repo root with implementation-phase guidance for worker agents
+- [x] `apm.toml` references `apm.worker.md` as the `instructions` for the `ready` and `in_progress` states (requires the `instructions` field added in ticket #61)
+- [x] The content of `apm.worker.md` covers: reading the spec before coding, minimal-change discipline, commit message format, test requirements, PR creation, when to open side tickets, how to transition to `blocked`, and the `apm.agents.md` shell discipline rules
+- [x] `apm-core` config parsing continues to work if `instructions` is absent on any state (already addressed by ticket #61)
 
 ### Out of scope
 
@@ -60,3 +60,4 @@ This ticket depends on ticket #61 for the `instructions` field in `StateConfig` 
 | 2026-03-29T23:09Z | in_design | specd | claude-0329-1430-main |
 | 2026-03-29T23:19Z | specd | ready | apm |
 | 2026-03-29T23:37Z | ready | in_progress | claude-0329-1430-main |
+| 2026-03-29T23:39Z | in_progress | implemented | claude-0329-1430-main |

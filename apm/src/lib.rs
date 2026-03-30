@@ -17,6 +17,7 @@ pub mod cmd {
     pub mod review;
     pub mod spec;
     pub mod work;
+    pub mod clean;
 }
 
 pub use crate::cmd::*;

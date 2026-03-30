@@ -37,11 +37,19 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
 
     let now = Utc::now();
     let old_state = t.frontmatter.state.clone();
+
+    // Find the target state for this ticket's command:start transition.
+    let new_state = config.workflow.states.iter()
+        .find(|s| s.id == old_state)
+        .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
+        .map(|tr| tr.to.clone())
+        .unwrap_or_else(|| "in_progress".into());
+
     t.frontmatter.agent = Some(agent_name.clone());
-    t.frontmatter.state = "in_progress".into();
+    t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    super::state::append_history(&mut t.body, &old_state, "in_progress", &when, &agent_name);
+    super::state::append_history(&mut t.body, &old_state, &new_state, &when, &agent_name);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -67,7 +75,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         }
     }
 
-    git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → in_progress"))?;
+    git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
 
     // Provision permanent worktree.
     // Worktree dir name: ticket-<id>-<slug> (branch name with / replaced by -)
@@ -115,7 +123,7 @@ pub fn run(root: &Path, id: u32, no_aggressive: bool, spawn: bool, skip_permissi
         Err(e) => eprintln!("warning: merge failed: {e}"),
     }
 
-    println!("#{id}: {old_state} → in_progress (agent: {agent_name}, branch: {branch})");
+    println!("#{id}: {old_state} → {new_state} (agent: {agent_name}, branch: {branch})");
     println!("Worktree: {}", wt_display.display());
 
     if !spawn {
