@@ -53,19 +53,14 @@ Three spawn sites in `apm-core/src/start.rs` all need the same fix.
 fn resolve_system_prompt(root: &Path, pre_transition_state: &str) -> String {
     let spec_writer_states = ["new", "ammend"];
     if spec_writer_states.contains(&pre_transition_state) {
-        let p = root.join(".apm/spec-writer.md");
+        let p = root.join(".apm/apm.spec-writer.md");
         if let Ok(content) = std::fs::read_to_string(&p) {
             return content;
         }
     }
-    let p1 = root.join(".apm/worker.md");
-    let p2 = root.join("apm.worker.md");
-    if p1.exists() {
-        std::fs::read_to_string(p1).unwrap_or_default()
-    } else {
-        std::fs::read_to_string(p2)
-            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
-    }
+    let p = root.join(".apm/apm.worker.md");
+    std::fs::read_to_string(p)
+        .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
 }
 ```
 
@@ -84,9 +79,9 @@ fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
 
 **Sites to update** (all in `apm-core/src/start.rs`):
 
-1. `run()` — lines ~233–240: replace the hardcoded `worker.md` load with `resolve_system_prompt(root, &old_state)`, and replace the `"You are a Worker agent..."` prefix with `agent_role_prefix(&old_state, &id)`.
+1. `run()` — lines ~233–240: replace the hardcoded `apm.worker.md` load with `resolve_system_prompt(root, &old_state)`, and replace the `"You are a Worker agent..."` prefix with `agent_role_prefix(&old_state, &id)`.
 
-2. `run_next()` — lines ~380–393: replace the `if !prompt.is_empty() { prompt } else { worker.md }` block with `resolve_system_prompt(root, &old_state)`, and update the `ticket_content` format string to use `agent_role_prefix`.
+2. `run_next()` — lines ~380–393: replace the `if !prompt.is_empty() { prompt } else { apm.worker.md }` block with `resolve_system_prompt(root, &old_state)`, and update the `ticket_content` format string to use `agent_role_prefix`.
 
 3. `spawn_next_worker()` — lines ~535–549: same replacement as `run_next()`.
 
