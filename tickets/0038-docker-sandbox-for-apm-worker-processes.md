@@ -77,7 +77,7 @@ current native behaviour unchanged.
   ```
 - [x] `apm init --with-docker` generates a `Dockerfile.apm-worker` into `.apm/`
   and prints instructions to build it; it does NOT auto-run `docker build`
-- [ ] The generated `Dockerfile.apm-worker` installs: `claude` CLI, `git`,
+- [x] The generated `Dockerfile.apm-worker` installs: `claude` CLI, `git`,
   and `apm` (from the project's own binary or a downloaded release); it does
   NOT include `gh` — the worker never pushes or creates PRs; it includes
   commented sections for users to add project-specific dependencies
