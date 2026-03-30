@@ -9,7 +9,7 @@ author = "claude-0329-1430-main"
 agent = "claude-0329-1430-main"
 branch = "ticket/0071-open-editor-should-split-editor-visual-o"
 created_at = "2026-03-29T23:40:38.875035Z"
-updated_at = "2026-03-30T00:54:19.872079Z"
+updated_at = "2026-03-30T01:17:49.888575Z"
 +++
 
 ## Spec
@@ -53,4 +53,4 @@ cmd.args(parts).arg(path);
 | 2026-03-29T23:43Z | ready | in_progress | claude-0329-1430-main |
 | 2026-03-29T23:44Z | in_progress | implemented | claude-0329-1430-main |
 | 2026-03-29T23:55Z | implemented | accepted | apm |
-| 2026-03-30T00:54Z | accepted | closed | apm-sync |
+| 2026-03-30T01:17Z | accepted | closed | apm-sync |

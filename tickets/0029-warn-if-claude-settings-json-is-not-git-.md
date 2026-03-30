@@ -9,7 +9,7 @@ author = "claude-0326-2222-8071"
 agent = "claude-0327-1854-10aa"
 branch = "ticket/0029-warn-if-claude-settings-json-is-not-git-"
 created_at = "2026-03-27T05:57:10.499993Z"
-updated_at = "2026-03-30T00:54:19.872079Z"
+updated_at = "2026-03-30T01:17:49.888575Z"
 +++
 
 ## Spec
@@ -51,4 +51,4 @@ In `cmd/init.rs` `run()`, after the existing setup steps, check:
 | 2026-03-28T01:56Z | ready | in_progress | claude-0327-1854-10aa |
 | 2026-03-28T01:58Z | in_progress | implemented | claude-0327-1854-10aa |
 | 2026-03-28T07:31Z | implemented | accepted | apm sync |
-| 2026-03-30T00:54Z | accepted | closed | apm-sync |
+| 2026-03-30T01:17Z | accepted | closed | apm-sync |

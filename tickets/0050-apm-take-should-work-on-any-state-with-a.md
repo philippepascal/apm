@@ -9,7 +9,7 @@ author = "claude-0328-1430-a4f2"
 agent = "claude-0328-1430-a4f2"
 branch = "ticket/0050-apm-take-should-work-on-any-state-with-a"
 created_at = "2026-03-28T22:11:45.364790Z"
-updated_at = "2026-03-30T00:54:19.872079Z"
+updated_at = "2026-03-30T01:17:49.888575Z"
 +++
 
 ## Spec
@@ -75,4 +75,4 @@ No other changes needed.
 | 2026-03-28T22:25Z | ready | in_progress | claude-0328-1430-a4f2 |
 | 2026-03-28T22:27Z | in_progress | implemented | claude-0328-1430-a4f2 |
 | 2026-03-28T23:07Z | implemented | accepted | apm |
-| 2026-03-30T00:54Z | accepted | closed | apm-sync |
+| 2026-03-30T01:17Z | accepted | closed | apm-sync |
