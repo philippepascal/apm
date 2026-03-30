@@ -24,7 +24,7 @@ The daemon should be interruptible with Ctrl-C and should log each dispatch cycl
 
 ### Acceptance criteria
 
-- [ ] `apm work --daemon` continues running after `apm next` returns null (queue exhausted)
+- [x] `apm work --daemon` continues running after `apm next` returns null (queue exhausted)
 - [ ] When a worker finishes and a slot opens, the daemon immediately re-checks for actionable tickets without waiting for the poll interval
 - [ ] When the poll interval elapses with no workers finishing, the daemon re-checks for actionable tickets
 - [ ] `apm work --daemon --interval <N>` sets the poll interval to N seconds; default is 30
