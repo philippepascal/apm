@@ -25,7 +25,7 @@ The only way to close a ticket today is via `apm sync`, which detects merged bra
 - [x] `closed` is treated as a mandatory terminal state: it is always a valid target regardless of what transitions are defined in `apm.toml` (analogous to `new` being a mandatory initial state)
 - [x] The `apm validate` command recognises `closed` as a built-in state and does not flag it as unknown even if it is absent from `[[workflow.states]]`
 - [x] `apm close` is not triggerable via `command:start` — it is a supervisor-only operation
-- [ ] `apm close` writes `closed` to the ticket branch, pushes it, then merges it into the default branch — so the branch is a true git ancestor of main and `apm clean` can detect and remove it
+- [x] `apm close` writes `closed` to the ticket branch, pushes it, then merges it into the default branch — so the branch is a true git ancestor of main and `apm clean` can detect and remove it
 - [ ] `apm sync`'s `batch_close` function is removed; `apm sync` calls the same close logic for each candidate instead
 - [ ] After `apm sync` closes tickets, their branches are merged into main and `apm clean` removes their worktrees correctly
 - [ ] `cargo test --workspace` passes
