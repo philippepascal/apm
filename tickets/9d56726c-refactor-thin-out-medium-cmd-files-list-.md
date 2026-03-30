@@ -1,7 +1,7 @@
 +++
 id = "9d56726c"
 title = "refactor: thin out medium cmd files (list, set, take, workers, worktrees, work)"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0330-0245-main"
 agent = "99207"
 branch = "ticket/9d56726c-refactor-thin-out-medium-cmd-files-list-"
 created_at = "2026-03-30T14:27:53.108961Z"
-updated_at = "2026-03-30T17:32:23.852074Z"
+updated_at = "2026-03-30T17:46:36.348766Z"
 +++
 
 ## Spec
@@ -177,3 +177,4 @@ let good_states: Vec<&str> = config.workflow.states.iter()
 | 2026-03-30T16:50Z | specd | ammend | philippepascal |
 | 2026-03-30T17:29Z | ammend | in_design | philippepascal |
 | 2026-03-30T17:32Z | in_design | specd | claude-0330-1800-sp02 |
+| 2026-03-30T17:46Z | specd | ready | philippepascal |
