@@ -3,13 +3,13 @@ id = "4223716a"
 title = "apm start --next should dispatch spec-writer agent for new/ammend tickets"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 agent = "11764"
 branch = "ticket/4223716a-apm-start-next-should-dispatch-spec-writ"
 created_at = "2026-03-30T20:52:32.229319Z"
-updated_at = "2026-03-30T20:52:54.638908Z"
+updated_at = "2026-03-30T20:59:56.295996Z"
 +++
 
 ## Spec
