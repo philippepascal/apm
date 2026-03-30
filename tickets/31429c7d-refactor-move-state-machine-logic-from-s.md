@@ -56,7 +56,7 @@ CLI wrappers of ~30 lines each.
 - [x] `apm state <id> <new_state>` produces identical output to before the refactor
 - [x] `apm start <id>` produces identical output to before the refactor
 - [x] `apm start --next --spawn` produces identical output to before the refactor
-- [ ] `cargo test --workspace` passes after the refactor
+- [x] `cargo test --workspace` passes after the refactor
 
 ### Out of scope
 
