@@ -24,10 +24,10 @@ The fix is a one-liner: add `#[serde(default = "default_true")]` to the `aggress
 
 ### Acceptance criteria
 
-- [ ] When `apm.toml` has no `[sync]` section, `sync.aggressive` resolves to `true`
-- [ ] When `apm.toml` has `[sync]` with no `aggressive` key, `sync.aggressive` resolves to `true`
-- [ ] When `apm.toml` has `aggressive = false` explicitly, `sync.aggressive` resolves to `false`
-- [ ] When `apm.toml` has `aggressive = true` explicitly, `sync.aggressive` resolves to `true`
+- [x] When `apm.toml` has no `[sync]` section, `sync.aggressive` resolves to `true`
+- [x] When `apm.toml` has `[sync]` with no `aggressive` key, `sync.aggressive` resolves to `true`
+- [x] When `apm.toml` has `aggressive = false` explicitly, `sync.aggressive` resolves to `false`
+- [x] When `apm.toml` has `aggressive = true` explicitly, `sync.aggressive` resolves to `true`
 
 ### Out of scope
 
