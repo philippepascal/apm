@@ -34,7 +34,7 @@ Specifically missing today:
 - [x] `apm start --spawn` writes a `.apm-worker.pid` file to the worktree
   containing the worker PID and ticket ID, deleted automatically when the
   process exits
-- [ ] `apm workers` lists all currently running workers in a table:
+- [x] `apm workers` lists all currently running workers in a table:
   ticket ID, title, PID, elapsed time, current ticket state
 - [ ] `apm workers` shows no output (or "No workers running.") when no
   `.apm-worker.pid` files exist in any active worktree
