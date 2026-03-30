@@ -48,7 +48,7 @@ CLI wrappers of ~30 lines each.
 ### Acceptance criteria
 
 - [x] `apm_core::state` module exists and exports a `transition()` function encapsulating all transition logic currently in `cmd/state::run()`
-- [ ] `apm_core::start` module exists and exports `run()`, `run_next()`, and `spawn_next_worker()` containing all start logic currently in `cmd/start.rs`
+- [x] `apm_core::start` module exists and exports `run()`, `run_next()`, and `spawn_next_worker()` containing all start logic currently in `cmd/start.rs`
 - [ ] `append_history()` and `ensure_amendment_section()` are public functions in `apm_core::state` (no longer in the CLI layer)
 - [ ] `resolve_agent_name()` is a public function in `apm_core::start` (no longer in the CLI layer)
 - [ ] `apm/src/cmd/state.rs` contains no business logic — it parses CLI args and delegates entirely to `apm_core::state::transition()`
