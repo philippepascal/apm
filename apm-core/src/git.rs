@@ -532,3 +532,31 @@ pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+pub fn has_remote(root: &Path) -> bool {
+    run(root, &["remote", "get-url", "origin"]).is_ok()
+}
+
+/// Merge `branch` into `default_branch` (fast-forward or merge commit).
+/// Pushes `default_branch` to origin when a remote exists.
+pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str) -> Result<()> {
+    let _ = run(root, &["fetch", "origin", default_branch]);
+
+    let merge_dir = if current_branch(root).ok().as_deref() == Some(default_branch) {
+        root.to_path_buf()
+    } else {
+        find_worktree_for_branch(root, default_branch).unwrap_or_else(|| root.to_path_buf())
+    };
+
+    if let Err(e) = run(&merge_dir, &["merge", "--no-ff", branch, "--no-edit"]) {
+        let _ = run(&merge_dir, &["merge", "--abort"]);
+        anyhow::bail!("merge failed: {e:#}");
+    }
+
+    if has_remote(root) {
+        if let Err(e) = run(&merge_dir, &["push", "origin", default_branch]) {
+            eprintln!("warning: push {default_branch} failed: {e:#}");
+        }
+    }
+    Ok(())
+}
