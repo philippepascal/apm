@@ -3,9 +3,34 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+fn deserialize_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    use serde::de::{self, Visitor};
+    struct IdVisitor;
+    impl<'de> Visitor<'de> for IdVisitor {
+        type Value = String;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("an integer or hex string")
+        }
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
+            Ok(format!("{v:04}"))
+        }
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<String, E> {
+            Ok(format!("{v:04}"))
+        }
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<String, E> {
+            Ok(v.to_string())
+        }
+        fn visit_string<E: de::Error>(self, v: String) -> Result<String, E> {
+            Ok(v)
+        }
+    }
+    d.deserialize_any(IdVisitor)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Frontmatter {
-    pub id: u32,
+    #[serde(deserialize_with = "deserialize_id")]
+    pub id: String,
     pub title: String,
     pub state: String,
     #[serde(default)]
@@ -26,6 +51,8 @@ pub struct Frontmatter {
     pub created_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focus_section: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +103,31 @@ impl Ticket {
     }
 }
 
+/// Return the highest-scoring ticket from `tickets` whose state is in
+/// `actionable` and (if `startable` is non-empty) also in `startable`.
+pub fn pick_next<'a>(
+    tickets: &'a [Ticket],
+    actionable: &[&str],
+    startable: &[&str],
+    pw: f64,
+    ew: f64,
+    rw: f64,
+) -> Option<&'a Ticket> {
+    let mut candidates: Vec<&Ticket> = tickets
+        .iter()
+        .filter(|t| {
+            let state = t.frontmatter.state.as_str();
+            actionable.contains(&state) && (startable.is_empty() || startable.contains(&state))
+        })
+        .collect();
+    candidates.sort_by(|a, b| {
+        b.score(pw, ew, rw)
+            .partial_cmp(&a.score(pw, ew, rw))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    candidates.into_iter().next()
+}
+
 /// Load all tickets by reading directly from their git branches.
 /// No filesystem cache is involved.
 pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Result<Vec<Ticket>> {
@@ -94,8 +146,300 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
             Err(e) => eprintln!("warning: cannot read {branch}: {e:#}"),
         }
     }
-    tickets.sort_by_key(|t| t.frontmatter.id);
+    tickets.sort_by_key(|t| t.frontmatter.created_at);
     Ok(tickets)
+}
+
+/// Read a ticket's state from a specific branch by relative path.
+pub fn state_from_branch(root: &Path, branch: &str, rel_path: &str) -> Option<String> {
+    let content = crate::git::read_from_branch(root, branch, rel_path).ok()?;
+    let dummy = root.join(rel_path);
+    Ticket::parse(&dummy, &content).ok().map(|t| t.frontmatter.state)
+}
+
+/// Normalize a user-supplied ID argument to a canonical prefix string.
+/// Accepts: plain integer (zero-padded to 4 chars), or 4–8 hex char string.
+pub fn normalize_id_arg(arg: &str) -> Result<String> {
+    if !arg.is_empty() && arg.chars().all(|c| c.is_ascii_digit()) {
+        let n: u64 = arg.parse().context("invalid integer ID")?;
+        return Ok(format!("{n:04}"));
+    }
+    if arg.len() < 4 || arg.len() > 8 {
+        bail!("invalid ticket ID {:?}: use 4–8 hex chars or a plain integer", arg);
+    }
+    if !arg.chars().all(|c| c.is_ascii_hexdigit()) {
+        bail!("invalid ticket ID {:?}: not a hex string", arg);
+    }
+    Ok(arg.to_lowercase())
+}
+
+/// Resolve a user-supplied ID argument to a unique ticket ID from a loaded list.
+pub fn resolve_id_in_slice(tickets: &[Ticket], arg: &str) -> Result<String> {
+    let prefix = normalize_id_arg(arg)?;
+    let matches: Vec<&Ticket> = tickets.iter()
+        .filter(|t| t.frontmatter.id.starts_with(&prefix))
+        .collect();
+    match matches.len() {
+        0 => bail!("no ticket matches '{prefix}'"),
+        1 => Ok(matches[0].frontmatter.id.clone()),
+        _ => {
+            let mut msg = format!("error: prefix '{prefix}' is ambiguous");
+            for t in &matches {
+                msg.push_str(&format!("\n  {}  {}", t.frontmatter.id, t.frontmatter.title));
+            }
+            bail!("{msg}")
+        }
+    }
+}
+
+/// Close a ticket from any state.  Commits the change to the ticket branch,
+/// pushes it (non-fatal if no remote), then merges into the default branch
+/// so that `apm clean` can detect and remove the worktree.
+pub fn close(
+    root: &Path,
+    config: &crate::config::Config,
+    id_arg: &str,
+    reason: Option<&str>,
+    agent: &str,
+) -> Result<()> {
+    let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
+    let prefix = normalize_id_arg(id_arg)?;
+
+    // Search ticket branches first, then fall back to the default branch.
+    // This handles stale "implemented" tickets whose branch was deleted.
+    let branch_matches: Vec<usize> = tickets.iter()
+        .enumerate()
+        .filter(|(_, t)| t.frontmatter.id.starts_with(prefix.as_str()))
+        .map(|(i, _)| i)
+        .collect();
+
+    let mut from_default: Option<Ticket> = None;
+    let id: String = match branch_matches.len() {
+        1 => tickets[branch_matches[0]].frontmatter.id.clone(),
+        0 => {
+            let default_branch = &config.project.default_branch;
+            let mut found: Option<Ticket> = None;
+            if let Ok(files) = crate::git::list_files_on_branch(root, default_branch, &config.tickets.dir.to_string_lossy()) {
+                for rel_path in files {
+                    if !rel_path.ends_with(".md") { continue; }
+                    if let Ok(content) = crate::git::read_from_branch(root, default_branch, &rel_path) {
+                        let dummy = root.join(&rel_path);
+                        if let Ok(t) = Ticket::parse(&dummy, &content) {
+                            if t.frontmatter.id.starts_with(prefix.as_str()) {
+                                found = Some(t);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            match found {
+                Some(t) => { let id = t.frontmatter.id.clone(); from_default = Some(t); id }
+                None => bail!("no ticket matches '{prefix}'"),
+            }
+        }
+        _ => {
+            let names: Vec<String> = branch_matches.iter()
+                .map(|&i| tickets[i].frontmatter.id.clone())
+                .collect();
+            bail!("ambiguous prefix '{}', matches: {}", prefix, names.join(", "));
+        }
+    };
+
+    let ticket_pos = tickets.iter().position(|t| t.frontmatter.id == id);
+    let t: &mut Ticket = match ticket_pos {
+        Some(pos) => &mut tickets[pos],
+        None => from_default.as_mut().ok_or_else(|| anyhow::anyhow!("ticket {id:?} not found"))?,
+    };
+
+    if t.frontmatter.state == "closed" {
+        anyhow::bail!("ticket {id:?} is already closed");
+    }
+
+    let now = chrono::Utc::now();
+    let prev = t.frontmatter.state.clone();
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    let by = match reason {
+        Some(r) => format!("{agent} (reason: {r})"),
+        None => agent.to_string(),
+    };
+
+    t.frontmatter.state = "closed".into();
+    t.frontmatter.updated_at = Some(now);
+
+    let row = format!("| {when} | {prev} | closed | {by} |");
+    if t.body.contains("## History") {
+        if !t.body.ends_with('\n') {
+            t.body.push('\n');
+        }
+        t.body.push_str(&row);
+        t.body.push('\n');
+    } else {
+        t.body.push_str(&format!(
+            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
+        ));
+    }
+
+    let content = t.serialize()?;
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    let branch = t.frontmatter.branch.clone()
+        .or_else(|| crate::git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id}"));
+
+    crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
+    crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
+
+    if crate::git::has_remote(root) {
+        if let Err(e) = crate::git::push_branch(root, &branch) {
+            eprintln!("warning: push {branch} failed: {e:#}");
+        }
+    }
+
+    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch) {
+        eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
+    }
+
+    println!("{id}: {prev} → closed");
+    Ok(())
+}
+
+pub fn accept(
+    root: &Path,
+    config: &crate::config::Config,
+    id_arg: &str,
+    agent: &str,
+) -> Result<()> {
+    let tickets = load_all_from_git(root, &config.tickets.dir)?;
+    let prefix = normalize_id_arg(id_arg)?;
+
+    let idx = tickets.iter().position(|t| t.frontmatter.id.starts_with(prefix.as_str()))
+        .ok_or_else(|| anyhow::anyhow!("no ticket matches '{prefix}'"))?;
+
+    let mut t = tickets[idx].clone();
+    let id = t.frontmatter.id.clone();
+    let prev = t.frontmatter.state.clone();
+    let now = chrono::Utc::now();
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+
+    t.frontmatter.state = "accepted".into();
+    t.frontmatter.updated_at = Some(now);
+
+    let row = format!("| {when} | {prev} | accepted | {agent} |");
+    if t.body.contains("## History") {
+        if !t.body.ends_with('\n') {
+            t.body.push('\n');
+        }
+        t.body.push_str(&row);
+        t.body.push('\n');
+    } else {
+        t.body.push_str(&format!(
+            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
+        ));
+    }
+
+    let content = t.serialize()?;
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        t.path.file_name().unwrap().to_string_lossy()
+    );
+    let branch = t.frontmatter.branch.clone()
+        .or_else(|| crate::git::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id}"));
+
+    crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): {prev} → accepted"))?;
+    crate::logger::log("state_transition", &format!("{id:?} {prev} -> accepted"));
+
+    println!("{id}: {prev} → accepted");
+    Ok(())
+}
+
+pub fn create(
+    root: &std::path::Path,
+    config: &crate::config::Config,
+    title: String,
+    author: String,
+    context: Option<String>,
+    context_section: Option<String>,
+    aggressive: bool,
+) -> Result<Ticket> {
+    let tickets_dir = root.join(&config.tickets.dir);
+    std::fs::create_dir_all(&tickets_dir)?;
+
+    let id = crate::git::gen_hex_id();
+    let slug = slugify(&title);
+    let filename = format!("{id}-{slug}.md");
+    let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
+    let branch = format!("ticket/{id}-{slug}");
+    let now = chrono::Utc::now();
+    let fm = Frontmatter {
+        id: id.clone(),
+        title: title.clone(),
+        state: "new".into(),
+        priority: 0,
+        effort: 0,
+        risk: 0,
+        author: Some(author.clone()),
+        supervisor: None,
+        agent: None,
+        branch: Some(branch.clone()),
+        created_at: Some(now),
+        updated_at: Some(now),
+        focus_section: None,
+    };
+    let when = now.format("%Y-%m-%dT%H:%MZ");
+    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
+    let body_template = if config.ticket.sections.is_empty() {
+        format!("## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n{history_footer}")
+    } else {
+        let mut s = String::from("## Spec\n\n");
+        for sec in &config.ticket.sections {
+            let placeholder = sec.placeholder.as_deref().unwrap_or("");
+            s.push_str(&format!("### {}\n\n{}\n\n", sec.name, placeholder));
+        }
+        s.push_str(&history_footer);
+        s
+    };
+    let body = if let Some(ctx) = &context {
+        let transition_section = config.workflow.states.iter()
+            .find(|s| s.id == "new")
+            .and_then(|s| s.transitions.iter().find(|tr| tr.to == "in_design"))
+            .and_then(|tr| tr.context_section.clone());
+        let section = context_section
+            .clone()
+            .or(transition_section)
+            .unwrap_or_else(|| "Problem".to_string());
+        let heading = format!("### {section}\n\n");
+        if !body_template.contains(&heading) {
+            anyhow::bail!("section '### {section}' not found in ticket body template");
+        }
+        body_template.replacen(&heading, &format!("### {section}\n\n{ctx}\n\n"), 1)
+    } else {
+        body_template
+    };
+    let path = tickets_dir.join(&filename);
+    let t = Ticket { frontmatter: fm, body, path };
+    let content = t.serialize()?;
+
+    crate::git::commit_to_branch(
+        root,
+        &branch,
+        &rel_path,
+        &content,
+        &format!("ticket({id}): create {title}"),
+    )?;
+
+    if aggressive {
+        if let Err(e) = crate::git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
+
+    Ok(t)
 }
 
 pub fn slugify(s: &str) -> String {
@@ -109,17 +453,6 @@ pub fn slugify(s: &str) -> String {
         .chars()
         .take(40)
         .collect()
-}
-
-pub fn next_id(tickets_dir: &Path) -> Result<u32> {
-    let path = tickets_dir.join("NEXT_ID");
-    let id: u32 = if path.exists() {
-        std::fs::read_to_string(&path)?.trim().parse().context("invalid NEXT_ID")?
-    } else {
-        1
-    };
-    std::fs::write(&path, format!("{}\n", id + 1))?;
-    Ok(id)
 }
 
 // ── TicketDocument ─────────────────────────────────────────────────────────
@@ -322,6 +655,99 @@ impl Ticket {
     }
 }
 
+pub fn list_filtered<'a>(
+    tickets: &'a [Ticket],
+    config: &crate::config::Config,
+    state_filter: Option<&str>,
+    unassigned: bool,
+    all: bool,
+    supervisor_filter: Option<&str>,
+    actionable_filter: Option<&str>,
+) -> Vec<&'a Ticket> {
+    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
+    let actionable_map: std::collections::HashMap<&str, &Vec<String>> = config.workflow.states.iter()
+        .map(|s| (s.id.as_str(), &s.actionable))
+        .collect();
+
+    tickets.iter().filter(|t| {
+        let fm = &t.frontmatter;
+        let state_ok = state_filter.map_or(true, |s| fm.state == s);
+        let agent_ok = !unassigned || fm.agent.is_none();
+        let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
+        let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
+        let supervisor_ok = supervisor_filter.map_or(true, |s| fm.supervisor.as_deref() == Some(s));
+        let actionable_ok = actionable_filter.map_or(true, |actor| {
+            actionable_map.get(fm.state.as_str())
+                .map_or(false, |actors| actors.iter().any(|a| a == actor || a == "any"))
+        });
+        state_ok && agent_ok && terminal_ok && supervisor_ok && actionable_ok
+    }).collect()
+}
+
+pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Result<()> {
+    match field {
+        "priority" => fm.priority = value.parse().map_err(|_| anyhow::anyhow!("priority must be 0–255"))?,
+        "effort"   => fm.effort   = value.parse().map_err(|_| anyhow::anyhow!("effort must be 0–255"))?,
+        "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
+        "author"   => anyhow::bail!("author is immutable"),
+        "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.to_string()) },
+        "agent"    => fm.agent    = if value == "-" { None } else { Some(value.to_string()) },
+        "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
+        "title"    => fm.title    = value.to_string(),
+        other => anyhow::bail!("unknown field: {other}"),
+    }
+    Ok(())
+}
+
+fn append_history_row(body: &mut String, from: &str, to: &str, when: &str, by: &str) {
+    let row = format!("| {when} | {from} | {to} | {by} |");
+    if body.contains("## History") {
+        if !body.ends_with('\n') {
+            body.push('\n');
+        }
+        body.push_str(&row);
+        body.push('\n');
+    } else {
+        body.push_str(&format!(
+            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
+        ));
+    }
+}
+
+pub fn handoff(ticket: &mut Ticket, new_agent: &str, now: DateTime<Utc>) -> Result<Option<String>> {
+    let old_agent = match &ticket.frontmatter.agent {
+        None => bail!("no agent assigned — use `apm start` instead"),
+        Some(a) => a.clone(),
+    };
+    if old_agent == new_agent {
+        return Ok(None);
+    }
+    ticket.frontmatter.agent = Some(new_agent.to_string());
+    ticket.frontmatter.updated_at = Some(now);
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    append_history_row(&mut ticket.body, &old_agent, new_agent, &when, "handoff");
+    Ok(Some(old_agent))
+}
+
+pub fn list_worktrees_with_tickets(
+    root: &Path,
+    tickets_dir: &Path,
+) -> Result<Vec<(std::path::PathBuf, String, Option<Ticket>)>> {
+    let worktrees = crate::git::list_ticket_worktrees(root)?;
+    let tickets = load_all_from_git(root, tickets_dir).unwrap_or_default();
+    let result = worktrees.into_iter().map(|(wt_path, branch)| {
+        let ticket = tickets.iter().find(|t| {
+            t.frontmatter.branch.as_deref() == Some(branch.as_str())
+                || crate::git::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
+        }).cloned();
+        (wt_path, branch, ticket)
+    }).collect();
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -333,6 +759,12 @@ mod tests {
 
     fn minimal_raw(extra_fm: &str, body: &str) -> String {
         format!(
+            "+++\nid = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n{extra_fm}+++\n\n{body}"
+        )
+    }
+
+    fn minimal_raw_int(extra_fm: &str, body: &str) -> String {
+        format!(
             "+++\nid = 1\ntitle = \"Test\"\nstate = \"new\"\n{extra_fm}+++\n\n{body}"
         )
     }
@@ -343,11 +775,18 @@ mod tests {
     fn parse_well_formed() {
         let raw = minimal_raw("priority = 5\n", "## Spec\n\nHello\n");
         let t = Ticket::parse(dummy_path(), &raw).unwrap();
-        assert_eq!(t.frontmatter.id, 1);
+        assert_eq!(t.frontmatter.id, "0001");
         assert_eq!(t.frontmatter.title, "Test");
         assert_eq!(t.frontmatter.state, "new");
         assert_eq!(t.frontmatter.priority, 5);
         assert_eq!(t.body, "## Spec\n\nHello\n");
+    }
+
+    #[test]
+    fn parse_integer_id_is_zero_padded() {
+        let raw = minimal_raw_int("", "");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.id, "0001");
     }
 
     #[test]
@@ -363,14 +802,14 @@ mod tests {
 
     #[test]
     fn parse_missing_opening_delimiter() {
-        let raw = "id = 1\ntitle = \"Test\"\nstate = \"new\"\n+++\n\nbody\n";
+        let raw = "id = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n+++\n\nbody\n";
         let err = Ticket::parse(dummy_path(), raw).unwrap_err();
         assert!(err.to_string().contains("missing frontmatter"));
     }
 
     #[test]
     fn parse_unclosed_frontmatter() {
-        let raw = "+++\nid = 1\ntitle = \"Test\"\nstate = \"new\"\n\nbody\n";
+        let raw = "+++\nid = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n\nbody\n";
         let err = Ticket::parse(dummy_path(), raw).unwrap_err();
         assert!(err.to_string().contains("unclosed frontmatter"));
     }
@@ -421,15 +860,29 @@ mod tests {
         assert_eq!(slugify("foo  --  bar"), "foo-bar");
     }
 
-    // --- next_id ---
+    // --- normalize_id_arg ---
 
     #[test]
-    fn next_id_creates_and_increments() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path();
-        assert_eq!(next_id(p).unwrap(), 1);
-        assert_eq!(next_id(p).unwrap(), 2);
-        assert_eq!(next_id(p).unwrap(), 3);
+    fn normalize_integer_pads_to_four() {
+        assert_eq!(normalize_id_arg("35").unwrap(), "0035");
+        assert_eq!(normalize_id_arg("1").unwrap(), "0001");
+        assert_eq!(normalize_id_arg("9999").unwrap(), "9999");
+    }
+
+    #[test]
+    fn normalize_hex_passthrough() {
+        assert_eq!(normalize_id_arg("a3f9b2c1").unwrap(), "a3f9b2c1");
+        assert_eq!(normalize_id_arg("a3f9").unwrap(), "a3f9");
+    }
+
+    #[test]
+    fn normalize_too_short_errors() {
+        assert!(normalize_id_arg("abc").is_err());
+    }
+
+    #[test]
+    fn normalize_non_hex_errors() {
+        assert!(normalize_id_arg("gggg").is_err());
     }
 
     // ── TicketDocument ────────────────────────────────────────────────────
@@ -515,5 +968,170 @@ mod tests {
         let s = doc.serialize();
         assert!(s.contains("## History"));
         assert!(s.contains("| When |"));
+    }
+
+    // ── list_filtered ─────────────────────────────────────────────────────
+
+    fn test_config_with_states(terminal_states: &[&str]) -> crate::config::Config {
+        let mut states_toml = String::new();
+        for s in ["new", "ready", "in_progress"] {
+            states_toml.push_str(&format!(
+                "[[workflow.states]]\nid = \"{s}\"\nlabel = \"{s}\"\nterminal = false\nactionable = [\"agent\"]\n\n"
+            ));
+        }
+        for s in terminal_states {
+            states_toml.push_str(&format!(
+                "[[workflow.states]]\nid = \"{s}\"\nlabel = \"{s}\"\nterminal = true\n\n"
+            ));
+        }
+        let full = format!(
+            "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n\n{states_toml}"
+        );
+        toml::from_str(&full).unwrap()
+    }
+
+    fn make_ticket(id: &str, state: &str, agent: Option<&str>) -> Ticket {
+        let agent_line = agent.map(|a| format!("agent = \"{a}\"\n")).unwrap_or_default();
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T{id}\"\nstate = \"{state}\"\n{agent_line}+++\n\n"
+        );
+        Ticket::parse(dummy_path(), &raw).unwrap()
+    }
+
+    #[test]
+    fn list_filtered_by_state() {
+        let config = test_config_with_states(&["closed"]);
+        let tickets = vec![
+            make_ticket("0001", "new", None),
+            make_ticket("0002", "ready", None),
+            make_ticket("0003", "new", None),
+        ];
+        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None);
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().all(|t| t.frontmatter.state == "new"));
+    }
+
+    #[test]
+    fn list_filtered_terminal_hidden_by_default() {
+        let config = test_config_with_states(&["closed"]);
+        let tickets = vec![
+            make_ticket("0001", "new", None),
+            make_ticket("0002", "closed", None),
+        ];
+        // By default, terminal states are hidden.
+        let result = list_filtered(&tickets, &config, None, false, false, None, None);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].frontmatter.state, "new");
+
+        // With all=true, terminal states are shown.
+        let result_all = list_filtered(&tickets, &config, None, false, true, None, None);
+        assert_eq!(result_all.len(), 2);
+
+        // With state_filter matching the terminal state, it's shown.
+        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None);
+        assert_eq!(result_filtered.len(), 1);
+        assert_eq!(result_filtered[0].frontmatter.state, "closed");
+    }
+
+    #[test]
+    fn list_filtered_unassigned() {
+        let config = test_config_with_states(&[]);
+        let tickets = vec![
+            make_ticket("0001", "new", None),
+            make_ticket("0002", "new", Some("alice")),
+            make_ticket("0003", "ready", None),
+        ];
+        let result = list_filtered(&tickets, &config, None, true, false, None, None);
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().all(|t| t.frontmatter.agent.is_none()));
+    }
+
+    // ── set_field ─────────────────────────────────────────────────────────
+
+    fn make_frontmatter() -> Frontmatter {
+        Frontmatter {
+            id: "0001".to_string(),
+            title: "Test".to_string(),
+            state: "new".to_string(),
+            priority: 0,
+            effort: 0,
+            risk: 0,
+            author: None,
+            supervisor: None,
+            agent: None,
+            branch: None,
+            created_at: None,
+            updated_at: None,
+            focus_section: None,
+        }
+    }
+
+    #[test]
+    fn set_field_priority_valid() {
+        let mut fm = make_frontmatter();
+        set_field(&mut fm, "priority", "5").unwrap();
+        assert_eq!(fm.priority, 5);
+    }
+
+    #[test]
+    fn set_field_priority_overflow() {
+        let mut fm = make_frontmatter();
+        let err = set_field(&mut fm, "priority", "256").unwrap_err();
+        assert!(err.to_string().contains("priority must be 0"));
+    }
+
+    #[test]
+    fn set_field_author_immutable() {
+        let mut fm = make_frontmatter();
+        let err = set_field(&mut fm, "author", "alice").unwrap_err();
+        assert!(err.to_string().contains("author is immutable"));
+    }
+
+    #[test]
+    fn set_field_unknown_field() {
+        let mut fm = make_frontmatter();
+        let err = set_field(&mut fm, "foo", "bar").unwrap_err();
+        assert!(err.to_string().contains("unknown field: foo"));
+    }
+
+    #[test]
+    fn set_field_agent_clear() {
+        let mut fm = make_frontmatter();
+        fm.agent = Some("alice".to_string());
+        set_field(&mut fm, "agent", "-").unwrap();
+        assert!(fm.agent.is_none());
+    }
+
+    // ── handoff ───────────────────────────────────────────────────────────
+
+    fn make_ticket_with_agent(agent: Option<&str>) -> Ticket {
+        make_ticket("0001", "in_progress", agent)
+    }
+
+    #[test]
+    fn handoff_no_agent_errors() {
+        let mut t = make_ticket_with_agent(None);
+        let now = chrono::Utc::now();
+        let err = handoff(&mut t, "bob", now).unwrap_err();
+        assert!(err.to_string().contains("no agent assigned"));
+    }
+
+    #[test]
+    fn handoff_idempotent() {
+        let mut t = make_ticket_with_agent(Some("alice"));
+        let now = chrono::Utc::now();
+        let result = handoff(&mut t, "alice", now).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn handoff_successful() {
+        let mut t = make_ticket_with_agent(Some("alice"));
+        let now = chrono::Utc::now();
+        let result = handoff(&mut t, "bob", now).unwrap();
+        assert_eq!(result, Some("alice".to_string()));
+        assert_eq!(t.frontmatter.agent.as_deref(), Some("bob"));
+        assert!(t.body.contains("## History"));
+        assert!(t.body.contains("handoff"));
     }
 }

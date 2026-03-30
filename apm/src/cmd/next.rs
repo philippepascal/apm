@@ -6,25 +6,9 @@ pub fn run(root: &Path, json: bool) -> Result<()> {
     let config = Config::load(root)?;
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let actionable = config.actionable_states_for("agent");
-    let pw = config.workflow.prioritization.priority_weight;
-    let ew = config.workflow.prioritization.effort_weight;
-    let rw = config.workflow.prioritization.risk_weight;
+    let p = &config.workflow.prioritization;
 
-    let mut candidates: Vec<_> = tickets
-        .iter()
-        .filter(|t| {
-            let fm = &t.frontmatter;
-            actionable.contains(&fm.state.as_str()) && fm.agent.is_none()
-        })
-        .collect();
-
-    candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-
-    match candidates.first() {
+    match ticket::pick_next(&tickets, &actionable, &[], p.priority_weight, p.effort_weight, p.risk_weight) {
         None => {
             if json {
                 println!("null");
@@ -36,11 +20,11 @@ pub fn run(root: &Path, json: bool) -> Result<()> {
             let fm = &t.frontmatter;
             if json {
                 println!(
-                    r#"{{"id":{}, "title":{:?}, "state":{:?}, "score":{}}}"#,
-                    fm.id, fm.title, fm.state, t.score(pw, ew, rw)
+                    r#"{{"id":{:?}, "title":{:?}, "state":{:?}, "score":{}}}"#,
+                    fm.id, fm.title, fm.state, t.score(p.priority_weight, p.effort_weight, p.risk_weight)
                 );
             } else {
-                println!("#{} [{}] {}", fm.id, fm.state, fm.title);
+                println!("{} [{}] {}", fm.id, fm.state, fm.title);
             }
         }
     }

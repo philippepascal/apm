@@ -1,3 +1,5 @@
 /target
 tickets/NEXT_ID
 .claude/settings.local.json
+.apm-worker.log
+pr-body.txt

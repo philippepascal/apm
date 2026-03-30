@@ -87,8 +87,10 @@ dependencies = [
  "apm-core",
  "chrono",
  "clap",
+ "serde",
  "serde_json",
  "tempfile",
+ "toml",
 ]
 
 [[package]]
@@ -99,6 +101,7 @@ dependencies = [
  "chrono",
  "rusqlite",
  "serde",
+ "serde_json",
  "tempfile",
  "toml",
 ]

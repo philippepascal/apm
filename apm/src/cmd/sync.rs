@@ -1,8 +1,9 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket::Ticket};
+use apm_core::{config::Config, git, sync::{self, Candidates}};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::Path;
 
-pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool, auto_accept: bool) -> Result<()> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
@@ -15,45 +16,11 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool) -> Resu
         }
     }
 
-    // Detect merged branches and fire implemented → accepted auto-transition.
-    let branches = git::ticket_branches(root)?;
-    let merged = git::merged_into_main(root, &config.project.default_branch)?;
-    let mut transitioned = 0usize;
+    let candidates = sync::detect(root, &config)?;
 
-    for branch in &merged {
-        let suffix = branch.trim_start_matches("ticket/");
-        let filename = format!("{suffix}.md");
-        let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
-
-        let content = match git::read_from_branch(root, branch, &rel_path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        let dummy_path = root.join(&rel_path);
-        let mut t = match Ticket::parse(&dummy_path, &content) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        if t.frontmatter.state != "implemented" { continue; }
-
-        let now = chrono::Utc::now();
-        t.frontmatter.state = "accepted".into();
-        t.frontmatter.updated_at = Some(now);
-        let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-        crate::cmd::state::append_history(&mut t.body, "implemented", "accepted", &when, "apm sync");
-
-        let updated = match t.serialize() {
-            Ok(c) => c,
-            Err(e) => { eprintln!("warning: ticket({}) serialize: {e:#}", t.frontmatter.id); continue; }
-        };
-        let id = t.frontmatter.id;
-        match git::commit_to_branch(root, branch, &rel_path, &updated,
-            &format!("ticket({id}): implemented → accepted (branch merged)")) {
-            Ok(_) => {
-                if !quiet { println!("#{id}: implemented → accepted (branch merged)"); }
-                transitioned += 1;
-            }
-            Err(e) => eprintln!("warning: ticket({id}) transition failed: {e:#}"),
+    for c in &candidates.accept {
+        if !quiet {
+            println!("#{}: branch merged — run `apm state {} accepted` to accept", c.ticket.frontmatter.id, c.ticket.frontmatter.id);
         }
     }
 
@@ -61,13 +28,58 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool) -> Resu
         git::push_ticket_branches(root);
     }
 
+    let branches = git::ticket_branches(root)?;
     if !quiet {
         println!(
-            "sync: {} ticket branch{} visible, {} auto-transitioned",
+            "sync: {} ticket branch{} visible",
             branches.len(),
             if branches.len() == 1 { "" } else { "es" },
-            transitioned,
         );
     }
+
+    let Candidates { accept: accept_cands, close: close_cands } = candidates;
+
+    if !accept_cands.is_empty() {
+        let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_cands)?);
+        if confirmed {
+            sync::apply(root, &config, &Candidates { accept: accept_cands, close: vec![] }, "apm-sync")?;
+        }
+    }
+
+    if !close_cands.is_empty() {
+        let confirmed = auto_close || (!quiet && prompt_close(&close_cands)?);
+        if confirmed {
+            sync::apply(root, &config, &Candidates { accept: vec![], close: close_cands }, "apm-sync")?;
+        }
+    }
+
     Ok(())
+}
+
+fn is_interactive() -> bool {
+    io::stdout().is_terminal()
+}
+
+fn prompt_accept(candidates: &[sync::AcceptCandidate]) -> Result<bool> {
+    println!("\nTickets ready to accept:");
+    for c in candidates {
+        println!("  #{}  {}", c.ticket.frontmatter.id, c.ticket.frontmatter.title);
+    }
+    print!("\nAccept all? [y/N] ");
+    io::stdout().flush()?;
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    Ok(line.trim().eq_ignore_ascii_case("y"))
+}
+
+fn prompt_close(candidates: &[sync::CloseCandidate]) -> Result<bool> {
+    println!("\nTickets ready to close:");
+    for c in candidates {
+        println!("  #{}  {}  ({})", c.ticket.frontmatter.id, c.ticket.frontmatter.title, c.reason);
+    }
+    print!("\nClose all? [y/N] ");
+    io::stdout().flush()?;
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    Ok(line.trim().eq_ignore_ascii_case("y"))
 }
