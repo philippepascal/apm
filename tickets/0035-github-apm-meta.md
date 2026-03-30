@@ -1,7 +1,7 @@
 +++
 id = "0035"
 title = "github-apm-meta"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 3
 risk = 4
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0330-0245-main"
 branch = "ticket/0035-github-apm-meta"
 created_at = "2026-03-27T21:14:43.351349Z"
-updated_at = "2026-03-30T05:39:57.631334Z"
+updated_at = "2026-03-30T05:41:45.940173Z"
 +++
 
 ## Spec
@@ -153,3 +153,4 @@ Engineers will primarily interact with tickets through the UI, where IDs are cli
 | 2026-03-30T04:52Z | ready | in_progress | claude-0330-0245-main |
 | 2026-03-30T05:28Z | in_progress | implemented | claude-0329-resume |
 | 2026-03-30T05:39Z | implemented | accepted | apm |
+| 2026-03-30T05:41Z | accepted | closed | apm-sync |
