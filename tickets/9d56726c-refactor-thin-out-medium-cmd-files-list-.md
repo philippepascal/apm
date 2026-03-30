@@ -58,7 +58,7 @@ blocks `apm-serve` from reusing any of it.
 - [x] `ticket::handoff()` exists in apm-core and is unit-tested: rejects missing agent, is idempotent when already assigned, and appends a history row on successful transfer
 - [x] apm-core exposes a `worker` module with `PidFile`, `read_pid_file()`, `is_alive()`, and `elapsed_since()`, each unit-tested
 - [x] `ticket::list_worktrees_with_tickets()` exists in apm-core and is called by `cmd/worktrees.rs`
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
