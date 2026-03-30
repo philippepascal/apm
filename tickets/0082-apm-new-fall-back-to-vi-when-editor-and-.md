@@ -25,12 +25,12 @@ set gets no editor and a confusing warning.
 
 ### Acceptance criteria
 
-- [ ] `apm new` (without `--no-edit`) checks `$VISUAL` first, then `$EDITOR`,
+- [x] `apm new` (without `--no-edit`) checks `$VISUAL` first, then `$EDITOR`,
   then falls back to `vi`
-- [ ] No warning is printed when falling back to `vi` — the fallback is silent
-- [ ] The `open_editor` function in `review.rs` also uses the same lookup order
+- [x] No warning is printed when falling back to `vi` — the fallback is silent
+- [x] The `open_editor` function in `review.rs` also uses the same lookup order
   (`$VISUAL` → `$EDITOR` → `vi`) for consistency
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
