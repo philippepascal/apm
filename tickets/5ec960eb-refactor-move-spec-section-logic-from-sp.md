@@ -4,12 +4,12 @@ title = "refactor: move spec section logic from spec.rs into apm-core"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0330-0245-main"
 agent = "99956"
 branch = "ticket/5ec960eb-refactor-move-spec-section-logic-from-sp"
 created_at = "2026-03-30T14:27:31.109323Z"
-updated_at = "2026-03-30T16:35:46.178540Z"
+updated_at = "2026-03-30T16:35:48.557440Z"
 +++
 
 ## Spec
