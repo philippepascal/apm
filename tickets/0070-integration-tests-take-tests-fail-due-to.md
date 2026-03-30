@@ -3,12 +3,12 @@ id = 70
 title = "Integration tests: take_* tests fail due to stale worktree dirs"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "claude-0329-1430-main"
 branch = "ticket/0070-integration-tests-take-tests-fail-due-to"
 created_at = "2026-03-29T23:38:38.394203Z"
-updated_at = "2026-03-30T00:47:37.384808Z"
+updated_at = "2026-03-30T00:48:08.976683Z"
 +++
 
 ## Spec
