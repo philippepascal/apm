@@ -14,7 +14,7 @@ pub fn run(root: &Path, json: bool) -> Result<()> {
         .iter()
         .filter(|t| {
             let fm = &t.frontmatter;
-            actionable.contains(&fm.state.as_str()) && fm.agent.is_none()
+            actionable.contains(&fm.state.as_str())
         })
         .collect();
 
