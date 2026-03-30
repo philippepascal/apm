@@ -15,7 +15,21 @@ updated_at = "2026-03-30T06:15:20.855321Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm worktrees --add <id>` is documented in `apm.agents.md` and used by agents
+for spec-writing states (`new` → `in_design`, `ammend` → `in_design`). But per
+`TICKET-LIFECYCLE.md`, worktree provisioning is always an internal step driven
+by another command — it is never a user or agent action in its own right.
+
+`apm start` already provisions worktrees internally and prints the path. The
+spec-writing path lacks an equivalent: agents must call `apm worktrees --add`
+manually, which leaks an implementation detail into the public CLI and agent
+instructions.
+
+The fix: move worktree provisioning into an `apm-core` function shared by all
+commands that need it, have `apm state <id> in_design` auto-provision and print
+the worktree path (mirroring `apm start`), and remove `--add` from the public
+`apm worktrees` interface. Update `apm.agents.md` to remove the manual
+`apm worktrees --add` calls.
 
 ### Acceptance criteria
 
