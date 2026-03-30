@@ -38,7 +38,15 @@ description = "Git-native, agent-first project management tool"
 
 ### Approach
 
-How the implementation will work.
+In `apm-core/src/init.rs`, the `setup()` function currently derives the project name silently from the directory.
+The fix is to add an interactive prompt step before writing `.apm/config.toml`:
+
+1. Check if stdin is a TTY (`std::io::IsTerminal::is_terminal(&std::io::stdin())`). If not, skip prompts and use the directory name with empty description (preserves CI/test behaviour).
+2. If stdin is a TTY, print a prompt showing the default name, read a line, and use the trimmed input if non-empty, else the default.
+3. Print a description prompt, read a line, use trimmed input (may be empty).
+4. Pass `name` and `description` into `default_config()` so they are written into the generated TOML.
+5. Update `default_config()` to include `description = "..."` in the `[project]` section.
+6. Tests: verify that calling `setup()` in a non-TTY context (the default in tests) produces a config with the directory name and empty description.
 
 ### Open questions
 
