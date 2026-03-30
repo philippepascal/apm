@@ -4,12 +4,12 @@ title = "make skip_permissions configurable in apm.toml for worker spawning"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 agent = "20197"
 branch = "ticket/6051fb6f-make-skip-permissions-configurable-in-ap"
 created_at = "2026-03-30T21:17:37.548290Z"
-updated_at = "2026-03-30T21:31:26.064728Z"
+updated_at = "2026-03-30T21:31:34.742397Z"
 +++
 
 ## Spec
