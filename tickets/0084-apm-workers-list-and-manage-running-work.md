@@ -31,7 +31,7 @@ Specifically missing today:
 
 ### Acceptance criteria
 
-- [ ] `apm start --spawn` writes a `.apm-worker.pid` file to the worktree
+- [x] `apm start --spawn` writes a `.apm-worker.pid` file to the worktree
   containing the worker PID and ticket ID, deleted automatically when the
   process exits
 - [ ] `apm workers` lists all currently running workers in a table:
