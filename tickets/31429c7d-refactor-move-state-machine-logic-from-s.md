@@ -4,12 +4,12 @@ title = "refactor: move state machine logic from state.rs and start.rs into apm-
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "claude-0330-0245-main"
 agent = "96040"
 branch = "ticket/31429c7d-refactor-move-state-machine-logic-from-s"
 created_at = "2026-03-30T14:27:29.706701Z"
-updated_at = "2026-03-30T16:35:47.110607Z"
+updated_at = "2026-03-30T16:35:52.195916Z"
 +++
 
 ## Spec
