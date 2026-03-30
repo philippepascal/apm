@@ -1,15 +1,15 @@
 +++
 id = "5ec960eb"
 title = "refactor: move spec section logic from spec.rs into apm-core"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
 author = "claude-0330-0245-main"
-agent = "99956"
+agent = "philippepascal"
 branch = "ticket/5ec960eb-refactor-move-spec-section-logic-from-sp"
 created_at = "2026-03-30T14:27:31.109323Z"
-updated_at = "2026-03-30T16:57:19.221600Z"
+updated_at = "2026-03-30T17:20:27.695767Z"
 +++
 
 ## Spec
@@ -99,3 +99,4 @@ CLI `spec.rs` becomes a thin wrapper of ~50 lines.
 | 2026-03-30T16:31Z | new | in_design | philippepascal |
 | 2026-03-30T16:35Z | in_design | specd | claude-0330-1645-spec5 |
 | 2026-03-30T16:57Z | specd | ready | philippepascal |
+| 2026-03-30T17:20Z | ready | in_progress | philippepascal |
