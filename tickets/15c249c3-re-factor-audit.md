@@ -1,7 +1,7 @@
 +++
 id = "15c249c3"
 title = "re-factor audit"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "claude-0330-0245-main"
 branch = "ticket/15c249c3-re-factor-audit"
 created_at = "2026-03-30T06:01:35.844292Z"
-updated_at = "2026-03-30T14:26:37.258103Z"
+updated_at = "2026-03-30T18:07:57.966113Z"
 +++
 
 ## Spec
@@ -125,3 +125,4 @@ apm new --no-edit "Move rand_u16 utility to apm-core"
 | 2026-03-30T06:25Z | ready | in_progress | claude-0330-0245-main |
 | 2026-03-30T06:26Z | in_progress | implemented | claude-0330-0245-main |
 | 2026-03-30T14:26Z | implemented | accepted | apm |
+| 2026-03-30T18:07Z | accepted | closed | apm-sync |
