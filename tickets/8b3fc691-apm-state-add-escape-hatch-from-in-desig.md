@@ -1,15 +1,15 @@
 +++
 id = "8b3fc691"
 title = "apm state: add escape hatch from in_design back to new"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
-agent = "57170"
+agent = "philippepascal"
 branch = "ticket/8b3fc691-apm-state-add-escape-hatch-from-in-desig"
 created_at = "2026-03-30T14:44:59.243807Z"
-updated_at = "2026-03-30T16:13:44.089046Z"
+updated_at = "2026-03-30T16:14:04.583554Z"
 +++
 
 ## Spec
@@ -68,3 +68,4 @@ cannot reset the ticket without directly editing the branch blob.
 | 2026-03-30T16:09Z | new | in_design | philippepascal |
 | 2026-03-30T16:10Z | in_design | specd | claude-0330-1620-b7e2 |
 | 2026-03-30T16:13Z | specd | ready | philippepascal |
+| 2026-03-30T16:14Z | ready | in_progress | philippepascal |
