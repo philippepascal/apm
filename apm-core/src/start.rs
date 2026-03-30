@@ -230,10 +230,9 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let worker_system = std::fs::read_to_string(root.join(".apm/apm.worker.md"))
-        .unwrap_or_else(|_| "You are an APM worker agent.".to_string());
+    let worker_system = resolve_system_prompt(root, &old_state);
 
-    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{content}");
+    let ticket_content = format!("{}\n\n{content}", agent_role_prefix(&old_state, &id));
 
     let log_path = wt_display.join(".apm-worker.log");
 
@@ -373,15 +372,10 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let worker_system = if !prompt.is_empty() {
-        prompt
-    } else {
-        std::fs::read_to_string(root.join(".apm/apm.worker.md"))
-            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
-    };
+    let worker_system = resolve_system_prompt(root, &old_state);
 
     let raw = t.serialize()?;
-    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
+    let ticket_content = format!("{}\n\n{raw}", agent_role_prefix(&old_state, &id));
 
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
@@ -523,15 +517,10 @@ pub fn spawn_next_worker(
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let worker_system = if !prompt.is_empty() {
-        prompt
-    } else {
-        std::fs::read_to_string(root.join(".apm/apm.worker.md"))
-            .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
-    };
+    let worker_system = resolve_system_prompt(root, &old_state);
 
     let raw = t.serialize()?;
-    let ticket_content = format!("You are a Worker agent assigned to ticket #{id}.\n\n{raw}");
+    let ticket_content = format!("{}\n\n{raw}", agent_role_prefix(&old_state, &id));
     let branch = t.frontmatter.branch.clone()
         .or_else(|| git::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
@@ -591,6 +580,28 @@ pub fn spawn_next_worker(
     Ok(Some((id, child, pid_path)))
 }
 
+fn resolve_system_prompt(root: &Path, pre_transition_state: &str) -> String {
+    let spec_writer_states = ["new", "ammend"];
+    if spec_writer_states.contains(&pre_transition_state) {
+        let p = root.join(".apm/apm.spec-writer.md");
+        if let Ok(content) = std::fs::read_to_string(&p) {
+            return content;
+        }
+    }
+    let p = root.join(".apm/apm.worker.md");
+    std::fs::read_to_string(p)
+        .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
+}
+
+fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
+    let spec_writer_states = ["new", "ammend"];
+    if spec_writer_states.contains(&pre_transition_state) {
+        format!("You are a Spec-Writer agent assigned to ticket #{id}.")
+    } else {
+        format!("You are a Worker agent assigned to ticket #{id}.")
+    }
+}
+
 fn write_pid_file(path: &Path, pid: u32, ticket_id: &str) -> Result<()> {
     let started_at = chrono::Utc::now().format("%Y-%m-%dT%H:%MZ").to_string();
     let content = serde_json::json!({
@@ -610,10 +621,96 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_agent_name;
+    use super::{resolve_agent_name, resolve_system_prompt, agent_role_prefix};
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    // --- resolve_system_prompt ---
+
+    #[test]
+    fn resolve_system_prompt_uses_spec_writer_for_new() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER").unwrap();
+        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
+        assert_eq!(resolve_system_prompt(p, "new"), "SPEC WRITER");
+    }
+
+    #[test]
+    fn resolve_system_prompt_uses_spec_writer_for_ammend() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER").unwrap();
+        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
+        assert_eq!(resolve_system_prompt(p, "ammend"), "SPEC WRITER");
+    }
+
+    #[test]
+    fn resolve_system_prompt_falls_back_to_worker_when_spec_writer_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        // No apm.spec-writer.md — only worker
+        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
+        assert_eq!(resolve_system_prompt(p, "new"), "WORKER");
+    }
+
+    #[test]
+    fn resolve_system_prompt_uses_worker_for_ready() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER").unwrap();
+        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
+        assert_eq!(resolve_system_prompt(p, "ready"), "WORKER");
+    }
+
+    #[test]
+    fn resolve_system_prompt_uses_worker_for_in_progress() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER").unwrap();
+        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
+        assert_eq!(resolve_system_prompt(p, "in_progress"), "WORKER");
+    }
+
+    // --- agent_role_prefix ---
+
+    #[test]
+    fn agent_role_prefix_spec_writer_for_new() {
+        assert_eq!(
+            agent_role_prefix("new", "abc123"),
+            "You are a Spec-Writer agent assigned to ticket #abc123."
+        );
+    }
+
+    #[test]
+    fn agent_role_prefix_spec_writer_for_ammend() {
+        assert_eq!(
+            agent_role_prefix("ammend", "abc123"),
+            "You are a Spec-Writer agent assigned to ticket #abc123."
+        );
+    }
+
+    #[test]
+    fn agent_role_prefix_worker_for_ready() {
+        assert_eq!(
+            agent_role_prefix("ready", "abc123"),
+            "You are a Worker agent assigned to ticket #abc123."
+        );
+    }
+
+    #[test]
+    fn agent_role_prefix_worker_for_in_progress() {
+        assert_eq!(
+            agent_role_prefix("in_progress", "abc123"),
+            "You are a Worker agent assigned to ticket #abc123."
+        );
+    }
 
     #[test]
     fn prefers_apm_agent_name() {
