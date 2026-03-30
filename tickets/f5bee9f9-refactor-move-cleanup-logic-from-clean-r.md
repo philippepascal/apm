@@ -34,7 +34,7 @@ The target is apm_core::clean::candidates() returning a structured list of branc
 - [x] `remove()` deletes the worktree (if present) and the local branch for a given candidate
 - [x] `apm clean --dry-run` prints the same output as before, now driven by `candidates()`
 - [x] `apm clean` (non-dry-run) removes the same set of worktrees and branches as before, now via `remove()`
-- [ ] All six existing clean integration tests pass without modification
+- [x] All six existing clean integration tests pass without modification
 
 ### Out of scope
 
