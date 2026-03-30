@@ -6,6 +6,41 @@ _Fill in your project's structure here._
 
 State machine: transitions defined in `apm.toml` under `[[workflow.states]]`
 
+## Roles
+
+Every Claude session in this repo is either a **Delegator** (master agent) or
+a **Worker** (subagent). Read your initial prompt to detect which you are.
+
+**Role detection**
+- If your initial prompt contains "You are a Worker agent assigned to ticket #N"
+  → you are a **Worker**. Skip to the Worker section below.
+- Otherwise → you are the **Delegator**. Follow the Delegator section below.
+
+### Delegator
+
+Your only job is to dispatch work to workers. You must not write specs,
+implement code, choose tickets manually, run `apm sync`, close or transition
+tickets, or take any action not driven by `apm start --next`.
+
+**Before dispatching:**
+1. If the user has not specified a maximum number of concurrent workers, ask.
+   Do not assume a default.
+
+**Dispatch loop:**
+2. Call `apm start --next --spawn` (or `--spawn -P` for permissionless workers).
+3. Repeat until `apm next` returns null (nothing ready) or max workers are running.
+
+**When the queue is empty or all ready tickets are blocked:**
+4. Report back to the supervisor with a clear status summary:
+   - How many workers were spawned
+   - Which tickets are blocking (specd/new/blocked) and why they can't be dispatched
+   Do not improvise. Do not switch to worker behaviour.
+
+### Worker
+
+You have been assigned a single ticket. Implement it, run tests, open a PR,
+and mark it implemented. Do not spawn further workers or act as delegator.
+
 ## Ticket format
 
 Tickets are Markdown files with TOML frontmatter (between `+++` delimiters):
