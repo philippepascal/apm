@@ -46,9 +46,18 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         focus_section: None,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
-    let body_template = format!(
-        "## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n"
-    );
+    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
+    let body_template = if config.ticket.sections.is_empty() {
+        format!("## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n{history_footer}")
+    } else {
+        let mut s = String::from("## Spec\n\n");
+        for sec in &config.ticket.sections {
+            let placeholder = sec.placeholder.as_deref().unwrap_or("");
+            s.push_str(&format!("### {}\n\n{}\n\n", sec.name, placeholder));
+        }
+        s.push_str(&history_footer);
+        s
+    };
     let body = if let Some(ctx) = &context {
         let section = context_section
             .as_deref()
