@@ -34,14 +34,79 @@ The desired behaviour: `apm clean` diagnoses each blocked worktree, explains wha
 
 ### Acceptance criteria
 
+- [ ] When `apm clean` finds a dirty worktree whose only dirty files are known temp files (`pr-body.md`, `body.md`, `ac.txt`, `.apm-worker.pid`, `.apm-worker.log`), it lists those files and prompts `Remove N file(s) and clean? [y/N]`
+- [ ] Confirming the prompt deletes the listed temp files, then removes the worktree and branch as normal
+- [ ] Declining the prompt skips that worktree with a one-line "skipping" message
+- [ ] When a dirty worktree contains modified tracked files, `apm clean` lists each file with an `M` prefix, prints "manual cleanup required — skipping", and does not prompt
+- [ ] When a dirty worktree has both modified tracked files and untracked files, the modified-tracked gate applies: no prompt, skip with message
+- [ ] When a dirty worktree contains untracked files not in the known-temp list, `apm clean` lists them labelled `[user]`, distinct from known-temp files labelled `[temp]`, and includes all of them in the removal prompt
+- [ ] In `--dry-run` mode, `apm clean` prints a categorised diagnosis of each dirty worktree (file labels and names) without prompting or removing anything
+- [ ] A `--yes` flag auto-confirms all removal prompts without reading stdin, enabling scripted use
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing modified tracked file content — always left for the user to handle manually
+- Making the known-temp filename list configurable via `apm.toml` — it is a hardcoded constant
+- Selective per-file confirmation — removal is all-or-nothing per worktree
+- Staged (indexed) changes — treated as modified tracked files and block auto-cleaning
 
 ### Approach
 
-How the implementation will work.
+**Core changes (`apm-core/src/clean.rs`):**
+
+1. Add a `DirtyWorktree` struct capturing the diagnosis for one blocked worktree:
+   ```rust
+   pub struct DirtyWorktree {
+       pub ticket_id: String,
+       pub ticket_title: String,
+       pub branch: String,
+       pub path: PathBuf,
+       pub local_branch_exists: bool,
+       pub known_temp: Vec<PathBuf>,
+       pub other_untracked: Vec<PathBuf>,
+       pub modified_tracked: Vec<PathBuf>,
+   }
+   ```
+
+2. Add a `const KNOWN_TEMP_FILES: &[&str]` with the safe filenames:
+   `"pr-body.md"`, `"body.md"`, `"ac.txt"`, `".apm-worker.pid"`, `".apm-worker.log"`.
+
+3. Add `diagnose_worktree(path, ticket_id, ticket_title, branch, local_branch_exists) -> Result<DirtyWorktree>`:
+   - Runs `git status --porcelain` in the worktree
+   - Parses each output line: `XY <file>`
+     - `??` prefix → untracked: filename in `KNOWN_TEMP_FILES` → `known_temp`, else → `other_untracked`
+     - Any other XY → `modified_tracked`
+
+4. Change `candidates()` return type from `Result<Vec<CleanCandidate>>` to `Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)>`.
+   Replace the current dirty-worktree `eprintln!(...); continue;` block with a call to `diagnose_worktree()` that pushes into the second vec.
+
+5. Add `remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()>` that deletes each listed file.
+
+**Command layer (`apm/src/cmd/clean.rs`):**
+
+6. Update `run(root, dry_run, yes)` to receive both vecs from `candidates()`.
+
+7. For each `DirtyWorktree`:
+   - If `modified_tracked` non-empty:
+     - Print each file as `  M <file>` then `warning: <branch> has modified tracked files — manual cleanup required — skipping`
+   - Else (only untracked files):
+     - Print each `known_temp` file as `  [temp] <file>`
+     - Print each `other_untracked` file as `  [user] <file>`
+     - In `--dry-run`: print `would remove N file(s) — re-run without --dry-run to be prompted`
+     - Not dry-run, `yes=true`: call `remove_untracked` then construct a `CleanCandidate` from the `DirtyWorktree` fields and call `remove()`
+     - Not dry-run, `yes=false`, interactive (stdout is a terminal): prompt `Remove N file(s) and clean? [y/N]`; on "y": remove and clean; on anything else: print `skipping <branch>`
+     - Not dry-run, non-interactive: print `skipping <branch> — untracked files present (use --yes to auto-remove)`
+
+**CLI (`apm/src/main.rs`):**
+
+8. Add `--yes` / `-y` boolean flag to the `Clean` subcommand. Pass it through to `cmd::clean::run`.
+
+**Tests (`apm/tests/integration.rs`):**
+
+9. `clean_yes_removes_known_temp_files_and_cleans`: create a merged/closed worktree, drop a `pr-body.md` into it, run `apm clean --yes`, assert worktree and branch are gone.
+10. `clean_skips_modified_tracked_files`: create a merged/closed worktree, modify a tracked file without committing, run `apm clean --yes`, assert worktree and branch still exist and stdout contains "manual cleanup required".
+11. `clean_dry_run_diagnoses_dirty_worktree`: create a merged/closed worktree with a `pr-body.md`, run `apm clean --dry-run`, assert output mentions `[temp]` and no files removed.
+12. `clean_yes_removes_other_untracked_files`: create a merged/closed worktree with an unrecognised untracked file (e.g. `notes.txt`), run `apm clean --yes`, assert worktree and branch are gone.
 
 ### Open questions
 
