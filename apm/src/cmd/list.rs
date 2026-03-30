@@ -1,9 +1,17 @@
 use anyhow::Result;
-use apm_core::{config::Config, ticket};
+use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>, actionable_filter: Option<String>) -> Result<()> {
+pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>, actionable_filter: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
+
+    if aggressive {
+        if let Err(e) = git::fetch_all(root) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
+
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
     let filtered = ticket::list_filtered(

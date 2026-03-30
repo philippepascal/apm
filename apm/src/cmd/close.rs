@@ -1,9 +1,32 @@
 use anyhow::Result;
-use apm_core::{config::Config, ticket};
+use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, reason: Option<String>) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, reason: Option<String>, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
     let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
-    ticket::close(root, &config, id_arg, reason.as_deref(), &agent)
+
+    let branches = git::ticket_branches(root).unwrap_or_default();
+    let branch = git::resolve_ticket_branch(&branches, id_arg).ok();
+
+    if aggressive {
+        if let Some(ref b) = branch {
+            if let Err(e) = git::fetch_branch(root, b) {
+                eprintln!("warning: fetch failed: {e:#}");
+            }
+        }
+    }
+
+    ticket::close(root, &config, id_arg, reason.as_deref(), &agent)?;
+
+    if aggressive {
+        if let Some(ref b) = branch {
+            if let Err(e) = git::push_branch(root, b) {
+                eprintln!("warning: push failed: {e:#}");
+            }
+        }
+    }
+
+    Ok(())
 }

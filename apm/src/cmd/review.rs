@@ -104,6 +104,11 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
         let content = t.serialize()?;
         git::commit_to_branch(root, &branch, &rel_path, &content,
             &format!("ticket({id}): review edit"))?;
+        if aggressive {
+            if let Err(e) = git::push_branch(root, &branch) {
+                eprintln!("warning: push failed: {e:#}");
+            }
+        }
         println!("{id}: spec updated");
     }
 

@@ -3,12 +3,13 @@ use apm_core::{config::Config, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, field: String, value: String) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, field: String, value: String, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
 
-    if config.sync.aggressive {
+    if aggressive {
         let branches = git::ticket_branches(root).unwrap_or_default();
         if let Some(b) = branches.iter().find(|b| {
             b.strip_prefix("ticket/")
@@ -48,6 +49,12 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String) -> Result<()
         &content,
         &format!("ticket({id}): set {field} = {value}"),
     )?;
+
+    if aggressive {
+        if let Err(e) = git::push_branch(root, &branch) {
+            eprintln!("warning: push failed: {e:#}");
+        }
+    }
 
     println!("{id}: {field} = {value}");
     Ok(())

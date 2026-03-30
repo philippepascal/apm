@@ -267,7 +267,7 @@ fn list_shows_all_tickets() {
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::list::run(dir.path(), None, false, false, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, None, true).unwrap();
 }
 
 #[test]
@@ -284,7 +284,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true).unwrap();
 }
 
 // --- show ---
@@ -353,7 +353,7 @@ fn set_priority_updates_frontmatter() {
     let branch = find_ticket_branch(dir.path(), "set-test");
     let id = find_ticket_id(dir.path(), "set-test");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::set::run(dir.path(), &id, "priority".into(), "7".into()).unwrap();
+    apm::cmd::set::run(dir.path(), &id, "priority".into(), "7".into(), true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("priority = 7"));
 }
@@ -369,9 +369,9 @@ fn next_returns_highest_priority() {
     apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, None, true).unwrap();
     let b2 = find_ticket_branch(dir.path(), "high-priority");
     let high_id = find_ticket_id(dir.path(), "high-priority");
-    apm::cmd::set::run(dir.path(), &high_id, "priority".into(), "10".into()).unwrap();
+    apm::cmd::set::run(dir.path(), &high_id, "priority".into(), "10".into(), true).unwrap();
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::next::run(dir.path(), false).unwrap();
+    apm::cmd::next::run(dir.path(), false, true).unwrap();
 }
 
 #[test]
@@ -380,13 +380,13 @@ fn next_json_is_valid() {
     apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, None, true).unwrap();
     let b = find_ticket_branch(dir.path(), "json-test");
     sync_from_branch(dir.path(), &b, &ticket_rel_path(&b));
-    apm::cmd::next::run(dir.path(), true).unwrap();
+    apm::cmd::next::run(dir.path(), true, true).unwrap();
 }
 
 #[test]
 fn next_null_when_no_actionable() {
     let dir = setup();
-    apm::cmd::next::run(dir.path(), true).unwrap();
+    apm::cmd::next::run(dir.path(), true, true).unwrap();
 }
 
 // --- branch ---
@@ -710,7 +710,7 @@ fn spec_prints_all_sections() {
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
     // Should succeed and not error
-    apm::cmd::spec::run(p, "1", None, None, false, None).unwrap();
+    apm::cmd::spec::run(p, "1", None, None, false, None, true).unwrap();
 }
 
 #[test]
@@ -718,7 +718,7 @@ fn spec_prints_single_section() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "the problem text", "the approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, false, None).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, false, None, true).unwrap();
 }
 
 #[test]
@@ -726,7 +726,7 @@ fn spec_set_section_commits() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), false, None).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), false, None, true).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("new problem text"), "updated problem not found: {content}");
 }
@@ -736,7 +736,7 @@ fn spec_check_passes_full_ticket() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    apm::cmd::spec::run(p, "1", None, None, true, None).unwrap();
+    apm::cmd::spec::run(p, "1", None, None, true, None, true).unwrap();
 }
 
 #[test]
@@ -744,7 +744,7 @@ fn spec_unknown_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, false, None);
+    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, false, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("unknown section"));
 }
@@ -753,7 +753,7 @@ fn spec_unknown_section_errors() {
 fn spec_nonexistent_ticket_errors() {
     let dir = setup();
     let p = dir.path();
-    let result = apm::cmd::spec::run(p, "999", None, None, false, None);
+    let result = apm::cmd::spec::run(p, "999", None, None, false, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("no ticket matches"));
 }
@@ -763,7 +763,7 @@ fn spec_set_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), false, None);
+    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), false, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set requires --section"));
 }
@@ -805,6 +805,7 @@ fn spec_mark_checks_off_item_in_amendment_requests() {
         None,
         false,
         Some("Add error handling".into()),
+        true,
     ).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
@@ -823,6 +824,7 @@ fn spec_mark_no_match_errors() {
         None,
         false,
         Some("nonexistent item".into()),
+        true,
     );
     assert!(result.is_err());
     let msg = format!("{}", result.unwrap_err());
@@ -852,6 +854,7 @@ fn spec_mark_ambiguous_errors() {
         None,
         false,
         Some("error".into()),
+        true,
     );
     assert!(result.is_err());
     let msg = format!("{}", result.unwrap_err());
@@ -863,7 +866,7 @@ fn spec_mark_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_ticket_with_amendment_requests(p, 1);
-    let result = apm::cmd::spec::run(p, "1", None, None, false, Some("Add error handling".into()));
+    let result = apm::cmd::spec::run(p, "1", None, None, false, Some("Add error handling".into()), true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--mark requires --section"));
 }
@@ -880,6 +883,7 @@ fn spec_mark_case_insensitive() {
         None,
         false,
         Some("ADD ERROR".into()),
+        true,
     ).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
@@ -896,7 +900,7 @@ fn close_transitions_from_any_state() {
     let id = find_ticket_id(p, "close-me");
     let rel = ticket_rel_path(&branch);
     // Ticket is in "new" state — no transition to "closed" is defined.
-    apm::cmd::close::run(p, &id, None).unwrap();
+    apm::cmd::close::run(p, &id, None, true).unwrap();
     let content = branch_content(p, &branch, &rel);
     assert!(content.contains("state = \"closed\""), "state not updated: {content}");
     assert!(content.contains("| new | closed |"), "history row missing: {content}");
@@ -910,7 +914,7 @@ fn close_with_reason_appends_to_history() {
     let branch = find_ticket_branch(p, "close-reason");
     let id = find_ticket_id(p, "close-reason");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::close::run(p, &id, Some("superseded by #42".into())).unwrap();
+    apm::cmd::close::run(p, &id, Some("superseded by #42".into()), true).unwrap();
     let content = branch_content(p, &branch, &rel);
     assert!(content.contains("state = \"closed\""), "state not updated: {content}");
     assert!(content.contains("superseded by #42"), "reason missing: {content}");
@@ -922,8 +926,8 @@ fn close_already_closed_is_error() {
     let p = dir.path();
     apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true).unwrap();
     let id = find_ticket_id(p, "already-closed");
-    apm::cmd::close::run(p, &id, None).unwrap();
-    let result = apm::cmd::close::run(p, &id, None);
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+    let result = apm::cmd::close::run(p, &id, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("already closed"));
 }
@@ -932,7 +936,7 @@ fn close_already_closed_is_error() {
 fn close_nonexistent_ticket_is_error() {
     let dir = setup();
     let p = dir.path();
-    let result = apm::cmd::close::run(p, "999", None);
+    let result = apm::cmd::close::run(p, "999", None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("no ticket matches"));
 }
@@ -943,11 +947,11 @@ fn validate_does_not_flag_closed_state() {
     let p = dir.path();
     apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true).unwrap();
     let id = find_ticket_id(p, "validate-closed");
-    apm::cmd::close::run(p, &id, None).unwrap();
+    apm::cmd::close::run(p, &id, None, true).unwrap();
     // apm validate should not flag the closed ticket as having an unknown state.
     // The test config is minimal and may produce config warnings (e.g. missing transitions),
     // but there must be zero ticket-level errors.
-    let result = apm::cmd::validate::run(p, false, false, false);
+    let result = apm::cmd::validate::run(p, false, false, false, true);
     if let Err(e) = &result {
         let msg = e.to_string();
         assert!(
@@ -970,6 +974,143 @@ fn state_to_closed_bypasses_transition_rules() {
     apm::cmd::state::run(p, &id, "closed".into(), false, false).unwrap();
     let content = branch_content(p, &branch, &rel);
     assert!(content.contains("state = \"closed\""), "state not updated: {content}");
+}
+
+// ── aggressive fetch/push ──────────────────────────────────────────────────────
+
+/// Build a minimal apm.toml with sync.aggressive = true.
+fn setup_aggressive() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+
+[sync]
+aggressive = true
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+/// Commands with aggressive=true but no remote must not abort — fetch/push
+/// failures are warnings only.
+#[test]
+fn aggressive_no_remote_does_not_abort_next() {
+    let dir = setup_aggressive();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Aggressive next".into(), true, false, None, None, false).unwrap();
+    // No remote configured — fetch_all will fail; must not propagate as error.
+    apm::cmd::next::run(p, false, false).unwrap();
+}
+
+#[test]
+fn aggressive_no_remote_does_not_abort_list() {
+    let dir = setup_aggressive();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false).unwrap();
+    apm::cmd::list::run(p, None, false, false, None, None, false).unwrap();
+}
+
+#[test]
+fn aggressive_no_remote_does_not_abort_close() {
+    let dir = setup_aggressive();
+    let p = dir.path();
+    apm::cmd::new::run(p, "Aggressive close".into(), true, false, None, None, false).unwrap();
+    let id = find_ticket_id(p, "aggressive-close");
+    // No remote: fetch and push will warn but not abort.
+    apm::cmd::close::run(p, &id, None, false).unwrap();
+    let branch = find_ticket_branch(p, "aggressive-close");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(p, &branch, &rel);
+    assert!(content.contains("state = \"closed\""), "ticket not closed: {content}");
+}
+
+/// --no-aggressive suppresses fetch/push even when config has aggressive = true.
+#[test]
+fn no_aggressive_flag_suppresses_fetch_on_next() {
+    let dir = setup_aggressive();
+    let p = dir.path();
+    apm::cmd::new::run(p, "No agg next".into(), true, false, None, None, false).unwrap();
+    // --no-aggressive = true means fetch is skipped entirely (no warning printed,
+    // no error). We verify the command still succeeds.
+    apm::cmd::next::run(p, false, true).unwrap();
+}
+
+#[test]
+fn no_aggressive_flag_suppresses_fetch_on_spec() {
+    let dir = setup_aggressive();
+    let p = dir.path();
+    apm::cmd::new::run(p, "No agg spec".into(), true, false, None, None, false).unwrap();
+    let id = find_ticket_id(p, "no-agg-spec");
+    // no_aggressive=true: fetch and push are skipped.
+    apm::cmd::spec::run(
+        p,
+        &id,
+        Some("Problem".into()),
+        Some("test content".into()),
+        false,
+        None,
+        true,
+    ).unwrap();
+}
+
+#[test]
+fn no_aggressive_flag_suppresses_fetch_on_set() {
+    let dir = setup_aggressive();
+    let p = dir.path();
+    apm::cmd::new::run(p, "No agg set".into(), true, false, None, None, false).unwrap();
+    let id = find_ticket_id(p, "no-agg-set");
+    apm::cmd::set::run(p, &id, "priority".into(), "5".into(), true).unwrap();
+    let branch = find_ticket_branch(p, "no-agg-set");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(p, &branch, &rel);
+    assert!(content.contains("priority = 5"), "priority not set: {content}");
 }
 
 // ── apm start --next ─────────────────────────────────────────────────────────

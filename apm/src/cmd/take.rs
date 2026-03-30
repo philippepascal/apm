@@ -8,6 +8,16 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool) -> Result<()> {
 
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
+
+    if aggressive {
+        let branches = git::ticket_branches(root).unwrap_or_default();
+        if let Ok(b) = git::resolve_ticket_branch(&branches, id_arg) {
+            if let Err(e) = git::fetch_branch(root, &b) {
+                eprintln!("warning: fetch failed: {e:#}");
+            }
+        }
+    }
+
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
 

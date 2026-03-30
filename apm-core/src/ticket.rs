@@ -316,12 +316,6 @@ pub fn close(
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
     crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
 
-    if crate::git::has_remote(root) {
-        if let Err(e) = crate::git::push_branch(root, &branch) {
-            eprintln!("warning: push {branch} failed: {e:#}");
-        }
-    }
-
     if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch) {
         eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
     }

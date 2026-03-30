@@ -90,6 +90,9 @@ Examples:
         /// Show only tickets actionable by this actor (agent, supervisor, engineer)
         #[arg(long, value_name = "ACTOR")]
         actionable: Option<String>,
+        /// Skip automatic git fetch before reading ticket data
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -207,6 +210,9 @@ Examples:
         /// New value for the field (use "-" to clear agent/supervisor/branch)
         #[arg(value_name = "VALUE")]
         value: String,
+        /// Skip automatic git fetch/push
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Claim a ticket and check out its branch
     #[command(long_about = "Claim a ticket and provision its permanent worktree.
@@ -264,6 +270,9 @@ Typical agent startup sequence:
         /// Output result as JSON instead of human-readable text
         #[arg(long)]
         json: bool,
+        /// Skip automatic git fetch before reading ticket data
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Sync with remote (poll events, detect merges)
     #[command(long_about = "Fetch from remote and reconcile the local ticket cache.
@@ -384,6 +393,9 @@ Run this if `apm list` or `apm show` is behaving unexpectedly.")]
         /// Auto-fix issues where possible
         #[arg(long)]
         fix: bool,
+        /// Skip automatic git fetch before reading ticket data
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Validate config and ticket integrity
     #[command(long_about = "Validate apm.toml correctness and cross-ticket integrity.
@@ -411,6 +423,9 @@ ticket file on its branch.
         /// Run only config cross-checks, skip ticket integrity checks
         #[arg(long)]
         config_only: bool,
+        /// Skip automatic git fetch before reading ticket data
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook", hide = true)]
@@ -489,6 +504,9 @@ Example:
         /// Optional reason appended to the history entry
         #[arg(long)]
         reason: Option<String>,
+        /// Skip automatic git fetch/push
+        #[arg(long)]
+        no_aggressive: bool,
     },
     /// Remove worktrees and local branches for closed tickets
     #[command(long_about = "Remove worktrees and local branches for closed tickets.
@@ -555,6 +573,9 @@ the given substring:
         /// Mark the first unchecked item matching this text in --section as done
         #[arg(long)]
         mark: Option<String>,
+        /// Skip automatic git fetch/push
+        #[arg(long)]
+        no_aggressive: bool,
     },
 }
 
@@ -589,12 +610,12 @@ fn main() -> Result<()> {
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
-        Command::List { state, unassigned, all, supervisor, actionable } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable),
+        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
         Command::Show { id, no_aggressive } => cmd::show::run(&root, &id, no_aggressive),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
-        Command::Set { id, field, value } => cmd::set::run(&root, &id, field, value),
-        Command::Next { json } => cmd::next::run(&root, json),
+        Command::Set { id, field, value, no_aggressive } => cmd::set::run(&root, &id, field, value, no_aggressive),
+        Command::Next { json, no_aggressive } => cmd::next::run(&root, json, no_aggressive),
         Command::Start { id, no_aggressive, spawn, skip_permissions, next } => {
             match (next, id) {
                 (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
@@ -610,14 +631,14 @@ fn main() -> Result<()> {
         Command::Take { id, no_aggressive } => cmd::take::run(&root, &id, no_aggressive),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
-        Command::Verify { fix } => cmd::verify::run(&root, fix),
-        Command::Validate { fix, json, config_only } => cmd::validate::run(&root, fix, json, config_only),
+        Command::Verify { fix, no_aggressive } => cmd::verify::run(&root, fix, no_aggressive),
+        Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
-        Command::Close { id, reason } => cmd::close::run(&root, &id, reason),
+        Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
-        Command::Spec { id, section, set, check, mark } => cmd::spec::run(&root, &id, section, set, check, mark),
+        Command::Spec { id, section, set, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
     }
 }

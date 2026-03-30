@@ -4,8 +4,16 @@ use chrono::Utc;
 use std::collections::HashSet;
 use std::path::Path;
 
-pub fn run(root: &Path, fix: bool) -> Result<()> {
+pub fn run(root: &Path, fix: bool, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let aggressive = config.sync.aggressive && !no_aggressive;
+
+    if aggressive {
+        if let Err(e) = git::fetch_all(root) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
+
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
     let merged = git::merged_into_main(root, &config.project.default_branch).unwrap_or_default();
