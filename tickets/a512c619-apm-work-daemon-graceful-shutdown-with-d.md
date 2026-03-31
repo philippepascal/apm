@@ -3,13 +3,13 @@ id = "a512c619"
 title = "apm work --daemon: graceful shutdown with double-Ctrl+C escape hatch"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "claude-0331-1200-a7b9"
 agent = "4585"
 branch = "ticket/a512c619-apm-work-daemon-graceful-shutdown-with-d"
 created_at = "2026-03-31T18:35:38.898908Z"
-updated_at = "2026-03-31T19:02:23.764652Z"
+updated_at = "2026-03-31T19:06:18.297388Z"
 +++
 
 ## Spec
