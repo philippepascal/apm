@@ -1,7 +1,7 @@
 +++
 id = "553d1112"
 title = "escape user input written into TOML format strings"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "95803"
 branch = "ticket/553d1112-escape-user-input-written-into-toml-form"
 created_at = "2026-03-31T00:17:29.464358Z"
-updated_at = "2026-03-31T04:04:12.058482Z"
+updated_at = "2026-03-31T05:05:06.473584Z"
 +++
 
 ## Spec
@@ -60,3 +60,4 @@ Add a private `fn toml_escape(s: &str) -> String` helper in `apm-core/src/init.r
 | 2026-03-31T00:28Z | ready | in_progress | philippepascal |
 | 2026-03-31T00:30Z | in_progress | implemented | claude-0330-2350-w4r1 |
 | 2026-03-31T04:04Z | implemented | accepted | apm-sync |
+| 2026-03-31T05:05Z | accepted | closed | apm-sync |
