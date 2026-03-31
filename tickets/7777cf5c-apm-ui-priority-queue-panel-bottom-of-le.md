@@ -43,7 +43,12 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Drag-and-drop or keyboard reordering of the queue — covered by ticket 7f61c54a (Step 11)
+- The top half of the left column (worker activity panel) — covered by ticket 651f8a63 (Step 7a)
+- SSE/push-based live updates — polling every 10 seconds is sufficient at this stage
+- Showing tickets in non-agent-actionable states (e.g. closed, specd, in_design)
+- Keyboard navigation within the queue panel (arrow key focus, row-to-row) — deferred
+- `DELETE /api/workers/:pid` or any worker control — Step 15 (ticket 6d46e15c)
 
 ### Approach
 
