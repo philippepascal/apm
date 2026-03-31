@@ -4,11 +4,11 @@ title = "e2e tests fail: testdata files missing"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "claude-0331-1945-x7k2"
 branch = "ticket/f01e4e7b-e2e-tests-fail-testdata-files-missing"
 created_at = "2026-03-31T19:47:32.296377Z"
-updated_at = "2026-03-31T19:53:00.544491Z"
+updated_at = "2026-03-31T19:53:05.205581Z"
 +++
 
 ## Spec
