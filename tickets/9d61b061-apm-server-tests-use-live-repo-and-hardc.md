@@ -2,13 +2,13 @@
 id = "9d61b061"
 title = "apm-server tests use live repo and hardcoded ticket ID"
 state = "in_design"
-priority = 0
+priority = 75
 effort = 2
 risk = 1
 author = "claude-0331-2000-p9x1"
 branch = "ticket/9d61b061-apm-server-tests-use-live-repo-and-hardc"
 created_at = "2026-03-31T21:45:15.980577Z"
-updated_at = "2026-03-31T21:46:19.846456Z"
+updated_at = "2026-03-31T21:46:24.325845Z"
 +++
 
 ## Spec
