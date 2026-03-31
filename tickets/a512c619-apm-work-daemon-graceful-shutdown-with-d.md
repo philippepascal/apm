@@ -26,7 +26,7 @@ The desired behaviour follows the standard two-stage shutdown pattern used by pr
 
 - [x] First Ctrl+C while workers are running prints a message stating how many workers are still running and that a second Ctrl+C will force-exit
 - [x] After the first Ctrl+C the daemon stops dispatching new workers
-- [ ] After the first Ctrl+C the daemon continues reaping workers until all have finished, then exits cleanly
+- [x] After the first Ctrl+C the daemon continues reaping workers until all have finished, then exits cleanly
 - [ ] A second Ctrl+C at any point during the drain phase exits immediately and prints a message that workers may still be running
 - [ ] When the first Ctrl+C is received and no workers are running the daemon exits immediately without waiting
 - [ ] The non-daemon (one-shot) mode is unaffected: Ctrl+C behaviour there remains unchanged
