@@ -24,6 +24,22 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 
 ### Acceptance criteria
 
+- [ ] `GET /api/queue` returns HTTP 200 with `Content-Type: application/json`
+- [ ] The response is a JSON array sorted by descending score using the formula `priority * priority_weight + effort * effort_weight + risk * risk_weight` with weights from `[workflow.prioritization]` in `apm.toml`
+- [ ] Each element in the response contains: `rank` (1-based integer), `id`, `title`, `state`, `priority`, `effort`, `risk`, `score`
+- [ ] Only tickets whose state is in `config.actionable_states_for("agent")` appear in the response
+- [ ] `GET /api/queue` returns an empty JSON array when no agent-actionable tickets exist
+- [ ] The handler offloads all blocking git work via `spawn_blocking` and does not block the tokio runtime
+- [ ] `PriorityQueuePanel` renders a row for each ticket in the response, showing rank, ID, title, state badge, effort, risk, and score
+- [ ] When the response array is empty, `PriorityQueuePanel` shows a centred "No tickets in queue." message
+- [ ] While the initial fetch is in-flight, `PriorityQueuePanel` shows loading skeleton rows
+- [ ] If the fetch fails, `PriorityQueuePanel` shows an inline error message
+- [ ] `PriorityQueuePanel` automatically refetches `GET /api/queue` every 10 seconds via TanStack Query `refetchInterval`
+- [ ] Clicking a queue row sets `selectedTicketId` in the Zustand store (the same global selection used by the swimlanes)
+- [ ] The row for the currently selected ticket is visually highlighted
+- [ ] `PriorityQueuePanel` is rendered in the bottom half of `WorkerView.tsx`, replacing the placeholder stub
+- [ ] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
