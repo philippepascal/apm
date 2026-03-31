@@ -4,12 +4,12 @@ title = "apm new: accept --section/--set flags to pre-populate spec sections"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "66061"
 branch = "ticket/47d4695f-apm-new-accept-section-set-flags-to-pre-"
 created_at = "2026-03-31T00:05:27.351459Z"
-updated_at = "2026-03-31T04:38:49.533791Z"
+updated_at = "2026-03-31T04:38:51.672139Z"
 +++
 
 ## Spec
