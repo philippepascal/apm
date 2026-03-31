@@ -41,7 +41,148 @@ There is no frontend. The backend steps (Steps 1 and 2) will deliver an axum ser
 
 ### Approach
 
-How the implementation will work.
+**Prerequisite:** Step 2 (`GET /api/tickets` and `GET /api/tickets/:id`) must be `implemented` before this ticket moves to `ready`.
+
+---
+
+### 1. Scaffold `apm-ui/`
+
+Run from repo root (not committed; the output files are what gets committed):
+
+```
+npm create vite@latest apm-ui -- --template react-ts
+cd apm-ui
+npm install
+npm install @tanstack/react-query
+```
+
+Then initialise shadcn/ui (base setup only — no components):
+
+```
+npx shadcn@latest init
+```
+
+Accept the defaults (TypeScript, Tailwind, CSS variables). This writes:
+- `components.json`
+- `src/lib/utils.ts` (the `cn` helper)
+- `src/index.css` (CSS variables + Tailwind directives)
+- Updates `tailwind.config.ts` and `vite.config.ts`
+
+Add to `apm-ui/.gitignore`:
+```
+node_modules/
+dist/
+```
+
+---
+
+### 2. Wire TanStack Query — `apm-ui/src/main.tsx`
+
+Wrap `<App />` with `QueryClientProvider`:
+
+```tsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </React.StrictMode>,
+)
+```
+
+---
+
+### 3. Fetch tickets — `apm-ui/src/App.tsx`
+
+Replace the default template content with a minimal component:
+
+```tsx
+import { useQuery } from '@tanstack/react-query'
+
+function App() {
+  const { data, error } = useQuery({
+    queryKey: ['tickets'],
+    queryFn: () => fetch('/api/tickets').then(r => {
+      if (!r.ok) throw new Error(`/api/tickets returned ${r.status}`)
+      return r.json()
+    }),
+  })
+
+  if (data) console.log('tickets', data)
+  if (error) console.error('tickets error', error)
+
+  return <></>
+}
+
+export default App
+```
+
+The page renders nothing. All feedback is in the console.
+
+---
+
+### 4. Static file serving — `apm-server/src/main.rs`
+
+`tower-http` was listed as an optional dependency in the Step 1 spec. Add the `ServeDir` feature:
+
+In `apm-server/Cargo.toml`:
+```toml
+tower-http = { workspace = true, features = ["fs"] }
+```
+
+In root `Cargo.toml` workspace.dependencies, update or add:
+```toml
+tower-http = { version = "0.5", features = [] }
+```
+
+In `apm-server/src/main.rs`, add the static file route after existing routes:
+
+```rust
+use tower_http::services::{ServeDir, ServeFile};
+
+let serve_dir = ServeDir::new("apm-ui/dist")
+    .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
+
+let app = Router::new()
+    .route("/health", get(health_handler))
+    .route("/api/tickets", get(tickets_handler))
+    .route("/api/tickets/:id", get(ticket_by_id_handler))
+    .nest_service("/", serve_dir)
+    .with_state(state);
+```
+
+`ServeFile` fallback ensures React Router (if added later) works; it's harmless here.
+
+The server must be run from the **repo root** so the relative path `apm-ui/dist` resolves correctly. Document this in a comment above the `ServeDir::new` call.
+
+---
+
+### 5. Build and validate
+
+Steps to confirm it works end-to-end:
+
+1. `cd apm-ui && npm run build && cd ..`
+2. `cargo run -p apm-server` (from repo root)
+3. Open `http://localhost:3000/` — blank page, no errors
+4. Browser console shows the JSON array from `/api/tickets`
+
+---
+
+### File changes summary
+
+| File | Change |
+|------|--------|
+| `apm-ui/` | New directory — full Vite scaffold + shadcn/ui init |
+| `apm-ui/.gitignore` | `node_modules/`, `dist/` |
+| `apm-server/Cargo.toml` | Add `tower-http` with `fs` feature |
+| `Cargo.toml` (root) | Add/update `tower-http` in workspace deps |
+| `apm-server/src/main.rs` | Add `ServeDir` fallback route for `/` |
+
+`node_modules/` and `dist/` are excluded from git; only source files are committed.
 
 ### Open questions
 
