@@ -2,14 +2,14 @@
 id = "268f5694"
 title = "apm-ui: ticket detail panel with markdown viewer and keyboard navigation"
 state = "specd"
-priority = 0
+priority = 50
 effort = 4
 risk = 3
 author = "apm"
 agent = "20759"
 branch = "ticket/268f5694-apm-ui-ticket-detail-panel-with-markdown"
 created_at = "2026-03-31T06:12:10.547637Z"
-updated_at = "2026-03-31T06:33:35.471471Z"
+updated_at = "2026-03-31T19:35:36.694793Z"
 +++
 
 ## Spec
