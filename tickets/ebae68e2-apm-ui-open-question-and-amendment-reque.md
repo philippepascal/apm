@@ -16,7 +16,9 @@ updated_at = "2026-03-31T07:27:12.986619Z"
 
 ### Problem
 
-Ticket summary cards in the swimlanes give no indication of whether a ticket has open questions or pending amendment requests. Add visual badges derived from the ticket body so supervisors can triage at a glance without opening the detail panel. Full spec context: initial_specs/UIdraft_spec_starter.md Step 14. Requires Step 5.
+Ticket summary cards in the SupervisorView swimlanes show id, title, agent, effort, and risk, but give no signal about whether a ticket is waiting on supervisor input. Specifically: a ticket in *question* state may have written questions in `### Open questions` that need reading, and a ticket in *ammend* state has unchecked checkboxes in `### Amendment requests` that the spec-writer must address. Without glanceable badges, a supervisor must open every detail panel to know whether action is required.
+
+The desired behaviour is: when a ticket has non-empty content in its `### Open questions` section, its card shows a small "?" badge; when a ticket has one or more unchecked items (`- [ ]`) in its `### Amendment requests` section, its card shows a small "A" badge. These badges let supervisors triage at a glance without opening the detail panel.
 
 ### Acceptance criteria
 
