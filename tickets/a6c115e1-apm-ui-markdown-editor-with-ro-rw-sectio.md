@@ -1,7 +1,7 @@
 +++
 id = "a6c115e1"
 title = "apm-ui: markdown editor with RO/RW sections (CodeMirror 6) and save API"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 6
 risk = 5
@@ -9,7 +9,7 @@ author = "apm"
 agent = "4523"
 branch = "ticket/a6c115e1-apm-ui-markdown-editor-with-ro-rw-sectio"
 created_at = "2026-03-31T06:12:48.893575Z"
-updated_at = "2026-03-31T19:18:29.020240Z"
+updated_at = "2026-03-31T19:18:36.700889Z"
 +++
 
 ## Spec
@@ -122,3 +122,4 @@ Key constraints:
 | 2026-03-31T06:53Z | in_design | specd | claude-0330-0800-s9ed |
 | 2026-03-31T18:14Z | specd | ammend | claude-0331-1200-a7b9 |
 | 2026-03-31T19:16Z | ammend | in_design | philippepascal |
+| 2026-03-31T19:18Z | in_design | specd | claude-0331-1430-b2f7 |
