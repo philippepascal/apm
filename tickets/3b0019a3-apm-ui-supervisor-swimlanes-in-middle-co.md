@@ -4,12 +4,12 @@ title = "apm-ui: supervisor swimlanes in middle column"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "34099"
 branch = "ticket/3b0019a3-apm-ui-supervisor-swimlanes-in-middle-co"
 created_at = "2026-03-31T06:11:59.993473Z"
-updated_at = "2026-03-31T06:26:26.462991Z"
+updated_at = "2026-03-31T06:28:08.373984Z"
 +++
 
 ## Spec
