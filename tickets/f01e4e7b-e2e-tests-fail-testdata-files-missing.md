@@ -29,7 +29,7 @@ Changes to the e2e test logic itself; adding more testdata files beyond what the
 
 ### Approach
 
-How the implementation will work.
+Create testdata/src/parser.rs and testdata/src/main.rs with minimal valid Rust content — a stub parse function and a main fn respectively. No logic needed; the files exist only to be copied by the test harness.
 
 ### Open questions
 
