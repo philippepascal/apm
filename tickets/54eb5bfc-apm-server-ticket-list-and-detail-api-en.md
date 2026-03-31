@@ -72,10 +72,14 @@ struct TicketResponse<'a> {
 3. Map results to `TicketResponse`, serialise with `axum::Json`
 
 **`GET /api/tickets/:id` handler:**
-1. Extract `:id` path param; call `ticket::normalize_id_arg(&id)` — return 400 on parse error
-2. Load all tickets via `spawn_blocking` (same as above)
-3. Find the first ticket whose `frontmatter.id.starts_with(&prefix)` — return 404 if none
-4. Return `axum::Json(TicketResponse { ... })`
+1. Extract `:id` path param
+2. Load all tickets via `spawn_blocking` (same as above) — return 500 on git error
+3. Call `ticket::resolve_id_in_slice(&tickets, &id)`:
+   - `Err` whose message contains "no ticket matches" → return HTTP 404
+   - `Err` whose message contains "invalid ticket ID" (format validation from `normalize_id_arg` internally) → return HTTP 400
+   - `Ok(full_id)` → find the ticket in the slice and return `axum::Json(TicketResponse { ... })`
+
+`resolve_id_in_slice` (confirmed present in `apm-core/src/ticket.rs`) handles all ID resolution: it calls `id_arg_prefixes` → `normalize_id_arg` internally for format validation, then does prefix matching with deduplication and ambiguity detection. No manual `.starts_with()` logic is needed in the handler. `normalize_id_arg` is also confirmed present but is not called directly by the handler — it is used internally by `resolve_id_in_slice`.
 
 **Error handling:** Use `axum::response::IntoResponse`; map `anyhow::Error` to a 500 with a plain-text body. A thin `AppError` newtype wrapping `anyhow::Error` is sufficient.
 
@@ -87,7 +91,7 @@ struct TicketResponse<'a> {
 
 ### Amendment requests
 
-- [ ] The Approach references `ticket::normalize_id_arg` — verify this function exists in the current apm-core API. The ID resolution logic may be named differently (e.g. `resolve_id_in_slice` or implemented inline as prefix matching). Update the handler code to use the correct function name.
+- [x] The Approach references `ticket::normalize_id_arg` — verify this function exists in the current apm-core API. The ID resolution logic may be named differently (e.g. `resolve_id_in_slice` or implemented inline as prefix matching). Update the handler code to use the correct function name.
 
 ## History
 
