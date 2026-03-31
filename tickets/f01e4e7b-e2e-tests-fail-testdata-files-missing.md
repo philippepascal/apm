@@ -15,13 +15,10 @@ updated_at = "2026-03-31T19:51:57.809926Z"
 
 ### Problem
 
-cargo test fails on full_ticket_lifecycle because testdata/src/parser.rs and main.rs do not exist. Pre-existing on main.
-
-What is broken or missing, and why it matters.
+The e2e test suite (apm/tests/e2e.rs) copies two files from testdata/src/ into each temporary test repo to seed a realistic Rust project. Those files — testdata/src/parser.rs and testdata/src/main.rs — were never committed to the repository. cargo test --workspace fails immediately with a file-not-found panic whenever the e2e tests run.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -36,10 +33,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
