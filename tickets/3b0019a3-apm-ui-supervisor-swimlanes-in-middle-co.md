@@ -16,7 +16,11 @@ updated_at = "2026-03-31T06:23:39.579037Z"
 
 ### Problem
 
-The middle column shows tickets grouped by state as vertical swimlanes. Only supervisor-actionable states are shown; empty columns are hidden. Tickets appear as summary cards with id, title, agent, effort/risk badges. Clicking a card sets selectedTicketId in Zustand. Full spec context: initial_specs/UIdraft_spec_starter.md Step 5. Requires Step 4.
+The middle column (SupervisorView) is an empty shell from Step 4. It needs to render tickets grouped by state as vertical swimlanes so a supervisor can see at a glance what needs their attention.
+
+Currently there is no way to see supervisor-actionable tickets in the UI. The supervisor must use the CLI to identify what needs review, approval, or unblocking. The swimlane view gives a columnar overview of every ticket in a state that requires supervisor action, making the workscreen the primary interface for the supervision workflow.
+
+The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`) are: **question**, **specd**, **blocked**, **implemented**, and **accepted**. Swimlanes for states with no tickets must be hidden. Tickets within a swimlane are shown as compact summary cards. Clicking a card updates the global `selectedTicketId` in Zustand, which will drive the right-column detail panel (Step 6).
 
 ### Acceptance criteria
 
