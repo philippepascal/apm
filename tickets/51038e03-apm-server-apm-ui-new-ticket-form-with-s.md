@@ -40,7 +40,12 @@ Without this, supervisors using the web UI have no way to capture new work items
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Setting effort, risk, or priority at creation time (covered by Step 13b inline editing)
+- Choosing a custom author or supervisor at creation time (defaults to server-configured author)
+- Attaching files or images
+- Auto-saving draft form state across page reloads
+- Editing or deleting tickets from the modal (edit is Step 9; delete is not planned)
+- Any section beyond the four standard spec sections (Problem, Acceptance criteria, Out of scope, Approach)
 
 ### Approach
 
