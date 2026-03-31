@@ -1,14 +1,15 @@
 +++
 id = "3b0019a3"
 title = "apm-ui: supervisor swimlanes in middle column"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/3b0019a3-apm-ui-supervisor-swimlanes-in-middle-co"
 created_at = "2026-03-31T06:11:59.993473Z"
-updated_at = "2026-03-31T06:11:59.993473Z"
+updated_at = "2026-03-31T06:23:39.579037Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:11Z | — | new | apm |
+| 2026-03-31T06:23Z | new | in_design | philippepascal |
