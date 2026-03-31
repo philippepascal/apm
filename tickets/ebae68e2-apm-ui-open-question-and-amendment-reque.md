@@ -2,14 +2,14 @@
 id = "ebae68e2"
 title = "apm-ui: open question and amendment request badges on ticket cards"
 state = "specd"
-priority = 0
+priority = 25
 effort = 2
 risk = 1
 author = "apm"
 agent = "11159"
 branch = "ticket/ebae68e2-apm-ui-open-question-and-amendment-reque"
 created_at = "2026-03-31T06:13:20.438546Z"
-updated_at = "2026-03-31T07:29:38.810036Z"
+updated_at = "2026-03-31T19:36:50.711971Z"
 +++
 
 ## Spec
