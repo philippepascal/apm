@@ -1,7 +1,7 @@
 +++
 id = "eb4ee6d7"
 title = "aggressive sync should default to true"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "85958"
 branch = "ticket/eb4ee6d7-aggressive-sync-should-default-to-true"
 created_at = "2026-03-30T19:53:26.019513Z"
-updated_at = "2026-03-30T20:31:43.826491Z"
+updated_at = "2026-03-31T05:05:26.290356Z"
 +++
 
 ## Spec
@@ -80,3 +80,4 @@ Add a unit test in `apm-core/src/config.rs` (or its existing test module) coveri
 | 2026-03-30T20:10Z | ready | in_progress | philippepascal |
 | 2026-03-30T20:12Z | in_progress | implemented | claude-0330-2015-f4a1 |
 | 2026-03-30T20:31Z | implemented | accepted | apm-sync |
+| 2026-03-31T05:05Z | accepted | closed | apm-sync |
