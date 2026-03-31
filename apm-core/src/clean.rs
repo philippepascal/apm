@@ -260,6 +260,17 @@ pub fn remove(root: &Path, candidate: &CleanCandidate) -> Result<()> {
                 );
             }
         }
+        // Prune the remote tracking ref so sync_local_ticket_refs does not
+        // recreate the local branch on the next apm sync.
+        let _ = Command::new("git")
+            .args([
+                "-C",
+                &root.to_string_lossy(),
+                "branch",
+                "-dr",
+                &format!("origin/{}", candidate.branch),
+            ])
+            .output();
     }
 
     Ok(())
