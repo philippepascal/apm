@@ -9,7 +9,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
 
     if !offline {
         match git::fetch_all(root) {
-            Ok(_) => {}
+            Ok(_) => {
+                git::sync_local_ticket_refs(root);
+            }
             Err(e) => {
                 eprintln!("warning: fetch failed (no remote configured?): {e:#}");
             }
