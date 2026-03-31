@@ -16,7 +16,11 @@ updated_at = "2026-03-31T06:57:21.975360Z"
 
 ### Problem
 
-The priority queue in the left column is currently read-only. Users need to reorder tickets to influence what apm next dispatches next. Add drag-and-drop (and up/down keyboard shortcuts) that call PATCH /api/tickets/:id {"priority":N} to persist the new order. Full spec context: initial_specs/UIdraft_spec_starter.md Step 11. Requires Step 7b.
+The priority queue panel in the bottom half of the left column (introduced by Step 7b) is read-only. Users have no way to influence the dispatch order from the UI — apm next always picks based on computed score — without reaching for the CLI. This means the UI does not fulfil the core supervisor workflow of adjusting which ticket gets worked on next.
+
+The desired behaviour: dragging a ticket card up or down in the queue, or pressing up/down keyboard shortcuts while a queue item is focused, reorders the queue and persists the new order by updating the ticket priority frontmatter field via PATCH /api/tickets/:id. Because the apm next score formula is priority * priority_weight + effort * effort_weight + risk * risk_weight, updating priority is sufficient to control relative dispatch order when priority values are spread far enough apart.
+
+Affected users: anyone supervising an apm work session via the web UI.
 
 ### Acceptance criteria
 
