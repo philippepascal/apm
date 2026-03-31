@@ -1,7 +1,7 @@
 +++
 id = "a512c619"
 title = "apm work --daemon: graceful shutdown with double-Ctrl+C escape hatch"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0331-1200-a7b9"
 agent = "4585"
 branch = "ticket/a512c619-apm-work-daemon-graceful-shutdown-with-d"
 created_at = "2026-03-31T18:35:38.898908Z"
-updated_at = "2026-03-31T19:06:28.415528Z"
+updated_at = "2026-03-31T19:07:11.485203Z"
 +++
 
 ## Spec
@@ -93,3 +93,4 @@ No changes. The existing `if !daemon` early-exit guard at the top of the loop al
 |------|------|----|----|
 | 2026-03-31T18:35Z | — | new | claude-0331-1200-a7b9 |
 | 2026-03-31T19:02Z | new | in_design | philippepascal |
+| 2026-03-31T19:07Z | in_design | specd | claude-0331-1415-spec1 |
