@@ -1,14 +1,15 @@
 +++
 id = "54eb5bfc"
 title = "apm-server: ticket list and detail API endpoints"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/54eb5bfc-apm-server-ticket-list-and-detail-api-en"
 created_at = "2026-03-31T06:11:28.689659Z"
-updated_at = "2026-03-31T06:11:28.689659Z"
+updated_at = "2026-03-31T06:13:41.748340Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:11Z | — | new | apm |
+| 2026-03-31T06:13Z | new | in_design | philippepascal |
