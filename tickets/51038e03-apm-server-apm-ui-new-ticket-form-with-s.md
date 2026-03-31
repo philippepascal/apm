@@ -4,12 +4,12 @@ title = "apm-server + apm-ui: new ticket form with section pre-population"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 agent = "92131"
 branch = "ticket/51038e03-apm-server-apm-ui-new-ticket-form-with-s"
 created_at = "2026-03-31T06:12:50.437393Z"
-updated_at = "2026-03-31T06:56:53.947818Z"
+updated_at = "2026-03-31T06:56:58.077596Z"
 +++
 
 ## Spec
