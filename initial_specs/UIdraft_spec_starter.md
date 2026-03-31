@@ -126,3 +126,91 @@ Each step produces a working, shippable slice. Validate the technology choice be
 ---
 
 Each step can be delivered as its own PR. Steps 1–3 are the integration proof — if anything in the stack is wrong, it shows up there before the UI is built on top of it.
+
+---
+
+## Ticket creation commands
+
+Run these in order. Each command pre-populates the Problem section so spec writers have full context immediately. The step number in the title maps directly to the implementation plan above. Prerequisites must be `implemented` before the dependent ticket moves to `ready`.
+
+```bash
+# Step 1 — no prerequisites
+apm new --no-edit "apm-server: axum/tokio skeleton with GET /health endpoint" \
+  --section Problem --set "The UI needs a Rust HTTP backend. Create the apm-server crate (or apm serve command) with axum + tokio. The only endpoint at this stage is GET /health returning {\"ok\":true}. No business logic yet — the goal is to confirm the crate compiles, ships, and serves. Full spec context: initial_specs/UIdraft_spec_starter.md Step 1."
+
+# Step 2 — requires Step 1 implemented
+apm new --no-edit "apm-server: ticket list and detail API endpoints" \
+  --section Problem --set "The frontend needs read access to tickets. Add GET /api/tickets (all tickets as JSON array via ticket::load_all_from_git) and GET /api/tickets/:id (single ticket, frontmatter + body). This also validates that apm-core logic works correctly in an async axum context. Full spec context: initial_specs/UIdraft_spec_starter.md Step 2. Requires Step 1."
+
+# Step 3 — requires Step 2 implemented
+apm new --no-edit "apm-ui: Vite + React + shadcn/ui skeleton wired to backend" \
+  --section Problem --set "There is no frontend yet. Create the apm-ui/ directory with Vite + React + TypeScript + shadcn/ui. The page is blank but TanStack Query is installed and one useQuery call to /api/tickets logs results to console. Static files are served by the axum server at GET /. Goal: confirm the full stack wires together end-to-end before any UI is built on top. Full spec context: initial_specs/UIdraft_spec_starter.md Step 3. Requires Step 2."
+
+# Step 4 — requires Step 3 implemented
+apm new --no-edit "apm-ui: 3-column resizable/hidable layout shell with Zustand" \
+  --section Problem --set "The workscreen layout (3 resizable/hidable columns: workerview, supervisorview, ticket detail) needs to be established before any data is rendered into it. Zustand store holds selectedTicketId and column visibility flags. No data rendered yet — validate resize, hide, and keyboard focus between columns. Full spec context: initial_specs/UIdraft_spec_starter.md Step 4. Requires Step 3."
+
+# Step 5 — requires Step 4 implemented
+apm new --no-edit "apm-ui: supervisor swimlanes in middle column" \
+  --section Problem --set "The middle column shows tickets grouped by state as vertical swimlanes. Only supervisor-actionable states are shown; empty columns are hidden. Tickets appear as summary cards with id, title, agent, effort/risk badges. Clicking a card sets selectedTicketId in Zustand. Full spec context: initial_specs/UIdraft_spec_starter.md Step 5. Requires Step 4."
+
+# Step 6 — requires Step 5 implemented
+apm new --no-edit "apm-ui: ticket detail panel with markdown viewer and keyboard navigation" \
+  --section Problem --set "The right column shows the full ticket content as a read-only markdown view, updating reactively when selectedTicketId changes. Arrow key navigation moves selection across swimlanes and the worker queue globally. Full spec context: initial_specs/UIdraft_spec_starter.md Step 6. Requires Step 5."
+
+# Step 7a — requires Step 6 implemented
+apm new --no-edit "apm-server + apm-ui: worker activity panel (running workers, top of left column)" \
+  --section Problem --set "The top half of the left column shows running worker processes and which ticket each holds. Add GET /api/workers listing PID, agent name, ticket id, and state. The panel polls on a short interval or uses SSE. Full spec context: initial_specs/UIdraft_spec_starter.md Step 7. Requires Step 6."
+
+# Step 7b — requires Step 7a implemented
+apm new --no-edit "apm-ui: priority queue panel (bottom of left column, apm next ordering)" \
+  --section Problem --set "The bottom half of the left column shows the queue of actionable tickets in the same priority order as apm next. This is read-only at this stage; reordering is covered by a later ticket. Full spec context: initial_specs/UIdraft_spec_starter.md Step 7. Requires Step 7a."
+
+# Step 8 — requires Step 6 implemented
+apm new --no-edit "apm-server + apm-ui: state transition API and buttons" \
+  --section Problem --set "There is no way to transition ticket state from the UI. Add POST /api/tickets/:id/transition {\"to\":\"<state>\"} backed by the apm-core state machine. The ticket detail panel gains buttons for all valid transitions from the current state, including close and keep-at-current-state, matching CLI behaviour. Full spec context: initial_specs/UIdraft_spec_starter.md Step 8. Requires Step 6."
+
+# Step 9 — requires Step 8 implemented
+apm new --no-edit "apm-ui: markdown editor with RO/RW sections (CodeMirror 6) and save API" \
+  --section Problem --set "The review button on the ticket detail panel should open a full markdown editor. Frontmatter and the History section must be read-only (CodeMirror compartments); all other sections are editable. Checkboxes render as interactive UI elements. Add PUT /api/tickets/:id/body to commit the edited content back to the ticket branch. Full spec context: initial_specs/UIdraft_spec_starter.md Step 9. Requires Step 8."
+
+# Step 10 — requires Step 9 implemented
+apm new --no-edit "apm-server + apm-ui: new ticket form with section pre-population" \
+  --section Problem --set "There is no way to create a ticket from the UI. A '+ New ticket' button/shortcut opens a modal with fields for title (required) and optional spec sections (problem, acceptance criteria, out of scope, approach). Add POST /api/tickets backed by ticket::create in apm-core. Sections are written atomically at creation. Full spec context: initial_specs/UIdraft_spec_starter.md Step 10. Requires Step 9."
+
+# Step 11 — requires Step 7b implemented
+apm new --no-edit "apm-ui: priority reorder via drag-and-drop in worker queue" \
+  --section Problem --set "The priority queue in the left column is currently read-only. Users need to reorder tickets to influence what apm next dispatches next. Add drag-and-drop (and up/down keyboard shortcuts) that call PATCH /api/tickets/:id {\"priority\":N} to persist the new order. Full spec context: initial_specs/UIdraft_spec_starter.md Step 11. Requires Step 7b."
+
+# Step 12a — requires Step 7a implemented
+apm new --no-edit "apm-server + apm-ui: apm work engine start/stop controls" \
+  --section Problem --set "There is no way to start or stop the apm work daemon from the UI. Add POST /api/work/start and POST /api/work/stop endpoints. The top of the workerview panel shows a start/stop button with a status indicator (running / stopped / idle) and a keyboard shortcut. Full spec context: initial_specs/UIdraft_spec_starter.md Step 12. Requires Step 7a."
+
+# Step 12b — requires Step 12a implemented
+apm new --no-edit "apm-ui: apm work dry-run preview before engine start" \
+  --section Problem --set "Users need to see what would be dispatched before starting the work engine. Add a dry-run preview panel (backed by GET /api/work/dry-run) that shows candidate tickets and their intended workers, visible before clicking start. Full spec context: initial_specs/UIdraft_spec_starter.md Step 12. Requires Step 12a."
+
+# Step 13a — requires Step 4 implemented
+apm new --no-edit "apm-server + apm-ui: sync button (POST /api/sync)" \
+  --section Problem --set "The UI has no way to pull the latest ticket state from git branches. Add POST /api/sync that runs apm sync logic and refreshes all ticket data. A sync button in the UI (with keyboard shortcut) triggers this and shows a loading state while in progress. Full spec context: initial_specs/UIdraft_spec_starter.md Step 13. Requires Step 4."
+
+# Step 13b — requires Step 9 implemented
+apm new --no-edit "apm-ui: inline effort/risk/priority editing in ticket detail" \
+  --section Problem --set "effort, risk, and priority fields in the ticket detail panel are read-only. Users need click-to-edit inline controls for these fields, backed by PATCH /api/tickets/:id, without opening the full markdown editor. Full spec context: initial_specs/UIdraft_spec_starter.md Step 13. Requires Step 9."
+
+# Step 14a — requires Step 5 implemented
+apm new --no-edit "apm-ui: ticket search and filter (by state, agent, text)" \
+  --section Problem --set "There is no way to filter the ticket list beyond the swimlane grouping. Add client-side text search across titles and bodies, and filter controls for state, agent, and show-closed toggle (parity with apm list --state and --all). Full spec context: initial_specs/UIdraft_spec_starter.md Step 14. Requires Step 5."
+
+# Step 14b — requires Step 12a implemented
+apm new --no-edit "apm-server + apm-ui: log tail viewer via SSE" \
+  --section Problem --set "There is no visibility into the apm log from the UI. Add GET /api/log/stream as a Server-Sent Events endpoint tailing the configured log file. A collapsible log panel in the UI shows the live stream. Full spec context: initial_specs/UIdraft_spec_starter.md Step 14. Requires Step 12a."
+
+# Step 14c — requires Step 5 implemented
+apm new --no-edit "apm-ui: open question and amendment request badges on ticket cards" \
+  --section Problem --set "Ticket summary cards in the swimlanes give no indication of whether a ticket has open questions or pending amendment requests. Add visual badges derived from the ticket body so supervisors can triage at a glance without opening the detail panel. Full spec context: initial_specs/UIdraft_spec_starter.md Step 14. Requires Step 5."
+
+# Step 15 — requires Step 7a and Step 8 implemented
+apm new --no-edit "apm-server + apm-ui: worker management (list, stop, reassign)" \
+  --section Problem --set "The worker activity panel shows running workers but provides no controls. Extend GET /api/workers with PID and uptime, add DELETE /api/workers/:pid to stop a worker, and add a reassign action (apm take equivalent) on the ticket detail panel. Full spec context: initial_specs/UIdraft_spec_starter.md Step 15. Requires Step 7a and Step 8."
+```

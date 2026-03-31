@@ -449,7 +449,7 @@ pub fn create(
             if config_active {
                 let section_config = config.ticket.sections.iter()
                     .find(|s| s.name.eq_ignore_ascii_case(name))
-                    .unwrap();
+                    .ok_or_else(|| anyhow::anyhow!("unknown section {:?}", name))?;
                 let formatted = crate::spec::apply_section_type(&section_config.type_, trimmed);
                 if crate::spec::is_doc_field(name) {
                     let mut doc = t.document()?;
