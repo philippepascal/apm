@@ -4,12 +4,12 @@ title = "apm-server + apm-ui: state transition API and buttons"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "apm"
 agent = "82538"
 branch = "ticket/8c7d47f0-apm-server-apm-ui-state-transition-api-a"
 created_at = "2026-03-31T06:12:47.638355Z"
-updated_at = "2026-03-31T06:48:49.597253Z"
+updated_at = "2026-03-31T06:48:53.827401Z"
 +++
 
 ## Spec
