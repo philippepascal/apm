@@ -43,7 +43,7 @@ The ticket is created fully specd in a single atomic command.
 - [x] Section names are validated with the same rules as `apm spec` (known built-in names, or config-defined sections when `[ticket.sections]` is non-empty)
 - [x] The ticket git history never contains an intermediate empty-section commit when sections are provided at creation time
 - [x] All existing `apm new` flags (`--no-edit`, `--side-note`, `--context`, `--context-section`) continue to work unchanged
-- [ ] `cargo test --workspace` passes, including a new integration test for multi-section pre-population
+- [x] `cargo test --workspace` passes, including a new integration test for multi-section pre-population
 
 ### Out of scope
 
