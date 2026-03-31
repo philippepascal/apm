@@ -60,9 +60,9 @@ Use the existing TanStack Query hook (established in Step 3) that calls `GET /ap
 
 Hard-code the ordered list of supervisor-actionable states:
 ```ts
-const SUPERVISOR_STATES = ['question', 'specd', 'blocked', 'implemented', 'accepted'] as const;
+const SUPERVISOR_STATES = ['question', 'specd', 'ammend', 'blocked', 'implemented', 'accepted'] as const;
 ```
-These match the `actionable = ["supervisor"]` entries in `.apm/config.toml`. Hard-coding is intentional — the config is not served by the API at this stage.
+These match the `actionable = ["supervisor"]` entries in `.apm/config.toml`. Hard-coding is intentional — the config is not served by the API at this stage. `ammend` is placed after `specd` to reflect the real workflow order (specd → ammend).
 
 **Grouping logic** (inside SupervisorView)
 
