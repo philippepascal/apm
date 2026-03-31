@@ -40,7 +40,7 @@ Sad paths:
 - [x] After `apm sync`, a ticket branch that exists only on origin (no local ref yet) gains a local ref pointing to the origin tip
 - [x] After `apm sync`, a ticket branch whose local ref was already equal to origin is left unchanged
 - [x] `apm sync` does not update the local ref for a branch that is currently checked out in a permanent worktree
-- [ ] `apm sync` does not update the local ref for the branch currently checked out in the main worktree
+- [x] `apm sync` does not update the local ref for the branch currently checked out in the main worktree
 - [ ] When `git update-ref` fails for a single branch, `apm sync` emits a warning to stderr and continues without aborting the overall sync
 - [ ] `apm sync --offline` (no fetch) does not call the local-ref update logic
 
