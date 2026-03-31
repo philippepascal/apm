@@ -3,13 +3,13 @@ id = "36ea9bdb"
 title = "apm-server: axum/tokio skeleton with GET /health endpoint"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "apm"
 agent = "2356"
 branch = "ticket/36ea9bdb-apm-server-axum-tokio-skeleton-with-get-"
 created_at = "2026-03-31T06:05:42.967376Z"
-updated_at = "2026-03-31T06:06:10.291031Z"
+updated_at = "2026-03-31T06:09:00.950807Z"
 +++
 
 ## Spec
