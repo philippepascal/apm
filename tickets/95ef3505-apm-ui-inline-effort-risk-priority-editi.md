@@ -1,14 +1,15 @@
 +++
 id = "95ef3505"
 title = "apm-ui: inline effort/risk/priority editing in ticket detail"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/95ef3505-apm-ui-inline-effort-risk-priority-editi"
 created_at = "2026-03-31T06:13:16.584261Z"
-updated_at = "2026-03-31T06:13:16.584261Z"
+updated_at = "2026-03-31T07:14:43.852798Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:13Z | — | new | apm |
+| 2026-03-31T07:14Z | new | in_design | philippepascal |
