@@ -36,7 +36,7 @@ Sad paths:
 
 ### Acceptance criteria
 
-- [ ] After `apm sync` fetches new commits on a ticket branch pushed by another agent, `apm clean` no longer emits a "local tip differs from origin" warning for that branch
+- [x] After `apm sync` fetches new commits on a ticket branch pushed by another agent, `apm clean` no longer emits a "local tip differs from origin" warning for that branch
 - [ ] After `apm sync`, a ticket branch that exists only on origin (no local ref yet) gains a local ref pointing to the origin tip
 - [ ] After `apm sync`, a ticket branch whose local ref was already equal to origin is left unchanged
 - [ ] `apm sync` does not update the local ref for a branch that is currently checked out in a permanent worktree
