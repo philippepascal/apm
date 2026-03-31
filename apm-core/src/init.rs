@@ -34,18 +34,18 @@ pub fn setup(root: &Path) -> Result<()> {
         std::fs::write(&agents_path, default_agents_md())?;
         println!("Created .apm/agents.md");
     }
-    let spec_writer_path = apm_dir.join("spec-writer.md");
+    let spec_writer_path = apm_dir.join("apm.spec-writer.md");
     if !spec_writer_path.exists() {
         std::fs::write(
             &spec_writer_path,
             "# APM Spec-Writer Agent\n\n_Fill in spec-writing instructions here._\n",
         )?;
-        println!("Created .apm/spec-writer.md");
+        println!("Created .apm/apm.spec-writer.md");
     }
-    let worker_md_path = apm_dir.join("worker.md");
+    let worker_md_path = apm_dir.join("apm.worker.md");
     if !worker_md_path.exists() {
         std::fs::write(&worker_md_path, include_str!("apm.worker.md"))?;
-        println!("Created .apm/worker.md");
+        println!("Created .apm/apm.worker.md");
     }
     ensure_claude_md(root, ".apm/agents.md")?;
     let gitignore = root.join(".gitignore");
@@ -226,10 +226,11 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-color      = "#6b7280"
-actionable = ["agent"]
+id           = "new"
+label        = "New"
+color        = "#6b7280"
+actionable   = ["agent"]
+instructions = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
 id         = "question"
@@ -244,22 +245,25 @@ color      = "#3b82f6"
 actionable = ["supervisor"]
 
 [[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-color      = "#ef4444"
-actionable = ["agent"]
+id           = "ammend"
+label        = "Ammend"
+color        = "#ef4444"
+actionable   = ["agent"]
+instructions = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
-id         = "in_design"
-label      = "In Design"
-color      = "#f97316"
-actionable = ["agent"]
+id           = "in_design"
+label        = "In Design"
+color        = "#f97316"
+actionable   = ["agent"]
+instructions = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-color      = "#10b981"
-actionable = ["agent"]
+id           = "ready"
+label        = "Ready"
+color        = "#10b981"
+actionable   = ["agent"]
+instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -267,9 +271,10 @@ actionable = ["agent"]
   actor   = "agent"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-color = "#8b5cf6"
+id           = "in_progress"
+label        = "In Progress"
+color        = "#8b5cf6"
+instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "implemented"
@@ -482,8 +487,8 @@ mod tests {
         assert!(tmp.path().join("tickets").exists());
         assert!(tmp.path().join(".apm/config.toml").exists());
         assert!(tmp.path().join(".apm/agents.md").exists());
-        assert!(tmp.path().join(".apm/spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/worker.md").exists());
+        assert!(tmp.path().join(".apm/apm.spec-writer.md").exists());
+        assert!(tmp.path().join(".apm/apm.worker.md").exists());
         assert!(tmp.path().join(".gitignore").exists());
         assert!(tmp.path().join("CLAUDE.md").exists());
     }
