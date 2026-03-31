@@ -3,13 +3,13 @@ id = "a6c115e1"
 title = "apm-ui: markdown editor with RO/RW sections (CodeMirror 6) and save API"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "apm"
 agent = "8631"
 branch = "ticket/a6c115e1-apm-ui-markdown-editor-with-ro-rw-sectio"
 created_at = "2026-03-31T06:12:48.893575Z"
-updated_at = "2026-03-31T06:49:16.790304Z"
+updated_at = "2026-03-31T06:53:16.988138Z"
 +++
 
 ## Spec
