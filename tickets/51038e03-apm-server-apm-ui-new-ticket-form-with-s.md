@@ -1,7 +1,7 @@
 +++
 id = "51038e03"
 title = "apm-server + apm-ui: new ticket form with section pre-population"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "92131"
 branch = "ticket/51038e03-apm-server-apm-ui-new-ticket-form-with-s"
 created_at = "2026-03-31T06:12:50.437393Z"
-updated_at = "2026-03-31T06:57:04.802689Z"
+updated_at = "2026-03-31T18:15:19.021103Z"
 +++
 
 ## Spec
@@ -155,3 +155,4 @@ setNewTicketOpen: (v: boolean) => void;
 | 2026-03-31T06:12Z | — | new | apm |
 | 2026-03-31T06:53Z | new | in_design | philippepascal |
 | 2026-03-31T06:57Z | in_design | specd | claude-0330-0700-b2e4 |
+| 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
