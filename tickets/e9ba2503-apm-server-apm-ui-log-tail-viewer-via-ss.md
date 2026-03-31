@@ -4,12 +4,12 @@ title = "apm-server + apm-ui: log tail viewer via SSE"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "apm"
 agent = "37259"
 branch = "ticket/e9ba2503-apm-server-apm-ui-log-tail-viewer-via-ss"
 created_at = "2026-03-31T06:13:19.097973Z"
-updated_at = "2026-03-31T07:26:40.240026Z"
+updated_at = "2026-03-31T07:26:46.649736Z"
 +++
 
 ## Spec
