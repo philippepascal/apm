@@ -10,8 +10,7 @@ use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
 struct AppState {
-    root: PathBuf,
-    tickets_dir: PathBuf,
+    tickets: Vec<apm_core::ticket::Ticket>,
 }
 
 #[derive(serde::Serialize)]
@@ -48,17 +47,12 @@ async fn health_handler() -> Json<serde_json::Value> {
 async fn list_tickets(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TicketResponse>>, AppError> {
-    let root = state.root.clone();
-    let tickets_dir = state.tickets_dir.clone();
-    let tickets = tokio::task::spawn_blocking(move || {
-        apm_core::ticket::load_all_from_git(&root, &tickets_dir)
-    })
-    .await??;
-    let response = tickets
-        .into_iter()
+    let response = state
+        .tickets
+        .iter()
         .map(|t| TicketResponse {
-            frontmatter: t.frontmatter,
-            body: t.body,
+            frontmatter: t.frontmatter.clone(),
+            body: t.body.clone(),
         })
         .collect();
     Ok(Json(response))
@@ -68,14 +62,8 @@ async fn get_ticket(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Response, AppError> {
-    let root = state.root.clone();
-    let tickets_dir = state.tickets_dir.clone();
-    let tickets = tokio::task::spawn_blocking(move || {
-        apm_core::ticket::load_all_from_git(&root, &tickets_dir)
-    })
-    .await??;
-
-    match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+    let tickets = &state.tickets;
+    match apm_core::ticket::resolve_id_in_slice(tickets, &id) {
         Err(e) => {
             let msg = e.to_string();
             if msg.contains("no ticket matches") {
@@ -87,10 +75,10 @@ async fn get_ticket(
             }
         }
         Ok(full_id) => {
-            let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+            let ticket = tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap();
             Ok(Json(TicketResponse {
-                frontmatter: ticket.frontmatter,
-                body: ticket.body,
+                frontmatter: ticket.frontmatter.clone(),
+                body: ticket.body.clone(),
             })
             .into_response())
         }
@@ -99,10 +87,9 @@ async fn get_ticket(
 
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
-    let state = Arc::new(AppState {
-        root,
-        tickets_dir: config.tickets.dir,
-    });
+    let tickets =
+        apm_core::ticket::load_all_from_git(&root, &config.tickets.dir).unwrap_or_default();
+    let state = Arc::new(AppState { tickets });
     // Run from repo root so apm-ui/dist resolves correctly
     let serve_dir = ServeDir::new("apm-ui/dist")
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
@@ -111,6 +98,15 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
         .nest_service("/", serve_dir)
+        .with_state(state)
+}
+
+#[cfg(test)]
+fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
+    let state = Arc::new(AppState { tickets });
+    Router::new()
+        .route("/api/tickets", get(list_tickets))
+        .route("/api/tickets/:id", get(get_ticket))
         .with_state(state)
 }
 
@@ -126,21 +122,44 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use apm_core::ticket::{Frontmatter, Ticket};
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
-    fn repo_root() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .to_path_buf()
+    fn fake_ticket(id: &str, title: &str) -> Ticket {
+        Ticket {
+            frontmatter: Frontmatter {
+                id: id.to_string(),
+                title: title.to_string(),
+                state: "ready".to_string(),
+                priority: 0,
+                effort: 0,
+                risk: 0,
+                author: None,
+                supervisor: None,
+                agent: None,
+                branch: None,
+                created_at: None,
+                updated_at: None,
+                focus_section: None,
+            },
+            body: String::new(),
+            path: PathBuf::from(format!("{}.md", id)),
+        }
+    }
+
+    fn test_tickets() -> Vec<Ticket> {
+        vec![
+            fake_ticket("aaaabbbb-fake-ticket-one", "Fake ticket one"),
+            fake_ticket("ccccdddd-fake-ticket-two", "Fake ticket two"),
+        ]
     }
 
     #[tokio::test]
     async fn list_tickets_returns_200_json_array() {
-        let app = build_app(repo_root());
+        let app = build_app_with_tickets(test_tickets());
         let response = app
             .oneshot(
                 Request::builder()
@@ -161,12 +180,12 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert!(json.is_array());
+        assert_eq!(json.as_array().unwrap().len(), 2);
     }
 
     #[tokio::test]
     async fn get_ticket_unknown_id_returns_404() {
-        let app = build_app(repo_root());
-        // "00000000" is valid hex but matches no real ticket
+        let app = build_app_with_tickets(test_tickets());
         let response = app
             .oneshot(
                 Request::builder()
@@ -181,12 +200,11 @@ mod tests {
 
     #[tokio::test]
     async fn get_ticket_valid_prefix_returns_200_object() {
-        let app = build_app(repo_root());
-        // Use the current ticket's prefix
+        let app = build_app_with_tickets(test_tickets());
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/api/tickets/54eb5bfc")
+                    .uri("/api/tickets/aaaabbbb")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -196,13 +214,12 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert!(json.is_object());
-        assert_eq!(json["id"], "54eb5bfc");
+        assert_eq!(json["id"], "aaaabbbb-fake-ticket-one");
     }
 
     #[tokio::test]
     async fn get_ticket_invalid_id_format_returns_400() {
-        let app = build_app(repo_root());
-        // "ab" is only 2 hex chars — too short, invalid format
+        let app = build_app_with_tickets(test_tickets());
         let response = app
             .oneshot(
                 Request::builder()

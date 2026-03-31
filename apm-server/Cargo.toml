@@ -17,5 +17,5 @@ apm-core = { path = "../apm-core" }
 tower-http = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
-tower = { version = "0.4", features = ["util"] }
+tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
