@@ -33,6 +33,26 @@ The right column (TicketDetail) is a labelled placeholder stub delivered by Step
 
 ### Acceptance criteria
 
+- [ ] When selectedTicketId is null, TicketDetail shows a placeholder message
+- [ ] When a ticket is selected, TicketDetail fetches GET /api/tickets/:id via TanStack Query and renders the body as formatted markdown
+- [ ] Markdown rendering includes GFM: tables, strikethrough, task-list checkboxes, fenced code blocks
+- [ ] While the ticket is loading, TicketDetail shows a loading skeleton
+- [ ] If the fetch fails, TicketDetail shows an error message with the status code
+- [ ] The detail view updates automatically within one query-cache cycle when selectedTicketId changes
+- [ ] Pressing ArrowRight moves selection to the first card of the next swimlane column
+- [ ] Pressing ArrowRight on the last swimlane column has no effect
+- [ ] Pressing ArrowLeft moves selection to the first card of the previous swimlane column
+- [ ] Pressing ArrowLeft on the first swimlane column has no effect
+- [ ] Pressing ArrowDown moves selection to the next card within the current swimlane
+- [ ] Pressing ArrowDown on the last card of a swimlane has no effect
+- [ ] Pressing ArrowUp moves selection to the previous card within the current swimlane
+- [ ] Pressing ArrowUp on the first card of a swimlane has no effect
+- [ ] If no ticket is selected, pressing any arrow key selects the first card of the first visible swimlane
+- [ ] Arrow key events are ignored when event target is an input, textarea, select, or contenteditable element
+- [ ] Arrow key events are ignored when Ctrl or Meta is held
+- [ ] When keyboard navigation changes selection, the newly-selected card scrolls into view
+- [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
+- [ ] cargo test --workspace passes
 
 ### Out of scope
 
