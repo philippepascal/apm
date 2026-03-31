@@ -77,7 +77,22 @@ Handler logic:
    - ("Out of scope", out_of_scope)
    - ("Approach", approach)
 3. Determine `author`: use `state.config.apm.author.clone()` (or a fallback string "apm-ui" if the field is absent from config).
-4. `tokio::task::spawn_blocking(move || apm_core::ticket::create(&root, &config, title, author, None, None, /*aggressive=*/false, section_sets))`
+4. Call `apm_core::ticket::create` with the verified signature (confirmed in `apm-core/src/ticket.rs:392`):
+   ```rust
+   tokio::task::spawn_blocking(move || {
+       apm_core::ticket::create(
+           &root,
+           &config,
+           title,
+           author,
+           None,   // context
+           None,   // context_section
+           false,  // aggressive — controls remote push after creation; always false for the server
+           section_sets,
+       )
+   })
+   ```
+   The `aggressive: bool` parameter (line 399 in apm-core) pushes the new ticket branch to a remote when `true`. The server operates on the local repo and must not push automatically, so pass `false`.
 5. On `Ok(ticket)`: return `Json(TicketResponse::from(&ticket))` with status 201.
 6. On `Err(e)`: return 500 with `Json(serde_json::json!({"error": e.to_string()}))`.
 
