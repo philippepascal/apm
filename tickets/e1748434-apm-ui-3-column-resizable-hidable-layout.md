@@ -2,14 +2,14 @@
 id = "e1748434"
 title = "apm-ui: 3-column resizable/hidable layout shell with Zustand"
 state = "specd"
-priority = 0
+priority = 60
 effort = 3
 risk = 2
 author = "apm"
 agent = "15877"
 branch = "ticket/e1748434-apm-ui-3-column-resizable-hidable-layout"
 created_at = "2026-03-31T06:11:50.266948Z"
-updated_at = "2026-03-31T19:07:15.147846Z"
+updated_at = "2026-03-31T19:35:23.996362Z"
 +++
 
 ## Spec
