@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "25666"
 branch = "ticket/05a79474-apm-init-prompt-for-project-name-and-des"
 created_at = "2026-03-30T23:56:25.325030Z"
-updated_at = "2026-03-30T23:59:46.611120Z"
+updated_at = "2026-03-31T00:10:00.062262Z"
 +++
 
 ## Spec
@@ -28,7 +28,6 @@ description = "Git-native, agent-first project management tool"
 
 ### Acceptance criteria
 
-- [ ] hello
 
 ### Out of scope
 
@@ -53,9 +52,6 @@ The fix is to add an interactive prompt step before writing `.apm/config.toml`:
 
 
 ### Amendment requests
-
-
-
 ## History
 
 | When | From | To | By |
