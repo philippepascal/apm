@@ -37,7 +37,28 @@ The UI roadmap (initial_specs/UIdraft_spec_starter.md) requires a Rust HTTP back
 
 ### Approach
 
-How the implementation will work.
+1. Add apm-server to workspace
+   - Append "apm-server" to the members list in the root Cargo.toml
+   - Add axum and tokio to [workspace.dependencies]: axum = { version = "0.7", features = [] }, tokio = { version = "1", features = ["full"] }, tower-http = { version = "0.5" } (optional, for future middleware)
+
+2. Create apm-server/Cargo.toml
+   - [package] name = "apm-server", edition = "2021"
+   - [[bin]] name = "apm-server", path = "src/main.rs"
+   - [dependencies]: axum from workspace, tokio from workspace, serde_json from workspace
+
+3. Create apm-server/src/main.rs
+   - Declare a tokio::main async fn main()
+   - Build an axum Router with one route: .route("/health", get(health_handler))
+   - health_handler returns Json(serde_json::json\!({"ok": true}))
+   - Bind to "0.0.0.0:3000" with tokio::net::TcpListener::bind, then axum::serve
+   - Print "Listening on 0.0.0.0:3000" to stdout before serving
+
+4. No tests needed for this ticket beyond confirming cargo test --workspace passes (the crate has no logic to unit-test).
+
+File changes:
+- Cargo.toml (root): add "apm-server" to members and axum/tokio to workspace.dependencies
+- apm-server/Cargo.toml: new file
+- apm-server/src/main.rs: new file (~25 lines)
 
 ### Open questions
 
