@@ -3,13 +3,13 @@ id = "15b7b28e"
 title = "apm-server + apm-ui: sync button (POST /api/sync)"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 agent = "5398"
 branch = "ticket/15b7b28e-apm-server-apm-ui-sync-button-post-api-s"
 created_at = "2026-03-31T06:13:15.004948Z"
-updated_at = "2026-03-31T07:10:36.832701Z"
+updated_at = "2026-03-31T07:13:15.774086Z"
 +++
 
 ## Spec
