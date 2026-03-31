@@ -40,6 +40,7 @@ Desired state: WorkerActivityPanel gains a Stop button per row (live workers onl
 - [ ] Clicking "Stop" in WorkerActivityPanel calls DELETE /api/workers/:pid; on success the worker list refreshes and the row disappears or shows "crashed"
 - [ ] Clicking "Stop" disables the button while the DELETE request is in-flight
 - [ ] On a DELETE failure, WorkerActivityPanel shows an inline error message near the row
+- [ ] Pressing Shift+K while a worker row is focused triggers the same Stop action as clicking the Stop button
 - [ ] TicketDetail shows a "Reassign to me" button when a ticket is selected
 - [ ] Clicking "Reassign to me" calls POST /api/tickets/:id/take and, on success, updates the agent badge in the detail panel
 - [ ] On a take failure, TicketDetail shows an inline error message near the button
@@ -228,6 +229,7 @@ In `apm-ui/src/components/WorkerActivityPanel.tsx`:
   5. Always: clear `stopping`
 
 - Crashed workers show no Stop button (their process is already gone)
+- Add a `onKeyDown` handler on each row (`tabIndex={0}` to make rows focusable): when `event.shiftKey && event.key === 'K'` and the row's worker is running, call `handleStop(worker.pid)`
 
 ---
 
@@ -266,6 +268,15 @@ Frontend:
 
 ---
 
+**apm-core name verification (do before writing any handler):** Before implementing steps 2 and 3, verify that the following identifiers exist in `apm-core` under exactly these names:
+- `apm_core::start::resolve_agent_name()` — resolves APM_AGENT_NAME or USER
+- `apm_core::git::list_ticket_worktrees(root)` — returns worktree paths and branch names
+- `apm_core::ticket::handoff(ticket, agent, now)` — updates the agent field on a ticket
+
+If any of these are missing or named differently, add or rename them in `apm-core` first (as a separate commit) before wiring them into the server routes.
+
+---
+
 **Ordering note:** The `stop_worker_by_pid` function does filesystem I/O and process signals — always call it inside `tokio::task::spawn_blocking`. Same pattern as the existing workers handler. `ticket::handoff` also does git I/O — same treatment.
 
 ### Open questions
@@ -274,8 +285,8 @@ Frontend:
 
 ### Amendment requests
 
-- [ ] Add Acceptance Criterion: pressing `Shift+K` while a worker row is focused triggers the same Stop action as clicking the Stop button
-- [ ] Add note to Approach: the implementing agent must verify that `apm_core::start::resolve_agent_name()`, `apm_core::git::list_ticket_worktrees()`, and `ticket::handoff()` exist under exactly these names before writing the handler — they may need to be added to or renamed in apm-core first
+- [x] Add Acceptance Criterion: pressing `Shift+K` while a worker row is focused triggers the same Stop action as clicking the Stop button
+- [x] Add note to Approach: the implementing agent must verify that `apm_core::start::resolve_agent_name()`, `apm_core::git::list_ticket_worktrees()`, and `ticket::handoff()` exist under exactly these names before writing the handler — they may need to be added to or renamed in apm-core first
 
 ## History
 
