@@ -44,7 +44,62 @@ The ticket detail panel (right column, Step 6) shows ticket content as read-only
 
 ### Approach
 
-How the implementation will work.
+Backend — apm-server
+
+1. Add route: PUT /api/tickets/:id/body
+   - Request body: JSON { "content": "<full raw document text>" }
+   - The "full raw document" is what the editor contains, including the +++ frontmatter block
+
+2. Handler logic:
+   a. Resolve ticket ID to branch name (same helper as existing GET endpoints)
+   b. Read current ticket content from git via git::read_from_branch
+   c. Parse current content with Ticket::parse to extract current frontmatter TOML and History section text
+   d. Parse submitted content the same way
+   e. Guard: if submitted frontmatter TOML differs from current → return 422 "frontmatter is read-only"
+   f. Guard: extract ## History block from both current and submitted; if they differ → return 422 "history section is read-only"
+   g. Write the submitted content to the ticket file via git::commit_to_branch(root, branch, rel_path, content, "ui: edit ticket body")
+   h. Return 200 { "ok": true }
+
+3. Error responses:
+   - 404: ticket not found
+   - 422: RO section tampered (frontmatter or History differ)
+   - 500: git operation failed
+
+4. Files to change:
+   - apm-server/src/routes/tickets.rs — add put_body handler
+   - apm-server/src/main.rs or router — register .put(put_body) on the /api/tickets/:id/body path
+
+Frontend — apm-ui
+
+5. Add ReviewEditor component (apm-ui/src/components/ReviewEditor.tsx):
+   a. Uses @codemirror/lang-markdown (already in the dep list; add if not)
+   b. On mount, compute two protected ranges from the document string:
+      - Frontmatter range: position 0 to end of closing "+++" line (inclusive)
+      - History range: from position of "\n## History" to end of document
+   c. Install a changeFilter transaction extension that rejects any transaction whose changes intersect either protected range. This is the correct CodeMirror 6 approach for per-range read-only (EditorState.readOnly is document-wide; changeFilter is per-range).
+   d. Install a ViewPlugin that decorates "- [ ] " and "- [x] " lines with Decoration.widget (an HTML checkbox). The widget dispatches a transaction on click that replaces the "[ ]"/"[x]" text in the source.
+   e. Toolbar: Save button (calls PUT /api/tickets/:id/body), Cancel button
+   f. Keyboard shortcut: keymap extension binding Mod-s to the save action
+   g. Dirty tracking: compare current doc to initial doc string; if dirty and Cancel clicked, show window.confirm before closing
+
+6. Modify TicketDetail (apm-ui/src/components/TicketDetail.tsx):
+   - When reviewMode is false: show existing read-only markdown view
+   - When reviewMode is true: render ReviewEditor in place of both supervisor-view and ticket-detail columns (hide supervisorview, expand editor to fill both)
+
+7. Zustand store (apm-ui/src/store.ts):
+   - Add reviewMode: boolean (default false)
+   - Add setReviewMode(v: boolean) action
+
+8. Review button (already added in Step 8 per the spec):
+   - Wire onClick to setReviewMode(true)
+
+9. On successful save: call queryClient.invalidateQueries for the ticket query, then setReviewMode(false)
+
+Key constraints:
+- changeFilter is the right CodeMirror 6 API for per-range read-only. Do NOT use Compartment-scoped EditorState.readOnly (that is document-wide). The changeFilter extension should be a StateField or a plain extension added at editor init.
+- The PUT endpoint receives the FULL document content (frontmatter included), not just the body. The server validates and commits atomically. This avoids split/reconstruct logic on the server and matches what the editor displays.
+- History section boundary: from the line matching /^## History/ to the end of the file. The guard compares this substring between current and submitted content.
+- Step 8 must be merged (state: implemented) before this ticket is set to ready.
 
 ### Open questions
 
