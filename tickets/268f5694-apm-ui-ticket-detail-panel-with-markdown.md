@@ -65,7 +65,87 @@ The right column (TicketDetail) is a labelled placeholder stub delivered by Step
 
 ### Approach
 
-How the implementation will work.
+Prerequisites: Step 5 (ticket 3b0019a3) must be implemented so SupervisorView renders swimlanes and selectedTicketId is wired in Zustand.
+
+**1. Install dependencies** (in apm-ui/)
+
+  npm install react-markdown remark-gfm
+  npm install -D @tailwindcss/typography
+
+Add `@tailwindcss/typography` to the Tailwind plugins array in `tailwind.config.ts`.
+
+**2. Markdown viewer — apm-ui/src/components/TicketDetail.tsx**
+
+Replace the stub with a full component:
+
+- Read `selectedTicketId` from the Zustand store (useLayoutStore)
+- When null: render a centred grey placeholder ("Select a ticket to view details")
+- When non-null: run a TanStack Query:
+    useQuery({ queryKey: ['ticket', selectedTicketId], queryFn: () => fetch(`/api/tickets/${selectedTicketId}`).then(r => { if (!r.ok) throw r; return r.json(); }), enabled: !!selectedTicketId })
+- Loading state: render a shadcn Skeleton filling the panel (a few lines of varying width)
+- Error state: render an error card showing the HTTP status code
+- Success: render `<ReactMarkdown remarkPlugins={[remarkGfm]}>{ticket.body}</ReactMarkdown>` inside a `<div className="prose prose-sm max-w-none overflow-y-auto p-4 h-full">`
+
+The ticket JSON shape from GET /api/tickets/:id must include at minimum `id`, `title`, `body` (full markdown string). If the backend returns frontmatter + body separately, concatenate them for display.
+
+**3. Shared grouping utility — apm-ui/src/lib/supervisorUtils.ts** (new file)
+
+Extract the supervisor-state grouping logic into a reusable function so both SupervisorView and the keyboard nav handler share the same source of truth:
+
+```ts
+export const SUPERVISOR_STATES = ['question', 'specd', 'blocked', 'implemented', 'accepted'] as const;
+export type SupervisorState = typeof SUPERVISOR_STATES[number];
+
+export function groupBySupervisorState(tickets: Ticket[]): [SupervisorState, Ticket[]][] {
+  // returns ordered pairs, omitting states with no tickets
+}
+```
+
+Update SupervisorView.tsx to import from this utility instead of duplicating logic.
+
+**4. Keyboard navigation — apm-ui/src/components/WorkScreen.tsx**
+
+Add a `useEffect` that attaches a `keydown` listener to `document`. The handler:
+
+1. Returns early if `event.ctrlKey || event.metaKey`
+2. Returns early if `['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(event.key) === -1`
+3. Returns early if `event.target` matches `input, textarea, select, [contenteditable]`
+4. Calls `event.preventDefault()` to suppress browser scroll
+5. Reads `selectedTicketId` and the current `tickets` query result from TanStack Query cache
+6. Calls `groupBySupervisorState(tickets)` to get the ordered grid as `columns: [state, Ticket[]][]`
+7. Finds the current ticket's column index and row index; if not found (no selection), selects `columns[0][1][0]` and returns
+8. Computes new position based on key:
+    - ArrowRight: colIdx + 1 (if within bounds), rowIdx = 0
+    - ArrowLeft: colIdx - 1 (if within bounds), rowIdx = 0
+    - ArrowDown: rowIdx + 1 within same column (if within bounds)
+    - ArrowUp: rowIdx - 1 within same column (if within bounds)
+9. Calls `setSelectedTicketId(newTicket.id)` on the store
+10. Calls `document.querySelector('[data-ticket-id="' + newId + '"]')?.scrollIntoView({ block: 'nearest' })`
+
+The useEffect cleanup removes the listener on unmount.
+
+**5. TicketCard data attribute — apm-ui/src/components/supervisor/TicketCard.tsx**
+
+Add `data-ticket-id={ticket.id}` to the root element of TicketCard so the scroll-into-view selector can find it.
+
+**6. File changes summary**
+
+New files:
+  apm-ui/src/lib/supervisorUtils.ts
+
+Modified files:
+  apm-ui/src/components/TicketDetail.tsx      (replace stub with markdown viewer)
+  apm-ui/src/components/WorkScreen.tsx        (add keyboard nav handler)
+  apm-ui/src/components/supervisor/SupervisorView.tsx   (import from supervisorUtils)
+  apm-ui/src/components/supervisor/TicketCard.tsx       (add data-ticket-id attribute)
+  apm-ui/tailwind.config.ts                   (add typography plugin)
+  apm-ui/package.json                         (react-markdown, remark-gfm, @tailwindcss/typography)
+
+No Rust / backend files change.
+
+**7. Extension point for Step 7**
+
+Step 7 will add the worker queue. The keyboard nav in WorkScreen should be designed so that WorkerView can register its ordered ticket list. The simplest seam: after Step 6, when ArrowLeft is pressed from column 0 in the swimlanes, nothing happens. Step 7 will update this handler to continue into the worker queue list.
 
 ### Open questions
 
