@@ -48,7 +48,7 @@ Affected users: anyone supervising an apm work session via the web UI.
 
 **Backend: PATCH /api/tickets/:id**
 
-Add a PATCH handler to the axum router (in the apm-serve crate, alongside the existing GET /api/tickets routes from Step 2). The handler:
+Add a PATCH handler to the axum router (in the apm-server crate, alongside the existing GET /api/tickets routes from Step 2). The handler:
 1. Deserialises the JSON body into a struct with an optional `priority: Option<u8>` field (other patchable fields may be added later by Step 13b)
 2. Calls `ticket::set_field(&mut fm, "priority", &value.to_string())` from apm-core, identical to what `apm set` does
 3. Calls `git::commit_to_branch` to persist the change to the ticket branch
@@ -82,7 +82,7 @@ When a queue item has focus, the up/down arrow keys call the same reorder functi
 In `handleDragEnd` and the keyboard handler, skip any operation if the ticket's state is `in_progress`. The drag handle should also be visually disabled (reduced opacity, no-grab cursor) for in_progress tickets.
 
 **Files changed**
-- `apm-serve/src/routes/tickets.rs` — add PATCH handler and request/response types
+- `apm-server/src/routes/tickets.rs` — add PATCH handler and request/response types
 - `apm-ui/src/components/PriorityQueue.tsx` — add DnD context, sortable wrappers, keyboard handling, optimistic updates
 - `apm-ui/package.json` — add `@dnd-kit/core` and `@dnd-kit/sortable` dependencies
 
