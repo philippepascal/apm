@@ -446,6 +446,53 @@ pub fn push_ticket_branches(root: &Path) {
     }
 }
 
+/// Update local refs for all ticket/* branches to match origin after a fetch.
+/// Skips branches that are currently checked out in any worktree (main or permanent).
+/// All failures are handled as warnings — this function never panics or returns an error.
+pub fn sync_local_ticket_refs(root: &Path) {
+    // Collect all branches currently checked out across all worktrees.
+    let checked_out: std::collections::HashSet<String> = {
+        let mut set = std::collections::HashSet::new();
+        if let Ok(out) = run(root, &["worktree", "list", "--porcelain"]) {
+            for line in out.lines() {
+                if let Some(b) = line.strip_prefix("branch refs/heads/") {
+                    set.insert(b.to_string());
+                }
+            }
+        }
+        set
+    };
+
+    // Enumerate all origin ticket branches.
+    let remote_refs = match run(root, &["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/ticket/"]) {
+        Ok(o) => o,
+        Err(_) => return,
+    };
+
+    for remote_name in remote_refs.lines().filter(|l| !l.is_empty()) {
+        // remote_name is like "origin/ticket/<slug>"; strip the "origin/" prefix.
+        let branch = match remote_name.strip_prefix("origin/") {
+            Some(b) => b.to_string(),
+            None => continue,
+        };
+
+        if checked_out.contains(&branch) {
+            continue;
+        }
+
+        // Resolve the origin SHA.
+        let sha = match run(root, &["rev-parse", &format!("refs/remotes/{remote_name}")]) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+
+        // Create or update the local ref unconditionally.
+        if let Err(e) = run(root, &["update-ref", &format!("refs/heads/{branch}"), &sha]) {
+            eprintln!("warning: could not update local ref {branch}: {e:#}");
+        }
+    }
+}
+
 /// Derive the ticket branch name from the ticket file path.
 /// e.g. tickets/0001-my-ticket.md → ticket/0001-my-ticket
 pub fn branch_name_from_path(path: &Path) -> Option<String> {
