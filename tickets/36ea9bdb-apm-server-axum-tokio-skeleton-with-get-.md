@@ -29,7 +29,11 @@ The UI roadmap (initial_specs/UIdraft_spec_starter.md) requires a Rust HTTP back
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Any business logic or apm-core integration (later tickets)
+The apm serve subcommand in the apm CLI binary
+Authentication, TLS, or CORS
+Configurable host/port (hard-code 0.0.0.0:3000 for now)
+Any API endpoints beyond GET /health
 
 ### Approach
 
