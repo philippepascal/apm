@@ -1,15 +1,15 @@
 +++
 id = "7777cf5c"
 title = "apm-ui: priority queue panel (bottom of left column, apm next ordering)"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
-agent = "7369"
+agent = "philippepascal"
 branch = "ticket/7777cf5c-apm-ui-priority-queue-panel-bottom-of-le"
 created_at = "2026-03-31T06:12:28.610477Z"
-updated_at = "2026-03-31T18:15:27.885394Z"
+updated_at = "2026-03-31T19:07:38.204273Z"
 +++
 
 ## Spec
@@ -72,3 +72,4 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 | 2026-03-31T06:38Z | new | in_design | philippepascal |
 | 2026-03-31T06:42Z | in_design | specd | claude-0331-0638-c698 |
 | 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
+| 2026-03-31T19:07Z | ammend | in_design | philippepascal |
