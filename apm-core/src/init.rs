@@ -194,8 +194,16 @@ fn prompt_project_info(default_name: &str) -> Result<(String, String)> {
     Ok((name, description))
 }
 
+fn toml_escape(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 fn default_config(name: &str, description: &str, default_branch: &str) -> String {
     let log_file = default_log_file(name);
+    let name = toml_escape(name);
+    let description = toml_escape(description);
+    let default_branch = toml_escape(default_branch);
+    let log_file = toml_escape(&log_file);
     format!(
         r##"[project]
 name = "{name}"
@@ -562,5 +570,14 @@ mod tests {
         setup_docker(tmp.path()).unwrap();
         let after = std::fs::read_to_string(tmp.path().join(".apm/Dockerfile.apm-worker")).unwrap();
         assert_eq!(before, after);
+    }
+
+    #[test]
+    fn default_config_escapes_special_chars() {
+        let name = r#"my\"project"#;
+        let description = r#"desc with "quotes" and \backslash"#;
+        let branch = "main";
+        let config = default_config(name, description, branch);
+        toml::from_str::<toml::Value>(&config).expect("default_config output must be valid TOML");
     }
 }
