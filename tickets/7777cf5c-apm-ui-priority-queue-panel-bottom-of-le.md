@@ -1,7 +1,7 @@
 +++
 id = "7777cf5c"
 title = "apm-ui: priority queue panel (bottom of left column, apm next ordering)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "13194"
 branch = "ticket/7777cf5c-apm-ui-priority-queue-panel-bottom-of-le"
 created_at = "2026-03-31T06:12:28.610477Z"
-updated_at = "2026-03-31T19:11:49.234282Z"
+updated_at = "2026-03-31T19:11:57.051473Z"
 +++
 
 ## Spec
@@ -185,3 +185,4 @@ interface QueueEntry {
 | 2026-03-31T06:42Z | in_design | specd | claude-0331-0638-c698 |
 | 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
 | 2026-03-31T19:07Z | ammend | in_design | philippepascal |
+| 2026-03-31T19:11Z | in_design | specd | claude-0331-1907-b2f1 |
