@@ -16,7 +16,7 @@ updated_at = "2026-03-31T06:16:51.666808Z"
 
 ### Problem
 
-There is no frontend yet. Create the apm-ui/ directory with Vite + React + TypeScript + shadcn/ui. The page is blank but TanStack Query is installed and one useQuery call to /api/tickets logs results to console. Static files are served by the axum server at GET /. Goal: confirm the full stack wires together end-to-end before any UI is built on top. Full spec context: initial_specs/UIdraft_spec_starter.md Step 3. Requires Step 2.
+There is no frontend. The backend steps (Steps 1 and 2) will deliver an axum server on port 3000 with `GET /health` and `GET /api/tickets`, but there is nothing to load in a browser. This ticket creates the `apm-ui/` directory with a Vite + React + TypeScript + shadcn/ui scaffold, wires TanStack Query to make one `useQuery` call to `/api/tickets` that logs results to the browser console, and configures the axum server to serve the built static files at `GET /`. The page is intentionally blank. The goal is to prove the full stack — React build → axum static serving → API fetch → console output — wires together correctly before any UI is built on top of it.
 
 ### Acceptance criteria
 
