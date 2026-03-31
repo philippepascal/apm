@@ -160,9 +160,25 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
             _ => {}
         }
 
+        let wt_path = git::find_worktree_for_branch(root, &branch);
+
+        // Check worktree cleanliness before the tip-divergence guard so that
+        // a clean worktree on a closed ticket is not blocked by stale refs.
+        let wt_clean = if let Some(ref path) = wt_path {
+            let out = Command::new("git")
+                .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
+                .output();
+            match out {
+                Ok(ref o) => o.stdout.is_empty(),
+                Err(_) => false,
+            }
+        } else {
+            true
+        };
+
         let remote_tip = git::remote_branch_tip(root, &branch);
         if let (Some(ref lt), Some(ref rt)) = (&local_tip, &remote_tip) {
-            if lt != rt {
+            if lt != rt && !wt_clean {
                 eprintln!(
                     "warning: {branch} local tip differs from origin/{branch} — skipping"
                 );
@@ -170,17 +186,8 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
             }
         }
 
-        let wt_path = git::find_worktree_for_branch(root, &branch);
-
         if let Some(ref path) = wt_path {
-            let out = Command::new("git")
-                .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
-                .output();
-            let dirty = match out {
-                Ok(ref o) => !o.stdout.is_empty(),
-                Err(_) => false,
-            };
-            if dirty {
+            if !wt_clean {
                 let lbe = Command::new("git")
                     .args([
                         "-C",
