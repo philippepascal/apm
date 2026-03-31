@@ -37,7 +37,12 @@ Affected users: anyone supervising an apm work session via the web UI.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Priority editing via the inline click-to-edit field in the ticket detail panel (covered by Step 13b)
+- Reordering tickets in the supervisor swimlanes (middle column)
+- Batch priority normalization across the entire ticket set
+- Drag-and-drop between the priority queue and other panels
+- Touch / mobile drag support
+- Persisting visual order independently of the priority field (no separate ordering index; priority is the single source of truth)
 
 ### Approach
 
