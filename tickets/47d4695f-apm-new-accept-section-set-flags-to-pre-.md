@@ -40,7 +40,7 @@ The ticket is created fully specd in a single atomic command.
 - [x] Multiple `--section`/`--set` pairs apply all named sections atomically before the first commit
 - [x] Mismatched pair counts (e.g. two `--section` flags but one `--set` flag, or vice versa) return a clear error
 - [x] `--set` without `--section` returns an error consistent with `apm spec` behaviour
-- [ ] Section names are validated with the same rules as `apm spec` (known built-in names, or config-defined sections when `[ticket.sections]` is non-empty)
+- [x] Section names are validated with the same rules as `apm spec` (known built-in names, or config-defined sections when `[ticket.sections]` is non-empty)
 - [ ] The ticket git history never contains an intermediate empty-section commit when sections are provided at creation time
 - [ ] All existing `apm new` flags (`--no-edit`, `--side-note`, `--context`, `--context-section`) continue to work unchanged
 - [ ] `cargo test --workspace` passes, including a new integration test for multi-section pre-population
