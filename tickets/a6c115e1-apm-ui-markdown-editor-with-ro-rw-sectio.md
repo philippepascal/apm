@@ -35,7 +35,12 @@ The ticket detail panel (right column, Step 6) shows ticket content as read-only
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Editing frontmatter fields (title, state, priority, effort, risk) inline — covered by Step 13b
+- State transition buttons in the editor — delivered by Step 8
+- New ticket creation form — covered by Step 10
+- Live collaboration or auto-save
+- Syntax highlighting beyond the standard CodeMirror markdown mode
+- Diff view or version history
 
 ### Approach
 
