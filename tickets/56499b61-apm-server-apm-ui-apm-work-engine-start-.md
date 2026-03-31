@@ -106,7 +106,7 @@ pub fn run_engine_loop(root: &Path, cancel: tokio_util::sync::CancellationToken,
 
 ### Amendment requests
 
-- [ ] Change keyboard shortcut in AC from `Ctrl+Shift+W` to `Shift+W` (keyboard spec uses Shift+W)
+- [x] Change keyboard shortcut in AC from `Ctrl+Shift+W` to `Shift+W` (keyboard spec uses Shift+W)
 - [ ] Rewrite the Approach entirely — apm-server must NOT spawn the `apm` CLI as a subprocess. The server must be self-contained: implement the work dispatch loop directly in Rust using apm-core functions (ticket loading, actionable filtering, score sorting, state transitions, worktree provisioning) running inside a tokio background task. For spawning Claude worker agents, use the same logic as `apm start --spawn` but called via apm-core directly. Remove all references to `std::process::Command::new("apm")`.
 
 ## History
