@@ -41,7 +41,12 @@ The dependency on Step 12a (ticket 56499b61) means `apm-server`, its `AppState`,
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Filtering or searching log lines on the server side
+- Log rotation handling (the stream does not follow across a log rotate/rename)
+- Replaying the full log history beyond the initial 100 lines
+- Configuring the log file path from the UI
+- Authentication or authorisation on the stream endpoint
+- Downloading or exporting the log from the UI
 
 ### Approach
 
