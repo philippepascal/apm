@@ -26,10 +26,26 @@ This ticket delivers the structural shell only: three labelled empty panels that
 
 ### Acceptance criteria
 
+- [ ] Three panels labelled WorkerView, SupervisorView, and TicketDetail render side-by-side on the workscreen with no content inside them
+- [ ] Dragging the divider between any two adjacent columns resizes them in real time
+- [ ] Each column has a toggle control (button or icon) that hides it when clicked
+- [ ] Hiding a column collapses it to zero width; clicking its toggle again restores it
+- [ ] Attempting to hide the last visible column has no effect (the column stays visible)
+- [ ] Column visibility state is held in the Zustand store and survives React re-renders without resetting
+- [ ] The Zustand store exposes selectedTicketId (null by default) and column width percentages alongside the visibility flags
+- [ ] Pressing Ctrl+1, Ctrl+2, Ctrl+3 moves keyboard focus to WorkerView, SupervisorView, and TicketDetail respectively (skipping hidden columns)
+- [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
+- [ ] cargo test --workspace passes after all UI source changes are in place
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Rendering any real ticket data (swimlanes, ticket cards, worker queue) — those are Steps 5-7
+- The ticket detail markdown viewer — Step 6
+- Arrow key navigation across ticket cards — Step 6
+- Persistence of column state across browser sessions (localStorage)
+- Mobile or responsive layouts
+- The editor/review screen — Step 9
+- Authentication, CORS, or any backend changes
 
 ### Approach
 
