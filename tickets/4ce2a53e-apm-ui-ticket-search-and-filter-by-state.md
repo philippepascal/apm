@@ -2,14 +2,14 @@
 id = "4ce2a53e"
 title = "apm-ui: ticket search and filter (by state, agent, text)"
 state = "specd"
-priority = 0
+priority = 25
 effort = 3
 risk = 1
 author = "apm"
 agent = "76050"
 branch = "ticket/4ce2a53e-apm-ui-ticket-search-and-filter-by-state"
 created_at = "2026-03-31T06:13:17.849783Z"
-updated_at = "2026-03-31T18:27:23.981094Z"
+updated_at = "2026-03-31T19:36:46.313764Z"
 +++
 
 ## Spec
