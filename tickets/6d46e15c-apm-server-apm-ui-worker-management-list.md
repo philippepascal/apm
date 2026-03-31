@@ -58,7 +58,215 @@ Desired state: WorkerActivityPanel gains a Stop button per row (live workers onl
 
 ### Approach
 
-How the implementation will work.
+**Prerequisites:** Step 7a (ticket 651f8a63) and Step 8 (ticket 8c7d47f0) must be `implemented` before this ticket moves to `ready`. This ticket builds directly on the `WorkerInfo` struct, `WorkerActivityPanel`, `TicketDetail`, and `AppState` established in those steps.
+
+---
+
+**1. Extend GET /api/workers — add `branch` field**
+
+In `apm-server/src/routes/workers.rs`, add `branch: String` to the `WorkerInfo` struct:
+
+```rust
+#[derive(serde::Serialize)]
+struct WorkerInfo {
+    pid: u32,
+    ticket_id: String,
+    ticket_title: String,
+    branch: String,   // new
+    state: String,
+    agent: String,
+    elapsed: String,
+    status: String,
+}
+```
+
+In the handler loop, after finding the matching ticket, set:
+```rust
+branch: t.map(|t| {
+    t.frontmatter.branch.clone()
+        .or_else(|| apm_core::git::branch_name_from_path(&t.path))
+        .unwrap_or_default()
+}).unwrap_or_default(),
+```
+
+---
+
+**2. Add DELETE /api/workers/:pid**
+
+In `apm-server/src/routes/workers.rs`, add a handler `delete_worker`:
+
+```rust
+async fn delete_worker(
+    State(state): State<Arc<AppState>>,
+    Path(pid_str): Path<String>,
+) -> impl IntoResponse {
+    let pid: u32 = match pid_str.parse() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::BAD_REQUEST, ...).into_response(),
+    };
+    let root = state.root.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        stop_worker_by_pid(&root, pid)
+    }).await.unwrap();
+    match result {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(StopError::NotFound) => (StatusCode::NOT_FOUND, Json(json!({"error":"pid not found"}))).into_response(),
+        Err(StopError::NotAlive) => (StatusCode::CONFLICT, Json(json!({"error":"process not alive (stale pid file)"}))).into_response(),
+        Err(StopError::Other(e)) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response(),
+    }
+}
+
+enum StopError { NotFound, NotAlive, Other(String) }
+
+fn stop_worker_by_pid(root: &Path, target_pid: u32) -> Result<(), StopError> {
+    let worktrees = apm_core::git::list_ticket_worktrees(root)
+        .map_err(|e| StopError::Other(e.to_string()))?;
+    for (wt_path, _branch) in &worktrees {
+        let pid_path = wt_path.join(".apm-worker.pid");
+        if !pid_path.exists() { continue; }
+        let Ok((pid, _)) = apm_core::worker::read_pid_file(&pid_path) else { continue; };
+        if pid != target_pid { continue; }
+        if !apm_core::worker::is_alive(pid) {
+            let _ = std::fs::remove_file(&pid_path);
+            return Err(StopError::NotAlive);
+        }
+        std::process::Command::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .status()
+            .map_err(|e| StopError::Other(e.to_string()))?;
+        let _ = std::fs::remove_file(&pid_path);
+        return Ok(());
+    }
+    Err(StopError::NotFound)
+}
+```
+
+Register in `apm-server/src/main.rs`:
+```rust
+.route("/api/workers/:pid", delete(workers::delete_worker))
+```
+
+---
+
+**3. Add POST /api/tickets/:id/take**
+
+In `apm-server/src/routes/tickets.rs`, add a `take_ticket` handler:
+
+```rust
+async fn take_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let root = state.root.clone();
+    let config = state.config.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let agent_name = apm_core::start::resolve_agent_name();
+        let mut tickets = apm_core::ticket::load_all_from_git(&root, &config.tickets.dir)?;
+        let resolved = apm_core::ticket::resolve_id_in_slice(&tickets, &id)?;
+        let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == resolved) else {
+            anyhow::bail!("not found");
+        };
+        let now = chrono::Utc::now();
+        apm_core::ticket::handoff(t, &agent_name, now)?;
+        let branch = t.frontmatter.branch.clone()
+            .or_else(|| apm_core::git::branch_name_from_path(&t.path))
+            .unwrap_or_else(|| format!("ticket/{resolved}"));
+        let rel_path = format!(
+            "{}/{}",
+            config.tickets.dir.to_string_lossy(),
+            t.path.file_name().unwrap().to_string_lossy()
+        );
+        let content = t.serialize()?;
+        apm_core::git::commit_to_branch(&root, &branch, &rel_path, &content,
+            &format!("ticket({resolved}): reassign agent to {agent_name}"))?;
+        // Re-load to return fresh state
+        let tickets = apm_core::ticket::load_all_from_git(&root, &config.tickets.dir)?;
+        Ok::<_, anyhow::Error>(tickets.into_iter().find(|t| t.frontmatter.id == resolved))
+    }).await.unwrap();
+
+    match result {
+        Ok(Some(t)) => build_ticket_response(&t, &state.config).into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) if e.to_string().contains("not found") =>
+            (StatusCode::NOT_FOUND, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) =>
+            (StatusCode::UNPROCESSABLE_ENTITY, Json(json!({"error": e.to_string()}))).into_response(),
+    }
+}
+```
+
+Register in `main.rs`:
+```rust
+.route("/api/tickets/:id/take", post(take_ticket))
+```
+
+Note: `build_ticket_response` is the existing helper that serialises a ticket to `TicketResponse` (including `valid_transitions`). Extract it as a function if it isn't already.
+
+---
+
+**4. WorkerActivityPanel — Stop button**
+
+In `apm-ui/src/components/WorkerActivityPanel.tsx`:
+
+- Add `branch: string` to the `WorkerInfo` TypeScript interface
+- Add a "Stop" column to the table header
+- For each row where `status === 'running'`, render:
+
+```tsx
+<Button size="sm" variant="destructive" disabled={stopping === worker.pid}
+  onClick={() => handleStop(worker.pid)}>
+  Stop
+</Button>
+```
+
+- `stopping` is a `useState<number | null>(null)` tracking which PID has an in-flight DELETE
+- `handleStop(pid)`:
+  1. Set `stopping = pid`
+  2. `await fetch('/api/workers/' + pid, { method: 'DELETE' })`
+  3. On success (204): call `queryClient.invalidateQueries({ queryKey: ['workers'] })`
+  4. On error: set an inline `stopError` state and display it
+  5. Always: clear `stopping`
+
+- Crashed workers show no Stop button (their process is already gone)
+
+---
+
+**5. TicketDetail — Reassign button**
+
+In `apm-ui/src/components/TicketDetail.tsx`:
+
+Add a "Reassign to me" button alongside the existing transition buttons (or in the same footer bar):
+
+```tsx
+<Button size="sm" variant="outline" disabled={reassigning}
+  onClick={handleReassign}>
+  Reassign to me
+</Button>
+```
+
+- `handleReassign`:
+  1. `setReassigning(true)`
+  2. `POST /api/tickets/:id/take` (no body needed)
+  3. On success: `queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })` and `queryClient.invalidateQueries({ queryKey: ['tickets'] })`
+  4. On error: show inline error string
+  5. Always: `setReassigning(false)`
+
+---
+
+**6. File changes summary**
+
+Backend:
+- `apm-server/src/routes/workers.rs` — add `branch` to WorkerInfo, add `delete_worker` handler + `stop_worker_by_pid` helper
+- `apm-server/src/routes/tickets.rs` — add `take_ticket` handler, extract `build_ticket_response` helper if not already a function
+- `apm-server/src/main.rs` — register `DELETE /api/workers/:pid` and `POST /api/tickets/:id/take`
+
+Frontend:
+- `apm-ui/src/components/WorkerActivityPanel.tsx` — add `branch` to type, add Stop button column
+- `apm-ui/src/components/TicketDetail.tsx` — add Reassign to me button
+
+---
+
+**Ordering note:** The `stop_worker_by_pid` function does filesystem I/O and process signals — always call it inside `tokio::task::spawn_blocking`. Same pattern as the existing workers handler. `ticket::handoff` also does git I/O — same treatment.
 
 ### Open questions
 
