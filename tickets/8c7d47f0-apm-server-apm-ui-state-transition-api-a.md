@@ -1,7 +1,7 @@
 +++
 id = "8c7d47f0"
 title = "apm-server + apm-ui: state transition API and buttons"
-state = "specd"
+state = "ready"
 priority = 45
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "22761"
 branch = "ticket/8c7d47f0-apm-server-apm-ui-state-transition-api-a"
 created_at = "2026-03-31T06:12:47.638355Z"
-updated_at = "2026-03-31T19:35:50.371601Z"
+updated_at = "2026-03-31T19:44:09.015586Z"
 +++
 
 ## Spec
@@ -255,3 +255,4 @@ Frontend:
 | 2026-03-31T18:14Z | specd | ammend | claude-0331-1200-a7b9 |
 | 2026-03-31T19:12Z | ammend | in_design | philippepascal |
 | 2026-03-31T19:16Z | in_design | specd | claude-0331-1912-b4c2 |
+| 2026-03-31T19:44Z | specd | ready | apm |
