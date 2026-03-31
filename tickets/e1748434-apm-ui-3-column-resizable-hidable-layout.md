@@ -22,7 +22,7 @@ Currently there is no workscreen component at all; only the blank page with a co
 
 Global UI state is managed by a Zustand store: selectedTicketId, column visibility flags, and column widths. Downstream tickets (Steps 5-7) will read and write this store without prop-drilling.
 
-This ticket delivers the structural shell only: three labelled empty panels that prove resize, hide/show, and keyboard focus switching all work before any data is layered in.
+This ticket delivers the structural shell only: three labelled empty panels that prove resize and hide/show all work before any data is layered in.
 
 ### Acceptance criteria
 
@@ -33,7 +33,6 @@ This ticket delivers the structural shell only: three labelled empty panels that
 - [ ] Attempting to hide the last visible column has no effect (the column stays visible)
 - [ ] Column visibility state is held in the Zustand store and survives React re-renders without resetting
 - [ ] The Zustand store exposes selectedTicketId (null by default) and column width percentages alongside the visibility flags
-- [ ] Pressing Ctrl+1, Ctrl+2, Ctrl+3 moves keyboard focus to WorkerView, SupervisorView, and TicketDetail respectively (skipping hidden columns)
 - [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
 - [ ] cargo test --workspace passes after all UI source changes are in place
 
@@ -84,11 +83,8 @@ Use ResizablePanelGroup with direction=horizontal containing three ResizablePane
 Each panel:
   - Reads its visibility flag from the store; when hidden, renders nothing and sets its minSize/maxSize to 0
   - Has a collapse toggle button in its header (an eye icon from lucide-react or a simple X)
-  - Ref-forwards its focusable wrapper for Ctrl+1/2/3 shortcut targeting
 
 Column hide/show: react-resizable-panels supports collapsible panels via the collapsible and onCollapse props. Use these to drive the Zustand visibility flags on user-drag-to-zero; separately, the toggle button calls toggleColumn() directly.
-
-Keyboard shortcut handler: add a useEffect in WorkScreen that listens for keydown on document. On Ctrl+1/Ctrl+2/Ctrl+3, call .focus() on the ref for the corresponding panel (if visible); skip to the next visible panel if the target is hidden.
 
 **5. Wire into App**
 
@@ -120,8 +116,8 @@ No Rust / backend files change.
 
 ### Amendment requests
 
-- [ ] Remove the Acceptance Criterion "Pressing Ctrl+1, Ctrl+2, Ctrl+3 moves keyboard focus to WorkerView, SupervisorView, and TicketDetail respectively" — column visibility has no keyboard shortcut (toolbar-only per keyboard spec)
-- [ ] Remove the corresponding keyboard shortcut useEffect from the Approach (Step 4 "Keyboard shortcut handler" paragraph)
+- [x] Remove the Acceptance Criterion "Pressing Ctrl+1, Ctrl+2, Ctrl+3 moves keyboard focus to WorkerView, SupervisorView, and TicketDetail respectively" — column visibility has no keyboard shortcut (toolbar-only per keyboard spec)
+- [x] Remove the corresponding keyboard shortcut useEffect from the Approach (Step 4 "Keyboard shortcut handler" paragraph)
 
 ## History
 
