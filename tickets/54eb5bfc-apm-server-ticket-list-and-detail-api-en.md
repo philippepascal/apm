@@ -20,12 +20,12 @@ The frontend needs read access to ticket data served over HTTP. Currently there 
 
 ### Acceptance criteria
 
-- [ ] `GET /api/tickets` returns HTTP 200 with `Content-Type: application/json`
-- [ ] The response body is a JSON array where each element contains all frontmatter fields plus a `body` string
-- [ ] `GET /api/tickets/:id` with a valid ticket ID prefix returns HTTP 200 with a JSON object for that ticket
-- [ ] `GET /api/tickets/:id` with an unknown ID returns HTTP 404
-- [ ] `GET /api/tickets/:id` accepts a 4–8 hex-char prefix or a zero-padded integer (same matching rules as `apm show`)
-- [ ] The server does not block the tokio runtime while reading from git (blocking work is off-loaded via spawn_blocking)
+- [x] `GET /api/tickets` returns HTTP 200 with `Content-Type: application/json`
+- [x] The response body is a JSON array where each element contains all frontmatter fields plus a `body` string
+- [x] `GET /api/tickets/:id` with a valid ticket ID prefix returns HTTP 200 with a JSON object for that ticket
+- [x] `GET /api/tickets/:id` with an unknown ID returns HTTP 404
+- [x] `GET /api/tickets/:id` accepts a 4–8 hex-char prefix or a zero-padded integer (same matching rules as `apm show`)
+- [x] The server does not block the tokio runtime while reading from git (blocking work is off-loaded via spawn_blocking)
 
 ### Out of scope
 
