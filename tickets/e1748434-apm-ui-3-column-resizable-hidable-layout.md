@@ -30,7 +30,7 @@ This ticket delivers the structural shell only: three labelled empty panels that
 - [x] Dragging the divider between any two adjacent columns resizes them in real time
 - [x] Each column has a toggle control (button or icon) that hides it when clicked
 - [x] Hiding a column collapses it to zero width; clicking its toggle again restores it
-- [ ] Attempting to hide the last visible column has no effect (the column stays visible)
+- [x] Attempting to hide the last visible column has no effect (the column stays visible)
 - [ ] Column visibility state is held in the Zustand store and survives React re-renders without resetting
 - [ ] The Zustand store exposes selectedTicketId (null by default) and column width percentages alongside the visibility flags
 - [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
