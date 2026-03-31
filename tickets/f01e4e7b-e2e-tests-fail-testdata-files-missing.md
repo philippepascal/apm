@@ -25,7 +25,7 @@ The e2e test suite (apm/tests/e2e.rs) copies two files from testdata/src/ into e
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Changes to the e2e test logic itself; adding more testdata files beyond what the tests reference.
 
 ### Approach
 
