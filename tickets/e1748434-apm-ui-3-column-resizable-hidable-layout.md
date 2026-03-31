@@ -16,7 +16,13 @@ updated_at = "2026-03-31T06:20:11.319397Z"
 
 ### Problem
 
-The workscreen layout (3 resizable/hidable columns: workerview, supervisorview, ticket detail) needs to be established before any data is rendered into it. Zustand store holds selectedTicketId and column visibility flags. No data rendered yet — validate resize, hide, and keyboard focus between columns. Full spec context: initial_specs/UIdraft_spec_starter.md Step 4. Requires Step 3.
+The workscreen is the main view of the apm UI. It has three columns: workerview (left), supervisorview (middle), and ticket detail (right). Each column must be resizable by dragging dividers, hidable via a toggle control, with the constraint that at least one column always remains visible.
+
+Currently there is no workscreen component at all; only the blank page with a console-logging stub delivered by Step 3.
+
+Global UI state is managed by a Zustand store: selectedTicketId, column visibility flags, and column widths. Downstream tickets (Steps 5-7) will read and write this store without prop-drilling.
+
+This ticket delivers the structural shell only: three labelled empty panels that prove resize, hide/show, and keyboard focus switching all work before any data is layered in.
 
 ### Acceptance criteria
 
