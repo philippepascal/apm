@@ -16,7 +16,11 @@ updated_at = "2026-03-31T07:14:43.852798Z"
 
 ### Problem
 
-effort, risk, and priority fields in the ticket detail panel are read-only. Users need click-to-edit inline controls for these fields, backed by PATCH /api/tickets/:id, without opening the full markdown editor. Full spec context: initial_specs/UIdraft_spec_starter.md Step 13. Requires Step 9.
+In the ticket detail panel (Step 6), the `effort`, `risk`, and `priority` frontmatter fields are displayed as static text. Supervisors and spec-writers need to adjust these values frequently — particularly after reviewing a spec — without opening the full CodeMirror markdown editor introduced in Step 9.
+
+Currently the only way to change these fields is via the CLI (`apm set <id> effort <n>`). The UI should provide click-to-edit inline controls directly in the detail panel header area so supervisors can update values with a single click and a keystroke.
+
+The backend already exposes or will expose `PATCH /api/tickets/:id` (first introduced in Step 11 for priority reordering). This ticket extends that endpoint to accept `effort` and `risk` in addition to `priority`, and adds the corresponding inline UI controls for all three fields.
 
 ### Acceptance criteria
 
