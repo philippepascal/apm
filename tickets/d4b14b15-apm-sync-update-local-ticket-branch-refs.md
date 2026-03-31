@@ -3,13 +3,13 @@ id = "d4b14b15"
 title = "apm sync: update local ticket branch refs after remote operations"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 agent = "33670"
 branch = "ticket/d4b14b15-apm-sync-update-local-ticket-branch-refs"
 created_at = "2026-03-31T05:10:30.606044Z"
-updated_at = "2026-03-31T05:25:46.637659Z"
+updated_at = "2026-03-31T05:32:25.795592Z"
 +++
 
 ## Spec
