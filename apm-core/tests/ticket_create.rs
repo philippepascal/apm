@@ -75,6 +75,7 @@ fn create_returns_ticket_with_correct_fields() {
         None,
         None,
         false,
+        vec![],
     )
     .unwrap();
 
@@ -101,6 +102,7 @@ fn create_branch_exists_in_repo() {
         None,
         None,
         false,
+        vec![],
     )
     .unwrap();
 
@@ -128,6 +130,7 @@ fn create_context_injected_into_problem() {
         Some("the context text".to_string()),
         None,
         false,
+        vec![],
     )
     .unwrap();
 
@@ -151,6 +154,7 @@ fn create_no_push_when_not_aggressive() {
         None,
         None,
         false,
+        vec![],
     )
     .unwrap();
 }
