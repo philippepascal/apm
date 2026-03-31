@@ -1,14 +1,15 @@
 +++
 id = "553d1112"
 title = "escape user input written into TOML format strings"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/553d1112-escape-user-input-written-into-toml-form"
 created_at = "2026-03-31T00:17:29.464358Z"
-updated_at = "2026-03-31T00:21:09.656620Z"
+updated_at = "2026-03-31T00:21:29.347248Z"
 +++
 
 ## Spec
@@ -51,3 +52,4 @@ How the implementation will work.
 | 2026-03-31T00:17Z | new | in_design | apm |
 | 2026-03-31T00:20Z | in_design | specd | apm |
 | 2026-03-31T00:21Z | specd | ammend | apm |
+| 2026-03-31T00:21Z | ammend | in_design | philippepascal |
