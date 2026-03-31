@@ -1,14 +1,15 @@
 +++
 id = "ed5c2b3b"
 title = "apm-ui: Vite + React + shadcn/ui skeleton wired to backend"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/ed5c2b3b-apm-ui-vite-react-shadcn-ui-skeleton-wir"
 created_at = "2026-03-31T06:11:40.599936Z"
-updated_at = "2026-03-31T06:11:40.599936Z"
+updated_at = "2026-03-31T06:16:51.666808Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:11Z | — | new | apm |
+| 2026-03-31T06:16Z | new | in_design | philippepascal |
