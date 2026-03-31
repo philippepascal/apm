@@ -35,7 +35,9 @@ Both gaps force agents into awkward workarounds when writing amendment requests 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to any other apm command
+- Interactive editor mode (`--edit`) — not needed once `--set-file` exists
+- Validation of file content format
 
 ### Approach
 
