@@ -114,6 +114,9 @@ The ticket ID can be supplied as:
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
+        /// Open the ticket in $VISUAL / $EDITOR (falls back to vi) instead of printing to stdout
+        #[arg(long)]
+        edit: bool,
     },
     /// Create a new ticket
     #[command(long_about = "Create a new ticket and its branch.
@@ -611,7 +614,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
         Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
-        Command::Show { id, no_aggressive } => cmd::show::run(&root, &id, no_aggressive),
+        Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
         Command::Set { id, field, value, no_aggressive } => cmd::set::run(&root, &id, field, value, no_aggressive),

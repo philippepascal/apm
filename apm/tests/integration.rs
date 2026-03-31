@@ -294,13 +294,13 @@ fn show_existing_ticket() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, None, true).unwrap();
     let id = find_ticket_id(dir.path(), "show-me");
-    apm::cmd::show::run(dir.path(), &id, false).unwrap();
+    apm::cmd::show::run(dir.path(), &id, false, false).unwrap();
 }
 
 #[test]
 fn show_missing_ticket_errors() {
     let dir = setup();
-    assert!(apm::cmd::show::run(dir.path(), "99", false).is_err());
+    assert!(apm::cmd::show::run(dir.path(), "99", false, false).is_err());
 }
 
 // --- state ---
