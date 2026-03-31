@@ -67,7 +67,7 @@ This ticket adds the `POST /api/sync` endpoint to `apm-server` and the correspon
 
 ### Amendment requests
 
-- [ ] Change keyboard shortcut from lowercase `s` to `Shift+S` in both the Acceptance Criteria and the Approach — lowercase `s` is unsafe as a global shortcut (fires unexpectedly when returning focus from modals or other components)
+- [x] Change keyboard shortcut from lowercase `s` to `Shift+S` in both the Acceptance Criteria and the Approach — lowercase `s` is unsafe as a global shortcut (fires unexpectedly when returning focus from modals or other components)
 
 ## History
 
