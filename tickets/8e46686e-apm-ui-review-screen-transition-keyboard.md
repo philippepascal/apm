@@ -35,7 +35,10 @@ Affected: anyone using the review screen keyboard shortcuts to progress tickets.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Keyboard shortcuts outside the review/editor screen — global shortcuts are defined elsewhere
+- The state transition API itself (covered by 8c7d47f0)
+- The review screen layout and save mechanism (covered by a6c115e1)
+- Shortcuts for transitions in the ticket detail panel (detail panel shows buttons only, no keyboard shortcuts)
 
 ### Approach
 
