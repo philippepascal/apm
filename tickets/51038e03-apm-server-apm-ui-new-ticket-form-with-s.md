@@ -16,7 +16,11 @@ updated_at = "2026-03-31T06:53:50.711229Z"
 
 ### Problem
 
-There is no way to create a ticket from the UI. A '+ New ticket' button/shortcut opens a modal with fields for title (required) and optional spec sections (problem, acceptance criteria, out of scope, approach). Add POST /api/tickets backed by ticket::create in apm-core. Sections are written atomically at creation. Full spec context: initial_specs/UIdraft_spec_starter.md Step 10. Requires Step 9.
+There is no way to create a ticket from the UI. Steps 1–9 deliver the backend server, ticket list/detail API, and the markdown editor; Step 10 adds ticket creation.
+
+A '+ New ticket' button (and keyboard shortcut) must open a modal form with a required title field and optional fields for each standard spec section (Problem, Acceptance criteria, Out of scope, Approach). Submitting the form calls a new POST /api/tickets endpoint in apm-server, which delegates atomically to ticket::create in apm-core — the same function the CLI uses. All provided sections are written to the ticket body at creation time (parity with the --section/--set CLI feature).
+
+Without this, supervisors using the web UI have no way to capture new work items without switching to the command line.
 
 ### Acceptance criteria
 
