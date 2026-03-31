@@ -174,7 +174,7 @@ interface QueueEntry {
 
 ### Amendment requests
 
-- [ ] Add `config.actionable_states_for(actor: &str) -> Vec<String>` to apm-core Config (scan `[[workflow.states]]` for entries whose `actionable` array contains the given actor string). Both the queue handler and the dry-run handler depend on this method — it must be defined in apm-core before either handler is implemented. Include this step at the top of the Approach.
+- [x] Add `config.actionable_states_for(actor: &str) -> Vec<String>` to apm-core Config (scan `[[workflow.states]]` for entries whose `actionable` array contains the given actor string). Both the queue handler and the dry-run handler depend on this method — it must be defined in apm-core before either handler is implemented. Include this step at the top of the Approach.
 
 ## History
 
