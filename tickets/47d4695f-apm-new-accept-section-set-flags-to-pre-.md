@@ -37,7 +37,7 @@ The ticket is created fully specd in a single atomic command.
 ### Acceptance criteria
 
 - [x] `apm new --no-edit "title" --section Problem --set "text"` creates a ticket with the Problem section pre-populated in the initial git commit
-- [ ] Multiple `--section`/`--set` pairs apply all named sections atomically before the first commit
+- [x] Multiple `--section`/`--set` pairs apply all named sections atomically before the first commit
 - [ ] Mismatched pair counts (e.g. two `--section` flags but one `--set` flag, or vice versa) return a clear error
 - [ ] `--set` without `--section` returns an error consistent with `apm spec` behaviour
 - [ ] Section names are validated with the same rules as `apm spec` (known built-in names, or config-defined sections when `[ticket.sections]` is non-empty)
