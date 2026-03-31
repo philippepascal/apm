@@ -2,14 +2,14 @@
 id = "54eb5bfc"
 title = "apm-server: ticket list and detail API endpoints"
 state = "specd"
-priority = 0
+priority = 80
 effort = 3
 risk = 2
 author = "apm"
 agent = "10014"
 branch = "ticket/54eb5bfc-apm-server-ticket-list-and-detail-api-en"
 created_at = "2026-03-31T06:11:28.689659Z"
-updated_at = "2026-03-31T19:07:48.355554Z"
+updated_at = "2026-03-31T19:35:15.045701Z"
 +++
 
 ## Spec
