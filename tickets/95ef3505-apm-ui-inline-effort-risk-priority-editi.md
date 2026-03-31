@@ -2,14 +2,14 @@
 id = "95ef3505"
 title = "apm-ui: inline effort/risk/priority editing in ticket detail"
 state = "specd"
-priority = 0
+priority = 35
 effort = 4
 risk = 2
 author = "apm"
 agent = "80361"
 branch = "ticket/95ef3505-apm-ui-inline-effort-risk-priority-editi"
 created_at = "2026-03-31T06:13:16.584261Z"
-updated_at = "2026-03-31T07:18:02.333994Z"
+updated_at = "2026-03-31T19:36:17.110343Z"
 +++
 
 ## Spec
