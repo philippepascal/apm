@@ -1,7 +1,7 @@
 +++
 id = "066d21de"
 title = "apm show: open ticket in $EDITOR"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "46090"
 branch = "ticket/066d21de-apm-show-open-ticket-in-editor"
 created_at = "2026-03-31T04:32:11.186464Z"
-updated_at = "2026-03-31T05:01:34.598465Z"
+updated_at = "2026-03-31T05:04:50.440935Z"
 +++
 
 ## Spec
@@ -68,3 +68,4 @@ No new dependencies are required — `std::fs` handles temp file I/O and the edi
 | 2026-03-31T04:45Z | ready | in_progress | philippepascal |
 | 2026-03-31T04:48Z | in_progress | implemented | claude-0330-2026-w4f1 |
 | 2026-03-31T05:01Z | implemented | accepted | apm-sync |
+| 2026-03-31T05:04Z | accepted | closed | apm-sync |
