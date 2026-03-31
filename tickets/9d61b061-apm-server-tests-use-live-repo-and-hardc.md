@@ -32,7 +32,7 @@ A secondary minor issue: the dev-dependency on tower 0.4.13 conflicts with axum'
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Adding new test cases beyond the four existing ones; changes to the handler logic itself; integration tests that spin up a real TCP listener.
 
 ### Approach
 
