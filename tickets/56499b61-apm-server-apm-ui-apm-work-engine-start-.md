@@ -16,7 +16,11 @@ updated_at = "2026-03-31T07:02:07.528911Z"
 
 ### Problem
 
-There is no way to start or stop the apm work daemon from the UI. Add POST /api/work/start and POST /api/work/stop endpoints. The top of the workerview panel shows a start/stop button with a status indicator (running / stopped / idle) and a keyboard shortcut. Full spec context: initial_specs/UIdraft_spec_starter.md Step 12. Requires Step 7a.
+The apm work engine — which dispatches Claude worker agents to actionable tickets — can only be started or stopped from the command line. There is no way to control it from the UI.
+
+This ticket adds three server endpoints (`GET /api/work/status`, `POST /api/work/start`, `POST /api/work/stop`) and a control widget at the top of the workerview left column. The widget shows the current engine state (running / idle / stopped) and a button to toggle it, with a keyboard shortcut.
+
+The work engine runs as a child process of the axum server, equivalent to `apm work --daemon`. The server tracks the child process handle in shared state. Start spawns it; stop sends SIGTERM. Status is derived by checking whether the child is alive and whether any worker PID files exist.
 
 ### Acceptance criteria
 
