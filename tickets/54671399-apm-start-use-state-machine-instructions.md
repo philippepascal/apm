@@ -1,7 +1,7 @@
 +++
 id = "54671399"
 title = "apm start: use state machine instructions field as worker system prompt"
-state = "implemented"
+state = "accepted"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "60240"
 branch = "ticket/54671399-apm-start-use-state-machine-instructions"
 created_at = "2026-03-30T22:51:08.077356Z"
-updated_at = "2026-03-31T00:02:13.113367Z"
+updated_at = "2026-03-31T00:19:51.542526Z"
 +++
 
 ## Spec
@@ -67,3 +67,4 @@ This replaces the single hardcoded `std::fs::read_to_string(root.join(".apm/apm.
 | 2026-03-30T23:58Z | specd | ready | apm |
 | 2026-03-30T23:58Z | ready | in_progress | philippepascal |
 | 2026-03-31T00:02Z | in_progress | implemented | claude-0330-2251-b7f2 |
+| 2026-03-31T00:19Z | implemented | accepted | apm-sync |
