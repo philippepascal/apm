@@ -1,14 +1,15 @@
 +++
 id = "d4b14b15"
 title = "apm sync: update local ticket branch refs after remote operations"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/d4b14b15-apm-sync-update-local-ticket-branch-refs"
 created_at = "2026-03-31T05:10:30.606044Z"
-updated_at = "2026-03-31T05:25:17.411021Z"
+updated_at = "2026-03-31T05:25:46.637659Z"
 +++
 
 ## Spec
@@ -59,3 +60,4 @@ How the implementation will work.
 | 2026-03-31T05:10Z | — | new | apm |
 | 2026-03-31T05:10Z | new | in_design | apm |
 | 2026-03-31T05:25Z | in_design | new | apm |
+| 2026-03-31T05:25Z | new | in_design | philippepascal |
