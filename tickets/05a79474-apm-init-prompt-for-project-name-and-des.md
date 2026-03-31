@@ -1,7 +1,7 @@
 +++
 id = "05a79474"
 title = "apm init: prompt for project name and description"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "74093"
 branch = "ticket/05a79474-apm-init-prompt-for-project-name-and-des"
 created_at = "2026-03-30T23:56:25.325030Z"
-updated_at = "2026-03-31T00:10:35.933766Z"
+updated_at = "2026-03-31T00:12:42.504834Z"
 +++
 
 ## Spec
@@ -61,3 +61,4 @@ The fix is to add an interactive prompt step before writing `.apm/config.toml`:
 | 2026-03-30T23:59Z | in_design | specd | claude-0330-2356-b7f2 |
 | 2026-03-31T00:10Z | specd | ready | apm |
 | 2026-03-31T00:10Z | ready | in_progress | philippepascal |
+| 2026-03-31T00:12Z | in_progress | implemented | claude-0331-0010-w7k2 |
