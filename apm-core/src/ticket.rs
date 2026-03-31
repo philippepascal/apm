@@ -219,6 +219,7 @@ pub fn close(
     id_arg: &str,
     reason: Option<&str>,
     agent: &str,
+    aggressive: bool,
 ) -> Result<()> {
     let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
     let prefixes = id_arg_prefixes(id_arg)?;
@@ -320,6 +321,12 @@ pub fn close(
         eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
     }
 
+    if aggressive {
+        if let Err(e) = crate::git::push_branch(root, &branch) {
+            eprintln!("warning: push failed for {branch}: {e:#}");
+        }
+    }
+
     println!("{id}: {prev} → closed");
     Ok(())
 }
@@ -329,6 +336,7 @@ pub fn accept(
     config: &crate::config::Config,
     id_arg: &str,
     agent: &str,
+    aggressive: bool,
 ) -> Result<()> {
     let tickets = load_all_from_git(root, &config.tickets.dir)?;
     let prefixes = id_arg_prefixes(id_arg)?;
@@ -370,6 +378,12 @@ pub fn accept(
 
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): {prev} → accepted"))?;
     crate::logger::log("state_transition", &format!("{id:?} {prev} -> accepted"));
+
+    if aggressive {
+        if let Err(e) = crate::git::push_branch(root, &branch) {
+            eprintln!("warning: push failed for {branch}: {e:#}");
+        }
+    }
 
     println!("{id}: {prev} → accepted");
     Ok(())

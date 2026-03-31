@@ -40,19 +40,15 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
     if !accept_cands.is_empty() {
         let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_cands)?);
         if confirmed {
-            sync::apply(root, &config, &Candidates { accept: accept_cands, close: vec![] }, "apm-sync")?;
+            sync::apply(root, &config, &Candidates { accept: accept_cands, close: vec![] }, "apm-sync", aggressive)?;
         }
     }
 
     if !close_cands.is_empty() {
         let confirmed = auto_close || (!quiet && prompt_close(&close_cands)?);
         if confirmed {
-            sync::apply(root, &config, &Candidates { accept: vec![], close: close_cands }, "apm-sync")?;
+            sync::apply(root, &config, &Candidates { accept: vec![], close: close_cands }, "apm-sync", aggressive)?;
         }
-    }
-
-    if aggressive {
-        git::push_ticket_branches(root);
     }
 
     Ok(())

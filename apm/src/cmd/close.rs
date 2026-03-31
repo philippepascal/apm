@@ -18,15 +18,7 @@ pub fn run(root: &Path, id_arg: &str, reason: Option<String>, no_aggressive: boo
         }
     }
 
-    ticket::close(root, &config, id_arg, reason.as_deref(), &agent)?;
-
-    if aggressive {
-        if let Some(ref b) = branch {
-            if let Err(e) = git::push_branch(root, b) {
-                eprintln!("warning: push failed: {e:#}");
-            }
-        }
-    }
+    ticket::close(root, &config, id_arg, reason.as_deref(), &agent, aggressive)?;
 
     Ok(())
 }

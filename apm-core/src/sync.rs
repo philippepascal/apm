@@ -94,13 +94,13 @@ fn detect_closeable(
     Ok(candidates)
 }
 
-pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str) -> Result<()> {
+pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str, aggressive: bool) -> Result<()> {
     for c in &candidates.accept {
-        crate::ticket::accept(root, config, &c.ticket.frontmatter.id, author)?;
+        crate::ticket::accept(root, config, &c.ticket.frontmatter.id, author, aggressive)?;
     }
     for c in &candidates.close {
         let id = c.ticket.frontmatter.id.clone();
-        if let Err(e) = crate::ticket::close(root, config, &id, None, author) {
+        if let Err(e) = crate::ticket::close(root, config, &id, None, author, aggressive) {
             eprintln!("warning: could not close {id:?}: {e:#}");
         }
     }
