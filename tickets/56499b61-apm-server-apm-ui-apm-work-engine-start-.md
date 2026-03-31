@@ -1,7 +1,7 @@
 +++
 id = "56499b61"
 title = "apm-server + apm-ui: apm work engine start/stop controls"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 4
@@ -9,7 +9,7 @@ author = "apm"
 agent = "45049"
 branch = "ticket/56499b61-apm-server-apm-ui-apm-work-engine-start-"
 created_at = "2026-03-31T06:13:12.529756Z"
-updated_at = "2026-03-31T07:05:36.249211Z"
+updated_at = "2026-03-31T18:14:40.153983Z"
 +++
 
 ## Spec
@@ -88,3 +88,4 @@ All three handlers return `{"status": "<value>"}` as JSON with HTTP 200.
 | 2026-03-31T06:13Z | — | new | apm |
 | 2026-03-31T07:02Z | new | in_design | philippepascal |
 | 2026-03-31T07:05Z | in_design | specd | claude-0331-0800-b7f2 |
+| 2026-03-31T18:14Z | specd | ammend | claude-0331-1200-a7b9 |
