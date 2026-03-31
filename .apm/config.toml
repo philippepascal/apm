@@ -147,6 +147,11 @@ instructions = ".apm/apm.spec-writer.md"
   trigger = "manual"
   actor   = "agent"
 
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id           = "ready"
 label        = "Ready"
@@ -261,7 +266,7 @@ risk_weight     = -1.0
 
 [agents]
 instructions   = "apm.agents.md"
-max_concurrent = 5
+max_concurrent = 3
 
 [sync]
 aggressive = true
