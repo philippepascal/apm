@@ -38,6 +38,7 @@ The ticket detail panel (added in Step 6) is read-only: a supervisor looking at 
 - [ ] GET /api/tickets/:id response includes a `valid_transitions` array, each entry having `to` (state id) and `label` (transition label from config, or `-> {to}` if blank)
 - [ ] The ticket detail panel renders one button per entry in `valid_transitions` using the entry's `label` as the button text
 - [ ] A "Keep at {state}" button is always visible in the detail panel and performs no API call when clicked
+- [ ] Pressing the `K` key while a ticket is selected in the detail panel activates the "Keep at {state}" button (same no-op behaviour as clicking it)
 - [ ] Clicking a transition button fires POST /api/tickets/:id/transition and disables all transition buttons while the request is in-flight
 - [ ] On a successful transition, the detail panel and swimlanes update to reflect the new state without a full page reload (TanStack Query cache invalidation)
 - [ ] On a failed transition, an inline error message appears near the buttons showing the text from the API error response; the buttons re-enable
@@ -51,7 +52,7 @@ The ticket detail panel (added in Step 6) is read-only: a supervisor looking at 
 - Editing any ticket content (body, spec sections) — Step 9
 - The "review" button opening a full editor screen — Step 9
 - Priority reordering in the worker queue — Step 11
-- Keyboard shortcut for state transitions (Step 8 scope is buttons only; shortcuts are a general feature)
+- Keyboard shortcuts for the transition buttons (only `K` for "Keep at {state}" is in scope; shortcuts for other transitions are a general feature)
 - Validation that the acting user has permission for the transition (no auth layer exists yet)
 - Optimistic UI updates — transitions wait for the server round-trip before refreshing
 
@@ -150,6 +151,17 @@ function TransitionButtons({ ticket, onTransitioned }: {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // K key activates "Keep at {state}" (no-op)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'k' || e.key === 'K') {
+        // no-op: keep is a no-op, just consume the key
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   async function doTransition(to: string) {
     setPending(true)
     setError(null)
@@ -180,7 +192,8 @@ function TransitionButtons({ ticket, onTransitioned }: {
           {tr.label}
         </Button>
       ))}
-      <Button key="keep" size="sm" variant="ghost" disabled={pending}>
+      <Button key="keep" size="sm" variant="ghost" disabled={pending}
+        title="Keep at current state (K)">
         Keep at {ticket.state}
       </Button>
       {error && <p className="text-destructive text-sm w-full">{error}</p>}
@@ -188,6 +201,8 @@ function TransitionButtons({ ticket, onTransitioned }: {
   )
 }
 ```
+
+The `K` key handler is registered via `useEffect` inside `TransitionButtons`. Since "Keep" is a no-op (no API call, no state change), the handler just consumes the key. Add `useEffect` to the React import in the component file.
 
 In `TicketDetail.tsx`, after the markdown section, render `<TransitionButtons>` when a ticket is loaded. Pass an `onTransitioned` callback that calls:
 ```ts
@@ -228,7 +243,7 @@ Frontend:
 
 ### Amendment requests
 
-- [ ] Add keyboard shortcut `K` for the "Keep at {state}" button to the Acceptance Criteria and to the TransitionButtons component in the Approach
+- [x] Add keyboard shortcut `K` for the "Keep at {state}" button to the Acceptance Criteria and to the TransitionButtons component in the Approach
 
 ## History
 
