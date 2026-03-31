@@ -2,14 +2,14 @@
 id = "8c7d47f0"
 title = "apm-server + apm-ui: state transition API and buttons"
 state = "specd"
-priority = 0
+priority = 45
 effort = 4
 risk = 3
 author = "apm"
 agent = "22761"
 branch = "ticket/8c7d47f0-apm-server-apm-ui-state-transition-api-a"
 created_at = "2026-03-31T06:12:47.638355Z"
-updated_at = "2026-03-31T19:16:26.095897Z"
+updated_at = "2026-03-31T19:35:50.371601Z"
 +++
 
 ## Spec
