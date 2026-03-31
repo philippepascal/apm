@@ -1,7 +1,7 @@
 +++
 id = "fabfef3d"
 title = "apm-ui: apm work dry-run preview before engine start"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "17766"
 branch = "ticket/fabfef3d-apm-ui-apm-work-dry-run-preview-before-e"
 created_at = "2026-03-31T06:13:13.767038Z"
-updated_at = "2026-03-31T07:10:13.574404Z"
+updated_at = "2026-03-31T07:10:20.274063Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ New file: `apm-ui/src/components/DryRunPreview.tsx`
 |------|------|----|----|
 | 2026-03-31T06:13Z | — | new | apm |
 | 2026-03-31T07:05Z | new | in_design | philippepascal |
+| 2026-03-31T07:10Z | in_design | specd | claude-0331-0800-b7e2 |
