@@ -25,6 +25,7 @@ All such strings must be escaped before interpolation: `\` → `\\`, `"` → `\"
 
 ### Acceptance criteria
 
+- [ ] All user-supplied strings interpolated into raw TOML format strings are escaped (`\` → `\\`, `"` → `\"`) before use
 
 ### Out of scope
 
