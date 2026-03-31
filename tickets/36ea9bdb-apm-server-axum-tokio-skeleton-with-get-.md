@@ -20,12 +20,12 @@ The UI roadmap (initial_specs/UIdraft_spec_starter.md) requires a Rust HTTP back
 
 ### Acceptance criteria
 
-- [ ] cargo build -p apm-server succeeds
-- [ ] Running apm-server starts HTTP server on port 3000
-- [ ] GET /health returns HTTP 200
-- [ ] GET /health body is exactly {"ok":true}
-- [ ] GET /health has Content-Type: application/json
-- [ ] cargo test --workspace passes
+- [x] cargo build -p apm-server succeeds
+- [x] Running apm-server starts HTTP server on port 3000
+- [x] GET /health returns HTTP 200
+- [x] GET /health body is exactly {"ok":true}
+- [x] GET /health has Content-Type: application/json
+- [x] cargo test --workspace passes
 
 ### Out of scope
 
