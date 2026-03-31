@@ -2,14 +2,14 @@
 id = "6d46e15c"
 title = "apm-server + apm-ui: worker management (list, stop, reassign)"
 state = "specd"
-priority = 0
+priority = 30
 effort = 5
 risk = 3
 author = "apm"
 agent = "9806"
 branch = "ticket/6d46e15c-apm-server-apm-ui-worker-management-list"
 created_at = "2026-03-31T06:13:21.657306Z"
-updated_at = "2026-03-31T19:16:06.912116Z"
+updated_at = "2026-03-31T19:36:41.856508Z"
 +++
 
 ## Spec
