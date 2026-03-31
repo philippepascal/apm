@@ -30,7 +30,7 @@ This ticket adds the `POST /api/sync` endpoint to `apm-server` and the correspon
 - [ ] Clicking the Sync button disables it and shows a loading indicator while the request is in-flight
 - [ ] On success, the Sync button re-enables and TanStack Query invalidates all ticket queries so the swimlanes and detail panel refresh with fresh data
 - [ ] On failure (non-2xx or network error), the Sync button re-enables and an error message is shown to the user
-- [ ] A keyboard shortcut (e.g. `s`) triggers the same sync action as clicking the button
+- [ ] A keyboard shortcut (`Shift+S`) triggers the same sync action as clicking the button
 
 ### Out of scope
 
@@ -59,7 +59,7 @@ This ticket adds the `POST /api/sync` endpoint to `apm-server` and the correspon
 5. `onSuccess`: call `queryClient.invalidateQueries({ queryKey: ['tickets'] })` to refetch all ticket data.
 6. `onError`: surface the error via a shadcn/ui `Toast` or inline alert near the button.
 7. Render a shadcn/ui `<Button>` in the supervisorview header (or shared top bar). While mutation is pending: disabled + spinner icon. Otherwise: normal state with a tooltip showing the keyboard shortcut.
-8. Register a global keydown handler for the `s` key (skip when an input/textarea/editor is focused) to fire the mutation. Use a `useEffect` with cleanup or a hotkey library already present in the project.
+8. Register a global keydown handler for `Shift+S` (skip when an input/textarea/editor is focused) to fire the mutation. Use a `useEffect` with cleanup or a hotkey library already present in the project.
 
 ### Open questions
 
