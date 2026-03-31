@@ -36,7 +36,7 @@ All such strings must be escaped before interpolation: `\` → `\\`, `"` → `\"
 
 ### Approach
 
-How the implementation will work.
+Add a private `fn toml_escape(s: &str) -> String` helper in `apm-core/src/init.rs` that replaces `\` with `\\` and `"` with `\"`. Apply it to every user-supplied string before interpolation in `default_config()`: `name`, `description`, `default_branch`, and `log_file` (which is derived from `name`). Add a unit test asserting that `default_config()` with a name containing `\` and `"` produces valid, parseable TOML.
 
 ### Open questions
 
