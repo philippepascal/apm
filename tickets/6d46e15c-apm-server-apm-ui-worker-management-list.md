@@ -274,7 +274,8 @@ Frontend:
 
 ### Amendment requests
 
-
+- [ ] Add Acceptance Criterion: pressing `Shift+K` while a worker row is focused triggers the same Stop action as clicking the Stop button
+- [ ] Add note to Approach: the implementing agent must verify that `apm_core::start::resolve_agent_name()`, `apm_core::git::list_ticket_worktrees()`, and `ticket::handoff()` exist under exactly these names before writing the handler — they may need to be added to or renamed in apm-core first
 
 ## History
 
