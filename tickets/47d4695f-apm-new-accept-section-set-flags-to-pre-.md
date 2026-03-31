@@ -15,11 +15,14 @@ updated_at = "2026-03-31T00:05:33.516592Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+apm new accepts --no-edit to skip the interactive editor, but agents cannot pre-populate spec sections in a single command. Without section content, the ticket is created empty in `new` state and immediately eligible for pickup by a running `apm work` daemon — a worker may start writing the spec before the creating agent has a chance to fill it in.
+
+Interactive users avoid this because the editor opens synchronously during `apm new`, keeping the ticket in a transient state until they save and close. Agents have no equivalent: they must create the ticket first, then make separate `apm spec` calls — a window where the ticket is vulnerable to premature worker pickup.
+
+The fix is to allow `--section`/`--set` pairs on `apm new`, with the same API as `apm spec`. Sections are written into the ticket file before the first commit, so the ticket never exists in an empty `new` state.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +37,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
