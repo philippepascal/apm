@@ -48,7 +48,13 @@ Desired state: WorkerActivityPanel gains a Stop button per row (live workers onl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Killing a worker by ticket id from the API (the CLI uses ticket id, but the HTTP endpoint uses PID directly — no ticket id → pid lookup needed in this ticket)
+- Sending signals other than SIGTERM (SIGKILL fallback, graceful drain) — not needed at this scale
+- The log tail viewer — covered by ticket e9ba2503 (Step 14)
+- Authentication or authorisation for the stop/take actions — no auth layer exists yet
+- The priority queue in the bottom half of the left column — covered by ticket 7777cf5c (Step 7b)
+- Streaming or SSE updates for the worker list — polling every 5 seconds (established in Step 7a) is sufficient
+- Reassigning a ticket to a specific named agent other than the server's own identity — the UI has no agent picker at this step
 
 ### Approach
 
