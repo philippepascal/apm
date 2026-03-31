@@ -1,14 +1,15 @@
 +++
 id = "6d46e15c"
 title = "apm-server + apm-ui: worker management (list, stop, reassign)"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/6d46e15c-apm-server-apm-ui-worker-management-list"
 created_at = "2026-03-31T06:13:21.657306Z"
-updated_at = "2026-03-31T06:13:21.657306Z"
+updated_at = "2026-03-31T07:29:56.040384Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:13Z | — | new | apm |
+| 2026-03-31T07:29Z | new | in_design | philippepascal |
