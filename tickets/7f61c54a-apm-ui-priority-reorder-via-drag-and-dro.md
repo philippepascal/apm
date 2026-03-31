@@ -99,7 +99,7 @@ In `handleDragEnd` and the keyboard handler, skip any operation if the ticket's 
 
 ### Amendment requests
 
-- [ ] Fix typo in File Changes Summary: `apm-serve/src/routes/tickets.rs` → `apm-server/src/routes/tickets.rs`
+- [x] Fix typo in File Changes Summary: `apm-serve/src/routes/tickets.rs` → `apm-server/src/routes/tickets.rs`
 
 ## History
 
