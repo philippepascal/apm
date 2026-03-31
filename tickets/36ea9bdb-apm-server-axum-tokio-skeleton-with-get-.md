@@ -1,7 +1,7 @@
 +++
 id = "36ea9bdb"
 title = "apm-server: axum/tokio skeleton with GET /health endpoint"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "2356"
 branch = "ticket/36ea9bdb-apm-server-axum-tokio-skeleton-with-get-"
 created_at = "2026-03-31T06:05:42.967376Z"
-updated_at = "2026-03-31T06:09:07.616336Z"
+updated_at = "2026-03-31T06:09:24.082324Z"
 +++
 
 ## Spec
@@ -74,3 +74,4 @@ File changes:
 |------|------|----|----|
 | 2026-03-31T06:05Z | — | new | apm |
 | 2026-03-31T06:06Z | new | in_design | philippepascal |
+| 2026-03-31T06:09Z | in_design | specd | claude-0330-0600-b7f2 |
