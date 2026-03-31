@@ -87,7 +87,7 @@ struct TicketResponse<'a> {
 
 ### Amendment requests
 
-
+- [ ] The Approach references `ticket::normalize_id_arg` — verify this function exists in the current apm-core API. The ID resolution logic may be named differently (e.g. `resolve_id_in_slice` or implemented inline as prefix matching). Update the handler code to use the correct function name.
 
 ## History
 
