@@ -33,7 +33,10 @@ The desired behaviour follows the standard two-stage shutdown pattern used by pr
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Sending SIGTERM or any other signal to workers — they are independent processes and continue running regardless of how the daemon exits
+- A configurable drain timeout — the operator already has the double-Ctrl+C escape hatch for cases where waiting is not an option
+- Changes to non-daemon (`apm work` without `--daemon`) shutdown behaviour
+- Changes to `apm start` or any other command
 
 ### Approach
 
