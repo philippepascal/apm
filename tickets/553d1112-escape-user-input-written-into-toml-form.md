@@ -30,7 +30,9 @@ All such strings must be escaped before interpolation: `\` → `\\`, `"` → `\"
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Escaping values already handled by serde/toml (struct serialization via `toml::to_string`)
+- TOML values not wrapped in double-quoted strings (integers, booleans, arrays)
+- Validation or sanitisation of branch names beyond TOML correctness
 
 ### Approach
 
