@@ -3,12 +3,12 @@ id = "8e46686e"
 title = "apm-ui: review-screen transition keyboard shortcut algorithm"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0331-1200-a7b9"
 branch = "ticket/8e46686e-apm-ui-review-screen-transition-keyboard"
 created_at = "2026-03-31T18:19:43.047043Z"
-updated_at = "2026-03-31T18:19:52.398096Z"
+updated_at = "2026-03-31T18:20:30.411230Z"
 +++
 
 ## Spec
