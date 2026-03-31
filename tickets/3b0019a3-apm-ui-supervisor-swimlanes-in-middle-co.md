@@ -20,12 +20,12 @@ The middle column (SupervisorView) is an empty shell from Step 4. It needs to re
 
 Currently there is no way to see supervisor-actionable tickets in the UI. The supervisor must use the CLI to identify what needs review, approval, or unblocking. The swimlane view gives a columnar overview of every ticket in a state that requires supervisor action, making the workscreen the primary interface for the supervision workflow.
 
-The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`) are: **question**, **specd**, **blocked**, **implemented**, and **accepted**. Swimlanes for states with no tickets must be hidden. Tickets within a swimlane are shown as compact summary cards. Clicking a card updates the global `selectedTicketId` in Zustand, which will drive the right-column detail panel (Step 6).
+The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`) are: **question**, **specd**, **ammend**, **blocked**, **implemented**, and **accepted**. Swimlanes for states with no tickets must be hidden. Tickets within a swimlane are shown as compact summary cards. Clicking a card updates the global `selectedTicketId` in Zustand, which will drive the right-column detail panel (Step 6).
 
 ### Acceptance criteria
 
 - [ ] SupervisorView renders a horizontal row of swimlane columns, one per supervisor-actionable state that has at least one ticket
-- [ ] Swimlanes appear in a fixed order matching the workflow: question, specd, blocked, implemented, accepted
+- [ ] Swimlanes appear in a fixed order matching the workflow: question, specd, ammend, blocked, implemented, accepted
 - [ ] A swimlane with zero tickets is not rendered
 - [ ] Each swimlane has a header showing the state label and a count of tickets in that state
 - [ ] Each ticket is rendered as a card showing: short id (first 8 chars), title, agent name (or empty if unassigned), effort badge, risk badge
