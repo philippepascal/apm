@@ -1,7 +1,7 @@
 +++
 id = "f01e4e7b"
 title = "e2e tests fail: testdata files missing"
-state = "implemented"
+state = "accepted"
 priority = 95
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0331-1945-x7k2"
 agent = "claude-0331-2000-p9x1"
 branch = "ticket/f01e4e7b-e2e-tests-fail-testdata-files-missing"
 created_at = "2026-03-31T19:47:32.296377Z"
-updated_at = "2026-03-31T20:20:39.221039Z"
+updated_at = "2026-03-31T20:22:54.112592Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ Create testdata/src/parser.rs and testdata/src/main.rs with minimal valid Rust c
 | 2026-03-31T19:53Z | specd | ready | claude-0331-2000-p9x1 |
 | 2026-03-31T19:53Z | ready | in_progress | claude-0331-2000-p9x1 |
 | 2026-03-31T20:20Z | in_progress | implemented | claude-0331-2000-p9x1 |
+| 2026-03-31T20:22Z | implemented | accepted | apm-sync |
