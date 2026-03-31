@@ -16,7 +16,7 @@ updated_at = "2026-03-31T06:49:16.790304Z"
 
 ### Problem
 
-The review button on the ticket detail panel should open a full markdown editor. Frontmatter and the History section must be read-only (CodeMirror compartments); all other sections are editable. Checkboxes render as interactive UI elements. Add PUT /api/tickets/:id/body to commit the edited content back to the ticket branch. Full spec context: initial_specs/UIdraft_spec_starter.md Step 9. Requires Step 8.
+The ticket detail panel (right column, Step 6) shows ticket content as read-only markdown. There is no way to edit a ticket body from the UI. The review button on the detail panel (Step 8) should open a full CodeMirror 6 editor occupying the supervisor-view and ticket-detail columns. The editor must enforce read-only constraints on the frontmatter block and the History section while allowing free editing everywhere else. Checkboxes must render as interactive UI elements. A new PUT /api/tickets/:id/body endpoint commits the edited content back to the ticket branch using the existing git::commit_to_branch function in apm-core.
 
 ### Acceptance criteria
 
