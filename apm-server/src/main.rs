@@ -9,8 +9,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
+enum TicketSource {
+    Git(PathBuf, PathBuf),
+    InMemory(Vec<apm_core::ticket::Ticket>),
+}
+
 struct AppState {
-    tickets: Vec<apm_core::ticket::Ticket>,
+    source: TicketSource,
 }
 
 #[derive(serde::Serialize)]
@@ -40,6 +45,20 @@ impl From<tokio::task::JoinError> for AppError {
     }
 }
 
+async fn load_tickets(state: &AppState) -> Result<Vec<apm_core::ticket::Ticket>, AppError> {
+    match &state.source {
+        TicketSource::Git(root, tickets_dir) => {
+            let root = root.clone();
+            let tickets_dir = tickets_dir.clone();
+            Ok(tokio::task::spawn_blocking(move || {
+                apm_core::ticket::load_all_from_git(&root, &tickets_dir)
+            })
+            .await??)
+        }
+        TicketSource::InMemory(tickets) => Ok(tickets.clone()),
+    }
+}
+
 async fn health_handler() -> Json<serde_json::Value> {
     Json(serde_json::json!({"ok": true}))
 }
@@ -47,12 +66,12 @@ async fn health_handler() -> Json<serde_json::Value> {
 async fn list_tickets(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TicketResponse>>, AppError> {
-    let response = state
-        .tickets
-        .iter()
+    let tickets = load_tickets(&state).await?;
+    let response = tickets
+        .into_iter()
         .map(|t| TicketResponse {
-            frontmatter: t.frontmatter.clone(),
-            body: t.body.clone(),
+            frontmatter: t.frontmatter,
+            body: t.body,
         })
         .collect();
     Ok(Json(response))
@@ -62,8 +81,8 @@ async fn get_ticket(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Response, AppError> {
-    let tickets = &state.tickets;
-    match apm_core::ticket::resolve_id_in_slice(tickets, &id) {
+    let tickets = load_tickets(&state).await?;
+    match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
         Err(e) => {
             let msg = e.to_string();
             if msg.contains("no ticket matches") {
@@ -75,10 +94,10 @@ async fn get_ticket(
             }
         }
         Ok(full_id) => {
-            let ticket = tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap();
+            let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
             Ok(Json(TicketResponse {
-                frontmatter: ticket.frontmatter.clone(),
-                body: ticket.body.clone(),
+                frontmatter: ticket.frontmatter,
+                body: ticket.body,
             })
             .into_response())
         }
@@ -87,10 +106,9 @@ async fn get_ticket(
 
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
-    let tickets =
-        apm_core::ticket::load_all_from_git(&root, &config.tickets.dir).unwrap_or_default();
-    let state = Arc::new(AppState { tickets });
-    // Run from repo root so apm-ui/dist resolves correctly
+    let state = Arc::new(AppState {
+        source: TicketSource::Git(root, config.tickets.dir),
+    });
     let serve_dir = ServeDir::new("apm-ui/dist")
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
     Router::new()
@@ -103,7 +121,9 @@ fn build_app(root: PathBuf) -> Router {
 
 #[cfg(test)]
 fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
-    let state = Arc::new(AppState { tickets });
+    let state = Arc::new(AppState {
+        source: TicketSource::InMemory(tickets),
+    });
     Router::new()
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
