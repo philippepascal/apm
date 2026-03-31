@@ -49,7 +49,38 @@ The `GET /api/tickets` response already includes a `body` field (Step 2 spec), s
 
 ### Approach
 
-How the implementation will work.
+**Modify `apm-ui/src/components/supervisor/SupervisorView.tsx`**
+
+Add four pieces of local state at the top of the component:
+- `searchText: string` (default `""`)
+- `stateFilter: string | null` (default `null`)
+- `agentFilter: string | null` (default `null`)
+- `showClosed: boolean` (default `false`)
+
+**Derive `visibleStates`** — the ordered list of swimlane state columns to consider:
+1. Start with `SUPERVISOR_STATES` (the existing hard-coded list: question, specd, blocked, implemented, accepted)
+2. If `showClosed` is true, append `['closed', 'cancelled']`
+3. If `stateFilter` is non-null, override to just `[stateFilter]` (stateFilter takes full precedence)
+
+**Derive `availableAgents: string[]`** — unique, non-empty, sorted agent values from all loaded tickets. Used to populate the agent dropdown.
+
+**Filter tickets within each swimlane** — before passing tickets to `Swimlane`, apply:
+- Agent filter: if `agentFilter` is set, keep only `ticket.agent === agentFilter`
+- Text filter: if `searchText.trim()` is non-empty, keep only tickets where `ticket.title` or `ticket.body ?? ""` includes `searchText` (case-insensitive via `.toLowerCase()`)
+
+A swimlane is still hidden when zero tickets pass the filter (existing behaviour unchanged).
+
+**Add a `FilterBar` section** at the top of the SupervisorView render, above the swimlane row. Either inline in `SupervisorView.tsx` or extracted to `components/supervisor/FilterBar.tsx` (prefer inline if it stays readable).
+
+FilterBar contains (using shadcn components):
+- `Input` for text search; show a clear (×) button when `searchText` is non-empty
+- `Select` for state: a fixed option list of all workflow states (`new`, `in_design`, `question`, `specd`, `ready`, `in_progress`, `blocked`, `implemented`, `accepted`, `closed`, `cancelled`) plus a "All states" default option
+- `Select` for agent: options from `availableAgents` plus an "All agents" default option
+- `Switch` (or `Checkbox`) labelled "Show closed"
+
+**Empty-state message**: when `visibleStates` produces zero non-empty swimlanes after filtering, render a short message such as "No tickets match the current filters" in place of the swimlane grid.
+
+**No backend changes required.** The `GET /api/tickets` response already includes a `body` field (per Step 2 spec), so all filtering is purely client-side.
 
 ### Open questions
 
