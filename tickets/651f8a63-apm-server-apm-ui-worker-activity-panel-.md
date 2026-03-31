@@ -4,12 +4,12 @@ title = "apm-server + apm-ui: worker activity panel (running workers, top of lef
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "apm"
 agent = "19736"
 branch = "ticket/651f8a63-apm-server-apm-ui-worker-activity-panel-"
 created_at = "2026-03-31T06:12:27.354130Z"
-updated_at = "2026-03-31T06:37:50.390961Z"
+updated_at = "2026-03-31T06:37:57.021614Z"
 +++
 
 ## Spec
