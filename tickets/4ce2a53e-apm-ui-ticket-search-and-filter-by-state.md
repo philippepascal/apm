@@ -40,7 +40,12 @@ The `GET /api/tickets` response already includes a `body` field (Step 2 spec), s
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Persisting filter state to localStorage, URL params, or any other storage across page reloads
+- Server-side filtering or new API endpoints (all filtering is client-side on cached data)
+- Visual badges for open questions or amendment requests on ticket cards (covered by ticket ebae68e2, Step 14c)
+- Log tail viewer (covered by ticket e9ba2503, Step 14b)
+- Keyboard navigation across swimlanes (covered by Step 6)
+- Debouncing or throttling the text search input (unnecessary at ticket scale)
 
 ### Approach
 
