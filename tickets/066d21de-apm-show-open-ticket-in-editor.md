@@ -22,7 +22,7 @@ apm show <id> currently prints ticket content to stdout. Engineers and agents of
 
 - [x] `apm show <id> --edit` opens the ticket in `$VISUAL` (falling back to `$EDITOR`, then `vi`) instead of printing to stdout
 - [x] Without `--edit`, `apm show` continues to print to stdout unchanged
-- [ ] The editor receives a temp file containing the full raw ticket content (frontmatter + body)
+- [x] The editor receives a temp file containing the full raw ticket content (frontmatter + body)
 - [ ] After the editor exits cleanly, if the content changed, it is committed to the ticket branch via `commit_to_branch` with message `ticket(<id>): edit`
 - [ ] If the content is unchanged after editing, no commit is made
 - [ ] When `$VISUAL` and `$EDITOR` are both unset, the command falls back to `vi`
