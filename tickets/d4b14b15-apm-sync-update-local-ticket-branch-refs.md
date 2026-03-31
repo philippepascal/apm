@@ -15,11 +15,26 @@ updated_at = "2026-03-31T05:10:37.544124Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+After any operation that commits to a ticket branch and pushes to origin (state transitions, close, accept, spec writes via apm spec), the local branch ref is not updated — only origin/ticket/... advances. This causes apm clean to emit "local tip differs from origin" warnings and skip those branches, making clean effectively a no-op until the user manually fetches.
+
+The fix is to update local branch refs to match origin after each push. This must handle several scenarios correctly:
+
+Happy paths:
+- Branch exists locally and is not checked out anywhere: update-ref to match origin
+- Branch exists locally and is checked out in a worktree: skip (git refuses to update checked-out refs; the worktree HEAD stays authoritative)
+- Branch does not exist locally yet: create local ref pointing to origin tip
+- apm sync running a full refresh: update all local refs in one pass, skipping checked-out ones
+
+Sad paths:
+- Origin push failed (network error, rejected): do not update local ref — local and origin are already consistent at the pre-push tip
+- origin/ticket/... does not exist after push (very unlikely, but guard it): skip silently
+- Branch is checked out in a worktree AND has uncommitted changes: skip — no local ref update should be attempted, worktree state is preserved
+- Branch is checked out in the main worktree (rare but possible if user ran git checkout manually): skip
+- Multiple worktrees have the same branch checked out (should not happen, but guard it): skip
+- update-ref fails for any unexpected reason: warn and continue, do not abort the parent operation
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +49,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
