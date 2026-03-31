@@ -42,7 +42,64 @@ Affected: anyone using the review screen keyboard shortcuts to progress tickets.
 
 ### Approach
 
-How the implementation will work.
+Prerequisites: 8c7d47f0 (transition buttons and valid_transitions API) and a6c115e1 (review screen) must be implemented.
+
+**1. Algorithm — pure function in `apm-ui/src/lib/transitionShortcuts.ts` (new file)**
+
+```ts
+const RESERVED = new Set(['k']);
+
+export function assignShortcuts(transitionTargets: string[]): Map<string, string> {
+  const result = new Map<string, string>();
+  const used = new Set<string>(RESERVED);
+
+  for (const target of transitionTargets) {
+    let assigned: string | null = null;
+    // Try letters of the state name first
+    for (const ch of target.toLowerCase().replace(/[^a-z]/g, '')) {
+      if (!used.has(ch)) { assigned = ch; break; }
+    }
+    // Fall back to alphabet scan
+    if (!assigned) {
+      for (let i = 0; i < 26; i++) {
+        const ch = String.fromCharCode(97 + i);
+        if (!used.has(ch)) { assigned = ch; break; }
+      }
+    }
+    if (assigned) {
+      result.set(target, assigned);
+      used.add(assigned);
+    }
+  }
+  return result;
+}
+```
+
+**2. Button rendering — in the TransitionButtons component (from 8c7d47f0)**
+
+Call `assignShortcuts(ticket.valid_transitions.map(t => t.to))` to get the shortcut map. For each transition button, find the assigned letter and render the button label with that character visually highlighted (underline via CSS or bracket notation).
+
+Example: if transition is `→ ready` and assigned letter is `r`, render the button label as `→ **r**eady` (underline the `r`).
+
+**3. Keydown handler — in the ReviewEditor component (from a6c115e1)**
+
+Add a CodeMirror keymap extension (or a React useEffect) that listens for letter keys while the editor is mounted:
+- On `k`: fire the "Keep" action (close editor without transitioning)
+- On any assigned letter: find the matching transition and fire it (same call as clicking the button: POST /api/tickets/:id/transition)
+- Guard: do not fire if a nested input/textarea/contenteditable has focus
+
+**4. Tests**
+
+Unit test `assignShortcuts` in `apm-ui/src/lib/transitionShortcuts.test.ts`:
+- Basic case: `['ready', 'blocked']` → `{ready: 'r', blocked: 'b'}`
+- Conflict: `['ready', 'review']` → `{ready: 'r', review: 'e'}` (second letter of 'review')
+- Reserved K: `['kept', 'closed']` → `{kept: 'e', closed: 'c'}` (k skipped for 'kept')
+- Overflow: alphabet exhaustion falls back correctly
+
+**File changes:**
+- `apm-ui/src/lib/transitionShortcuts.ts` — new file (algorithm)
+- `apm-ui/src/lib/transitionShortcuts.test.ts` — new file (unit tests)
+- `apm-ui/src/components/TicketDetail.tsx` or `ReviewEditor.tsx` — wire algorithm + keydown handler into transition buttons
 
 ### Open questions
 
