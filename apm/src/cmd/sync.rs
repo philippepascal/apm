@@ -26,10 +26,6 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         }
     }
 
-    if !offline || aggressive {
-        git::push_ticket_branches(root);
-    }
-
     let branches = git::ticket_branches(root)?;
     if !quiet {
         println!(
@@ -53,6 +49,10 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         if confirmed {
             sync::apply(root, &config, &Candidates { accept: vec![], close: close_cands }, "apm-sync")?;
         }
+    }
+
+    if aggressive {
+        git::push_ticket_branches(root);
     }
 
     Ok(())
