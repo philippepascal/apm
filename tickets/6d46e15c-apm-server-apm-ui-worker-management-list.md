@@ -4,12 +4,12 @@ title = "apm-server + apm-ui: worker management (list, stop, reassign)"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 2
+risk = 3
 author = "apm"
 agent = "9806"
 branch = "ticket/6d46e15c-apm-server-apm-ui-worker-management-list"
 created_at = "2026-03-31T06:13:21.657306Z"
-updated_at = "2026-03-31T19:15:29.348904Z"
+updated_at = "2026-03-31T19:15:51.350659Z"
 +++
 
 ## Spec
