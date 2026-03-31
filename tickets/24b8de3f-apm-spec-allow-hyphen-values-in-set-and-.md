@@ -32,7 +32,7 @@ Both gaps force agents into awkward workarounds when writing amendment requests 
 - [x] `--set-file` with a non-existent path returns a clear error
 - [x] `--set` and `--set-file` are mutually exclusive; providing both returns an error
 - [x] `--set -` (stdin) continues to work as before
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
