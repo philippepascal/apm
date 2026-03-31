@@ -56,7 +56,12 @@ The right column (TicketDetail) is a labelled placeholder stub delivered by Step
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Navigation into the worker queue (left column); Step 7 will extend the keyboard nav to include those tickets
+- Editing ticket content — covered by Step 9
+- State transition buttons on the detail panel — covered by Step 8
+- The review/editor screen — covered by Step 9
+- Persistence of selected ticket across browser sessions
+- Keyboard navigation within the WorkerView panel (left column) — Step 7
 
 ### Approach
 
