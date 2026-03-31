@@ -21,6 +21,18 @@ Interactive users avoid this because the editor opens synchronously during `apm 
 
 The fix is to allow `--section`/`--set` pairs on `apm new`, with the same API as `apm spec`. Sections are written into the ticket file before the first commit, so the ticket never exists in an empty `new` state.
 
+Example:
+
+```
+apm new --no-edit "title" \
+  --section Problem --set "What is broken..." \
+  --section "Acceptance criteria" --set "- [ ] ..." \
+  --section "Out of scope" --set "..." \
+  --section Approach --set "..."
+```
+
+The ticket is created fully specd in a single atomic command.
+
 ### Acceptance criteria
 
 
