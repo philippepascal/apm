@@ -22,7 +22,7 @@ The other two spawn paths — `run_next()` and `spawn_next_worker()` — already
 
 ### Acceptance criteria
 
-- [ ] `apm start <id> --spawn` uses the `instructions` file named in the ticket's pre-transition state config, not the hardcoded `.apm/apm.worker.md`
+- [x] `apm start <id> --spawn` uses the `instructions` file named in the ticket's pre-transition state config, not the hardcoded `.apm/apm.worker.md`
 - [ ] When the state has no `instructions` field, or the referenced file cannot be read, the spawn falls back to `.apm/apm.worker.md` (and then to the inline default string)
 - [ ] No state name strings are hardcoded in `start.rs`
 - [ ] `cargo test --workspace` passes
