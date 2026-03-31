@@ -1,14 +1,15 @@
 +++
 id = "7f61c54a"
 title = "apm-ui: priority reorder via drag-and-drop in worker queue"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/7f61c54a-apm-ui-priority-reorder-via-drag-and-dro"
 created_at = "2026-03-31T06:13:11.256058Z"
-updated_at = "2026-03-31T06:13:11.256058Z"
+updated_at = "2026-03-31T06:57:21.975360Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:13Z | — | new | apm |
+| 2026-03-31T06:57Z | new | in_design | philippepascal |
