@@ -228,7 +228,7 @@ Frontend:
 
 ### Amendment requests
 
-
+- [ ] Add keyboard shortcut `K` for the "Keep at {state}" button to the Acceptance Criteria and to the TransitionButtons component in the Approach
 
 ## History
 
