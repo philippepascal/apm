@@ -29,7 +29,7 @@ This ticket delivers the structural shell only: three labelled empty panels that
 - [x] Three panels labelled WorkerView, SupervisorView, and TicketDetail render side-by-side on the workscreen with no content inside them
 - [x] Dragging the divider between any two adjacent columns resizes them in real time
 - [x] Each column has a toggle control (button or icon) that hides it when clicked
-- [ ] Hiding a column collapses it to zero width; clicking its toggle again restores it
+- [x] Hiding a column collapses it to zero width; clicking its toggle again restores it
 - [ ] Attempting to hide the last visible column has no effect (the column stays visible)
 - [ ] Column visibility state is held in the Zustand store and survives React re-renders without resetting
 - [ ] The Zustand store exposes selectedTicketId (null by default) and column width percentages alongside the visibility flags
