@@ -24,14 +24,62 @@ The backend already exposes or will expose `PATCH /api/tickets/:id` (first intro
 
 ### Acceptance criteria
 
+- [ ] Clicking the `effort` value in the ticket detail panel activates an inline number input
+- [ ] Clicking the `risk` value in the ticket detail panel activates an inline number input
+- [ ] Clicking the `priority` value in the ticket detail panel activates an inline number input
+- [ ] Pressing Enter or blurring the input commits the change via `PATCH /api/tickets/:id`
+- [ ] Pressing Escape cancels the edit and restores the previous value without a network request
+- [ ] The UI reflects the updated value immediately after a successful PATCH (optimistic update via TanStack Query cache invalidation)
+- [ ] `PATCH /api/tickets/:id` body `{"effort":N}` updates the effort field in the ticket frontmatter and commits it to the ticket branch
+- [ ] `PATCH /api/tickets/:id` body `{"risk":N}` updates the risk field in the ticket frontmatter and commits it to the ticket branch
+- [ ] `PATCH /api/tickets/:id` body `{"priority":N}` updates the priority field in the ticket frontmatter and commits it to the ticket branch
+- [ ] Submitting a value outside the valid range (effort/risk: 1–10; priority: 0–255) shows an inline validation error and does not issue a PATCH request
+- [ ] If the PATCH request returns an error, the field reverts to its pre-edit value and a toast error is shown
+- [ ] Each inline control is keyboard-accessible: Tab focuses the field, Enter activates edit mode
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Editing any other frontmatter fields (title, state, agent, author) inline — those are handled elsewhere
+- The full markdown editor (CodeMirror) — that is Step 9
+- The sync button (`POST /api/sync`) — that is the sibling ticket Step 13a
+- Drag-and-drop priority reordering in the worker queue — that is Step 11
+- Persisting the PATCH endpoint itself if Step 11 is not yet merged; this ticket may need to introduce `PATCH /api/tickets/:id` if it does not already exist
 
 ### Approach
 
-How the implementation will work.
+**Backend — `apm-server`**
+
+1. If `PATCH /api/tickets/:id` does not yet exist (Step 11 not merged), add it. The handler accepts a JSON body with any subset of `{"effort": N, "risk": N, "priority": N}` (partial update — unknown keys are ignored or rejected with 400).
+2. For each provided field, call `ticket::set_field(&mut fm, field, value)` from `apm-core` (already handles effort, risk, priority with range validation returning an error for 0–255; note effort/risk semantic range 1–10 is enforced client-side only, server accepts 0–255).
+3. Serialize the updated frontmatter back into the ticket file and commit it to the ticket branch using the same git-commit helper used by `PUT /api/tickets/:id/body`.
+4. Return the updated ticket JSON (same shape as `GET /api/tickets/:id`).
+
+**Frontend — `apm-ui`**
+
+5. Create an `InlineNumberField` component (e.g. `src/components/InlineNumberField.tsx`) that:
+   - Renders a styled span showing the current value by default
+   - On click (or Enter when focused), switches to a `<input type="number">` pre-filled with the current value
+   - On blur or Enter: calls the `onCommit(newValue)` callback; reverts on Escape
+   - Accepts `min`/`max` props for client-side range validation; shows an inline error badge if violated (no network call)
+6. In the ticket detail panel (`TicketDetail` or equivalent component), replace the static `effort`, `risk`, and `priority` display with `InlineNumberField` instances wired to a TanStack Query mutation:
+   ```ts
+   useMutation({
+     mutationFn: (patch) => fetch(`/api/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+     onSuccess: () => queryClient.invalidateQueries(['ticket', id]),
+     onError: () => { revert(); toast.error('Update failed') },
+   })
+   ```
+7. Use optimistic updates (via `onMutate` / `onError` rollback) so the value updates instantly in the UI.
+8. Fields and their valid ranges:
+   - `effort`: min=1, max=10
+   - `risk`: min=1, max=10
+   - `priority`: min=0, max=255
+
+**Files changed**
+
+- `apm-server/src/routes/tickets.rs` — add/extend PATCH handler
+- `apm-ui/src/components/InlineNumberField.tsx` — new reusable component
+- `apm-ui/src/components/TicketDetail.tsx` — wire in the three fields
 
 ### Open questions
 
