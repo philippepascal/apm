@@ -42,7 +42,62 @@ The CLI already implements the dry-run logic in `apm/src/cmd/work.rs:run_dry()`:
 
 ### Approach
 
-How the implementation will work.
+The implementation has two parts: a new API endpoint in `apm-server` and a new UI component in `apm-ui`. Both depend on Step 12a being merged first.
+
+**1. Backend — `GET /api/work/dry-run` in `apm-server`**
+
+Add a handler in `apm-server/src/routes/work.rs` (or wherever Step 12a placed the work routes):
+
+```rust
+// Response type
+#[derive(serde::Serialize)]
+struct DryRunCandidate {
+    id: String,
+    title: String,
+    state: String,
+    priority: u8,
+    effort: u8,
+    risk: u8,
+    score: f64,
+}
+
+#[derive(serde::Serialize)]
+struct DryRunResponse {
+    candidates: Vec<DryRunCandidate>,
+}
+```
+
+Logic mirrors `apm/src/cmd/work.rs:run_dry()`:
+1. Load config and tickets via `Config::load(root)` and `ticket::load_all_from_git(root, &config.tickets.dir)`.
+2. Determine `startable` states: those with a `command:start` trigger.
+3. Determine `actionable` states: `config.actionable_states_for("agent")`.
+4. Filter tickets to those whose state is in both sets.
+5. Sort by `score(pw, ew, rw)` descending.
+6. Take at most `config.agents.max_concurrent` entries.
+7. Return 200 `{ "candidates": [...] }`.
+
+Wire the route: `GET /api/work/dry-run` → handler, registered in the router alongside the Step 12a routes.
+
+No new apm-core functions are needed — the filtering and scoring logic is already public.
+
+**2. Frontend — `DryRunPreview` component in `apm-ui`**
+
+New file: `apm-ui/src/components/DryRunPreview.tsx`
+
+- Uses TanStack Query: `useQuery({ queryKey: ['work-dry-run'], queryFn: () => fetch('/api/work/dry-run').then(r => r.json()) })`.
+- Query is enabled only when the engine is **stopped** (read `engineStatus` from the Zustand store set by Step 12a).
+- Renders a shadcn/ui `Card` or `Table` inside the workerview column (below the start/stop controls from Step 12a):
+  - If `candidates.length === 0`: show "No tickets ready to dispatch."
+  - Otherwise: one row per candidate showing `#<id>` badge, title, state badge, score.
+- Include a "Refresh" icon button that calls `queryClient.invalidateQueries(['work-dry-run'])`.
+
+**Integration point with Step 12a:**
+- The panel is conditionally rendered: `{engineStatus === 'stopped' && <DryRunPreview />}`.
+- `engineStatus` lives in the Zustand store introduced by Step 12a; this ticket only reads it.
+
+**Tests:**
+- Unit test the handler in `apm-server/tests/` using an in-memory config with a small set of tickets, asserting order and count of candidates.
+- React component tested via Vitest + Testing Library: mock the fetch, assert rows render, assert empty-state renders.
 
 ### Open questions
 
