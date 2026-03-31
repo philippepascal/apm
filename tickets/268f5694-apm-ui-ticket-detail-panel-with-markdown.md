@@ -4,12 +4,12 @@ title = "apm-ui: ticket detail panel with markdown viewer and keyboard navigatio
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "apm"
 agent = "20759"
 branch = "ticket/268f5694-apm-ui-ticket-detail-panel-with-markdown"
 created_at = "2026-03-31T06:12:10.547637Z"
-updated_at = "2026-03-31T06:33:17.048018Z"
+updated_at = "2026-03-31T06:33:21.074872Z"
 +++
 
 ## Spec
