@@ -4,12 +4,12 @@ title = "apm-ui: priority queue panel (bottom of left column, apm next ordering)
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "7369"
 branch = "ticket/7777cf5c-apm-ui-priority-queue-panel-bottom-of-le"
 created_at = "2026-03-31T06:12:28.610477Z"
-updated_at = "2026-03-31T06:41:46.058134Z"
+updated_at = "2026-03-31T06:41:52.552067Z"
 +++
 
 ## Spec
