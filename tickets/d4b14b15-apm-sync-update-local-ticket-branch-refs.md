@@ -42,7 +42,7 @@ Sad paths:
 - [x] `apm sync` does not update the local ref for a branch that is currently checked out in a permanent worktree
 - [x] `apm sync` does not update the local ref for the branch currently checked out in the main worktree
 - [x] When `git update-ref` fails for a single branch, `apm sync` emits a warning to stderr and continues without aborting the overall sync
-- [ ] `apm sync --offline` (no fetch) does not call the local-ref update logic
+- [x] `apm sync --offline` (no fetch) does not call the local-ref update logic
 
 ### Out of scope
 
