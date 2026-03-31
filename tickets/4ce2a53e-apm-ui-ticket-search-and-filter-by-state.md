@@ -3,13 +3,13 @@ id = "4ce2a53e"
 title = "apm-ui: ticket search and filter (by state, agent, text)"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 agent = "45935"
 branch = "ticket/4ce2a53e-apm-ui-ticket-search-and-filter-by-state"
 created_at = "2026-03-31T06:13:17.849783Z"
-updated_at = "2026-03-31T07:18:19.647756Z"
+updated_at = "2026-03-31T07:22:54.799244Z"
 +++
 
 ## Spec
