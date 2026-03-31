@@ -16,7 +16,11 @@ updated_at = "2026-03-31T07:18:19.647756Z"
 
 ### Problem
 
-There is no way to filter the ticket list beyond the swimlane grouping. Add client-side text search across titles and bodies, and filter controls for state, agent, and show-closed toggle (parity with apm list --state and --all). Full spec context: initial_specs/UIdraft_spec_starter.md Step 14. Requires Step 5.
+The supervisor swimlane view (Step 5) only shows tickets grouped by supervisor-actionable states, with no way to search by text, filter to a specific state or agent, or surface closed/cancelled tickets. Supervisors who need to find a specific ticket by content, check on a specific agent's work, or review completed tickets must fall back to the CLI.
+
+The fix is a filter bar above the swimlane grid that provides parity with the two most-used CLI flags: `apm list --state <state>` (narrow to one state, including any non-supervisor state) and `apm list --all` (expose closed/cancelled). Text search and an agent picker round out the filtering surface.
+
+The `GET /api/tickets` response already includes a `body` field (Step 2 spec), so all filtering can run client-side against TanStack Query's cached data — no new backend endpoints are needed.
 
 ### Acceptance criteria
 
