@@ -3,13 +3,13 @@ id = "56499b61"
 title = "apm-server + apm-ui: apm work engine start/stop controls"
 state = "in_design"
 priority = 0
-effort = 5
+effort = 6
 risk = 4
 author = "apm"
 agent = "12358"
 branch = "ticket/56499b61-apm-server-apm-ui-apm-work-engine-start-"
 created_at = "2026-03-31T06:13:12.529756Z"
-updated_at = "2026-03-31T19:16:46.067797Z"
+updated_at = "2026-03-31T19:24:09.452700Z"
 +++
 
 ## Spec
