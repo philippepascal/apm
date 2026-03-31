@@ -30,7 +30,14 @@ There is no frontend. The backend steps (Steps 1 and 2) will deliver an axum ser
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Any visible UI components or rendering of ticket data on the page (Steps 4+)
+- The Zustand store (Step 4)
+- Keyboard navigation or column layout (Step 4)
+- A Vite dev-server proxy to the Rust backend (dev convenience; not needed to validate the stack)
+- Hot-module replacement or watch mode in production
+- shadcn/ui component installation — only the base setup (Tailwind, CSS variables, `cn` util) is needed
+- Authentication or CORS configuration
+- Embedding the UI assets into the Rust binary at compile time
 
 ### Approach
 
