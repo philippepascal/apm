@@ -1,14 +1,15 @@
 +++
 id = "36ea9bdb"
 title = "apm-server: axum/tokio skeleton with GET /health endpoint"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/36ea9bdb-apm-server-axum-tokio-skeleton-with-get-"
 created_at = "2026-03-31T06:05:42.967376Z"
-updated_at = "2026-03-31T06:05:42.967376Z"
+updated_at = "2026-03-31T06:06:10.291031Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:05Z | — | new | apm |
+| 2026-03-31T06:06Z | new | in_design | philippepascal |
