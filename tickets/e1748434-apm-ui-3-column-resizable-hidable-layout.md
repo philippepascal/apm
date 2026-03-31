@@ -9,7 +9,7 @@ author = "apm"
 agent = "15877"
 branch = "ticket/e1748434-apm-ui-3-column-resizable-hidable-layout"
 created_at = "2026-03-31T06:11:50.266948Z"
-updated_at = "2026-03-31T19:02:37.681203Z"
+updated_at = "2026-03-31T19:06:35.005808Z"
 +++
 
 ## Spec
