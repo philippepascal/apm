@@ -4,12 +4,12 @@ title = "apm-server: ticket list and detail API endpoints"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "38135"
 branch = "ticket/54eb5bfc-apm-server-ticket-list-and-detail-api-en"
 created_at = "2026-03-31T06:11:28.689659Z"
-updated_at = "2026-03-31T06:16:23.405469Z"
+updated_at = "2026-03-31T06:16:27.598404Z"
 +++
 
 ## Spec
