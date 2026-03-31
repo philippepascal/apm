@@ -24,14 +24,69 @@ The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`
 
 ### Acceptance criteria
 
+- [ ] SupervisorView renders a horizontal row of swimlane columns, one per supervisor-actionable state that has at least one ticket
+- [ ] Swimlanes appear in a fixed order matching the workflow: question, specd, blocked, implemented, accepted
+- [ ] A swimlane with zero tickets is not rendered
+- [ ] Each swimlane has a header showing the state label and a count of tickets in that state
+- [ ] Each ticket is rendered as a card showing: short id (first 8 chars), title, agent name (or empty if unassigned), effort badge, risk badge
+- [ ] Clicking a ticket card sets selectedTicketId in the Zustand store to that ticket's id
+- [ ] The card for the currently selected ticket is visually highlighted
+- [ ] Ticket data is loaded from GET /api/tickets via TanStack Query
+- [ ] The swimlanes update automatically when the query refetches (no manual page reload required)
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Keyboard arrow-key navigation across swimlanes (covered by Step 6)
+- Ticket detail rendering (covered by Step 6)
+- The worker activity panel and priority queue (covered by Step 7)
+- State transition buttons on cards (covered by Step 8)
+- Drag-and-drop reordering (covered by Step 11)
+- Search or filter controls (covered by Step 14)
+- Open question / amendment badges on cards (covered by Step 14c)
 
 ### Approach
 
-How the implementation will work.
+**New files** (inside `apm-ui/src/`):
+
+- `components/supervisor/SupervisorView.tsx` — top-level component placed inside the middle column panel from Step 4; renders the swimlane row
+- `components/supervisor/Swimlane.tsx` — renders a single state column: header (label + count) and a scrollable list of TicketCard components
+- `components/supervisor/TicketCard.tsx` — compact card for one ticket
+
+**Data fetching**
+
+Use the existing TanStack Query hook (established in Step 3) that calls `GET /api/tickets`. The response is an array of ticket objects with at minimum: `id`, `title`, `state`, `agent`, `effort`, `risk`.
+
+**Supervisor-state filter**
+
+Hard-code the ordered list of supervisor-actionable states:
+```ts
+const SUPERVISOR_STATES = ['question', 'specd', 'blocked', 'implemented', 'accepted'] as const;
+```
+These match the `actionable = ["supervisor"]` entries in `.apm/config.toml`. Hard-coding is intentional — the config is not served by the API at this stage.
+
+**Grouping logic** (inside SupervisorView)
+
+1. Filter all tickets to only those whose `state` is in `SUPERVISOR_STATES`
+2. Group into a `Map<state, Ticket[]>`
+3. Iterate `SUPERVISOR_STATES` in order; skip any state with an empty group
+4. Render one `Swimlane` per non-empty state
+
+**TicketCard fields**
+
+- Short id: `ticket.id.slice(0, 8)`
+- Title: `ticket.title`
+- Agent: `ticket.agent` or a dash if unassigned
+- Effort badge: `E:{ticket.effort}` using shadcn Badge variant secondary; omit if effort is 0
+- Risk badge: `R:{ticket.risk}` using shadcn Badge variant destructive for risk >= 7, secondary otherwise; omit if risk is 0
+- Apply a ring highlight class when `ticket.id === selectedTicketId`
+
+**Zustand wiring**
+
+Read `selectedTicketId` and `setSelectedTicketId` from the Zustand store (established in Step 4). On card click, call `setSelectedTicketId(ticket.id)`.
+
+**Styling**
+
+Use shadcn Card for TicketCard and Tailwind for layout. The swimlane row uses `flex flex-row gap-4 overflow-x-auto h-full`. Each swimlane column uses `flex flex-col min-w-[220px] max-w-[280px]`.
 
 ### Open questions
 
