@@ -1,7 +1,7 @@
 +++
 id = "ac97bef7"
 title = "docs: Docker worker setup guide"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "91470"
 branch = "ticket/ac97bef7-docs-docker-worker-setup-guide"
 created_at = "2026-03-30T19:55:27.882184Z"
-updated_at = "2026-03-30T20:31:39.995925Z"
+updated_at = "2026-03-31T05:05:18.226155Z"
 +++
 
 ## Spec
@@ -120,3 +120,4 @@ This ticket creates two things: a `docs/` directory at the repo root and a singl
 | 2026-03-30T20:10Z | ready | in_progress | philippepascal |
 | 2026-03-30T20:12Z | in_progress | implemented | claude-0330-2015-d4f2 |
 | 2026-03-30T20:31Z | implemented | accepted | apm-sync |
+| 2026-03-31T05:05Z | accepted | closed | apm-sync |
