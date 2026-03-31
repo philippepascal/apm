@@ -1,14 +1,15 @@
 +++
 id = "51038e03"
 title = "apm-server + apm-ui: new ticket form with section pre-population"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/51038e03-apm-server-apm-ui-new-ticket-form-with-s"
 created_at = "2026-03-31T06:12:50.437393Z"
-updated_at = "2026-03-31T06:12:50.437393Z"
+updated_at = "2026-03-31T06:53:50.711229Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:12Z | — | new | apm |
+| 2026-03-31T06:53Z | new | in_design | philippepascal |
