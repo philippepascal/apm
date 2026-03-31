@@ -29,7 +29,12 @@ The frontend needs read access to ticket data served over HTTP. Currently there 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Write/mutation endpoints (covered by later steps: state transition, body edit, ticket create)
+- Authentication or authorization
+- Pagination, sorting, or filtering of the ticket list
+- The React/Vite frontend that consumes these endpoints (Step 3)
+- Worker, sync, or state-transition endpoints
+- The apm-server crate scaffold itself (Step 1 prerequisite)
 
 ### Approach
 
