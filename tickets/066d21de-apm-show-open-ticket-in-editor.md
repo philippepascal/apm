@@ -26,7 +26,7 @@ apm show <id> currently prints ticket content to stdout. Engineers and agents of
 - [x] After the editor exits cleanly, if the content changed, it is committed to the ticket branch via `commit_to_branch` with message `ticket(<id>): edit`
 - [x] If the content is unchanged after editing, no commit is made
 - [x] When `$VISUAL` and `$EDITOR` are both unset, the command falls back to `vi`
-- [ ] If the editor exits with a non-zero status, the command prints an error and exits non-zero without committing
+- [x] If the editor exits with a non-zero status, the command prints an error and exits non-zero without committing
 
 ### Out of scope
 
