@@ -31,12 +31,12 @@ The ticket detail panel (right column, Step 6) shows ticket content as read-only
 - [ ] PUT /api/tickets/:id/body returns 422 when the submitted content modifies the frontmatter block or the History section relative to the current branch content
 - [ ] The editor has a Cancel button that closes the editor and returns to the read-only detail view
 - [ ] If there are unsaved changes, clicking Cancel shows a confirmation dialog before discarding
-- [ ] Cmd+S / Ctrl+S inside the editor triggers the save action
+- [ ] The review panel shows one state-transition button per valid next state; each button's keyboard shortcut is a single letter derived from the transition-shortcut-algorithm (the same algorithm used by the global keyboard handler)
+- [ ] A "Keep at {state}" button is always shown in the review panel with keyboard shortcut K; clicking it closes the editor without changing state
 
 ### Out of scope
 
 - Editing frontmatter fields (title, state, priority, effort, risk) inline — covered by Step 13b
-- State transition buttons in the editor — delivered by Step 8
 - New ticket creation form — covered by Step 10
 - Live collaboration or auto-save
 - Syntax highlighting beyond the standard CodeMirror markdown mode
@@ -78,9 +78,11 @@ Frontend — apm-ui
       - History range: from position of "\n## History" to end of document
    c. Install a changeFilter transaction extension that rejects any transaction whose changes intersect either protected range. This is the correct CodeMirror 6 approach for per-range read-only (EditorState.readOnly is document-wide; changeFilter is per-range).
    d. Install a ViewPlugin that decorates "- [ ] " and "- [x] " lines with Decoration.widget (an HTML checkbox). The widget dispatches a transaction on click that replaces the "[ ]"/"[x]" text in the source.
-   e. Toolbar: Save button (calls PUT /api/tickets/:id/body), Cancel button
-   f. Keyboard shortcut: keymap extension binding Mod-s to the save action
-   g. Dirty tracking: compare current doc to initial doc string; if dirty and Cancel clicked, show window.confirm before closing
+   e. Toolbar:
+      - Save button (calls PUT /api/tickets/:id/body)
+      - Cancel / "Keep at {state}" button (keyboard shortcut K): closes editor without changing state; prompts if dirty
+      - One state-transition button per valid next state for the current ticket; each button's keyboard shortcut label is derived by the same transition-shortcut-algorithm used by the global keyboard handler. Clicking a transition button first saves (PUT /api/tickets/:id/body) then calls the state-transition API.
+   f. Dirty tracking: compare current doc to initial doc string; if dirty and Cancel / "Keep at {state}" clicked, show window.confirm before closing
 
 6. Modify TicketDetail (apm-ui/src/components/TicketDetail.tsx):
    - When reviewMode is false: show existing read-only markdown view
@@ -107,9 +109,9 @@ Key constraints:
 
 ### Amendment requests
 
-- [ ] Remove Acceptance Criterion "Cmd+S / Ctrl+S inside the editor triggers the save action" — Ctrl+S is not a keyboard shortcut in the editor per the updated keyboard spec
-- [ ] Add Acceptance Criterion: the review panel shows state transition buttons with computed keyboard shortcuts (one letter per transition target, derived per the transition-shortcut-algorithm ticket)
-- [ ] Add Acceptance Criterion: a "Keep at {state}" button is always shown in the review panel with keyboard shortcut `K`
+- [x] Remove Acceptance Criterion "Cmd+S / Ctrl+S inside the editor triggers the save action" — Ctrl+S is not a keyboard shortcut in the editor per the updated keyboard spec
+- [x] Add Acceptance Criterion: the review panel shows state transition buttons with computed keyboard shortcuts (one letter per transition target, derived per the transition-shortcut-algorithm ticket)
+- [x] Add Acceptance Criterion: a "Keep at {state}" button is always shown in the review panel with keyboard shortcut `K`
 
 ## History
 
