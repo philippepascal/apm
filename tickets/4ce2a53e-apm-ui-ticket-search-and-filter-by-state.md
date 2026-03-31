@@ -1,7 +1,7 @@
 +++
 id = "4ce2a53e"
 title = "apm-ui: ticket search and filter (by state, agent, text)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "76050"
 branch = "ticket/4ce2a53e-apm-ui-ticket-search-and-filter-by-state"
 created_at = "2026-03-31T06:13:17.849783Z"
-updated_at = "2026-03-31T18:23:38.654140Z"
+updated_at = "2026-03-31T18:27:23.981094Z"
 +++
 
 ## Spec
@@ -99,3 +99,4 @@ FilterBar contains (using shadcn components):
 | 2026-03-31T07:23Z | in_design | specd | claude-0331-0800-b7f2 |
 | 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
 | 2026-03-31T18:23Z | ammend | in_design | philippepascal |
+| 2026-03-31T18:27Z | in_design | specd | claude-0331-1430-s9w2 |
