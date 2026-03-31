@@ -2,14 +2,14 @@
 id = "3b0019a3"
 title = "apm-ui: supervisor swimlanes in middle column"
 state = "specd"
-priority = 0
+priority = 55
 effort = 3
 risk = 2
 author = "apm"
 agent = "6610"
 branch = "ticket/3b0019a3-apm-ui-supervisor-swimlanes-in-middle-co"
 created_at = "2026-03-31T06:11:59.993473Z"
-updated_at = "2026-03-31T19:09:49.673196Z"
+updated_at = "2026-03-31T19:35:32.219958Z"
 +++
 
 ## Spec
