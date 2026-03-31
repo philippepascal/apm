@@ -1,7 +1,7 @@
 +++
 id = "6d46e15c"
 title = "apm-server + apm-ui: worker management (list, stop, reassign)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "9806"
 branch = "ticket/6d46e15c-apm-server-apm-ui-worker-management-list"
 created_at = "2026-03-31T06:13:21.657306Z"
-updated_at = "2026-03-31T19:15:51.350659Z"
+updated_at = "2026-03-31T19:16:06.912116Z"
 +++
 
 ## Spec
@@ -297,3 +297,4 @@ If any of these are missing or named differently, add or rename them in `apm-cor
 | 2026-03-31T07:34Z | in_design | specd | claude-0331-0730-b7f2 |
 | 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
 | 2026-03-31T19:12Z | ammend | in_design | philippepascal |
+| 2026-03-31T19:16Z | in_design | specd | claude-0331-1430-c9d2 |
