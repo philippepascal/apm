@@ -94,7 +94,7 @@ Use shadcn Card for TicketCard and Tailwind for layout. The swimlane row uses `f
 
 ### Amendment requests
 
-
+- [ ] Add `'ammend'` to the `SUPERVISOR_STATES` ordered list in the Approach — place it after `'specd'` (reflecting the real workflow order: specd → ammend). Tickets in `ammend` state require supervisor attention and must appear in the swimlanes.
 
 ## History
 
