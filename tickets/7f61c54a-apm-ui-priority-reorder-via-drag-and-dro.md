@@ -24,6 +24,16 @@ Affected users: anyone supervising an apm work session via the web UI.
 
 ### Acceptance criteria
 
+- [ ] Dragging a ticket card to a new position in the queue reorders the list visually before the server responds (optimistic update)
+- [ ] After a drag reorder, PATCH /api/tickets/:id is sent with the updated priority value for the moved ticket
+- [ ] The queue order after drag reflects the same dispatch order that apm next would compute
+- [ ] Pressing the up-arrow key while a queue item is focused moves it one position up in the queue
+- [ ] Pressing the down-arrow key while a queue item is focused moves it one position down in the queue
+- [ ] Keyboard reorder triggers the same PATCH /api/tickets/:id call as drag reorder
+- [ ] If the PATCH request fails, the queue reverts to its pre-reorder order and an error toast is shown
+- [ ] Reordering the priority queue does not affect the swimlane layout in the middle column
+- [ ] A ticket with state in_progress cannot be reordered in the queue via drag or keyboard
+- [ ] PATCH /api/tickets/:id accepts a JSON body with a priority integer (0-255) and persists it to the ticket branch via git
 
 ### Out of scope
 
