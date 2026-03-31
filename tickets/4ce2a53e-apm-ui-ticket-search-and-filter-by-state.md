@@ -88,7 +88,7 @@ FilterBar contains (using shadcn components):
 
 ### Amendment requests
 
-- [ ] Remove `'cancelled'` from the show-closed toggle's extra-states list in the Approach — there is no `cancelled` state in the workflow config. The list should be `['closed']` only.
+- [x] Remove `'cancelled'` from the show-closed toggle's extra-states list in the Approach — there is no `cancelled` state in the workflow config. The list should be `['closed']` only.
 
 ## History
 
