@@ -26,7 +26,7 @@ This ticket delivers the structural shell only: three labelled empty panels that
 
 ### Acceptance criteria
 
-- [ ] Three panels labelled WorkerView, SupervisorView, and TicketDetail render side-by-side on the workscreen with no content inside them
+- [x] Three panels labelled WorkerView, SupervisorView, and TicketDetail render side-by-side on the workscreen with no content inside them
 - [ ] Dragging the divider between any two adjacent columns resizes them in real time
 - [ ] Each column has a toggle control (button or icon) that hides it when clicked
 - [ ] Hiding a column collapses it to zero width; clicking its toggle again restores it
