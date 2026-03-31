@@ -36,14 +36,28 @@ The ticket is created fully specd in a single atomic command.
 
 ### Acceptance criteria
 
+- [ ] `apm new --no-edit "title" --section Problem --set "text"` creates a ticket with the Problem section pre-populated in the initial git commit
+- [ ] Multiple `--section`/`--set` pairs apply all named sections atomically before the first commit
+- [ ] Mismatched pair counts (e.g. two `--section` flags but one `--set` flag, or vice versa) return a clear error
+- [ ] `--set` without `--section` returns an error consistent with `apm spec` behaviour
+- [ ] Section names are validated with the same rules as `apm spec` (known built-in names, or config-defined sections when `[ticket.sections]` is non-empty)
+- [ ] The ticket git history never contains an intermediate empty-section commit when sections are provided at creation time
+- [ ] All existing `apm new` flags (`--no-edit`, `--side-note`, `--context`, `--context-section`) continue to work unchanged
+- [ ] `cargo test --workspace` passes, including a new integration test for multi-section pre-population
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `--mark` flag support on `apm new` (only `--set` is needed for creation)
+- Changing spec validation behaviour or the `specd` transition rules
+- Support for `--section`/`--set` on the interactive editor path (only applies with `--no-edit`)
 
 ### Approach
 
-How the implementation will work.
+Add `section: Vec<String>` and `set: Vec<String>` args to the `New` subcommand in `main.rs`. Validate at the start of `cmd::new::run` that the two vecs have equal length (error if not), and that `--set` is not present without `--section`. Pass the pairs as `Vec<(String, String)>` into `ticket::create` in `apm-core/src/ticket.rs`.
+
+Inside `ticket::create`, after the body template is built (and after the existing `--context` substitution), iterate over the section/value pairs and apply each one using `spec::set_section` (for built-in structured sections) or `spec::set_section_body` (for custom sections), using the same dispatch logic that `cmd::spec::run` already uses. Serialize the final body and pass it to `commit_to_branch` as normal — no extra commit is needed.
+
+Add an integration test in `apm/tests/integration.rs` that calls `apm new --no-edit` with two `--section`/`--set` pairs and asserts that `git show` on the branch at HEAD contains the expected section content.
 
 ### Open questions
 
