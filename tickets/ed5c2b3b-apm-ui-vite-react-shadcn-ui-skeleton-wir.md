@@ -1,7 +1,7 @@
 +++
 id = "ed5c2b3b"
 title = "apm-ui: Vite + React + shadcn/ui skeleton wired to backend"
-state = "implemented"
+state = "accepted"
 priority = 70
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "51401"
 branch = "ticket/ed5c2b3b-apm-ui-vite-react-shadcn-ui-skeleton-wir"
 created_at = "2026-03-31T06:11:40.599936Z"
-updated_at = "2026-03-31T21:52:16.009650Z"
+updated_at = "2026-03-31T23:12:36.869120Z"
 +++
 
 ## Spec
@@ -202,3 +202,4 @@ Steps to confirm it works end-to-end:
 | 2026-03-31T19:43Z | specd | ready | apm |
 | 2026-03-31T21:45Z | ready | in_progress | philippepascal |
 | 2026-03-31T21:52Z | in_progress | implemented | claude-0331-2145-b7f2 |
+| 2026-03-31T23:12Z | implemented | accepted | philippepascal |
