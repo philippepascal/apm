@@ -38,7 +38,48 @@ The frontend needs read access to ticket data served over HTTP. Currently there 
 
 ### Approach
 
-How the implementation will work.
+**Prerequisite:** Step 1 (`apm-server` crate with axum/tokio and `GET /health`) must be `implemented` before this ticket moves to `ready`.
+
+**Files to change:**
+
+1. `apm-server/Cargo.toml` — add deps: `serde_json`, `apm-core` (path dep)
+2. `apm-server/src/main.rs` — extend `AppState` to hold `root: PathBuf` and `tickets_dir: PathBuf`; register the two new routes
+3. `apm-server/src/routes/tickets.rs` (new file, or inline in main.rs if small) — implement the two handlers
+
+**AppState:**
+```rust
+struct AppState {
+    root: PathBuf,
+    tickets_dir: PathBuf,  // relative, from apm.toml config.tickets_dir
+}
+```
+Populated at startup by reading `apm_core::config::load(&root)`.
+
+**Response type:**
+`Frontmatter` already derives `serde::Serialize`. Define a local response struct to avoid leaking the dummy `path`:
+```rust
+#[derive(serde::Serialize)]
+struct TicketResponse<'a> {
+    #[serde(flatten)]
+    frontmatter: &'a Frontmatter,
+    body: &'a str,
+}
+```
+
+**`GET /api/tickets` handler:**
+1. Clone `state.root` and `state.tickets_dir`
+2. `tokio::task::spawn_blocking(move || ticket::load_all_from_git(&root, &tickets_dir))` — keeps the async runtime unblocked
+3. Map results to `TicketResponse`, serialise with `axum::Json`
+
+**`GET /api/tickets/:id` handler:**
+1. Extract `:id` path param; call `ticket::normalize_id_arg(&id)` — return 400 on parse error
+2. Load all tickets via `spawn_blocking` (same as above)
+3. Find the first ticket whose `frontmatter.id.starts_with(&prefix)` — return 404 if none
+4. Return `axum::Json(TicketResponse { ... })`
+
+**Error handling:** Use `axum::response::IntoResponse`; map `anyhow::Error` to a 500 with a plain-text body. A thin `AppError` newtype wrapping `anyhow::Error` is sufficient.
+
+**Tests:** Add a unit test in `apm-server/src/main.rs` (or a separate test module) that starts the server against the real repo root and confirms both endpoints return 200/404 as expected. Use `axum::test` or `reqwest` + `tokio::test`.
 
 ### Open questions
 
