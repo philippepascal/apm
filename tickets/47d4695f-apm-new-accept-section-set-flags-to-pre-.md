@@ -1,15 +1,15 @@
 +++
 id = "47d4695f"
 title = "apm new: accept --section/--set flags to pre-populate spec sections"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
-agent = "66061"
+agent = "philippepascal"
 branch = "ticket/47d4695f-apm-new-accept-section-set-flags-to-pre-"
 created_at = "2026-03-31T00:05:27.351459Z"
-updated_at = "2026-03-31T04:44:41.238100Z"
+updated_at = "2026-03-31T04:45:01.569105Z"
 +++
 
 ## Spec
@@ -77,3 +77,4 @@ Add an integration test in `apm/tests/integration.rs` that calls `apm new --no-e
 | 2026-03-31T04:36Z | new | in_design | philippepascal |
 | 2026-03-31T04:39Z | in_design | specd | claude-0330-0000-w47f |
 | 2026-03-31T04:44Z | specd | ready | apm |
+| 2026-03-31T04:45Z | ready | in_progress | philippepascal |
