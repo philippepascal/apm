@@ -1,7 +1,7 @@
 +++
 id = "d4b14b15"
 title = "apm sync: update local ticket branch refs after remote operations"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "33670"
 branch = "ticket/d4b14b15-apm-sync-update-local-ticket-branch-refs"
 created_at = "2026-03-31T05:10:30.606044Z"
-updated_at = "2026-03-31T05:32:34.000188Z"
+updated_at = "2026-03-31T05:32:40.589806Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ No new files needed — the function lives alongside `push_ticket_branches` and 
 | 2026-03-31T05:10Z | new | in_design | apm |
 | 2026-03-31T05:25Z | in_design | new | apm |
 | 2026-03-31T05:25Z | new | in_design | philippepascal |
+| 2026-03-31T05:32Z | in_design | specd | claude-0330-spec-d4b1 |
