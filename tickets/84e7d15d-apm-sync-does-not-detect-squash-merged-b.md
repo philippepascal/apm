@@ -1,7 +1,7 @@
 +++
 id = "84e7d15d"
 title = "apm sync does not detect squash-merged branches"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "56990"
 branch = "ticket/84e7d15d-apm-sync-does-not-detect-squash-merged-b"
 created_at = "2026-03-30T20:34:55.205183Z"
-updated_at = "2026-03-30T20:51:29.961536Z"
+updated_at = "2026-03-31T05:05:14.260003Z"
 +++
 
 ## Spec
@@ -97,3 +97,4 @@ When GitHub auto-deletes the remote branch after a squash merge, `origin/ticket/
 | 2026-03-30T20:43Z | ready | in_progress | philippepascal |
 | 2026-03-30T20:49Z | in_progress | implemented | claude-0330-2045-x7k2 |
 | 2026-03-30T20:51Z | implemented | accepted | apm-sync |
+| 2026-03-31T05:05Z | accepted | closed | apm-sync |
