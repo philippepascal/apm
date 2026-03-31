@@ -2,14 +2,14 @@
 id = "e9ba2503"
 title = "apm-server + apm-ui: log tail viewer via SSE"
 state = "specd"
-priority = 0
+priority = 25
 effort = 5
 risk = 3
 author = "apm"
 agent = "37259"
 branch = "ticket/e9ba2503-apm-server-apm-ui-log-tail-viewer-via-ss"
 created_at = "2026-03-31T06:13:19.097973Z"
-updated_at = "2026-03-31T07:26:57.426309Z"
+updated_at = "2026-03-31T19:36:58.193515Z"
 +++
 
 ## Spec
