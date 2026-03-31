@@ -16,7 +16,7 @@ updated_at = "2026-03-31T06:13:41.748340Z"
 
 ### Problem
 
-The frontend needs read access to tickets. Add GET /api/tickets (all tickets as JSON array via ticket::load_all_from_git) and GET /api/tickets/:id (single ticket, frontmatter + body). This also validates that apm-core logic works correctly in an async axum context. Full spec context: initial_specs/UIdraft_spec_starter.md Step 2. Requires Step 1.
+The frontend needs read access to ticket data served over HTTP. Currently there is no API layer — only the CLI and the underlying `apm-core` library. Adding `GET /api/tickets` and `GET /api/tickets/:id` endpoints to the axum server (scaffolded in Step 1) gives the frontend a stable JSON interface to list all tickets and inspect individual ones. It also validates that `apm-core`'s synchronous git-reading functions integrate cleanly with axum's async runtime without blocking the event loop.
 
 ### Acceptance criteria
 
