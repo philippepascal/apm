@@ -7,6 +7,7 @@ use axum::{
 };
 use std::path::PathBuf;
 use std::sync::Arc;
+use tower_http::services::{ServeDir, ServeFile};
 
 struct AppState {
     root: PathBuf,
@@ -102,10 +103,14 @@ fn build_app(root: PathBuf) -> Router {
         root,
         tickets_dir: config.tickets.dir,
     });
+    // Run from repo root so apm-ui/dist resolves correctly
+    let serve_dir = ServeDir::new("apm-ui/dist")
+        .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
     Router::new()
         .route("/health", get(health_handler))
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
+        .nest_service("/", serve_dir)
         .with_state(state)
 }
 
