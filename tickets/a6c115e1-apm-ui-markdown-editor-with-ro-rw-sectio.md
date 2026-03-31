@@ -107,7 +107,9 @@ Key constraints:
 
 ### Amendment requests
 
-
+- [ ] Remove Acceptance Criterion "Cmd+S / Ctrl+S inside the editor triggers the save action" — Ctrl+S is not a keyboard shortcut in the editor per the updated keyboard spec
+- [ ] Add Acceptance Criterion: the review panel shows state transition buttons with computed keyboard shortcuts (one letter per transition target, derived per the transition-shortcut-algorithm ticket)
+- [ ] Add Acceptance Criterion: a "Keep at {state}" button is always shown in the review panel with keyboard shortcut `K`
 
 ## History
 
