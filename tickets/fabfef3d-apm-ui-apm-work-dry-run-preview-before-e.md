@@ -16,7 +16,9 @@ updated_at = "2026-03-31T07:05:53.084511Z"
 
 ### Problem
 
-Users need to see what would be dispatched before starting the work engine. Add a dry-run preview panel (backed by GET /api/work/dry-run) that shows candidate tickets and their intended workers, visible before clicking start. Full spec context: initial_specs/UIdraft_spec_starter.md Step 12. Requires Step 12a.
+When the apm work engine is stopped, users have no way to preview which tickets would be dispatched if they started it. They must either start the engine and watch what it does, or run `apm work --dry-run` on the command line. Neither gives visibility directly from the UI before committing to a start.
+
+The CLI already implements the dry-run logic in `apm/src/cmd/work.rs:run_dry()`: load all tickets from git, filter to actionable+startable states, sort by score (priority_weight × priority + effort_weight × effort + risk_weight × risk), and take up to `max_concurrent`. This ticket exposes that same logic through a `GET /api/work/dry-run` HTTP endpoint and renders the result in a preview panel in the workerview column, visible whenever the engine is stopped.
 
 ### Acceptance criteria
 
