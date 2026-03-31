@@ -50,7 +50,51 @@ The dependency on Step 12a (ticket 56499b61) means `apm-server`, its `AppState`,
 
 ### Approach
 
-How the implementation will work.
+**Prerequisites:** `apm-server` crate (Step 1), its `AppState` struct (populated through Steps 2–12a), and the `apm-ui` workscreen layout (Step 4) are already in place.
+
+---
+
+**Server-side — `apm-server/src/routes/log.rs` (new file)**
+
+1. Add `log_file: PathBuf` to `AppState` in `apm-server/src/main.rs`, populated at startup from `config.logging.file` (the same field already used by `apm-core::logger`).
+2. Wire the new route in the axum router:
+   ```
+   GET /api/log/stream  →  log::stream_handler
+   ```
+3. Handler logic (`stream_handler`):
+   - Open the log file; if it does not exist, return HTTP 404 immediately.
+   - Read the last 100 lines: seek to end, walk backward byte-by-byte collecting newlines, read the resulting slice. Send each line as a `data: <line>\n\n` SSE event.
+   - Record the current file length as `offset`.
+   - Spawn a `tokio::task` that:
+     - Every 250 ms: stat the file; if the length grew, read the new bytes from `offset`, split on `\n`, send each non-empty line as a `data:` event, advance `offset`.
+     - Every 15 s: send a `: keepalive\n\n` comment to the client.
+     - Exits when the response channel is closed (client disconnected).
+   - Return `Sse::new(ReceiverStream::new(rx))` with the appropriate headers (`Cache-Control: no-cache`).
+4. Use `axum::response::sse::{Event, Sse}` and `tokio::sync::mpsc` for the channel.
+
+---
+
+**UI-side — `apm-ui/src/components/LogPanel.tsx` (new file)**
+
+1. Use the browser's built-in `EventSource` (no polyfill needed); open it when the panel is mounted, close it when unmounted.
+2. Maintain a `lines: string[]` state capped at 500 entries; on each SSE `message` event, append the new line and slice the oldest off if over the cap.
+3. Track `isReconnecting` state: set it true in the `EventSource` `onerror` handler, clear it on the next successful `onmessage`.
+4. Auto-scroll: use a `ref` on the scroll container. After each `lines` update, if the user has not scrolled up (tracked via `onScroll`), call `container.scrollTop = container.scrollHeight`.
+5. Render:
+   - A header row with the "Logs" label and a toggle chevron.
+   - A monospace `<pre>` / `<code>` block for the log lines.
+   - A "Reconnecting…" badge overlaid at the top of the panel when `isReconnecting` is true.
+6. Integrate into the workscreen layout (`apm-ui/src/App.tsx` or the workscreen root component) as a collapsible section below the three columns, using the shadcn/ui `Collapsible` component.
+7. Add `logPanelOpen: boolean` and `setLogPanelOpen` to the Zustand workscreen store.
+
+---
+
+**File changes summary:**
+- `apm-server/src/routes/log.rs` — new file (~80 lines)
+- `apm-server/src/main.rs` — add `log_file` field to `AppState`, register route
+- `apm-ui/src/components/LogPanel.tsx` — new file (~120 lines)
+- `apm-ui/src/store.ts` — add `logPanelOpen` + `setLogPanelOpen`
+- `apm-ui/src/App.tsx` (or workscreen root) — mount `LogPanel` below columns, wire toggle
 
 ### Open questions
 
