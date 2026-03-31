@@ -2,14 +2,14 @@
 id = "ed5c2b3b"
 title = "apm-ui: Vite + React + shadcn/ui skeleton wired to backend"
 state = "specd"
-priority = 0
+priority = 70
 effort = 4
 risk = 2
 author = "apm"
 agent = "98941"
 branch = "ticket/ed5c2b3b-apm-ui-vite-react-shadcn-ui-skeleton-wir"
 created_at = "2026-03-31T06:11:40.599936Z"
-updated_at = "2026-03-31T06:19:51.987162Z"
+updated_at = "2026-03-31T19:35:19.497576Z"
 +++
 
 ## Spec
