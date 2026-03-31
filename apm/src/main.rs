@@ -574,8 +574,11 @@ the given substring:
         #[arg(long)]
         section: Option<String>,
         /// New content for the section; use "-" to read from stdin
-        #[arg(long)]
+        #[arg(long, allow_hyphen_values = true)]
         set: Option<String>,
+        /// Read new section content from this file
+        #[arg(long, value_name = "PATH", conflicts_with = "set")]
+        set_file: Option<String>,
         /// Check that all required sections are non-empty
         #[arg(long)]
         check: bool,
@@ -647,7 +650,7 @@ fn main() -> Result<()> {
         Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
-        Command::Spec { id, section, set, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, check, mark, no_aggressive),
+        Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
     }
 }
