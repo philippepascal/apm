@@ -25,6 +25,10 @@ A secondary minor issue: the dev-dependency on tower 0.4.13 conflicts with axum'
 
 ### Acceptance criteria
 
+- [ ] list_tickets and get_ticket tests use an isolated in-process ticket store, not the live repo on disk
+- [ ] No test hardcodes a real ticket ID from the apm repo
+- [ ] tower dev-dependency is on 0.5, eliminating the duplicate in Cargo.lock
+- [ ] All four existing test cases (200 list, 200 detail, 404, 400) continue to pass
 
 ### Out of scope
 
