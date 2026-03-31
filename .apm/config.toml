@@ -66,7 +66,7 @@ label        = "New"
 color        = "#6b7280"
 layer        = 1
 actionable   = ["agent"]
-instructions = "apm.spec-writer.md"
+instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "in_design"
@@ -110,7 +110,7 @@ label        = "Ammend"
 color        = "#ef4444"
 layer        = 1
 actionable   = ["agent"]
-instructions = "apm.spec-writer.md"
+instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -134,7 +134,7 @@ label        = "In Design"
 color        = "#f97316"
 layer        = 1
 actionable   = ["agent"]
-instructions = "apm.spec-writer.md"
+instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -153,7 +153,7 @@ label        = "Ready"
 color        = "#10b981"
 layer        = 1
 actionable   = ["agent"]
-instructions = "apm.worker.md"
+instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -175,7 +175,7 @@ id           = "in_progress"
 label        = "In Progress"
 color        = "#8b5cf6"
 layer        = 2
-instructions = "apm.worker.md"
+instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to            = "implemented"
