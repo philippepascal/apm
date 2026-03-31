@@ -1,7 +1,7 @@
 +++
 id = "54eb5bfc"
 title = "apm-server: ticket list and detail API endpoints"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "38135"
 branch = "ticket/54eb5bfc-apm-server-ticket-list-and-detail-api-en"
 created_at = "2026-03-31T06:11:28.689659Z"
-updated_at = "2026-03-31T06:16:35.046598Z"
+updated_at = "2026-03-31T18:15:23.412924Z"
 +++
 
 ## Spec
@@ -96,3 +96,4 @@ struct TicketResponse<'a> {
 | 2026-03-31T06:11Z | — | new | apm |
 | 2026-03-31T06:13Z | new | in_design | philippepascal |
 | 2026-03-31T06:16Z | in_design | specd | claude-0330-0615-b7f2 |
+| 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
