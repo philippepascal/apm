@@ -34,7 +34,11 @@ The CLI already implements the dry-run logic in `apm/src/cmd/work.rs:run_dry()`:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The start/stop button and engine status indicator (covered by Step 12a)
+- Assigning specific named worker processes to candidate tickets (workers are spawned dynamically at start time; the preview shows candidates, not assignments)
+- Auto-refresh / polling of the dry-run panel (a manual refresh button is sufficient)
+- Filtering candidates by agent or any other criterion beyond what the existing score-based algorithm already does
+- Any changes to the CLI `apm work --dry-run` behaviour
 
 ### Approach
 
