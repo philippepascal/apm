@@ -146,7 +146,7 @@ setNewTicketOpen: (v: boolean) => void;
 
 ### Amendment requests
 
-
+- [ ] Verify the `ticket::create` function signature before writing the handler — specifically whether it takes an `aggressive: bool` parameter added in a recent refactor. Update the example code in the Approach to match the actual current signature.
 
 ## History
 
