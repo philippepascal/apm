@@ -36,14 +36,66 @@ Sad paths:
 
 ### Acceptance criteria
 
+- [ ] After `apm sync` fetches new commits on a ticket branch pushed by another agent, `apm clean` no longer emits a "local tip differs from origin" warning for that branch
+- [ ] After `apm sync`, a ticket branch that exists only on origin (no local ref yet) gains a local ref pointing to the origin tip
+- [ ] After `apm sync`, a ticket branch whose local ref was already equal to origin is left unchanged
+- [ ] `apm sync` does not update the local ref for a branch that is currently checked out in a permanent worktree
+- [ ] `apm sync` does not update the local ref for the branch currently checked out in the main worktree
+- [ ] When `git update-ref` fails for a single branch, `apm sync` emits a warning to stderr and continues without aborting the overall sync
+- [ ] `apm sync --offline` (no fetch) does not call the local-ref update logic
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating local refs after operations other than `apm sync` (individual `apm state`, `apm spec`, `apm close` commands do not need this; the divergence is resolved on the next `apm sync`)
+- Handling non-ticket branches (only `ticket/*` namespace)
+- Force-updating local refs when they are ahead of origin (this ticket only handles origin-ahead or origin-equal cases that are visible after fetch)
+- Any changes to `apm clean`'s comparison logic — the fix is upstream in sync, not in clean
 
 ### Approach
 
-How the implementation will work.
+**New function in `apm-core/src/git.rs`:** `pub fn sync_local_ticket_refs(root: &Path)`
+
+1. Get all branches currently checked out across all worktrees:
+   - Run `git worktree list --porcelain` (reuse the same porcelain parsing already used by `find_worktree_for_branch` and `list_ticket_worktrees`)
+   - Collect every `branch refs/heads/<name>` line into a `HashSet<String>` of branch names
+   - This covers the main worktree, permanent ticket worktrees, and any temporary worktrees
+
+2. Enumerate all origin ticket branches:
+   - Run `git for-each-ref --format=%(refname:short) refs/remotes/origin/ticket/`
+   - Each result is of the form `origin/ticket/<slug>`, strip the `origin/` prefix to get the local branch name `ticket/<slug>`
+
+3. For each origin ticket branch:
+   - If `ticket/<slug>` is in the checked-out set: skip silently
+   - Resolve the origin SHA: `git rev-parse refs/remotes/origin/ticket/<slug>` — if this fails (ref vanished between enumeration and resolve): skip silently
+   - Call `git update-ref refs/heads/ticket/<slug> <sha>` — this creates the local ref if absent or advances/sets it if present; it is intentionally unconditional for non-checked-out branches
+   - If `update-ref` fails: `eprintln!("warning: could not update local ref {branch}: {e:#}")` and continue; do not propagate the error
+
+4. Function signature returns `()` (not `Result`) — all failures are handled internally as warnings
+
+**Call site in `apm/src/cmd/sync.rs`:**
+
+In the `Ok(_)` arm of `git::fetch_all` (currently lines 11–17), add a call to `git::sync_local_ticket_refs(root)` immediately after the fetch succeeds. Do not call it in the offline path.
+
+```rust
+if !offline {
+    match git::fetch_all(root) {
+        Ok(_) => {
+            git::sync_local_ticket_refs(root);  // new
+        }
+        Err(e) => {
+            eprintln!("warning: fetch failed (no remote configured?): {e:#}");
+        }
+    }
+}
+```
+
+**Tests to add in `apm-core/tests/` or inline in `git.rs`:**
+
+- Integration test: create a bare origin, two clones; clone A pushes a new commit to `ticket/xxx`; clone B fetches (via `fetch_all`) then `sync_local_ticket_refs`; assert clone B's local `refs/heads/ticket/xxx` equals origin's tip
+- Test: branch checked out in a worktree is skipped (local ref unchanged after sync_local_ticket_refs)
+- Test: branch not present locally before sync gains a local ref
+
+No new files needed — the function lives alongside `push_ticket_branches` and related helpers in `git.rs`.
 
 ### Open questions
 
