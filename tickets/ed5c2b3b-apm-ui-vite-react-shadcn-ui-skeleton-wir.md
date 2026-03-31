@@ -25,7 +25,7 @@ There is no frontend. The backend steps (Steps 1 and 2) will deliver an axum ser
 - [x] Loading `http://localhost:3000/` in a browser renders a blank page with no visible content
 - [x] After the page loads, the browser devtools console shows the array returned by `/api/tickets`
 - [x] If `/api/tickets` returns a non-2xx response or a network error, the console shows the error but the page does not throw an unhandled exception
-- [ ] `cargo test --workspace` passes after the static-serving changes are added to apm-server
+- [x] `cargo test --workspace` passes after the static-serving changes are added to apm-server
 - [ ] `apm-ui/.gitignore` excludes `node_modules/` and `dist/`
 
 ### Out of scope
