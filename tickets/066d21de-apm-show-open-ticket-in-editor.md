@@ -16,11 +16,10 @@ updated_at = "2026-03-31T04:32:42.222815Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+apm show <id> currently prints ticket content to stdout. Engineers and agents often want to read a ticket in their editor for a better reading experience — especially for long specs. There is no way to open the ticket file directly in $EDITOR without manually locating it.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -35,10 +34,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
