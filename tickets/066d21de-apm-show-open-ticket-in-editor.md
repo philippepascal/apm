@@ -1,14 +1,15 @@
 +++
 id = "066d21de"
 title = "apm show: open ticket in $EDITOR"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/066d21de-apm-show-open-ticket-in-editor"
 created_at = "2026-03-31T04:32:11.186464Z"
-updated_at = "2026-03-31T04:32:11.186464Z"
+updated_at = "2026-03-31T04:32:42.222815Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T04:32Z | — | new | apm |
+| 2026-03-31T04:32Z | new | in_design | philippepascal |
