@@ -40,7 +40,44 @@ The desired behaviour follows the standard two-stage shutdown pattern used by pr
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/src/cmd/work.rs`.
+
+**Signal counter**
+
+Replace the `Arc<AtomicBool>` with an `Arc<AtomicUsize>` that counts how many times SIGINT has been received:
+
+```rust
+let sig_count = Arc::new(AtomicUsize::new(0));
+let sig_count_clone = Arc::clone(&sig_count);
+let _ = ctrlc::set_handler(move || {
+    sig_count_clone.fetch_add(1, Ordering::Relaxed);
+});
+```
+
+**Modified loop logic (daemon mode only)**
+
+At the top of each loop iteration, read `sig_count`:
+
+1. `sigs == 0` — normal operation, no change.
+2. `sigs == 1` (first Ctrl+C):
+   - If `workers.is_empty()`: log "Daemon stopped." and break immediately.
+   - Otherwise, on the *first* iteration where `sigs` transitions to 1, print once: `"Graceful shutdown: waiting for N worker(s) to finish (Ctrl+C again to exit immediately)"`.
+   - Stop dispatching (skip the `spawn_next_worker` call).
+   - Continue the reap loop until `workers.is_empty()`, then break with `"All workers finished; exiting."`.
+3. `sigs >= 2` (second Ctrl+C): log `"Forced exit; N worker(s) may still be running"` and break immediately.
+
+Use a `bool` flag `drain_announced` to ensure the "waiting for N workers" message is only printed once.
+
+**Non-daemon path**
+
+No changes. The existing `if !daemon` early-exit guard at the top of the loop already keeps the paths separate. The `interrupted` variable can be removed if it becomes unused after the refactor, but only if nothing else references it.
+
+**Order of steps**
+
+1. Replace `AtomicBool` / `interrupted` with `AtomicUsize` / `sig_count` throughout `work.rs`.
+2. Update the loop body as described above.
+3. Verify `cargo test --workspace` passes (no existing tests cover this path, but compilation must succeed).
+4. Add an integration test in `apm/tests/integration.rs` that spawns `apm work --daemon`, sends SIGINT once, and asserts the process does not exit before workers finish; then sends SIGINT again and asserts immediate exit. *(If process-spawning in integration tests is impractical given the current test harness, a unit test exercising the signal-count logic directly is acceptable.)*
 
 ### Open questions
 
