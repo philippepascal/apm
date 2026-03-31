@@ -1,14 +1,15 @@
 +++
 id = "8c7d47f0"
 title = "apm-server + apm-ui: state transition API and buttons"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/8c7d47f0-apm-server-apm-ui-state-transition-api-a"
 created_at = "2026-03-31T06:12:47.638355Z"
-updated_at = "2026-03-31T06:12:47.638355Z"
+updated_at = "2026-03-31T06:42:17.687543Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:12Z | — | new | apm |
+| 2026-03-31T06:42Z | new | in_design | philippepascal |
