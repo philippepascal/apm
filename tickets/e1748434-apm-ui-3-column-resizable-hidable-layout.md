@@ -33,7 +33,7 @@ This ticket delivers the structural shell only: three labelled empty panels that
 - [x] Attempting to hide the last visible column has no effect (the column stays visible)
 - [x] Column visibility state is held in the Zustand store and survives React re-renders without resetting
 - [x] The Zustand store exposes selectedTicketId (null by default) and column width percentages alongside the visibility flags
-- [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
+- [x] npm run build in apm-ui/ exits 0 with no TypeScript errors
 - [ ] cargo test --workspace passes after all UI source changes are in place
 
 ### Out of scope
