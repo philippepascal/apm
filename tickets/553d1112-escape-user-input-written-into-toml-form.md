@@ -4,12 +4,12 @@ title = "escape user input written into TOML format strings"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 agent = "74521"
 branch = "ticket/553d1112-escape-user-input-written-into-toml-form"
 created_at = "2026-03-31T00:17:29.464358Z"
-updated_at = "2026-03-31T00:23:58.323569Z"
+updated_at = "2026-03-31T00:24:02.251311Z"
 +++
 
 ## Spec
