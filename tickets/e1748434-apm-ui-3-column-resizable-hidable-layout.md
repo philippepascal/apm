@@ -120,7 +120,8 @@ No Rust / backend files change.
 
 ### Amendment requests
 
-
+- [ ] Remove the Acceptance Criterion "Pressing Ctrl+1, Ctrl+2, Ctrl+3 moves keyboard focus to WorkerView, SupervisorView, and TicketDetail respectively" — column visibility has no keyboard shortcut (toolbar-only per keyboard spec)
+- [ ] Remove the corresponding keyboard shortcut useEffect from the Approach (Step 4 "Keyboard shortcut handler" paragraph)
 
 ## History
 
