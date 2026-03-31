@@ -24,14 +24,54 @@ The work engine runs as a child process of the axum server, equivalent to `apm w
 
 ### Acceptance criteria
 
+- [ ] `GET /api/work/status` returns `{"status":"stopped"}` when no daemon is running
+- [ ] `GET /api/work/status` returns `{"status":"running"}` when the daemon is alive and at least one worker PID file exists and the process is alive
+- [ ] `GET /api/work/status` returns `{"status":"idle"}` when the daemon is alive but no active worker PID files exist
+- [ ] `POST /api/work/start` spawns an `apm work --daemon` child process and returns the new status; a second call while already running returns the current status without spawning a second process
+- [ ] `POST /api/work/stop` sends SIGTERM to the daemon child, waits for exit, and returns `{"status":"stopped"}`; calling it when already stopped returns `{"status":"stopped"}` without an error
+- [ ] The WorkerView panel header shows a Start/Stop toggle button and a status badge labelled "Running", "Idle", or "Stopped"
+- [ ] Clicking Start calls `POST /api/work/start`; the button and badge update to the returned state without a full page reload
+- [ ] Clicking Stop calls `POST /api/work/stop`; the button and badge update to the returned state without a full page reload
+- [ ] The status badge auto-refreshes at a poll interval of 5 s or less while the WorkerView panel is mounted
+- [ ] A keyboard shortcut (`Ctrl+Shift+W`) toggles the engine start/stop from anywhere in the workscreen
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Dry-run preview before starting (covered by the follow-on ticket, Step 12b)
+- Per-worker stop controls (covered by Step 15 — worker management)
+- Configuring `max_concurrent` or `interval_secs` from the UI
+- Log tail viewer (covered by Step 14b)
+- Authentication or access control on the work endpoints
 
 ### Approach
 
-How the implementation will work.
+**Prerequisites:** This ticket requires `apm-server` (Step 1) and the `GET /api/workers` endpoint plus WorkerView panel (Step 7a) to already exist. The axum `AppState` struct from Step 7a must be extended with the daemon handle.
+
+**Server-side — `apm-server/src/routes/work.rs` (new file)**
+
+1. Extend `AppState` in `apm-server/src/main.rs` with:
+   ```rust
+   work_daemon: Arc<Mutex<Option<std::process::Child>>>
+   ```
+2. Add three handlers wired to the router:
+   - `GET /api/work/status` → `get_work_status`
+   - `POST /api/work/start` → `post_work_start`
+   - `POST /api/work/stop` → `post_work_stop`
+3. **Status logic** (shared helper `fn engine_status(state) -> &str`):
+   - If child handle is `None` or `try_wait()` shows it exited → `"stopped"`
+   - Else: scan worktrees for `.apm-worker.pid` files (reuse `git::list_ticket_worktrees` + `worker::is_alive`); if any alive → `"running"`, else → `"idle"`
+4. **Start handler:** If daemon is already running (child alive), return current status. Otherwise run `std::process::Command::new("apm").args(["work", "--daemon"])` with `current_dir` set to the repo root from config, spawn it, store in state, return status.
+5. **Stop handler:** If no child, return `stopped`. Otherwise send SIGTERM via `kill -TERM <pid>`, call `child.wait()` (with a timeout of ~5 s, then SIGKILL if necessary), set state to `None`, return `stopped`.
+
+All three handlers return `{"status": "<value>"}` as JSON with HTTP 200.
+
+**UI-side — `apm-ui/src/components/WorkEngineControls.tsx` (new component)**
+
+1. Use TanStack Query's `useQuery` to poll `GET /api/work/status` every 3 s.
+2. Use TanStack Query's `useMutation` for start and stop, with `onSuccess` calling `queryClient.invalidateQueries(['work-status'])`.
+3. Render a shadcn/ui `Badge` for the status and a `Button` labelled "Start" or "Stop" depending on status.
+4. Mount the component inside the WorkerView panel header row (already established by Step 7a).
+5. Register the keyboard shortcut in the Zustand store's global key handler: `Ctrl+Shift+W` calls the appropriate mutation based on current status.
 
 ### Open questions
 
