@@ -29,6 +29,22 @@ Desired state: WorkerActivityPanel gains a Stop button per row (live workers onl
 
 ### Acceptance criteria
 
+- [ ] GET /api/workers response includes a `branch` field (the ticket's branch name) for each worker entry
+- [ ] DELETE /api/workers/:pid returns 204 when the given PID is found in a worktree pid file, is alive, and is successfully sent SIGTERM
+- [ ] DELETE /api/workers/:pid removes the `.apm-worker.pid` file from the worktree after sending SIGTERM
+- [ ] DELETE /api/workers/:pid returns 404 when no `.apm-worker.pid` file in any worktree contains the given PID
+- [ ] DELETE /api/workers/:pid returns 409 when the PID is found in a pid file but the process is no longer alive (stale pid file)
+- [ ] POST /api/tickets/:id/take reassigns the ticket's agent field to the server's resolved agent name (APM_AGENT_NAME env var, falling back to USER) and returns 200 with the updated ticket JSON
+- [ ] POST /api/tickets/:id/take returns 404 when the ticket id does not exist
+- [ ] WorkerActivityPanel shows a "Stop" button for each worker row where status is "running"
+- [ ] Clicking "Stop" in WorkerActivityPanel calls DELETE /api/workers/:pid; on success the worker list refreshes and the row disappears or shows "crashed"
+- [ ] Clicking "Stop" disables the button while the DELETE request is in-flight
+- [ ] On a DELETE failure, WorkerActivityPanel shows an inline error message near the row
+- [ ] TicketDetail shows a "Reassign to me" button when a ticket is selected
+- [ ] Clicking "Reassign to me" calls POST /api/tickets/:id/take and, on success, updates the agent badge in the detail panel
+- [ ] On a take failure, TicketDetail shows an inline error message near the button
+- [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
+- [ ] cargo test --workspace passes
 
 ### Out of scope
 
