@@ -19,6 +19,9 @@ The e2e test suite (apm/tests/e2e.rs) copies two files from testdata/src/ into e
 
 ### Acceptance criteria
 
+- [ ] testdata/src/parser.rs exists and is valid Rust
+- [ ] testdata/src/main.rs exists and is valid Rust
+- [ ] cargo test --workspace passes with no file-not-found panics in e2e tests
 
 ### Out of scope
 
