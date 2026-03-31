@@ -2,14 +2,14 @@
 id = "7f61c54a"
 title = "apm-ui: priority reorder via drag-and-drop in worker queue"
 state = "specd"
-priority = 0
+priority = 35
 effort = 5
 risk = 3
 author = "apm"
 agent = "49326"
 branch = "ticket/7f61c54a-apm-ui-priority-reorder-via-drag-and-dro"
 created_at = "2026-03-31T06:13:11.256058Z"
-updated_at = "2026-03-31T19:17:33.886047Z"
+updated_at = "2026-03-31T19:36:29.537810Z"
 +++
 
 ## Spec
