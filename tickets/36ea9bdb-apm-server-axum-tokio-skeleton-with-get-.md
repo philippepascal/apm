@@ -1,7 +1,7 @@
 +++
 id = "36ea9bdb"
 title = "apm-server: axum/tokio skeleton with GET /health endpoint"
-state = "in_progress"
+state = "implemented"
 priority = 100
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "79925"
 branch = "ticket/36ea9bdb-apm-server-axum-tokio-skeleton-with-get-"
 created_at = "2026-03-31T06:05:42.967376Z"
-updated_at = "2026-03-31T19:45:49.721416Z"
+updated_at = "2026-03-31T19:49:24.708969Z"
 +++
 
 ## Spec
@@ -20,12 +20,12 @@ The UI roadmap (initial_specs/UIdraft_spec_starter.md) requires a Rust HTTP back
 
 ### Acceptance criteria
 
-- [ ] cargo build -p apm-server succeeds
-- [ ] Running apm-server starts HTTP server on port 3000
-- [ ] GET /health returns HTTP 200
-- [ ] GET /health body is exactly {"ok":true}
-- [ ] GET /health has Content-Type: application/json
-- [ ] cargo test --workspace passes
+- [x] cargo build -p apm-server succeeds
+- [x] Running apm-server starts HTTP server on port 3000
+- [x] GET /health returns HTTP 200
+- [x] GET /health body is exactly {"ok":true}
+- [x] GET /health has Content-Type: application/json
+- [x] cargo test --workspace passes
 
 ### Out of scope
 
@@ -77,3 +77,4 @@ File changes:
 | 2026-03-31T06:09Z | in_design | specd | claude-0330-0600-b7f2 |
 | 2026-03-31T19:43Z | specd | ready | apm |
 | 2026-03-31T19:45Z | ready | in_progress | philippepascal |
+| 2026-03-31T19:49Z | in_progress | implemented | claude-0331-1945-x7k2 |
