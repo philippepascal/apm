@@ -1,14 +1,15 @@
 +++
 id = "15b7b28e"
 title = "apm-server + apm-ui: sync button (POST /api/sync)"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/15b7b28e-apm-server-apm-ui-sync-button-post-api-s"
 created_at = "2026-03-31T06:13:15.004948Z"
-updated_at = "2026-03-31T06:13:15.004948Z"
+updated_at = "2026-03-31T07:10:36.832701Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:13Z | — | new | apm |
+| 2026-03-31T07:10Z | new | in_design | philippepascal |
