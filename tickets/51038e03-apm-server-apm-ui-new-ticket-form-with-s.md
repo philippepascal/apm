@@ -49,7 +49,96 @@ Without this, supervisors using the web UI have no way to capture new work items
 
 ### Approach
 
-How the implementation will work.
+**Prerequisite:** Step 9 (ticket a6c115e1) must be implemented — apm-server and apm-ui are both present, PUT /api/tickets/:id/body and the CodeMirror editor exist, AppState carries `root` and `config`.
+
+---
+
+**1. Backend — apm-server/src/routes/tickets.rs**
+
+Add a `create_ticket` handler for `POST /api/tickets`:
+
+Request body:
+```rust
+#[derive(serde::Deserialize)]
+struct CreateTicketRequest {
+    title: String,
+    problem: Option<String>,
+    acceptance_criteria: Option<String>,
+    out_of_scope: Option<String>,
+    approach: Option<String>,
+}
+```
+
+Handler logic:
+1. Deserialise the request body; return 400 if `title` is empty or missing.
+2. Build `section_sets: Vec<(String, String)>` from the optional fields — include only non-empty values:
+   - ("Problem", problem)
+   - ("Acceptance criteria", acceptance_criteria)
+   - ("Out of scope", out_of_scope)
+   - ("Approach", approach)
+3. Determine `author`: use `state.config.apm.author.clone()` (or a fallback string "apm-ui" if the field is absent from config).
+4. `tokio::task::spawn_blocking(move || apm_core::ticket::create(&root, &config, title, author, None, None, /*aggressive=*/false, section_sets))`
+5. On `Ok(ticket)`: return `Json(TicketResponse::from(&ticket))` with status 201.
+6. On `Err(e)`: return 500 with `Json(serde_json::json!({"error": e.to_string()}))`.
+
+Register the route in the router (main.rs or router setup):
+```rust
+.route("/api/tickets", get(list_tickets).post(create_ticket))
+```
+
+`TicketResponse` is the same struct already used by the GET endpoints (frontmatter + body). No new type needed.
+
+---
+
+**2. Frontend — apm-ui/src/components/NewTicketModal.tsx** (new file)
+
+A modal component built with shadcn/ui `Dialog`:
+- Title input: `<Input>` marked required; focus on open.
+- Four optional `<Textarea>` fields: Problem, Acceptance Criteria, Out of Scope, Approach. Each labelled clearly.
+- Submit button: disabled + shows spinner while mutation is in flight.
+- Cancel button + Escape key: close without submitting.
+- Client-side validation: if title is empty on submit, set an error state and display an inline message; do not call the API.
+- Use TanStack Query `useMutation`:
+  ```ts
+  useMutation({
+    mutationFn: (data) => fetch('/api/tickets', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }).then(r => { if (!r.ok) throw new Error(...); return r.json(); }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tickets'] }); setOpen(false); },
+  })
+  ```
+- On API error: display `error.message` inline above the submit button.
+
+---
+
+**3. Zustand store — apm-ui/src/store.ts**
+
+Add two fields:
+```ts
+newTicketOpen: boolean;        // default false
+setNewTicketOpen: (v: boolean) => void;
+```
+
+---
+
+**4. Wire up in layout — apm-ui/src/App.tsx (or WorkScreen.tsx)**
+
+- Render `<NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />` at the root level.
+- Add a "+ New ticket" button in the supervisorview column header; `onClick` calls `setNewTicketOpen(true)`.
+- Add a `keydown` listener (on `document`, or via the existing keyboard shortcut system from Step 4/6): when key is `'n'` and `document.activeElement` is not an input/textarea/contenteditable, call `setNewTicketOpen(true)`.
+
+---
+
+**Files to change:**
+- `apm-server/src/routes/tickets.rs` — add `create_ticket` handler
+- `apm-server/src/main.rs` (or router file) — register `.post(create_ticket)` on `/api/tickets`
+- `apm-ui/src/components/NewTicketModal.tsx` — new file
+- `apm-ui/src/store.ts` — add `newTicketOpen` + `setNewTicketOpen`
+- `apm-ui/src/App.tsx` or `WorkScreen.tsx` — render modal, add button, wire keyboard shortcut
+
+**Order of changes:**
+1. Backend endpoint (can be tested with curl independently)
+2. Zustand store field
+3. NewTicketModal component
+4. Wire modal + button + shortcut into layout
 
 ### Open questions
 
