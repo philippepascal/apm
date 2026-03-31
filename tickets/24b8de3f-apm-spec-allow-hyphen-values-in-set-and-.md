@@ -26,7 +26,7 @@ Both gaps force agents into awkward workarounds when writing amendment requests 
 
 ### Acceptance criteria
 
-- [ ] `apm spec <id> --section "Amendment requests" --set "- [ ] Fix the thing"` succeeds (value starting with `-` is accepted)
+- [x] `apm spec <id> --section "Amendment requests" --set "- [ ] Fix the thing"` succeeds (value starting with `-` is accepted)
 - [ ] `apm spec <id> --section Problem --set "- list item\n- another"` succeeds
 - [ ] `apm spec <id> --section Problem --set-file /path/to/content.txt` reads section content from the given file and writes it to the ticket
 - [ ] `--set-file` with a non-existent path returns a clear error
