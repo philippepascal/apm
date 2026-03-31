@@ -4,12 +4,12 @@ title = "apm-ui: inline effort/risk/priority editing in ticket detail"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 agent = "80361"
 branch = "ticket/95ef3505-apm-ui-inline-effort-risk-priority-editi"
 created_at = "2026-03-31T06:13:16.584261Z"
-updated_at = "2026-03-31T07:17:50.491780Z"
+updated_at = "2026-03-31T07:17:54.728198Z"
 +++
 
 ## Spec
