@@ -1,15 +1,15 @@
 +++
 id = "6d46e15c"
 title = "apm-server + apm-ui: worker management (list, stop, reassign)"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 4
 risk = 2
 author = "apm"
-agent = "66058"
+agent = "philippepascal"
 branch = "ticket/6d46e15c-apm-server-apm-ui-worker-management-list"
 created_at = "2026-03-31T06:13:21.657306Z"
-updated_at = "2026-03-31T18:15:06.058053Z"
+updated_at = "2026-03-31T19:12:15.021655Z"
 +++
 
 ## Spec
@@ -285,3 +285,4 @@ Frontend:
 | 2026-03-31T07:29Z | new | in_design | philippepascal |
 | 2026-03-31T07:34Z | in_design | specd | claude-0331-0730-b7f2 |
 | 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
+| 2026-03-31T19:12Z | ammend | in_design | philippepascal |
