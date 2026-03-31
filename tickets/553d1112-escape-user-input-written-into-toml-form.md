@@ -15,11 +15,16 @@ updated_at = "2026-03-31T00:17:35.365470Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Several places in APM write user-supplied strings directly into raw TOML format strings using Rust `format!()` macros. If the input contains `"` or `\`, the output is invalid TOML that will fail to parse.
+
+Known locations:
+- `apm-core/src/init.rs` `default_config()`: `name` and `description` from interactive prompts
+- Any other command that interpolates user input into raw TOML
+
+All such strings must be escaped before interpolation: `\` → `\\`, `"` → `\"`.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +39,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
