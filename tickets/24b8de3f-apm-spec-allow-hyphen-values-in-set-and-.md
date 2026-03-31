@@ -30,7 +30,7 @@ Both gaps force agents into awkward workarounds when writing amendment requests 
 - [x] `apm spec <id> --section Problem --set "- list item\n- another"` succeeds
 - [x] `apm spec <id> --section Problem --set-file /path/to/content.txt` reads section content from the given file and writes it to the ticket
 - [x] `--set-file` with a non-existent path returns a clear error
-- [ ] `--set` and `--set-file` are mutually exclusive; providing both returns an error
+- [x] `--set` and `--set-file` are mutually exclusive; providing both returns an error
 - [ ] `--set -` (stdin) continues to work as before
 - [ ] `cargo test --workspace` passes
 
