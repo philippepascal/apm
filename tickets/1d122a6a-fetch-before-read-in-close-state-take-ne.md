@@ -1,7 +1,7 @@
 +++
 id = "1d122a6a"
 title = "fetch before read in close, state, take, next, list when aggressive"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "65756"
 branch = "ticket/1d122a6a-fetch-before-read-in-close-state-take-ne"
 created_at = "2026-03-30T19:50:51.401850Z"
-updated_at = "2026-03-30T20:31:38.148251Z"
+updated_at = "2026-03-31T05:04:54.282593Z"
 +++
 
 ## Spec
@@ -150,3 +150,4 @@ All changes follow the same pattern already used in `show`, `start`, `take` (pus
 | 2026-03-30T20:10Z | ready | in_progress | philippepascal |
 | 2026-03-30T20:30Z | in_progress | implemented | claude-0330-2015-c4d2 |
 | 2026-03-30T20:31Z | implemented | accepted | apm-sync |
+| 2026-03-31T05:04Z | accepted | closed | apm-sync |
