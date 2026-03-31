@@ -31,8 +31,8 @@ The `GET /api/tickets` response already includes a `body` field (Step 2 spec), s
 - [ ] Clearing the state dropdown restores the default supervisor-actionable-states-only swimlane view
 - [ ] Selecting an agent in the agent dropdown shows only tickets where agent equals the selected value, across all visible swimlanes
 - [ ] Clearing the agent dropdown restores tickets for all agents
-- [ ] Enabling the show-closed toggle reveals swimlanes for closed and cancelled tickets in addition to the default supervisor-actionable states
-- [ ] Disabling the show-closed toggle hides the closed and cancelled swimlanes
+- [ ] Enabling the show-closed toggle reveals the closed swimlane in addition to the default supervisor-actionable states
+- [ ] Disabling the show-closed toggle hides the closed swimlane
 - [ ] When no tickets match the combined active filters, an empty-state message replaces the swimlane grid
 - [ ] The agent dropdown options are derived from the unique non-empty agent values present in the loaded ticket list
 - [ ] Multiple filters active simultaneously are combined with AND logic (all conditions must be satisfied)
@@ -59,7 +59,7 @@ Add four pieces of local state at the top of the component:
 
 **Derive `visibleStates`** — the ordered list of swimlane state columns to consider:
 1. Start with `SUPERVISOR_STATES` (the existing hard-coded list: question, specd, blocked, implemented, accepted)
-2. If `showClosed` is true, append `['closed', 'cancelled']`
+2. If `showClosed` is true, append `['closed']`
 3. If `stateFilter` is non-null, override to just `[stateFilter]` (stateFilter takes full precedence)
 
 **Derive `availableAgents: string[]`** — unique, non-empty, sorted agent values from all loaded tickets. Used to populate the agent dropdown.
@@ -74,7 +74,7 @@ A swimlane is still hidden when zero tickets pass the filter (existing behaviour
 
 FilterBar contains (using shadcn components):
 - `Input` for text search; show a clear (×) button when `searchText` is non-empty
-- `Select` for state: a fixed option list of all workflow states (`new`, `in_design`, `question`, `specd`, `ready`, `in_progress`, `blocked`, `implemented`, `accepted`, `closed`, `cancelled`) plus a "All states" default option
+- `Select` for state: a fixed option list of all workflow states (`new`, `in_design`, `question`, `specd`, `ready`, `in_progress`, `blocked`, `implemented`, `accepted`, `closed`) plus a "All states" default option
 - `Select` for agent: options from `availableAgents` plus an "All agents" default option
 - `Switch` (or `Checkbox`) labelled "Show closed"
 
