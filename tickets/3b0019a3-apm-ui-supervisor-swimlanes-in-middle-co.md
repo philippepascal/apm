@@ -1,7 +1,7 @@
 +++
 id = "3b0019a3"
 title = "apm-ui: supervisor swimlanes in middle column"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "34099"
 branch = "ticket/3b0019a3-apm-ui-supervisor-swimlanes-in-middle-co"
 created_at = "2026-03-31T06:11:59.993473Z"
-updated_at = "2026-03-31T06:28:15.558594Z"
+updated_at = "2026-03-31T18:15:10.284484Z"
 +++
 
 ## Spec
@@ -103,3 +103,4 @@ Use shadcn Card for TicketCard and Tailwind for layout. The swimlane row uses `f
 | 2026-03-31T06:11Z | — | new | apm |
 | 2026-03-31T06:23Z | new | in_design | philippepascal |
 | 2026-03-31T06:28Z | in_design | specd | claude-0331-0623-9a98 |
+| 2026-03-31T18:15Z | specd | ammend | claude-0331-1200-a7b9 |
