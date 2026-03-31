@@ -4,12 +4,12 @@ title = "apm-ui: open question and amendment request badges on ticket cards"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 agent = "11159"
 branch = "ticket/ebae68e2-apm-ui-open-question-and-amendment-reque"
 created_at = "2026-03-31T06:13:20.438546Z"
-updated_at = "2026-03-31T07:29:25.071093Z"
+updated_at = "2026-03-31T07:29:31.466976Z"
 +++
 
 ## Spec
