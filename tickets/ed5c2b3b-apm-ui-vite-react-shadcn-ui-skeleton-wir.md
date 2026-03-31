@@ -20,7 +20,7 @@ There is no frontend. The backend steps (Steps 1 and 2) will deliver an axum ser
 
 ### Acceptance criteria
 
-- [ ] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
+- [x] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
 - [ ] `cargo run -p apm-server` (from repo root, after building the UI) serves `GET /` with HTTP 200 and `Content-Type: text/html`
 - [ ] Loading `http://localhost:3000/` in a browser renders a blank page with no visible content
 - [ ] After the page loads, the browser devtools console shows the array returned by `/api/tickets`
