@@ -2,13 +2,13 @@
 id = "24b8de3f"
 title = "apm spec: allow hyphen values in --set and add --set-file flag"
 state = "specd"
-priority = 0
+priority = 90
 effort = 0
 risk = 0
 author = "claude-0331-1200-a7b9"
 branch = "ticket/24b8de3f-apm-spec-allow-hyphen-values-in-set-and-"
 created_at = "2026-03-31T18:26:12.162123Z"
-updated_at = "2026-03-31T18:26:54.061835Z"
+updated_at = "2026-03-31T19:35:02.873964Z"
 +++
 
 ## Spec
