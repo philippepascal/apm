@@ -16,7 +16,11 @@ updated_at = "2026-03-31T06:38:21.959118Z"
 
 ### Problem
 
-The bottom half of the left column shows the queue of actionable tickets in the same priority order as apm next. This is read-only at this stage; reordering is covered by a later ticket. Full spec context: initial_specs/UIdraft_spec_starter.md Step 7. Requires Step 7a.
+The bottom half of the `WorkerView` left column is a stub placeholder labelled "Queue" (put there by Step 7a, ticket 651f8a63). Supervisors currently have no browser-visible way to see which tickets are queued for dispatch or in what order the work engine will pick them up. They must leave the browser and run `apm next` from the CLI.
+
+This ticket fills the placeholder with a `PriorityQueuePanel` showing all agent-actionable tickets ranked by the same scoring formula `apm next` uses: score = priority x priority_weight + effort x effort_weight + risk x risk_weight (weights from [workflow.prioritization] in apm.toml). The panel is read-only at this stage; drag-and-drop reordering is covered by ticket 7f61c54a (Step 11).
+
+Two changes are required: (1) a GET /api/queue endpoint in apm-server returning all agent-actionable tickets sorted by descending score; (2) a PriorityQueuePanel React component wired into WorkerView.tsx replacing the stub placeholder.
 
 ### Acceptance criteria
 
