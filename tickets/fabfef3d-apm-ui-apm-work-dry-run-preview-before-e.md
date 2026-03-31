@@ -4,12 +4,12 @@ title = "apm-ui: apm work dry-run preview before engine start"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "17766"
 branch = "ticket/fabfef3d-apm-ui-apm-work-dry-run-preview-before-e"
 created_at = "2026-03-31T06:13:13.767038Z"
-updated_at = "2026-03-31T07:10:07.377240Z"
+updated_at = "2026-03-31T07:10:13.574404Z"
 +++
 
 ## Spec
