@@ -1,7 +1,7 @@
 +++
 id = "e9ba2503"
 title = "apm-server + apm-ui: log tail viewer via SSE"
-state = "specd"
+state = "ready"
 priority = 25
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "37259"
 branch = "ticket/e9ba2503-apm-server-apm-ui-log-tail-viewer-via-ss"
 created_at = "2026-03-31T06:13:19.097973Z"
-updated_at = "2026-03-31T19:36:58.193515Z"
+updated_at = "2026-03-31T19:44:48.874201Z"
 +++
 
 ## Spec
@@ -111,3 +111,4 @@ The dependency on Step 12a (ticket 56499b61) means `apm-server`, its `AppState`,
 | 2026-03-31T06:13Z | — | new | apm |
 | 2026-03-31T07:23Z | new | in_design | philippepascal |
 | 2026-03-31T07:26Z | in_design | specd | claude-0331-0723-aea0 |
+| 2026-03-31T19:44Z | specd | ready | apm |
