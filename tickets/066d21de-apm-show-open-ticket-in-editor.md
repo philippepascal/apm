@@ -4,12 +4,12 @@ title = "apm show: open ticket in $EDITOR"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 agent = "2429"
 branch = "ticket/066d21de-apm-show-open-ticket-in-editor"
 created_at = "2026-03-31T04:32:11.186464Z"
-updated_at = "2026-03-31T04:37:14.614619Z"
+updated_at = "2026-03-31T04:37:18.548476Z"
 +++
 
 ## Spec
