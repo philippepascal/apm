@@ -15,11 +15,16 @@ updated_at = "2026-03-31T18:26:20.477438Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Two related usability gaps in `apm spec --set`:
+
+1. **Clap rejects values starting with `-`**: `apm spec <id> --section "Amendment requests" --set "- [ ] Fix the thing"` fails with `error: unexpected argument '- ' found`. Clap interprets the leading dash as a flag prefix. This makes it impossible to pass checklist content (which always starts with `- [ ]`) directly on the command line.
+
+2. **No file input option**: Multi-line content (amendment lists, full section rewrites) must currently be piped via stdin (`--set -`), which requires a heredoc or a temp file. Heredocs are forbidden by apm shell discipline; temp files require extra Write tool calls and generate file permission prompts in Claude Code's acceptEdits mode.
+
+Both gaps force agents into awkward workarounds when writing amendment requests or multi-line spec sections.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +39,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
