@@ -1,14 +1,14 @@
 +++
 id = "47d4695f"
 title = "apm new: accept --section/--set flags to pre-populate spec sections"
-state = "in_design"
+state = "new"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/47d4695f-apm-new-accept-section-set-flags-to-pre-"
 created_at = "2026-03-31T00:05:27.351459Z"
-updated_at = "2026-03-31T00:05:33.516592Z"
+updated_at = "2026-03-31T04:35:30.024550Z"
 +++
 
 ## Spec
@@ -58,3 +58,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-03-31T00:05Z | — | new | apm |
 | 2026-03-31T00:05Z | new | in_design | apm |
+| 2026-03-31T04:35Z | in_design | new | apm |
