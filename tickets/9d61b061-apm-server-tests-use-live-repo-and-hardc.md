@@ -36,7 +36,13 @@ Adding new test cases beyond the four existing ones; changes to the handler logi
 
 ### Approach
 
-How the implementation will work.
+1. Add a helper in the test module that builds an AppState from a hardcoded list of Ticket structs rather than calling load_all_from_git. This requires exposing or stubbing the state construction — either by making AppState fields pub(crate) and constructing it directly in tests, or by adding a build_app_with_tickets(tickets: Vec<Ticket>) variant of build_app for test use.
+
+2. Construct two or three synthetic Ticket values inline in the test (fake IDs like "aaaabbbb" and "ccccdddd", minimal frontmatter fields) and verify the endpoints return the expected shapes.
+
+3. Replace the get_ticket_valid_prefix_returns_200_object test to use one of the synthetic ticket IDs instead of "54eb5bfc".
+
+4. In apm-server/Cargo.toml, bump tower dev-dependency from "0.4" to "0.5".
 
 ### Open questions
 
