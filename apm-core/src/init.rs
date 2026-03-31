@@ -1,4 +1,6 @@
 use anyhow::Result;
+use std::io::IsTerminal;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
@@ -14,12 +16,17 @@ pub fn setup(root: &Path) -> Result<()> {
 
     let config_path = apm_dir.join("config.toml");
     if !config_path.exists() {
-        let name = root
+        let default_name = root
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project");
+        let (name, description) = if std::io::stdin().is_terminal() {
+            prompt_project_info(default_name)?
+        } else {
+            (default_name.to_string(), String::new())
+        };
         let branch = detect_default_branch(root);
-        std::fs::write(&config_path, default_config(name, &branch))?;
+        std::fs::write(&config_path, default_config(&name, &description, &branch))?;
         println!("Created .apm/config.toml");
     }
     let agents_path = apm_dir.join("agents.md");
@@ -161,11 +168,46 @@ fn default_log_file(name: &str) -> String {
     format!("~/.local/state/apm/{name}.log")
 }
 
-fn default_config(name: &str, default_branch: &str) -> String {
+fn prompt_project_info(default_name: &str) -> Result<(String, String)> {
+    let mut stdout = std::io::stdout();
+    let stdin = std::io::stdin();
+
+    print!("Project name [{}]: ", default_name);
+    stdout.flush()?;
+    let mut name_input = String::new();
+    stdin.read_line(&mut name_input)?;
+    let name = {
+        let trimmed = name_input.trim();
+        if trimmed.is_empty() {
+            default_name.to_string()
+        } else {
+            trimmed.to_string()
+        }
+    };
+
+    print!("Project description []: ");
+    stdout.flush()?;
+    let mut desc_input = String::new();
+    stdin.read_line(&mut desc_input)?;
+    let description = desc_input.trim().to_string();
+
+    Ok((name, description))
+}
+
+fn toml_escape(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn default_config(name: &str, description: &str, default_branch: &str) -> String {
     let log_file = default_log_file(name);
+    let name = toml_escape(name);
+    let description = toml_escape(description);
+    let default_branch = toml_escape(default_branch);
+    let log_file = toml_escape(&log_file);
     format!(
         r##"[project]
 name = "{name}"
+description = "{description}"
 default_branch = "{default_branch}"
 
 [tickets]
@@ -447,6 +489,18 @@ mod tests {
     }
 
     #[test]
+    fn setup_non_tty_uses_dir_name_and_empty_description() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path()).unwrap();
+
+        let config = std::fs::read_to_string(tmp.path().join(".apm/config.toml")).unwrap();
+        let dir_name = tmp.path().file_name().unwrap().to_str().unwrap();
+        assert!(config.contains(&format!("name = \"{dir_name}\"")));
+        assert!(config.contains("description = \"\""));
+    }
+
+    #[test]
     fn setup_is_idempotent() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
@@ -516,5 +570,14 @@ mod tests {
         setup_docker(tmp.path()).unwrap();
         let after = std::fs::read_to_string(tmp.path().join(".apm/Dockerfile.apm-worker")).unwrap();
         assert_eq!(before, after);
+    }
+
+    #[test]
+    fn default_config_escapes_special_chars() {
+        let name = r#"my\"project"#;
+        let description = r#"desc with "quotes" and \backslash"#;
+        let branch = "main";
+        let config = default_config(name, description, branch);
+        toml::from_str::<toml::Value>(&config).expect("default_config output must be valid TOML");
     }
 }
