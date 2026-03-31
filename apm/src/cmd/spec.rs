@@ -2,8 +2,9 @@ use anyhow::{bail, Result};
 use apm_core::{config::Config, git, spec, ticket};
 use std::{io::Read, path::Path};
 const KNOWN_SECTIONS: &[&str] = &["Problem", "Acceptance criteria", "Out of scope", "Approach", "Open questions"];
-pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<String>, check: bool, mark: Option<String>, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<String>, set_file: Option<String>, check: bool, mark: Option<String>, no_aggressive: bool) -> Result<()> {
     if set.is_some() && section.is_none() { bail!("--set requires --section"); }
+    if set_file.is_some() && section.is_none() { bail!("--set-file requires --section"); }
     if mark.is_some() && section.is_none() { bail!("--mark requires --section"); }
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -44,7 +45,12 @@ pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<Strin
         if let Some(oq) = spec::get_section(&doc, "open questions") { println!("### Open questions\n\n{oq}\n"); } return Ok(()); };
     if config_active { if !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name)) { bail!("unknown section {:?}; not defined in [ticket.sections]", name); } }
     else if !KNOWN_SECTIONS.iter().any(|s| s.eq_ignore_ascii_case(name)) { bail!("unknown section {:?}; valid sections: {}", name, KNOWN_SECTIONS.join(", ")); }
-    if let Some(value) = set {
+    let set_resolved = match (set, set_file) {
+        (Some(v), _) => Some(v),
+        (None, Some(path)) => Some(std::fs::read_to_string(&path).map_err(|e| anyhow::anyhow!("--set-file: {}: {e}", path))?),
+        (None, None) => None,
+    };
+    if let Some(value) = set_resolved {
         let text = if value == "-" { let mut b = String::new(); std::io::stdin().read_to_string(&mut b)?; b } else { value };
         let trimmed = text.trim().to_string();
         if config_active {
