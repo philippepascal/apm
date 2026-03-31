@@ -56,6 +56,118 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 
 ---
 
+### Step 0 — Update `Config::actionable_states_for` return type (apm-core)
+
+`apm-core/src/config.rs` already defines `Config::actionable_states_for(&self, actor: &str) -> Vec<&'_ str>`. The queue handler calls this inside a `spawn_blocking` closure, which requires all captured values to be `'static`; a `Vec<&'_ str>` tied to `Config`'s lifetime cannot cross that boundary.
+
+Change the return type to `Vec<String>` and update the body to `.map(|s| s.id.clone()).collect()`. Update any callers in `apm-core` (e.g. `start.rs`, `ticket.rs`) that currently compare against `&str` slices — usually a trivial `.as_str()` call. Add a unit test confirming `actionable_states_for("agent")` returns a vec containing `"ready".to_string()`.
+
+Do this before implementing the server handler.
+
+---
+
+### apm-core: expose sorted queue helper
+
+Add `pub fn sorted_actionable<'a>(tickets: &'a [Ticket], actionable: &[&str], pw: f64, ew: f64, rw: f64) -> Vec<&'a Ticket>` to `apm-core/src/ticket.rs` alongside `pick_next`. It filters by actionable states, sorts descending by score, and returns the full ranked slice. Refactor `pick_next` to call `sorted_actionable(...).into_iter().next()` so the scoring formula lives in one place.
+
+This avoids duplicating the sort logic in the server handler and makes the formula testable independently.
+
+---
+
+### apm-server: `GET /api/queue`
+
+1. Add `apm-server/src/routes/queue.rs` (~55 lines):
+
+```rust
+#[derive(serde::Serialize)]
+struct QueueEntry {
+    rank: usize,
+    id: String,
+    title: String,
+    state: String,
+    priority: u8,
+    effort: u8,
+    risk: u8,
+    score: f64,
+}
+```
+
+2. `queue_handler(State(app): State<AppState>) -> axum::Json<Vec<QueueEntry>>`:
+   - Runs inside `tokio::task::spawn_blocking`
+   - Loads config via `Config::load(&root)`
+   - Calls `ticket::load_all_from_git(&root, &config.tickets.dir)`
+   - Gets actionable states: `config.actionable_states_for("agent")`
+   - Gets prioritization weights: `&config.workflow.prioritization`
+   - Calls `ticket::sorted_actionable(&tickets, &actionable, pw, ew, rw)`
+   - Maps to `Vec<QueueEntry>` with 1-based rank, `score` rounded to 2 decimal places
+   - Returns `axum::Json(entries)`
+
+3. Register in `apm-server/src/main.rs`:
+```rust
+.route("/api/queue", get(queue::queue_handler))
+```
+Add `mod queue;` import.
+
+---
+
+### apm-ui: PriorityQueuePanel
+
+1. Add `apm-ui/src/components/PriorityQueuePanel.tsx` (~90 lines):
+
+```ts
+interface QueueEntry {
+  rank: number;
+  id: string;
+  title: string;
+  state: string;
+  priority: number;
+  effort: number;
+  risk: number;
+  score: number;
+}
+```
+
+- `useQuery({ queryKey: ['queue'], queryFn: () => fetch('/api/queue').then(r => r.json()), refetchInterval: 10_000 })`
+- Read `selectedTicketId` and `setSelectedTicketId` from Zustand store
+- **Loading:** render 3 `<Skeleton>` rows (shadcn Skeleton)
+- **Error:** render short error card with message
+- **Empty:** render centred `<p>No tickets in queue.</p>`
+- **Populated:** render a scrollable shadcn `Table` with columns: **#**, **ID**, **Title**, **State**, **E**, **R**, **Score**
+  - **#** column: 1-based rank number
+  - **ID** column: first 8 chars of ticket id
+  - **State** column: `<Badge variant="outline">` with state label
+  - **E / R** columns: effort / risk numeric values
+  - **Score** column: score to 1 decimal place
+  - Row `onClick`: `setSelectedTicketId(entry.id)`
+  - Row highlighted (e.g. `bg-accent`) when `entry.id === selectedTicketId`
+
+2. Integrate into `apm-ui/src/components/WorkerView.tsx`:
+   - Import `PriorityQueuePanel`
+   - Replace the "Queue" placeholder stub with `<PriorityQueuePanel />`
+   - The existing `<Separator />` between top and bottom halves (from Step 7a) stays in place
+
+---
+
+### File changes summary
+
+| File | Change |
+|------|--------|
+| `apm-core/src/ticket.rs` | Add `sorted_actionable`; refactor `pick_next` to delegate |
+| `apm-server/src/routes/queue.rs` | New file — queue handler |
+| `apm-server/src/main.rs` | Add `mod queue` and `.route("/api/queue", ...)` |
+| `apm-ui/src/components/PriorityQueuePanel.tsx` | New file — queue panel component |
+| `apm-ui/src/components/WorkerView.tsx` | Replace placeholder with `<PriorityQueuePanel />` |
+
+---
+
+### Order of steps
+
+1. Add `sorted_actionable` to `apm-core` and update `pick_next` — run `cargo test --workspace` to confirm no regression
+2. Add `queue.rs` route and register it in `main.rs`
+3. Add `PriorityQueuePanel.tsx`
+4. Wire it into `WorkerView.tsx`
+5. Run `npm run build` in `apm-ui/` and `cargo test --workspace`
+
 ### Open questions
 
 
