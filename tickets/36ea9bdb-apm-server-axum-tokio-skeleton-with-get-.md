@@ -16,7 +16,7 @@ updated_at = "2026-03-31T06:06:10.291031Z"
 
 ### Problem
 
-The UI needs a Rust HTTP backend. Create the apm-server crate (or apm serve command) with axum + tokio. The only endpoint at this stage is GET /health returning {"ok":true}. No business logic yet — the goal is to confirm the crate compiles, ships, and serves. Full spec context: initial_specs/UIdraft_spec_starter.md Step 1.
+The UI roadmap (initial_specs/UIdraft_spec_starter.md) requires a Rust HTTP backend. Currently no server crate exists in the workspace. This ticket adds the `apm-server` crate wired to axum + tokio, with a single `GET /health` endpoint returning `{"ok":true}`. No business logic is added yet — the goal is to confirm the crate compiles, ships, and serves HTTP traffic before later steps build on it.
 
 ### Acceptance criteria
 
