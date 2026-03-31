@@ -41,7 +41,45 @@ Both gaps force agents into awkward workarounds when writing amendment requests 
 
 ### Approach
 
-How the implementation will work.
+Both fixes are in `apm/src/cmd/spec.rs` and the clap argument definition.
+
+**Fix 1 — allow hyphen values on `--set`**
+
+In the clap argument definition for `--set`, add `.allow_hyphen_values(true)`. This tells clap that the value for this argument may start with a `-` and should not be interpreted as a flag.
+
+```rust
+.arg(
+    Arg::new("set")
+        .long("set")
+        .value_name("SET")
+        .allow_hyphen_values(true)  // add this
+        .help("New content for the section; use \"-\" to read from stdin")
+)
+```
+
+**Fix 2 — add `--set-file <PATH>`**
+
+Add a new `--set-file` argument that reads content from a file path:
+
+```rust
+.arg(
+    Arg::new("set_file")
+        .long("set-file")
+        .value_name("PATH")
+        .conflicts_with("set")
+        .help("Read new section content from this file")
+)
+```
+
+In the handler, resolve the three content sources in order:
+1. `--set -` → read from stdin (existing behaviour)
+2. `--set <value>` → use value directly (existing behaviour, now works with leading `-`)
+3. `--set-file <path>` → `std::fs::read_to_string(path)?`
+
+Then pass the resolved content string to the existing section-write logic unchanged.
+
+File changes:
+- `apm/src/cmd/spec.rs` — add `allow_hyphen_values`, add `--set-file` arg, add file-read branch
 
 ### Open questions
 
