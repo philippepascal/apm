@@ -383,6 +383,7 @@ pub fn create(
     context: Option<String>,
     context_section: Option<String>,
     aggressive: bool,
+    section_sets: Vec<(String, String)>,
 ) -> Result<Ticket> {
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
@@ -439,7 +440,32 @@ pub fn create(
         body_template
     };
     let path = tickets_dir.join(&filename);
-    let t = Ticket { frontmatter: fm, body, path };
+    let mut t = Ticket { frontmatter: fm, body, path };
+
+    if !section_sets.is_empty() {
+        let config_active = !config.ticket.sections.is_empty();
+        for (name, value) in &section_sets {
+            let trimmed = value.trim().to_string();
+            if config_active {
+                let section_config = config.ticket.sections.iter()
+                    .find(|s| s.name.eq_ignore_ascii_case(name))
+                    .unwrap();
+                let formatted = crate::spec::apply_section_type(&section_config.type_, trimmed);
+                if crate::spec::is_doc_field(name) {
+                    let mut doc = t.document()?;
+                    crate::spec::set_section(&mut doc, name, formatted);
+                    t.body = doc.serialize();
+                } else {
+                    crate::spec::set_section_body(&mut t.body, name, &formatted);
+                }
+            } else {
+                let mut doc = t.document()?;
+                crate::spec::set_section(&mut doc, name, trimmed);
+                t.body = doc.serialize();
+            }
+        }
+    }
+
     let content = t.serialize()?;
 
     crate::git::commit_to_branch(

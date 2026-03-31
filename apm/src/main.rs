@@ -152,6 +152,12 @@ After creating a ticket the typical next step is:
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
+        /// Section name to pre-populate (repeat paired with --set)
+        #[arg(long, value_name = "NAME")]
+        section: Vec<String>,
+        /// Content for the section named by the preceding --section (repeat paired with --section)
+        #[arg(long, value_name = "TEXT")]
+        set: Vec<String>,
     },
     /// Transition a ticket's state
     #[command(long_about = "Transition a ticket to a new state.
@@ -614,8 +620,8 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
         Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
+        Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
-        Command::New { title, no_edit, side_note, context, context_section, no_aggressive } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
         Command::Set { id, field, value, no_aggressive } => cmd::set::run(&root, &id, field, value, no_aggressive),
         Command::Next { json, no_aggressive } => cmd::next::run(&root, json, no_aggressive),

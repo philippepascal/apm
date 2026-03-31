@@ -2,11 +2,35 @@ use anyhow::Result;
 use apm_core::{config::Config, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool) -> Result<()> {
+const KNOWN_SECTIONS: &[&str] = &["Problem", "Acceptance criteria", "Out of scope", "Approach", "Open questions"];
+
+pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>) -> Result<()> {
     let config = Config::load(root)?;
 
     if context_section.is_some() && context.is_none() {
         anyhow::bail!("--context-section requires --context");
+    }
+
+    if !sets.is_empty() && sections.is_empty() {
+        anyhow::bail!("--set requires --section");
+    }
+    if sections.len() != sets.len() {
+        anyhow::bail!(
+            "--section and --set must be paired: {} --section flag(s) but {} --set flag(s)",
+            sections.len(),
+            sets.len()
+        );
+    }
+
+    let config_active = !config.ticket.sections.is_empty();
+    for name in &sections {
+        if config_active {
+            if !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name)) {
+                anyhow::bail!("unknown section {:?}; not defined in [ticket.sections]", name);
+            }
+        } else if !KNOWN_SECTIONS.iter().any(|s| s.eq_ignore_ascii_case(name)) {
+            anyhow::bail!("unknown section {:?}; valid sections: {}", name, KNOWN_SECTIONS.join(", "));
+        }
     }
 
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -18,7 +42,8 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         .ok()
         .unwrap_or_else(|| "apm".into());
 
-    let t = ticket::create(root, &config, title, author, context, context_section, aggressive)?;
+    let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
+    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets)?;
     let id = &t.frontmatter.id;
     let branch = t.frontmatter.branch.as_deref().unwrap_or("");
     let filename = t.path.file_name().unwrap().to_string_lossy();

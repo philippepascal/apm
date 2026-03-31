@@ -195,8 +195,8 @@ fn init_generated_config_has_all_workflow_states() {
 #[test]
 fn list_excludes_terminal_tickets_by_default() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true).unwrap();
-    apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, None, true).unwrap();
+apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let closed_id = find_ticket_id(dir.path(), "closed-ticket");
     apm::cmd::state::run(dir.path(), &closed_id, "closed".into(), false, false).unwrap();
 
@@ -222,7 +222,7 @@ apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, tr
 #[test]
 fn new_creates_ticket_file() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     // File lives on the ticket branch, not in the working tree.
     let branch = find_ticket_branch(dir.path(), "my-first-ticket");
     let rel_path = ticket_rel_path(&branch);
@@ -233,7 +233,7 @@ fn new_creates_ticket_file() {
 #[test]
 fn new_ticket_has_correct_frontmatter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "hello-world");
     let rel_path = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel_path);
@@ -245,8 +245,8 @@ fn new_ticket_has_correct_frontmatter() {
 #[test]
 fn new_increments_ids() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true).unwrap();
-    apm::cmd::new::run(dir.path(), "Second".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Second".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id1 = find_ticket_id(dir.path(), "first");
     let id2 = find_ticket_id(dir.path(), "second");
     assert_ne!(id1, id2, "ticket IDs must be unique");
@@ -261,10 +261,10 @@ fn new_increments_ids() {
 #[test]
 fn list_shows_all_tickets() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b1 = find_ticket_branch(dir.path(), "alpha");
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
     apm::cmd::list::run(dir.path(), None, false, false, None, None, true).unwrap();
@@ -273,11 +273,11 @@ fn list_shows_all_tickets() {
 #[test]
 fn list_state_filter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b1 = find_ticket_branch(dir.path(), "alpha");
     let alpha_id = find_ticket_id(dir.path(), "alpha");
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
     write_valid_spec_to_branch(dir.path(), &b1, &ticket_rel_path(&b1));
@@ -292,7 +292,7 @@ fn list_state_filter() {
 #[test]
 fn show_existing_ticket() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(dir.path(), "show-me");
     apm::cmd::show::run(dir.path(), &id, false, false).unwrap();
 }
@@ -308,7 +308,7 @@ fn show_missing_ticket_errors() {
 #[test]
 fn state_transition_updates_file() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "transition-test");
     let id = find_ticket_id(dir.path(), "transition-test");
     let rel = ticket_rel_path(&branch);
@@ -322,7 +322,7 @@ fn state_transition_updates_file() {
 #[test]
 fn state_transition_appends_history_row() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "History test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "History test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "history-test");
     let id = find_ticket_id(dir.path(), "history-test");
     let rel = ticket_rel_path(&branch);
@@ -335,7 +335,7 @@ fn state_transition_appends_history_row() {
 #[test]
 fn state_ammend_inserts_amendment_section() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "ammend-test");
     let id = find_ticket_id(dir.path(), "ammend-test");
     let rel = ticket_rel_path(&branch);
@@ -349,7 +349,7 @@ fn state_ammend_inserts_amendment_section() {
 #[test]
 fn set_priority_updates_frontmatter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "set-test");
     let id = find_ticket_id(dir.path(), "set-test");
     let rel = ticket_rel_path(&branch);
@@ -363,10 +363,10 @@ fn set_priority_updates_frontmatter() {
 #[test]
 fn next_returns_highest_priority() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b1 = find_ticket_branch(dir.path(), "low-priority");
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "high-priority");
     let high_id = find_ticket_id(dir.path(), "high-priority");
     apm::cmd::set::run(dir.path(), &high_id, "priority".into(), "10".into(), true).unwrap();
@@ -377,7 +377,7 @@ fn next_returns_highest_priority() {
 #[test]
 fn next_json_is_valid() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let b = find_ticket_branch(dir.path(), "json-test");
     sync_from_branch(dir.path(), &b, &ticket_rel_path(&b));
     apm::cmd::next::run(dir.path(), true, true).unwrap();
@@ -394,7 +394,7 @@ fn next_null_when_no_actionable() {
 #[test]
 fn new_ticket_creates_branch() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     // Branch should exist locally after apm new.
     let branch = find_ticket_branch(dir.path(), "branch-test");
     assert!(branch.starts_with("ticket/"), "expected ticket/ branch, got: {branch}");
@@ -404,7 +404,7 @@ fn new_ticket_creates_branch() {
 #[test]
 fn new_ticket_sets_branch_in_frontmatter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Frontmatter branch".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(dir.path(), "Frontmatter branch".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "frontmatter-branch");
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
@@ -895,7 +895,7 @@ fn spec_mark_case_insensitive() {
 fn close_transitions_from_any_state() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Close me".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "Close me".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(p, "close-me");
     let id = find_ticket_id(p, "close-me");
     let rel = ticket_rel_path(&branch);
@@ -910,7 +910,7 @@ fn close_transitions_from_any_state() {
 fn close_with_reason_appends_to_history() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Close reason".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "Close reason".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(p, "close-reason");
     let id = find_ticket_id(p, "close-reason");
     let rel = ticket_rel_path(&branch);
@@ -924,7 +924,7 @@ fn close_with_reason_appends_to_history() {
 fn close_already_closed_is_error() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "already-closed");
     apm::cmd::close::run(p, &id, None, true).unwrap();
     let result = apm::cmd::close::run(p, &id, None, true);
@@ -945,7 +945,7 @@ fn close_nonexistent_ticket_is_error() {
 fn validate_does_not_flag_closed_state() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "validate-closed");
     apm::cmd::close::run(p, &id, None, true).unwrap();
     // apm validate should not flag the closed ticket as having an unknown state.
@@ -965,7 +965,7 @@ fn validate_does_not_flag_closed_state() {
 fn state_to_closed_bypasses_transition_rules() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "State closed".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "State closed".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let branch = find_ticket_branch(p, "state-closed");
     let id = find_ticket_id(p, "state-closed");
     let rel = ticket_rel_path(&branch);
@@ -1044,7 +1044,7 @@ terminal = true
 fn aggressive_no_remote_does_not_abort_next() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "Aggressive next".into(), true, false, None, None, false).unwrap();
+    apm::cmd::new::run(p, "Aggressive next".into(), true, false, None, None, false, vec![], vec![]).unwrap();
     // No remote configured — fetch_all will fail; must not propagate as error.
     apm::cmd::next::run(p, false, false).unwrap();
 }
@@ -1053,7 +1053,7 @@ fn aggressive_no_remote_does_not_abort_next() {
 fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false).unwrap();
+    apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![]).unwrap();
     apm::cmd::list::run(p, None, false, false, None, None, false).unwrap();
 }
 
@@ -1061,7 +1061,7 @@ fn aggressive_no_remote_does_not_abort_list() {
 fn aggressive_no_remote_does_not_abort_close() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "Aggressive close".into(), true, false, None, None, false).unwrap();
+    apm::cmd::new::run(p, "Aggressive close".into(), true, false, None, None, false, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "aggressive-close");
     // No remote: fetch and push will warn but not abort.
     apm::cmd::close::run(p, &id, None, false).unwrap();
@@ -1076,7 +1076,7 @@ fn aggressive_no_remote_does_not_abort_close() {
 fn no_aggressive_flag_suppresses_fetch_on_next() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "No agg next".into(), true, false, None, None, false).unwrap();
+    apm::cmd::new::run(p, "No agg next".into(), true, false, None, None, false, vec![], vec![]).unwrap();
     // --no-aggressive = true means fetch is skipped entirely (no warning printed,
     // no error). We verify the command still succeeds.
     apm::cmd::next::run(p, false, true).unwrap();
@@ -1086,7 +1086,7 @@ fn no_aggressive_flag_suppresses_fetch_on_next() {
 fn no_aggressive_flag_suppresses_fetch_on_spec() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "No agg spec".into(), true, false, None, None, false).unwrap();
+    apm::cmd::new::run(p, "No agg spec".into(), true, false, None, None, false, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "no-agg-spec");
     // no_aggressive=true: fetch and push are skipped.
     apm::cmd::spec::run(
@@ -1104,7 +1104,7 @@ fn no_aggressive_flag_suppresses_fetch_on_spec() {
 fn no_aggressive_flag_suppresses_fetch_on_set() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "No agg set".into(), true, false, None, None, false).unwrap();
+    apm::cmd::new::run(p, "No agg set".into(), true, false, None, None, false, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "no-agg-set");
     apm::cmd::set::run(p, &id, "priority".into(), "5".into(), true).unwrap();
     let branch = find_ticket_branch(p, "no-agg-set");
@@ -1656,6 +1656,8 @@ fn context_section_approach_places_text_under_approach() {
         Some("my approach text".into()),
         Some("Approach".into()),
         true,
+        vec![],
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "section-test");
     let rel = ticket_rel_path(&branch);
@@ -1676,6 +1678,8 @@ fn context_section_defaults_to_problem_without_config() {
         Some("default context".into()),
         None,
         true,
+        vec![],
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "default-section-test");
     let rel = ticket_rel_path(&branch);
@@ -1694,6 +1698,8 @@ fn context_section_without_context_is_error() {
         None,
         Some("Approach".into()),
         true,
+        vec![],
+        vec![],
     );
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("--context-section requires --context"));
@@ -1710,6 +1716,8 @@ fn context_section_unknown_section_is_error() {
         Some("some text".into()),
         Some("Nonexistent".into()),
         true,
+        vec![],
+        vec![],
     );
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not found in ticket body template"));
@@ -1756,11 +1764,99 @@ context_section = "Approach"
         Some("transition driven context".into()),
         None,
         true,
+        vec![],
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(p, "transition-context-test");
     let rel = ticket_rel_path(&branch);
     let content = branch_content(p, &branch, &rel);
     assert!(content.contains("### Approach\n\ntransition driven context\n\n"), "expected context under ### Approach from transition config");
+}
+
+// --- --section/--set pre-population ---
+
+#[test]
+fn new_section_set_prepopulates_multiple_sections() {
+    let dir = setup();
+    apm::cmd::new::run(
+        dir.path(),
+        "Pre-populated ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec!["Problem".into(), "Approach".into()],
+        vec!["Something is broken".into(), "Fix it with a hammer".into()],
+    ).unwrap();
+    let branch = find_ticket_branch(dir.path(), "pre-populated-ticket");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("### Problem\n\nSomething is broken\n"), "Problem section should be pre-populated");
+    assert!(content.contains("### Approach\n\nFix it with a hammer\n"), "Approach section should be pre-populated");
+    // Only one commit on the ticket branch above main (no intermediate empty-section commit)
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline", &branch, "^main"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let log_str = String::from_utf8(log.stdout).unwrap();
+    assert_eq!(log_str.lines().count(), 1, "ticket branch should have exactly one commit above main");
+}
+
+#[test]
+fn new_section_set_mismatched_counts_is_error() {
+    let dir = setup();
+    let result = apm::cmd::new::run(
+        dir.path(),
+        "Mismatch test".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec!["Problem".into(), "Approach".into()],
+        vec!["Only one set".into()],
+    );
+    assert!(result.is_err());
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("--section") && msg.contains("--set"), "error should mention both flags");
+}
+
+#[test]
+fn new_set_without_section_is_error() {
+    let dir = setup();
+    let result = apm::cmd::new::run(
+        dir.path(),
+        "Set only test".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec!["Orphaned value".into()],
+    );
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("--set requires --section"));
+}
+
+#[test]
+fn new_section_unknown_name_is_error() {
+    let dir = setup();
+    let result = apm::cmd::new::run(
+        dir.path(),
+        "Unknown section test".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec!["Nonexistent".into()],
+        vec!["some text".into()],
+    );
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("unknown section"));
 }
 
 #[test]
@@ -1807,7 +1903,7 @@ type = "free"
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    apm::cmd::new::run(p, "Scaffold test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "Scaffold test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
 
     let scaffold_branch = find_ticket_branch(p, "scaffold-test");
     let scaffold_rel = ticket_rel_path(&scaffold_branch);
@@ -1886,7 +1982,7 @@ fn review_ammend_normalises_plain_bullets_to_checkboxes() {
     let dir = setup();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "Review checkbox test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "Review checkbox test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
 
     let branch = find_ticket_branch(p, "review-checkbox-test");
     let ticket_path = ticket_rel_path(&branch);
@@ -2329,7 +2425,7 @@ fn workers_kill_no_pid_file_errors() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
-    apm::cmd::new::run(p, "kill test ticket".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "kill test ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "kill-test-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
 
@@ -2352,7 +2448,7 @@ fn workers_stale_pid_file_detected() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
-    apm::cmd::new::run(p, "stale pid ticket".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "stale pid ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "stale-pid-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
     let branch = find_ticket_branch(p, "stale-pid-ticket");
@@ -2379,7 +2475,7 @@ fn workers_kill_stale_pid_errors() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
-    apm::cmd::new::run(p, "kill stale ticket".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "kill stale ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "kill-stale-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
     let branch = find_ticket_branch(p, "kill-stale-ticket");
@@ -2479,7 +2575,7 @@ fn state_force_bypasses_transition_rules() {
     let dir = setup_with_strict_transitions();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force test".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "force test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "force-test");
 
     // Advance to in_progress (new → in_progress is valid).
@@ -2503,7 +2599,7 @@ fn state_force_implemented_from_in_progress() {
     let dir = setup_with_strict_transitions();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force progress".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "force progress".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "force-progress");
 
     // Advance to in_progress.
@@ -2526,7 +2622,7 @@ fn state_force_still_rejects_unknown_state() {
     let dir = setup();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force unknown".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "force unknown".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "force-unknown");
 
     // --force does not allow transitioning to a state that doesn't exist in config.
@@ -2539,7 +2635,7 @@ fn state_force_does_not_skip_doc_validation() {
     let dir = setup();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force doc valid".into(), true, false, None, None, true).unwrap();
+    apm::cmd::new::run(p, "force doc valid".into(), true, false, None, None, true, vec![], vec![]).unwrap();
     let id = find_ticket_id(p, "force-doc-valid");
 
     // Transitioning to "specd" without a valid spec should still fail even with --force.
