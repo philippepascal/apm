@@ -1,14 +1,15 @@
 +++
 id = "56499b61"
 title = "apm-server + apm-ui: apm work engine start/stop controls"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/56499b61-apm-server-apm-ui-apm-work-engine-start-"
 created_at = "2026-03-31T06:13:12.529756Z"
-updated_at = "2026-03-31T06:13:12.529756Z"
+updated_at = "2026-03-31T07:02:07.528911Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:13Z | — | new | apm |
+| 2026-03-31T07:02Z | new | in_design | philippepascal |
