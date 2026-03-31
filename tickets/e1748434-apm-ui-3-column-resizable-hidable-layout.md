@@ -1,14 +1,15 @@
 +++
 id = "e1748434"
 title = "apm-ui: 3-column resizable/hidable layout shell with Zustand"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/e1748434-apm-ui-3-column-resizable-hidable-layout"
 created_at = "2026-03-31T06:11:50.266948Z"
-updated_at = "2026-03-31T06:11:50.266948Z"
+updated_at = "2026-03-31T06:20:11.319397Z"
 +++
 
 ## Spec
@@ -41,3 +42,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-03-31T06:11Z | — | new | apm |
+| 2026-03-31T06:20Z | new | in_design | philippepascal |
