@@ -16,7 +16,7 @@ pub fn verify_tickets(
         .collect();
 
     let in_progress_states: HashSet<&str> =
-        ["in_progress", "implemented", "accepted"].iter().copied().collect();
+        ["in_progress", "implemented"].iter().copied().collect();
 
     let mut issues: Vec<String> = Vec::new();
 
@@ -41,23 +41,23 @@ pub fn verify_tickets(
             }
         }
 
-        // in_progress/implemented/accepted with no branch.
+        // in_progress/implemented with no branch.
         if in_progress_states.contains(fm.state.as_str()) && fm.branch.is_none() {
             issues.push(format!("{prefix}: state requires branch but none set"));
         }
 
-        // Branch merged but ticket not yet accepted.
+        // Branch merged but ticket not yet closed.
         if let Some(branch) = &fm.branch {
             if (fm.state == "in_progress" || fm.state == "implemented")
                 && merged.contains(branch.as_str())
             {
-                issues.push(format!("{prefix}: branch {branch} is merged but ticket not accepted"));
+                issues.push(format!("{prefix}: branch {branch} is merged but ticket not closed"));
             }
         }
 
-        // Agent set but state is not in in_progress/implemented/accepted.
+        // Agent set but state is not in_progress/implemented.
         if fm.agent.is_some() && !in_progress_states.contains(fm.state.as_str()) {
-            issues.push(format!("{prefix}: agent is set but state is not in_progress/implemented/accepted"));
+            issues.push(format!("{prefix}: agent is set but state is not in_progress/implemented"));
         }
 
         // Missing ## Spec section.

@@ -349,64 +349,6 @@ pub fn close(
     Ok(())
 }
 
-pub fn accept(
-    root: &Path,
-    config: &crate::config::Config,
-    id_arg: &str,
-    agent: &str,
-    aggressive: bool,
-) -> Result<()> {
-    let tickets = load_all_from_git(root, &config.tickets.dir)?;
-    let prefixes = id_arg_prefixes(id_arg)?;
-
-    let idx = tickets.iter().position(|t| prefixes.iter().any(|p| t.frontmatter.id.starts_with(p.as_str())))
-        .ok_or_else(|| anyhow::anyhow!("no ticket matches '{id_arg}'"))?;
-
-    let mut t = tickets[idx].clone();
-    let id = t.frontmatter.id.clone();
-    let prev = t.frontmatter.state.clone();
-    let now = chrono::Utc::now();
-    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-
-    t.frontmatter.state = "accepted".into();
-    t.frontmatter.updated_at = Some(now);
-
-    let row = format!("| {when} | {prev} | accepted | {agent} |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') {
-            t.body.push('\n');
-        }
-        t.body.push_str(&row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
-        ));
-    }
-
-    let content = t.serialize()?;
-    let rel_path = format!(
-        "{}/{}",
-        config.tickets.dir.to_string_lossy(),
-        t.path.file_name().unwrap().to_string_lossy()
-    );
-    let branch = t.frontmatter.branch.clone()
-        .or_else(|| crate::git::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id}"));
-
-    crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): {prev} → accepted"))?;
-    crate::logger::log("state_transition", &format!("{id:?} {prev} -> accepted"));
-
-    if aggressive {
-        if let Err(e) = crate::git::push_branch(root, &branch) {
-            eprintln!("warning: push failed for {branch}: {e:#}");
-        }
-    }
-
-    println!("{id}: {prev} → accepted");
-    Ok(())
-}
-
 pub fn create(
     root: &std::path::Path,
     config: &crate::config::Config,
