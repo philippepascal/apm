@@ -34,7 +34,11 @@ The fix is entirely in the UI layer. Backend behaviour is already correct. Clari
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Any backend changes — the drain/kill semantics are already correct
+- Adding a confirmation dialog before killing a worker
+- Adding a "drain and stop" feature that waits for all workers before marking the engine as stopped
+- Changes to the engine status display or worker status indicators beyond button labels
+- Accessibility improvements beyond `title` attributes (aria-live, keyboard nav, etc.)
 
 ### Approach
 
