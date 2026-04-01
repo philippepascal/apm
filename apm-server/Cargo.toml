@@ -17,6 +17,7 @@ toml = { workspace = true }
 apm-core = { path = "../apm-core" }
 chrono = { workspace = true }
 tower-http = { workspace = true, features = ["fs"] }
+tokio-stream = "0.1"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
+mod log;
 mod queue;
 mod work;
 mod workers;
@@ -21,6 +22,7 @@ enum TicketSource {
 struct AppState {
     source: TicketSource,
     work_engine: work::WorkEngineState,
+    log_file: Option<std::path::PathBuf>,
 }
 
 impl AppState {
@@ -658,9 +660,13 @@ async fn take_ticket(
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
+    let log_file = config.logging.file.map(|p| {
+        if p.is_absolute() { p } else { root.join(&p) }
+    });
     let state = Arc::new(AppState {
         source: TicketSource::Git(root, tickets_dir),
         work_engine: work::new_engine_state(),
+        log_file,
     });
     let serve_dir = ServeDir::new("apm-ui/dist")
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
@@ -679,6 +685,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/work/start", post(work::post_work_start))
         .route("/api/work/stop", post(work::post_work_stop))
         .route("/api/work/dry-run", get(work::get_work_dry_run))
+        .route("/api/log/stream", get(log::stream_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -688,6 +695,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(tickets),
         work_engine: work::new_engine_state(),
+        log_file: None,
     });
     Router::new()
         .route("/api/sync", post(sync_handler))
@@ -703,6 +711,7 @@ pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) 
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(tickets),
         work_engine: work::new_engine_state(),
+        log_file: None,
     });
     Router::new()
         .route("/api/workers", get(workers::workers_handler))
@@ -714,6 +723,7 @@ pub fn build_app_in_memory_with_queue(tickets: Vec<apm_core::ticket::Ticket>) ->
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(tickets),
         work_engine: work::new_engine_state(),
+        log_file: None,
     });
     Router::new()
         .route("/api/queue", get(queue::queue_handler))
@@ -725,6 +735,7 @@ pub fn build_app_in_memory_for_work() -> Router {
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(vec![]),
         work_engine: work::new_engine_state(),
+        log_file: None,
     });
     Router::new()
         .route("/api/work/status", get(work::get_work_status))

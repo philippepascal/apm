@@ -9,6 +9,7 @@ import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
 import ReviewEditor from './ReviewEditor'
 import NewTicketModal from './NewTicketModal'
+import LogPanel from './LogPanel'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
 import { fetchStatus, startEngine, stopEngine } from './WorkEngineControls'
@@ -207,6 +208,7 @@ export default function WorkScreen() {
           ))}
         </ResizablePanelGroup>
       </div>
+      <LogPanel />
     </div>
   )
 }
