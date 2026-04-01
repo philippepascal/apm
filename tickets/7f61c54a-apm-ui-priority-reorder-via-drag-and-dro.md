@@ -1,7 +1,7 @@
 +++
 id = "7f61c54a"
 title = "apm-ui: priority reorder via drag-and-drop in worker queue"
-state = "in_progress"
+state = "implemented"
 priority = 35
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "32939"
 branch = "ticket/7f61c54a-apm-ui-priority-reorder-via-drag-and-dro"
 created_at = "2026-03-31T06:13:11.256058Z"
-updated_at = "2026-04-01T06:01:57.905502Z"
+updated_at = "2026-04-01T06:13:24.177679Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ In `handleDragEnd` and the keyboard handler, skip any operation if the ticket's 
 | 2026-03-31T19:17Z | in_design | specd | claude-0331-1913-b2c4 |
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T06:01Z | ready | in_progress | philippepascal |
+| 2026-04-01T06:13Z | in_progress | implemented | claude-0401-0602-c8e0 |
