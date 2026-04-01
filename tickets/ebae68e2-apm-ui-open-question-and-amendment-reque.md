@@ -1,7 +1,7 @@
 +++
 id = "ebae68e2"
 title = "apm-ui: open question and amendment request badges on ticket cards"
-state = "implemented"
+state = "accepted"
 priority = 25
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "60571"
 branch = "ticket/ebae68e2-apm-ui-open-question-and-amendment-reque"
 created_at = "2026-03-31T06:13:20.438546Z"
-updated_at = "2026-04-01T06:45:05.861768Z"
+updated_at = "2026-04-01T07:02:31.329550Z"
 +++
 
 ## Spec
@@ -91,3 +91,4 @@ No new files are required. Changes are confined to:
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T06:39Z | ready | in_progress | philippepascal |
 | 2026-04-01T06:45Z | in_progress | implemented | claude-0401-0639-ca90 |
+| 2026-04-01T07:02Z | implemented | accepted | apm-sync |
