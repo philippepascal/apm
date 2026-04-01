@@ -28,7 +28,7 @@ in_progress is already excluded (no actionable field in config). The fix require
 - [x] The worker queue panel continues to display tickets in `new` state
 - [x] The worker queue panel continues to display tickets in `ammend` state
 - [x] The worker queue panel continues to display tickets in `ready` state
-- [ ] The worker queue panel does not display tickets in `in_progress` state (existing behaviour, must not regress)
+- [x] The worker queue panel does not display tickets in `in_progress` state (existing behaviour, must not regress)
 - [ ] `apm next` does not return an `in_design` ticket as the next actionable item (consistent with queue behaviour)
 
 ### Out of scope
