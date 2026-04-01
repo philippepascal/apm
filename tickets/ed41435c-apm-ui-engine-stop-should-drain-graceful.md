@@ -42,7 +42,39 @@ The fix is entirely in the UI layer. Backend behaviour is already correct. Clari
 
 ### Approach
 
-How the implementation will work.
+Two files change; both are minimal text/attribute edits.
+
+**`apm-ui/src/components/WorkEngineControls.tsx`** (line ~77)
+
+Change the engine toggle button so that when the engine is active it renders "Stop dispatching" with a `title` tooltip:
+
+```tsx
+<button
+  onClick={handleToggle}
+  disabled={isPending}
+  title={isEngineActive ? 'Running workers will finish their current ticket' : undefined}
+  className="px-2 py-0.5 rounded border border-gray-600 text-gray-300 text-xs hover:bg-gray-700 disabled:opacity-50"
+>
+  {isEngineActive ? 'Stop dispatching' : 'Start'}
+</button>
+```
+
+**`apm-ui/src/components/WorkerActivityPanel.tsx`** (line ~121)
+
+Change the per-worker stop button label to "Kill" and add a `title`:
+
+```tsx
+<button
+  className="px-2 py-0.5 text-xs rounded bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 shrink-0"
+  disabled={stopping === w.pid}
+  title="Send SIGTERM to this worker"
+  onClick={() => handleStop(w.pid)}
+>
+  Kill
+</button>
+```
+
+No other files need to change. No new dependencies. No backend changes. Tests: the project has no frontend unit tests covering button labels; verify manually by running the dev server and inspecting both panels.
 
 ### Open questions
 
