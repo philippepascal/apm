@@ -1,17 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
-
-const SUPERVISOR_STATES = [
-  'question',
-  'specd',
-  'ammend',
-  'blocked',
-  'implemented',
-  'accepted',
-] as const
-
-type SupervisorState = (typeof SUPERVISOR_STATES)[number]
+import { groupBySupervisorState } from '../../lib/supervisorUtils'
 
 async function fetchTickets(): Promise<Ticket[]> {
   const res = await fetch('/api/tickets')
@@ -25,13 +15,7 @@ export default function SupervisorView() {
     queryFn: fetchTickets,
   })
 
-  const grouped = new Map<SupervisorState, Ticket[]>()
-  for (const state of SUPERVISOR_STATES) {
-    const matches = tickets.filter((t) => t.state === state)
-    if (matches.length > 0) {
-      grouped.set(state, matches)
-    }
-  }
+  const columns = groupBySupervisorState(tickets)
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
@@ -39,10 +23,10 @@ export default function SupervisorView() {
         Supervisor
       </div>
       <div className="flex-1 flex flex-row gap-4 overflow-x-auto p-3">
-        {SUPERVISOR_STATES.filter((s) => grouped.has(s)).map((state) => (
-          <Swimlane key={state} state={state} tickets={grouped.get(state)!} />
+        {columns.map(([state, colTickets]) => (
+          <Swimlane key={state} state={state} tickets={colTickets} />
         ))}
-        {grouped.size === 0 && (
+        {columns.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
             No tickets require supervisor attention
           </div>

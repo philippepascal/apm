@@ -11,6 +11,7 @@ export default function TicketCard({ ticket }: TicketCardProps) {
 
   return (
     <div
+      data-ticket-id={ticket.id}
       onClick={() => setSelectedTicketId(ticket.id)}
       className={
         'rounded-md border bg-white p-2 cursor-pointer hover:bg-gray-50 ' +
