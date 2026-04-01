@@ -14,14 +14,14 @@ export default function TicketCard({ ticket }: TicketCardProps) {
       data-ticket-id={ticket.id}
       onClick={() => setSelectedTicketId(ticket.id)}
       className={
-        'rounded-md border bg-white p-2.5 cursor-pointer hover:bg-gray-50 shadow-sm ' +
+        'rounded-md border border-gray-600 bg-gray-800 p-2.5 cursor-pointer hover:bg-gray-700 shadow-sm ' +
         (isSelected ? 'ring-2 ring-blue-500' : '')
       }
     >
       <div className="flex items-start justify-between gap-1">
         <div className="flex gap-1 shrink-0 ml-auto">
           {!!ticket.effort && (
-            <span className="text-[10px] px-1 rounded bg-gray-100 text-gray-500">
+            <span className="text-[10px] px-1 rounded bg-gray-700 text-gray-300">
               E:{ticket.effort}
             </span>
           )}
@@ -30,8 +30,8 @@ export default function TicketCard({ ticket }: TicketCardProps) {
               className={
                 'text-[10px] px-1 rounded ' +
                 (ticket.risk >= 7
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-gray-100 text-gray-500')
+                  ? 'bg-red-900/60 text-red-300'
+                  : 'bg-gray-700 text-gray-300')
               }
             >
               R:{ticket.risk}

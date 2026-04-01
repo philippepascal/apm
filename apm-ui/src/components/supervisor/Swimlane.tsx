@@ -13,7 +13,7 @@ export default function Swimlane({ state, tickets }: SwimlaneProps) {
     <div className="flex flex-col min-w-[220px] max-w-[280px] h-full">
       <div className={`px-2 py-1.5 border-b border-l-4 ${colors.headerBorder} flex items-center justify-between shrink-0`}>
         <span className="text-xs font-semibold capitalize">{state}</span>
-        <span className="text-[10px] bg-gray-100 text-gray-600 rounded-full px-1.5 py-0.5">
+        <span className="text-[10px] bg-gray-700 text-gray-300 rounded-full px-1.5 py-0.5">
           {tickets.length}
         </span>
       </div>

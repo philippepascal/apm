@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useLayoutStore } from '../store/useLayoutStore'
 
 interface WorkerInfo {
   pid: number
@@ -22,6 +23,7 @@ export default function WorkerActivityPanel() {
   const queryClient = useQueryClient()
   const [stopping, setStopping] = useState<number | null>(null)
   const [stopErrors, setStopErrors] = useState<Record<number, string>>({})
+  const { selectedTicketId, setSelectedTicketId } = useLayoutStore()
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['workers'],
@@ -83,7 +85,8 @@ export default function WorkerActivityPanel() {
         <div
           key={w.pid}
           tabIndex={0}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-500"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-md bg-gray-800 cursor-pointer focus:outline-none focus:ring-1 focus:ring-gray-500 ${w.ticket_id === selectedTicketId ? 'ring-2 ring-blue-500' : ''}`}
+          onClick={() => setSelectedTicketId(w.ticket_id)}
           onKeyDown={(e) => {
             if (e.shiftKey && e.key === 'K' && w.status === 'running' && stopping !== w.pid) {
               handleStop(w.pid)
@@ -93,6 +96,7 @@ export default function WorkerActivityPanel() {
           <span
             className={`w-2 h-2 rounded-full shrink-0 ${w.status === 'running' ? 'bg-green-400' : w.status === 'crashed' ? 'bg-red-400' : 'bg-gray-400'}`}
           />
+          <span className="text-[10px] text-gray-400 shrink-0">{w.status}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-mono text-gray-500 shrink-0">
