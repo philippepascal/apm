@@ -15,11 +15,14 @@ updated_at = "2026-04-01T06:08:22.545458Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a ticket is accepted via `apm state <id> accepted`, the PR has already been merged on GitHub (the transition has a `pr_all_closing_merged` precondition). At this point, local main is stale — it does not reflect the merged changes. Nothing currently pulls or fast-forwards main after acceptance.
+
+The fix requires new code in apm-core: a new CompletionStrategy variant (e.g. `PullDefault`) that fetches origin/<default_branch> and fast-forwards local main. This variant must be wired into the TOML config parser so transitions can opt into it with `completion = "pull"`. The `implemented → accepted` transition in .apm/config.toml should then set this.
+
+The existing `completion = "merge"` strategy is wrong for this case — it would try to merge the ticket branch locally, which is redundant and potentially messy after a squash merge.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +37,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
