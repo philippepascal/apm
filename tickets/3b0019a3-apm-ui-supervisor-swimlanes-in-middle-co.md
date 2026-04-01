@@ -28,7 +28,7 @@ The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`
 - [x] Swimlanes appear in a fixed order matching the workflow: question, specd, ammend, blocked, implemented, accepted
 - [x] A swimlane with zero tickets is not rendered
 - [x] Each swimlane has a header showing the state label and a count of tickets in that state
-- [ ] Each ticket is rendered as a card showing: short id (first 8 chars), title, agent name (or empty if unassigned), effort badge, risk badge
+- [x] Each ticket is rendered as a card showing: short id (first 8 chars), title, agent name (or empty if unassigned), effort badge, risk badge
 - [ ] Clicking a ticket card sets selectedTicketId in the Zustand store to that ticket's id
 - [ ] The card for the currently selected ticket is visually highlighted
 - [ ] Ticket data is loaded from GET /api/tickets via TanStack Query
