@@ -1,7 +1,7 @@
 +++
 id = "268a88c9"
 title = "apm state accepted: pull default branch after PR merge"
-state = "implemented"
+state = "accepted"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "71249"
 branch = "ticket/268a88c9-apm-state-accepted-pull-default-branch-a"
 created_at = "2026-04-01T06:10:14.360337Z"
-updated_at = "2026-04-01T06:43:17.728505Z"
+updated_at = "2026-04-01T07:02:20.896404Z"
 +++
 
 ## Spec
@@ -91,3 +91,4 @@ Extend the existing `CompletionStrategy` serde test to assert that `"pull"` dese
 | 2026-04-01T06:25Z | specd | ready | apm |
 | 2026-04-01T06:39Z | ready | in_progress | philippepascal |
 | 2026-04-01T06:43Z | in_progress | implemented | claude-0401-0639-19d0 |
+| 2026-04-01T07:02Z | implemented | accepted | apm-sync |
