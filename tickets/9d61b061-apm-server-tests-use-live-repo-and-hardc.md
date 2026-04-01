@@ -1,7 +1,7 @@
 +++
 id = "9d61b061"
 title = "apm-server tests use live repo and hardcoded ticket ID"
-state = "accepted"
+state = "closed"
 priority = 75
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0331-2000-p9x1"
 agent = "19386"
 branch = "ticket/9d61b061-apm-server-tests-use-live-repo-and-hardc"
 created_at = "2026-03-31T21:45:15.980577Z"
-updated_at = "2026-03-31T23:23:06.936376Z"
+updated_at = "2026-04-01T04:55:11.285598Z"
 +++
 
 ## Spec
@@ -64,3 +64,4 @@ Adding new test cases beyond the four existing ones; changes to the handler logi
 | 2026-03-31T23:13Z | ready | in_progress | philippepascal |
 | 2026-03-31T23:16Z | in_progress | implemented | claude-0331-2330-w7k2 |
 | 2026-03-31T23:23Z | implemented | accepted | philippepascal |
+| 2026-04-01T04:55Z | accepted | closed | apm-sync |
