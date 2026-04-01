@@ -1,7 +1,7 @@
 +++
 id = "6d46e15c"
 title = "apm-server + apm-ui: worker management (list, stop, reassign)"
-state = "accepted"
+state = "closed"
 priority = 30
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "78853"
 branch = "ticket/6d46e15c-apm-server-apm-ui-worker-management-list"
 created_at = "2026-03-31T06:13:21.657306Z"
-updated_at = "2026-04-01T07:02:26.169049Z"
+updated_at = "2026-04-01T07:12:44.596656Z"
 +++
 
 ## Spec
@@ -302,3 +302,4 @@ If any of these are missing or named differently, add or rename them in `apm-cor
 | 2026-04-01T06:39Z | ready | in_progress | philippepascal |
 | 2026-04-01T06:47Z | in_progress | implemented | claude-0401-0639-6510 |
 | 2026-04-01T07:02Z | implemented | accepted | apm-sync |
+| 2026-04-01T07:12Z | accepted | closed | apm-sync |
