@@ -30,7 +30,7 @@ Adding `GET /api/workers` to `apm-server` and wiring up a WorkerActivityPanel co
 - [x] The response body is a JSON array; each element contains: `pid`, `ticket_id`, `ticket_title`, `state`, `agent`, `elapsed`, `status` (`"running"` or `"crashed"`)
 - [x] `GET /api/workers` returns an empty JSON array when no `.apm-worker.pid` files exist in any worktree
 - [x] A worker whose PID is no longer alive appears in the response with `status: "crashed"` (not silently omitted)
-- [ ] The handler offloads all blocking work via `spawn_blocking` and does not block the tokio runtime
+- [x] The handler offloads all blocking work via `spawn_blocking` and does not block the tokio runtime
 - [ ] WorkerActivityPanel renders a table row for each worker in the response
 - [ ] Each row shows: ticket ID, ticket title, agent name, current state, elapsed time, and a status badge
 - [ ] When the array is empty, WorkerActivityPanel shows a centred "No workers running." message
