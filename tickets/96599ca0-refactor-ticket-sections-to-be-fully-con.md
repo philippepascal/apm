@@ -30,7 +30,7 @@ The fix is to replace `TicketDocument`'s typed fields with a config-driven order
 - [x] `apm spec <id> --section <name>` works for any section defined in config, not only the six currently hardcoded ones
 - [x] A ticket containing a section whose name is not in config is preserved unchanged on a parse → serialize round-trip (no silent drops)
 - [x] The "Code review" section (present in config but absent from `TicketDocument`) survives a parse-serialize round-trip on an existing ticket file
-- [ ] `TicketDocument` no longer declares individual typed Rust fields (`problem`, `acceptance_criteria`, etc.) — sections are stored in an ordered map
+- [x] `TicketDocument` no longer declares individual typed Rust fields (`problem`, `acceptance_criteria`, etc.) — sections are stored in an ordered map
 - [ ] `get_section` and `set_section` in `spec.rs` contain no hardcoded section-name match arms
 - [ ] `is_doc_field` in `spec.rs` is removed; all callers route sections through `set_section` / `get_section` without branching on section name
 - [ ] `validate()` accepts a `&[TicketSection]` parameter and enforces `required = true` sections from config — no hardcoded field names
