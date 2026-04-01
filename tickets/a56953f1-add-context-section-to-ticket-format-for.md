@@ -15,11 +15,11 @@ updated_at = "2026-04-01T22:21:43.547233Z"
 
 ### Problem
 
-When a delegator creates a ticket and promotes it to `groomed`, the spec-writer worker receives nothing beyond the ticket title. There is no sanctioned place in the ticket format for the delegator to record the relevant design document, the relevant section, or known constraints (e.g. "the `accepted` state has been removed").
+The ticket body section model has two sources of truth. `[[ticket.sections]]` in `config.toml` drives skeleton generation and `apm spec` validation, but `TicketDocument` hardcodes six typed fields (`problem`, `acceptance_criteria`, `out_of_scope`, `approach`, `open_questions`, `amendment_requests`) with a fixed serialization order.
 
-The existing sections (`### Problem`, `### Acceptance criteria`, etc.) are worker-owned. Pre-filling them creates ambiguity about whether the worker should preserve or replace the content.
+Any section not in this struct — including custom sections like a delegator-facing `Context` — either bypasses `TicketDocument` entirely via raw string manipulation, or gets silently dropped the next time any doc-field section is updated (because `TicketDocument::serialize` only outputs its six hardcoded fields).
 
-The result: spec-writers must guess intent from the title alone and often produce specs that miss the design or require amendment cycles.
+Adding a new section today requires code changes in `ticket.rs`, `spec.rs`, and `apm-server` instead of a single config entry. The config already has everything needed (`name`, `type`, `required`, `placeholder`); it just isn't used at the model layer.
 
 ### Acceptance criteria
 
