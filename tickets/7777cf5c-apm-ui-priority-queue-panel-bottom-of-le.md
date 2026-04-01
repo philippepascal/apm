@@ -37,7 +37,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 - [x] `PriorityQueuePanel` automatically refetches `GET /api/queue` every 10 seconds via TanStack Query `refetchInterval`
 - [x] Clicking a queue row sets `selectedTicketId` in the Zustand store (the same global selection used by the swimlanes)
 - [x] The row for the currently selected ticket is visually highlighted
-- [ ] `PriorityQueuePanel` is rendered in the bottom half of `WorkerView.tsx`, replacing the placeholder stub
+- [x] `PriorityQueuePanel` is rendered in the bottom half of `WorkerView.tsx`, replacing the placeholder stub
 - [ ] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
 - [ ] `cargo test --workspace` passes
 
