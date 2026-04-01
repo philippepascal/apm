@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useLayoutStore } from '../store/useLayoutStore'
 import InlineNumberField from './InlineNumberField'
+import { getStateColors } from '../lib/stateColors'
 
 interface TicketDetail {
   id: string
@@ -27,8 +28,11 @@ function TransitionButtons({ ticket, onTransitioned }: {
   ticket: TicketDetail
   onTransitioned: () => void
 }) {
+  const queryClient = useQueryClient()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reassigning, setReassigning] = useState(false)
+  const [reassignError, setReassignError] = useState<string | null>(null)
   const keepRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -63,6 +67,25 @@ function TransitionButtons({ ticket, onTransitioned }: {
     }
   }
 
+  async function handleReassign() {
+    setReassigning(true)
+    setReassignError(null)
+    try {
+      const res = await fetch(`/api/tickets/${ticket.id}/take`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json()
+        setReassignError(body.error ?? `Error ${res.status}`)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      }
+    } catch (e) {
+      setReassignError(String(e))
+    } finally {
+      setReassigning(false)
+    }
+  }
+
   return (
     <div className="border-t p-3 flex flex-wrap gap-2 items-center">
       {ticket.valid_transitions.map(tr => (
@@ -83,6 +106,14 @@ function TransitionButtons({ ticket, onTransitioned }: {
       >
         Keep at {ticket.state}
       </button>
+      <button
+        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        disabled={reassigning}
+        onClick={handleReassign}
+      >
+        Reassign to me
+      </button>
+      {reassignError && <p className="text-red-600 text-sm w-full">{reassignError}</p>}
       {error && <p className="text-red-600 text-sm w-full">{error}</p>}
     </div>
   )
@@ -137,44 +168,60 @@ export default function TicketDetail() {
     queryClient.invalidateQueries({ queryKey: ['tickets'] })
   }
 
+  const stateColors = data ? getStateColors(data.state) : null
+
   return (
-    <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
-      <div className="px-3 py-2 text-sm font-medium border-b shrink-0">
-        <div className="flex items-center justify-between">
-          <span>TicketDetail</span>
+    <div tabIndex={0} className="h-full flex flex-col bg-white outline-none">
+      <div className="px-4 py-3 border-b shrink-0 bg-gray-50">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            {data ? (
+              <h2 className="text-base font-semibold leading-snug text-gray-900">
+                {data.title}
+              </h2>
+            ) : (
+              <span className="text-sm font-medium text-gray-700">Detail</span>
+            )}
+          </div>
           {data && (
             <button
               onClick={() => setReviewMode(true)}
-              className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-50"
+              className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-100 shrink-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
               Review
             </button>
           )}
         </div>
-        {data && (
-          <div className="flex items-center gap-3 mt-1">
-            <InlineNumberField
-              label="E"
-              value={data.effort}
-              min={1}
-              max={10}
-              onCommit={(v) => patchMutation.mutate({ effort: v })}
-            />
-            <InlineNumberField
-              label="R"
-              value={data.risk}
-              min={1}
-              max={10}
-              onCommit={(v) => patchMutation.mutate({ risk: v })}
-            />
-            <InlineNumberField
-              label="P"
-              value={data.priority}
-              min={0}
-              max={255}
-              onCommit={(v) => patchMutation.mutate({ priority: v })}
-            />
-            {patchError && <span className="text-xs text-red-500">{patchError}</span>}
+        {data && stateColors && (
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stateColors.badge}`}>
+              {data.state}
+            </span>
+            <span className="text-[10px] font-mono text-gray-400">{data.id.slice(0, 8)}</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <InlineNumberField
+                label="E"
+                value={data.effort}
+                min={1}
+                max={10}
+                onCommit={(v) => patchMutation.mutate({ effort: v })}
+              />
+              <InlineNumberField
+                label="R"
+                value={data.risk}
+                min={1}
+                max={10}
+                onCommit={(v) => patchMutation.mutate({ risk: v })}
+              />
+              <InlineNumberField
+                label="P"
+                value={data.priority}
+                min={0}
+                max={255}
+                onCommit={(v) => patchMutation.mutate({ priority: v })}
+              />
+              {patchError && <span className="text-xs text-red-500">{patchError}</span>}
+            </div>
           </div>
         )}
       </div>
@@ -199,7 +246,7 @@ export default function TicketDetail() {
           </div>
         )}
         {data && (
-          <div className="prose prose-sm max-w-none p-4">
+          <div className="prose prose-sm px-6 py-4">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.body}</ReactMarkdown>
           </div>
         )}

@@ -7,6 +7,7 @@ import { Decoration, ViewPlugin, WidgetType } from '@codemirror/view'
 import type { DecorationSet, ViewUpdate } from '@codemirror/view'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLayoutStore } from '../store/useLayoutStore'
+import { assignShortcuts } from '../lib/transitionShortcuts'
 
 interface TicketDetail {
   id: string
@@ -36,24 +37,6 @@ function getHistoryStart(content: string): number {
   return idx === -1 ? content.length : idx
 }
 
-function getTransitionShortcut(targetState: string, allTransitions: { to: string }[]): string {
-  const used = new Set<string>(['k'])
-  const shortcuts = new Map<string, string>()
-  for (const tr of allTransitions) {
-    for (const ch of tr.to) {
-      const lower = ch.toLowerCase()
-      if (!used.has(lower)) {
-        used.add(lower)
-        shortcuts.set(tr.to, lower)
-        break
-      }
-    }
-    if (!shortcuts.has(tr.to)) {
-      shortcuts.set(tr.to, tr.to[0].toLowerCase())
-    }
-  }
-  return shortcuts.get(targetState) ?? targetState[0].toLowerCase()
-}
 
 class CheckboxWidget extends WidgetType {
   checked: boolean
@@ -238,13 +221,20 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
     }
   }
 
+  const shortcuts = assignShortcuts(ticket.valid_transitions.map(t => t.to))
+  const shortcutsRef = useRef(shortcuts)
+  shortcutsRef.current = shortcuts
+
   const handleTransitionRef = useRef(handleTransition)
   handleTransitionRef.current = handleTransition
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const target = e.target as Element | null
-      if (target && target.closest('.cm-editor')) return
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+      }
       const key = e.key.toLowerCase()
       if (key === 'k') {
         if (isDirtyRef.current && !window.confirm('Discard unsaved changes?')) return
@@ -252,8 +242,8 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
         return
       }
       for (const tr of ticket.valid_transitions) {
-        const shortcut = getTransitionShortcut(tr.to, ticket.valid_transitions)
-        if (key === shortcut) {
+        const shortcut = shortcutsRef.current.get(tr.to)
+        if (shortcut && key === shortcut) {
           e.preventDefault()
           handleTransitionRef.current(tr.to)
           return
@@ -282,7 +272,7 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
           Keep at {ticket.state} [K]
         </button>
         {ticket.valid_transitions.map((tr) => {
-          const shortcut = getTransitionShortcut(tr.to, ticket.valid_transitions)
+          const shortcut = shortcuts.get(tr.to) ?? tr.to[0].toLowerCase()
           return (
             <button
               key={tr.to}

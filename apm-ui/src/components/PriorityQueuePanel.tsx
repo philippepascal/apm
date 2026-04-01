@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
+import { getStateColors } from '../lib/stateColors'
 
 interface QueueEntry {
   rank: number
@@ -99,42 +100,44 @@ function SortableRow({
     }
   }
 
+  const colors = getStateColors(entry.state)
+
   return (
     <tr
       ref={setNodeRef}
       style={style}
       onKeyDown={handleKeyDown}
       onClick={onSelect}
-      className={`border-b last:border-0 cursor-pointer hover:bg-gray-100 ${
-        isSelected ? 'bg-accent' : ''
+      className={`border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800 ${
+        isSelected ? 'bg-gray-800' : ''
       } ${isInProgress ? 'opacity-60' : ''}`}
       {...attributes}
       tabIndex={isInProgress ? -1 : 0}
     >
-      <td className="px-1 py-1 w-5 text-gray-400">
+      <td className="px-1 py-1.5 w-5 text-gray-600">
         {isInProgress ? (
           <span className="inline-block w-4" />
         ) : (
           <span
             {...listeners}
-            className="cursor-grab hover:text-gray-600 inline-flex items-center"
+            className="cursor-grab hover:text-gray-400 inline-flex items-center"
             aria-label="drag handle"
           >
             <GripVertical width={12} height={12} />
           </span>
         )}
       </td>
-      <td className="px-2 py-1 text-right text-gray-400">{entry.rank}</td>
-      <td className="px-2 py-1 font-mono">{entry.id.slice(0, 8)}</td>
-      <td className="px-2 py-1 truncate max-w-[120px]">{entry.title}</td>
-      <td className="px-2 py-1">
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-gray-300 text-gray-600">
+      <td className="px-2 py-1.5 text-right text-gray-500 text-[10px]">{entry.rank}</td>
+      <td className="px-2 py-1.5 font-mono text-gray-500 text-[10px]">{entry.id.slice(0, 8)}</td>
+      <td className="px-2 py-1.5 truncate max-w-[100px] text-gray-200 text-xs">{entry.title}</td>
+      <td className="px-2 py-1.5">
+        <span className={`text-[10px] font-medium ${colors.queueText}`}>
           {entry.state}
         </span>
       </td>
-      <td className="px-2 py-1 text-right">{entry.effort}</td>
-      <td className="px-2 py-1 text-right">{entry.risk}</td>
-      <td className="px-2 py-1 text-right">{entry.score.toFixed(1)}</td>
+      <td className="px-2 py-1.5 text-right text-gray-400 text-[10px]">{entry.effort}</td>
+      <td className="px-2 py-1.5 text-right text-gray-400 text-[10px]">{entry.risk}</td>
+      <td className="px-2 py-1.5 text-right text-gray-400 text-[10px]">{entry.score.toFixed(1)}</td>
     </tr>
   )
 }
@@ -212,7 +215,7 @@ export default function PriorityQueuePanel() {
     return (
       <div className="p-3 space-y-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-4 bg-gray-200 rounded animate-pulse" />
+          <div key={i} className="h-4 bg-gray-800 rounded animate-pulse" />
         ))}
       </div>
     )
@@ -220,7 +223,7 @@ export default function PriorityQueuePanel() {
 
   if (isError) {
     return (
-      <div className="m-3 p-3 rounded border border-red-200 bg-red-50 text-xs text-red-700">
+      <div className="m-3 p-3 rounded border border-red-700 bg-red-900/30 text-xs text-red-400">
         Failed to load queue
       </div>
     )
@@ -228,7 +231,7 @@ export default function PriorityQueuePanel() {
 
   if (!data || data.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-xs text-gray-400">
+      <div className="h-full flex items-center justify-center text-xs text-gray-500">
         No tickets in queue.
       </div>
     )
@@ -239,11 +242,11 @@ export default function PriorityQueuePanel() {
   return (
     <div className="overflow-auto h-full flex flex-col">
       {errorMsg && (
-        <div className="m-2 p-2 rounded border border-red-200 bg-red-50 text-xs text-red-700 flex items-center gap-2 shrink-0">
+        <div className="m-2 p-2 rounded border border-red-700 bg-red-900/30 text-xs text-red-400 flex items-center gap-2 shrink-0">
           <span className="flex-1">{errorMsg}</span>
           <button
             onClick={() => setErrorMsg(null)}
-            className="text-red-500 hover:text-red-700 font-bold"
+            className="text-red-400 hover:text-red-300 font-bold"
           >
             ×
           </button>
@@ -256,15 +259,15 @@ export default function PriorityQueuePanel() {
         >
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b text-gray-500">
-                <th className="px-1 py-1 w-5" />
-                <th className="px-2 py-1 text-right font-medium w-6">#</th>
-                <th className="px-2 py-1 text-left font-medium">ID</th>
-                <th className="px-2 py-1 text-left font-medium">Title</th>
-                <th className="px-2 py-1 text-left font-medium">State</th>
-                <th className="px-2 py-1 text-right font-medium w-6">E</th>
-                <th className="px-2 py-1 text-right font-medium w-6">R</th>
-                <th className="px-2 py-1 text-right font-medium">Score</th>
+              <tr className="border-b border-gray-700 text-gray-500">
+                <th className="px-1 py-1.5 w-5" />
+                <th className="px-2 py-1.5 text-right font-medium w-6">#</th>
+                <th className="px-2 py-1.5 text-left font-medium">ID</th>
+                <th className="px-2 py-1.5 text-left font-medium">Title</th>
+                <th className="px-2 py-1.5 text-left font-medium">State</th>
+                <th className="px-2 py-1.5 text-right font-medium w-6">E</th>
+                <th className="px-2 py-1.5 text-right font-medium w-6">R</th>
+                <th className="px-2 py-1.5 text-right font-medium">Score</th>
               </tr>
             </thead>
             <tbody>

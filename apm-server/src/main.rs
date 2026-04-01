@@ -43,6 +43,20 @@ struct TicketResponse {
     #[serde(flatten)]
     frontmatter: apm_core::ticket::Frontmatter,
     body: String,
+    has_open_questions: bool,
+    has_pending_amendments: bool,
+}
+
+fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
+    let marker = format!("### {heading}");
+    let Some(start) = body.find(&marker) else {
+        return "";
+    };
+    let after = &body[start + marker.len()..];
+    match after.find("\n###") {
+        Some(end) => &after[..end],
+        None => after,
+    }
 }
 
 #[derive(serde::Serialize)]
@@ -185,9 +199,15 @@ async fn list_tickets(
     let tickets = load_tickets(&state).await?;
     let response = tickets
         .into_iter()
-        .map(|t| TicketResponse {
-            frontmatter: t.frontmatter,
-            body: t.body,
+        .map(|t| {
+            let has_open_questions = !extract_section(&t.body, "Open questions").trim().is_empty();
+            let has_pending_amendments = extract_section(&t.body, "Amendment requests").contains("- [ ]");
+            TicketResponse {
+                frontmatter: t.frontmatter,
+                body: t.body,
+                has_open_questions,
+                has_pending_amendments,
+            }
         })
         .collect();
     Ok(Json(response))
@@ -529,9 +549,13 @@ async fn create_ticket(
     .await?;
     match result {
         Ok(ticket) => {
+            let has_open_questions = !extract_section(&ticket.body, "Open questions").trim().is_empty();
+            let has_pending_amendments = extract_section(&ticket.body, "Amendment requests").contains("- [ ]");
             let response = TicketResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
+                has_open_questions,
+                has_pending_amendments,
             };
             Ok((StatusCode::CREATED, Json(response)).into_response())
         }
@@ -540,6 +564,94 @@ async fn create_ticket(
             Json(serde_json::json!({"error": e.to_string()})),
         )
             .into_response()),
+    }
+}
+
+async fn take_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let tickets = load_tickets(&state).await?;
+    let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("no ticket matches") {
+                return Ok((StatusCode::NOT_FOUND, Json(serde_json::json!({"error": msg}))).into_response());
+            } else if msg.contains("invalid ticket ID") {
+                return Ok((StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": msg}))).into_response());
+            } else {
+                return Err(AppError(e));
+            }
+        }
+        Ok(id) => id,
+    };
+    let mut ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+    let branch = match ticket.frontmatter.branch.clone() {
+        Some(b) => b,
+        None => {
+            return Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": "ticket has no branch"})),
+            )
+                .into_response())
+        }
+    };
+    let rel_path = match ticket.path.strip_prefix(&root) {
+        Ok(p) => p.to_string_lossy().to_string(),
+        Err(_) => return Err(AppError(anyhow::anyhow!("cannot compute relative path for ticket"))),
+    };
+    let agent_name = apm_core::start::resolve_agent_name();
+    let now = chrono::Utc::now();
+    // handoff errors if no agent is set; in that case just set directly
+    match apm_core::ticket::handoff(&mut ticket, &agent_name, now) {
+        Ok(_) => {}
+        Err(e) if e.to_string().contains("no agent assigned") => {
+            ticket.frontmatter.agent = Some(agent_name.clone());
+            ticket.frontmatter.updated_at = Some(now);
+        }
+        Err(e) => return Err(AppError(e)),
+    }
+    let content = ticket
+        .serialize()
+        .map_err(|e| AppError(anyhow::anyhow!("cannot serialize ticket: {e}")))?;
+    let root_clone = root.clone();
+    let branch_clone = branch.clone();
+    let rel_path_clone = rel_path.clone();
+    let content_clone = content.clone();
+    let agent_name_clone = agent_name.clone();
+    let full_id_clone = full_id.clone();
+    tokio::task::spawn_blocking(move || {
+        apm_core::git::commit_to_branch(
+            &root_clone,
+            &branch_clone,
+            &rel_path_clone,
+            &content_clone,
+            &format!("ticket({full_id_clone}): reassign agent to {agent_name_clone}"),
+        )
+    })
+    .await??;
+    let tickets2 = load_tickets(&state).await?;
+    match tickets2.into_iter().find(|t| t.frontmatter.id == full_id) {
+        None => Ok(StatusCode::NOT_FOUND.into_response()),
+        Some(t) => {
+            let state_str = t.frontmatter.state.clone();
+            let root2 = root.clone();
+            let valid_transitions =
+                tokio::task::spawn_blocking(move || compute_valid_transitions(&root2, &state_str))
+                    .await?;
+            let raw = t.serialize().unwrap_or_default();
+            Ok(Json(TicketDetailResponse {
+                frontmatter: t.frontmatter,
+                body: t.body,
+                raw,
+                valid_transitions,
+            })
+            .into_response())
+        }
     }
 }
 
@@ -561,9 +673,12 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/queue", get(queue::queue_handler))
         .route("/api/workers", get(workers::workers_handler))
+        .route("/api/workers/:pid", axum::routing::delete(workers::delete_worker))
+        .route("/api/tickets/:id/take", post(take_ticket))
         .route("/api/work/status", get(work::get_work_status))
         .route("/api/work/start", post(work::post_work_start))
         .route("/api/work/stop", post(work::post_work_stop))
+        .route("/api/work/dry-run", get(work::get_work_dry_run))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -615,6 +730,7 @@ pub fn build_app_in_memory_for_work() -> Router {
         .route("/api/work/status", get(work::get_work_status))
         .route("/api/work/start", post(work::post_work_start))
         .route("/api/work/stop", post(work::post_work_stop))
+        .route("/api/work/dry-run", get(work::get_work_dry_run))
         .with_state(state)
 }
 
@@ -689,6 +805,57 @@ mod tests {
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert!(json.is_array());
         assert_eq!(json.as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn extract_section_finds_content() {
+        let body = "## Spec\n\n### Open questions\n\nIs this real?\n\n### Amendment requests\n\n- [ ] Fix it\n";
+        assert_eq!(extract_section(body, "Open questions").trim(), "Is this real?");
+        assert_eq!(extract_section(body, "Amendment requests").trim(), "- [ ] Fix it");
+    }
+
+    #[test]
+    fn extract_section_missing_returns_empty() {
+        let body = "## Spec\n\nNo sections here.\n";
+        assert_eq!(extract_section(body, "Open questions"), "");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_includes_badge_fields() {
+        let mut ticket_with_question = fake_ticket("11112222-badge-test-q", "Question ticket");
+        ticket_with_question.body = "### Open questions\n\nWhat is this?\n".to_string();
+
+        let mut ticket_with_amendment = fake_ticket("33334444-badge-test-a", "Amendment ticket");
+        ticket_with_amendment.body = "### Amendment requests\n\n- [ ] Fix the thing\n".to_string();
+
+        let mut ticket_clean = fake_ticket("55556666-badge-test-c", "Clean ticket");
+        ticket_clean.body = "### Open questions\n\n\n### Amendment requests\n\n- [x] Done\n".to_string();
+
+        let app = build_app_with_tickets(vec![ticket_with_question, ticket_with_amendment, ticket_clean]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+
+        let q = arr.iter().find(|t| t["id"] == "11112222-badge-test-q").unwrap();
+        assert_eq!(q["has_open_questions"], true);
+        assert_eq!(q["has_pending_amendments"], false);
+
+        let a = arr.iter().find(|t| t["id"] == "33334444-badge-test-a").unwrap();
+        assert_eq!(a["has_open_questions"], false);
+        assert_eq!(a["has_pending_amendments"], true);
+
+        let c = arr.iter().find(|t| t["id"] == "55556666-badge-test-c").unwrap();
+        assert_eq!(c["has_open_questions"], false);
+        assert_eq!(c["has_pending_amendments"], false);
     }
 
     #[tokio::test]
