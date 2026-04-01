@@ -16,13 +16,14 @@ updated_at = "2026-04-01T06:23:41.689841Z"
 
 ### Problem
 
-The worker queue panel displays tickets in in_design state. These tickets are already claimed by a spec agent and are being actively worked on — they are not waiting to be picked up. Only truly queued/waiting states (e.g. new, ready) should appear in the queue panel. in_design (and likely in_progress) should be excluded. The set of states to exclude should be derived from config where possible, but at minimum in_design and in_progress must be filtered out.
+The worker queue panel in apm-ui fetches tickets from the /api/queue backend endpoint, which returns all tickets whose state is marked actionable = ["agent"] in .apm/config.toml. Currently the in_design state carries this flag, so tickets that are actively being worked by a spec-writer agent appear in the queue alongside tickets that are genuinely waiting to be picked up (new, ammend, ready).
 
-What is broken or missing, and why it matters.
+This is misleading: an in_design ticket is already claimed — another agent trying to act on it would either duplicate work or collide with the current spec-writer. The queue panel should only show tickets that are actually waiting for an agent to start work on them.
+
+in_progress is already excluded (no actionable field in config). The fix required is removing in_design from the set of agent-actionable states so it stops appearing in the queue.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -37,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
