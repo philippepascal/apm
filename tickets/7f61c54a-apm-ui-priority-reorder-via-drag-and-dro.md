@@ -30,7 +30,7 @@ Affected users: anyone supervising an apm work session via the web UI.
 - [x] Pressing the up-arrow key while a queue item is focused moves it one position up in the queue
 - [x] Pressing the down-arrow key while a queue item is focused moves it one position down in the queue
 - [x] Keyboard reorder triggers the same PATCH /api/tickets/:id call as drag reorder
-- [ ] If the PATCH request fails, the queue reverts to its pre-reorder order and an error toast is shown
+- [x] If the PATCH request fails, the queue reverts to its pre-reorder order and an error toast is shown
 - [ ] Reordering the priority queue does not affect the swimlane layout in the middle column
 - [ ] A ticket with state in_progress cannot be reordered in the queue via drag or keyboard
 - [ ] PATCH /api/tickets/:id accepts a JSON body with a priority integer (0-255) and persists it to the ticket branch via git
