@@ -5,4 +5,5 @@ export interface Ticket {
   agent?: string
   effort?: number
   risk?: number
+  body?: string
 }

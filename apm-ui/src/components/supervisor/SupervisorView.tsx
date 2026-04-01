@@ -1,10 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Loader2, Plus } from 'lucide-react'
+import { RefreshCw, Loader2, Plus, X } from 'lucide-react'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
-import { groupBySupervisorState } from '../../lib/supervisorUtils'
+import { SUPERVISOR_STATES } from '../../lib/supervisorUtils'
 import { useLayoutStore } from '../../store/useLayoutStore'
+
+const ALL_WORKFLOW_STATES = [
+  'new',
+  'in_design',
+  'question',
+  'specd',
+  'ammend',
+  'ready',
+  'in_progress',
+  'blocked',
+  'implemented',
+  'accepted',
+  'closed',
+]
 
 async function fetchTickets(): Promise<Ticket[]> {
   const res = await fetch('/api/tickets')
@@ -21,6 +35,11 @@ export default function SupervisorView() {
   const queryClient = useQueryClient()
   const [syncError, setSyncError] = useState<string | null>(null)
   const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
+
+  const [searchText, setSearchText] = useState('')
+  const [stateFilter, setStateFilter] = useState<string | null>(null)
+  const [agentFilter, setAgentFilter] = useState<string | null>(null)
+  const [showClosed, setShowClosed] = useState(false)
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['tickets'],
@@ -49,7 +68,42 @@ export default function SupervisorView() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [syncMutation])
 
-  const columns = groupBySupervisorState(tickets)
+  const availableAgents = useMemo(() => {
+    const agents = new Set<string>()
+    for (const t of tickets) {
+      if (t.agent) agents.add(t.agent)
+    }
+    return Array.from(agents).sort()
+  }, [tickets])
+
+  const visibleStates = useMemo(() => {
+    if (stateFilter !== null) return [stateFilter]
+    const base = [...SUPERVISOR_STATES] as string[]
+    if (showClosed) base.push('closed')
+    return base
+  }, [stateFilter, showClosed])
+
+  const columns = useMemo(() => {
+    const query = searchText.trim().toLowerCase()
+    return visibleStates
+      .map((state): [string, Ticket[]] => {
+        let filtered = tickets.filter((t) => t.state === state)
+        if (agentFilter !== null) {
+          filtered = filtered.filter((t) => t.agent === agentFilter)
+        }
+        if (query) {
+          filtered = filtered.filter(
+            (t) =>
+              t.title.toLowerCase().includes(query) ||
+              (t.body ?? '').toLowerCase().includes(query)
+          )
+        }
+        return [state, filtered]
+      })
+      .filter(([, group]) => group.length > 0)
+  }, [tickets, visibleStates, agentFilter, searchText])
+
+  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || showClosed
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
@@ -82,13 +136,63 @@ export default function SupervisorView() {
           </button>
         </div>
       </div>
+      <div className="px-3 py-2 border-b shrink-0 flex flex-wrap items-center gap-2">
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search tickets…"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="h-7 pl-2 pr-6 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-40"
+          />
+          {searchText && (
+            <button
+              onClick={() => setSearchText('')}
+              className="absolute right-1 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        <select
+          value={stateFilter ?? ''}
+          onChange={(e) => setStateFilter(e.target.value || null)}
+          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+        >
+          <option value="">All states</option>
+          {ALL_WORKFLOW_STATES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          value={agentFilter ?? ''}
+          onChange={(e) => setAgentFilter(e.target.value || null)}
+          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+        >
+          <option value="">All agents</option>
+          {availableAgents.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+        <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showClosed}
+            onChange={(e) => setShowClosed(e.target.checked)}
+            className="rounded"
+          />
+          Show closed
+        </label>
+      </div>
       <div className="flex-1 flex flex-row gap-4 overflow-x-auto p-3">
         {columns.map(([state, colTickets]) => (
           <Swimlane key={state} state={state} tickets={colTickets} />
         ))}
         {columns.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
-            No tickets require supervisor attention
+            {hasActiveFilters
+              ? 'No tickets match the current filters'
+              : 'No tickets require supervisor attention'}
           </div>
         )}
       </div>
