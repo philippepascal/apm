@@ -54,7 +54,49 @@ The `Config::load()` function in `apm-core/src/config.rs` must be updated to rea
 
 ### Approach
 
-How the implementation will work.
+### 1. Update Config::load() in apm-core/src/config.rs
+
+Replace the current single-file read with a merge of up to three files:
+
+- Load primary config (project/infra settings) from .apm/config.toml (or legacy apm.toml) into Config as today; workflow and ticket default to empty if absent
+- If .apm/workflow.toml exists, parse it into a thin wrapper struct WorkflowFile { workflow: WorkflowConfig } and replace config.workflow
+- If .apm/ticket.toml exists, parse it into a thin wrapper struct TicketFile { ticket: TicketConfig } and replace config.ticket
+
+Add two private wrapper structs in the same file:
+
+    struct WorkflowFile { workflow: WorkflowConfig }
+    struct TicketFile { ticket: TicketConfig }  // ticket defaults to empty
+
+No callers change -- they all call Config::load(root) and receive the same Config type.
+
+### 2. Split the live .apm/config.toml
+
+- Move [[workflow.states]] blocks and [workflow] / [workflow.prioritization] into a new .apm/workflow.toml
+- Move [[ticket.sections]] entries into a new .apm/ticket.toml
+- Leave [project], [tickets], [worktrees], [[repos.code]], [provider], [agents], [sync], [logging] in .apm/config.toml
+
+### 3. Update apm init in apm-core/src/init.rs
+
+- Split default_config() into three functions: default_config(), default_workflow_toml(), default_ticket_toml()
+- setup() creates all three files under .apm/ (skip each if already exists)
+- maybe_initial_commit() stages all three: git add .apm/config.toml .apm/workflow.toml .apm/ticket.toml
+- default_config() retains project/infra content only (no workflow or ticket-section content)
+- default_workflow_toml() produces the standard states + prioritization block
+- default_ticket_toml() produces the seven standard [[ticket.sections]] entries
+
+### 4. Update integration tests in apm/tests/integration.rs
+
+Tests that write an inline apm.toml with workflow content continue to work (backward-compat path). Tests that assert on .apm/config.toml content for workflow strings (e.g. [[workflow.states]]) must read .apm/workflow.toml instead.
+
+Lines to audit: approx 157, 171, 173, 186, 423 -- check whether each assertion targets workflow, ticket-section, or project content and redirect to the correct file.
+
+### 5. Order of changes
+
+1. apm-core/src/config.rs -- add wrapper structs and update load()
+2. apm-core/src/init.rs -- split default_config(), update setup() and maybe_initial_commit()
+3. Split live .apm/config.toml into three files
+4. Fix any integration tests broken by the new init layout
+5. Run cargo test --workspace
 
 ### Open questions
 
