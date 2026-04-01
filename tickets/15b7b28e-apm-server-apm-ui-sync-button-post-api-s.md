@@ -1,7 +1,7 @@
 +++
 id = "15b7b28e"
 title = "apm-server + apm-ui: sync button (POST /api/sync)"
-state = "implemented"
+state = "closed"
 priority = 38
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "89531"
 branch = "ticket/15b7b28e-apm-server-apm-ui-sync-button-post-api-s"
 created_at = "2026-03-31T06:13:15.004948Z"
-updated_at = "2026-04-01T05:03:37.637817Z"
+updated_at = "2026-04-01T06:20:52.825267Z"
 +++
 
 ## Spec
@@ -82,3 +82,5 @@ This ticket adds the `POST /api/sync` endpoint to `apm-server` and the correspon
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T04:59Z | ready | in_progress | philippepascal |
 | 2026-04-01T05:03Z | in_progress | implemented | claude-0401-0459-4ff0 |
+| 2026-04-01T05:13Z | implemented | accepted | apm-sync |
+| 2026-04-01T06:20Z | accepted | closed | apm-sync |

@@ -24,9 +24,9 @@ async function stopEngine(): Promise<EngineStatus> {
 }
 
 const STATUS_CLASSES: Record<EngineStatus, string> = {
-  running: 'inline-flex items-center px-1.5 py-0.5 rounded border border-green-400 text-green-700 bg-green-50 text-xs',
-  idle: 'inline-flex items-center px-1.5 py-0.5 rounded border border-yellow-400 text-yellow-700 bg-yellow-50 text-xs',
-  stopped: 'inline-flex items-center px-1.5 py-0.5 rounded border border-gray-300 text-gray-500 bg-gray-50 text-xs',
+  running: 'inline-flex items-center px-1.5 py-0.5 rounded border border-green-600 text-green-400 text-xs',
+  idle: 'inline-flex items-center px-1.5 py-0.5 rounded border border-yellow-600 text-yellow-400 text-xs',
+  stopped: 'inline-flex items-center px-1.5 py-0.5 rounded border border-gray-600 text-gray-400 text-xs',
 }
 
 const STATUS_LABELS: Record<EngineStatus, string> = {
@@ -72,7 +72,7 @@ export default function WorkEngineControls() {
       <button
         onClick={handleToggle}
         disabled={isPending}
-        className="px-2 py-0.5 rounded border text-xs hover:bg-gray-100 disabled:opacity-50"
+        className="px-2 py-0.5 rounded border border-gray-600 text-gray-300 text-xs hover:bg-gray-700 disabled:opacity-50"
       >
         {isEngineActive ? 'Stop' : 'Start'}
       </button>
