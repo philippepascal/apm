@@ -26,6 +26,11 @@ The fix is entirely in the UI layer. Backend behaviour is already correct. Clari
 
 ### Acceptance criteria
 
+- [ ] The engine Stop button in WorkEngineControls displays the label "Stop dispatching" (or equivalent wording that references dispatching, not workers)
+- [ ] The engine Stop button has a `title` attribute reading "Running workers will finish their current ticket"
+- [ ] The individual worker Stop button in WorkerActivityPanel displays the label "Kill"
+- [ ] The individual worker Stop button has a `title` attribute reading "Send SIGTERM to this worker"
+- [ ] No behaviour change: clicking engine Stop still posts to `/api/work/stop`; clicking worker Kill still sends DELETE to `/api/workers/:pid`
 
 ### Out of scope
 
