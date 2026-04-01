@@ -24,19 +24,19 @@ Without this, supervisors using the web UI have no way to capture new work items
 
 ### Acceptance criteria
 
-- [ ] A '+ New ticket' button is visible in the supervisorview column header area
-- [ ] Pressing the '+ New ticket' button opens a modal dialog
-- [ ] Pressing the 'n' key (when no text input is focused) opens the new ticket modal
-- [ ] The modal contains a Title field that is required
-- [ ] The modal contains optional textarea fields for Problem, Acceptance criteria, Out of scope, and Approach
-- [ ] Attempting to submit the form with an empty title shows a validation error and does not call the API
-- [ ] Submitting a valid form calls POST /api/tickets with the title and any non-empty section content
-- [ ] POST /api/tickets returns 201 with the created ticket as JSON on success
-- [ ] POST /api/tickets returns 400 when title is absent or empty
-- [ ] After successful creation, the new ticket appears in the supervisor swimlanes (TanStack Query cache is invalidated)
-- [ ] Pressing Escape or clicking Cancel closes the modal without creating a ticket
-- [ ] The form shows a loading indicator while the mutation is in flight
-- [ ] The form shows an inline error message if the API call fails
+- [x] A '+ New ticket' button is visible in the supervisorview column header area
+- [x] Pressing the '+ New ticket' button opens a modal dialog
+- [x] Pressing the 'n' key (when no text input is focused) opens the new ticket modal
+- [x] The modal contains a Title field that is required
+- [x] The modal contains optional textarea fields for Problem, Acceptance criteria, Out of scope, and Approach
+- [x] Attempting to submit the form with an empty title shows a validation error and does not call the API
+- [x] Submitting a valid form calls POST /api/tickets with the title and any non-empty section content
+- [x] POST /api/tickets returns 201 with the created ticket as JSON on success
+- [x] POST /api/tickets returns 400 when title is absent or empty
+- [x] After successful creation, the new ticket appears in the supervisor swimlanes (TanStack Query cache is invalidated)
+- [x] Pressing Escape or clicking Cancel closes the modal without creating a ticket
+- [x] The form shows a loading indicator while the mutation is in flight
+- [x] The form shows an inline error message if the API call fails
 
 ### Out of scope
 
