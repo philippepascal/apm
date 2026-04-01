@@ -1,7 +1,7 @@
 +++
 id = "a7073d07"
 title = "Add groomed state as human gate before spec work"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "4792"
 branch = "ticket/a7073d07-add-groomed-state-as-human-gate-before-s"
 created_at = "2026-04-01T20:26:40.952240Z"
-updated_at = "2026-04-01T21:28:57.516646Z"
+updated_at = "2026-04-01T21:29:29.439379Z"
 +++
 
 ## Spec
@@ -121,3 +121,4 @@ Update the two unit tests that assert on `"new"`:
 | 2026-04-01T20:50Z | ready | in_progress | philippepascal |
 | 2026-04-01T20:56Z | in_progress | implemented | claude-0401-2050-6248 |
 | 2026-04-01T21:28Z | implemented | accepted | apm-sync |
+| 2026-04-01T21:29Z | accepted | closed | apm-sync |
