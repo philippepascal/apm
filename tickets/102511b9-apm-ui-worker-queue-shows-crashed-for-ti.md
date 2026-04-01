@@ -39,7 +39,44 @@ The fix must consult the workflow config terminal flag (already defined on State
 
 ### Approach
 
-How the implementation will work.
+All changes are confined to two files.
+
+**apm-server/src/workers.rs**
+
+1. Inside collect_workers, after loading tickets with load_all_from_git, also load the config:
+   let config = apm_core::config::Config::load(root)?;
+
+2. Build a HashSet of terminal state IDs:
+   let terminal_states: std::collections::HashSet<_> = config.workflow.states.iter()
+       .filter(|s| s.terminal)
+       .map(|s| s.id.as_str())
+       .collect();
+
+3. Replace the single-line status assignment (line 53) with:
+   let status = if apm_core::worker::is_alive(pid) {
+       "running"
+   } else if terminal_states.contains(state.as_str()) {
+       "ended"
+   } else {
+       "crashed"
+   };
+   Note: state is already resolved from the ticket lookup at this point in the function.
+
+4. Add a unit test that constructs an in-memory worker list with state set to a known terminal state and asserts status == "ended". The existing test infrastructure in the mod tests block can be extended.
+
+**apm-ui/src/components/WorkerActivityPanel.tsx**
+
+1. Extend the WorkerInfo interface on line 10:
+   status: 'running' | 'crashed' | 'ended'
+
+2. Add an else-if branch in the status cell renderer after the running branch and before the existing else (crashed):
+   } else if (w.status === 'ended') {
+     <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+       ended
+     </span>
+   }
+
+No schema changes, no new files, no changes to AppState or routing.
 
 ### Open questions
 
