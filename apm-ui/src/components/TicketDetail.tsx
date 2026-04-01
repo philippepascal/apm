@@ -48,7 +48,7 @@ export default function TicketDetail() {
           </div>
         )}
         {data && (
-          <div className="prose prose-sm max-w-none overflow-y-auto p-4 h-full">
+          <div className="prose prose-sm max-w-none p-4">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.body}</ReactMarkdown>
           </div>
         )}
