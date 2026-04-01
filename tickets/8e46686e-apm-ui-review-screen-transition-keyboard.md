@@ -1,7 +1,7 @@
 +++
 id = "8e46686e"
 title = "apm-ui: review-screen transition keyboard shortcut algorithm"
-state = "accepted"
+state = "closed"
 priority = 30
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0331-1200-a7b9"
 agent = "65623"
 branch = "ticket/8e46686e-apm-ui-review-screen-transition-keyboard"
 created_at = "2026-03-31T18:19:43.047043Z"
-updated_at = "2026-04-01T07:02:28.714316Z"
+updated_at = "2026-04-01T07:12:49.068414Z"
 +++
 
 ## Spec
@@ -121,3 +121,4 @@ Unit test `assignShortcuts` in `apm-ui/src/lib/transitionShortcuts.test.ts`:
 | 2026-04-01T06:39Z | ready | in_progress | philippepascal |
 | 2026-04-01T06:43Z | in_progress | implemented | claude-0401-0639-2dc0 |
 | 2026-04-01T07:02Z | implemented | accepted | apm-sync |
+| 2026-04-01T07:12Z | accepted | closed | apm-sync |
