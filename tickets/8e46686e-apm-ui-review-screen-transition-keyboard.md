@@ -24,15 +24,15 @@ Affected: anyone using the review screen keyboard shortcuts to progress tickets.
 
 ### Acceptance criteria
 
-- [ ] Each transition button in the review panel has a computed keyboard shortcut letter displayed on the button
-- [ ] The letter is derived from the target state name: take the first letter; if that letter is already taken by another transition on the same screen, take the second letter; continue until a free letter is found
-- [ ] `K` is always reserved for "Keep at {state}" and is never assigned to a transition button
-- [ ] If all letters in the state name are taken, fall back to the first available letter of the alphabet not yet assigned
-- [ ] Pressing the assigned letter while the editor is focused fires the corresponding transition
-- [ ] Pressing `K` while the editor is focused fires the "Keep" action (no transition, closes editor)
-- [ ] The shortcut letter is displayed on the button in a visually distinct way (e.g. underlined character or `[X]` prefix)
-- [ ] The keydown handler does not fire when an inner input/textarea/contenteditable has focus
-- [ ] The algorithm is a pure function tested independently: given a list of transition target state names, it returns a map of state → letter with no conflicts and K excluded
+- [x] Each transition button in the review panel has a computed keyboard shortcut letter displayed on the button
+- [x] The letter is derived from the target state name: take the first letter; if that letter is already taken by another transition on the same screen, take the second letter; continue until a free letter is found
+- [x] `K` is always reserved for "Keep at {state}" and is never assigned to a transition button
+- [x] If all letters in the state name are taken, fall back to the first available letter of the alphabet not yet assigned
+- [x] Pressing the assigned letter while the editor is focused fires the corresponding transition
+- [x] Pressing `K` while the editor is focused fires the "Keep" action (no transition, closes editor)
+- [x] The shortcut letter is displayed on the button in a visually distinct way (e.g. underlined character or `[X]` prefix)
+- [x] The keydown handler does not fire when an inner input/textarea/contenteditable has focus
+- [x] The algorithm is a pure function tested independently: given a list of transition target state names, it returns a map of state → letter with no conflicts and K excluded
 
 ### Out of scope
 
