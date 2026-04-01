@@ -4,12 +4,12 @@ title = "Add groomed state as human gate before spec work"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "63261"
 branch = "ticket/a7073d07-add-groomed-state-as-human-gate-before-s"
 created_at = "2026-04-01T20:26:40.952240Z"
-updated_at = "2026-04-01T20:32:03.630631Z"
+updated_at = "2026-04-01T20:32:09.562565Z"
 +++
 
 ## Spec
