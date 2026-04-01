@@ -33,7 +33,11 @@ The current apm-ui has a functional but visually raw interface. All panels use t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Layout structure changes (column count, resizable panels) — those are functional changes
+- New features or data displayed in panels
+- Dark mode
+- Animations or transitions beyond what shadcn/ui provides by default
+- Mobile/responsive layout
 
 ### Approach
 
