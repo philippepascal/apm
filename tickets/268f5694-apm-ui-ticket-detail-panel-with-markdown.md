@@ -1,15 +1,15 @@
 +++
 id = "268f5694"
 title = "apm-ui: ticket detail panel with markdown viewer and keyboard navigation"
-state = "ready"
+state = "in_progress"
 priority = 50
 effort = 4
 risk = 3
 author = "apm"
-agent = "20759"
+agent = "philippepascal"
 branch = "ticket/268f5694-apm-ui-ticket-detail-panel-with-markdown"
 created_at = "2026-03-31T06:12:10.547637Z"
-updated_at = "2026-03-31T19:43:55.916695Z"
+updated_at = "2026-04-01T00:53:54.115871Z"
 +++
 
 ## Spec
@@ -163,3 +163,4 @@ Step 7 will add the worker queue. The keyboard nav in WorkScreen should be desig
 | 2026-03-31T06:28Z | new | in_design | philippepascal |
 | 2026-03-31T06:33Z | in_design | specd | claude-0330-spec-a7f2 |
 | 2026-03-31T19:43Z | specd | ready | apm |
+| 2026-04-01T00:53Z | ready | in_progress | philippepascal |
