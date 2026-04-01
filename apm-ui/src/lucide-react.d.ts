@@ -9,4 +9,6 @@ declare module 'lucide-react' {
   export const Columns: FC<IconProps>
   export const FileText: FC<IconProps>
   export const X: FC<IconProps>
+  export const ChevronDown: FC<IconProps>
+  export const ChevronUp: FC<IconProps>
 }
