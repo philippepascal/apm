@@ -1,14 +1,14 @@
 +++
 id = "0f0d89b6"
 title = "apm-ui: worker queue status should show 'ended' for terminal states, not 'crashed'"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/0f0d89b6-apm-ui-worker-queue-status-should-show-e"
 created_at = "2026-04-01T06:06:12.431241Z"
-updated_at = "2026-04-01T06:06:12.431241Z"
+updated_at = "2026-04-01T06:08:28.784862Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T06:06Z | — | new | philippepascal |
+| 2026-04-01T06:08Z | new | in_design | philippepascal |
