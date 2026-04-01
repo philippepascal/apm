@@ -67,6 +67,32 @@ Flag: wrong method names, renamed props, changed callback signatures,
 removed features. These are the most common source of "compiles but doesn't
 work" bugs in frontend code.
 
+**Critical discipline: verify before flagging, not after.**
+
+Memory of a library's API is version-specific and frequently wrong. An API
+that changed between v2 and v4 will feel certain but be incorrect. Before
+writing any amendment request about an API call, prop name, or callback
+signature, verify it against the actual installed version's type definitions:
+
+```
+node_modules/<library>/dist/<library>.d.ts
+```
+
+or the library's changelog for the installed version. If you cannot verify,
+say so explicitly rather than flagging with false confidence.
+
+The cost of a wrong amendment request is high: the worker spends a cycle
+"fixing" correct code, the fix breaks the build, and the supervisor loses
+trust in the review process. A missed bug is recoverable; a false positive
+that corrupts working code is worse.
+
+**When TypeScript is available, use it as the oracle.** If you are uncertain
+about an API, mentally apply the type signature: would the TypeScript compiler
+accept this call with the installed version's types? If you cannot answer
+confidently from the type definitions, do not flag it as a required fix —
+flag it as a question instead: "verify that `panelRef` is the correct prop
+name for react-resizable-panels v4.8.0 before accepting".
+
 ### 2. Silent failures
 
 Look for code paths where a bug produces no error — null/undefined
@@ -281,6 +307,42 @@ Add a `command:review` trigger alongside the existing transitions:
 
 `apm work` dispatches a reviewer agent when it finds a ticket in `implemented`
 state, using the same priority queue as worker dispatch.
+
+---
+
+## Known reviewer failure modes
+
+These are failure modes observed in practice, not hypothetical. The reviewer
+instructions must be written to prevent them.
+
+### Confident incorrectness on library APIs
+
+A reviewer flagged `panelRef`, `orientation`, `PanelImperativeHandle`, and
+`{ asPercentage: number }` as wrong in react-resizable-panels v4.8.0. All
+four were correct for the installed version. The reviewer was applying API
+knowledge from a different version and did not check the actual type
+definitions before writing four amendment requests. The worker had done the
+right thing; the reviewer's amendments would have broken working code.
+
+**Root cause:** API knowledge felt certain but was version-specific. No
+verification step was performed.
+
+**Mitigation:** Make verification a hard gate, not a recommendation. The
+reviewer agent instructions (apm.reviewer.md) must require checking
+`node_modules/<lib>/dist/*.d.ts` for every library API claim before it can
+be written as a required fix. Unverified API concerns must be written as
+questions, not amendment requests.
+
+### Review confidence ≠ review correctness
+
+The reviewer operates in a skeptical mode that is valuable for catching silent
+failures, but that same skepticism can generate false positives when applied
+to unfamiliar APIs. Skepticism without verification is just noise.
+
+A useful heuristic: if the code compiled and the TypeScript build passed, any
+API correctness concern should be treated as "possibly wrong" not "definitely
+wrong" until verified against the type definitions. The TypeScript compiler
+already caught the real API errors; surviving that check is meaningful signal.
 
 ---
 
