@@ -24,7 +24,7 @@ The fix must consult the workflow config terminal flag (already defined on State
 
 ### Acceptance criteria
 
-- [ ] A worker whose process has exited and whose ticket is in a terminal state shows an ended badge with gray/neutral styling, not a red crashed badge
+- [x] A worker whose process has exited and whose ticket is in a terminal state shows an ended badge with gray/neutral styling, not a red crashed badge
 - [ ] A worker whose process has exited and whose ticket is NOT in a terminal state still shows a red crashed badge
 - [ ] A worker whose process is still running shows a green running badge regardless of ticket state
 - [ ] The set of terminal states is read from the workflow config (StateConfig.terminal == true) and not hardcoded in the server or client
