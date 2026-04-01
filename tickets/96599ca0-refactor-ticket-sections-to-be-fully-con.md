@@ -1,7 +1,7 @@
 +++
 id = "96599ca0"
 title = "Refactor ticket sections to be fully config-driven, removing hardcoded TicketDocument fields"
-state = "in_progress"
+state = "implemented"
 priority = 8
 effort = 6
 risk = 4
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "43280"
 branch = "ticket/96599ca0-refactor-ticket-sections-to-be-fully-con"
 created_at = "2026-04-01T22:27:39.127351Z"
-updated_at = "2026-04-01T23:08:59.098750Z"
+updated_at = "2026-04-01T23:31:42.356567Z"
 +++
 
 ## Spec
@@ -177,3 +177,4 @@ In the submit handler, build the sections map from the four textarea values, usi
 | 2026-04-01T22:40Z | in_design | specd | claude-0401-2230-spec1 |
 | 2026-04-01T22:51Z | specd | ready | apm |
 | 2026-04-01T23:08Z | ready | in_progress | philippepascal |
+| 2026-04-01T23:31Z | in_progress | implemented | claude-0401-0000-w96a |
