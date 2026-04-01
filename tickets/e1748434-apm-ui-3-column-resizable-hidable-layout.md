@@ -134,7 +134,7 @@ No Rust / backend files change.
 ### Amendment requests
 
 - [x] Replace `panelRef` prop with `ref` on ResizablePanel — `panelRef` is not a valid prop in react-resizable-panels v4; the imperative handle must be passed via React's standard `ref`. Without this fix toggle buttons silently do nothing.
-- [ ] Fix `onResize` callback signature: v4 calls `onResize(size: number)` not `onResize({ asPercentage: number })`. Update `handleResize` to accept `(key: ColumnKey, size: number)` and check `size === 0` for collapsed detection.
+- [x] Fix `onResize` callback signature: v4 calls `onResize(size: number)` not `onResize({ asPercentage: number })`. Update `handleResize` to accept `(key: ColumnKey, size: number)` and check `size === 0` for collapsed detection.
 - [ ] Replace `orientation="horizontal"` with `direction="horizontal"` on ResizablePanelGroup — react-resizable-panels uses `direction`, not `orientation`. Without this the columns stack vertically.
 - [ ] Fix fragment keys in the COLS map: replace `<>` with `<React.Fragment key={key}>` so React does not warn about missing keys.
 
