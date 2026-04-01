@@ -1,14 +1,15 @@
 +++
 id = "034ed345"
 title = "apm state: include ticket ID in GitHub PR title"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/034ed345-apm-state-include-ticket-id-in-github-pr"
 created_at = "2026-04-01T07:44:24.055761Z"
-updated_at = "2026-04-01T07:44:24.055761Z"
+updated_at = "2026-04-01T07:44:46.342072Z"
 +++
 
 ## Spec
@@ -50,3 +51,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T07:44Z | — | new | philippepascal |
+| 2026-04-01T07:44Z | new | in_design | philippepascal |
