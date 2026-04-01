@@ -41,7 +41,40 @@ The current apm-ui has a functional but visually raw interface. All panels use t
 
 ### Approach
 
-How the implementation will work.
+**Design reference:** Linear is the closest analogue — dark left sidebar, swimlane-style board, card-based tickets, colored state indicators.
+
+**1. Color tokens for state categories**
+Define a mapping in a shared file (e.g. lib/stateColors.ts):
+- blocked, question → red/amber
+- in_design, in_progress → blue
+- specd, ready → purple/indigo
+- implemented, accepted → green
+- closed → gray
+
+Use these in swimlane headers, state badges, and the detail panel header badge.
+
+**2. Swimlane columns**
+- Add a colored left border (4px) to each swimlane header using the state category color
+- Increase card padding slightly; give cards a box-shadow-sm
+- Title at text-sm font-medium; ID at text-[10px] mono muted; agent at text-[10px] muted below title
+
+**3. Left column**
+- Set WorkerView background to bg-gray-900 text-gray-100 (dark sidebar)
+- Replace worker table with worker cards: status dot (green/red) + ticket ID + agent + elapsed in a compact card
+- Queue rows: increase py to py-1.5, ensure rank column is narrow and muted
+
+**4. Toolbar**
+- Replace 'Hide X / Show X' text buttons with icon toggle buttons (ChevronLeft/ChevronRight or Columns icon from lucide) placed at panel edges or in a thin top bar
+- Keep keyboard shortcuts working
+
+**5. Detail panel header**
+- Add a header section above the markdown: large title (text-base font-semibold), state badge with color, a row of metadata (agent, effort E:N, risk R:N)
+- Markdown content: add px-6 py-4 prose-base or prose-sm with max-w-2xl mx-auto for comfortable line length
+
+**6. Accent color consistency**
+- Primary buttons: bg-blue-600 (already partially done)
+- Selected card: ring-2 ring-blue-500 (already done)
+- Focus rings: focus:ring-blue-500 (audit all inputs)
 
 ### Open questions
 
