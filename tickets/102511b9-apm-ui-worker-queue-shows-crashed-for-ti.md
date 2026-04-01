@@ -16,15 +16,14 @@ updated_at = "2026-04-01T06:13:02.387897Z"
 
 ### Problem
 
-Workers assigned to tickets that have reached terminal states (implemented, accepted, closed, specd, etc.) show status 'crashed' in the worker queue UI. They should show 'ended' with a gray/neutral style instead.
+The worker queue UI fetches from /api/workers and renders each entry status as green running or red crashed. The handler in apm-server/src/workers.rs (line 53) sets status purely based on whether the OS process is alive: if is_alive(pid) { running } else { crashed }.
 
-The set of terminal states is config-dependent — it should not be hardcoded. The server or client should derive which states are terminal from the workflow config (states with no outgoing transitions, or a designated property). The worker queue panel should use this to distinguish a crashed process from one that simply completed its work.
+When an agent finishes its work on a ticket that reaches a terminal state (specd, implemented, closed, etc.), its process exits normally. The PID file persists in the worktree, so the entry keeps appearing in the queue but with the alarming red crashed badge. This is misleading: the worker completed normally, it did not crash.
 
-What is broken or missing, and why it matters.
+The fix must consult the workflow config terminal flag (already defined on StateConfig in apm-core/src/config.rs) to distinguish the two cases. A dead process whose ticket is in a terminal state should be shown as ended with neutral gray styling. Only a dead process whose ticket is still in a non-terminal state should be shown as crashed.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -39,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
