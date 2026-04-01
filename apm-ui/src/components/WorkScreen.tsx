@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import React, { useRef } from 'react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './ui/resizable'
 import { useLayoutStore } from '../store/useLayoutStore'
@@ -65,10 +65,9 @@ export default function WorkScreen() {
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup orientation="horizontal">
           {COLS.map(({ key, defaultSize }, i) => (
-            <>
-              {i > 0 && <ResizableHandle key={`handle-${key}`} withHandle />}
+            <React.Fragment key={key}>
+              {i > 0 && <ResizableHandle withHandle />}
               <ResizablePanel
-                key={key}
                 panelRef={(el) => { panelRefs.current[key] = el }}
                 collapsible
                 collapsedSize={0}
@@ -78,7 +77,7 @@ export default function WorkScreen() {
               >
                 {columnVisibility[key] ? CONTENT[key] : null}
               </ResizablePanel>
-            </>
+            </React.Fragment>
           ))}
         </ResizablePanelGroup>
       </div>
