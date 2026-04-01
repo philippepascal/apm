@@ -78,13 +78,30 @@ Each component wraps itself in a div with tabIndex={0} so it can receive keyboar
 
 **4. WorkScreen layout — apm-ui/src/components/WorkScreen.tsx**
 
-Use ResizablePanelGroup with direction=horizontal containing three ResizablePanel / ResizableHandle pairs.
+Use ResizablePanelGroup with **direction="horizontal"** (not orientation) containing three ResizablePanel / ResizableHandle pairs.
+
+react-resizable-panels v4 API specifics (all four amendments incorporated):
+
+a. **ref instead of panelRef**: Pass the imperative handle via React's standard ref prop.
+   Use useRef<ImperativePanelHandle>(null) and attach as ref={...} on ResizablePanel.
+   Call ref.current?.collapse() and ref.current?.expand() to hide/show.
+   The prop panelRef is invalid in v4 and silently does nothing -- only ref works.
+
+b. **onResize signature**: v4 delivers a single number (current size as a percentage).
+   Handler signature: (size: number) => void.
+   Check size === 0 (or below minSize threshold) for collapsed detection.
+   Do not destructure asPercentage -- that shape does not exist in v4.
+
+c. **direction not orientation**: ResizablePanelGroup requires direction="horizontal".
+   The orientation prop is absent from v4 and causes panels to stack vertically.
+
+d. **Fragment keys**: Wrap each (ResizablePanel + ResizableHandle) pair in React.Fragment
+   with an explicit key prop instead of the shorthand <> fragment syntax.
 
 Each panel:
-  - Reads its visibility flag from the store; when hidden, renders nothing and sets its minSize/maxSize to 0
-  - Has a collapse toggle button in its header (an eye icon from lucide-react or a simple X)
-
-Column hide/show: react-resizable-panels supports collapsible panels via the collapsible and onCollapse props. Use these to drive the Zustand visibility flags on user-drag-to-zero; separately, the toggle button calls toggleColumn() directly.
+  - Reads its visibility flag from the store; toggle button calls toggleColumn() then ref.current?.collapse() / expand() accordingly
+  - Has a collapse toggle button in its header (eye icon from lucide-react or a simple X)
+  - Uses collapsible prop on ResizablePanel so drag-to-zero syncs visibility state via onCollapse/onExpand callbacks
 
 **5. Wire into App**
 
