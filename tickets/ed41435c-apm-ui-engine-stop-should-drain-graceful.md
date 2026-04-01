@@ -4,12 +4,12 @@ title = "apm-ui: engine stop should drain gracefully; individual stop should kil
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 agent = "88851"
 branch = "ticket/ed41435c-apm-ui-engine-stop-should-drain-graceful"
 created_at = "2026-04-01T07:56:48.702217Z"
-updated_at = "2026-04-01T07:59:46.117556Z"
+updated_at = "2026-04-01T07:59:52.341427Z"
 +++
 
 ## Spec
