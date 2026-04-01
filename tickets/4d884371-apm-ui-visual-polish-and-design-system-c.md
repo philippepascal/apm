@@ -1,7 +1,7 @@
 +++
 id = "4d884371"
 title = "apm-ui: visual polish and design system consistency"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "8711"
 branch = "ticket/4d884371-apm-ui-visual-polish-and-design-system-c"
 created_at = "2026-04-01T05:51:09.997793Z"
-updated_at = "2026-04-01T06:36:22.819750Z"
+updated_at = "2026-04-01T07:12:39.925137Z"
 +++
 
 ## Spec
@@ -96,3 +96,4 @@ Use these in swimlane headers, state badges, and the detail panel header badge.
 | 2026-04-01T06:23Z | ready | in_progress | philippepascal |
 | 2026-04-01T06:33Z | in_progress | implemented | claude-0401-0623-07b8 |
 | 2026-04-01T06:36Z | implemented | accepted | apm |
+| 2026-04-01T07:12Z | accepted | closed | apm-sync |
