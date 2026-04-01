@@ -32,6 +32,7 @@ pub struct TicketConfig {
 pub enum CompletionStrategy {
     Pr,
     Merge,
+    Pull,
     #[default]
     None,
 }
@@ -299,6 +300,8 @@ type = "qa"
         assert_eq!(pr.c, CompletionStrategy::Pr);
         let merge: W = toml::from_str("c = \"merge\"").unwrap();
         assert_eq!(merge.c, CompletionStrategy::Merge);
+        let pull: W = toml::from_str("c = \"pull\"").unwrap();
+        assert_eq!(pull.c, CompletionStrategy::Pull);
         let none: W = toml::from_str("c = \"none\"").unwrap();
         assert_eq!(none.c, CompletionStrategy::None);
     }

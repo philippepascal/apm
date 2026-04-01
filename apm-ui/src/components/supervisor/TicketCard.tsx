@@ -37,6 +37,22 @@ export default function TicketCard({ ticket }: TicketCardProps) {
               R:{ticket.risk}
             </span>
           )}
+          {ticket.has_open_questions && (
+            <span
+              title="Has open questions"
+              className="text-[10px] px-1 rounded bg-amber-100 text-amber-700"
+            >
+              ?
+            </span>
+          )}
+          {ticket.has_pending_amendments && (
+            <span
+              title="Has pending amendments"
+              className="text-[10px] px-1 rounded bg-violet-100 text-violet-700"
+            >
+              A
+            </span>
+          )}
         </div>
       </div>
       <p className="text-sm font-medium mt-1 leading-tight line-clamp-2">

@@ -266,6 +266,7 @@ actionable = ["supervisor"]
   trigger       = "manual"
   actor         = "engineer"
   preconditions = ["pr_all_closing_merged"]
+  completion    = "pull"
 
   [[workflow.states.transitions]]
   to             = "ready"
