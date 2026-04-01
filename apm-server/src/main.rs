@@ -9,6 +9,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
+mod workers;
+
 enum TicketSource {
     Git(PathBuf, PathBuf),
     InMemory(Vec<apm_core::ticket::Ticket>),
@@ -115,6 +117,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/health", get(health_handler))
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
+        .route("/api/workers", get(workers::workers_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -127,6 +130,16 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     Router::new()
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
+        .with_state(state)
+}
+
+#[cfg(test)]
+pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
+    let state = Arc::new(AppState {
+        source: TicketSource::InMemory(tickets),
+    });
+    Router::new()
+        .route("/api/workers", get(workers::workers_handler))
         .with_state(state)
 }
 
