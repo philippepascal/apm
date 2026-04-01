@@ -1,7 +1,7 @@
 +++
 id = "034ed345"
 title = "apm state: include ticket ID in GitHub PR title"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "94174"
 branch = "ticket/034ed345-apm-state-include-ticket-id-in-github-pr"
 created_at = "2026-04-01T07:44:24.055761Z"
-updated_at = "2026-04-01T07:57:29.330161Z"
+updated_at = "2026-04-01T08:00:31.269734Z"
 +++
 
 ## Spec
@@ -73,3 +73,4 @@ Then replace `title` with `&pr_title` in the `.args([... "--title", title, ...])
 | 2026-04-01T07:45Z | in_design | specd | claude-0401-0744-6ee0 |
 | 2026-04-01T07:56Z | specd | ready | apm |
 | 2026-04-01T07:57Z | ready | in_progress | philippepascal |
+| 2026-04-01T08:00Z | in_progress | implemented | claude-0401-0757-66f0 |
