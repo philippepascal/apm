@@ -180,10 +180,16 @@ fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &
         return Ok(());
     }
 
+    let short_id = &id[..8.min(id.len())];
+    let pr_title = if title.is_empty() {
+        short_id.to_string()
+    } else {
+        format!("{short_id}: {title}")
+    };
     let body = format!("Closes #{id}");
     let out = std::process::Command::new("gh")
         .args(["pr", "create", "--base", default_branch, "--head", branch,
-               "--title", title, "--body", &body])
+               "--title", &pr_title, "--body", &body])
         .current_dir(root)
         .output()?;
 
@@ -322,5 +328,35 @@ pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &
         body.push_str(&format!(
             "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    fn pr_title(id: &str, title: &str) -> String {
+        let short_id = &id[..8.min(id.len())];
+        if title.is_empty() {
+            short_id.to_string()
+        } else {
+            format!("{short_id}: {title}")
+        }
+    }
+
+    #[test]
+    fn pr_title_includes_short_id_prefix() {
+        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
+        assert_eq!(pr_title(id, "Fix the thing"), "034ed345: Fix the thing");
+    }
+
+    #[test]
+    fn pr_title_empty_title_falls_back_to_short_id() {
+        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
+        assert_eq!(pr_title(id, ""), "034ed345");
+    }
+
+    #[test]
+    fn pr_title_short_id_exactly_8_chars() {
+        let id = "abcd1234efgh";
+        assert_eq!(pr_title(id, "My ticket"), "abcd1234: My ticket");
     }
 }
