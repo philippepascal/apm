@@ -5,4 +5,6 @@ export interface Ticket {
   agent?: string
   effort?: number
   risk?: number
+  has_open_questions?: boolean
+  has_pending_amendments?: boolean
 }
