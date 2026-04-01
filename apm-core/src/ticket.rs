@@ -148,6 +148,11 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
     let mut tickets = Vec::new();
     for branch in &branches {
         let suffix = branch.trim_start_matches("ticket/");
+        // Skip bare short-ID refs (e.g. ticket/268f5694) created by fetch operations.
+        // A real ticket branch always has a slug after the ID: ticket/<id>-<slug>.
+        if suffix.len() == 8 && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            continue;
+        }
         let filename = format!("{suffix}.md");
         let rel_path = format!("{}/{}", tickets_dir_rel.to_string_lossy(), filename);
         let dummy_path = root.join(&rel_path);
