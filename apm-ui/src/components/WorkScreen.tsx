@@ -9,6 +9,7 @@ import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
 import ReviewEditor from './ReviewEditor'
 import NewTicketModal from './NewTicketModal'
+import LogPanel from './LogPanel'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
 import { fetchStatus, startEngine, stopEngine } from './WorkEngineControls'
@@ -176,13 +177,13 @@ export default function WorkScreen() {
   return (
     <div className="h-screen w-screen flex flex-col">
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
-      <div className="flex gap-1 px-2 py-1 border-b bg-gray-50 shrink-0">
+      <div className="flex gap-1 px-2 py-1 border-b bg-gray-900 shrink-0">
         {COLS.map(({ key, label, Icon }) => (
           <button
             key={key}
             onClick={() => handleToggle(key)}
             title={columnVisibility[key] ? `Hide ${label}` : `Show ${label}`}
-            className={`p-1.5 rounded hover:bg-gray-200 transition-opacity ${!columnVisibility[key] ? 'opacity-30' : 'text-gray-600'}`}
+            className={`p-1.5 rounded hover:bg-gray-700 transition-opacity ${!columnVisibility[key] ? 'opacity-30' : 'text-gray-400'}`}
           >
             <Icon className="w-4 h-4" />
           </button>
@@ -207,6 +208,7 @@ export default function WorkScreen() {
           ))}
         </ResizablePanelGroup>
       </div>
+      <LogPanel />
     </div>
   )
 }

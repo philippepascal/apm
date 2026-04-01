@@ -106,8 +106,8 @@ export default function SupervisorView() {
   const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || showClosed
 
   return (
-    <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
-      <div className="px-3 py-2 text-sm font-medium border-b shrink-0 flex items-center justify-between">
+    <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
+      <div className="px-3 py-2 text-sm font-medium border-b border-gray-700 shrink-0 flex items-center justify-between">
         <span>Supervisor</span>
         <div className="flex items-center gap-2">
           {syncError && (
@@ -116,7 +116,7 @@ export default function SupervisorView() {
           <button
             onClick={() => setNewTicketOpen(true)}
             title="New ticket (n)"
-            className="flex items-center gap-1 px-2 py-0.5 rounded border text-xs hover:bg-gray-100"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700"
           >
             <Plus className="w-3 h-3" />
             New ticket
@@ -125,7 +125,7 @@ export default function SupervisorView() {
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
             title="Sync (Shift+S)"
-            className="flex items-center gap-1 px-2 py-0.5 rounded border text-xs hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {syncMutation.isPending ? (
               <Loader2 className="w-3 h-3 animate-spin" />

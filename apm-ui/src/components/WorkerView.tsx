@@ -1,7 +1,6 @@
 import WorkerActivityPanel from './WorkerActivityPanel'
 import PriorityQueuePanel from './PriorityQueuePanel'
 import WorkEngineControls from './WorkEngineControls'
-import DryRunPreview from './DryRunPreview'
 
 export default function WorkerView() {
   return (
@@ -15,7 +14,6 @@ export default function WorkerView() {
       </div>
       <div className="border-t border-gray-700" />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DryRunPreview />
         <div className="px-3 py-2 text-xs font-medium text-gray-400 border-b border-gray-700 shrink-0">Queue</div>
         <div className="flex-1 overflow-hidden">
           <PriorityQueuePanel />

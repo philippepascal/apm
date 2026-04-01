@@ -87,11 +87,11 @@ function TransitionButtons({ ticket, onTransitioned }: {
   }
 
   return (
-    <div className="border-t p-3 flex flex-wrap gap-2 items-center">
+    <div className="border-t border-gray-700 p-3 flex flex-wrap gap-2 items-center">
       {ticket.valid_transitions.map(tr => (
         <button
           key={tr.to}
-          className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50"
+          className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-50"
           disabled={pending}
           onClick={() => doTransition(tr.to)}
         >
@@ -100,14 +100,14 @@ function TransitionButtons({ ticket, onTransitioned }: {
       ))}
       <button
         ref={keepRef}
-        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400"
         disabled={pending}
         title="Keep at current state (K)"
       >
         Keep at {ticket.state}
       </button>
       <button
-        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400"
         disabled={reassigning}
         onClick={handleReassign}
       >
@@ -171,22 +171,22 @@ export default function TicketDetail() {
   const stateColors = data ? getStateColors(data.state) : null
 
   return (
-    <div tabIndex={0} className="h-full flex flex-col bg-white outline-none">
-      <div className="px-4 py-3 border-b shrink-0 bg-gray-50">
+    <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
+      <div className="px-4 py-3 border-b border-gray-700 shrink-0 bg-gray-800">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             {data ? (
-              <h2 className="text-base font-semibold leading-snug text-gray-900">
+              <h2 className="text-base font-semibold leading-snug text-gray-100">
                 {data.title}
               </h2>
             ) : (
-              <span className="text-sm font-medium text-gray-700">Detail</span>
+              <span className="text-sm font-medium text-gray-300">Detail</span>
             )}
           </div>
           {data && (
             <button
               onClick={() => setReviewMode(true)}
-              className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-100 shrink-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="px-2 py-0.5 text-xs rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 shrink-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
               Review
             </button>
@@ -233,20 +233,20 @@ export default function TicketDetail() {
         )}
         {selectedTicketId && isLoading && (
           <div className="p-4 space-y-3">
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-full" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-full" />
+            <div className="h-4 bg-gray-700 rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-gray-700 rounded animate-pulse w-full" />
+            <div className="h-4 bg-gray-700 rounded animate-pulse w-5/6" />
+            <div className="h-4 bg-gray-700 rounded animate-pulse w-2/3" />
+            <div className="h-4 bg-gray-700 rounded animate-pulse w-full" />
           </div>
         )}
         {selectedTicketId && isError && (
-          <div className="m-4 p-3 rounded border border-red-200 bg-red-50 text-sm text-red-700">
+          <div className="m-4 p-3 rounded border border-red-700 bg-red-900/30 text-sm text-red-400">
             Error {(error as { status?: number }).status ?? ''}: failed to load ticket
           </div>
         )}
         {data && (
-          <div className="prose prose-sm px-6 py-4">
+          <div className="prose prose-sm prose-invert px-6 py-4">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.body}</ReactMarkdown>
           </div>
         )}
