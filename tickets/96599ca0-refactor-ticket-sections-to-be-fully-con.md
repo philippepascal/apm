@@ -36,7 +36,7 @@ The fix is to replace `TicketDocument`'s typed fields with a config-driven order
 - [x] `validate()` accepts a `&[TicketSection]` parameter and enforces `required = true` sections from config — no hardcoded field names
 - [x] `CreateTicketRequest` in `apm-server/src/main.rs` no longer has individual named section fields; it accepts a generic sections map
 - [x] `apm-ui` `NewTicketModal` sends form data using the new generic sections map shape
-- [ ] `cargo test --workspace` passes with no new failures after the refactor
+- [x] `cargo test --workspace` passes with no new failures after the refactor
 
 ### Out of scope
 
