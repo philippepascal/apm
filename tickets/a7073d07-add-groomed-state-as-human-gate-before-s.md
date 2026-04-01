@@ -1,7 +1,7 @@
 +++
 id = "a7073d07"
 title = "Add groomed state as human gate before spec work"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "63261"
 branch = "ticket/a7073d07-add-groomed-state-as-human-gate-before-s"
 created_at = "2026-04-01T20:26:40.952240Z"
-updated_at = "2026-04-01T20:32:15.569350Z"
+updated_at = "2026-04-01T20:36:45.008970Z"
 +++
 
 ## Spec
@@ -117,3 +117,4 @@ Update the two unit tests that assert on `"new"`:
 | 2026-04-01T20:26Z | — | new | apm |
 | 2026-04-01T20:29Z | new | in_design | philippepascal |
 | 2026-04-01T20:32Z | in_design | specd | claude-0401-2029-cb28 |
+| 2026-04-01T20:36Z | specd | ready | philippepascal |
