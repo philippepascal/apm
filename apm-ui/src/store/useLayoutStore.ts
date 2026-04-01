@@ -6,15 +6,18 @@ interface LayoutStore {
   selectedTicketId: string | null
   columnVisibility: Record<ColumnKey, boolean>
   columnSizes: [number, number, number]
+  reviewMode: boolean
   setSelectedTicketId: (id: string | null) => void
   toggleColumn: (col: ColumnKey) => void
   setColumnSizes: (sizes: [number, number, number]) => void
+  setReviewMode: (v: boolean) => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
   selectedTicketId: null,
   columnVisibility: { workerView: true, supervisorView: true, ticketDetail: true },
   columnSizes: [25, 50, 25],
+  reviewMode: false,
   setSelectedTicketId: (id) => set({ selectedTicketId: id }),
   toggleColumn: (col) =>
     set((state) => {
@@ -24,4 +27,5 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       return { columnVisibility: next }
     }),
   setColumnSizes: (sizes) => set({ columnSizes: sizes }),
+  setReviewMode: (v) => set({ reviewMode: v }),
 }))
