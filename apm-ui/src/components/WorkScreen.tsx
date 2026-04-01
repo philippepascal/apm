@@ -7,6 +7,7 @@ import WorkerView from './WorkerView'
 import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
 import ReviewEditor from './ReviewEditor'
+import NewTicketModal from './NewTicketModal'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
 import { fetchStatus, startEngine, stopEngine } from './WorkEngineControls'
@@ -28,7 +29,7 @@ const CONTENT: Record<ColumnKey, React.ReactNode> = {
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, reviewMode } =
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, reviewMode, newTicketOpen, setNewTicketOpen } =
     useLayoutStore()
   const queryClient = useQueryClient()
 
@@ -49,9 +50,14 @@ export default function WorkScreen() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as Element | null
+      const inInput = target && target.matches('input, textarea, select, [contenteditable]')
+      if (event.key === 'n' && !event.ctrlKey && !event.metaKey && !event.shiftKey && !inInput) {
+        setNewTicketOpen(true)
+        return
+      }
       if (event.shiftKey && event.key === 'W') {
-        const target = event.target as Element | null
-        if (target && target.matches('input, textarea, select, [contenteditable]')) return
+        if (inInput) return
         fetchStatus().then((status) => {
           if (status === 'running' || status === 'idle') {
             stopMutation.mutate()
@@ -63,8 +69,7 @@ export default function WorkScreen() {
       }
       if (event.ctrlKey || event.metaKey) return
       if (ARROW_KEYS.indexOf(event.key) === -1) return
-      const target = event.target as Element | null
-      if (target && target.matches('input, textarea, select, [contenteditable]')) return
+      if (inInput) return
 
       event.preventDefault()
 
@@ -128,7 +133,7 @@ export default function WorkScreen() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTicketId, setSelectedTicketId, queryClient, startMutation, stopMutation])
+  }, [selectedTicketId, setSelectedTicketId, queryClient, startMutation, stopMutation, setNewTicketOpen])
 
   function handleToggle(key: ColumnKey) {
     const panel = panelRefs.current[key]
@@ -153,6 +158,7 @@ export default function WorkScreen() {
   if (reviewMode) {
     return (
       <div className="h-screen w-screen flex flex-col overflow-hidden">
+        <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel defaultSize={25} minSize={10}>
             <WorkerView />
@@ -168,6 +174,7 @@ export default function WorkScreen() {
 
   return (
     <div className="h-screen w-screen flex flex-col">
+      <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
       <div className="flex gap-2 px-3 py-1 border-b text-xs shrink-0">
         {COLS.map(({ key, label }) => (
           <button
