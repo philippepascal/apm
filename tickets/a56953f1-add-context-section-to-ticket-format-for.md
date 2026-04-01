@@ -23,14 +23,16 @@ Adding a new section today requires code changes in `ticket.rs`, `spec.rs`, and 
 
 ### Acceptance criteria
 
-- [ ] `apm spec <id> --section Context --set "..."` writes a `### Context` section to the ticket
-- [ ] `apm show <id>` renders the Context section immediately before `### Problem`
-- [ ] `### Context` is optional — tickets without it parse and validate successfully
-- [ ] Context is not required for `apm state <id> specd` (the quality bar still checks only Problem, Acceptance criteria, Out of scope, Approach)
-- [ ] New ticket skeletons produced by `apm new` include an empty `### Context` placeholder before `### Problem`
-- [ ] `apm spec <id> --section Context` (get) returns the current context value
-- [ ] `.apm/agents.md` Delegator section instructs the delegator to populate `### Context` after each `apm new` call, before promoting to `groomed`
-- [ ] `.apm/agents.md` Worker `state = groomed` section instructs the worker to read `### Context` before writing any spec section
+- [ ] `TicketDocument` stores sections as an ordered map (IndexMap<String, SectionValue>); no hardcoded field names remain
+- [ ] `TicketDocument::parse(body, config_sections)` extracts all `### <name>` headings; builds the map in config order; does not bail on missing sections
+- [ ] `TicketDocument::serialize` outputs sections in config order, followed by `## History`
+- [ ] `TicketDocument::validate(config_sections)` enforces `required = true` sections and checks unchecked items in tasks-type sections — no hardcoded section names
+- [ ] `apm spec --section <name> --set <value>` works for any section defined in `[[ticket.sections]]` including new custom ones
+- [ ] Adding a new section to `[[ticket.sections]]` in config.toml requires zero Rust code changes
+- [ ] `state.rs` specd and ammend transition guards use config-driven section validation; no references to `unchecked_criteria` or `unchecked_amendments` by name
+- [ ] `apm-server` `CreateTicketRequest` accepts sections dynamically; existing named fields (problem, acceptance_criteria, out_of_scope, approach) are kept as shims that merge into the dynamic map — no breaking API change
+- [ ] A `Context` section (`required = false`, `type = free`) is added to `[[ticket.sections]]` in `.apm/config.toml` and the `init.rs` template, placed before Problem — this serves as the end-to-end proof that the config-driven path works
+- [ ] All existing tests pass; TicketDocument unit tests rewritten to use the new section map API; a round-trip test with a custom section verifies it survives parse → serialize
 
 ### Out of scope
 
