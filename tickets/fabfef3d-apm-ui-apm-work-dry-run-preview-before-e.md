@@ -27,7 +27,7 @@ The CLI already implements the dry-run logic in `apm/src/cmd/work.rs:run_dry()`:
 - [x] Candidates are sorted by score descending, matching the order `apm work --dry-run` produces
 - [x] The response contains at most `config.agents.max_concurrent` candidates
 - [x] The response returns `{ "candidates": [] }` (empty array) when there are no actionable tickets
-- [ ] The dry-run preview panel is visible in the workerview column when the engine is stopped
+- [x] The dry-run preview panel is visible in the workerview column when the engine is stopped
 - [ ] The panel calls `GET /api/work/dry-run` and renders each candidate as a row showing id, title, and state
 - [ ] The panel shows an empty-state message when candidates is empty
 - [ ] The panel is hidden when the engine is running
