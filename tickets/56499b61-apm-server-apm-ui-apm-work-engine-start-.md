@@ -1,15 +1,15 @@
 +++
 id = "56499b61"
 title = "apm-server + apm-ui: apm work engine start/stop controls"
-state = "ready"
+state = "in_progress"
 priority = 40
 effort = 6
 risk = 5
 author = "apm"
-agent = "82899"
+agent = "philippepascal"
 branch = "ticket/56499b61-apm-server-apm-ui-apm-work-engine-start-"
 created_at = "2026-03-31T06:13:12.529756Z"
-updated_at = "2026-04-01T05:00:35.221108Z"
+updated_at = "2026-04-01T05:00:45.745277Z"
 +++
 
 ## Spec
@@ -122,3 +122,4 @@ pub fn run_engine_loop(root: &Path, cancel: tokio_util::sync::CancellationToken,
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T04:07Z | ready | in_progress | philippepascal |
 | 2026-04-01T05:00Z | in_progress | ready | apm |
+| 2026-04-01T05:00Z | ready | in_progress | philippepascal |
