@@ -26,6 +26,16 @@ The fix is to replace `TicketDocument`'s typed fields with a config-driven order
 
 ### Acceptance criteria
 
+- [ ] Adding a new entry to `[[ticket.sections]]` in `.apm/config.toml` makes that section appear in newly created ticket skeletons without any Rust code changes
+- [ ] `apm spec <id> --section <name>` works for any section defined in config, not only the six currently hardcoded ones
+- [ ] A ticket containing a section whose name is not in config is preserved unchanged on a parse → serialize round-trip (no silent drops)
+- [ ] The "Code review" section (present in config but absent from `TicketDocument`) survives a parse-serialize round-trip on an existing ticket file
+- [ ] `TicketDocument` no longer declares individual typed Rust fields (`problem`, `acceptance_criteria`, etc.) — sections are stored in an ordered map
+- [ ] `get_section` and `set_section` in `spec.rs` contain no hardcoded section-name match arms
+- [ ] `is_doc_field` in `spec.rs` is driven by the config section list, not a hardcoded string literal list
+- [ ] `CreateTicketRequest` in `apm-server/src/main.rs` no longer has individual named section fields; it accepts a generic sections map
+- [ ] `apm-ui` `NewTicketModal` sends form data using the new generic sections map shape
+- [ ] `cargo test --workspace` passes with no new failures after the refactor
 
 ### Out of scope
 
