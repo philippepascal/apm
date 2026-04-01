@@ -8,11 +8,13 @@ interface LayoutStore {
   columnSizes: [number, number, number]
   reviewMode: boolean
   newTicketOpen: boolean
+  logPanelOpen: boolean
   setSelectedTicketId: (id: string | null) => void
   toggleColumn: (col: ColumnKey) => void
   setColumnSizes: (sizes: [number, number, number]) => void
   setReviewMode: (v: boolean) => void
   setNewTicketOpen: (v: boolean) => void
+  setLogPanelOpen: (v: boolean) => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -21,6 +23,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   columnSizes: [25, 50, 25],
   reviewMode: false,
   newTicketOpen: false,
+  logPanelOpen: false,
   setSelectedTicketId: (id) => set({ selectedTicketId: id }),
   toggleColumn: (col) =>
     set((state) => {
@@ -32,4 +35,5 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   setColumnSizes: (sizes) => set({ columnSizes: sizes }),
   setReviewMode: (v) => set({ reviewMode: v }),
   setNewTicketOpen: (v) => set({ newTicketOpen: v }),
+  setLogPanelOpen: (v) => set({ logPanelOpen: v }),
 }))
