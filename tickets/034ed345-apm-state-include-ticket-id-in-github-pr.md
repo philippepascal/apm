@@ -36,7 +36,25 @@ The desired behaviour is a PR title prefixed with the short ticket ID (first 8 c
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-core/src/state.rs`
+
+**Change:** Inside `gh_pr_create_or_update`, construct the PR title by prepending the short ID before building the `--title` argument:
+
+```rust
+// line ~183, before the gh pr create call
+let short_id = &id[..8.min(id.len())];
+let pr_title = if title.is_empty() {
+    short_id.to_string()
+} else {
+    format!("{short_id}: {title}")
+};
+```
+
+Then replace `title` with `&pr_title` in the `.args([... "--title", title, ...])` call on line ~186.
+
+**No other files need to change.** The `id` parameter is already passed into the function alongside `title`, so no signature change is needed.
+
+**Test:** Add a unit or integration test that calls the state transition that triggers PR creation and asserts the PR title starts with the 8-char short ID. Because `gh` is a live CLI, the test can be a pure string-construction test on the formatting logic extracted into a small helper, or an integration test that stubs the command.
 
 ### Open questions
 
