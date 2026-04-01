@@ -44,7 +44,7 @@ The fix is to replace `TicketDocument`'s typed fields with a config-driven order
 - Adding new sections to the default `.apm/config.toml` (this ticket only makes new sections work once added; it does not add any)
 - Changing the `SectionType` enum values or config parsing logic in `config.rs`
 - Migrating existing ticket files on disk — old files continue to round-trip correctly
-- Changes to the `apm check` command beyond what is required to compile (if `apm check` accesses typed fields it will be updated to parse the raw string, but no behaviour changes)
+- Changes to `apm verify` beyond what is required to compile (if it accesses typed fields it will be updated to use the map, but no behaviour changes)
 
 ### Approach
 
