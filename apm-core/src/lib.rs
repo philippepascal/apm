@@ -10,6 +10,7 @@ pub mod sync;
 pub mod review;
 pub mod spec;
 pub mod ticket;
+pub mod work;
 pub mod worker;
 pub mod validate;
 pub mod verify;
