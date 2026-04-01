@@ -28,7 +28,7 @@ The fix is to remove the DryRunPreview component from WorkerView and delete the 
 - [x] WorkerView no longer imports DryRunPreview
 - [x] WorkerView renders no dry-run preview panel when the engine is stopped
 - [x] The ticket queue is visible at the top of the left column when the engine is stopped (no panel above it)
-- [ ] The /api/work/dry-run HTTP endpoint continues to respond (backend unchanged)
+- [x] The /api/work/dry-run HTTP endpoint continues to respond (backend unchanged)
 - [ ] The apm-ui build completes without errors or unused-import warnings
 
 ### Out of scope
