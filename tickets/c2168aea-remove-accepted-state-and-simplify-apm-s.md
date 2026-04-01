@@ -38,7 +38,11 @@ Both changes together eliminate a redundant state, shorten the closing cycle fro
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing the `completion` field or `CompletionStrategy` enum from `TransitionConfig` — it stays for side-effect use
+- Changing any other states or transitions in the workflow beyond removing `accepted`
+- Changing how `apm sync` fetches from remote or handles offline mode
+- Migrating existing tickets that are currently in `accepted` state (those are rare/non-existent in practice; they will simply fail state validation after the change, which is acceptable)
+- UI changes in apm-ui
 
 ### Approach
 
