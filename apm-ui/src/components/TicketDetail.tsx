@@ -1,13 +1,17 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useLayoutStore } from '../store/useLayoutStore'
+import InlineNumberField from './InlineNumberField'
 
 interface TicketDetail {
   id: string
   title: string
   state: string
+  effort: number
+  risk: number
+  priority: number
   body: string
   raw: string
   valid_transitions: { to: string; label: string }[]
@@ -88,11 +92,44 @@ export default function TicketDetail() {
   const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
   const setReviewMode = useLayoutStore((s) => s.setReviewMode)
   const queryClient = useQueryClient()
+  const [patchError, setPatchError] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ticket', selectedTicketId],
     queryFn: () => fetchTicket(selectedTicketId!),
     enabled: !!selectedTicketId,
+  })
+
+  const patchMutation = useMutation({
+    mutationFn: (patch: { effort?: number; risk?: number; priority?: number }) =>
+      fetch(`/api/tickets/${selectedTicketId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }).then((r) => {
+        if (!r.ok)
+          return r.json().then((j) => {
+            throw new Error(j.error ?? `Error ${r.status}`)
+          })
+        return r.json()
+      }),
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey: ['ticket', selectedTicketId] })
+      const prev = queryClient.getQueryData<TicketDetail>(['ticket', selectedTicketId])
+      queryClient.setQueryData<TicketDetail>(['ticket', selectedTicketId], (old) =>
+        old ? { ...old, ...patch } : old,
+      )
+      setPatchError(null)
+      return { prev }
+    },
+    onError: (_err, _patch, context) => {
+      queryClient.setQueryData(['ticket', selectedTicketId], context?.prev)
+      setPatchError('Update failed')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', selectedTicketId] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    },
   })
 
   function handleTransitioned() {
@@ -102,15 +139,43 @@ export default function TicketDetail() {
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
-      <div className="px-3 py-2 text-sm font-medium border-b shrink-0 flex items-center justify-between">
-        <span>TicketDetail</span>
+      <div className="px-3 py-2 text-sm font-medium border-b shrink-0">
+        <div className="flex items-center justify-between">
+          <span>TicketDetail</span>
+          {data && (
+            <button
+              onClick={() => setReviewMode(true)}
+              className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-50"
+            >
+              Review
+            </button>
+          )}
+        </div>
         {data && (
-          <button
-            onClick={() => setReviewMode(true)}
-            className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-50"
-          >
-            Review
-          </button>
+          <div className="flex items-center gap-3 mt-1">
+            <InlineNumberField
+              label="E"
+              value={data.effort}
+              min={1}
+              max={10}
+              onCommit={(v) => patchMutation.mutate({ effort: v })}
+            />
+            <InlineNumberField
+              label="R"
+              value={data.risk}
+              min={1}
+              max={10}
+              onCommit={(v) => patchMutation.mutate({ risk: v })}
+            />
+            <InlineNumberField
+              label="P"
+              value={data.priority}
+              min={0}
+              max={255}
+              onCommit={(v) => patchMutation.mutate({ priority: v })}
+            />
+            {patchError && <span className="text-xs text-red-500">{patchError}</span>}
+          </div>
         )}
       </div>
       <div className="flex-1 overflow-y-auto">
