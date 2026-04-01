@@ -46,7 +46,11 @@ The `Config::load()` function in `apm-core/src/config.rs` must be updated to rea
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the schema or content of any config section (states, transitions, ticket sections remain identical)
+- Providing a CLI command or migration tool to split an existing monolithic `config.toml` — existing projects keep working as-is; only new `apm init` produces the split layout
+- Validating that the three files do not contain conflicting or duplicate keys beyond the precedence rule stated in acceptance criteria
+- Moving `[tickets]` (the `dir` path) out of `config.toml` — it stays in the project settings file
+- Any UI or documentation changes beyond updating the `apm.agents.md` reference if it mentions `apm.toml`
 
 ### Approach
 
