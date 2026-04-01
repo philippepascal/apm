@@ -26,15 +26,15 @@ These regressions affect every user of the UI who relies on clicking a worker to
 
 ### Acceptance criteria
 
-- [ ] SupervisorView background is dark (bg-gray-900 or equivalent) and header text is light
-- [ ] Swimlane lane-count badge uses dark-palette colors instead of bg-gray-100/text-gray-600
-- [ ] TicketCard background is dark (bg-gray-800 or equivalent) and title text is light
-- [ ] TicketDetail panel background is dark (bg-gray-900 or equivalent) and body text is light
-- [ ] TicketDetail header sub-bar uses a dark surface (bg-gray-800 or equivalent) instead of bg-gray-50
-- [ ] TicketDetail transition buttons use dark surface and border colors
-- [ ] WorkScreen top toolbar (column-toggle bar) uses a dark background instead of bg-gray-50
-- [ ] Clicking a WorkerActivityPanel card calls setSelectedTicketId with that card's ticket_id
-- [ ] Each WorkerActivityPanel card displays the status text ('running' or 'crashed') alongside the colored dot
+- [x] SupervisorView background is dark (bg-gray-900 or equivalent) and header text is light
+- [x] Swimlane lane-count badge uses dark-palette colors instead of bg-gray-100/text-gray-600
+- [x] TicketCard background is dark (bg-gray-800 or equivalent) and title text is light
+- [x] TicketDetail panel background is dark (bg-gray-900 or equivalent) and body text is light
+- [x] TicketDetail header sub-bar uses a dark surface (bg-gray-800 or equivalent) instead of bg-gray-50
+- [x] TicketDetail transition buttons use dark surface and border colors
+- [x] WorkScreen top toolbar (column-toggle bar) uses a dark background instead of bg-gray-50
+- [x] Clicking a WorkerActivityPanel card calls setSelectedTicketId with that card's ticket_id
+- [x] Each WorkerActivityPanel card displays the status text ('running' or 'crashed') alongside the colored dot
 
 ### Out of scope
 
