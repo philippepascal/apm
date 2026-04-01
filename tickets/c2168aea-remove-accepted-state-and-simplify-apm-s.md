@@ -46,17 +46,13 @@ Both changes together eliminate a redundant state, shorten the closing cycle fro
 
 ### Approach
 
-1. Remove `accepted` from the state machine configs
+1. Remove `accepted` from the state machine config
 
 `.apm/config.toml` (project config, lines ~293-303):
 - Delete the entire `[[workflow.states]]` block for `accepted`
+- Update the transitions on `implemented`: remove the transition `to = "accepted"` with `completion = "pull"`; if a direct `implemented -> closed` transition is not already present, add one with `trigger = "auto"` and `actor = "supervisor"`
 
-`apm-core/.apm/config.toml` (init template, same structure):
-- Delete the same block
-
-In both files, also update the transitions on `implemented`:
-- Remove the transition `to = "accepted"` with `completion = "pull"`
-- If a direct `implemented -> closed` transition is not already present, add one with `trigger = "auto"` and `actor = "supervisor"`
+Note: there is no `apm-core/.apm/config.toml` — the init template is an embedded string in `apm-core/src/init.rs`, handled in step 6.
 
 2. Rewrite `apm-core/src/sync.rs`
 
@@ -69,7 +65,7 @@ New logic (one pass):
 - `detect()`: iterate all non-terminal tickets (all branches, all states); for each, check if the ticket's branch has been merged into the default branch on GitHub; if merged, add to close candidates
 - `apply()`: for each close candidate, call `ticket::close()` directly
 
-The "merged" check reuses the existing mechanism (git branch merge detection). Key simplification: no filtering by state, no reading of `completion` fields to decide candidacy.
+The "merged" check reuses the existing mechanism (git branch merge detection). Key simplification: no filtering by state, no reading of `completion` fields to decide candidacy. Note that scanning all non-terminal states (not just `implemented`) is intentional — if a ticket's branch is merged at any stage (e.g. a supervisor closes a spec branch manually), it should be closed. This is a deliberate broadening of the existing `implemented`-only scan.
 
 Remove the `detect_accept` / `accept_candidates` code path entirely.
 
@@ -94,12 +90,17 @@ The simplified command: fetch remote -> detect close candidates (merged PRs) -> 
 
 Remove the `accepted` state block from the default config string/template embedded in `init.rs` (line ~307-310). This ensures new projects initialised with `apm init` do not include the `accepted` state.
 
+7. Update `.apm/agents.md`
+
+Search for any reference to `accepted` (e.g. in the "Working a ticket" section or history notes) and remove or update it. No new behaviour to document — just remove the stale state name.
+
 Order of steps:
 1. Config changes (step 1) -- no code impact, establishes the intent
 2. Core logic changes (steps 2, 3, 4) -- compile and unit-test after each
 3. CLI changes (step 5) -- depends on core changes being done
 4. Init template (step 6) -- independent, do last
-5. `cargo test --workspace` -- all must pass before opening PR
+5. agents.md cleanup (step 7) -- independent, do last
+6. `cargo test --workspace` -- all must pass before opening PR
 
 ### Open questions
 
