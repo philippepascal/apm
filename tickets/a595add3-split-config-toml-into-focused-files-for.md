@@ -36,7 +36,7 @@ The `Config::load()` function in `apm-core/src/config.rs` must be updated to rea
 
 ### Acceptance criteria
 
-- [ ] `apm` loads a project whose `.apm/` directory contains three separate files (`config.toml`, `workflow.toml`, `ticket.toml`) without error
+- [x] `apm` loads a project whose `.apm/` directory contains three separate files (`config.toml`, `workflow.toml`, `ticket.toml`) without error
 - [ ] `apm` loads a project whose `.apm/config.toml` still contains `[workflow]` and `[[ticket.sections]]` (legacy monolithic layout) without error
 - [ ] When both `workflow.toml` and a `[workflow]` block in `config.toml` exist, the content from `workflow.toml` takes precedence but show a warning in apm validate
 - [ ] When both `ticket.toml` and `[[ticket.sections]]` in `config.toml` exist, the content from `ticket.toml` takes precedence but show a warning in apm validate
