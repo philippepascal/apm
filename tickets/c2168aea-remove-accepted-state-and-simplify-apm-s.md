@@ -46,7 +46,60 @@ Both changes together eliminate a redundant state, shorten the closing cycle fro
 
 ### Approach
 
-How the implementation will work.
+1. Remove `accepted` from the state machine configs
+
+`.apm/config.toml` (project config, lines ~293-303):
+- Delete the entire `[[workflow.states]]` block for `accepted`
+
+`apm-core/.apm/config.toml` (init template, same structure):
+- Delete the same block
+
+In both files, also update the transitions on `implemented`:
+- Remove the transition `to = "accepted"` with `completion = "pull"`
+- If a direct `implemented -> closed` transition is not already present, add one with `trigger = "auto"` and `actor = "supervisor"`
+
+2. Rewrite `apm-core/src/sync.rs`
+
+Current logic (two passes):
+- Find `implemented` tickets with merged branches -> collect as accept candidates
+- Find `accepted` tickets (any branch) -> collect as close candidates
+- Apply: accepted -> transition to `accepted`; close -> transition to `closed`
+
+New logic (one pass):
+- `detect()`: iterate all non-terminal tickets (all branches, all states); for each, check if the ticket's branch has been merged into the default branch on GitHub; if merged, add to close candidates
+- `apply()`: for each close candidate, call `ticket::close()` directly
+
+The "merged" check reuses the existing mechanism (git branch merge detection). Key simplification: no filtering by state, no reading of `completion` fields to decide candidacy.
+
+Remove the `detect_accept` / `accept_candidates` code path entirely.
+
+3. Remove `ticket::accept()` from `apm-core/src/ticket.rs`
+
+Delete the `accept()` function (lines ~352-408). It is only called from `sync::apply()`.
+
+4. Update `apm-core/src/verify.rs`
+
+Remove `"accepted"` from the `in_progress_states` set (line ~19). After this change the set contains only `"in_progress"` and `"implemented"`.
+
+5. Update `apm/src/cmd/sync.rs`
+
+Remove:
+- The prompt/message about accept candidates (line ~25: "branch merged -- run 'apm state {} accepted' to accept")
+- Any loop that iterates accept candidates and prints/applies them
+- Any references to the `accepted` variant in match arms or string literals
+
+The simplified command: fetch remote -> detect close candidates (merged PRs) -> optionally prompt -> apply closures.
+
+6. Update `apm-core/src/init.rs`
+
+Remove the `accepted` state block from the default config string/template embedded in `init.rs` (line ~307-310). This ensures new projects initialised with `apm init` do not include the `accepted` state.
+
+Order of steps:
+1. Config changes (step 1) -- no code impact, establishes the intent
+2. Core logic changes (steps 2, 3, 4) -- compile and unit-test after each
+3. CLI changes (step 5) -- depends on core changes being done
+4. Init template (step 6) -- independent, do last
+5. `cargo test --workspace` -- all must pass before opening PR
 
 ### Open questions
 
