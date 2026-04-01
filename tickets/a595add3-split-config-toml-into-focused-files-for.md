@@ -4,12 +4,12 @@ title = "Split config.toml into focused files for state machine, ticket structur
 state = "in_design"
 priority = 9
 effort = 4
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "42283"
 branch = "ticket/a595add3-split-config-toml-into-focused-files-for"
 created_at = "2026-04-01T22:27:35.511052Z"
-updated_at = "2026-04-01T22:38:27.724688Z"
+updated_at = "2026-04-01T22:38:32.795442Z"
 +++
 
 ## Spec
