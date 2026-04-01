@@ -33,7 +33,7 @@ Affected users: anyone supervising an apm work session via the web UI.
 - [x] If the PATCH request fails, the queue reverts to its pre-reorder order and an error toast is shown
 - [x] Reordering the priority queue does not affect the swimlane layout in the middle column
 - [x] A ticket with state in_progress cannot be reordered in the queue via drag or keyboard
-- [ ] PATCH /api/tickets/:id accepts a JSON body with a priority integer (0-255) and persists it to the ticket branch via git
+- [x] PATCH /api/tickets/:id accepts a JSON body with a priority integer (0-255) and persists it to the ticket branch via git
 
 ### Out of scope
 
