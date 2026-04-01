@@ -24,7 +24,7 @@ The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`
 
 ### Acceptance criteria
 
-- [ ] SupervisorView renders a horizontal row of swimlane columns, one per supervisor-actionable state that has at least one ticket
+- [x] SupervisorView renders a horizontal row of swimlane columns, one per supervisor-actionable state that has at least one ticket
 - [ ] Swimlanes appear in a fixed order matching the workflow: question, specd, ammend, blocked, implemented, accepted
 - [ ] A swimlane with zero tickets is not rendered
 - [ ] Each swimlane has a header showing the state label and a count of tickets in that state
