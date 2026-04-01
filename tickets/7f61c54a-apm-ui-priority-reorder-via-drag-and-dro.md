@@ -24,7 +24,7 @@ Affected users: anyone supervising an apm work session via the web UI.
 
 ### Acceptance criteria
 
-- [ ] Dragging a ticket card to a new position in the queue reorders the list visually before the server responds (optimistic update)
+- [x] Dragging a ticket card to a new position in the queue reorders the list visually before the server responds (optimistic update)
 - [ ] After a drag reorder, PATCH /api/tickets/:id is sent with the updated priority value for the moved ticket
 - [ ] The queue order after drag reflects the same dispatch order that apm next would compute
 - [ ] Pressing the up-arrow key while a queue item is focused moves it one position up in the queue
