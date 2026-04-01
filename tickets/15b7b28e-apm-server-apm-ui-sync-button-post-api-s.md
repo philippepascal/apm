@@ -22,15 +22,15 @@ This ticket adds the `POST /api/sync` endpoint to `apm-server` and the correspon
 
 ### Acceptance criteria
 
-- [ ] `POST /api/sync` returns HTTP 200 with a JSON body containing at least `{ "branches": <count> }`
-- [ ] `POST /api/sync` calls `git::sync_local_ticket_refs` so local branch refs are refreshed before the response is sent
-- [ ] `POST /api/sync` attempts `git::fetch_all`; if the fetch fails (e.g. no remote configured) the endpoint still returns 200 and includes a `"fetch_error"` field in the response body
-- [ ] After `POST /api/sync` completes, a subsequent `GET /api/tickets` returns ticket data that reflects the refreshed branch state
-- [ ] The UI renders a Sync button in the supervisorview header or an equivalent top-level location visible on the main screen
-- [ ] Clicking the Sync button disables it and shows a loading indicator while the request is in-flight
-- [ ] On success, the Sync button re-enables and TanStack Query invalidates all ticket queries so the swimlanes and detail panel refresh with fresh data
-- [ ] On failure (non-2xx or network error), the Sync button re-enables and an error message is shown to the user
-- [ ] A keyboard shortcut (`Shift+S`) triggers the same sync action as clicking the button
+- [x] `POST /api/sync` returns HTTP 200 with a JSON body containing at least `{ "branches": <count> }`
+- [x] `POST /api/sync` calls `git::sync_local_ticket_refs` so local branch refs are refreshed before the response is sent
+- [x] `POST /api/sync` attempts `git::fetch_all`; if the fetch fails (e.g. no remote configured) the endpoint still returns 200 and includes a `"fetch_error"` field in the response body
+- [x] After `POST /api/sync` completes, a subsequent `GET /api/tickets` returns ticket data that reflects the refreshed branch state
+- [x] The UI renders a Sync button in the supervisorview header or an equivalent top-level location visible on the main screen
+- [x] Clicking the Sync button disables it and shows a loading indicator while the request is in-flight
+- [x] On success, the Sync button re-enables and TanStack Query invalidates all ticket queries so the swimlanes and detail panel refresh with fresh data
+- [x] On failure (non-2xx or network error), the Sync button re-enables and an error message is shown to the user
+- [x] A keyboard shortcut (`Shift+S`) triggers the same sync action as clicking the button
 
 ### Out of scope
 
