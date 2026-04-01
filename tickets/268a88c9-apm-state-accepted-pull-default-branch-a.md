@@ -3,13 +3,13 @@ id = "268a88c9"
 title = "apm state accepted: pull default branch after PR merge"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 agent = "71767"
 branch = "ticket/268a88c9-apm-state-accepted-pull-default-branch-a"
 created_at = "2026-04-01T06:10:14.360337Z"
-updated_at = "2026-04-01T06:12:47.286959Z"
+updated_at = "2026-04-01T06:16:37.618509Z"
 +++
 
 ## Spec
