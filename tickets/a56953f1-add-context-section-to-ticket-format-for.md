@@ -15,11 +15,14 @@ updated_at = "2026-04-01T22:10:17.024845Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a delegator creates a ticket and promotes it to `groomed`, the spec-writer worker receives nothing beyond the ticket title. There is no sanctioned place in the ticket format for the delegator to record the relevant design document, the relevant section, or known constraints (e.g. "the `accepted` state has been removed").
+
+The existing sections (`### Problem`, `### Acceptance criteria`, etc.) are worker-owned. Pre-filling them creates ambiguity about whether the worker should preserve or replace the content.
+
+The result: spec-writers must guess intent from the title alone and often produce specs that miss the design or require amendment cycles.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +37,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
