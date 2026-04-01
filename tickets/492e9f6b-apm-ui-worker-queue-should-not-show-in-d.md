@@ -25,7 +25,7 @@ in_progress is already excluded (no actionable field in config). The fix require
 ### Acceptance criteria
 
 - [x] The worker queue panel does not display tickets in `in_design` state
-- [ ] The worker queue panel continues to display tickets in `new` state
+- [x] The worker queue panel continues to display tickets in `new` state
 - [ ] The worker queue panel continues to display tickets in `ammend` state
 - [ ] The worker queue panel continues to display tickets in `ready` state
 - [ ] The worker queue panel does not display tickets in `in_progress` state (existing behaviour, must not regress)
