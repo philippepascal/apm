@@ -3,13 +3,13 @@ id = "102511b9"
 title = "apm-ui: worker queue shows 'crashed' for tickets in terminal states"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 agent = "78978"
 branch = "ticket/102511b9-apm-ui-worker-queue-shows-crashed-for-ti"
 created_at = "2026-04-01T06:10:23.311626Z"
-updated_at = "2026-04-01T06:13:02.387897Z"
+updated_at = "2026-04-01T06:15:39.057108Z"
 +++
 
 ## Spec
