@@ -24,18 +24,18 @@ The backend already exposes or will expose `PATCH /api/tickets/:id` (first intro
 
 ### Acceptance criteria
 
-- [ ] Clicking the `effort` value in the ticket detail panel activates an inline number input
-- [ ] Clicking the `risk` value in the ticket detail panel activates an inline number input
-- [ ] Clicking the `priority` value in the ticket detail panel activates an inline number input
-- [ ] Pressing Enter or blurring the input commits the change via `PATCH /api/tickets/:id`
-- [ ] Pressing Escape cancels the edit and restores the previous value without a network request
-- [ ] The UI reflects the updated value immediately after a successful PATCH (optimistic update via TanStack Query cache invalidation)
-- [ ] `PATCH /api/tickets/:id` body `{"effort":N}` updates the effort field in the ticket frontmatter and commits it to the ticket branch
-- [ ] `PATCH /api/tickets/:id` body `{"risk":N}` updates the risk field in the ticket frontmatter and commits it to the ticket branch
-- [ ] `PATCH /api/tickets/:id` body `{"priority":N}` updates the priority field in the ticket frontmatter and commits it to the ticket branch
-- [ ] Submitting a value outside the valid range (effort/risk: 1–10; priority: 0–255) shows an inline validation error and does not issue a PATCH request
-- [ ] If the PATCH request returns an error, the field reverts to its pre-edit value and a toast error is shown
-- [ ] Each inline control is keyboard-accessible: Tab focuses the field, Enter activates edit mode
+- [x] Clicking the `effort` value in the ticket detail panel activates an inline number input
+- [x] Clicking the `risk` value in the ticket detail panel activates an inline number input
+- [x] Clicking the `priority` value in the ticket detail panel activates an inline number input
+- [x] Pressing Enter or blurring the input commits the change via `PATCH /api/tickets/:id`
+- [x] Pressing Escape cancels the edit and restores the previous value without a network request
+- [x] The UI reflects the updated value immediately after a successful PATCH (optimistic update via TanStack Query cache invalidation)
+- [x] `PATCH /api/tickets/:id` body `{"effort":N}` updates the effort field in the ticket frontmatter and commits it to the ticket branch
+- [x] `PATCH /api/tickets/:id` body `{"risk":N}` updates the risk field in the ticket frontmatter and commits it to the ticket branch
+- [x] `PATCH /api/tickets/:id` body `{"priority":N}` updates the priority field in the ticket frontmatter and commits it to the ticket branch
+- [x] Submitting a value outside the valid range (effort/risk: 1–10; priority: 0–255) shows an inline validation error and does not issue a PATCH request
+- [x] If the PATCH request returns an error, the field reverts to its pre-edit value and a toast error is shown
+- [x] Each inline control is keyboard-accessible: Tab focuses the field, Enter activates edit mode
 
 ### Out of scope
 
