@@ -1,7 +1,7 @@
 +++
 id = "ed41435c"
 title = "apm-ui: engine stop should drain gracefully; individual stop should kill"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "43949"
 branch = "ticket/ed41435c-apm-ui-engine-stop-should-drain-graceful"
 created_at = "2026-04-01T07:56:48.702217Z"
-updated_at = "2026-04-01T08:02:49.123765Z"
+updated_at = "2026-04-01T08:05:00.171904Z"
 +++
 
 ## Spec
@@ -93,3 +93,4 @@ No other files need to change. No new dependencies. No backend changes. Tests: t
 | 2026-04-01T07:59Z | in_design | specd | claude-0401-0757-5cc0 |
 | 2026-04-01T08:02Z | specd | ready | apm |
 | 2026-04-01T08:02Z | ready | in_progress | philippepascal |
+| 2026-04-01T08:05Z | in_progress | implemented | claude-0401-0802-33d0 |
