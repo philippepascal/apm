@@ -33,7 +33,10 @@ The fix is to remove the DryRunPreview component from WorkerView and delete the 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing or modifying the /api/work/dry-run backend endpoint or its handler logic
+- Any changes to other WorkerView sub-components (WorkerActivityPanel, queue rendering, etc.)
+- Redesigning the left-column layout beyond removing the panel
+- Adding an alternative surface for dry-run information (e.g. tooltip, CLI command)
 
 ### Approach
 
