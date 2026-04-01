@@ -1,14 +1,15 @@
 +++
 id = "ed41435c"
 title = "apm-ui: engine stop should drain gracefully; individual stop should kill"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/ed41435c-apm-ui-engine-stop-should-drain-graceful"
 created_at = "2026-04-01T07:56:48.702217Z"
-updated_at = "2026-04-01T07:56:48.702217Z"
+updated_at = "2026-04-01T07:57:24.298225Z"
 +++
 
 ## Spec
@@ -57,3 +58,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T07:56Z | — | new | philippepascal |
+| 2026-04-01T07:57Z | new | in_design | philippepascal |
