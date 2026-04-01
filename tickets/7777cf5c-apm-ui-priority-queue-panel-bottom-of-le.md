@@ -34,7 +34,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 - [x] When the response array is empty, `PriorityQueuePanel` shows a centred "No tickets in queue." message
 - [x] While the initial fetch is in-flight, `PriorityQueuePanel` shows loading skeleton rows
 - [x] If the fetch fails, `PriorityQueuePanel` shows an inline error message
-- [ ] `PriorityQueuePanel` automatically refetches `GET /api/queue` every 10 seconds via TanStack Query `refetchInterval`
+- [x] `PriorityQueuePanel` automatically refetches `GET /api/queue` every 10 seconds via TanStack Query `refetchInterval`
 - [ ] Clicking a queue row sets `selectedTicketId` in the Zustand store (the same global selection used by the swimlanes)
 - [ ] The row for the currently selected ticket is visually highlighted
 - [ ] `PriorityQueuePanel` is rendered in the bottom half of `WorkerView.tsx`, replacing the placeholder stub
