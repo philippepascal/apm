@@ -1,0 +1,23 @@
+[package]
+name = "apm-server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "apm-server"
+path = "src/main.rs"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+anyhow = { workspace = true }
+toml = { workspace = true }
+apm-core = { path = "../apm-core" }
+tower-http = { workspace = true, features = ["fs"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+tempfile = "3"

@@ -103,6 +103,26 @@ impl Ticket {
     }
 }
 
+/// Return all agent-actionable tickets sorted by descending score.
+pub fn sorted_actionable<'a>(
+    tickets: &'a [Ticket],
+    actionable: &[&str],
+    pw: f64,
+    ew: f64,
+    rw: f64,
+) -> Vec<&'a Ticket> {
+    let mut candidates: Vec<&Ticket> = tickets
+        .iter()
+        .filter(|t| actionable.contains(&t.frontmatter.state.as_str()))
+        .collect();
+    candidates.sort_by(|a, b| {
+        b.score(pw, ew, rw)
+            .partial_cmp(&a.score(pw, ew, rw))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    candidates
+}
+
 /// Return the highest-scoring ticket from `tickets` whose state is in
 /// `actionable` and (if `startable` is non-empty) also in `startable`.
 pub fn pick_next<'a>(
@@ -113,19 +133,12 @@ pub fn pick_next<'a>(
     ew: f64,
     rw: f64,
 ) -> Option<&'a Ticket> {
-    let mut candidates: Vec<&Ticket> = tickets
-        .iter()
-        .filter(|t| {
+    sorted_actionable(tickets, actionable, pw, ew, rw)
+        .into_iter()
+        .find(|t| {
             let state = t.frontmatter.state.as_str();
-            actionable.contains(&state) && (startable.is_empty() || startable.contains(&state))
+            startable.is_empty() || startable.contains(&state)
         })
-        .collect();
-    candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    candidates.into_iter().next()
 }
 
 /// Load all tickets by reading directly from their git branches.
@@ -135,6 +148,11 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
     let mut tickets = Vec::new();
     for branch in &branches {
         let suffix = branch.trim_start_matches("ticket/");
+        // Skip bare short-ID refs (e.g. ticket/268f5694) created by fetch operations.
+        // A real ticket branch always has a slug after the ID: ticket/<id>-<slug>.
+        if suffix.len() == 8 && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            continue;
+        }
         let filename = format!("{suffix}.md");
         let rel_path = format!("{}/{}", tickets_dir_rel.to_string_lossy(), filename);
         let dummy_path = root.join(&rel_path);
