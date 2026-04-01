@@ -16,22 +16,16 @@ updated_at = "2026-04-01T06:44:57.458950Z"
 
 ### Problem
 
-4d884371 applied a dark theme (bg-gray-900) to the left worker column only. The center (supervisor board) and right (ticket detail) columns still use a light background. The dark theme should be applied consistently across all three columns for a cohesive look.
+Commit 4d884371 applied a dark background (bg-gray-900) only to the left WorkerView column. The center column (SupervisorView) still uses bg-gray-50 and the right column (TicketDetail) uses bg-white, making the three-column layout visually inconsistent. The dark theme must be applied uniformly so all columns share the same dark palette.
 
-Additionally, 4d884371 introduced two regressions in WorkerActivityPanel when it replaced the table with a card layout:
-1. Worker cards are no longer clickable — clicking a card should select the ticket in the detail panel (setSelectedTicketId), as the table rows did before.
-2. The status label ('running' / 'crashed') is gone — replaced by a dot only. The status text should be visible alongside or instead of the dot. The previous table had an explicit status badge that was useful at a glance.
+The same commit replaced WorkerActivityPanel's table with a card layout but introduced two regressions:
+1. Click-to-select removed. The old table rows called setSelectedTicketId on click; the new card divs have no onClick handler, so clicking a worker card no longer opens that ticket in the detail panel.
+2. Status label removed. The old table had an explicit text badge ('running' / 'crashed'). The new cards show only a green or red dot with no label, making status harder to read at a glance.
 
-Scope:
-- Apply dark background + appropriate text colors to SupervisorView, Swimlane, TicketCard, TicketDetail, and any shared layout containers in WorkScreen
-- Restore click-to-select on WorkerActivityPanel cards
-- Restore visible status label on WorkerActivityPanel cards (can keep the dot, but add the text)
-
-What is broken or missing, and why it matters.
+These regressions affect every user of the UI who relies on clicking a worker to jump to its ticket, and on reading worker status without hovering.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -46,10 +40,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
