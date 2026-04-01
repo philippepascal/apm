@@ -22,13 +22,13 @@ The desired behaviour is: when a ticket has non-empty content in its `### Open q
 
 ### Acceptance criteria
 
-- [ ] A ticket card shows a question badge when the ticket `### Open questions` section contains non-whitespace content
-- [ ] A ticket card shows an amendment badge when the ticket `### Amendment requests` section contains at least one unchecked checkbox (`- [ ]`)
-- [ ] A ticket card with no open questions and no pending amendments shows neither badge
-- [ ] Both badges can appear simultaneously on the same card
-- [ ] The question and amendment badges are visually distinct from the effort and risk badges already on the card
-- [ ] The `GET /api/tickets` response includes `has_open_questions` and `has_pending_amendments` boolean fields derived from the ticket body
-- [ ] The badges update when TanStack Query refetches (no manual reload needed)
+- [x] A ticket card shows a question badge when the ticket `### Open questions` section contains non-whitespace content
+- [x] A ticket card shows an amendment badge when the ticket `### Amendment requests` section contains at least one unchecked checkbox (`- [ ]`)
+- [x] A ticket card with no open questions and no pending amendments shows neither badge
+- [x] Both badges can appear simultaneously on the same card
+- [x] The question and amendment badges are visually distinct from the effort and risk badges already on the card
+- [x] The `GET /api/tickets` response includes `has_open_questions` and `has_pending_amendments` boolean fields derived from the ticket body
+- [x] The badges update when TanStack Query refetches (no manual reload needed)
 
 ### Out of scope
 
