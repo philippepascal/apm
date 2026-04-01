@@ -3,13 +3,13 @@ id = "96599ca0"
 title = "Refactor ticket sections to be fully config-driven, removing hardcoded TicketDocument fields"
 state = "in_design"
 priority = 8
-effort = 0
+effort = 6
 risk = 0
 author = "claude-0401-2145-a8f3"
 agent = "44317"
 branch = "ticket/96599ca0-refactor-ticket-sections-to-be-fully-con"
 created_at = "2026-04-01T22:27:39.127351Z"
-updated_at = "2026-04-01T22:35:17.030477Z"
+updated_at = "2026-04-01T22:39:45.984519Z"
 +++
 
 ## Spec
