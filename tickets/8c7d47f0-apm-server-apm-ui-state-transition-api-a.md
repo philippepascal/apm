@@ -31,20 +31,20 @@ The ticket detail panel (added in Step 6) is read-only: a supervisor looking at 
 
 ### Acceptance criteria
 
-- [ ] POST /api/tickets/:id/transition with a valid body transitions the ticket state and returns 200 with the updated ticket JSON
-- [ ] POST /api/tickets/:id/transition returns 422 with a JSON `{"error":"..."}` body when the transition is invalid (not defined in the state machine from the current state)
-- [ ] POST /api/tickets/:id/transition returns 422 with a JSON error when a precondition fails (e.g. transitioning to `specd` with missing spec sections, or to `implemented` with unchecked criteria)
-- [ ] POST /api/tickets/:id/transition returns 404 when the ticket id does not exist
-- [ ] GET /api/tickets/:id response includes a `valid_transitions` array, each entry having `to` (state id) and `label` (transition label from config, or `-> {to}` if blank)
-- [ ] The ticket detail panel renders one button per entry in `valid_transitions` using the entry's `label` as the button text
-- [ ] A "Keep at {state}" button is always visible in the detail panel and performs no API call when clicked
-- [ ] Pressing the `K` key while a ticket is selected in the detail panel activates the "Keep at {state}" button (same no-op behaviour as clicking it)
-- [ ] Clicking a transition button fires POST /api/tickets/:id/transition and disables all transition buttons while the request is in-flight
-- [ ] On a successful transition, the detail panel and swimlanes update to reflect the new state without a full page reload (TanStack Query cache invalidation)
-- [ ] On a failed transition, an inline error message appears near the buttons showing the text from the API error response; the buttons re-enable
-- [ ] The transition buttons are not shown when no ticket is selected
-- [ ] npm run build in apm-ui/ exits 0 with no TypeScript errors
-- [ ] cargo test --workspace passes
+- [x] POST /api/tickets/:id/transition with a valid body transitions the ticket state and returns 200 with the updated ticket JSON
+- [x] POST /api/tickets/:id/transition returns 422 with a JSON `{"error":"..."}` body when the transition is invalid (not defined in the state machine from the current state)
+- [x] POST /api/tickets/:id/transition returns 422 with a JSON error when a precondition fails (e.g. transitioning to `specd` with missing spec sections, or to `implemented` with unchecked criteria)
+- [x] POST /api/tickets/:id/transition returns 404 when the ticket id does not exist
+- [x] GET /api/tickets/:id response includes a `valid_transitions` array, each entry having `to` (state id) and `label` (transition label from config, or `-> {to}` if blank)
+- [x] The ticket detail panel renders one button per entry in `valid_transitions` using the entry's `label` as the button text
+- [x] A "Keep at {state}" button is always visible in the detail panel and performs no API call when clicked
+- [x] Pressing the `K` key while a ticket is selected in the detail panel activates the "Keep at {state}" button (same no-op behaviour as clicking it)
+- [x] Clicking a transition button fires POST /api/tickets/:id/transition and disables all transition buttons while the request is in-flight
+- [x] On a successful transition, the detail panel and swimlanes update to reflect the new state without a full page reload (TanStack Query cache invalidation)
+- [x] On a failed transition, an inline error message appears near the buttons showing the text from the API error response; the buttons re-enable
+- [x] The transition buttons are not shown when no ticket is selected
+- [x] npm run build in apm-ui/ exits 0 with no TypeScript errors
+- [x] cargo test --workspace passes
 
 ### Out of scope
 
