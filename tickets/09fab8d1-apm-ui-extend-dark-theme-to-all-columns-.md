@@ -38,7 +38,11 @@ These regressions affect every user of the UI who relies on clicking a worker to
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- System-level dark mode (prefers-color-scheme media queries / CSS variables / theme toggle)
+- Theming infrastructure — no new theme abstraction layer; direct Tailwind class changes only
+- stateColors.ts badge palette — badge pills (bg-X-100 text-X-700) carry their own background and remain readable on dark surfaces; recolouring them is a separate concern
+- PriorityQueuePanel, ReviewEditor, NewTicketModal, WorkEngineControls — not mentioned in the problem statement
+- WorkerView.tsx — already dark; no changes needed
 
 ### Approach
 
