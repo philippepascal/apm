@@ -36,11 +36,11 @@ Adding a new section today requires code changes in `ticket.rs`, `spec.rs`, and 
 
 ### Out of scope
 
-- Making `### Context` required or validated against a schema
-- Parsing Context content programmatically — it is purely human/agent-readable prose
-- Changes to `apm new` CLI flags
+- Changes to the frontmatter (TOML) format or `## History` handling
+- Adding any behaviour to the Context section beyond storing and rendering it
 - UI changes
-- Migrating existing tickets to add empty Context sections
+- Migrating existing ticket files on disk (parse is forward-compatible; old tickets without Context simply render without it)
+- Changes to `[[workflow.states]]` or the state machine
 
 ### Approach
 
