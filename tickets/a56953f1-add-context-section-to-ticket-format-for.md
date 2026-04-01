@@ -23,6 +23,14 @@ The result: spec-writers must guess intent from the title alone and often produc
 
 ### Acceptance criteria
 
+- [ ] `apm spec <id> --section Context --set "..."` writes a `### Context` section to the ticket
+- [ ] `apm show <id>` renders the Context section immediately before `### Problem`
+- [ ] `### Context` is optional — tickets without it parse and validate successfully
+- [ ] Context is not required for `apm state <id> specd` (the quality bar still checks only Problem, Acceptance criteria, Out of scope, Approach)
+- [ ] New ticket skeletons produced by `apm new` include an empty `### Context` placeholder before `### Problem`
+- [ ] `apm spec <id> --section Context` (get) returns the current context value
+- [ ] `.apm/agents.md` Delegator section instructs the delegator to populate `### Context` after each `apm new` call, before promoting to `groomed`
+- [ ] `.apm/agents.md` Worker `state = groomed` section instructs the worker to read `### Context` before writing any spec section
 
 ### Out of scope
 
