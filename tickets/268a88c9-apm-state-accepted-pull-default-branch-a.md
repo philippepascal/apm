@@ -1,7 +1,7 @@
 +++
 id = "268a88c9"
 title = "apm state accepted: pull default branch after PR merge"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "71767"
 branch = "ticket/268a88c9-apm-state-accepted-pull-default-branch-a"
 created_at = "2026-04-01T06:10:14.360337Z"
-updated_at = "2026-04-01T06:17:00.121329Z"
+updated_at = "2026-04-01T06:17:06.632563Z"
 +++
 
 ## Spec
@@ -92,3 +92,4 @@ Extend the existing `CompletionStrategy` serde test to assert that `"pull"` dese
 |------|------|----|----|
 | 2026-04-01T06:10Z | — | new | philippepascal |
 | 2026-04-01T06:12Z | new | in_design | philippepascal |
+| 2026-04-01T06:17Z | in_design | specd | claude-0401-0612-b280 |
