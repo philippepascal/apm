@@ -1,6 +1,5 @@
 use anyhow::Result;
 use apm_core::{config::{CompletionStrategy, Config}, git, ticket};
-use chrono::Utc;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -71,20 +70,10 @@ fn apply_fixes(
         if (fm.state == "in_progress" || fm.state == "implemented")
             && merged_set.contains(branch.as_str())
         {
-            let now = Utc::now();
-            let mut t = t.clone();
-            let old_state = fm.state.clone();
-            t.frontmatter.state = "accepted".into();
-            t.frontmatter.updated_at = Some(now);
-            let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-            apm_core::state::append_history(&mut t.body, &old_state, "accepted", &when, "verify --fix");
-            let content = t.serialize()?;
             let id = fm.id.clone();
-            let filename = t.path.file_name().unwrap().to_string_lossy().to_string();
-            let rel_path = format!("{}/{filename}", config.tickets.dir.to_string_lossy());
-            match git::commit_to_branch(root, branch, &rel_path, &content,
-                &format!("ticket({id}): {} → accepted (verify --fix)", fm.state)) {
-                Ok(_) => println!("  fixed {id}: {} → accepted", fm.state),
+            let old_state = fm.state.clone();
+            match apm_core::ticket::close(root, config, &id, None, "verify --fix", false) {
+                Ok(_) => println!("  fixed {id}: {old_state} → closed"),
                 Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
             }
         }

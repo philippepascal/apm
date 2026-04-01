@@ -309,12 +309,6 @@ color      = "#06b6d4"
 actionable = ["supervisor"]
 
 [[workflow.states]]
-id         = "accepted"
-label      = "Accepted"
-color      = "#84cc16"
-actionable = ["supervisor"]
-
-[[workflow.states]]
 id       = "closed"
 label    = "Closed"
 color    = "#374151"

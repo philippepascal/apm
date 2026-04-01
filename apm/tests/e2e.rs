@@ -531,7 +531,7 @@ mod tests {
     assert!(!src.contains("- 1"), "merged main still has the bug");
     assert!(src.contains("if input.is_empty()"), "fix not in main after merge");
 
-    // ── Step 11: apm sync detects merged branch and suggests manual accept ──────
+    // ── Step 11: apm sync detects merged branch and offers to close ─────────────
     // --offline skips the remote fetch/push.
     // sync reads tickets from git blobs directly — no working-tree prep needed.
 
@@ -542,13 +542,8 @@ mod tests {
         "merge suggestion not reported:\n{}",
         stdout(&out)
     );
-    assert!(
-        stdout(&out).contains(&format!("apm state {ticket_id} accepted")),
-        "apm state suggestion missing:\n{}",
-        stdout(&out)
-    );
 
-    // Ticket is still in implemented — no auto-transition.
+    // Ticket is still in implemented — no auto-close without --auto-close flag.
     let ticket_after = env.branch_content(&branch, &ticket_path);
     assert!(ticket_after.contains("state = \"implemented\""), "state should still be implemented after sync");
 }

@@ -277,13 +277,6 @@ layer      = 2
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to            = "accepted"
-  trigger       = "manual"
-  actor         = "engineer"
-  preconditions = ["pr_all_closing_merged"]
-  completion    = "pull"
-
-  [[workflow.states.transitions]]
   to             = "ready"
   trigger        = "manual"
   actor          = "supervisor"
@@ -300,18 +293,6 @@ actionable = ["supervisor"]
   to      = "in_progress"
   trigger = "manual"
   actor   = "any"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  actor   = "supervisor"
-
-[[workflow.states]]
-id         = "accepted"
-label      = "Accepted"
-color      = "#84cc16"
-layer      = 2
-actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
   to      = "closed"

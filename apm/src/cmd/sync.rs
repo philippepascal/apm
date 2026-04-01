@@ -1,9 +1,9 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, sync::{self, Candidates}};
-use std::io::{self, BufRead, IsTerminal, Write};
+use apm_core::{config::Config, git, sync};
+use std::io::{self, BufRead, Write};
 use std::path::Path;
 
-pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool, auto_accept: bool) -> Result<()> {
+pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool) -> Result<()> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
@@ -20,12 +20,6 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
 
     let candidates = sync::detect(root, &config)?;
 
-    for c in &candidates.accept {
-        if !quiet {
-            println!("#{}: branch merged — run `apm state {} accepted` to accept", c.ticket.frontmatter.id, c.ticket.frontmatter.id);
-        }
-    }
-
     let branches = git::ticket_branches(root)?;
     if !quiet {
         println!(
@@ -35,39 +29,14 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         );
     }
 
-    let Candidates { accept: accept_cands, close: close_cands } = candidates;
-
-    if !accept_cands.is_empty() {
-        let confirmed = auto_accept || (!quiet && is_interactive() && prompt_accept(&accept_cands)?);
+    if !candidates.close.is_empty() {
+        let confirmed = auto_close || (!quiet && prompt_close(&candidates.close)?);
         if confirmed {
-            sync::apply(root, &config, &Candidates { accept: accept_cands, close: vec![] }, "apm-sync", aggressive)?;
-        }
-    }
-
-    if !close_cands.is_empty() {
-        let confirmed = auto_close || (!quiet && prompt_close(&close_cands)?);
-        if confirmed {
-            sync::apply(root, &config, &Candidates { accept: vec![], close: close_cands }, "apm-sync", aggressive)?;
+            sync::apply(root, &config, &candidates, "apm-sync", aggressive)?;
         }
     }
 
     Ok(())
-}
-
-fn is_interactive() -> bool {
-    io::stdout().is_terminal()
-}
-
-fn prompt_accept(candidates: &[sync::AcceptCandidate]) -> Result<bool> {
-    println!("\nTickets ready to accept:");
-    for c in candidates {
-        println!("  #{}  {}", c.ticket.frontmatter.id, c.ticket.frontmatter.title);
-    }
-    print!("\nAccept all? [y/N] ");
-    io::stdout().flush()?;
-    let mut line = String::new();
-    io::stdin().lock().read_line(&mut line)?;
-    Ok(line.trim().eq_ignore_ascii_case("y"))
 }
 
 fn prompt_close(candidates: &[sync::CloseCandidate]) -> Result<bool> {
