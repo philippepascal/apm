@@ -1,7 +1,7 @@
 +++
 id = "3b0019a3"
 title = "apm-ui: supervisor swimlanes in middle column"
-state = "implemented"
+state = "closed"
 priority = 55
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "94914"
 branch = "ticket/3b0019a3-apm-ui-supervisor-swimlanes-in-middle-co"
 created_at = "2026-03-31T06:11:59.993473Z"
-updated_at = "2026-04-01T00:41:07.204025Z"
+updated_at = "2026-04-01T04:54:49.252409Z"
 +++
 
 ## Spec
@@ -109,3 +109,5 @@ Use shadcn Card for TicketCard and Tailwind for layout. The swimlane row uses `f
 | 2026-03-31T19:43Z | specd | ready | apm |
 | 2026-04-01T00:37Z | ready | in_progress | philippepascal |
 | 2026-04-01T00:41Z | in_progress | implemented | claude-0401-0037-d1a8 |
+| 2026-04-01T00:53Z | implemented | accepted | apm-sync |
+| 2026-04-01T04:54Z | accepted | closed | apm-sync |
