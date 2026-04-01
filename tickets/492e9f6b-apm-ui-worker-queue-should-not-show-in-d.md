@@ -40,7 +40,18 @@ in_progress is already excluded (no actionable field in config). The fix require
 
 ### Approach
 
-How the implementation will work.
+Root cause: In .apm/config.toml, the in_design state has actionable = ["agent"] at line 156. The /api/queue endpoint (apm-server/src/queue.rs) calls config.actionable_states_for("agent"), which collects all states with that flag. The resulting list is passed to apm_core::ticket::sorted_actionable, which filters tickets by state. Since in_design is marked actionable for agents, in_design tickets appear in the queue.
+
+Fix (single-file change in .apm/config.toml):
+
+Remove the actionable = ["agent"] line from the [[workflow.states]] block where id = "in_design" (currently line 156). No other files need to change — the filtering is entirely config-driven.
+
+Why this is safe: No agent should ever discover an in_design ticket through the queue. A spec-writer claims a new or ammend ticket and immediately transitions it to in_design themselves. All transitions out of in_design (to specd, question, ammend, closed) are triggered explicitly by the agent already holding the ticket, not by queue discovery. Removing the actionable flag makes the config accurately reflect actual workflow semantics.
+
+Verification steps:
+- apm list --state in_design should list existing in_design tickets
+- apm next should not return any of those tickets
+- In the apm-ui queue panel, no in_design tickets should appear
 
 ### Open questions
 
