@@ -26,18 +26,18 @@ The dependency on Step 12a (ticket 56499b61) means `apm-server`, its `AppState`,
 
 ### Acceptance criteria
 
-- [ ] `GET /api/log/stream` returns `Content-Type: text/event-stream` with HTTP 200 when the log file exists
-- [ ] On connect, the server sends the last 100 lines of the existing log file as individual `data:` events before following new lines
-- [ ] Each line appended to the log file is delivered to connected clients as a `data:` event within 1 second of being written
-- [ ] `GET /api/log/stream` returns HTTP 404 when the configured log file does not exist
-- [ ] The server sends SSE keepalive comments (`: keepalive`) at least every 15 seconds to prevent proxy timeouts
-- [ ] When a client disconnects, the server stops polling the log file (no task leak)
-- [ ] The workscreen renders a collapsible log panel (toggle labelled "Logs") below the 3-column layout
-- [ ] Clicking the toggle opens and closes the log panel; open/closed state persists in the Zustand store
-- [ ] When the log panel is open, lines received via SSE are appended at the bottom and the panel auto-scrolls to the newest line
-- [ ] Auto-scroll is suppressed when the user has manually scrolled up; it resumes when the user scrolls back to the bottom
-- [ ] The panel buffers at most 500 lines; older lines are dropped when the buffer is full
-- [ ] When the SSE connection drops, the panel shows a "Reconnecting..." indicator and the EventSource auto-reconnects using the browser built-in retry
+- [x] `GET /api/log/stream` returns `Content-Type: text/event-stream` with HTTP 200 when the log file exists
+- [x] On connect, the server sends the last 100 lines of the existing log file as individual `data:` events before following new lines
+- [x] Each line appended to the log file is delivered to connected clients as a `data:` event within 1 second of being written
+- [x] `GET /api/log/stream` returns HTTP 404 when the configured log file does not exist
+- [x] The server sends SSE keepalive comments (`: keepalive`) at least every 15 seconds to prevent proxy timeouts
+- [x] When a client disconnects, the server stops polling the log file (no task leak)
+- [x] The workscreen renders a collapsible log panel (toggle labelled "Logs") below the 3-column layout
+- [x] Clicking the toggle opens and closes the log panel; open/closed state persists in the Zustand store
+- [x] When the log panel is open, lines received via SSE are appended at the bottom and the panel auto-scrolls to the newest line
+- [x] Auto-scroll is suppressed when the user has manually scrolled up; it resumes when the user scrolls back to the bottom
+- [x] The panel buffers at most 500 lines; older lines are dropped when the buffer is full
+- [x] When the SSE connection drops, the panel shows a "Reconnecting..." indicator and the EventSource auto-reconnects using the browser built-in retry
 
 ### Out of scope
 
