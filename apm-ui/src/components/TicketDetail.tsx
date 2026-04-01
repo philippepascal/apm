@@ -1,0 +1,259 @@
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { useLayoutStore } from '../store/useLayoutStore'
+import InlineNumberField from './InlineNumberField'
+import { getStateColors } from '../lib/stateColors'
+
+interface TicketDetail {
+  id: string
+  title: string
+  state: string
+  effort: number
+  risk: number
+  priority: number
+  body: string
+  raw: string
+  valid_transitions: { to: string; label: string }[]
+}
+
+async function fetchTicket(id: string): Promise<TicketDetail> {
+  const res = await fetch(`/api/tickets/${id}`)
+  if (!res.ok) throw Object.assign(new Error('fetch failed'), { status: res.status })
+  return res.json()
+}
+
+function TransitionButtons({ ticket, onTransitioned }: {
+  ticket: TicketDetail
+  onTransitioned: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [reassigning, setReassigning] = useState(false)
+  const [reassignError, setReassignError] = useState<string | null>(null)
+  const keepRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'k' || e.key === 'K') {
+        keepRef.current?.click()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  async function doTransition(to: string) {
+    setPending(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/tickets/${ticket.id}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        setError(body.error ?? `Error ${res.status}`)
+      } else {
+        onTransitioned()
+      }
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function handleReassign() {
+    setReassigning(true)
+    setReassignError(null)
+    try {
+      const res = await fetch(`/api/tickets/${ticket.id}/take`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json()
+        setReassignError(body.error ?? `Error ${res.status}`)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      }
+    } catch (e) {
+      setReassignError(String(e))
+    } finally {
+      setReassigning(false)
+    }
+  }
+
+  return (
+    <div className="border-t p-3 flex flex-wrap gap-2 items-center">
+      {ticket.valid_transitions.map(tr => (
+        <button
+          key={tr.to}
+          className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50"
+          disabled={pending}
+          onClick={() => doTransition(tr.to)}
+        >
+          {tr.label}
+        </button>
+      ))}
+      <button
+        ref={keepRef}
+        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        disabled={pending}
+        title="Keep at current state (K)"
+      >
+        Keep at {ticket.state}
+      </button>
+      <button
+        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        disabled={reassigning}
+        onClick={handleReassign}
+      >
+        Reassign to me
+      </button>
+      {reassignError && <p className="text-red-600 text-sm w-full">{reassignError}</p>}
+      {error && <p className="text-red-600 text-sm w-full">{error}</p>}
+    </div>
+  )
+}
+
+export default function TicketDetail() {
+  const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
+  const setReviewMode = useLayoutStore((s) => s.setReviewMode)
+  const queryClient = useQueryClient()
+  const [patchError, setPatchError] = useState<string | null>(null)
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['ticket', selectedTicketId],
+    queryFn: () => fetchTicket(selectedTicketId!),
+    enabled: !!selectedTicketId,
+  })
+
+  const patchMutation = useMutation({
+    mutationFn: (patch: { effort?: number; risk?: number; priority?: number }) =>
+      fetch(`/api/tickets/${selectedTicketId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }).then((r) => {
+        if (!r.ok)
+          return r.json().then((j) => {
+            throw new Error(j.error ?? `Error ${r.status}`)
+          })
+        return r.json()
+      }),
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey: ['ticket', selectedTicketId] })
+      const prev = queryClient.getQueryData<TicketDetail>(['ticket', selectedTicketId])
+      queryClient.setQueryData<TicketDetail>(['ticket', selectedTicketId], (old) =>
+        old ? { ...old, ...patch } : old,
+      )
+      setPatchError(null)
+      return { prev }
+    },
+    onError: (_err, _patch, context) => {
+      queryClient.setQueryData(['ticket', selectedTicketId], context?.prev)
+      setPatchError('Update failed')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', selectedTicketId] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    },
+  })
+
+  function handleTransitioned() {
+    queryClient.invalidateQueries({ queryKey: ['ticket', selectedTicketId] })
+    queryClient.invalidateQueries({ queryKey: ['tickets'] })
+  }
+
+  const stateColors = data ? getStateColors(data.state) : null
+
+  return (
+    <div tabIndex={0} className="h-full flex flex-col bg-white outline-none">
+      <div className="px-4 py-3 border-b shrink-0 bg-gray-50">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            {data ? (
+              <h2 className="text-base font-semibold leading-snug text-gray-900">
+                {data.title}
+              </h2>
+            ) : (
+              <span className="text-sm font-medium text-gray-700">Detail</span>
+            )}
+          </div>
+          {data && (
+            <button
+              onClick={() => setReviewMode(true)}
+              className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-100 shrink-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              Review
+            </button>
+          )}
+        </div>
+        {data && stateColors && (
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stateColors.badge}`}>
+              {data.state}
+            </span>
+            <span className="text-[10px] font-mono text-gray-400">{data.id.slice(0, 8)}</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <InlineNumberField
+                label="E"
+                value={data.effort}
+                min={1}
+                max={10}
+                onCommit={(v) => patchMutation.mutate({ effort: v })}
+              />
+              <InlineNumberField
+                label="R"
+                value={data.risk}
+                min={1}
+                max={10}
+                onCommit={(v) => patchMutation.mutate({ risk: v })}
+              />
+              <InlineNumberField
+                label="P"
+                value={data.priority}
+                min={0}
+                max={255}
+                onCommit={(v) => patchMutation.mutate({ priority: v })}
+              />
+              {patchError && <span className="text-xs text-red-500">{patchError}</span>}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {!selectedTicketId && (
+          <div className="h-full flex items-center justify-center text-xs text-gray-400">
+            Select a ticket to view details
+          </div>
+        )}
+        {selectedTicketId && isLoading && (
+          <div className="p-4 space-y-3">
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-full" />
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6" />
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-full" />
+          </div>
+        )}
+        {selectedTicketId && isError && (
+          <div className="m-4 p-3 rounded border border-red-200 bg-red-50 text-sm text-red-700">
+            Error {(error as { status?: number }).status ?? ''}: failed to load ticket
+          </div>
+        )}
+        {data && (
+          <div className="prose prose-sm px-6 py-4">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.body}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+      {data && (
+        <TransitionButtons ticket={data} onTransitioned={handleTransitioned} />
+      )}
+    </div>
+  )
+}

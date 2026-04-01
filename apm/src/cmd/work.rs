@@ -1,7 +1,7 @@
 use anyhow::Result;
 use apm_core::{config::Config, ticket};
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -22,10 +22,10 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
         return run_dry(root, &config);
     }
 
-    let interrupted = Arc::new(AtomicBool::new(false));
-    let interrupted_clone = Arc::clone(&interrupted);
+    let sig_count = Arc::new(AtomicUsize::new(0));
+    let sig_count_clone = Arc::clone(&sig_count);
     let _ = ctrlc::set_handler(move || {
-        interrupted_clone.store(true, Ordering::Relaxed);
+        sig_count_clone.fetch_add(1, Ordering::Relaxed);
     });
 
     let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
@@ -33,12 +33,45 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
     let mut no_more = false;
     // next_poll only used in daemon mode
     let mut next_poll = Instant::now();
+    let mut drain_announced = false;
 
     loop {
-        if interrupted.load(Ordering::Relaxed) {
-            if daemon {
-                log("Daemon interrupted, stopping");
+        let sigs = sig_count.load(Ordering::Relaxed);
+
+        if daemon {
+            if sigs >= 2 {
+                log(&format!("Forced exit; {} worker(s) may still be running", workers.len()));
+                break;
             }
+            if sigs == 1 {
+                if workers.is_empty() {
+                    log("Daemon stopped.");
+                    break;
+                }
+                if !drain_announced {
+                    log(&format!(
+                        "Graceful shutdown: waiting for {} worker(s) to finish (Ctrl+C again to exit immediately)",
+                        workers.len()
+                    ));
+                    drain_announced = true;
+                }
+                // Reap finished workers during drain.
+                workers.retain_mut(|(id, child, pid_path)| {
+                    let done = matches!(child.try_wait(), Ok(Some(_)));
+                    if done {
+                        log(&format!("Worker for ticket #{id} finished"));
+                        let _ = std::fs::remove_file(pid_path);
+                    }
+                    !done
+                });
+                if workers.is_empty() {
+                    log("All workers finished; exiting.");
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(500));
+                continue;
+            }
+        } else if sigs >= 1 {
             break;
         }
 
@@ -150,7 +183,8 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
-    let actionable = config.actionable_states_for("agent");
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let mut candidates: Vec<&ticket::Ticket> = tickets
@@ -201,5 +235,18 @@ mod tests {
             msg.contains("--daemon") && msg.contains("--dry-run"),
             "unexpected error: {msg}"
         );
+    }
+
+    #[test]
+    fn sig_count_increments_correctly() {
+        let sig_count = Arc::new(AtomicUsize::new(0));
+        assert_eq!(sig_count.load(Ordering::Relaxed), 0);
+
+        sig_count.fetch_add(1, Ordering::Relaxed);
+        assert_eq!(sig_count.load(Ordering::Relaxed), 1);
+
+        sig_count.fetch_add(1, Ordering::Relaxed);
+        let sigs = sig_count.load(Ordering::Relaxed);
+        assert!(sigs >= 2);
     }
 }

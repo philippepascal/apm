@@ -74,6 +74,11 @@ instructions = ".apm/apm.spec-writer.md"
   actor   = "agent"
   context_section = "Problem"
 
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id         = "question"
 label      = "Question"
@@ -85,6 +90,11 @@ actionable = ["supervisor"]
   to      = "new"
   trigger = "manual"
   actor   = "any"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id         = "specd"
@@ -101,6 +111,11 @@ actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
   to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
   trigger = "manual"
   actor   = "supervisor"
 
@@ -128,6 +143,11 @@ instructions = ".apm/apm.spec-writer.md"
   trigger = "command:start"
   actor   = "agent"
 
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id           = "in_design"
 label        = "In Design"
@@ -146,6 +166,16 @@ instructions = ".apm/apm.spec-writer.md"
   to      = "question"
   trigger = "manual"
   actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id           = "ready"
@@ -170,6 +200,11 @@ instructions = ".apm/apm.worker.md"
   trigger = "manual"
   actor   = "supervisor"
 
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id           = "in_progress"
 label        = "In Progress"
@@ -189,6 +224,17 @@ instructions = ".apm/apm.worker.md"
   actor   = "agent"
   label   = "Agent is blocked — wrote questions in ### Open questions"
 
+  [[workflow.states.transitions]]
+  to           = "ammend"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"
@@ -203,6 +249,11 @@ actionable = ["supervisor"]
   label        = "Supervisor answered questions — agent can resume"
   side_effects = ["set_agent_null"]
 
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id         = "implemented"
 label      = "Implemented"
@@ -215,6 +266,7 @@ actionable = ["supervisor"]
   trigger       = "manual"
   actor         = "engineer"
   preconditions = ["pr_all_closing_merged"]
+  completion    = "pull"
 
   [[workflow.states.transitions]]
   to             = "ready"
@@ -233,6 +285,11 @@ actionable = ["supervisor"]
   to      = "in_progress"
   trigger = "manual"
   actor   = "any"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id         = "accepted"
@@ -261,7 +318,7 @@ risk_weight     = -1.0
 
 [agents]
 instructions   = "apm.agents.md"
-max_concurrent = 5
+max_concurrent = 1
 
 [sync]
 aggressive = true

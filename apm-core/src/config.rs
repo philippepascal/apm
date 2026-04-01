@@ -32,6 +32,7 @@ pub struct TicketConfig {
 pub enum CompletionStrategy {
     Pr,
     Merge,
+    Pull,
     #[default]
     None,
 }
@@ -226,10 +227,10 @@ impl Default for AgentsConfig {
 impl Config {
     /// States where `actor` can actively pick up / act on tickets.
     /// Matches "any" as a wildcard in addition to the literal actor name.
-    pub fn actionable_states_for<'a>(&'a self, actor: &str) -> Vec<&'a str> {
+    pub fn actionable_states_for(&self, actor: &str) -> Vec<String> {
         self.workflow.states.iter()
             .filter(|s| s.actionable.iter().any(|a| a == actor || a == "any"))
-            .map(|s| s.id.as_str())
+            .map(|s| s.id.clone())
             .collect()
     }
 
@@ -299,6 +300,8 @@ type = "qa"
         assert_eq!(pr.c, CompletionStrategy::Pr);
         let merge: W = toml::from_str("c = \"merge\"").unwrap();
         assert_eq!(merge.c, CompletionStrategy::Merge);
+        let pull: W = toml::from_str("c = \"pull\"").unwrap();
+        assert_eq!(pull.c, CompletionStrategy::Pull);
         let none: W = toml::from_str("c = \"none\"").unwrap();
         assert_eq!(none.c, CompletionStrategy::None);
     }
@@ -415,6 +418,36 @@ dir = "tickets"
         let explicit_false = format!("{base}[agents]\nskip_permissions = false\n");
         let config: Config = toml::from_str(&explicit_false).unwrap();
         assert!(!config.agents.skip_permissions, "explicit skip_permissions = false should be false");
+    }
+
+    #[test]
+    fn actionable_states_for_agent_includes_ready() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id = "specd"
+label = "Specd"
+actionable = ["supervisor"]
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let states = config.actionable_states_for("agent");
+        assert!(states.contains(&"ready".to_string()));
+        assert!(!states.contains(&"specd".to_string()));
+        assert!(!states.contains(&"in_progress".to_string()));
     }
 
     #[test]
