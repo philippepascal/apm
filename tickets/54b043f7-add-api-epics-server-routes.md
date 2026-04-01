@@ -2,13 +2,13 @@
 id = "54b043f7"
 title = "Add /api/epics server routes"
 state = "new"
-priority = 0
+priority = 4
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/54b043f7-add-api-epics-server-routes"
 created_at = "2026-04-01T21:55:53.796830Z"
-updated_at = "2026-04-01T21:55:53.796830Z"
+updated_at = "2026-04-01T21:58:00.444257Z"
 +++
 
 ## Spec
