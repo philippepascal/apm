@@ -1,7 +1,7 @@
 +++
 id = "c2168aea"
 title = "Remove accepted state and simplify apm sync to hardcode merged-PR-to-closed"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "7549"
 branch = "ticket/c2168aea-remove-accepted-state-and-simplify-apm-s"
 created_at = "2026-04-01T20:26:50.809264Z"
-updated_at = "2026-04-01T21:00:34.446290Z"
+updated_at = "2026-04-01T21:29:34.003774Z"
 +++
 
 ## Spec
@@ -120,3 +120,5 @@ Order of steps:
 | 2026-04-01T20:43Z | specd | ready | philippepascal |
 | 2026-04-01T20:50Z | ready | in_progress | philippepascal |
 | 2026-04-01T21:00Z | in_progress | implemented | claude-0401-2051-6708 |
+| 2026-04-01T21:29Z | implemented | accepted | apm-sync |
+| 2026-04-01T21:29Z | accepted | closed | apm-sync |
