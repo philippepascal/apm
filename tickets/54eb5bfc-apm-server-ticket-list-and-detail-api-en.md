@@ -1,7 +1,7 @@
 +++
 id = "54eb5bfc"
 title = "apm-server: ticket list and detail API endpoints"
-state = "accepted"
+state = "closed"
 priority = 80
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "1041"
 branch = "ticket/54eb5bfc-apm-server-ticket-list-and-detail-api-en"
 created_at = "2026-03-31T06:11:28.689659Z"
-updated_at = "2026-03-31T21:43:16.068792Z"
+updated_at = "2026-04-01T04:54:53.746794Z"
 +++
 
 ## Spec
@@ -109,3 +109,4 @@ struct TicketResponse<'a> {
 | 2026-03-31T21:30Z | ready | in_progress | philippepascal |
 | 2026-03-31T21:35Z | in_progress | implemented | claude-0331-2130-w4k9 |
 | 2026-03-31T21:43Z | implemented | accepted | apm-sync |
+| 2026-04-01T04:54Z | accepted | closed | apm-sync |
