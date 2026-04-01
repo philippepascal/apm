@@ -1,15 +1,15 @@
 +++
 id = "95ef3505"
 title = "apm-ui: inline effort/risk/priority editing in ticket detail"
-state = "ready"
+state = "in_progress"
 priority = 35
 effort = 4
 risk = 2
 author = "apm"
-agent = "80361"
+agent = "philippepascal"
 branch = "ticket/95ef3505-apm-ui-inline-effort-risk-priority-editi"
 created_at = "2026-03-31T06:13:16.584261Z"
-updated_at = "2026-03-31T19:44:40.031435Z"
+updated_at = "2026-04-01T05:45:08.509357Z"
 +++
 
 ## Spec
@@ -97,3 +97,4 @@ The backend already exposes or will expose `PATCH /api/tickets/:id` (first intro
 | 2026-03-31T07:14Z | new | in_design | philippepascal |
 | 2026-03-31T07:18Z | in_design | specd | claude-0331-0800-b7e2 |
 | 2026-03-31T19:44Z | specd | ready | apm |
+| 2026-04-01T05:45Z | ready | in_progress | philippepascal |
