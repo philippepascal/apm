@@ -15,11 +15,10 @@ updated_at = "2026-04-01T05:51:17.058963Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The current apm-ui has a functional but visually raw interface. All panels use the same text scale (mostly text-xs/text-sm), state badges are uniformly gray, panel differentiation relies entirely on borders, and the worker/queue panels use dense tables at widths too narrow to read comfortably. The toggle buttons in the toolbar feel like debug controls. There is no consistent visual language or accent color application. The result is a UI that works but does not communicate hierarchy or state clearly at a glance.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +33,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
