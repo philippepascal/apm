@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useLayoutStore } from '../store/useLayoutStore'
@@ -6,7 +7,9 @@ import { useLayoutStore } from '../store/useLayoutStore'
 interface TicketDetail {
   id: string
   title: string
+  state: string
   body: string
+  valid_transitions: { to: string; label: string }[]
 }
 
 async function fetchTicket(id: string): Promise<TicketDetail> {
@@ -15,14 +18,85 @@ async function fetchTicket(id: string): Promise<TicketDetail> {
   return res.json()
 }
 
+function TransitionButtons({ ticket, onTransitioned }: {
+  ticket: TicketDetail
+  onTransitioned: () => void
+}) {
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const keepRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'k' || e.key === 'K') {
+        keepRef.current?.click()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  async function doTransition(to: string) {
+    setPending(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/tickets/${ticket.id}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        setError(body.error ?? `Error ${res.status}`)
+      } else {
+        onTransitioned()
+      }
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="border-t p-3 flex flex-wrap gap-2 items-center">
+      {ticket.valid_transitions.map(tr => (
+        <button
+          key={tr.to}
+          className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50"
+          disabled={pending}
+          onClick={() => doTransition(tr.to)}
+        >
+          {tr.label}
+        </button>
+      ))}
+      <button
+        ref={keepRef}
+        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        disabled={pending}
+        title="Keep at current state (K)"
+      >
+        Keep at {ticket.state}
+      </button>
+      {error && <p className="text-red-600 text-sm w-full">{error}</p>}
+    </div>
+  )
+}
+
 export default function TicketDetail() {
   const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
+  const queryClient = useQueryClient()
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ticket', selectedTicketId],
     queryFn: () => fetchTicket(selectedTicketId!),
     enabled: !!selectedTicketId,
   })
+
+  function handleTransitioned() {
+    queryClient.invalidateQueries({ queryKey: ['ticket', selectedTicketId] })
+    queryClient.invalidateQueries({ queryKey: ['tickets'] })
+  }
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
@@ -53,6 +127,9 @@ export default function TicketDetail() {
           </div>
         )}
       </div>
+      {data && (
+        <TransitionButtons ticket={data} onTransitioned={handleTransitioned} />
+      )}
     </div>
   )
 }
