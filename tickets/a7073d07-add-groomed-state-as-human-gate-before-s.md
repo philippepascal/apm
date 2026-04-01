@@ -25,7 +25,7 @@ Adding a `groomed` state between `new` and `in_design` mirrors the existing patt
 ### Acceptance criteria
 
 - [x] `apm next` does not return `new` tickets as actionable for agents
-- [ ] `apm next` returns `groomed` tickets as actionable for agents
+- [x] `apm next` returns `groomed` tickets as actionable for agents
 - [ ] `apm start --next` picks up a `groomed` ticket and transitions it to `in_design`
 - [ ] A ticket in `new` state cannot be transitioned to `in_design` via `apm start`
 - [ ] A supervisor can transition a ticket from `new` to `groomed` via `apm state <id> groomed`
