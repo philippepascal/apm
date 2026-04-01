@@ -33,7 +33,11 @@ This matters because engineers who immediately branch off `main` after accepting
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing or modifying the existing `completion = "merge"` strategy
+- Deleting the ticket branch after acceptance (that belongs to the `closed` transition)
+- Pushing the ticket branch to origin as part of acceptance (the PR is already merged)
+- Handling cases where `git fetch` fails due to network issues (a warning and non-fatal continuation is sufficient)
+- Any changes to the `implemented → closed` or `accepted → closed` transitions
 
 ### Approach
 
