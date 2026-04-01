@@ -1,7 +1,7 @@
 +++
 id = "7777cf5c"
 title = "apm-ui: priority queue panel (bottom of left column, apm next ordering)"
-state = "implemented"
+state = "accepted"
 priority = 40
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "23081"
 branch = "ticket/7777cf5c-apm-ui-priority-queue-panel-bottom-of-le"
 created_at = "2026-03-31T06:12:28.610477Z"
-updated_at = "2026-04-01T02:31:38.225909Z"
+updated_at = "2026-04-01T02:34:36.977188Z"
 +++
 
 ## Spec
@@ -189,3 +189,4 @@ interface QueueEntry {
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T02:13Z | ready | in_progress | philippepascal |
 | 2026-04-01T02:31Z | in_progress | implemented | claude-0401-0213-c3d0 |
+| 2026-04-01T02:34Z | implemented | accepted | apm-sync |
