@@ -24,12 +24,7 @@ This matters because engineers who immediately branch off `main` after accepting
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> accepted` fetches `origin/main` (or the configured default branch) from the remote
-- [ ] After `apm state <id> accepted`, the local default branch is fast-forwarded to match `origin/<default_branch>`
-- [ ] If the local default branch cannot be fast-forwarded (e.g. it has diverged), `apm state` prints a clear warning but does not fail — the state transition still completes
-- [ ] `completion = "pull"` is accepted in `.apm/config.toml` transition definitions without a parse error
-- [ ] `apm verify` lists the `implemented → accepted` transition as `completion: implemented → accepted = pull`
-- [ ] The `implemented → accepted` transition in the project `.apm/config.toml` uses `completion = "pull"`
+- [x] `apm state <id> accepted` fetches `origin/main` (or the configured default branch) from the remote\n- [x] After `apm state <id> accepted`, the local default branch is fast-forwarded to match `origin/<default_branch>`\n- [x] If the local default branch cannot be fast-forwarded (e.g. it has diverged), `apm state` prints a clear warning but does not fail — the state transition still completes\n- [x] `completion = "pull"` is accepted in `.apm/config.toml` transition definitions without a parse error\n- [x] `apm verify` lists the `implemented → accepted` transition as `completion: implemented → accepted = pull`\n- [x] The `implemented → accepted` transition in the project `.apm/config.toml` uses `completion = "pull"`
 
 ### Out of scope
 
