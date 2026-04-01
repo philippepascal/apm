@@ -32,7 +32,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 - [x] The handler offloads all blocking git work via `spawn_blocking` and does not block the tokio runtime
 - [x] `PriorityQueuePanel` renders a row for each ticket in the response, showing rank, ID, title, state badge, effort, risk, and score
 - [x] When the response array is empty, `PriorityQueuePanel` shows a centred "No tickets in queue." message
-- [ ] While the initial fetch is in-flight, `PriorityQueuePanel` shows loading skeleton rows
+- [x] While the initial fetch is in-flight, `PriorityQueuePanel` shows loading skeleton rows
 - [ ] If the fetch fails, `PriorityQueuePanel` shows an inline error message
 - [ ] `PriorityQueuePanel` automatically refetches `GET /api/queue` every 10 seconds via TanStack Query `refetchInterval`
 - [ ] Clicking a queue row sets `selectedTicketId` in the Zustand store (the same global selection used by the swimlanes)
