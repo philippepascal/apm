@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "42283"
 branch = "ticket/a595add3-split-config-toml-into-focused-files-for"
 created_at = "2026-04-01T22:27:35.511052Z"
-updated_at = "2026-04-01T22:40:07.131142Z"
+updated_at = "2026-04-01T22:46:05.689219Z"
 +++
 
 ## Spec
@@ -38,8 +38,8 @@ The `Config::load()` function in `apm-core/src/config.rs` must be updated to rea
 
 - [ ] `apm` loads a project whose `.apm/` directory contains three separate files (`config.toml`, `workflow.toml`, `ticket.toml`) without error
 - [ ] `apm` loads a project whose `.apm/config.toml` still contains `[workflow]` and `[[ticket.sections]]` (legacy monolithic layout) without error
-- [ ] When both `workflow.toml` and a `[workflow]` block in `config.toml` exist, the content from `workflow.toml` takes precedence
-- [ ] When both `ticket.toml` and `[[ticket.sections]]` in `config.toml` exist, the content from `ticket.toml` takes precedence
+- [ ] When both `workflow.toml` and a `[workflow]` block in `config.toml` exist, the content from `workflow.toml` takes precedence but show a warning in apm validate
+- [ ] When both `ticket.toml` and `[[ticket.sections]]` in `config.toml` exist, the content from `ticket.toml` takes precedence but show a warning in apm validate
 - [ ] `apm init` on a new project creates `.apm/config.toml`, `.apm/workflow.toml`, and `.apm/ticket.toml` as separate files
 - [ ] The live `.apm/config.toml` in this repository no longer contains `[[workflow.states]]` or `[[ticket.sections]]` blocks
 - [ ] `cargo test --workspace` passes
@@ -103,9 +103,6 @@ Lines to audit: approx 157, 171, 173, 186, 423 -- check whether each assertion t
 
 
 ### Amendment requests
-
-
-
 ## History
 
 | When | From | To | By |
