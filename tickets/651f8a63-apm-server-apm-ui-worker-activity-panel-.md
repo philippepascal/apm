@@ -1,7 +1,7 @@
 +++
 id = "651f8a63"
 title = "apm-server + apm-ui: worker activity panel (running workers, top of left column)"
-state = "implemented"
+state = "closed"
 priority = 45
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "53860"
 branch = "ticket/651f8a63-apm-server-apm-ui-worker-activity-panel-"
 created_at = "2026-03-31T06:12:27.354130Z"
-updated_at = "2026-04-01T01:30:18.189255Z"
+updated_at = "2026-04-01T04:54:58.099240Z"
 +++
 
 ## Spec
@@ -140,3 +140,5 @@ Adding `GET /api/workers` to `apm-server` and wiring up a WorkerActivityPanel co
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T01:23Z | ready | in_progress | philippepascal |
 | 2026-04-01T01:30Z | in_progress | implemented | claude-0401-0123-3778 |
+| 2026-04-01T01:36Z | implemented | accepted | apm-sync |
+| 2026-04-01T04:54Z | accepted | closed | apm-sync |
