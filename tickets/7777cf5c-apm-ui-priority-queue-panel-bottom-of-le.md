@@ -28,7 +28,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 - [x] The response is a JSON array sorted by descending score using the formula `priority * priority_weight + effort * effort_weight + risk * risk_weight` with weights from `[workflow.prioritization]` in `apm.toml`
 - [x] Each element in the response contains: `rank` (1-based integer), `id`, `title`, `state`, `priority`, `effort`, `risk`, `score`
 - [x] Only tickets whose state is in `config.actionable_states_for("agent")` appear in the response
-- [ ] `GET /api/queue` returns an empty JSON array when no agent-actionable tickets exist
+- [x] `GET /api/queue` returns an empty JSON array when no agent-actionable tickets exist
 - [ ] The handler offloads all blocking git work via `spawn_blocking` and does not block the tokio runtime
 - [ ] `PriorityQueuePanel` renders a row for each ticket in the response, showing rank, ID, title, state badge, effort, risk, and score
 - [ ] When the response array is empty, `PriorityQueuePanel` shows a centred "No tickets in queue." message
