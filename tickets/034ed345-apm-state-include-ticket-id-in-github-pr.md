@@ -25,7 +25,7 @@ The desired behaviour is a PR title prefixed with the short ticket ID (first 8 c
 - [x] When `apm state <id> implemented` (or any state transition that triggers PR creation) creates a new PR, the PR title on GitHub is `<short-id>: <ticket title>` where `<short-id>` is the first 8 characters of the ticket UUID
 - [x] The PR body is unchanged and still contains `Closes #<full-id>`
 - [x] When a PR already exists for the branch, the title is not modified (existing early-return path is preserved)
-- [ ] If the ticket title is empty, the PR title falls back to just the short ID prefix (no trailing colon-space)
+- [x] If the ticket title is empty, the PR title falls back to just the short ID prefix (no trailing colon-space)
 
 ### Out of scope
 
