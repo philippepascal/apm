@@ -38,7 +38,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 - [x] Clicking a queue row sets `selectedTicketId` in the Zustand store (the same global selection used by the swimlanes)
 - [x] The row for the currently selected ticket is visually highlighted
 - [x] `PriorityQueuePanel` is rendered in the bottom half of `WorkerView.tsx`, replacing the placeholder stub
-- [ ] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
+- [x] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
 - [ ] `cargo test --workspace` passes
 
 ### Out of scope
