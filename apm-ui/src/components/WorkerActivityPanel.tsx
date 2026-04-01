@@ -43,7 +43,7 @@ export default function WorkerActivityPanel() {
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
+      <div className="h-full flex items-center justify-center text-xs text-gray-400">
         No workers running.
       </div>
     )
