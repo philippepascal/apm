@@ -31,7 +31,7 @@ The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`
 - [x] Each ticket is rendered as a card showing: short id (first 8 chars), title, agent name (or empty if unassigned), effort badge, risk badge
 - [x] Clicking a ticket card sets selectedTicketId in the Zustand store to that ticket's id
 - [x] The card for the currently selected ticket is visually highlighted
-- [ ] Ticket data is loaded from GET /api/tickets via TanStack Query
+- [x] Ticket data is loaded from GET /api/tickets via TanStack Query
 - [ ] The swimlanes update automatically when the query refetches (no manual page reload required)
 
 ### Out of scope
