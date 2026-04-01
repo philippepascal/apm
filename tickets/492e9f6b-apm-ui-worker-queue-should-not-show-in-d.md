@@ -1,14 +1,15 @@
 +++
 id = "492e9f6b"
 title = "apm-ui: worker queue should not show in_design tickets"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/492e9f6b-apm-ui-worker-queue-should-not-show-in-d"
 created_at = "2026-04-01T06:14:29.015814Z"
-updated_at = "2026-04-01T06:14:29.015814Z"
+updated_at = "2026-04-01T06:23:41.689841Z"
 +++
 
 ## Spec
@@ -48,3 +49,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T06:14Z | — | new | philippepascal |
+| 2026-04-01T06:23Z | new | in_design | philippepascal |
