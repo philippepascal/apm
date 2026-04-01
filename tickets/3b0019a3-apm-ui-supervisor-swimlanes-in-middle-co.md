@@ -32,7 +32,7 @@ The supervisor-actionable states (from config.toml `actionable = ["supervisor"]`
 - [x] Clicking a ticket card sets selectedTicketId in the Zustand store to that ticket's id
 - [x] The card for the currently selected ticket is visually highlighted
 - [x] Ticket data is loaded from GET /api/tickets via TanStack Query
-- [ ] The swimlanes update automatically when the query refetches (no manual page reload required)
+- [x] The swimlanes update automatically when the query refetches (no manual page reload required)
 
 ### Out of scope
 
