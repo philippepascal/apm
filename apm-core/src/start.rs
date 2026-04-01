@@ -597,7 +597,7 @@ pub fn spawn_next_worker(
 }
 
 fn resolve_system_prompt(root: &Path, pre_transition_state: &str) -> String {
-    let spec_writer_states = ["new", "ammend"];
+    let spec_writer_states = ["groomed", "ammend"];
     if spec_writer_states.contains(&pre_transition_state) {
         let p = root.join(".apm/apm.spec-writer.md");
         if let Ok(content) = std::fs::read_to_string(&p) {
@@ -610,7 +610,7 @@ fn resolve_system_prompt(root: &Path, pre_transition_state: &str) -> String {
 }
 
 fn agent_role_prefix(pre_transition_state: &str, id: &str) -> String {
-    let spec_writer_states = ["new", "ammend"];
+    let spec_writer_states = ["groomed", "ammend"];
     if spec_writer_states.contains(&pre_transition_state) {
         format!("You are a Spec-Writer agent assigned to ticket #{id}.")
     } else {
@@ -645,13 +645,13 @@ mod tests {
     // --- resolve_system_prompt ---
 
     #[test]
-    fn resolve_system_prompt_uses_spec_writer_for_new() {
+    fn resolve_system_prompt_uses_spec_writer_for_groomed() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER").unwrap();
         std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
-        assert_eq!(resolve_system_prompt(p, "new"), "SPEC WRITER");
+        assert_eq!(resolve_system_prompt(p, "groomed"), "SPEC WRITER");
     }
 
     #[test]
@@ -671,7 +671,7 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm")).unwrap();
         // No apm.spec-writer.md — only worker
         std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
-        assert_eq!(resolve_system_prompt(p, "new"), "WORKER");
+        assert_eq!(resolve_system_prompt(p, "groomed"), "WORKER");
     }
 
     #[test]
@@ -697,9 +697,9 @@ mod tests {
     // --- agent_role_prefix ---
 
     #[test]
-    fn agent_role_prefix_spec_writer_for_new() {
+    fn agent_role_prefix_spec_writer_for_groomed() {
         assert_eq!(
-            agent_role_prefix("new", "abc123"),
+            agent_role_prefix("groomed", "abc123"),
             "You are a Spec-Writer agent assigned to ticket #abc123."
         );
     }

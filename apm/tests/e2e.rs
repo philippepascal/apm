@@ -673,6 +673,11 @@ fn next_respects_priority_and_actionable_states() {
     env.apm(&["set", &id2, "priority", "9"]);
     env.apm(&["set", &id3, "priority", "5"]);
 
+    // Promote all tickets to groomed so they are agent-actionable.
+    env.apm(&["state", &id1, "groomed"]);
+    env.apm(&["state", &id2, "groomed"]);
+    env.apm(&["state", &id3, "groomed"]);
+
     // apm next --json should return the highest-priority actionable ticket.
     let out = env.apm(&["next", "--json"]);
     assert!(out.status.success(), "apm next failed:\n{}", stderr(&out));

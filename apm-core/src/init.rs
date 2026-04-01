@@ -226,9 +226,14 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id           = "new"
-label        = "New"
-color        = "#6b7280"
+id    = "new"
+label = "New"
+color = "#6b7280"
+
+[[workflow.states]]
+id           = "groomed"
+label        = "Groomed"
+color        = "#6366f1"
 actionable   = ["agent"]
 instructions = ".apm/apm.spec-writer.md"
 
