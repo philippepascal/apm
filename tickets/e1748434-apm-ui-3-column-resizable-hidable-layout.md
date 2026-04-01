@@ -1,7 +1,7 @@
 +++
 id = "e1748434"
 title = "apm-ui: 3-column resizable/hidable layout shell with Zustand"
-state = "in_design"
+state = "specd"
 priority = 60
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "51514"
 branch = "ticket/e1748434-apm-ui-3-column-resizable-hidable-layout"
 created_at = "2026-03-31T06:11:50.266948Z"
-updated_at = "2026-04-01T00:01:10.645426Z"
+updated_at = "2026-04-01T00:01:36.819308Z"
 +++
 
 ## Spec
@@ -153,3 +153,4 @@ No Rust / backend files change.
 | 2026-03-31T23:39Z | in_progress | implemented | claude-0331-2330-w4k2 |
 | 2026-03-31T23:54Z | implemented | ammend | philippepascal |
 | 2026-03-31T23:56Z | ammend | in_design | philippepascal |
+| 2026-04-01T00:01Z | in_design | specd | claude-0331-2359-spec3 |
