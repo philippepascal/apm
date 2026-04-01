@@ -30,7 +30,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 - [x] Only tickets whose state is in `config.actionable_states_for("agent")` appear in the response
 - [x] `GET /api/queue` returns an empty JSON array when no agent-actionable tickets exist
 - [x] The handler offloads all blocking git work via `spawn_blocking` and does not block the tokio runtime
-- [ ] `PriorityQueuePanel` renders a row for each ticket in the response, showing rank, ID, title, state badge, effort, risk, and score
+- [x] `PriorityQueuePanel` renders a row for each ticket in the response, showing rank, ID, title, state badge, effort, risk, and score
 - [ ] When the response array is empty, `PriorityQueuePanel` shows a centred "No tickets in queue." message
 - [ ] While the initial fetch is in-flight, `PriorityQueuePanel` shows loading skeleton rows
 - [ ] If the fetch fails, `PriorityQueuePanel` shows an inline error message
