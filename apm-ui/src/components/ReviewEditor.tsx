@@ -38,21 +38,21 @@ function getHistoryStart(content: string): number {
 
 function getTransitionShortcut(targetState: string, allTransitions: { to: string }[]): string {
   const used = new Set<string>(['k'])
+  const shortcuts = new Map<string, string>()
   for (const tr of allTransitions) {
-    if (tr.to === targetState) continue
     for (const ch of tr.to) {
       const lower = ch.toLowerCase()
       if (!used.has(lower)) {
         used.add(lower)
+        shortcuts.set(tr.to, lower)
         break
       }
     }
+    if (!shortcuts.has(tr.to)) {
+      shortcuts.set(tr.to, tr.to[0].toLowerCase())
+    }
   }
-  for (const ch of targetState) {
-    const lower = ch.toLowerCase()
-    if (!used.has(lower)) return lower
-  }
-  return targetState[0].toLowerCase()
+  return shortcuts.get(targetState) ?? targetState[0].toLowerCase()
 }
 
 class CheckboxWidget extends WidgetType {
@@ -158,7 +158,7 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
             const histStart = getHistoryStart(docStr)
             let blocked = false
             tr.changes.iterChanges((fromA, toA) => {
-              if (fromA < fmEnd || toA > histStart) {
+              if (fromA < fmEnd || toA >= histStart) {
                 blocked = true
               }
             })
