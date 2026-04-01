@@ -72,9 +72,10 @@ export default function WorkEngineControls() {
       <button
         onClick={handleToggle}
         disabled={isPending}
+        title={isEngineActive ? 'Running workers will finish their current ticket' : undefined}
         className="px-2 py-0.5 rounded border border-gray-600 text-gray-300 text-xs hover:bg-gray-700 disabled:opacity-50"
       >
-        {isEngineActive ? 'Stop' : 'Start'}
+        {isEngineActive ? 'Stop dispatching' : 'Start'}
       </button>
     </div>
   )
