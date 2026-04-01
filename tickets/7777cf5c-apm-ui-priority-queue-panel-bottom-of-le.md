@@ -25,7 +25,7 @@ Two changes are required: (1) a GET /api/queue endpoint in apm-server returning 
 ### Acceptance criteria
 
 - [x] `GET /api/queue` returns HTTP 200 with `Content-Type: application/json`
-- [ ] The response is a JSON array sorted by descending score using the formula `priority * priority_weight + effort * effort_weight + risk * risk_weight` with weights from `[workflow.prioritization]` in `apm.toml`
+- [x] The response is a JSON array sorted by descending score using the formula `priority * priority_weight + effort * effort_weight + risk * risk_weight` with weights from `[workflow.prioritization]` in `apm.toml`
 - [ ] Each element in the response contains: `rank` (1-based integer), `id`, `title`, `state`, `priority`, `effort`, `risk`, `score`
 - [ ] Only tickets whose state is in `config.actionable_states_for("agent")` appear in the response
 - [ ] `GET /api/queue` returns an empty JSON array when no agent-actionable tickets exist
