@@ -29,7 +29,7 @@ Adding a `groomed` state between `new` and `in_design` mirrors the existing patt
 - [x] `apm start --next` picks up a `groomed` ticket and transitions it to `in_design`
 - [x] A ticket in `new` state cannot be transitioned to `in_design` via `apm start`
 - [x] A supervisor can transition a ticket from `new` to `groomed` via `apm state <id> groomed`
-- [ ] `apm init` generates a `config.toml` that includes the `groomed` state
+- [x] `apm init` generates a `config.toml` that includes the `groomed` state
 - [ ] A spawned spec-writer worker receives the spec-writer system prompt and role prefix when the ticket pre-transition state is `groomed`
 - [ ] A spawned spec-writer worker still receives the spec-writer system prompt when the ticket pre-transition state is `ammend`
 - [ ] After a supervisor answers a question (`question → groomed`), the ticket is agent-actionable again
