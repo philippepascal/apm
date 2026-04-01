@@ -25,7 +25,7 @@ The work engine runs as a child process of the axum server, equivalent to `apm w
 ### Acceptance criteria
 
 - [x] `GET /api/work/status` returns `{"status":"stopped"}` when no engine task is running
-- [ ] `GET /api/work/status` returns `{"status":"running"}` when the engine task is alive and at least one worker PID file exists and the process is alive
+- [x] `GET /api/work/status` returns `{"status":"running"}` when the engine task is alive and at least one worker PID file exists and the process is alive
 - [ ] `GET /api/work/status` returns `{"status":"idle"}` when the engine task is alive but no active worker PID files exist
 - [ ] `POST /api/work/start` starts the tokio engine task and returns the new status; a second call while already running returns the current status without starting a second task
 - [ ] `POST /api/work/stop` signals the engine task to stop, waits for it to exit, and returns `{"status":"stopped"}`; calling it when already stopped returns `{"status":"stopped"}` without an error
