@@ -3,13 +3,13 @@ id = "5e3b3632"
 title = "apm-ui: remove dry-run preview panel from WorkerView"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 agent = "57546"
 branch = "ticket/5e3b3632-apm-ui-remove-dry-run-preview-panel-from"
 created_at = "2026-04-01T07:10:20.365066Z"
-updated_at = "2026-04-01T07:15:53.148638Z"
+updated_at = "2026-04-01T07:17:15.614903Z"
 +++
 
 ## Spec
