@@ -36,7 +36,11 @@ Adding a `groomed` state between `new` and `in_design` mirrors the existing patt
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the `apm new` command — tickets still start in `new`
+- UI or dashboard changes to surface the `groomed` state
+- Bulk-grooming commands (e.g. `apm groom --all`)
+- Any change to the implementation half of the workflow (`ready`, `in_progress`, etc.)
+- Renaming or removing the `question` state or its existing transitions other than the `question → new` target
 
 ### Approach
 
