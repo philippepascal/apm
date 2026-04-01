@@ -2,13 +2,13 @@
 id = "19c2ab13"
 title = "Add --epic flag to apm new command"
 state = "new"
-priority = 0
+priority = 6
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/19c2ab13-add-epic-flag-to-apm-new-command"
 created_at = "2026-04-01T21:55:26.992429Z"
-updated_at = "2026-04-01T21:55:26.992429Z"
+updated_at = "2026-04-01T21:57:44.244583Z"
 +++
 
 ## Spec
