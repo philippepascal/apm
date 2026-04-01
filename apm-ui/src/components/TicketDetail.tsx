@@ -28,8 +28,11 @@ function TransitionButtons({ ticket, onTransitioned }: {
   ticket: TicketDetail
   onTransitioned: () => void
 }) {
+  const queryClient = useQueryClient()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reassigning, setReassigning] = useState(false)
+  const [reassignError, setReassignError] = useState<string | null>(null)
   const keepRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -64,6 +67,25 @@ function TransitionButtons({ ticket, onTransitioned }: {
     }
   }
 
+  async function handleReassign() {
+    setReassigning(true)
+    setReassignError(null)
+    try {
+      const res = await fetch(`/api/tickets/${ticket.id}/take`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json()
+        setReassignError(body.error ?? `Error ${res.status}`)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      }
+    } catch (e) {
+      setReassignError(String(e))
+    } finally {
+      setReassigning(false)
+    }
+  }
+
   return (
     <div className="border-t p-3 flex flex-wrap gap-2 items-center">
       {ticket.valid_transitions.map(tr => (
@@ -84,6 +106,14 @@ function TransitionButtons({ ticket, onTransitioned }: {
       >
         Keep at {ticket.state}
       </button>
+      <button
+        className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
+        disabled={reassigning}
+        onClick={handleReassign}
+      >
+        Reassign to me
+      </button>
+      {reassignError && <p className="text-red-600 text-sm w-full">{reassignError}</p>}
       {error && <p className="text-red-600 text-sm w-full">{error}</p>}
     </div>
   )

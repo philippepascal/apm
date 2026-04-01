@@ -141,6 +141,9 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             git::push_branch(root, &branch)?;
             merge_into_default(root, &branch, &config.project.default_branch)?;
         }
+        CompletionStrategy::Pull => {
+            pull_default(root, &config.project.default_branch)?;
+        }
         CompletionStrategy::None => {
             if aggressive {
                 if let Err(e) = git::push_branch(root, &branch) {
@@ -238,6 +241,53 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str) -> Result
     }
 
     println!("Merged {branch} into {default_branch} and pushed.");
+    Ok(())
+}
+
+fn pull_default(root: &Path, default_branch: &str) -> Result<()> {
+    let fetch = std::process::Command::new("git")
+        .args(["fetch", "origin", default_branch])
+        .current_dir(root)
+        .output();
+
+    match fetch {
+        Err(e) => {
+            eprintln!("warning: fetch failed: {e:#}");
+            return Ok(());
+        }
+        Ok(out) if !out.status.success() => {
+            eprintln!(
+                "warning: fetch failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+            return Ok(());
+        }
+        _ => {}
+    }
+
+    let current = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()?;
+    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
+
+    let merge_dir = if current_branch == default_branch {
+        root.to_path_buf()
+    } else {
+        git::find_worktree_for_branch(root, default_branch)
+            .unwrap_or_else(|| root.to_path_buf())
+    };
+
+    let remote_ref = format!("origin/{default_branch}");
+    let out = std::process::Command::new("git")
+        .args(["merge", "--ff-only", &remote_ref])
+        .current_dir(&merge_dir)
+        .output()?;
+
+    if !out.status.success() {
+        eprintln!("warning: could not fast-forward {default_branch} — pull manually");
+    }
+
     Ok(())
 }
 
