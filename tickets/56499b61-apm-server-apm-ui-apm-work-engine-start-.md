@@ -29,7 +29,7 @@ The work engine runs as a child process of the axum server, equivalent to `apm w
 - [x] `GET /api/work/status` returns `{"status":"idle"}` when the engine task is alive but no active worker PID files exist
 - [x] `POST /api/work/start` starts the tokio engine task and returns the new status; a second call while already running returns the current status without starting a second task
 - [x] `POST /api/work/stop` signals the engine task to stop, waits for it to exit, and returns `{"status":"stopped"}`; calling it when already stopped returns `{"status":"stopped"}` without an error
-- [ ] The WorkerView panel header shows a Start/Stop toggle button and a status badge labelled "Running", "Idle", or "Stopped"
+- [x] The WorkerView panel header shows a Start/Stop toggle button and a status badge labelled "Running", "Idle", or "Stopped"
 - [ ] Clicking Start calls `POST /api/work/start`; the button and badge update to the returned state without a full page reload
 - [ ] Clicking Stop calls `POST /api/work/stop`; the button and badge update to the returned state without a full page reload
 - [ ] The status badge auto-refreshes at a poll interval of 5 s or less while the WorkerView panel is mounted
