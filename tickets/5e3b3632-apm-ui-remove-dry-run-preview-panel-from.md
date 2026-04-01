@@ -1,7 +1,7 @@
 +++
 id = "5e3b3632"
 title = "apm-ui: remove dry-run preview panel from WorkerView"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "57546"
 branch = "ticket/5e3b3632-apm-ui-remove-dry-run-preview-panel-from"
 created_at = "2026-04-01T07:10:20.365066Z"
-updated_at = "2026-04-01T07:17:21.783045Z"
+updated_at = "2026-04-01T07:17:27.262238Z"
 +++
 
 ## Spec
@@ -67,3 +67,4 @@ No backend files change. No new tests are needed (there were none for DryRunPrev
 |------|------|----|----|
 | 2026-04-01T07:10Z | — | new | philippepascal |
 | 2026-04-01T07:15Z | new | in_design | philippepascal |
+| 2026-04-01T07:17Z | in_design | specd | claude-0401-0715-15f0 |
