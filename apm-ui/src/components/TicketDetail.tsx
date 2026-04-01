@@ -9,6 +9,7 @@ interface TicketDetail {
   title: string
   state: string
   body: string
+  raw: string
   valid_transitions: { to: string; label: string }[]
 }
 
@@ -85,6 +86,7 @@ function TransitionButtons({ ticket, onTransitioned }: {
 
 export default function TicketDetail() {
   const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
+  const setReviewMode = useLayoutStore((s) => s.setReviewMode)
   const queryClient = useQueryClient()
 
   const { data, isLoading, isError, error } = useQuery({
@@ -100,7 +102,17 @@ export default function TicketDetail() {
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-50 outline-none">
-      <div className="px-3 py-2 text-sm font-medium border-b shrink-0">TicketDetail</div>
+      <div className="px-3 py-2 text-sm font-medium border-b shrink-0 flex items-center justify-between">
+        <span>TicketDetail</span>
+        {data && (
+          <button
+            onClick={() => setReviewMode(true)}
+            className="px-2 py-0.5 text-xs rounded border bg-white hover:bg-gray-50"
+          >
+            Review
+          </button>
+        )}
+      </div>
       <div className="flex-1 overflow-y-auto">
         {!selectedTicketId && (
           <div className="h-full flex items-center justify-center text-xs text-gray-400">

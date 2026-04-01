@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import WorkerView from './WorkerView'
 import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
+import ReviewEditor from './ReviewEditor'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
 
@@ -26,7 +27,8 @@ const CONTENT: Record<ColumnKey, React.ReactNode> = {
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId } = useLayoutStore()
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, reviewMode } =
+    useLayoutStore()
   const queryClient = useQueryClient()
 
   const panelRefs = useRef<Record<ColumnKey, PanelImperativeHandle | null>>({
@@ -124,6 +126,22 @@ export default function WorkScreen() {
     } else if (!isCollapsed && !columnVisibility[key]) {
       toggleColumn(key)
     }
+  }
+
+  if (reviewMode) {
+    return (
+      <div className="h-screen w-screen flex flex-col overflow-hidden">
+        <ResizablePanelGroup orientation="horizontal">
+          <ResizablePanel defaultSize={25} minSize={10}>
+            <WorkerView />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={75} minSize={30}>
+            <ReviewEditor />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    )
   }
 
   return (

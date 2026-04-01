@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use std::path::PathBuf;
@@ -48,12 +48,31 @@ struct TicketDetailResponse {
     #[serde(flatten)]
     frontmatter: apm_core::ticket::Frontmatter,
     body: String,
+    raw: String,
     valid_transitions: Vec<TransitionOption>,
 }
 
 #[derive(serde::Deserialize)]
 struct TransitionRequest {
     to: String,
+}
+
+#[derive(serde::Deserialize)]
+struct PutBodyRequest {
+    content: String,
+}
+
+fn extract_frontmatter_raw(content: &str) -> Option<&str> {
+    let rest = content.strip_prefix("+++\n")?;
+    let end = rest.find("\n+++")?;
+    Some(&rest[..end])
+}
+
+fn extract_history_raw(content: &str) -> &str {
+    match content.find("\n## History") {
+        Some(idx) => &content[idx..],
+        None => "",
+    }
 }
 
 struct AppError(anyhow::Error);
@@ -159,9 +178,11 @@ async fn get_ticket(
                     tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?
                 }
             };
+            let raw = ticket.serialize().unwrap_or_default();
             Ok(Json(TicketDetailResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
+                raw,
                 valid_transitions,
             })
             .into_response())
@@ -217,9 +238,11 @@ async fn transition_ticket(
                         compute_valid_transitions(&root2, &state_str)
                     })
                     .await?;
+                    let raw = ticket.serialize().unwrap_or_default();
                     Ok(Json(TicketDetailResponse {
                         frontmatter: ticket.frontmatter,
                         body: ticket.body,
+                        raw,
                         valid_transitions,
                     })
                     .into_response())
@@ -227,6 +250,111 @@ async fn transition_ticket(
             }
         }
     }
+}
+
+async fn put_body(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<PutBodyRequest>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let tickets = load_tickets(&state).await?;
+    let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("no ticket matches") {
+                return Ok((StatusCode::NOT_FOUND, msg).into_response());
+            } else if msg.contains("invalid ticket ID") {
+                return Ok((StatusCode::BAD_REQUEST, msg).into_response());
+            } else {
+                return Err(AppError(e));
+            }
+        }
+        Ok(id) => id,
+    };
+    let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+    let branch = match ticket.frontmatter.branch.clone() {
+        Some(b) => b,
+        None => {
+            return Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": "ticket has no branch"})),
+            )
+                .into_response())
+        }
+    };
+    let rel_path = match ticket.path.strip_prefix(&root) {
+        Ok(p) => p.to_string_lossy().to_string(),
+        Err(_) => {
+            return Err(AppError(anyhow::anyhow!("cannot compute relative path for ticket")))
+        }
+    };
+
+    let root_clone = root.clone();
+    let branch_clone = branch.clone();
+    let rel_path_clone = rel_path.clone();
+    let current_content = tokio::task::spawn_blocking(move || {
+        apm_core::git::read_from_branch(&root_clone, &branch_clone, &rel_path_clone)
+    })
+    .await??;
+
+    let current_fm = match extract_frontmatter_raw(&current_content) {
+        Some(fm) => fm.to_owned(),
+        None => {
+            return Err(AppError(anyhow::anyhow!("cannot parse frontmatter from current ticket")))
+        }
+    };
+    let submitted_fm = match extract_frontmatter_raw(&req.content) {
+        Some(fm) => fm.to_owned(),
+        None => {
+            return Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": "cannot parse frontmatter from submitted content"})),
+            )
+                .into_response())
+        }
+    };
+
+    let current_fm_val: toml::Value = toml::from_str(&current_fm)
+        .map_err(|e| AppError(anyhow::anyhow!("invalid current frontmatter TOML: {e}")))?;
+    let submitted_fm_val: toml::Value = match toml::from_str(&submitted_fm) {
+        Ok(v) => v,
+        Err(_) => {
+            return Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": "invalid frontmatter TOML in submitted content"})),
+            )
+                .into_response())
+        }
+    };
+    if current_fm_val != submitted_fm_val {
+        return Ok((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({"error": "frontmatter is read-only"})),
+        )
+            .into_response());
+    }
+
+    let current_history = extract_history_raw(&current_content).to_owned();
+    let submitted_history = extract_history_raw(&req.content).to_owned();
+    if current_history != submitted_history {
+        return Ok((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({"error": "history section is read-only"})),
+        )
+            .into_response());
+    }
+
+    let content = req.content.clone();
+    tokio::task::spawn_blocking(move || {
+        apm_core::git::commit_to_branch(&root, &branch, &rel_path, &content, "ui: edit ticket body")
+    })
+    .await??;
+
+    Ok(Json(serde_json::json!({"ok": true})).into_response())
 }
 
 fn build_app(root: PathBuf) -> Router {
@@ -241,6 +369,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/health", get(health_handler))
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
+        .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/queue", get(queue::queue_handler))
         .route("/api/workers", get(workers::workers_handler))
@@ -256,6 +385,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     Router::new()
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
+        .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .with_state(state)
 }
@@ -418,6 +548,67 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert!(json["valid_transitions"].is_array());
+    }
+
+    #[test]
+    fn extract_frontmatter_raw_returns_toml_content() {
+        let content = "+++\nid = \"abc\"\ntitle = \"t\"\n+++\n\n## Body\n";
+        let fm = extract_frontmatter_raw(content).unwrap();
+        // extract_frontmatter_raw returns the slice up to (but not including) the \n before +++
+        assert_eq!(fm, "id = \"abc\"\ntitle = \"t\"");
+    }
+
+    #[test]
+    fn extract_frontmatter_raw_returns_none_on_missing() {
+        assert!(extract_frontmatter_raw("no frontmatter").is_none());
+    }
+
+    #[test]
+    fn extract_history_raw_returns_from_heading() {
+        let content = "## Spec\n\nBody text\n\n## History\n\n| row |";
+        assert_eq!(extract_history_raw(content), "\n## History\n\n| row |");
+    }
+
+    #[test]
+    fn extract_history_raw_returns_empty_when_absent() {
+        assert_eq!(extract_history_raw("no history here"), "");
+    }
+
+    #[tokio::test]
+    async fn put_body_in_memory_returns_501() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/tickets/aaaabbbb/body")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"content":"+++\n+++\n\nbody"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
+    async fn get_ticket_includes_raw_field() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/aaaabbbb")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["raw"].is_string());
+        let raw = json["raw"].as_str().unwrap();
+        assert!(raw.starts_with("+++\n"), "raw should start with +++");
     }
 
     #[tokio::test]
