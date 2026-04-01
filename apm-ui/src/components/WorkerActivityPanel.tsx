@@ -9,7 +9,7 @@ interface WorkerInfo {
   state: string
   agent: string
   elapsed: string
-  status: 'running' | 'crashed'
+  status: 'running' | 'crashed' | 'ended'
 }
 
 async function fetchWorkers(): Promise<WorkerInfo[]> {
@@ -91,7 +91,7 @@ export default function WorkerActivityPanel() {
           }}
         >
           <span
-            className={`w-2 h-2 rounded-full shrink-0 ${w.status === 'running' ? 'bg-green-400' : 'bg-red-400'}`}
+            className={`w-2 h-2 rounded-full shrink-0 ${w.status === 'running' ? 'bg-green-400' : w.status === 'crashed' ? 'bg-red-400' : 'bg-gray-400'}`}
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
@@ -116,6 +116,11 @@ export default function WorkerActivityPanel() {
             >
               Stop
             </button>
+          )}
+          {w.status === 'ended' && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-xs shrink-0">
+              ended
+            </span>
           )}
         </div>
       ))}

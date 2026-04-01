@@ -32,6 +32,16 @@ pub async fn workers_handler(
     Ok(Json(results))
 }
 
+fn determine_status(alive: bool, state: &str, terminal_states: &std::collections::HashSet<&str>) -> &'static str {
+    if alive {
+        "running"
+    } else if terminal_states.contains(state) {
+        "ended"
+    } else {
+        "crashed"
+    }
+}
+
 fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<WorkerInfo>> {
     let output = std::process::Command::new("git")
         .args(["worktree", "list", "--porcelain"])
@@ -45,6 +55,14 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
         .collect();
 
     let tickets = apm_core::ticket::load_all_from_git(root, tickets_dir).unwrap_or_default();
+    let config = apm_core::config::Config::load(root)?;
+    let terminal_states: std::collections::HashSet<&str> = config
+        .workflow
+        .states
+        .iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
 
     let mut results = Vec::new();
     for wt_path in worktree_paths {
@@ -56,7 +74,7 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
             Ok(v) => v,
             Err(_) => continue,
         };
-        let status = if apm_core::worker::is_alive(pid) { "running" } else { "crashed" };
+        let alive = apm_core::worker::is_alive(pid);
         let elapsed = apm_core::worker::elapsed_since(&pf.started_at);
         let ticket = tickets.iter().find(|t| t.frontmatter.id == pf.ticket_id);
         let (ticket_title, branch, state, agent) = match ticket {
@@ -68,6 +86,7 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
             ),
             None => (String::new(), String::new(), String::new(), String::new()),
         };
+        let status = determine_status(alive, &state, &terminal_states);
         results.push(WorkerInfo {
             pid,
             ticket_id: pf.ticket_id,
@@ -170,6 +189,19 @@ mod tests {
     use axum::http::{Request, StatusCode};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+
+    #[test]
+    fn determine_status_dead_terminal_shows_ended() {
+        let mut terminal: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        terminal.insert("implemented");
+        terminal.insert("closed");
+
+        assert_eq!(determine_status(false, "implemented", &terminal), "ended");
+        assert_eq!(determine_status(false, "closed", &terminal), "ended");
+        assert_eq!(determine_status(false, "in_progress", &terminal), "crashed");
+        assert_eq!(determine_status(true, "implemented", &terminal), "running");
+        assert_eq!(determine_status(true, "in_progress", &terminal), "running");
+    }
 
     #[tokio::test]
     async fn workers_empty_when_no_pid_files() {
