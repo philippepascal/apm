@@ -32,7 +32,7 @@ Adding a `groomed` state between `new` and `in_design` mirrors the existing patt
 - [x] `apm init` generates a `config.toml` that includes the `groomed` state
 - [x] A spawned spec-writer worker receives the spec-writer system prompt and role prefix when the ticket pre-transition state is `groomed`
 - [x] A spawned spec-writer worker still receives the spec-writer system prompt when the ticket pre-transition state is `ammend`
-- [ ] After a supervisor answers a question (`question → groomed`), the ticket is agent-actionable again
+- [x] After a supervisor answers a question (`question → groomed`), the ticket is agent-actionable again
 
 ### Out of scope
 
