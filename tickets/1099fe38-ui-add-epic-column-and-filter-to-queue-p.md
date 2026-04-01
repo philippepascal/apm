@@ -1,14 +1,14 @@
 +++
 id = "1099fe38"
 title = "UI: add epic column and filter to queue panel"
-state = "new"
+state = "groomed"
 priority = 2
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/1099fe38-ui-add-epic-column-and-filter-to-queue-p"
 created_at = "2026-04-01T21:56:20.710748Z"
-updated_at = "2026-04-01T21:58:43.415324Z"
+updated_at = "2026-04-01T22:01:18.358221Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T21:56Z | — | new | claude-0401-2145-a8f3 |
+| 2026-04-01T22:01Z | new | groomed | claude-0401-2145-a8f3 |
