@@ -34,7 +34,11 @@ The result: spec-writers must guess intent from the title alone and often produc
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Making `### Context` required or validated against a schema
+- Parsing Context content programmatically — it is purely human/agent-readable prose
+- Changes to `apm new` CLI flags
+- UI changes
+- Migrating existing tickets to add empty Context sections
 
 ### Approach
 
