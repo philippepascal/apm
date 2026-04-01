@@ -29,7 +29,10 @@ The desired behaviour is a PR title prefixed with the short ticket ID (first 8 c
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating PR titles on PRs that were already created before this change
+- Changing the PR body format or the `Closes #<id>` link
+- Configuring the prefix format (bracket style, separator character, etc.)
+- Any other call sites that construct PR titles outside of `gh_pr_create_or_update`
 
 ### Approach
 
