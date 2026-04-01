@@ -41,7 +41,42 @@ This matters because engineers who immediately branch off `main` after accepting
 
 ### Approach
 
-How the implementation will work.
+**1. Add `Pull` variant — `apm-core/src/config.rs` (line ~33)**
+
+Add `Pull` to the `CompletionStrategy` enum alongside `Pr`, `Merge`, `None`. Serde's `rename_all = "lowercase"` attribute already maps variant names to lowercase TOML strings, so no parser changes are needed beyond adding the variant.
+
+**2. Implement `pull_default` helper — `apm-core/src/state.rs`**
+
+Add a private `pull_default(root: &Path, default_branch: &str) -> Result<()>`:
+1. Run `git fetch origin <default_branch>`. On network failure print a warning and `return Ok(())` (non-fatal).
+2. Determine the working directory: if `HEAD` is already `default_branch`, use `root`; otherwise call `git::find_worktree_for_branch(root, default_branch)` and fall back to `root` if not found (same pattern as `merge_into_default`).
+3. Run `git merge --ff-only origin/<default_branch>` in that directory.
+4. If the ff-only fails (local branch has diverged), print `"warning: could not fast-forward <default_branch> — pull manually"` and return `Ok(())` (non-fatal).
+
+**3. Wire into the completion match — `apm-core/src/state.rs` (line ~135)**
+
+Add a `CompletionStrategy::Pull` arm to the existing `match completion` block. No `push_branch` call is needed — the ticket branch was already pushed as part of the PR flow before the PR was merged.
+
+**4. Update `verify.rs` — `apm/src/cmd/verify.rs` (line ~27)**
+
+Add `CompletionStrategy::Pull => "pull"` to the match in the completion-strategy report loop so `apm verify` output includes the new strategy.
+
+**5. Update `.apm/config.toml` — `implemented → accepted` transition (line ~264)**
+
+Add `completion = "pull"` to the transition block:
+
+```toml
+[[workflow.states.transitions]]
+to            = "accepted"
+trigger       = "manual"
+actor         = "engineer"
+preconditions = ["pr_all_closing_merged"]
+completion    = "pull"
+```
+
+**6. Add a unit test — `apm-core/src/config.rs`**
+
+Extend the existing `CompletionStrategy` serde test to assert that `"pull"` deserialises to `CompletionStrategy::Pull`.
 
 ### Open questions
 
