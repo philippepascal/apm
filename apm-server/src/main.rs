@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{get, patch, post, put},
     Json, Router,
 };
 use std::path::PathBuf;
@@ -62,6 +62,13 @@ struct TransitionRequest {
 #[derive(serde::Deserialize)]
 struct PutBodyRequest {
     content: String,
+}
+
+#[derive(serde::Deserialize)]
+struct PatchTicketRequest {
+    effort: Option<u8>,
+    risk: Option<u8>,
+    priority: Option<u8>,
 }
 
 #[derive(serde::Deserialize)]
@@ -391,6 +398,94 @@ async fn put_body(
     Ok(Json(serde_json::json!({"ok": true})).into_response())
 }
 
+async fn patch_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<PatchTicketRequest>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let tickets = load_tickets(&state).await?;
+    let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("no ticket matches") {
+                return Ok((StatusCode::NOT_FOUND, msg).into_response());
+            } else if msg.contains("invalid ticket ID") {
+                return Ok((StatusCode::BAD_REQUEST, msg).into_response());
+            } else {
+                return Err(AppError(e));
+            }
+        }
+        Ok(id) => id,
+    };
+    let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+    let branch = match ticket.frontmatter.branch.clone() {
+        Some(b) => b,
+        None => {
+            return Ok((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({"error": "ticket has no branch"})),
+            )
+                .into_response())
+        }
+    };
+    let rel_path = match ticket.path.strip_prefix(&root) {
+        Ok(p) => p.to_string_lossy().to_string(),
+        Err(_) => {
+            return Err(AppError(anyhow::anyhow!("cannot compute relative path for ticket")))
+        }
+    };
+
+    let mut fm = ticket.frontmatter;
+    let body = ticket.body;
+
+    if let Some(v) = req.effort {
+        apm_core::ticket::set_field(&mut fm, "effort", &v.to_string())?;
+    }
+    if let Some(v) = req.risk {
+        apm_core::ticket::set_field(&mut fm, "risk", &v.to_string())?;
+    }
+    if let Some(v) = req.priority {
+        apm_core::ticket::set_field(&mut fm, "priority", &v.to_string())?;
+    }
+
+    let updated = apm_core::ticket::Ticket {
+        frontmatter: fm,
+        body,
+        path: ticket.path,
+    };
+    let content = updated
+        .serialize()
+        .map_err(|e| AppError(anyhow::anyhow!("cannot serialize ticket: {e}")))?;
+
+    let root_clone = root.clone();
+    tokio::task::spawn_blocking(move || {
+        apm_core::git::commit_to_branch(
+            &root_clone,
+            &branch,
+            &rel_path,
+            &content,
+            "ui: update ticket fields",
+        )
+    })
+    .await??;
+
+    let state_str = updated.frontmatter.state.clone();
+    let valid_transitions =
+        tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
+    let raw = updated.serialize().unwrap_or_default();
+    Ok(Json(TicketDetailResponse {
+        frontmatter: updated.frontmatter,
+        body: updated.body,
+        raw,
+        valid_transitions,
+    })
+    .into_response())
+}
+
 async fn create_ticket(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTicketRequest>,
@@ -461,7 +556,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/health", get(health_handler))
         .route("/api/sync", post(sync_handler))
         .route("/api/tickets", get(list_tickets).post(create_ticket))
-        .route("/api/tickets/:id", get(get_ticket))
+        .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/queue", get(queue::queue_handler))
@@ -482,7 +577,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     Router::new()
         .route("/api/sync", post(sync_handler))
         .route("/api/tickets", get(list_tickets).post(create_ticket))
-        .route("/api/tickets/:id", get(get_ticket))
+        .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .with_state(state)
@@ -772,6 +867,41 @@ mod tests {
             )
             .await
             .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_in_memory_returns_501() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri("/api/tickets/aaaabbbb")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"effort":5}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_unknown_id_returns_not_implemented_for_in_memory() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri("/api/tickets/00000000")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"effort":5}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        // In-memory has no git root so returns 501 before ID resolution
         assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     }
 
