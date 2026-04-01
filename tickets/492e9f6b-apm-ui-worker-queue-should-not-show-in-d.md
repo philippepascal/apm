@@ -33,7 +33,10 @@ in_progress is already excluded (no actionable field in config). The fix require
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the UI component (PriorityQueuePanel.tsx) or the /api/queue endpoint handler (queue.rs) — the filtering is config-driven
+- Filtering by agent assignment (e.g. hiding tickets claimed by a different agent's name)
+- Changing how the queue panel ranks or sorts entries
+- Any changes to the in_progress state (already excluded from the queue)
 
 ### Approach
 
