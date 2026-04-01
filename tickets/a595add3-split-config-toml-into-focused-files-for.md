@@ -1,7 +1,7 @@
 +++
 id = "a595add3"
 title = "Split config.toml into focused files for state machine, ticket structure, and project settings"
-state = "implemented"
+state = "closed"
 priority = 9
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "73872"
 branch = "ticket/a595add3-split-config-toml-into-focused-files-for"
 created_at = "2026-04-01T22:27:35.511052Z"
-updated_at = "2026-04-01T22:53:56.163540Z"
+updated_at = "2026-04-01T23:07:09.230079Z"
 +++
 
 ## Spec
@@ -114,3 +114,4 @@ Lines to audit: approx 157, 171, 173, 186, 423 -- check whether each assertion t
 | 2026-04-01T22:46Z | specd | ready | apm |
 | 2026-04-01T22:46Z | ready | in_progress | philippepascal |
 | 2026-04-01T22:53Z | in_progress | implemented | claude-0401-2300-w001 |
+| 2026-04-01T23:07Z | implemented | closed | apm-sync |
