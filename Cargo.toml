@@ -2,6 +2,7 @@
 members = [
     "apm-core",
     "apm",
+    "apm-server",
 ]
 resolver = "2"
 
@@ -12,3 +13,6 @@ toml = "0.8"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = [] }
