@@ -1,14 +1,14 @@
 +++
 id = "04e846e9"
 title = "apm state accepted: pull default branch after PR merge"
-state = "in_design"
+state = "closed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/04e846e9-apm-state-accepted-pull-default-branch-a"
 created_at = "2026-04-01T06:04:14.712639Z"
-updated_at = "2026-04-01T06:08:22.545458Z"
+updated_at = "2026-04-01T06:11:25.528600Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T06:04Z | — | new | philippepascal |
 | 2026-04-01T06:08Z | new | in_design | philippepascal |
+| 2026-04-01T06:11Z | in_design | closed | apm |
