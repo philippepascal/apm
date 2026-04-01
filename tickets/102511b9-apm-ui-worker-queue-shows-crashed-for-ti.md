@@ -1,7 +1,7 @@
 +++
 id = "102511b9"
 title = "apm-ui: worker queue shows 'crashed' for tickets in terminal states"
-state = "accepted"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "3031"
 branch = "ticket/102511b9-apm-ui-worker-queue-shows-crashed-for-ti"
 created_at = "2026-04-01T06:10:23.311626Z"
-updated_at = "2026-04-01T07:46:37.092579Z"
+updated_at = "2026-04-01T07:47:26.526540Z"
 +++
 
 ## Spec
@@ -97,3 +97,4 @@ No schema changes, no new files, no changes to AppState or routing.
 | 2026-04-01T07:19Z | ready | in_progress | philippepascal |
 | 2026-04-01T07:23Z | in_progress | implemented | claude-0401-0719-d458 |
 | 2026-04-01T07:46Z | implemented | accepted | apm-sync |
+| 2026-04-01T07:47Z | accepted | closed | apm-sync |
