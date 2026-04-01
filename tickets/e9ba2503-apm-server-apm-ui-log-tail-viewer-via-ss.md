@@ -1,7 +1,7 @@
 +++
 id = "e9ba2503"
 title = "apm-server + apm-ui: log tail viewer via SSE"
-state = "implemented"
+state = "closed"
 priority = 25
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "12029"
 branch = "ticket/e9ba2503-apm-server-apm-ui-log-tail-viewer-via-ss"
 created_at = "2026-03-31T06:13:19.097973Z"
-updated_at = "2026-04-01T07:15:40.138317Z"
+updated_at = "2026-04-01T07:47:40.117689Z"
 +++
 
 ## Spec
@@ -114,3 +114,5 @@ The dependency on Step 12a (ticket 56499b61) means `apm-server`, its `AppState`,
 | 2026-03-31T19:44Z | specd | ready | apm |
 | 2026-04-01T07:08Z | ready | in_progress | philippepascal |
 | 2026-04-01T07:15Z | in_progress | implemented | claude-0401-0709-6398 |
+| 2026-04-01T07:46Z | implemented | accepted | apm-sync |
+| 2026-04-01T07:47Z | accepted | closed | apm-sync |
