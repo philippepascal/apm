@@ -1,13 +1,5 @@
 import TicketCard from './TicketCard'
-
-interface Ticket {
-  id: string
-  title: string
-  state: string
-  agent?: string
-  effort?: number
-  risk?: number
-}
+import type { Ticket } from './types'
 
 interface SwimlaneProps {
   state: string

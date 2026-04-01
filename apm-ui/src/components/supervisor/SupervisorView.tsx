@@ -1,14 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import Swimlane from './Swimlane'
-
-interface Ticket {
-  id: string
-  title: string
-  state: string
-  agent?: string
-  effort?: number
-  risk?: number
-}
+import type { Ticket } from './types'
 
 const SUPERVISOR_STATES = [
   'question',

@@ -1,13 +1,5 @@
 import { useLayoutStore } from '../../store/useLayoutStore'
-
-interface Ticket {
-  id: string
-  title: string
-  state: string
-  agent?: string
-  effort?: number
-  risk?: number
-}
+import type { Ticket } from './types'
 
 interface TicketCardProps {
   ticket: Ticket
