@@ -40,7 +40,7 @@ The `Config::load()` function in `apm-core/src/config.rs` must be updated to rea
 - [x] `apm` loads a project whose `.apm/config.toml` still contains `[workflow]` and `[[ticket.sections]]` (legacy monolithic layout) without error
 - [ ] When both `workflow.toml` and a `[workflow]` block in `config.toml` exist, the content from `workflow.toml` takes precedence but show a warning in apm validate
 - [ ] When both `ticket.toml` and `[[ticket.sections]]` in `config.toml` exist, the content from `ticket.toml` takes precedence but show a warning in apm validate
-- [ ] `apm init` on a new project creates `.apm/config.toml`, `.apm/workflow.toml`, and `.apm/ticket.toml` as separate files
+- [x] `apm init` on a new project creates `.apm/config.toml`, `.apm/workflow.toml`, and `.apm/ticket.toml` as separate files
 - [x] The live `.apm/config.toml` in this repository no longer contains `[[workflow.states]]` or `[[ticket.sections]]` blocks
 - [ ] `cargo test --workspace` passes
 
