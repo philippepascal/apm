@@ -1,14 +1,14 @@
 +++
 id = "a56953f1"
 title = "Add Context section to ticket format for delegator handoff"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "claude-0401-2145-a8f3"
 branch = "ticket/a56953f1-add-context-section-to-ticket-format-for"
 created_at = "2026-04-01T22:09:53.033510Z"
-updated_at = "2026-04-01T22:12:18.472159Z"
+updated_at = "2026-04-01T22:12:27.541937Z"
 +++
 
 ## Spec
@@ -126,3 +126,4 @@ Add as step 1 (before the existing "1. `apm show <id>`"):
 | 2026-04-01T22:09Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:10Z | new | groomed | claude-0401-2145-a8f3 |
 | 2026-04-01T22:10Z | groomed | in_design | claude-0401-2145-a8f3 |
+| 2026-04-01T22:12Z | in_design | specd | claude-0401-2145-a8f3 |
