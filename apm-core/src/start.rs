@@ -312,7 +312,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
-    let actionable = config.actionable_states_for("agent");
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight) else {
@@ -466,7 +467,8 @@ pub fn spawn_next_worker(
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
-    let actionable = config.actionable_states_for("agent");
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight) else {

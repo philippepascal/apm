@@ -183,7 +183,8 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
         .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
-    let actionable = config.actionable_states_for("agent");
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let mut candidates: Vec<&ticket::Ticket> = tickets
