@@ -2,13 +2,13 @@
 id = "c1ff90de"
 title = "Add depends_on scheduling to engine dispatch loop"
 state = "new"
-priority = 0
+priority = 8
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/c1ff90de-add-depends-on-scheduling-to-engine-disp"
 created_at = "2026-04-01T21:55:02.787625Z"
-updated_at = "2026-04-01T21:55:02.787625Z"
+updated_at = "2026-04-01T21:56:45.845820Z"
 +++
 
 ## Spec
