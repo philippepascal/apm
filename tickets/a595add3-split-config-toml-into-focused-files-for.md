@@ -16,14 +16,23 @@ updated_at = "2026-04-01T22:35:07.194666Z"
 
 ### Problem
 
-The single `.apm/config.toml` file mixes unrelated concerns: project identity, repo and provider settings, sync behaviour, worktree paths, workflow state machine, and ticket section definitions. As the project grows, this becomes hard to navigate and makes it impossible to swap out individual concerns (e.g. use a different state machine) without touching everything else.
+The single `.apm/config.toml` file mixes three unrelated concerns in one 324-line file:
 
-The goal is to split it into focused files, likely:
-- One for the workflow state machine (the `[[workflow.states]]` blocks — the bulk of the current file)
-- One for ticket structure (`[[ticket.sections]]` — defines the body sections spec-writers fill in)
-- One for project and infrastructure settings (project name, repos, provider, sync, worktrees)
+1. **Project identity and infrastructure** — `[project]`, `[tickets]`, `[worktrees]`, `[[repos.code]]`, `[provider]`, `[agents]`, `[sync]`, `[logging]`, `[workers]`
+2. **State machine** — `[workflow]`, `[[workflow.states]]` (11 states with transitions, ~200 lines), `[workflow.prioritization]`
+3. **Ticket body structure** — `[[ticket.sections]]` (7 section definitions)
 
-The spec writer should read `.apm/config.toml` in full to understand what exists today, then propose the right file split and how the loader in `apm-core/src/config.rs` should be changed to load and merge the files.
+As the project evolves, this creates practical problems:
+- Navigating the file is difficult; a reader wanting to tweak a transition must scroll past or around ticket sections and project settings.
+- Swapping or customising the state machine requires touching the same file that holds unrelated project settings.
+- Code reviews for workflow changes are noisy because unrelated settings appear in the diff context.
+
+The desired state is three focused files under `.apm/`:
+- `config.toml` — project identity and infrastructure settings (already the primary config file; retains its name but sheds the workflow and ticket-section content)
+- `workflow.toml` — the state machine: `[workflow]`, `[[workflow.states]]`, `[workflow.prioritization]`
+- `ticket.toml` — ticket body structure: `[[ticket.sections]]`
+
+The `Config::load()` function in `apm-core/src/config.rs` must be updated to read all three files and merge them into the existing `Config` struct. Backward compatibility with projects that still keep everything in one `config.toml` must be preserved.
 
 ### Acceptance criteria
 
