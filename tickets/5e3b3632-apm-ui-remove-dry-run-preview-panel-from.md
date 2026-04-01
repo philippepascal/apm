@@ -16,13 +16,14 @@ updated_at = "2026-04-01T07:15:53.148638Z"
 
 ### Problem
 
-fabfef3d added a DryRunPreview component that renders above the queue in WorkerView when the engine is stopped. In practice it takes up space in the left column and hides the priority queue, which is more useful. The dry-run information (what would be dispatched next) is not actionable enough to warrant a persistent panel in the UI. Remove DryRunPreview from WorkerView entirely. The /api/work/dry-run endpoint and its backend logic can stay — it may be useful later — but the UI component should be deleted and its import removed from WorkerView.
+Commit fabfef3d introduced a DryRunPreview component that renders above the ticket queue in WorkerView when the dispatch engine is stopped. The component occupies vertical space in the left column and pushes the priority queue — the most actionable information in that panel — further down or out of view.
 
-What is broken or missing, and why it matters.
+The dry-run preview shows which tickets would be dispatched next, but this information is low-value in day-to-day use: it duplicates what is already visible in the queue itself, requires a stopped engine to appear, and offers no action beyond a manual refresh. Keeping it in the UI creates visual clutter without proportionate benefit.
+
+The fix is to remove the DryRunPreview component from WorkerView and delete the component file. The /api/work/dry-run endpoint and all backend logic should be left in place — they may prove useful for CLI or future tooling.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -37,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
