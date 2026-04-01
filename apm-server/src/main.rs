@@ -888,6 +888,124 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn patch_ticket_priority_out_of_range_returns_422() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri("/api/tickets/aaaabbbb")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"priority":256}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        // 256 exceeds u8::MAX → JSON deserialization fails → 422
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
+    fn git_setup(p: &std::path::Path) {
+        for args in [
+            vec!["init", "-q", "-b", "main"],
+            vec!["config", "user.email", "test@test.com"],
+            vec!["config", "user.name", "test"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(p)
+                .status()
+                .unwrap();
+        }
+        std::fs::write(
+            p.join("apm.toml"),
+            r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+"#,
+        )
+        .unwrap();
+        for args in [
+            vec!["add", "apm.toml"],
+            vec!["-c", "commit.gpgsign=false", "commit", "-m", "init"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(p)
+                .env("GIT_AUTHOR_NAME", "test")
+                .env("GIT_AUTHOR_EMAIL", "test@test.com")
+                .env("GIT_COMMITTER_NAME", "test")
+                .env("GIT_COMMITTER_EMAIL", "test@test.com")
+                .status()
+                .unwrap();
+        }
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_priority_persists_to_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p,
+            &config,
+            "test ticket".to_string(),
+            "test".to_string(),
+            None,
+            None,
+            false,
+            vec![],
+        )
+        .unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app = build_app(p.clone());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"priority":42}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["priority"], 42);
+
+        // Verify the value was committed to the branch
+        let branch = ticket.frontmatter.branch.unwrap();
+        let rel_path = ticket.path.strip_prefix(&p).unwrap().to_string_lossy().to_string();
+        let content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
+        assert!(content.contains("priority = 42"), "expected priority = 42 in: {content}");
+    }
+
+    #[tokio::test]
     async fn patch_ticket_unknown_id_returns_not_implemented_for_in_memory() {
         let app = build_app_with_tickets(test_tickets());
         let response = app
