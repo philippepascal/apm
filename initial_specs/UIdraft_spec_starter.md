@@ -214,3 +214,61 @@ apm new --no-edit "apm-ui: open question and amendment request badges on ticket 
 apm new --no-edit "apm-server + apm-ui: worker management (list, stop, reassign)" \
   --section Problem --set "The worker activity panel shows running workers but provides no controls. Extend GET /api/workers with PID and uptime, add DELETE /api/workers/:pid to stop a worker, and add a reassign action (apm take equivalent) on the ticket detail panel. Full spec context: initial_specs/UIdraft_spec_starter.md Step 15. Requires Step 7a and Step 8."
 ```
+
+---
+
+## Keyboard shortcuts
+
+All operations must have a keyboard shortcut (point 16). Shortcuts are global unless noted as context-specific.
+
+### Navigation
+
+| Key | Action | Notes |
+|-----|--------|-------|
+| `↑` / `↓` | Move selection within current column | Focus must be on a ticket card, not in text |
+| `←` / `→` | Move focus between columns (WorkerView ↔ SupervisorView ↔ TicketDetail) | Only when focus is on a card |
+| `Enter` | Open selected ticket in detail panel | |
+| `Escape` | Close editor / dismiss modal / return focus to card grid | |
+
+### Ticket operations (selected ticket)
+
+| Key | Action | CLI equivalent |
+|-----|--------|----------------|
+| `n` | New ticket (open modal) | `apm new` |
+| `r` | Review selected ticket (open editor) | `apm review` |
+| `s` | Show raw ticket in detail panel | `apm show` |
+| `t` | Take selected ticket (reassign to self) | `apm take` |
+| `Shift+S` | Sync with remote | `apm sync` |
+| `Shift+C` | Close selected ticket (supervisor only) | `apm close` |
+
+### State transitions (selected ticket, context: detail panel or editor)
+
+### Work engine
+
+| Key | Action | CLI equivalent |
+|-----|--------|----------------|
+| `Shift+W` | Start / stop `apm work` daemon | `apm work` / stop |
+
+### Workers
+
+| Key | Action | CLI equivalent |
+|-----|--------|----------------|
+| `Shift+K` | Stop selected worker | `apm workers stop` |
+
+### Column visibility
+
+Column visibility is toggled via toolbar buttons only — no keyboard shortcut. `Ctrl+1/2/3` conflicts with browser tab switching on Windows/Linux (Chrome, Firefox, Edge) and cannot be reliably used. `Alt+1/2/3` conflicts with system menu navigation on Windows. Toolbar buttons are the safe, cross-platform solution.
+
+### State transitions Editor (when markdown editor is open)
+Transitions only happen in review screen (with the exception of close).
+Only valid transitions are shown and are based on config. 
+Shortcut letter is calculated using an algorithm based on state name and avoid conflict.
+
+| Key | Action |
+|-----|--------|
+| `Escape` | Discard changes and close editor |
+
+### Notes
+- `1`–`9` is NOT used directly for effort/risk — it would fire while typing in search or other inputs. Instead, `e` and `Shift+R` open a focused picker that captures the next digit keystroke, then closes.
+- Arrow key navigation between columns should only fire when focus is on a ticket card, not when focus is inside a text input or the markdown editor, to avoid conflicting with normal text navigation.
+- All shortcuts should be discoverable via a `?` help overlay.

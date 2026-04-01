@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use crate::{config::Config, git, ticket};
 use chrono::Utc;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 
 pub struct StartOutput {
@@ -98,6 +99,7 @@ fn spawn_container_worker(
     let log_clone = log_file.try_clone()?;
     cmd.stdout(log_file);
     cmd.stderr(log_clone);
+    cmd.process_group(0);
 
     let child = cmd.spawn()?;
     Ok(child)
@@ -270,6 +272,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         let log_clone = log_file.try_clone()?;
         cmd.stdout(log_file);
         cmd.stderr(log_clone);
+        cmd.process_group(0);
 
         cmd.spawn()?
     };
@@ -421,6 +424,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         let log_clone = log_file.try_clone()?;
         cmd.stdout(log_file);
         cmd.stderr(log_clone);
+        cmd.process_group(0);
 
         cmd.spawn()?
     };
@@ -566,6 +570,7 @@ pub fn spawn_next_worker(
         let log_clone = log_file.try_clone()?;
         cmd.stdout(log_file);
         cmd.stderr(log_clone);
+        cmd.process_group(0);
 
         cmd.spawn()?
     };
