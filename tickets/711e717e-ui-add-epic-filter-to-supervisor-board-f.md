@@ -2,13 +2,13 @@
 id = "711e717e"
 title = "UI: add epic filter to supervisor board filter bar"
 state = "new"
-priority = 0
+priority = 2
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/711e717e-ui-add-epic-filter-to-supervisor-board-f"
 created_at = "2026-04-01T21:56:24.806901Z"
-updated_at = "2026-04-01T21:56:24.806901Z"
+updated_at = "2026-04-01T21:58:50.452565Z"
 +++
 
 ## Spec
