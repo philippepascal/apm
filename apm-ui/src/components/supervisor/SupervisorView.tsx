@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Loader2 } from 'lucide-react'
+import { RefreshCw, Loader2, Plus } from 'lucide-react'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
 import { groupBySupervisorState } from '../../lib/supervisorUtils'
+import { useLayoutStore } from '../../store/useLayoutStore'
 
 async function fetchTickets(): Promise<Ticket[]> {
   const res = await fetch('/api/tickets')
@@ -19,6 +20,7 @@ async function postSync(): Promise<void> {
 export default function SupervisorView() {
   const queryClient = useQueryClient()
   const [syncError, setSyncError] = useState<string | null>(null)
+  const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['tickets'],
@@ -57,6 +59,14 @@ export default function SupervisorView() {
           {syncError && (
             <span className="text-xs text-red-500">{syncError}</span>
           )}
+          <button
+            onClick={() => setNewTicketOpen(true)}
+            title="New ticket (n)"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border text-xs hover:bg-gray-100"
+          >
+            <Plus className="w-3 h-3" />
+            New ticket
+          </button>
           <button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}

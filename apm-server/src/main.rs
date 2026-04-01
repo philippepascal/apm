@@ -64,6 +64,15 @@ struct PutBodyRequest {
     content: String,
 }
 
+#[derive(serde::Deserialize)]
+struct CreateTicketRequest {
+    title: Option<String>,
+    problem: Option<String>,
+    acceptance_criteria: Option<String>,
+    out_of_scope: Option<String>,
+    approach: Option<String>,
+}
+
 fn extract_frontmatter_raw(content: &str) -> Option<&str> {
     let rest = content.strip_prefix("+++\n")?;
     let end = rest.find("\n+++")?;
@@ -382,6 +391,63 @@ async fn put_body(
     Ok(Json(serde_json::json!({"ok": true})).into_response())
 }
 
+async fn create_ticket(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CreateTicketRequest>,
+) -> Result<Response, AppError> {
+    let title = match req.title {
+        Some(t) if !t.trim().is_empty() => t,
+        _ => {
+            return Ok((
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": "title is required"})),
+            )
+                .into_response());
+        }
+    };
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let section_sets: Vec<(String, String)> = [
+        ("Problem", req.problem),
+        ("Acceptance criteria", req.acceptance_criteria),
+        ("Out of scope", req.out_of_scope),
+        ("Approach", req.approach),
+    ]
+    .into_iter()
+    .filter_map(|(name, val)| val.filter(|v| !v.trim().is_empty()).map(|v| (name.to_string(), v)))
+    .collect();
+    let result = tokio::task::spawn_blocking(move || {
+        let config = apm_core::config::Config::load(&root)?;
+        apm_core::ticket::create(
+            &root,
+            &config,
+            title,
+            "apm-ui".to_string(),
+            None,
+            None,
+            false,
+            section_sets,
+        )
+    })
+    .await?;
+    match result {
+        Ok(ticket) => {
+            let response = TicketResponse {
+                frontmatter: ticket.frontmatter,
+                body: ticket.body,
+            };
+            Ok((StatusCode::CREATED, Json(response)).into_response())
+        }
+        Err(e) => Ok((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        )
+            .into_response()),
+    }
+}
+
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
@@ -394,7 +460,7 @@ fn build_app(root: PathBuf) -> Router {
     Router::new()
         .route("/health", get(health_handler))
         .route("/api/sync", post(sync_handler))
-        .route("/api/tickets", get(list_tickets))
+        .route("/api/tickets", get(list_tickets).post(create_ticket))
         .route("/api/tickets/:id", get(get_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
@@ -415,7 +481,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     });
     Router::new()
         .route("/api/sync", post(sync_handler))
-        .route("/api/tickets", get(list_tickets))
+        .route("/api/tickets", get(list_tickets).post(create_ticket))
         .route("/api/tickets/:id", get(get_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
@@ -656,6 +722,57 @@ mod tests {
         assert!(json["raw"].is_string());
         let raw = json["raw"].as_str().unwrap();
         assert!(raw.starts_with("+++\n"), "raw should start with +++");
+    }
+
+    #[tokio::test]
+    async fn create_ticket_missing_title_returns_400() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"problem":"something"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn create_ticket_empty_title_returns_400() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"title":"   "}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn create_ticket_in_memory_returns_501() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"title":"New ticket"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     }
 
     #[tokio::test]
