@@ -34,7 +34,7 @@ Adding `GET /api/workers` to `apm-server` and wiring up a WorkerActivityPanel co
 - [x] WorkerActivityPanel renders a table row for each worker in the response
 - [x] Each row shows: ticket ID, ticket title, agent name, current state, elapsed time, and a status badge
 - [x] When the array is empty, WorkerActivityPanel shows a centred "No workers running." message
-- [ ] WorkerActivityPanel polls `GET /api/workers` automatically every 5 seconds via TanStack Query `refetchInterval`
+- [x] WorkerActivityPanel polls `GET /api/workers` automatically every 5 seconds via TanStack Query `refetchInterval`
 - [ ] While the initial fetch is in-flight, WorkerActivityPanel shows a loading skeleton
 - [ ] If the fetch returns an error, WorkerActivityPanel shows an error message
 - [ ] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
