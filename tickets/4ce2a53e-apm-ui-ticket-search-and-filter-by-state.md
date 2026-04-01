@@ -24,19 +24,19 @@ The `GET /api/tickets` response already includes a `body` field (Step 2 spec), s
 
 ### Acceptance criteria
 
-- [ ] A filter bar is visible at the top of the SupervisorView (middle column) containing a text search input, a state dropdown, an agent dropdown, and a show-closed toggle
-- [ ] Typing in the text search input filters ticket cards to those whose title or body contains the query string (case-insensitive)
-- [ ] Clearing the text input restores all ticket cards that matched before the search was applied
-- [ ] Selecting a state in the state dropdown shows only the swimlane for that state (any valid workflow state, not limited to supervisor-actionable ones)
-- [ ] Clearing the state dropdown restores the default supervisor-actionable-states-only swimlane view
-- [ ] Selecting an agent in the agent dropdown shows only tickets where agent equals the selected value, across all visible swimlanes
-- [ ] Clearing the agent dropdown restores tickets for all agents
-- [ ] Enabling the show-closed toggle reveals the closed swimlane in addition to the default supervisor-actionable states
-- [ ] Disabling the show-closed toggle hides the closed swimlane
-- [ ] When no tickets match the combined active filters, an empty-state message replaces the swimlane grid
-- [ ] The agent dropdown options are derived from the unique non-empty agent values present in the loaded ticket list
-- [ ] Multiple filters active simultaneously are combined with AND logic (all conditions must be satisfied)
-- [ ] Filter state is held in local React component state and resets to defaults on page reload
+- [x] A filter bar is visible at the top of the SupervisorView (middle column) containing a text search input, a state dropdown, an agent dropdown, and a show-closed toggle
+- [x] Typing in the text search input filters ticket cards to those whose title or body contains the query string (case-insensitive)
+- [x] Clearing the text input restores all ticket cards that matched before the search was applied
+- [x] Selecting a state in the state dropdown shows only the swimlane for that state (any valid workflow state, not limited to supervisor-actionable ones)
+- [x] Clearing the state dropdown restores the default supervisor-actionable-states-only swimlane view
+- [x] Selecting an agent in the agent dropdown shows only tickets where agent equals the selected value, across all visible swimlanes
+- [x] Clearing the agent dropdown restores tickets for all agents
+- [x] Enabling the show-closed toggle reveals the closed swimlane in addition to the default supervisor-actionable states
+- [x] Disabling the show-closed toggle hides the closed swimlane
+- [x] When no tickets match the combined active filters, an empty-state message replaces the swimlane grid
+- [x] The agent dropdown options are derived from the unique non-empty agent values present in the loaded ticket list
+- [x] Multiple filters active simultaneously are combined with AND logic (all conditions must be satisfied)
+- [x] Filter state is held in local React component state and resets to defaults on page reload
 
 ### Out of scope
 
