@@ -10,6 +10,7 @@ use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
 mod queue;
+mod work;
 mod workers;
 
 enum TicketSource {
@@ -19,6 +20,7 @@ enum TicketSource {
 
 struct AppState {
     source: TicketSource,
+    work_engine: work::WorkEngineState,
 }
 
 impl AppState {
@@ -362,6 +364,7 @@ fn build_app(root: PathBuf) -> Router {
     let tickets_dir = config.tickets.dir;
     let state = Arc::new(AppState {
         source: TicketSource::Git(root, tickets_dir),
+        work_engine: work::new_engine_state(),
     });
     let serve_dir = ServeDir::new("apm-ui/dist")
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
@@ -373,6 +376,9 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/queue", get(queue::queue_handler))
         .route("/api/workers", get(workers::workers_handler))
+        .route("/api/work/status", get(work::get_work_status))
+        .route("/api/work/start", post(work::post_work_start))
+        .route("/api/work/stop", post(work::post_work_stop))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -381,6 +387,7 @@ fn build_app(root: PathBuf) -> Router {
 fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(tickets),
+        work_engine: work::new_engine_state(),
     });
     Router::new()
         .route("/api/tickets", get(list_tickets))
@@ -394,6 +401,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
 pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(tickets),
+        work_engine: work::new_engine_state(),
     });
     Router::new()
         .route("/api/workers", get(workers::workers_handler))
@@ -404,9 +412,23 @@ pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) 
 pub fn build_app_in_memory_with_queue(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     let state = Arc::new(AppState {
         source: TicketSource::InMemory(tickets),
+        work_engine: work::new_engine_state(),
     });
     Router::new()
         .route("/api/queue", get(queue::queue_handler))
+        .with_state(state)
+}
+
+#[cfg(test)]
+pub fn build_app_in_memory_for_work() -> Router {
+    let state = Arc::new(AppState {
+        source: TicketSource::InMemory(vec![]),
+        work_engine: work::new_engine_state(),
+    });
+    Router::new()
+        .route("/api/work/status", get(work::get_work_status))
+        .route("/api/work/start", post(work::post_work_start))
+        .route("/api/work/stop", post(work::post_work_stop))
         .with_state(state)
 }
 

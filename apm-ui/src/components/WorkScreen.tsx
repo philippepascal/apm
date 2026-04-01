@@ -2,13 +2,14 @@ import React, { useRef, useEffect } from 'react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './ui/resizable'
 import { useLayoutStore } from '../store/useLayoutStore'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
 import WorkerView from './WorkerView'
 import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
 import ReviewEditor from './ReviewEditor'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
+import { fetchStatus, startEngine, stopEngine } from './WorkEngineControls'
 
 type ColumnKey = 'workerView' | 'supervisorView' | 'ticketDetail'
 
@@ -31,6 +32,15 @@ export default function WorkScreen() {
     useLayoutStore()
   const queryClient = useQueryClient()
 
+  const startMutation = useMutation({
+    mutationFn: startEngine,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['work-status'] }),
+  })
+  const stopMutation = useMutation({
+    mutationFn: stopEngine,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['work-status'] }),
+  })
+
   const panelRefs = useRef<Record<ColumnKey, PanelImperativeHandle | null>>({
     workerView: null,
     supervisorView: null,
@@ -39,6 +49,18 @@ export default function WorkScreen() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (event.shiftKey && event.key === 'W') {
+        const target = event.target as Element | null
+        if (target && target.matches('input, textarea, select, [contenteditable]')) return
+        fetchStatus().then((status) => {
+          if (status === 'running' || status === 'idle') {
+            stopMutation.mutate()
+          } else {
+            startMutation.mutate()
+          }
+        })
+        return
+      }
       if (event.ctrlKey || event.metaKey) return
       if (ARROW_KEYS.indexOf(event.key) === -1) return
       const target = event.target as Element | null
@@ -106,7 +128,7 @@ export default function WorkScreen() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTicketId, setSelectedTicketId, queryClient])
+  }, [selectedTicketId, setSelectedTicketId, queryClient, startMutation, stopMutation])
 
   function handleToggle(key: ColumnKey) {
     const panel = panelRefs.current[key]
