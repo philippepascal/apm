@@ -38,7 +38,7 @@ Adding `GET /api/workers` to `apm-server` and wiring up a WorkerActivityPanel co
 - [x] While the initial fetch is in-flight, WorkerActivityPanel shows a loading skeleton
 - [x] If the fetch returns an error, WorkerActivityPanel shows an error message
 - [x] `npm run build` in `apm-ui/` exits 0 with no TypeScript errors
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
