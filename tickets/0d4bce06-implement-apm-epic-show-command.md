@@ -2,13 +2,13 @@
 id = "0d4bce06"
 title = "Implement apm epic show command"
 state = "new"
-priority = 0
+priority = 6
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/0d4bce06-implement-apm-epic-show-command"
 created_at = "2026-04-01T21:55:14.006927Z"
-updated_at = "2026-04-01T21:55:14.006927Z"
+updated_at = "2026-04-01T21:57:28.184715Z"
 +++
 
 ## Spec
