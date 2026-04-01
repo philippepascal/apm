@@ -16,13 +16,14 @@ updated_at = "2026-04-01T20:29:49.049728Z"
 
 ### Problem
 
-Currently agents pick up 'new' tickets directly for spec writing, with no human triage gate. We need a 'groomed' state between new and in_design that acts as a human approval gate before spec work begins — mirroring how 'ready' gates implementation work. Changes needed: add 'groomed' to apm.toml workflow states with actionable=["agent"] for spec pickup; remove agent actionability from 'new'; update agents.md to reflect that agents pick up 'groomed' not 'new' tickets; update apm.toml transition from new->groomed (supervisor/engineer actor) and groomed->in_design (agent actor). Tickets start in 'new' (no change to apm new command). The delegator dispatches groomed tickets to spec agents, not new tickets.
+Currently agents pick up tickets directly from the `new` state for spec writing, with no human triage gate. A ticket creator (engineer or another agent) can create a ticket and it immediately becomes agent-actionable — an agent may start writing a spec before a supervisor has reviewed whether the ticket is worth pursuing, is well-scoped, or belongs in the current queue.
 
-What is broken or missing, and why it matters.
+The `ready` state already serves as a human gate before implementation work (supervisor reviews the spec and explicitly promotes to `ready`). There is no equivalent gate before spec work.
+
+Adding a `groomed` state between `new` and `in_design` mirrors the existing pattern: supervisors triage `new` tickets into `groomed` when they want spec work to begin. Agents only pick up `groomed` tickets. Tickets created with `apm new` continue to start in `new` and wait for supervisor promotion.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -37,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
