@@ -1,14 +1,15 @@
 +++
 id = "268a88c9"
 title = "apm state accepted: pull default branch after PR merge"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/268a88c9-apm-state-accepted-pull-default-branch-a"
 created_at = "2026-04-01T06:10:14.360337Z"
-updated_at = "2026-04-01T06:10:14.360337Z"
+updated_at = "2026-04-01T06:12:47.286959Z"
 +++
 
 ## Spec
@@ -52,3 +53,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T06:10Z | — | new | philippepascal |
+| 2026-04-01T06:12Z | new | in_design | philippepascal |
