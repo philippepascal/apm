@@ -1,14 +1,14 @@
 +++
 id = "4b663160"
 title = "Implement apm epic new command"
-state = "new"
+state = "groomed"
 priority = 8
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/4b663160-implement-apm-epic-new-command"
 created_at = "2026-04-01T21:55:06.350633Z"
-updated_at = "2026-04-01T21:56:55.036278Z"
+updated_at = "2026-04-01T21:59:23.576655Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
+| 2026-04-01T21:59Z | new | groomed | claude-0401-2145-a8f3 |
