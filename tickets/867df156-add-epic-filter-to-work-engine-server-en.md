@@ -2,13 +2,13 @@
 id = "867df156"
 title = "Add epic filter to work engine server endpoint"
 state = "new"
-priority = 0
+priority = 4
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/867df156-add-epic-filter-to-work-engine-server-en"
 created_at = "2026-04-01T21:56:02.797958Z"
-updated_at = "2026-04-01T21:56:02.797958Z"
+updated_at = "2026-04-01T21:58:07.743270Z"
 +++
 
 ## Spec
