@@ -4,12 +4,12 @@ title = "Remove accepted state and simplify apm sync to hardcode merged-PR-to-cl
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 agent = "70351"
 branch = "ticket/c2168aea-remove-accepted-state-and-simplify-apm-s"
 created_at = "2026-04-01T20:26:50.809264Z"
-updated_at = "2026-04-01T20:33:12.277303Z"
+updated_at = "2026-04-01T20:33:18.027388Z"
 +++
 
 ## Spec
