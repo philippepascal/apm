@@ -28,7 +28,7 @@ Affected users: anyone supervising an apm work session via the web UI.
 - [x] After a drag reorder, PATCH /api/tickets/:id is sent with the updated priority value for the moved ticket
 - [x] The queue order after drag reflects the same dispatch order that apm next would compute
 - [x] Pressing the up-arrow key while a queue item is focused moves it one position up in the queue
-- [ ] Pressing the down-arrow key while a queue item is focused moves it one position down in the queue
+- [x] Pressing the down-arrow key while a queue item is focused moves it one position down in the queue
 - [ ] Keyboard reorder triggers the same PATCH /api/tickets/:id call as drag reorder
 - [ ] If the PATCH request fails, the queue reverts to its pre-reorder order and an error toast is shown
 - [ ] Reordering the priority queue does not affect the swimlane layout in the middle column
