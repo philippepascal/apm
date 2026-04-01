@@ -4,12 +4,12 @@ title = "apm-ui: worker queue should not show in_design tickets"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 agent = "24073"
 branch = "ticket/492e9f6b-apm-ui-worker-queue-should-not-show-in-d"
 created_at = "2026-04-01T06:14:29.015814Z"
-updated_at = "2026-04-01T06:26:33.941299Z"
+updated_at = "2026-04-01T06:26:40.157586Z"
 +++
 
 ## Spec
