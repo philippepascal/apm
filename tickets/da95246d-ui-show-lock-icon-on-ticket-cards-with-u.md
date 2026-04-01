@@ -2,13 +2,13 @@
 id = "da95246d"
 title = "UI: show lock icon on ticket cards with unresolved depends_on"
 state = "new"
-priority = 0
+priority = 2
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/da95246d-ui-show-lock-icon-on-ticket-cards-with-u"
 created_at = "2026-04-01T21:56:15.495249Z"
-updated_at = "2026-04-01T21:56:15.495249Z"
+updated_at = "2026-04-01T21:58:36.211156Z"
 +++
 
 ## Spec
