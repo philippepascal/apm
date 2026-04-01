@@ -289,8 +289,8 @@ Typical agent startup sequence:
 What sync does:
   1. git fetch (unless --offline)
   2. Detects ticket branches that have been merged into main
-  3. For each merged branch, prompts to accept (mark implemented → closed)
-     or skip; use --auto-accept / --auto-close to skip the prompts in CI
+  3. For each merged branch, closes the ticket immediately; use --auto-close
+     to skip the confirmation prompt in CI
   4. Updates the local branch cache
 
 Run sync at the start of each agent session to ensure local state reflects
@@ -299,7 +299,7 @@ what has happened on the remote since last time.
 Examples:
   apm sync                    # interactive, fetch from remote
   apm sync --offline          # re-process local branches only
-  apm sync --auto-accept      # accept all merged tickets silently
+  apm sync --auto-close       # close all merged tickets silently
   apm sync --quiet            # suppress non-error output")]
     Sync {
         /// Skip git fetch; re-process local branches only
@@ -311,12 +311,9 @@ Examples:
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
-        /// Automatically close accepted/stale tickets without prompting
+        /// Automatically close merged/stale tickets without prompting
         #[arg(long)]
         auto_close: bool,
-        /// Automatically accept merged tickets without prompting
-        #[arg(long)]
-        auto_accept: bool,
     },
     /// Take over a ticket from another agent
     #[command(long_about = "Reassign a ticket to yourself (takeover scenario).
@@ -639,7 +636,7 @@ fn main() -> Result<()> {
                 (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
             }
         }
-        Command::Sync { offline, quiet, no_aggressive, auto_close, auto_accept } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close, auto_accept),
+        Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
         Command::Take { id, no_aggressive } => cmd::take::run(&root, &id, no_aggressive),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),

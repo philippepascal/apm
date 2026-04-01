@@ -184,7 +184,7 @@ fn init_generated_config_has_all_workflow_states() {
     apm::cmd::init::run(p, true, false, false).unwrap();
 
     let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
-    for state in &["new", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "accepted", "closed"] {
+    for state in &["new", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
     assert!(toml.contains("terminal = true"), "closed must be terminal");
@@ -475,10 +475,6 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "accepted"
-label = "Accepted"
-
-[[workflow.states]]
 id       = "closed"
 label    = "Closed"
 terminal = true
@@ -514,13 +510,15 @@ fn write_ticket_to_branch(dir: &std::path::Path, branch: &str, filename: &str, s
 }
 
 #[test]
-fn sync_closes_accepted_ticket_auto() {
+fn sync_closes_implemented_ticket_on_merged_branch() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
-    write_ticket_to_branch(p, "ticket/0001-my-ticket", "0001-my-ticket.md", "accepted", 1, "my ticket");
+    write_ticket_to_branch(p, "ticket/0001-my-ticket", "0001-my-ticket.md", "implemented", 1, "my ticket");
+    // Merge the branch into main so sync detects it.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-my-ticket", "--no-edit"]);
 
-    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
 
     let content = branch_content(p, "main", "tickets/0001-my-ticket.md");
     assert!(content.contains("state = \"closed\""), "ticket should be closed on main: {content}");
@@ -539,7 +537,7 @@ fn sync_closes_implemented_ticket_with_no_branch() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add stale ticket"]);
     // No ticket branch exists
 
-    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
 
     let updated = std::fs::read_to_string(p.join(path)).unwrap();
     assert!(updated.contains("state = \"closed\""), "stale ticket should be closed: {updated}");
@@ -551,7 +549,7 @@ fn sync_no_close_when_nothing_to_close() {
     let p = dir.path();
     // No tickets at all
     let log_before = branch_content(p, "main", "apm.toml"); // just to get a ref point
-    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
     // main should have no new commits (same HEAD)
     let head = std::process::Command::new("git")
         .args(["log", "--oneline", "-1"])
@@ -564,14 +562,16 @@ fn sync_no_close_when_nothing_to_close() {
 }
 
 #[test]
-fn sync_closes_multiple_accepted_tickets() {
+fn sync_closes_multiple_tickets_on_merged_branches() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "accepted", 1, "alpha");
-    write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "accepted", 2, "beta");
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "implemented", 1, "alpha");
+    write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "implemented", 2, "beta");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-alpha", "--no-edit"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0002-beta", "--no-edit"]);
 
-    apm::cmd::sync::run(p, true, true, true, true, false).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
 
     let alpha = branch_content(p, "main", "tickets/0001-alpha.md");
     let beta = branch_content(p, "main", "tickets/0002-beta.md");
@@ -1669,10 +1669,10 @@ fn work_dry_run_no_tickets() {
     apm::cmd::work::run(p, false, true, false, 30).unwrap();
 }
 
-// --- sync accept ---
+// --- sync direct close ---
 
 #[test]
-fn sync_auto_accept_transitions_implemented_ticket_to_accepted() {
+fn sync_closes_implemented_ticket_with_merged_branch_in_one_run() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
@@ -1682,12 +1682,12 @@ fn sync_auto_accept_transitions_implemented_ticket_to_accepted() {
     // Merge the ticket branch into main so it appears as merged.
     git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-impl", "--no-edit"]);
 
-    // Run sync with auto_accept — no interactive prompt needed.
-    apm::cmd::sync::run(p, true, true, true, false, true).unwrap();
+    // Run sync with auto_close — ticket should be closed in a single run.
+    apm::cmd::sync::run(p, true, true, true, true).unwrap();
 
-    // The ticket branch should now have state = "accepted".
+    // The ticket branch should now have state = "closed".
     let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
-    assert!(content.contains("state = \"accepted\""), "ticket should be accepted: {content}");
+    assert!(content.contains("state = \"closed\""), "ticket should be closed in one sync run: {content}");
 }
 
 // --- context-section ---
@@ -2692,7 +2692,7 @@ fn state_force_does_not_skip_doc_validation() {
 
 // --- squash-merge detection ---
 
-/// Minimal apm.toml with implemented + accepted states for squash-merge tests.
+/// Minimal apm.toml with implemented state for squash-merge tests.
 fn squash_merge_config() -> &'static str {
     r#"[project]
 name = "test"
@@ -2715,10 +2715,6 @@ label = "New"
 [[workflow.states]]
 id    = "implemented"
 label = "Implemented"
-
-[[workflow.states]]
-id    = "accepted"
-label = "Accepted"
 
 [[workflow.states]]
 id       = "closed"
@@ -2797,12 +2793,12 @@ fn sync_detect_squash_merged_branch_remote_ref_present() {
 
     let config = apm_core::config::Config::load(p).unwrap();
     let candidates = apm_core::sync::detect(p, &config).unwrap();
-    let accept_branches: Vec<&str> = candidates.accept.iter()
+    let close_branches: Vec<&str> = candidates.close.iter()
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        accept_branches.contains(&branch),
-        "squash-merged ticket should appear in accept candidates; got: {accept_branches:?}"
+        close_branches.contains(&branch),
+        "squash-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
 }
 
@@ -2826,12 +2822,12 @@ fn sync_detect_squash_merged_branch_remote_ref_deleted() {
     // Local branch still exists; remote tracking ref is gone.
     let config = apm_core::config::Config::load(p).unwrap();
     let candidates = apm_core::sync::detect(p, &config).unwrap();
-    let accept_branches: Vec<&str> = candidates.accept.iter()
+    let close_branches: Vec<&str> = candidates.close.iter()
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        accept_branches.contains(&branch),
-        "squash-merged ticket with deleted remote ref should appear in accept candidates; got: {accept_branches:?}"
+        close_branches.contains(&branch),
+        "squash-merged ticket with deleted remote ref should appear in close candidates; got: {close_branches:?}"
     );
 }
 
@@ -2849,12 +2845,12 @@ fn sync_detect_does_not_falsely_detect_unmerged_branch() {
 
     let config = apm_core::config::Config::load(p).unwrap();
     let candidates = apm_core::sync::detect(p, &config).unwrap();
-    let accept_branches: Vec<&str> = candidates.accept.iter()
+    let close_branches: Vec<&str> = candidates.close.iter()
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        !accept_branches.contains(&branch),
-        "unmerged ticket should NOT appear in accept candidates; got: {accept_branches:?}"
+        !close_branches.contains(&branch),
+        "unmerged ticket should NOT appear in close candidates; got: {close_branches:?}"
     );
 }
 
@@ -2874,11 +2870,11 @@ fn sync_detect_regular_merge_still_detected() {
 
     let config = apm_core::config::Config::load(p).unwrap();
     let candidates = apm_core::sync::detect(p, &config).unwrap();
-    let accept_branches: Vec<&str> = candidates.accept.iter()
+    let close_branches: Vec<&str> = candidates.close.iter()
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        accept_branches.contains(&branch),
-        "regular-merged ticket should appear in accept candidates; got: {accept_branches:?}"
+        close_branches.contains(&branch),
+        "regular-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
 }
