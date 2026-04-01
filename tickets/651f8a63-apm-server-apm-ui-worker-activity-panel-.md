@@ -32,7 +32,7 @@ Adding `GET /api/workers` to `apm-server` and wiring up a WorkerActivityPanel co
 - [x] A worker whose PID is no longer alive appears in the response with `status: "crashed"` (not silently omitted)
 - [x] The handler offloads all blocking work via `spawn_blocking` and does not block the tokio runtime
 - [x] WorkerActivityPanel renders a table row for each worker in the response
-- [ ] Each row shows: ticket ID, ticket title, agent name, current state, elapsed time, and a status badge
+- [x] Each row shows: ticket ID, ticket title, agent name, current state, elapsed time, and a status badge
 - [ ] When the array is empty, WorkerActivityPanel shows a centred "No workers running." message
 - [ ] WorkerActivityPanel polls `GET /api/workers` automatically every 5 seconds via TanStack Query `refetchInterval`
 - [ ] While the initial fetch is in-flight, WorkerActivityPanel shows a loading skeleton
