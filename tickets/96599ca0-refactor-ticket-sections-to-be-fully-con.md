@@ -65,14 +65,24 @@ pub struct TicketDocument {
 
 Section names use the canonical casing from config (e.g. "Problem", "Acceptance criteria"). Values are the raw markdown body of each section, stripped of the leading `### <name>` header line.
 
-Note on `Vec<ChecklistItem>`: The current typed fields expose `acceptance_criteria: Vec<ChecklistItem>` and `amendment_requests: Option<Vec<ChecklistItem>>`. Any call sites that access these directly (search for `.acceptance_criteria` and `.amendment_requests` across the workspace) must be updated to parse the raw string on demand using `ChecklistItem::parse_list(&doc.sections["Acceptance criteria"])` (or equivalent helper). Do not add a new abstraction layer — just inline the parse where needed.
+Remove `unchecked_criteria()` and `unchecked_amendments()` — they are replaced by a single helper:
+
+```rust
+pub fn unchecked_tasks(section_name: &str) -> Vec<usize>
+```
+
+which parses the raw string from `self.sections.get(section_name)` on demand and returns indices of unchecked `- [ ]` items. In `state.rs`, replace:
+- `doc.unchecked_criteria()` → `doc.unchecked_tasks("Acceptance criteria")`
+- `doc.unchecked_amendments()` → `doc.unchecked_tasks("Amendment requests")`
+
+Search for all remaining typed-field accesses (`.problem`, `.acceptance_criteria`, `.out_of_scope`, `.approach`, `.open_questions`, `.amendment_requests`) across the workspace and replace with `doc.sections.get("…").map(String::as_str).unwrap_or("")` or the equivalent.
 
 **Step 3 — Update `TicketDocument::parse()` (`ticket.rs`)**
 
 - Scan the `## Spec` body for `### <name>` headings.
 - Collect body text between consecutive headings into `self.sections` in file order.
 - Stop when `## History` (or EOF) is reached; route that content to `raw_history` as before.
-- Sections not present in config are still inserted into the map (preserves unknown sections).
+- Sections not present in config are still inserted into the map (preserves unknown sections on round-trip).
 
 **Step 4 — Update `TicketDocument::serialize()` (`ticket.rs`)**
 
@@ -81,25 +91,31 @@ Note on `Vec<ChecklistItem>`: The current typed fields expose `acceptance_criter
 - Append `raw_history` at the end if non-empty.
 - Remove all hardcoded if/else chains for individual section names.
 
-Because new tickets are created from config-ordered skeletons, their parse order equals config order. Existing tickets retain whatever order they had on disk.
+**Step 5 — Update `TicketDocument::validate()` (`ticket.rs`)**
 
-**Step 5 — Refactor `spec.rs`**
+Change signature to:
+
+```rust
+pub fn validate(&self, config_sections: &[TicketSection]) -> Vec<ValidationError>
+```
+
+Implementation: for each config section with `required = true`, check that `self.sections` contains it and the value is non-empty. For `SectionType::Tasks` sections, also check that `unchecked_tasks(name)` returns no items if all criteria must be checked before transitioning.
+
+All callers (`state.rs`, `verify.rs`, `cmd/spec.rs`) already hold a `Config`; thread `&config.ticket.sections` through each call site.
+
+**Step 6 — Refactor `spec.rs`**
 
 `get_section(doc, name)`: replace the match with a case-insensitive lookup over `doc.sections` keys, returning the value or an empty string.
 
 `set_section(doc, name, value)`: replace the match with a case-insensitive key lookup; update the existing entry if found, otherwise insert with the supplied casing.
 
-`is_doc_field(name, config)`: change signature to accept `&Config` and return true if `config.ticket.sections` contains a section whose name matches case-insensitively. All call sites in `ticket.rs` already have config available; update them to pass it. Alternatively, since the only reason to distinguish "doc field" vs "raw body section" was the struct's fixed field set — now that the map accepts any key — consider removing `is_doc_field` entirely and always routing through `set_section`. Prefer removal if it simplifies call sites.
+Remove `is_doc_field` entirely. The sole reason it existed was to route between the typed-field path and `set_section_body` — that distinction disappears now that the map accepts any key. Delete `set_section_body` and `get_section_body` from `spec.rs` once they have no callers. Update all call sites in `cmd/spec.rs` and `ticket.rs` to go through `set_section` / `get_section` unconditionally.
 
-Remove all hardcoded match arms in `get_section` and `set_section`.
+**Step 7 — Remove the hardcoded skeleton fallback (`ticket.rs`)**
 
-**Step 6 — Update ticket creation / section-setting logic (`ticket.rs`)**
+Delete the fallback template string used when `config.ticket.sections` is empty. Tests that relied on this path must be updated to supply a minimal `TicketConfig` with the standard sections — a shared test helper `fn minimal_ticket_config() -> TicketConfig` is the cleanest approach. This ensures no hidden code path bypasses config-driven behaviour.
 
-The fallback hardcoded template (used when `config.ticket.sections` is empty) can remain for tests that run without a config, but any typed-field references in that path must be removed.
-
-The section-setting loop that calls `is_doc_field` / `set_section` / `set_section_body` should be simplified: if the section name is found in the document map (or in config), use `set_section`; otherwise fall back to `set_section_body` for raw-body injection.
-
-**Step 7 — Update `apm-server/src/main.rs`**
+**Step 8 — Update `apm-server/src/main.rs`**
 
 Replace `CreateTicketRequest`:
 
@@ -122,7 +138,7 @@ struct CreateTicketRequest {
 
 Update the `create_ticket` handler to build `section_sets` by iterating over `req.sections` instead of the four named fields. Preserve the filter-empty-values behaviour.
 
-**Step 8 — Update `apm-ui/src/components/NewTicketModal.tsx`**
+**Step 9 — Update `apm-ui/src/components/NewTicketModal.tsx`**
 
 Change `CreateTicketData`:
 
@@ -135,12 +151,13 @@ interface CreateTicketData {
 
 In the submit handler, build the sections map from the four textarea values, using the same human-readable labels as keys ("Problem", "Acceptance criteria", "Out of scope", "Approach"). The form's visual labels and textareas are unchanged — only the JSON payload shape changes.
 
-**Step 9 — Update tests**
+**Step 10 — Update tests**
 
-- Update `document_round_trip` and related unit tests in `ticket.rs` to access `doc.sections["Problem"]` etc. instead of `doc.problem`.
-- Add a test: parse a ticket body containing an unrecognised section (e.g. `### Foo`), serialize, and assert the section is present in the output.
-- Add a test: parse a ticket body containing `### Code review`, serialize, assert it survives.
-- Run `cargo test --workspace` and fix any remaining compilation errors from typed-field accesses found across the workspace.
+- Rewrite `TicketDocument` unit tests to access `doc.sections["Problem"]` etc.
+- Add: parse a ticket body with an unrecognised section (`### Foo`), serialize, assert it is present in output.
+- Add: parse a ticket body with `### Code review`, serialize, assert it survives.
+- Add: `validate()` with a config that marks a section required returns an error when that section is empty.
+- Run `cargo test --workspace` and fix any remaining compilation errors from typed-field accesses.
 
 ### Open questions
 
