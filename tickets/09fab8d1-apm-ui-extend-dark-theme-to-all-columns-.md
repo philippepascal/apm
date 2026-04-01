@@ -1,14 +1,15 @@
 +++
 id = "09fab8d1"
 title = "apm-ui: extend dark theme to all columns and fix worker card regressions"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/09fab8d1-apm-ui-extend-dark-theme-to-all-columns-"
 created_at = "2026-04-01T06:44:14.497120Z"
-updated_at = "2026-04-01T06:44:14.497120Z"
+updated_at = "2026-04-01T06:44:57.458950Z"
 +++
 
 ## Spec
@@ -57,3 +58,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T06:44Z | — | new | philippepascal |
+| 2026-04-01T06:44Z | new | in_design | philippepascal |
