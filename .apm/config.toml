@@ -61,9 +61,25 @@ webhook_secret_env = "APM_WEBHOOK_SECRET"
 terminal_states = ["closed"]
 
 [[workflow.states]]
-id           = "new"
-label        = "New"
-color        = "#6b7280"
+id    = "new"
+label = "New"
+color = "#6b7280"
+layer = 1
+
+  [[workflow.states.transitions]]
+  to      = "groomed"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
+[[workflow.states]]
+id           = "groomed"
+label        = "Groomed"
+color        = "#6366f1"
 layer        = 1
 actionable   = ["agent"]
 instructions = ".apm/apm.spec-writer.md"
@@ -87,7 +103,7 @@ layer      = 1
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "new"
+  to      = "groomed"
   trigger = "manual"
   actor   = "any"
 

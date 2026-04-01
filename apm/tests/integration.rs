@@ -184,7 +184,7 @@ fn init_generated_config_has_all_workflow_states() {
     apm::cmd::init::run(p, true, false, false).unwrap();
 
     let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
-    for state in &["new", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "accepted", "closed"] {
+    for state in &["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "accepted", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
     assert!(toml.contains("terminal = true"), "closed must be terminal");

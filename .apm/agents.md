@@ -33,7 +33,7 @@ tickets, or take any action not driven by `apm start --next`.
 **When the queue is empty or all ready tickets are blocked:**
 4. Report back to the supervisor with a clear status summary:
    - How many workers were spawned
-   - Which tickets are blocking (specd/new/blocked) and why they can't be dispatched
+   - Which tickets are blocking (specd/groomed/blocked) and why they can't be dispatched
    Do not improvise. Do not switch to worker behaviour.
 
 ### Worker
@@ -109,7 +109,7 @@ to do. Report back to the supervisor.
 
 The ticket's state determines what to do next:
 
-**state = `new`** — write the spec:
+**state = `groomed`** — write the spec:
 1. `apm show <id>` — read the full ticket
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
