@@ -1,7 +1,7 @@
 +++
 id = "492e9f6b"
 title = "apm-ui: worker queue should not show in_design tickets"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "9577"
 branch = "ticket/492e9f6b-apm-ui-worker-queue-should-not-show-in-d"
 created_at = "2026-04-01T06:14:29.015814Z"
-updated_at = "2026-04-01T07:17:41.881698Z"
+updated_at = "2026-04-01T07:19:46.920552Z"
 +++
 
 ## Spec
@@ -70,3 +70,4 @@ Verification steps:
 | 2026-04-01T06:26Z | in_design | specd | claude-0401-0623-4e38 |
 | 2026-04-01T06:28Z | specd | ready | apm |
 | 2026-04-01T07:17Z | ready | in_progress | philippepascal |
+| 2026-04-01T07:19Z | in_progress | implemented | claude-0401-0717-fcc8 |
