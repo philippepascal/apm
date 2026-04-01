@@ -40,7 +40,18 @@ The fix is to remove the DryRunPreview component from WorkerView and delete the 
 
 ### Approach
 
-How the implementation will work.
+Two files change; no new files are created.
+
+1. **Delete** apm-ui/src/components/DryRunPreview.tsx — the entire file is removed.
+
+2. **Edit** apm-ui/src/components/WorkerView.tsx:
+   - Remove the import line: `import DryRunPreview from './DryRunPreview'`
+   - Remove the `<DryRunPreview />` JSX element (currently rendered unconditionally inside the flex container, between the border divider and the Queue section)
+   - No other layout changes are needed; the surrounding flex container will naturally expand to fill the reclaimed space.
+
+3. Run `npm run build` (or equivalent) inside apm-ui to confirm the build is clean.
+
+No backend files change. No new tests are needed (there were none for DryRunPreview, and the component is being deleted, not modified).
 
 ### Open questions
 
