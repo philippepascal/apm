@@ -2,13 +2,13 @@
 id = "a5e1ea24"
 title = "Implement apm epic list command"
 state = "new"
-priority = 0
+priority = 6
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/a5e1ea24-implement-apm-epic-list-command"
 created_at = "2026-04-01T21:55:09.722953Z"
-updated_at = "2026-04-01T21:55:09.722953Z"
+updated_at = "2026-04-01T21:57:19.990256Z"
 +++
 
 ## Spec
