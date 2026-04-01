@@ -47,7 +47,117 @@ The fix is to replace `TicketDocument`'s typed fields with a config-driven order
 
 ### Approach
 
-How the implementation will work.
+### 1. Add `indexmap` dependency
+
+In `apm-core/Cargo.toml`, add `indexmap = "2"`. `IndexMap` gives O(1) lookup and preserves insertion order, which means parse order == serialize order without requiring config at serialize time.
+
+---
+
+### 2. Replace `TicketDocument` fields with an ordered map (`apm-core/src/ticket.rs`)
+
+Change the struct from six typed fields to:
+
+```rust
+pub struct TicketDocument {
+    pub sections: IndexMap<String, String>,  // canonical name → raw body (no header)
+    raw_history: String,
+}
+```
+
+Section names use the canonical casing from config (e.g. "Problem", "Acceptance criteria"). Values are the raw markdown body of each section, stripped of the leading `### <name>` header line.
+
+**Note on `Vec<ChecklistItem>`:** The current typed fields expose `acceptance_criteria: Vec<ChecklistItem>` and `amendment_requests: Option<Vec<ChecklistItem>>`. Any call sites that access these directly (search for `.acceptance_criteria` and `.amendment_requests` across the workspace) must be updated to parse the raw string on demand using `ChecklistItem::parse_list(&doc.sections["Acceptance criteria"])` (or equivalent helper). Do not add a new abstraction layer — just inline the parse where needed.
+
+---
+
+### 3. Update `TicketDocument::parse()` (`ticket.rs`)
+
+- Scan the `## Spec` body for `### <name>` headings.
+- Collect body text between consecutive headings into `self.sections` in file order.
+- Stop when `## History` (or EOF) is reached; route that content to `raw_history` as before.
+- Sections not present in config are still inserted into the map (preserves unknown sections).
+
+---
+
+### 4. Update `TicketDocument::serialize()` (`ticket.rs`)
+
+- Iterate over `self.sections` (IndexMap preserves insertion order).
+- Emit `### <name>\n\n<body>\n\n` for each entry.
+- Append `raw_history` at the end if non-empty.
+- Remove all hardcoded if/else chains for individual section names.
+
+Because new tickets are created from config-ordered skeletons, their parse order equals config order. Existing tickets retain whatever order they had on disk.
+
+---
+
+### 5. Refactor `spec.rs`
+
+**`get_section(doc, name)`**: replace the match with a case-insensitive lookup over `doc.sections` keys, returning the value or an empty string.
+
+**`set_section(doc, name, value)`**: replace the match with a case-insensitive key lookup; update the existing entry if found, otherwise insert with the supplied casing.
+
+**`is_doc_field(name, config)`**: change signature to accept `&Config` and return true if `config.ticket.sections` contains a section whose name matches case-insensitively. All call sites in `ticket.rs` already have config available; update them to pass it. Alternatively, since the only reason to distinguish "doc field" vs "raw body section" was the struct's fixed field set — now that the map accepts any key — consider removing `is_doc_field` entirely and always routing through `set_section`. Prefer removal if it simplifies call sites.
+
+Remove all hardcoded match arms in `get_section` and `set_section`.
+
+---
+
+### 6. Update ticket creation / section-setting logic (`ticket.rs`)
+
+The fallback hardcoded template (used when `config.ticket.sections` is empty) can remain for tests that run without a config, but any typed-field references in that path must be removed.
+
+The section-setting loop that calls `is_doc_field` / `set_section` / `set_section_body` should be simplified: if the section name is found in the document map (or in config), use `set_section`; otherwise fall back to `set_section_body` for raw-body injection.
+
+---
+
+### 7. Update `apm-server/src/main.rs`
+
+Replace:
+
+```rust
+struct CreateTicketRequest {
+    title: Option<String>,
+    problem: Option<String>,
+    acceptance_criteria: Option<String>,
+    out_of_scope: Option<String>,
+    approach: Option<String>,
+}
+```
+
+With:
+
+```rust
+struct CreateTicketRequest {
+    title: Option<String>,
+    sections: Option<HashMap<String, String>>,
+}
+```
+
+Update the `create_ticket` handler to build `section_sets` by iterating over `req.sections` instead of the four named fields. Preserve the filter-empty-values behaviour.
+
+---
+
+### 8. Update `apm-ui/src/components/NewTicketModal.tsx`
+
+Change `CreateTicketData`:
+
+```ts
+interface CreateTicketData {
+  title: string
+  sections?: Record<string, string>
+}
+```
+
+In the submit handler, build the sections map from the four textarea values, using the same human-readable labels as keys ("Problem", "Acceptance criteria", "Out of scope", "Approach"). The form's visual labels and textareas are unchanged — only the JSON payload shape changes.
+
+---
+
+### 9. Update tests
+
+- Update `document_round_trip` and related unit tests in `ticket.rs` to access `doc.sections["Problem"]` etc. instead of `doc.problem`.
+- Add a test: parse a ticket body containing an unrecognised section (e.g. `### Foo`), serialize, and assert the section is present in the output.
+- Add a test: parse a ticket body containing `### Code review`, serialize, assert it survives.
+- Run `cargo test --workspace` and fix any remaining compilation errors from typed-field accesses found across the workspace.
 
 ### Open questions
 
