@@ -1,7 +1,7 @@
 +++
 id = "09fab8d1"
 title = "apm-ui: extend dark theme to all columns and fix worker card regressions"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 agent = "65373"
 branch = "ticket/09fab8d1-apm-ui-extend-dark-theme-to-all-columns-"
 created_at = "2026-04-01T06:44:14.497120Z"
-updated_at = "2026-04-01T06:47:36.838311Z"
+updated_at = "2026-04-01T06:47:43.410088Z"
 +++
 
 ## Spec
@@ -108,3 +108,4 @@ Regression 2 — status label:
 |------|------|----|----|
 | 2026-04-01T06:44Z | — | new | philippepascal |
 | 2026-04-01T06:44Z | new | in_design | philippepascal |
+| 2026-04-01T06:47Z | in_design | specd | claude-0401-0644-c800 |
