@@ -116,9 +116,10 @@ export default function WorkerActivityPanel() {
             <button
               className="px-2 py-0.5 text-xs rounded bg-red-700 hover:bg-red-600 text-white disabled:opacity-50 shrink-0"
               disabled={stopping === w.pid}
+              title="Send SIGTERM to this worker"
               onClick={() => handleStop(w.pid)}
             >
-              Stop
+              Kill
             </button>
           )}
           {w.status === 'ended' && (
