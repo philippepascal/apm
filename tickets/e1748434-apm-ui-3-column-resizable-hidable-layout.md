@@ -4,12 +4,12 @@ title = "apm-ui: 3-column resizable/hidable layout shell with Zustand"
 state = "in_design"
 priority = 60
 effort = 3
-risk = 2
+risk = 3
 author = "apm"
 agent = "51514"
 branch = "ticket/e1748434-apm-ui-3-column-resizable-hidable-layout"
 created_at = "2026-03-31T06:11:50.266948Z"
-updated_at = "2026-04-01T00:00:46.125471Z"
+updated_at = "2026-04-01T00:01:10.645426Z"
 +++
 
 ## Spec
