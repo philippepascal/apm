@@ -22,7 +22,7 @@ The CLI already implements the dry-run logic in `apm/src/cmd/work.rs:run_dry()`:
 
 ### Acceptance criteria
 
-- [ ] `GET /api/work/dry-run` returns HTTP 200 with a JSON object `{ "candidates": [...] }`
+- [x] `GET /api/work/dry-run` returns HTTP 200 with a JSON object `{ "candidates": [...] }`
 - [ ] Each candidate object includes: `id`, `title`, `state`, `priority`, `effort`, `risk`, `score` (float)
 - [ ] Candidates are sorted by score descending, matching the order `apm work --dry-run` produces
 - [ ] The response contains at most `config.agents.max_concurrent` candidates
