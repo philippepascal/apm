@@ -32,7 +32,10 @@ The fix must consult the workflow config terminal flag (already defined on State
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing stale PID files from worktrees after a worker ends
+- Adding a fourth status value beyond running, crashed, and ended
+- Changing the polling interval or the overall worker queue UI layout
+- Surfacing workflow config terminal state definitions via a separate API endpoint
 
 ### Approach
 
