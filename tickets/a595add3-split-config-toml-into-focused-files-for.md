@@ -15,11 +15,17 @@ updated_at = "2026-04-01T22:28:09.293687Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The single `.apm/config.toml` file mixes unrelated concerns: project identity, repo and provider settings, sync behaviour, worktree paths, workflow state machine, and ticket section definitions. As the project grows, this becomes hard to navigate and makes it impossible to swap out individual concerns (e.g. use a different state machine) without touching everything else.
+
+The goal is to split it into focused files, likely:
+- One for the workflow state machine (the `[[workflow.states]]` blocks — the bulk of the current file)
+- One for ticket structure (`[[ticket.sections]]` — defines the body sections spec-writers fill in)
+- One for project and infrastructure settings (project name, repos, provider, sync, worktrees)
+
+The spec writer should read `.apm/config.toml` in full to understand what exists today, then propose the right file split and how the loader in `apm-core/src/config.rs` should be changed to load and merge the files.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -34,10 +40,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
