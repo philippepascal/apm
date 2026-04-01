@@ -3,13 +3,13 @@ id = "09fab8d1"
 title = "apm-ui: extend dark theme to all columns and fix worker card regressions"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 agent = "65373"
 branch = "ticket/09fab8d1-apm-ui-extend-dark-theme-to-all-columns-"
 created_at = "2026-04-01T06:44:14.497120Z"
-updated_at = "2026-04-01T06:44:57.458950Z"
+updated_at = "2026-04-01T06:47:30.731361Z"
 +++
 
 ## Spec
