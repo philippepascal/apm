@@ -4,11 +4,11 @@ title = "apm-ui: visual polish and design system consistency"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 2
 author = "apm"
 branch = "ticket/4d884371-apm-ui-visual-polish-and-design-system-c"
 created_at = "2026-04-01T05:51:09.997793Z"
-updated_at = "2026-04-01T05:52:06.726781Z"
+updated_at = "2026-04-01T05:52:10.102955Z"
 +++
 
 ## Spec
