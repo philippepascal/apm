@@ -710,7 +710,7 @@ fn spec_prints_all_sections() {
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
     // Should succeed and not error
-    apm::cmd::spec::run(p, "1", None, None, false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", None, None, None, false, None, true).unwrap();
 }
 
 #[test]
@@ -718,7 +718,7 @@ fn spec_prints_single_section() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "the problem text", "the approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, None, false, None, true).unwrap();
 }
 
 #[test]
@@ -726,7 +726,7 @@ fn spec_set_section_commits() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), None, false, None, true).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("new problem text"), "updated problem not found: {content}");
 }
@@ -736,7 +736,7 @@ fn spec_check_passes_full_ticket() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    apm::cmd::spec::run(p, "1", None, None, true, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", None, None, None, true, None, true).unwrap();
 }
 
 #[test]
@@ -744,7 +744,7 @@ fn spec_unknown_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, false, None, true);
+    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, None, false, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("unknown section"));
 }
@@ -753,7 +753,7 @@ fn spec_unknown_section_errors() {
 fn spec_nonexistent_ticket_errors() {
     let dir = setup();
     let p = dir.path();
-    let result = apm::cmd::spec::run(p, "999", None, None, false, None, true);
+    let result = apm::cmd::spec::run(p, "999", None, None, None, false, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("no ticket matches"));
 }
@@ -763,9 +763,51 @@ fn spec_set_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), false, None, true);
+    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), None, false, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set requires --section"));
+}
+
+#[test]
+fn spec_set_hyphen_value() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "old problem", "old approach");
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("- [ ] Fix the thing".into()), None, false, None, true).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("- [ ] Fix the thing"), "hyphen value not stored: {content}");
+}
+
+#[test]
+fn spec_set_file_reads_content() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "old problem", "old approach");
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(tmp.path(), "content from file").unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some(tmp.path().to_string_lossy().into_owned()), false, None, true).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("content from file"), "file content not stored: {content}");
+}
+
+#[test]
+fn spec_set_file_nonexistent_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some("/nonexistent/path/to/file.txt".into()), false, None, true);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--set-file"));
+}
+
+#[test]
+fn spec_set_file_without_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, "1", None, None, Some("/some/file.txt".into()), false, None, true);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--set-file requires --section"));
 }
 
 fn write_ticket_with_amendment_requests(dir: &std::path::Path, id: u32) {
@@ -803,6 +845,7 @@ fn spec_mark_checks_off_item_in_amendment_requests() {
         "1",
         Some("Amendment requests".into()),
         None,
+        None,
         false,
         Some("Add error handling".into()),
         true,
@@ -821,6 +864,7 @@ fn spec_mark_no_match_errors() {
         p,
         "1",
         Some("Amendment requests".into()),
+        None,
         None,
         false,
         Some("nonexistent item".into()),
@@ -852,6 +896,7 @@ fn spec_mark_ambiguous_errors() {
         "1",
         Some("Amendment requests".into()),
         None,
+        None,
         false,
         Some("error".into()),
         true,
@@ -866,7 +911,7 @@ fn spec_mark_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_ticket_with_amendment_requests(p, 1);
-    let result = apm::cmd::spec::run(p, "1", None, None, false, Some("Add error handling".into()), true);
+    let result = apm::cmd::spec::run(p, "1", None, None, None, false, Some("Add error handling".into()), true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--mark requires --section"));
 }
@@ -880,6 +925,7 @@ fn spec_mark_case_insensitive() {
         p,
         "1",
         Some("Amendment requests".into()),
+        None,
         None,
         false,
         Some("ADD ERROR".into()),
@@ -1094,6 +1140,7 @@ fn no_aggressive_flag_suppresses_fetch_on_spec() {
         &id,
         Some("Problem".into()),
         Some("test content".into()),
+        None,
         false,
         None,
         true,
