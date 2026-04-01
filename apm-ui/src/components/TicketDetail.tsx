@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useLayoutStore } from '../store/useLayoutStore'
@@ -24,11 +24,12 @@ function TransitionButtons({ ticket, onTransitioned }: {
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const keepRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'k' || e.key === 'K') {
-        // no-op: keep is a no-op
+        keepRef.current?.click()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -70,6 +71,7 @@ function TransitionButtons({ ticket, onTransitioned }: {
         </button>
       ))}
       <button
+        ref={keepRef}
         className="px-3 py-1 text-sm rounded border bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-500"
         disabled={pending}
         title="Keep at current state (K)"

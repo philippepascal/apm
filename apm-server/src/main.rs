@@ -150,10 +150,14 @@ async fn get_ticket(
         }
         Ok(full_id) => {
             let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
-            let valid_transitions = state
-                .git_root()
-                .map(|root| compute_valid_transitions(root, &ticket.frontmatter.state))
-                .unwrap_or_default();
+            let valid_transitions = match state.git_root() {
+                None => vec![],
+                Some(root) => {
+                    let root = root.clone();
+                    let state_str = ticket.frontmatter.state.clone();
+                    tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?
+                }
+            };
             Ok(Json(TicketDetailResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
@@ -206,8 +210,12 @@ async fn transition_ticket(
                 Ok(full_id) => {
                     let ticket =
                         tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
-                    let valid_transitions =
-                        compute_valid_transitions(&root, &ticket.frontmatter.state);
+                    let state_str = ticket.frontmatter.state.clone();
+                    let root2 = root.clone();
+                    let valid_transitions = tokio::task::spawn_blocking(move || {
+                        compute_valid_transitions(&root2, &state_str)
+                    })
+                    .await?;
                     Ok(Json(TicketDetailResponse {
                         frontmatter: ticket.frontmatter,
                         body: ticket.body,
