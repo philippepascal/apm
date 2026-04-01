@@ -1,0 +1,38 @@
+[[ticket.sections]]
+name        = "Problem"
+type        = "free"
+required    = true
+placeholder = "What is broken or missing, and why it matters."
+
+[[ticket.sections]]
+name        = "Acceptance criteria"
+type        = "tasks"
+required    = true
+placeholder = "Checkboxes; each one independently testable."
+
+[[ticket.sections]]
+name        = "Out of scope"
+type        = "free"
+required    = true
+placeholder = "Explicit list of what this ticket does not cover."
+
+[[ticket.sections]]
+name        = "Approach"
+type        = "free"
+required    = true
+placeholder = "How the implementation will work."
+
+[[ticket.sections]]
+name     = "Open questions"
+type     = "qa"
+required = false
+
+[[ticket.sections]]
+name     = "Amendment requests"
+type     = "tasks"
+required = false
+
+[[ticket.sections]]
+name     = "Code review"
+type     = "tasks"
+required = false
