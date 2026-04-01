@@ -678,6 +678,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/work/status", get(work::get_work_status))
         .route("/api/work/start", post(work::post_work_start))
         .route("/api/work/stop", post(work::post_work_stop))
+        .route("/api/work/dry-run", get(work::get_work_dry_run))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -729,6 +730,7 @@ pub fn build_app_in_memory_for_work() -> Router {
         .route("/api/work/status", get(work::get_work_status))
         .route("/api/work/start", post(work::post_work_start))
         .route("/api/work/stop", post(work::post_work_stop))
+        .route("/api/work/dry-run", get(work::get_work_dry_run))
         .with_state(state)
 }
 
