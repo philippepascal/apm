@@ -16,13 +16,14 @@ updated_at = "2026-04-01T20:29:57.337864Z"
 
 ### Problem
 
-Two related changes: (1) Remove the 'accepted' state from the default state machine. It is redundant — PR approval is expressed by the merge itself. Tickets should go from 'implemented' directly to 'closed'. (2) Simplify apm sync: instead of reading 'completion' fields in transition config to decide which tickets to check, apm sync should hardcode one rule: scan all non-terminal tickets, check if the ticket's branch PR is merged on GitHub, and if so transition directly to 'closed'. This removes the config dependency entirely. The 'completion' field in TransitionConfig can stay (it drives side effects on transition), but apm sync must not rely on it to decide what to scan. Any code that checks for 'accepted' as a state or transitions to it must be removed or updated.
+The APM workflow has an unnecessary intermediate state, **`accepted`**, that sits between `implemented` and `closed`. Its sole purpose is to be an automatic waypoint: `apm sync` detects merged branches, transitions `implemented` tickets to `accepted`, then on the next sync run transitions `accepted` tickets to `closed`. This two-step dance provides no value — the PR merge is already the acceptance signal. Tickets should go from `implemented` directly to `closed` when their branch is merged.
 
-What is broken or missing, and why it matters.
+Compounding this, `apm sync` decides which tickets to inspect by reading the `completion` field in each state's transition config. This couples the sync behaviour to config structure in a fragile way. The correct rule is simpler and needs no config: scan every non-terminal ticket, check whether its branch's PR has been merged on GitHub, and if so close it immediately.
+
+Both changes together eliminate a redundant state, shorten the closing cycle from two sync runs to one, and remove the config dependency from the sync scan loop.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
 
 ### Out of scope
 
@@ -37,10 +38,6 @@ How the implementation will work.
 
 
 ### Amendment requests
-
-
-
-### Code review
 
 
 
