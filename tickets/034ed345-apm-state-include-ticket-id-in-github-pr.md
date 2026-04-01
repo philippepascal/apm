@@ -3,13 +3,13 @@ id = "034ed345"
 title = "apm state: include ticket ID in GitHub PR title"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 agent = "59328"
 branch = "ticket/034ed345-apm-state-include-ticket-id-in-github-pr"
 created_at = "2026-04-01T07:44:24.055761Z"
-updated_at = "2026-04-01T07:44:46.342072Z"
+updated_at = "2026-04-01T07:45:41.272907Z"
 +++
 
 ## Spec
