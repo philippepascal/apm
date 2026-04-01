@@ -2,13 +2,13 @@
 id = "5ae5f97c"
 title = "Add --epic exclusive mode to apm work command"
 state = "new"
-priority = 0
+priority = 6
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/5ae5f97c-add-epic-exclusive-mode-to-apm-work-comm"
 created_at = "2026-04-01T21:55:49.406819Z"
-updated_at = "2026-04-01T21:55:49.406819Z"
+updated_at = "2026-04-01T21:57:52.755074Z"
 +++
 
 ## Spec
