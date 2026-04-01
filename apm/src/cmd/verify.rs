@@ -27,6 +27,7 @@ pub fn run(root: &Path, fix: bool, no_aggressive: bool) -> Result<()> {
             let label = match &tr.completion {
                 CompletionStrategy::Pr => "pr",
                 CompletionStrategy::Merge => "merge",
+                CompletionStrategy::Pull => "pull",
                 CompletionStrategy::None => continue,
             };
             println!("completion: {} → {} = {label}", state.id, tr.to);

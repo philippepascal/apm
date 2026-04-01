@@ -3,6 +3,7 @@ import type { PanelImperativeHandle } from 'react-resizable-panels'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './ui/resizable'
 import { useLayoutStore } from '../store/useLayoutStore'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { Activity, Columns, FileText } from 'lucide-react'
 import WorkerView from './WorkerView'
 import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
@@ -14,10 +15,10 @@ import { fetchStatus, startEngine, stopEngine } from './WorkEngineControls'
 
 type ColumnKey = 'workerView' | 'supervisorView' | 'ticketDetail'
 
-const COLS: { key: ColumnKey; label: string; defaultSize: number }[] = [
-  { key: 'workerView', label: 'WorkerView', defaultSize: 25 },
-  { key: 'supervisorView', label: 'SupervisorView', defaultSize: 50 },
-  { key: 'ticketDetail', label: 'TicketDetail', defaultSize: 25 },
+const COLS: { key: ColumnKey; label: string; defaultSize: number; Icon: React.ElementType }[] = [
+  { key: 'workerView', label: 'Workers', defaultSize: 25, Icon: Activity },
+  { key: 'supervisorView', label: 'Board', defaultSize: 50, Icon: Columns },
+  { key: 'ticketDetail', label: 'Detail', defaultSize: 25, Icon: FileText },
 ]
 
 const CONTENT: Record<ColumnKey, React.ReactNode> = {
@@ -175,14 +176,15 @@ export default function WorkScreen() {
   return (
     <div className="h-screen w-screen flex flex-col">
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
-      <div className="flex gap-2 px-3 py-1 border-b text-xs shrink-0">
-        {COLS.map(({ key, label }) => (
+      <div className="flex gap-1 px-2 py-1 border-b bg-gray-50 shrink-0">
+        {COLS.map(({ key, label, Icon }) => (
           <button
             key={key}
             onClick={() => handleToggle(key)}
-            className="px-2 py-0.5 rounded border hover:bg-gray-100"
+            title={columnVisibility[key] ? `Hide ${label}` : `Show ${label}`}
+            className={`p-1.5 rounded hover:bg-gray-200 transition-opacity ${!columnVisibility[key] ? 'opacity-30' : 'text-gray-600'}`}
           >
-            {columnVisibility[key] ? `Hide ${label}` : `Show ${label}`}
+            <Icon className="w-4 h-4" />
           </button>
         ))}
       </div>

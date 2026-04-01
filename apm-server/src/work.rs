@@ -4,7 +4,23 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::{AppError, AppState};
+use crate::{AppError, AppState, TicketSource};
+
+#[derive(serde::Serialize)]
+pub struct DryRunCandidate {
+    id: String,
+    title: String,
+    state: String,
+    priority: u8,
+    effort: u8,
+    risk: u8,
+    score: f64,
+}
+
+#[derive(serde::Serialize)]
+pub struct DryRunResponse {
+    candidates: Vec<DryRunCandidate>,
+}
 
 pub struct WorkEngine {
     pub cancel: Arc<AtomicBool>,
@@ -135,6 +151,69 @@ pub async fn post_work_stop(
     Ok(Json(serde_json::json!({"status": "stopped"})))
 }
 
+pub async fn get_work_dry_run(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<DryRunResponse>, AppError> {
+    let (root, tickets_dir) = match &state.source {
+        TicketSource::Git(root, tickets_dir) => (root.clone(), tickets_dir.clone()),
+        TicketSource::InMemory(_) => {
+            return Ok(Json(DryRunResponse { candidates: vec![] }))
+        }
+    };
+    let candidates = tokio::task::spawn_blocking(move || {
+        let config = apm_core::config::Config::load(&root)?;
+        let pw = config.workflow.prioritization.priority_weight;
+        let ew = config.workflow.prioritization.effort_weight;
+        let rw = config.workflow.prioritization.risk_weight;
+        let max_concurrent = config.agents.max_concurrent.max(1);
+
+        let startable: Vec<String> = config
+            .workflow
+            .states
+            .iter()
+            .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
+            .map(|s| s.id.clone())
+            .collect();
+        let actionable_owned = config.actionable_states_for("agent");
+
+        let tickets = apm_core::ticket::load_all_from_git(&root, &tickets_dir)?;
+        let mut filtered: Vec<&apm_core::ticket::Ticket> = tickets
+            .iter()
+            .filter(|t| {
+                let st = t.frontmatter.state.as_str();
+                actionable_owned.iter().any(|a| a == st)
+                    && (startable.is_empty() || startable.iter().any(|s| s == st))
+            })
+            .collect();
+        filtered.sort_by(|a, b| {
+            b.score(pw, ew, rw)
+                .partial_cmp(&a.score(pw, ew, rw))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let result: Vec<DryRunCandidate> = filtered
+            .into_iter()
+            .take(max_concurrent)
+            .map(|t| {
+                let fm = &t.frontmatter;
+                let raw_score = t.score(pw, ew, rw);
+                let score = (raw_score * 100.0).round() / 100.0;
+                DryRunCandidate {
+                    id: fm.id.clone(),
+                    title: fm.title.clone(),
+                    state: fm.state.clone(),
+                    priority: fm.priority,
+                    effort: fm.effort,
+                    risk: fm.risk,
+                    score,
+                }
+            })
+            .collect();
+        Ok::<_, anyhow::Error>(result)
+    })
+    .await??;
+    Ok(Json(DryRunResponse { candidates }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,5 +276,24 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["status"], "stopped");
+    }
+
+    #[tokio::test]
+    async fn dry_run_returns_empty_candidates_for_in_memory() {
+        let app = crate::build_app_in_memory_for_work();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/work/dry-run")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["candidates"].is_array());
+        assert_eq!(json["candidates"].as_array().unwrap().len(), 0);
     }
 }
