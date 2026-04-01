@@ -1,4 +1,5 @@
 import WorkerActivityPanel from './WorkerActivityPanel'
+import PriorityQueuePanel from './PriorityQueuePanel'
 
 export default function WorkerView() {
   return (
@@ -8,10 +9,10 @@ export default function WorkerView() {
         <WorkerActivityPanel />
       </div>
       <div className="border-t" />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b shrink-0">Queue</div>
-        <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
-          Coming soon
+        <div className="flex-1 overflow-hidden">
+          <PriorityQueuePanel />
         </div>
       </div>
     </div>
