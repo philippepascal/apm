@@ -140,6 +140,29 @@ async fn health_handler() -> Json<serde_json::Value> {
     Json(serde_json::json!({"ok": true}))
 }
 
+async fn sync_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let (fetch_error, branches) = tokio::task::spawn_blocking(move || {
+        let fetch_error = apm_core::git::fetch_all(&root).err().map(|e| e.to_string());
+        apm_core::git::sync_local_ticket_refs(&root);
+        let branches = apm_core::git::ticket_branches(&root)
+            .map(|b| b.len())
+            .unwrap_or(0);
+        (fetch_error, branches)
+    })
+    .await?;
+    let mut resp = serde_json::json!({ "branches": branches });
+    if let Some(err) = fetch_error {
+        resp["fetch_error"] = serde_json::Value::String(err);
+    }
+    Ok(Json(resp).into_response())
+}
+
 async fn list_tickets(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TicketResponse>>, AppError> {
@@ -370,6 +393,7 @@ fn build_app(root: PathBuf) -> Router {
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
     Router::new()
         .route("/health", get(health_handler))
+        .route("/api/sync", post(sync_handler))
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
         .route("/api/tickets/:id/body", put(put_body))
@@ -390,6 +414,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
         work_engine: work::new_engine_state(),
     });
     Router::new()
+        .route("/api/sync", post(sync_handler))
         .route("/api/tickets", get(list_tickets))
         .route("/api/tickets/:id", get(get_ticket))
         .route("/api/tickets/:id/body", put(put_body))
@@ -631,6 +656,22 @@ mod tests {
         assert!(json["raw"].is_string());
         let raw = json["raw"].as_str().unwrap();
         assert!(raw.starts_with("+++\n"), "raw should start with +++");
+    }
+
+    #[tokio::test]
+    async fn sync_in_memory_returns_not_implemented() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/sync")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
     }
 
     #[tokio::test]
