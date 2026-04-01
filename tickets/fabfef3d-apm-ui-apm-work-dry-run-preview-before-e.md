@@ -30,7 +30,7 @@ The CLI already implements the dry-run logic in `apm/src/cmd/work.rs:run_dry()`:
 - [x] The dry-run preview panel is visible in the workerview column when the engine is stopped
 - [x] The panel calls `GET /api/work/dry-run` and renders each candidate as a row showing id, title, and state
 - [x] The panel shows an empty-state message when candidates is empty
-- [ ] The panel is hidden when the engine is running
+- [x] The panel is hidden when the engine is running
 
 ### Out of scope
 
