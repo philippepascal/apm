@@ -1,14 +1,14 @@
 +++
 id = "96599ca0"
 title = "Refactor ticket sections to be fully config-driven, removing hardcoded TicketDocument fields"
-state = "new"
+state = "groomed"
 priority = 8
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
 branch = "ticket/96599ca0-refactor-ticket-sections-to-be-fully-con"
 created_at = "2026-04-01T22:27:39.127351Z"
-updated_at = "2026-04-01T22:27:55.799327Z"
+updated_at = "2026-04-01T22:28:33.814950Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-01T22:27Z | — | new | claude-0401-2145-a8f3 |
+| 2026-04-01T22:28Z | new | groomed | claude-0401-2145-a8f3 |
