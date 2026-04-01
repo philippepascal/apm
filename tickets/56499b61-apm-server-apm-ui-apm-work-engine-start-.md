@@ -32,7 +32,7 @@ The work engine runs as a child process of the axum server, equivalent to `apm w
 - [x] The WorkerView panel header shows a Start/Stop toggle button and a status badge labelled "Running", "Idle", or "Stopped"
 - [x] Clicking Start calls `POST /api/work/start`; the button and badge update to the returned state without a full page reload
 - [x] Clicking Stop calls `POST /api/work/stop`; the button and badge update to the returned state without a full page reload
-- [ ] The status badge auto-refreshes at a poll interval of 5 s or less while the WorkerView panel is mounted
+- [x] The status badge auto-refreshes at a poll interval of 5 s or less while the WorkerView panel is mounted
 - [ ] A keyboard shortcut (`Shift+W`) toggles the engine start/stop from anywhere in the workscreen
 
 ### Out of scope
