@@ -20,17 +20,17 @@ The current apm-ui has a functional but visually raw interface. All panels use t
 
 ### Acceptance criteria
 
-- [ ] State badges use distinct colors by category: blocked/question = red/amber, in_design/in_progress = blue, specd/ready = purple, implemented/accepted = green, closed = gray
-- [ ] Swimlane column headers have a colored left or top border accent matching their state category color
-- [ ] Ticket cards have a subtle shadow and clearer title/metadata hierarchy (title prominent, ID and agent de-emphasized)
-- [ ] The left column has a darker background than the center and right columns, creating visual depth
-- [ ] Worker activity panel uses a card-per-worker layout instead of a table, with a colored status dot and elapsed time
-- [ ] Queue rows have sufficient padding and visual weight to be scannable at the panel's narrow width
-- [ ] The toolbar toggle buttons are replaced with icon-only toggle buttons or collapse arrows on panel edges
-- [ ] A single accent color (blue) is applied consistently: primary action buttons, selected card ring, focus rings
-- [ ] The ticket detail panel has a large title header, prominent state badge, and a metadata row before the markdown body
-- [ ] The markdown prose content in the detail panel renders at a comfortable max-width with adequate line height
-- [ ] npm run build exits 0 with no TypeScript errors
+- [x] State badges use distinct colors by category: blocked/question = red/amber, in_design/in_progress = blue, specd/ready = purple, implemented/accepted = green, closed = gray
+- [x] Swimlane column headers have a colored left or top border accent matching their state category color
+- [x] Ticket cards have a subtle shadow and clearer title/metadata hierarchy (title prominent, ID and agent de-emphasized)
+- [x] The left column has a darker background than the center and right columns, creating visual depth
+- [x] Worker activity panel uses a card-per-worker layout instead of a table, with a colored status dot and elapsed time
+- [x] Queue rows have sufficient padding and visual weight to be scannable at the panel's narrow width
+- [x] The toolbar toggle buttons are replaced with icon-only toggle buttons or collapse arrows on panel edges
+- [x] A single accent color (blue) is applied consistently: primary action buttons, selected card ring, focus rings
+- [x] The ticket detail panel has a large title header, prominent state badge, and a metadata row before the markdown body
+- [x] The markdown prose content in the detail panel renders at a comfortable max-width with adequate line height
+- [x] npm run build exits 0 with no TypeScript errors
 
 ### Out of scope
 
