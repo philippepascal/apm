@@ -113,7 +113,7 @@ Integration test in `apm/tests/integration.rs`: temp git repo with two fake `epi
 
 ### Amendment requests
 
-- [ ] Delete the duplicate "### Files changed" and "### State derivation note" and "### Tests" sections that remain at the bottom of the spec. They still contain the old `derive_epic_state(states: &[&str])` signature with hardcoded state names ("in_design", "in_progress", "accepted", "closed", "implemented"). The corrected Approach above those sections is authoritative; the stale duplicates must be removed entirely.
+- [x] Delete the duplicate "### Files changed" and "### State derivation note" and "### Tests" sections that remain at the bottom of the spec. They still contain the old `derive_epic_state(states: &[&str])` signature with hardcoded state names ("in_design", "in_progress", "accepted", "closed", "implemented"). The corrected Approach above those sections is authoritative; the stale duplicates must be removed entirely.
 
 ### Code review
 
