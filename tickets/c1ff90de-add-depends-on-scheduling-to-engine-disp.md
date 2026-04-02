@@ -22,13 +22,13 @@ The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop 
 
 ### Acceptance criteria
 
-- [ ] When a ticket has `depends_on = ["<id>"]` and the referenced ticket is in a state before `implemented`, `spawn_next_worker` skips it and dispatches the next highest-priority non-blocked ticket instead
-- [ ] When all entries in `depends_on` are in state `implemented` or later, the ticket is eligible for dispatch as normal
-- [ ] A state with `terminal = true` satisfies the dependency check regardless of its position in the workflow states list
+- [ ] When a ticket has `depends_on = ["<id>"]` and the referenced ticket's state has neither `satisfies_deps = true` nor `terminal = true`, `spawn_next_worker` skips it and dispatches the next highest-priority non-blocked ticket instead
+- [ ] When all entries in `depends_on` reference tickets whose states have `satisfies_deps = true` or `terminal = true`, the ticket is eligible for dispatch as normal
+- [ ] A state with `terminal = true` satisfies the dependency check regardless of its position in the workflow states list or its `satisfies_deps` value
 - [ ] A `depends_on` entry whose ID does not match any known ticket is treated as non-blocking (the candidate is not skipped due to that entry)
 - [ ] A ticket with an empty `depends_on = []` is treated identically to a ticket with no `depends_on` field
 - [ ] `apm next` skips dep-blocked tickets by the same rule — it returns the highest-scoring ticket whose deps are all satisfied
-- [ ] The dep-blocking logic does not hardcode state names beyond `implemented` as the threshold; states that appear after `implemented` in the workflow states list also satisfy the check
+- [ ] The dep-blocking check is driven entirely by `satisfies_deps` and `terminal` config flags — no state name is compared by string in the implementation
 
 ### Out of scope
 
