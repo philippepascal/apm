@@ -230,6 +230,8 @@ Leave `implemented` and `closed` as `satisfies_deps = true` — no change needed
 
 ### Amendment requests
 
+- [ ] Add `satisfies_deps = "spec"` to `ready`, `in_progress`, and `ammend` states in `workflow.toml` — not just `specd`. All three states have a complete spec; without this, a `groomed` ticket A becomes re-blocked the moment its dep B advances past `specd` to `ready` or `in_progress`, which is the opposite of the intended behaviour.
+- [ ] Remove the duplicate approach content. The full plan is already written as `####` subsections under `### Approach`; the identical content is repeated as top-level `###` sections below it. Delete the duplicates.
 
 ### Code review
 
