@@ -37,7 +37,11 @@ When using --force, it needs to be in interactive mode, asking the supervisor to
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Bypassing the state-mismatch guard (branch state vs. main state); run `apm sync` to reconcile first
+- Bypassing the modified-tracked-files guard; manual cleanup is still required for those
+- Bypassing the terminal-state filter; `--force` does not mean "clean all tickets regardless of state"
+- Deleting remote branches
+- Non-interactive (scriptable) force mode; `--force` always requires a human at the terminal
 
 ### Approach
 
