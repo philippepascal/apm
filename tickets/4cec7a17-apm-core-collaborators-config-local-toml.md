@@ -30,7 +30,15 @@ The desired state (design doc points 1–3) is:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `ProjectConfig` has a `collaborators: Vec<String>` field (default: empty) that parses from `[project] collaborators = ["alice", "bob"]` in `.apm/config.toml`
+- [ ] A `LocalConfig` struct with an optional `username` field loads from `.apm/local.toml`; if the file is absent, loading returns a default (no error)
+- [ ] `resolve_identity(repo_root)` returns the `username` from `.apm/local.toml` when present and non-empty, and returns `"unassigned"` otherwise
+- [ ] `apm new` sets `author` to the value returned by `resolve_identity` instead of `APM_AGENT_NAME`
+- [ ] `apm init` (interactive TTY) prompts "What is your username?", writes the answer to `.apm/local.toml` as `username = "..."`
+- [ ] `apm init` adds the entered username to `collaborators` in the newly created `.apm/config.toml`
+- [ ] `apm init` adds `.apm/local.toml` to `.gitignore`
+- [ ] `apm init` (non-interactive / no TTY) skips the username prompt and does not write `.apm/local.toml`
+- [ ] Existing ticket files with `agent = "..."` in frontmatter parse without error; new tickets written by `apm` do not include an `agent` field
 
 ### Out of scope
 
