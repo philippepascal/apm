@@ -36,7 +36,10 @@ This lets the workflow config express the intended policy once, without per-tick
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-ticket `completion` override in frontmatter
+- Any change to how `"pr"` or `"merge"` strategies behave
+- Squash or rebase merge options
+- Auto-transitioning after merge
 
 ### Approach
 
