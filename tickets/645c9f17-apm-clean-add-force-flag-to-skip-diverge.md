@@ -52,8 +52,8 @@ Four files change; changes are additive and do not touch non-force code paths.
 
 **`apm-core/src/clean.rs`**
 - Change `candidates(root, config)` to `candidates(root, config, force: bool)`.
-- When `force=true`, skip the two merge guards (lines 127-130 and 132-140: not-merged check and is-ancestor check).
-- When `force=true`, skip the divergence guard (lines 179-187).
+- When `force=true`, skip the not-merged check and the is-ancestor check.
+- When `force=true`, skip the divergence guard.
 - When `force=true` and the worktree is dirty (but has no `modified_tracked` files), add the ticket as a normal `CleanCandidate` instead of pushing to `dirty_result`; the force-remove will handle the dirty state. Tickets with `modified_tracked` files still go to `dirty_result` regardless.
 - Change `remove(root, candidate)` to `remove(root, candidate, force: bool)`; pass `force` through to `remove_worktree`.
 
@@ -74,6 +74,7 @@ Four files change; changes are additive and do not touch non-force code paths.
 - `clean_force_removes_diverged_worktree` — ticket closed, local tip ahead of origin, dirty worktree; `--force` removes it.
 - `clean_force_still_skips_non_terminal` — a ticket in `in_progress` state; `--force` does not touch it.
 - `clean_force_dry_run_shows_unmerged` — `--force --dry-run` prints "would remove" for an unmerged branch without modifying anything.
+- `clean_force_skips_modified_tracked` — ticket closed but worktree has modified tracked files; `--force` does not remove it.
 
 **Order of changes:** git.rs → clean.rs → cmd/clean.rs → main.rs → tests.
 
