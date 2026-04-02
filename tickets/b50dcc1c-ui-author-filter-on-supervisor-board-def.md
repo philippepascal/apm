@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/b50dcc1c-ui-author-filter-on-supervisor-board-def"
+depends_on = ["90ebf40b", "e2e3d958", "70d58b2d"]
 created_at = "2026-04-02T20:54:34.590380Z"
 updated_at = "2026-04-02T20:54:34.590380Z"
 epic = "8db73240"
