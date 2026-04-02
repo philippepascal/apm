@@ -1,14 +1,15 @@
 +++
 id = "7c570510"
 title = "UI: supervisor panel should poll for ticket updates to stay fresh"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/7c570510-ui-supervisor-panel-should-poll-for-tick"
 created_at = "2026-04-02T18:24:16.100111Z"
-updated_at = "2026-04-02T19:19:04.673987Z"
+updated_at = "2026-04-02T19:19:30.815976Z"
 +++
 
 ## Spec
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T18:24Z | — | new | apm |
 | 2026-04-02T19:19Z | new | groomed | apm |
+| 2026-04-02T19:19Z | groomed | in_design | philippepascal |
