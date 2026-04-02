@@ -3,13 +3,13 @@ id = "645c9f17"
 title = "apm clean: add --force flag to skip divergence and merge checks for closed tickets"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 agent = "56092"
 branch = "ticket/645c9f17-apm-clean-add-force-flag-to-skip-diverge"
 created_at = "2026-04-02T05:35:39.235404Z"
-updated_at = "2026-04-02T17:09:19.087314Z"
+updated_at = "2026-04-02T17:12:43.188901Z"
 +++
 
 ## Spec
