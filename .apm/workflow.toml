@@ -23,6 +23,7 @@ label        = "Groomed"
 color        = "#6366f1"
 layer        = 1
 actionable   = ["agent"]
+dep_requires = "spec"
 instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
@@ -54,11 +55,12 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "specd"
-label      = "Specd"
-color      = "#3b82f6"
-layer      = 1
-actionable = ["supervisor"]
+id             = "specd"
+label          = "Specd"
+color          = "#3b82f6"
+layer          = 1
+actionable     = ["supervisor"]
+satisfies_deps = "spec"
 
   [[workflow.states.transitions]]
   to           = "ready"
@@ -77,12 +79,13 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id           = "ammend"
-label        = "Ammend"
-color        = "#ef4444"
-layer        = 1
-actionable   = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
+id             = "ammend"
+label          = "Ammend"
+color          = "#ef4444"
+layer          = 1
+actionable     = ["agent"]
+satisfies_deps = "spec"
+instructions   = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to            = "specd"
@@ -134,12 +137,13 @@ instructions = ".apm/apm.spec-writer.md"
   actor   = "supervisor"
 
 [[workflow.states]]
-id           = "ready"
-label        = "Ready"
-color        = "#10b981"
-layer        = 1
-actionable   = ["agent"]
-instructions = ".apm/apm.worker.md"
+id             = "ready"
+label          = "Ready"
+color          = "#10b981"
+layer          = 1
+actionable     = ["agent"]
+satisfies_deps = "spec"
+instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -162,11 +166,12 @@ instructions = ".apm/apm.worker.md"
   actor   = "supervisor"
 
 [[workflow.states]]
-id           = "in_progress"
-label        = "In Progress"
-color        = "#8b5cf6"
-layer        = 2
-instructions = ".apm/apm.worker.md"
+id             = "in_progress"
+label          = "In Progress"
+color          = "#8b5cf6"
+layer          = 2
+satisfies_deps = "spec"
+instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to         = "implemented"
