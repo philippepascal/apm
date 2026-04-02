@@ -1,7 +1,7 @@
 +++
 id = "c1ff90de"
 title = "Add depends_on scheduling to engine dispatch loop"
-state = "in_progress"
+state = "implemented"
 priority = 8
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "77015"
 branch = "ticket/c1ff90de-add-depends-on-scheduling-to-engine-disp"
 created_at = "2026-04-01T21:55:02.787625Z"
-updated_at = "2026-04-02T03:16:11.248340Z"
+updated_at = "2026-04-02T03:24:59.998681Z"
 +++
 
 ## Spec
@@ -106,3 +106,4 @@ Integration test in `apm/tests/integration.rs`:
 | 2026-04-02T01:41Z | in_design | specd | claude-0402-0200-spec1 |
 | 2026-04-02T02:28Z | specd | ready | apm |
 | 2026-04-02T03:16Z | ready | in_progress | philippepascal |
+| 2026-04-02T03:24Z | in_progress | implemented | claude-0402-0316-w7k2 |
