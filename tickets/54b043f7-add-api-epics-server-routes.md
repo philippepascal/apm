@@ -1,7 +1,7 @@
 +++
 id = "54b043f7"
 title = "Add /api/epics server routes"
-state = "in_design"
+state = "specd"
 priority = 4
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "35861"
 branch = "ticket/54b043f7-add-api-epics-server-routes"
 created_at = "2026-04-01T21:55:53.796830Z"
-updated_at = "2026-04-02T01:45:27.478279Z"
+updated_at = "2026-04-02T01:45:33.751765Z"
 +++
 
 ## Spec
@@ -303,3 +303,4 @@ Full round-trip tests (branch creation + list + get) require a real git repo; us
 | 2026-04-02T00:57Z | in_design | specd | claude-0402-0055-spec1 |
 | 2026-04-02T01:37Z | specd | ammend | philippepascal |
 | 2026-04-02T01:42Z | ammend | in_design | philippepascal |
+| 2026-04-02T01:45Z | in_design | specd | claude-0402-0200-spec2 |
