@@ -45,7 +45,37 @@ When using --force, it needs to be in interactive mode, asking the supervisor to
 
 ### Approach
 
-How the implementation will work.
+Four files change; changes are additive and do not touch non-force code paths.
+
+**`apm-core/src/git.rs`**
+- Change `remove_worktree(root, wt_path)` to `remove_worktree(root, wt_path, force: bool)`; when `force` is true append `"--force"` to the `git worktree remove` args. Update the one existing call site in `clean.rs` to pass `false`.
+
+**`apm-core/src/clean.rs`**
+- Change `candidates(root, config)` to `candidates(root, config, force: bool)`.
+- When `force=true`, skip the two merge guards (lines 127-130 and 132-140: not-merged check and is-ancestor check).
+- When `force=true`, skip the divergence guard (lines 179-187).
+- When `force=true` and the worktree is dirty (but has no `modified_tracked` files), add the ticket as a normal `CleanCandidate` instead of pushing to `dirty_result`; the force-remove will handle the dirty state. Tickets with `modified_tracked` files still go to `dirty_result` regardless.
+- Change `remove(root, candidate)` to `remove(root, candidate, force: bool)`; pass `force` through to `remove_worktree`.
+
+**`apm/src/cmd/clean.rs`**
+- Change `run(root, dry_run, yes)` to `run(root, dry_run, yes, force: bool)`.
+- Pass `force` to `clean::candidates` and `clean::remove`.
+- When `force=true`, always prompt interactively for each `CleanCandidate` regardless of `yes` flag. Use stderr to print a warning line before the prompt (e.g. `"warning: force-removing {branch} — branch may not be merged"`). Accept `y`/`Y` to proceed, anything else skips.
+- When `force=true` and not a terminal (no TTY), print an error and return early: `"error: --force requires an interactive terminal"`.
+- `--force --dry-run` prints the same "would remove …" lines as without force, no prompts needed.
+
+**`apm/src/main.rs`**
+- Add `#[arg(long)] force: bool` to the `Clean` variant (with doc comment: "Bypass merge and divergence checks; always prompts before each removal").
+- Update the `long_about` string to document `apm clean --force`.
+- Pass `force` to `cmd::clean::run`.
+
+**Tests** (`apm/tests/integration.rs`)
+- `clean_force_removes_unmerged_branch` — ticket closed but branch never merged; `--force` removes it after confirming.
+- `clean_force_removes_diverged_worktree` — ticket closed, local tip ahead of origin, dirty worktree; `--force` removes it.
+- `clean_force_still_skips_non_terminal` — a ticket in `in_progress` state; `--force` does not touch it.
+- `clean_force_dry_run_shows_unmerged` — `--force --dry-run` prints "would remove" for an unmerged branch without modifying anything.
+
+**Order of changes:** git.rs → clean.rs → cmd/clean.rs → main.rs → tests.
 
 ### Open questions
 
