@@ -39,7 +39,44 @@ Tickets that belong to an epic are managed at the epic level. For the supervisor
 
 ### Approach
 
-How the implementation will work.
+Two files change; no server changes required.
+
+**1. `apm-ui/src/store/useLayoutStore.ts`**
+- Add `showEpicTickets: boolean` field, defaulting to `false`
+- Add `setShowEpicTickets: (v: boolean) => void` setter
+
+**2. `apm-ui/src/components/supervisor/SupervisorView.tsx`**
+
+*Read the store value:*
+```ts
+const showEpicTickets = useLayoutStore((s) => s.showEpicTickets)
+const setShowEpicTickets = useLayoutStore((s) => s.setShowEpicTickets)
+```
+
+*Extend the `columns` useMemo filter block* (after the existing epicFilter block):
+```ts
+// hide epic-member tickets unless the toggle is on or we are already
+// scoped to a specific epic
+if (!showEpicTickets && epicFilter === null) {
+  filtered = filtered.filter((t) => t.epic == null)
+}
+```
+Add `showEpicTickets` to the dependency array.
+
+*Add the checkbox to the filter bar* (next to the existing "Show closed" label):
+```tsx
+<label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+  <input
+    type="checkbox"
+    checked={showEpicTickets}
+    onChange={(e) => setShowEpicTickets(e.target.checked)}
+    className="rounded"
+  />
+  Show epic tickets
+</label>
+```
+
+No tests are needed beyond manual verification — this is a purely presentational filter with no business logic to unit-test. The existing integration test suite does not cover UI components.
 
 ### Open questions
 
