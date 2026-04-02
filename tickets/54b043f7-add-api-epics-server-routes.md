@@ -47,7 +47,12 @@ Epic state is derived on demand from the states of associated tickets (those who
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic` CLI subcommands (`epic new`, `epic list`, `epic show`, `epic close`) — CLI is a separate concern
+- Adding `epic`, `target_branch`, `depends_on` to `POST /api/tickets` / `CreateTicketRequest`
+- Work engine exclusive-epic scheduling (`POST /api/work/start` with `epic` field)
+- UI changes (queue epic column, supervisor board filter, engine epic selector)
+- `depends_on` scheduling enforcement in the work engine
+- `apm new --epic` CLI flag
 
 ### Approach
 
