@@ -35,7 +35,14 @@ The `epic` field does not yet exist on `Frontmatter` (apm-core) or `QueueEntry` 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Supervisor board epic filter (separate ticket per docs/epics.md)
+- Engine controls epic selector (separate ticket per docs/epics.md)
+- Ticket card lock icon for unresolved `depends_on` (separate ticket)
+- New ticket modal epic dropdown (separate ticket)
+- Ticket detail panel epic/depends_on display (separate ticket)
+- `GET /api/epics` route (not needed here; epic list is derived from queue data)
+- `depends_on` and `target_branch` frontmatter fields (not needed for this ticket)
+- Persisting the epic filter selection across page reloads
 
 ### Approach
 
