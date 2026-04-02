@@ -43,37 +43,43 @@ The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop 
 
 This ticket depends on d877bd37 landing first (adds `depends_on: Option<Vec<String>>` to `Frontmatter`).
 
-**1. Add `is_implemented_or_later` helper — `apm-core/src/ticket.rs`**
+**1. Add `satisfies_deps` to `StateConfig` — `apm-core/src/config.rs`**
 
-Add a pub function that takes `state: &str` and `states: &[crate::config::StateConfig]` and returns `bool`. It returns `true` if: (a) the state has `terminal = true`, or (b) the state's position in the list is >= the position of `"implemented"`. Returns `false` if the state is unknown.
+Add a `satisfies_deps: bool` field (default `false`) to `StateConfig`, annotated with `#[serde(default)]`. This field signals that tickets in this state are considered "done enough" to unblock dependents. It is set independently of `terminal`; both flags independently satisfy the check.
 
-**2. Extend `pick_next` signature — `apm-core/src/ticket.rs`**
+**2. Add `dep_satisfied` helper — `apm-core/src/ticket.rs`**
 
-Add `states: &[crate::config::StateConfig]` parameter after `startable`. Inside the existing `find` closure, add dep-block filtering: for each `dep_id` in `t.frontmatter.depends_on`, look up the dep ticket in `tickets`; if found and not `is_implemented_or_later`, the candidate is blocked (`return false`). Unknown dep IDs use `.unwrap_or(false)` — non-blocking.
+Add a pub function `dep_satisfied(state: &str, config: &Config) -> bool`. It looks up the state in `config.workflow.states` and returns `true` if the matching `StateConfig` has `satisfies_deps = true` OR `terminal = true`. Returns `false` if the state is unknown or neither flag is set. No state name string comparisons beyond the lookup key.
+
+**3. Extend `pick_next` signature — `apm-core/src/ticket.rs`**
+
+Add `config: &crate::config::Config` parameter after `startable`. Inside the existing `find` closure, add dep-block filtering: for each `dep_id` in `t.frontmatter.depends_on`, look up the dep ticket in `tickets`; if found, call `dep_satisfied(dep_state, config)`; if it returns `false`, the candidate is blocked (`return false`). Unknown dep IDs (ticket not found) are non-blocking.
 
 The existing iterator already tries candidates in score order; adding this filter means it naturally falls through to the next candidate.
 
-**3. Update call sites**
+**4. Update call sites**
 
 Three locations call `ticket::pick_next` — all have `config` in scope:
 
-- `apm-core/src/start.rs` line ~319 (non-aggressive `spawn_next_worker`): add `&config.workflow.states`
-- `apm-core/src/start.rs` line ~474 (main `spawn_next_worker`): add `&config.workflow.states`
-- `apm/src/cmd/next.rs` line ~20: add `&config.workflow.states`
+- `apm-core/src/start.rs` line ~319 (non-aggressive `spawn_next_worker`): add `&config`
+- `apm-core/src/start.rs` line ~474 (main `spawn_next_worker`): add `&config`
+- `apm/src/cmd/next.rs` line ~20: add `&config`
 
-**4. Tests**
+**5. Tests**
 
 Unit tests in `apm-core/src/ticket.rs`:
-- `is_implemented_or_later` returns `true` for `implemented`, for a state after it in the list, and for any `terminal = true` state
-- `is_implemented_or_later` returns `false` for states before `implemented`
+- `dep_satisfied` returns `true` for a state with `satisfies_deps = true`
+- `dep_satisfied` returns `true` for a state with `terminal = true` (even if `satisfies_deps = false`)
+- `dep_satisfied` returns `false` for a state with both flags `false`
+- `dep_satisfied` returns `false` for an unknown state name
 - `pick_next` skips a dep-blocked ticket and returns the next unblocked one
-- `pick_next` returns a ticket once its dep is at `implemented`
+- `pick_next` returns a ticket once its dep reaches a `satisfies_deps = true` state
 - `pick_next` does not skip a ticket with an unknown dep ID
 - `pick_next` does not skip a ticket with an empty `depends_on` list
 
 Integration test in `apm/tests/integration.rs`:
 - Set up two tickets (A in `ready`, B in `ready` with `depends_on = [A.id]`); `apm next` returns A
-- After A is transitioned to `implemented`, `apm next` returns B
+- After A is transitioned to a `satisfies_deps = true` state, `apm next` returns B
 
 ### Open questions
 
