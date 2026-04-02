@@ -1,15 +1,15 @@
 +++
 id = "0d4bce06"
 title = "Implement apm epic show command"
-state = "ammend"
+state = "in_design"
 priority = 6
 effort = 4
 risk = 3
 author = "claude-0401-2145-a8f3"
-agent = "7772"
+agent = "philippepascal"
 branch = "ticket/0d4bce06-implement-apm-epic-show-command"
 created_at = "2026-04-01T21:55:14.006927Z"
-updated_at = "2026-04-02T01:37:14.017566Z"
+updated_at = "2026-04-02T01:40:41.760651Z"
 +++
 
 ## Spec
@@ -156,3 +156,4 @@ Unit tests in apm-core/src/epic.rs:
 | 2026-04-02T00:47Z | groomed | in_design | philippepascal |
 | 2026-04-02T00:52Z | in_design | specd | claude-0402-0050-s7w2 |
 | 2026-04-02T01:37Z | specd | ammend | philippepascal |
+| 2026-04-02T01:40Z | ammend | in_design | philippepascal |
