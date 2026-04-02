@@ -16,7 +16,7 @@ updated_at = "2026-04-02T17:05:42.504353Z"
 
 ### Problem
 
-it seems to be looking for the wrong file name
+The `apm agents` command reads the agents instructions file path from `[agents] instructions` in `.apm/config.toml`. During the migration that moved the agents file from `apm.agents.md` (repo root) to `.apm/agents.md`, the path stored in `.apm/config.toml` was not updated. As a result, running `apm agents` fails with a "No such file or directory" error because the old filename `apm.agents.md` no longer exists.\n\nThe agents instructions file is the single source of truth for agent behaviour in a project. When `apm agents` is broken, users cannot inspect or validate what instructions agents are operating under, and any tooling that pipes `apm agents` output into system prompts also fails.
 
 ### Acceptance criteria
 
@@ -33,12 +33,12 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
