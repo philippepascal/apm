@@ -113,9 +113,9 @@ Add to component reads: `epicFilter` and `setEpicFilter` from layout store.
 
 **Depends on row** — render below the epic row, only when `data.depends_on?.length` is truthy:
 - Label "Depends on"
-- Build a set of unresolved dep IDs: `const blockingSet = new Set((data.blocking_deps ?? []).map(d => d.id))`
+- Build a set of blocking dep IDs: `const blockingSet = new Set((data.blocking_deps ?? []).map(d => d.id))`
 - For each dep ID, look it up in the React Query cache via `useQueryClient().getQueryData<Ticket[]>(['tickets'])` to determine if it is a known ticket
-- If found: render a `<button>` that calls `setSelectedTicketId(fullId)`. Apply `line-through` class if the dep ID is **absent** from `blockingSet` (i.e. it is resolved)
+- If found: render a `<button>` that calls `setSelectedTicketId(fullId)`. Apply `line-through` class if the dep ID is **absent** from `blockingSet` (i.e. it is resolved — not blocking)
 - If not found: render the raw ID as plain text (no crash)
 - Use the existing `useQueryClient` import; do not add a new `useQuery` call
 
