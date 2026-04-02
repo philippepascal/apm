@@ -24,13 +24,13 @@ The desired behaviour: each column's own header contains its minimize button; wh
 
 ### Acceptance criteria
 
-- [ ] Each column header (Workers, Board, Detail) contains a minimize button (icon-only) that collapses that column when clicked
-- [ ] Clicking the minimize button on an expanded column collapses it to a narrow strip
-- [ ] The narrow strip shows only the column's icon (Activity / Columns / FileText) aligned to the top-left
-- [ ] Clicking the icon in the collapsed strip re-expands the column
-- [ ] The top toolbar with the three global toggle buttons is removed
-- [ ] Columns that are collapsed via the handle (drag to zero) still show the icon strip and can be re-expanded by clicking it
-- [ ] All three columns (Workers, Board, Detail) behave consistently with this pattern
+- [x] Each column header (Workers, Board, Detail) contains a minimize button (icon-only) that collapses that column when clicked
+- [x] Clicking the minimize button on an expanded column collapses it to a narrow strip
+- [x] The narrow strip shows only the column's icon (Activity / Columns / FileText) aligned to the top-left
+- [x] Clicking the icon in the collapsed strip re-expands the column
+- [x] The top toolbar with the three global toggle buttons is removed
+- [x] Columns that are collapsed via the handle (drag to zero) still show the icon strip and can be re-expanded by clicking it
+- [x] All three columns (Workers, Board, Detail) behave consistently with this pattern
 
 ### Out of scope
 
