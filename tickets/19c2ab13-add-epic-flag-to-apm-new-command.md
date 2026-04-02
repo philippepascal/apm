@@ -15,7 +15,9 @@ updated_at = "2026-04-01T21:59:55.944656Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Currently `apm new` always creates tickets branching from `main`. For tickets that belong to an epic, the ticket branch must instead be created from the epic branch tip, and the frontmatter must carry `epic` and `target_branch` so `apm start` and the PR creation step know where to target.
+
+The full design is in `docs/epics.md` (§ Commands — `apm new --epic`). The flag pre-fills `epic`, `target_branch` (resolved from the epic branch name), and optionally `depends_on`. The ticket branch is created from the epic branch tip rather than `main`. Without this flag, `apm new` behaviour is unchanged.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
