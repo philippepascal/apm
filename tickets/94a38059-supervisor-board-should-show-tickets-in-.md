@@ -1,7 +1,7 @@
 +++
 id = "94a38059"
 title = "Supervisor board should show tickets in new state"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "50942"
 branch = "ticket/94a38059-supervisor-board-should-show-tickets-in-"
 created_at = "2026-04-02T03:17:21.639407Z"
-updated_at = "2026-04-02T17:00:21.995712Z"
+updated_at = "2026-04-02T17:00:51.309786Z"
 +++
 
 ## Spec
@@ -78,3 +78,4 @@ No other files need changing. `SupervisorView.tsx`, `Swimlane.tsx`, and `TicketC
 | 2026-04-02T03:17Z | — | new | apm |
 | 2026-04-02T16:56Z | new | groomed | apm |
 | 2026-04-02T16:58Z | groomed | in_design | philippepascal |
+| 2026-04-02T17:00Z | in_design | specd | claude-0402-1700-s4w1 |
