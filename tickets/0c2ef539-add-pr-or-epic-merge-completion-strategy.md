@@ -1,14 +1,15 @@
 +++
 id = "0c2ef539"
 title = "Add pr_or_epic_merge completion strategy"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
+agent = "philippepascal"
 branch = "ticket/0c2ef539-add-pr-or-epic-merge-completion-strategy"
 created_at = "2026-04-02T00:38:36.244478Z"
-updated_at = "2026-04-02T02:29:28.669395Z"
+updated_at = "2026-04-02T07:06:40.703103Z"
 +++
 
 ## Spec
@@ -88,3 +89,4 @@ CompletionStrategy::PrOrEpicMerge => {
 | 2026-04-02T00:41Z | specd | ready | apm |
 | 2026-04-02T00:42Z | ready | specd | apm |
 | 2026-04-02T02:29Z | specd | ready | apm |
+| 2026-04-02T07:06Z | ready | in_progress | philippepascal |
