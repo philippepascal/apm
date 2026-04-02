@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/553ec190-apm-list-add-mine-and-author-flags-for-f"
+depends_on = ["610be42e"]
 created_at = "2026-04-02T20:54:04.874772Z"
 updated_at = "2026-04-02T20:54:04.874772Z"
 epic = "8db73240"
