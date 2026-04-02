@@ -41,7 +41,15 @@ External devices (phone, remote laptop) are the primary audience. Localhost requ
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- WebAuthn registration ceremony — ticket 8a08637c
+- OTP generation and session/OTP infrastructure — ticket e2e3d958
+- `apm register <username>` CLI command — separate ticket
+- `apm sessions` and `apm revoke` CLI commands — separate ticket
+- Auth enforcement on existing API routes (all existing routes remain publicly accessible) — separate ticket
+- Redirect-on-unauthenticated: when a remote client hits a non-login route without a session, no redirect is issued (enforcement is deferred)
+- TLS termination — handled by apm-proxy
+- Attestation or authenticator policy — any stored passkey is accepted for assertion
+- Multi-device login UI (the login page asks only for username; the browser selects the matching credential automatically via allowCredentials)
 
 ### Approach
 
