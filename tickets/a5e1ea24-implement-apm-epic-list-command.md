@@ -1,15 +1,15 @@
 +++
 id = "a5e1ea24"
 title = "Implement apm epic list command"
-state = "ammend"
+state = "in_design"
 priority = 6
 effort = 4
 risk = 2
 author = "claude-0401-2145-a8f3"
-agent = "26851"
+agent = "philippepascal"
 branch = "ticket/a5e1ea24-implement-apm-epic-list-command"
 created_at = "2026-04-01T21:55:09.722953Z"
-updated_at = "2026-04-02T02:03:10.849788Z"
+updated_at = "2026-04-02T02:11:23.055497Z"
 +++
 
 ## Spec
@@ -133,3 +133,4 @@ Integration test in `apm/tests/integration.rs`: temp git repo with two fake `epi
 | 2026-04-02T01:56Z | ammend | in_design | philippepascal |
 | 2026-04-02T01:57Z | in_design | specd | claude-0402-0156-3680 |
 | 2026-04-02T02:03Z | specd | ammend | apm |
+| 2026-04-02T02:11Z | ammend | in_design | philippepascal |
