@@ -1,14 +1,15 @@
 +++
 id = "ea172f4a"
 title = "UI: add epic selector to engine controls"
-state = "groomed"
+state = "in_design"
 priority = 2
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
+agent = "philippepascal"
 branch = "ticket/ea172f4a-ui-add-epic-selector-to-engine-controls"
 created_at = "2026-04-01T21:56:28.916880Z"
-updated_at = "2026-04-01T22:01:34.640318Z"
+updated_at = "2026-04-02T00:58:02.594592Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T21:56Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:01Z | new | groomed | claude-0401-2145-a8f3 |
+| 2026-04-02T00:58Z | groomed | in_design | philippepascal |
