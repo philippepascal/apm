@@ -45,44 +45,52 @@ The problem has two parts: (1) the UI omits the value entirely, and (2) even if 
 
 ### Approach
 
-Backend — new apm-server/src/agents.rs
+**Backend — apm-server/src/agents.rs (new file)**
 
-1. Add GET /api/agents/config handler:
-   - Load Config from state.git_root() (same pattern as post_work_start)
-   - Return {"max_concurrent": config.agents.max_concurrent.max(1)}
-   - When git_root is None (in-memory), return the compiled-in default (3)
+1. Add `max_concurrent_override: Arc<Mutex<Option<usize>>>` field to `AppState` in main.rs, initialized to `None`.
 
-2. Add PATCH /api/agents/config handler:
-   - Accept {"max_concurrent": usize}; return 422 if value < 1
-   - Resolve config file path: .apm/config.toml if it exists, else apm.toml
-   - Read the file as a toml::Value, set value["agents"]["max_concurrent"] to the new integer,
-     serialize with toml::to_string_pretty, overwrite the file
-   - If the [agents] table does not exist yet, insert it
-   - Return {"max_concurrent": N} on success
+2. Add `GET /api/agents/config` handler:
+   - Load `Config` from `state.git_root()` (same pattern as `post_work_start`)
+   - Read `state.max_concurrent_override` from the mutex
+   - Return `{"max_concurrent": N, "override": override_or_null}`
+   - When `git_root` is `None` (in-memory mode), return the compiled-in default (3)
 
-3. Register routes in build_app() in main.rs:
-     .route("/api/agents/config", get(agents::get_agents_config).patch(agents::patch_agents_config))
+3. Add `PATCH /api/agents/config` handler:
+   - Accept `{"override": usize}`; return 422 if value < 1
+   - Write the value into `state.max_concurrent_override` (no disk write)
+   - Return `{"max_concurrent": N, "override": N}` on success
 
-4. Add unit tests in agents.rs:
-   - GET with no git root returns default (3)
-   - PATCH persists value and GET returns updated value afterward
+4. Update `post_work_start` in work.rs:
+   - After loading config, read `state.max_concurrent_override`
+   - Use override if `Some(n)`, otherwise use `config.agents.max_concurrent.max(1)`
+   - Same change needed in `get_work_dry_run` which also reads `max_concurrent`
+
+5. Register routes in `build_app()` in main.rs:
+   `.route("/api/agents/config", get(agents::get_agents_config).patch(agents::patch_agents_config))`
+
+6. Add unit tests in agents.rs:
+   - GET with no override returns configured default (3)
+   - PATCH stores override; subsequent GET returns updated override
    - PATCH with 0 returns 422
+   - POST /api/work/start uses override when set
 
-Frontend — apm-ui/src/components/WorkEngineControls.tsx
+**Frontend — apm-ui/src/components/WorkEngineControls.tsx**
 
-1. Add fetchAgentsConfig: GET /api/agents/config -> {max_concurrent: number}
-2. Add patchAgentsConfig(n): PATCH /api/agents/config with body {max_concurrent: n}
-3. Add useQuery(['agents-config'], fetchAgentsConfig)
-4. Add useMutation that calls patchAgentsConfig and invalidates ['agents-config'] on success
-5. Render an InlineNumberField (label="workers", min=1, max=99) in the existing flex row:
-   - When isEngineActive, render as read-only plain text (label + value, no click target)
-   - When engine is stopped, onCommit fires the mutation
+1. Add `fetchAgentsConfig`: `GET /api/agents/config -> {max_concurrent: number, override: number | null}`
+2. Add `patchAgentsConfig(n)`: `PATCH /api/agents/config` with body `{override: n}`
+3. Add `useQuery(['agents-config'], fetchAgentsConfig)`
+4. Add `useMutation` that calls `patchAgentsConfig` and invalidates `['agents-config']` on success
+5. Render in the existing flex row:
+   - Always: read-only label showing configured `max_concurrent` (e.g. "config: 3")
+   - Effective value using `InlineNumberField` (label="workers", min=1, max=99):
+     - When engine is stopped: editable; `onCommit` fires the mutation
+     - When engine is running or idle: rendered as read-only plain text (no click target)
+   - Effective value = `override ?? max_concurrent`
 
-Key constraints:
-- toml::Value round-trip will reformat the config file (comments and key ordering lost).
-  This is acceptable — the config is machine-managed.
-- No new crate dependencies needed; toml is already in the workspace.
-- InlineNumberField is already implemented — do not duplicate it.
+**Key constraints:**
+- No disk writes — the override is purely in-memory `AppState`
+- `InlineNumberField` already exists in `apm-ui/src/components/InlineNumberField.tsx` — do not duplicate it
+- No new crate dependencies needed
 
 ### Open questions
 
