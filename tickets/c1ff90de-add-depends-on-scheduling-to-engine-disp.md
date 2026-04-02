@@ -28,7 +28,7 @@ The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop 
 - [x] A `depends_on` entry whose ID does not match any known ticket is treated as non-blocking (the candidate is not skipped due to that entry)
 - [x] A ticket with an empty `depends_on = []` is treated identically to a ticket with no `depends_on` field
 - [x] `apm next` skips dep-blocked tickets by the same rule — it returns the highest-scoring ticket whose deps are all satisfied
-- [ ] The dep-blocking check is driven entirely by `satisfies_deps` and `terminal` config flags — no state name is compared by string in the implementation
+- [x] The dep-blocking check is driven entirely by `satisfies_deps` and `terminal` config flags — no state name is compared by string in the implementation
 
 ### Out of scope
 
