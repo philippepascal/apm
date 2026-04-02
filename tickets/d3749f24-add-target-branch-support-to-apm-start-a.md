@@ -28,7 +28,7 @@ The `target_branch` field does not yet exist on the `Frontmatter` struct in `apm
 - [x] When a ticket has no `target_branch` field, `apm start <id>` behaves identically to before this change
 - [x] When a ticket has `target_branch` set and `apm state <id> implemented` is called, the PR is created with `--base epic/abc` (the target branch), not with `--base main`
 - [x] When a ticket has no `target_branch` field and `apm state <id> implemented` is called, the PR is created with `--base main` (the default branch) as before
-- [ ] The `Frontmatter` struct round-trips a ticket file that contains `target_branch` without data loss
+- [x] The `Frontmatter` struct round-trips a ticket file that contains `target_branch` without data loss
 - [ ] The `Frontmatter` struct round-trips a ticket file that does not contain `target_branch` without adding the field to the serialised output
 
 ### Out of scope
