@@ -19,7 +19,11 @@ depends_on = ["610be42e"]
 
 ### Problem
 
-The server's ticket API responses do not include the `author` field. The UI cannot implement author filtering or display ticket ownership without it. See `initial_specs/DESIGN-users.md` points 1 and 8.
+The `author` field exists in `Frontmatter` but is declared `#[serde(skip_serializing_if = "Option::is_none")]`. Tickets that lack an `author` value (e.g. created before ticket #610be42e lands, or test fixtures) produce JSON responses with no `author` key at all. The UI cannot reliably read, display, or filter by ticket ownership when the field may be absent.
+
+Two additional gaps compound this: (1) `GET /api/tickets` has no `author` query parameter, so the UI must download and filter all tickets client-side; (2) there is no `GET /api/me` endpoint, so the supervisor board cannot know whose tickets to show by default.
+
+Together these gaps block the supervisor-board author filter and the per-author default view described in DESIGN-users.md points 1 and 8.
 
 ### Acceptance criteria
 
