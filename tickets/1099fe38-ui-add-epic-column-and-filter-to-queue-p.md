@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:56:57.977427Z"
 
 ### Problem
 
-The queue panel shows tickets without any grouping or filtering by epic. When multiple epics are in flight, all tickets are mixed together and there is no way to focus on a single epic's work queue.
+The queue panel table in `PriorityQueuePanel.tsx` shows tickets without any indication of which epic they belong to, and provides no way to filter by epic. When multiple epics are in flight, tickets from all epics are interleaved and there is no way to focus on a single epic's work queue.
 
-The full design is in `docs/epics.md` (§ apm-ui changes — Queue panel). Add an **Epic** column showing the short epic ID or "—" for free tickets. Add an epic filter dropdown following the same pattern as the existing state filter — selecting an epic hides tickets from other epics.
+The fix is two additive changes to the queue panel: (1) an **Epic** column that shows the short 8-char epic ID for tickets inside an epic, or "—" for free tickets; and (2) an epic filter dropdown that hides tickets not belonging to the selected epic.
+
+The `epic` field does not yet exist on `Frontmatter` (apm-core) or `QueueEntry` (apm-server), so both must be extended. The UI change is purely additive — no existing columns or interactions change.
 
 ### Acceptance criteria
 
