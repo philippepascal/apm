@@ -41,20 +41,55 @@ The desired behaviour (per `docs/epics.md` § "Ticket cards") is: cards where `d
 
 ### Approach
 
-**1. `apm-core/src/ticket.rs` — add `depends_on` to `Frontmatter`**
+**1. `apm-core/src/config.rs` — add `satisfies_deps` to `StateConfig`**
 
-Add below `focus_section`:
+Add a new field after `terminal`:
 
 ```rust
-#[serde(default, skip_serializing_if = "Vec::is_empty")]
-pub depends_on: Vec<String>,
+#[serde(default)]
+pub satisfies_deps: bool,
 ```
 
-Using `Vec` (not `Option<Vec>`) with `#[serde(default)]` means absent fields deserialise to an empty vec and existing tickets without the field are unaffected.
+A dependency is resolved when its state has `satisfies_deps || terminal` set to `true`.
 
 ---
 
-**2. `apm-server/src/main.rs` — expose `blocking_deps` in the API**
+**2. `.apm/workflow.toml` — mark states that satisfy deps**
+
+Add `satisfies_deps = true` to the `implemented` and `closed` state entries:
+
+```toml
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+...
+
+[[workflow.states]]
+id             = "closed"
+terminal       = true
+satisfies_deps = true
+...
+```
+
+(`closed` already has `terminal = true`; adding `satisfies_deps` makes the intent explicit.)
+
+---
+
+**3. `apm-core/src/ticket.rs` — add `depends_on` to `Frontmatter`**
+
+Add after `focus_section`, consistent with surrounding `Option<…>` fields:
+
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub depends_on: Option<Vec<String>>,
+```
+
+`Option<Vec<String>>` matches the pattern used by `author`, `agent`, `branch`, etc. Absent `depends_on` deserialises to `None`; existing tickets are unaffected.
+
+---
+
+**4. `apm-server/src/main.rs` — expose `blocking_deps` in the API**
 
 Add a serialisable struct above `TicketResponse`:
 
@@ -72,23 +107,39 @@ Add the field to `TicketResponse`:
 blocking_deps: Vec<BlockingDep>,
 ```
 
-In `list_tickets`, build a state lookup map before the `.map()` call:
+In `list_tickets`, load config and derive the resolved-state set before the `.map()`:
+
+```rust
+let resolved_ids: Vec<String> = match state.git_root() {
+    Some(root) => {
+        let cfg = apm_core::config::Config::load(root)?;
+        cfg.workflow.states.into_iter()
+            .filter(|s| s.satisfies_deps || s.terminal)
+            .map(|s| s.id)
+            .collect()
+    }
+    None => vec![],
+};
+let resolved: std::collections::HashSet<&str> =
+    resolved_ids.iter().map(|s| s.as_str()).collect();
+```
+
+Then build a state lookup map and compute `blocking_deps` per ticket:
 
 ```rust
 let state_map: std::collections::HashMap<&str, &str> = tickets
     .iter()
     .map(|t| (t.frontmatter.id.as_str(), t.frontmatter.state.as_str()))
     .collect();
-```
 
-Then compute `blocking_deps` per ticket (resolved = `implemented`, `merged`, or `closed`):
-
-```rust
-const RESOLVED: &[&str] = &["implemented", "merged", "closed"];
-let blocking_deps = t.frontmatter.depends_on.iter()
+// inside .map(|t| { … })
+let blocking_deps = t.frontmatter.depends_on
+    .as_deref()
+    .unwrap_or(&[])
+    .iter()
     .filter_map(|dep_id| {
         state_map.get(dep_id.as_str()).and_then(|&s| {
-            if RESOLVED.contains(&s) { None }
+            if resolved.contains(s) { None }
             else { Some(BlockingDep { id: dep_id.clone(), state: s.to_string() }) }
         })
     })
@@ -99,7 +150,7 @@ Unknown dep IDs (not in the map) are silently skipped.
 
 ---
 
-**3. `apm-ui/src/components/supervisor/types.ts` — extend `Ticket` interface**
+**5. `apm-ui/src/components/supervisor/types.ts` — extend `Ticket` interface**
 
 ```ts
 blocking_deps?: { id: string; state: string }[]
@@ -107,7 +158,7 @@ blocking_deps?: { id: string; state: string }[]
 
 ---
 
-**4. `apm-ui/src/components/supervisor/TicketCard.tsx` — render the lock icon**
+**6. `apm-ui/src/components/supervisor/TicketCard.tsx` — render the lock icon**
 
 Import `Lock` from `lucide-react`.
 
@@ -127,13 +178,15 @@ The native `title` attribute matches the pattern used by the existing `?` and `A
 
 ---
 
-**5. Tests**
+**7. Tests**
 
 Add a test in `apm-server/src/main.rs` (alongside `list_tickets_includes_badge_fields`) asserting:
 
-- A ticket with no `depends_on` has `blocking_deps: []`
-- A ticket whose dep is in `implemented` has `blocking_deps: []`
-- A ticket whose dep is in `in_progress` has `blocking_deps: [{id, state}]`
+- A ticket with no `depends_on` field has `blocking_deps: []`
+- A ticket whose dep is in a state with `satisfies_deps = true` has `blocking_deps: []`
+- A ticket whose dep is in a non-satisfies state (e.g. `in_progress`) has `blocking_deps: [{id, state}]`
+
+The test config must include at least one state with `satisfies_deps = true` (e.g., `implemented`).
 
 ### Open questions
 
