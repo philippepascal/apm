@@ -26,7 +26,7 @@ Two related pieces of infrastructure must land with this ticket because `apm epi
 
 ### Acceptance criteria
 
-- [ ] `apm epic show <id>` prints a header block with the epic title, branch name, and derived state
+- [x] `apm epic show <id>` prints a header block with the epic title, branch name, and derived state
 - [ ] `apm epic show <id>` prints a table of associated tickets, one row per ticket, showing: short ID, title, current state, assigned agent (or — if none), and `depends_on` entries (or — if none)
 - [ ] Tickets with no `epic` frontmatter field set to the epic's ID are not shown in the table
 - [ ] A 4-or-more character prefix that uniquely identifies one epic branch is accepted and resolves correctly
