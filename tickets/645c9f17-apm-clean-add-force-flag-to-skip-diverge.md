@@ -28,7 +28,7 @@ When using --force, it needs to be in interactive mode, asking the supervisor to
 
 - [x] `apm clean --force` removes the worktree and local branch for a closed ticket whose branch is not merged into main
 - [x] `apm clean --force` removes the worktree and local branch for a closed ticket whose local tip diverges from origin
-- [ ] `apm clean --force` uses `git worktree remove --force` for each worktree removal
+- [x] `apm clean --force` uses `git worktree remove --force` for each worktree removal
 - [ ] `apm clean --force` prompts for confirmation before each removal, even when `--yes` is also supplied
 - [ ] `apm clean --force` still skips tickets that are not in a terminal state
 - [ ] `apm clean --force` still skips tickets with a state mismatch between branch and main
