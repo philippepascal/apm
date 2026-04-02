@@ -28,7 +28,7 @@ When a state transition with `completion = "merge"` is executed (e.g. `apm state
 
 ### Approach
 
-How the implementation will work.
+Single change in one file:\n\n**`apm-core/src/state.rs`** — `merge_into_default` function (approx. lines 207–253)\n\nRemove the `git push origin <default_branch>` block (lines 242–249). The function already returns `Ok(())` after the merge; simply delete the push command and its error-handling branch.\n\nBefore:\n```rust\nlet push = std::process::Command::new("git")\n    .args(["push", "origin", default_branch])\n    .current_dir(&merge_dir)\n    .output()?;\n\nif !push.status.success() {\n    bail!("push failed: {}", String::from_utf8_lossy(&push.stderr).trim());\n}\n```\n\nAfter: *(lines deleted — nothing replaces them)*\n\nNo other files need to change. The integration test in `apm/tests/e2e.rs` may assert that main is pushed to origin after `apm state implemented`; if so, update the assertion to verify the push did NOT happen (or remove the push-verification step and replace it with a check that the local default branch contains the merge commit).
 
 ### Open questions
 
