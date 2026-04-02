@@ -4,12 +4,12 @@ title = "UI: move minimize buttons to column header, show icon in top-left only 
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "19457"
 branch = "ticket/62ffd590-ui-move-minimize-buttons-to-column-heade"
 created_at = "2026-04-02T18:22:08.087696Z"
-updated_at = "2026-04-02T18:26:38.012441Z"
+updated_at = "2026-04-02T18:26:45.004333Z"
 +++
 
 ## Spec
