@@ -1,14 +1,14 @@
 +++
 id = "e2e3d958"
 title = "apm-server: /api/me endpoint, OTP generation, session store, and localhost bypass"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/e2e3d958-apm-server-api-me-endpoint-otp-generatio"
 created_at = "2026-04-02T20:54:13.959036Z"
-updated_at = "2026-04-02T20:54:13.959036Z"
+updated_at = "2026-04-02T23:22:46.632826Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17", "90ebf40b"]
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
+| 2026-04-02T23:22Z | new | groomed | apm |
