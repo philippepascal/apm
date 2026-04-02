@@ -9,7 +9,7 @@ author = "apm-ui"
 agent = "30112"
 branch = "ticket/9b4d2c9c-ui-shows-configured-max-workers-and-allo"
 created_at = "2026-04-02T19:20:21.647921Z"
-updated_at = "2026-04-02T20:08:15.213372Z"
+updated_at = "2026-04-02T20:08:21.789341Z"
 +++
 
 ## Spec
