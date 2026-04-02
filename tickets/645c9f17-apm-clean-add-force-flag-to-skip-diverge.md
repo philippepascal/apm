@@ -15,7 +15,11 @@ updated_at = "2026-04-02T05:35:39.235404Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm clean` skips closed tickets in two cases: (1) the local branch tip differs from origin — this happens when `apm state <id> closed` commits to the ticket branch locally but the remote has diverged, or vice versa; (2) the ticket branch was never merged into main — this can happen when a ticket is force-closed without going through the normal implemented → closed path.
+
+Both guards are sensible defaults but become obstacles once a supervisor has verified the tickets are genuinely done and wants to reclaim worktree disk space. There is currently no way to override them short of manually running `git worktree remove --force <path>` and `git branch -D <branch>` for each ticket.
+
+A `--force` flag on `apm clean` should bypass both the divergence check and the merge check for closed tickets, running `git worktree remove --force` and deleting the local branch regardless. It should still only act on tickets in a terminal state — force does not mean "clean everything".
 
 ### Acceptance criteria
 
@@ -32,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
