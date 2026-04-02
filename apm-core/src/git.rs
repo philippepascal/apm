@@ -34,6 +34,26 @@ pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<Str
         .or_else(|_| run(root, &["show", &format!("origin/{branch}:{rel_path}")]))
 }
 
+/// Find a branch named `epic/<short_id>-*` locally or remotely.
+/// Returns the branch name (without `origin/` prefix) if found.
+pub fn find_epic_branch(root: &Path, short_id: &str) -> Option<String> {
+    let pattern = format!("epic/{short_id}-*");
+    let local = run(root, &["branch", "--list", &pattern]).ok()?;
+    for b in local.lines().map(|l| l.trim().trim_start_matches(['*', '+']).trim()) {
+        if !b.is_empty() {
+            return Some(b.to_string());
+        }
+    }
+    let remote_pattern = format!("origin/epic/{short_id}-*");
+    let remote = run(root, &["branch", "-r", "--list", &remote_pattern]).ok()?;
+    for b in remote.lines().map(|l| l.trim()) {
+        if !b.is_empty() {
+            return Some(b.trim_start_matches("origin/").to_string());
+        }
+    }
+    None
+}
+
 /// All ticket/* branch names visible locally or remotely (deduplicated).
 /// Local branches are included even when a remote exists, so that
 /// unpushed branches (e.g. just created) are visible without a push.
