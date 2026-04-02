@@ -4,12 +4,12 @@ title = "apm init: embed apm.spec-writer.md from source instead of placeholder s
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "apm"
 agent = "45409"
 branch = "ticket/61a98148-apm-init-embed-apm-spec-writer-md-from-s"
 created_at = "2026-04-02T02:09:54.035008Z"
-updated_at = "2026-04-02T02:14:04.600684Z"
+updated_at = "2026-04-02T02:14:11.714428Z"
 +++
 
 ## Spec
