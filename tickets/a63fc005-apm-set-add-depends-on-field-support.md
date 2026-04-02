@@ -26,7 +26,7 @@ Without CLI access to `depends_on`, callers must hand-edit ticket branch files t
 - [x] `apm set <id> depends_on "<id1>,<id2>"` sets depends_on to a two-element list and both IDs appear in the serialized TOML
 - [x] `apm set <id> depends_on -` clears depends_on so the field is absent from the serialized TOML
 - [x] `apm set <id> depends_on <id1>` updates the `updated_at` timestamp on the ticket
-- [ ] Whitespace around comma-separated IDs is trimmed: `" id1 , id2 "` yields `["id1", "id2"]`
+- [x] Whitespace around comma-separated IDs is trimmed: `" id1 , id2 "` yields `["id1", "id2"]`
 - [ ] After `apm set <id> depends_on <blocker-id>`, `apm next` does not return the dependent ticket while the blocker's state does not satisfy the required dep gate
 
 ### Out of scope
