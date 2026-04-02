@@ -1,7 +1,7 @@
 +++
 id = "5ae5f97c"
 title = "Add --epic exclusive mode to apm work command"
-state = "specd"
+state = "ready"
 priority = 6
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "77035"
 branch = "ticket/5ae5f97c-add-epic-exclusive-mode-to-apm-work-comm"
 created_at = "2026-04-01T21:55:49.406819Z"
-updated_at = "2026-04-02T00:54:23.257298Z"
+updated_at = "2026-04-02T02:28:49.876456Z"
 +++
 
 ## Spec
@@ -295,3 +295,4 @@ Update the dispatch arm to pass `epic` to `cmd::work::run`.
 | 2026-04-01T22:00Z | new | groomed | claude-0401-2145-a8f3 |
 | 2026-04-02T00:49Z | groomed | in_design | philippepascal |
 | 2026-04-02T00:54Z | in_design | specd | claude-0402-0050-spec1 |
+| 2026-04-02T02:28Z | specd | ready | apm |
