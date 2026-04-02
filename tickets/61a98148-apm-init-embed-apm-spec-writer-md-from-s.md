@@ -22,7 +22,10 @@ This matters because spec-writer agents run autonomously on `groomed`, `ammend`,
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm init`, `.apm/apm.spec-writer.md` contains the full spec-writer instructions (more than 50 lines), not a placeholder stub
+- [ ] The content written to `.apm/apm.spec-writer.md` matches the content of `apm-core/src/apm.spec-writer.md` verbatim
+- [ ] `apm init` does not overwrite an already-existing `.apm/apm.spec-writer.md` (idempotent, same as other template files)
+- [ ] `cargo test --workspace` passes after the change
 
 ### Out of scope
 
