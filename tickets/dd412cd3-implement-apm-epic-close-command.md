@@ -1,7 +1,7 @@
 +++
 id = "dd412cd3"
 title = "Implement apm epic close command"
-state = "in_design"
+state = "specd"
 priority = 6
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "39158"
 branch = "ticket/dd412cd3-implement-apm-epic-close-command"
 created_at = "2026-04-01T21:55:18.313179Z"
-updated_at = "2026-04-02T02:21:53.562790Z"
+updated_at = "2026-04-02T02:22:44.802324Z"
 +++
 
 ## Spec
@@ -121,3 +121,4 @@ Integration tests requiring a live `gh` CLI and GitHub remote are out of scope.
 | 2026-04-02T02:11Z | in_design | specd | claude-0402-0215-spec4 |
 | 2026-04-02T02:21Z | specd | ammend | apm |
 | 2026-04-02T02:21Z | ammend | in_design | philippepascal |
+| 2026-04-02T02:22Z | in_design | specd | claude-0402-0230-spec5 |
