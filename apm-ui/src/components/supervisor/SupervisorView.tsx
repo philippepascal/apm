@@ -57,6 +57,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const { data: tickets = [] } = useQuery({
     queryKey: ['tickets', showClosed],
     queryFn: () => fetchTickets(showClosed),
+    refetchInterval: 10_000,
   })
 
   const syncMutation = useMutation({
