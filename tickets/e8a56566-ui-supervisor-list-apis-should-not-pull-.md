@@ -1,14 +1,15 @@
 +++
 id = "e8a56566"
 title = "UI supervisor list APIs should not pull closed ticket by default"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm-ui"
+agent = "philippepascal"
 branch = "ticket/e8a56566-ui-supervisor-list-apis-should-not-pull-"
 created_at = "2026-04-02T18:12:19.697833Z"
-updated_at = "2026-04-02T18:12:58.736965Z"
+updated_at = "2026-04-02T18:13:05.178311Z"
 +++
 
 ## Spec
@@ -44,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T18:12Z | — | new | apm-ui |
 | 2026-04-02T18:12Z | new | groomed | apm |
+| 2026-04-02T18:13Z | groomed | in_design | philippepascal |
