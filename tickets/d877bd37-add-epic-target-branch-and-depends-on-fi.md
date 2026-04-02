@@ -79,6 +79,7 @@ Add to the existing `#[cfg(test)]` block using the existing `minimal_raw` / `dum
 ### Amendment requests
 
 - [x] Delete the duplicate sections "### 2. filter blocked tickets in pick_next", "### 3. use target_branch for PR creation", and "### 4. Tests" that remain in the Approach body — they were not removed in the previous amendment and still instruct the worker to implement dep-scheduling and PR-targeting code that belongs to c1ff90de and d3749f24. The spec must contain only the Frontmatter field addition and its five parse/round-trip tests.
+- [ ] The `### Problem` section says `depends_on = ["<ticket-id>", ...]` — ticket IDs that must reach `implemented` before this ticket can be dispatched. Replace `implemented` with `a state with satisfies_deps = true in workflow config` — no hardcoded state names anywhere in the spec.
 
 ### Code review
 
