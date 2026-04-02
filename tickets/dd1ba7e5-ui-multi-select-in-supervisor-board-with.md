@@ -1,14 +1,15 @@
 +++
 id = "dd1ba7e5"
 title = "UI: multi-select in supervisor board with batch actions"
-state = "groomed"
+state = "in_design"
 priority = 3
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/dd1ba7e5-ui-multi-select-in-supervisor-board-with"
 created_at = "2026-04-02T21:27:15.261676Z"
-updated_at = "2026-04-02T22:46:58.026773Z"
+updated_at = "2026-04-02T22:47:40.101023Z"
 +++
 
 ## Spec
@@ -55,3 +56,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T21:27Z | — | new | apm |
 | 2026-04-02T22:46Z | new | groomed | apm |
+| 2026-04-02T22:47Z | groomed | in_design | philippepascal |
