@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/553ec190-apm-list-add-mine-and-author-flags-for-f"
-depends_on = ["610be42e"]
 created_at = "2026-04-02T20:54:04.874772Z"
 updated_at = "2026-04-02T20:54:04.874772Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["610be42e"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+There is no way to filter `apm list` output by ticket author. A developer working on a shared project has to scan all tickets to find their own. `apm list --mine` and `apm list --author <username>` are the intended daily-driver filters. See `initial_specs/DESIGN-users.md` point 7.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
