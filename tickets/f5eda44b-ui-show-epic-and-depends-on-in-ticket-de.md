@@ -24,7 +24,18 @@ On the UI side, two small features are needed in the detail panel header: a clic
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When a ticket has no `epic` field, the detail panel shows no epic row
+- [ ] When a ticket has an `epic` field, the detail panel shows a labelled row with the epic ID value
+- [ ] Clicking the epic label sets `epicFilter` in the layout store to that epic ID
+- [ ] When `epicFilter` is set in the layout store, the supervisor board hides tickets whose `epic` field does not match (tickets with no `epic` field are also hidden)
+- [ ] Clicking the epic label a second time on the same ticket while the filter is already active clears the filter (toggle behaviour)
+- [ ] When a ticket has no `depends_on` field (or an empty array), the detail panel shows no dependencies row
+- [ ] When a ticket has a `depends_on` field, the detail panel lists each dep ticket ID
+- [ ] Clicking a dep ticket ID in the detail panel sets `selectedTicketId` in the layout store to that dep's full ID, opening its detail panel
+- [ ] Dep tickets whose state is `implemented`, `accepted`, or `closed` are shown with strikethrough text
+- [ ] Dep tickets whose state is any other value are shown without strikethrough
+- [ ] A dep ticket ID that does not resolve to any known ticket renders as plain text (no link, no crash)
+- [ ] Existing tickets without `epic` or `depends_on` in their frontmatter continue to load and display correctly
 
 ### Out of scope
 
