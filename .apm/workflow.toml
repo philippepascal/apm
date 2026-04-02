@@ -169,10 +169,10 @@ layer        = 2
 instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
-  to            = "implemented"
-  trigger       = "manual"
-  actor         = "agent"
-  preconditions = ["pr_exists"]
+  to         = "implemented"
+  trigger    = "manual"
+  actor      = "agent"
+  completion = "pr"
 
   [[workflow.states.transitions]]
   to      = "blocked"
