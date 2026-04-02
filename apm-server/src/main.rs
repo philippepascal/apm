@@ -47,6 +47,7 @@ struct TicketResponse {
     body: String,
     has_open_questions: bool,
     has_pending_amendments: bool,
+    blocking_deps: Vec<BlockingDep>,
 }
 
 fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
@@ -310,6 +311,7 @@ async fn get_epic(
                 body: t.body,
                 has_open_questions,
                 has_pending_amendments,
+                blocking_deps: vec![],
             }
         })
         .collect();
@@ -452,16 +454,44 @@ async fn list_tickets(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TicketResponse>>, AppError> {
     let tickets = load_tickets(&state).await?;
+    let resolved_ids: Vec<String> = match state.git_root() {
+        Some(root) => match apm_core::config::Config::load(root) {
+            Ok(cfg) => cfg.workflow.states.into_iter()
+                .filter(|s| s.satisfies_deps || s.terminal)
+                .map(|s| s.id)
+                .collect(),
+            Err(_) => vec![],
+        },
+        None => vec![],
+    };
+    let resolved: std::collections::HashSet<&str> =
+        resolved_ids.iter().map(|s| s.as_str()).collect();
+    let state_map: std::collections::HashMap<String, String> = tickets
+        .iter()
+        .map(|t| (t.frontmatter.id.clone(), t.frontmatter.state.clone()))
+        .collect();
     let response = tickets
         .into_iter()
         .map(|t| {
             let has_open_questions = !extract_section(&t.body, "Open questions").trim().is_empty();
             let has_pending_amendments = extract_section(&t.body, "Amendment requests").contains("- [ ]");
+            let blocking_deps = t.frontmatter.depends_on
+                .as_deref()
+                .unwrap_or(&[])
+                .iter()
+                .filter_map(|dep_id| {
+                    state_map.get(dep_id.as_str()).and_then(|s| {
+                        if resolved.contains(s.as_str()) { None }
+                        else { Some(BlockingDep { id: dep_id.clone(), state: s.clone() }) }
+                    })
+                })
+                .collect();
             TicketResponse {
                 frontmatter: t.frontmatter,
                 body: t.body,
                 has_open_questions,
                 has_pending_amendments,
+                blocking_deps,
             }
         })
         .collect();
@@ -843,6 +873,7 @@ async fn create_ticket(
                 body: ticket.body,
                 has_open_questions,
                 has_pending_amendments,
+                blocking_deps: vec![],
             };
             Ok((StatusCode::CREATED, Json(response)).into_response())
         }
@@ -1162,6 +1193,149 @@ mod tests {
         let c = arr.iter().find(|t| t["id"] == "55556666-badge-test-c").unwrap();
         assert_eq!(c["has_open_questions"], false);
         assert_eq!(c["has_pending_amendments"], false);
+    }
+
+    #[tokio::test]
+    async fn list_tickets_blocking_deps() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+
+        // git init
+        for args in [
+            vec!["init", "-q", "-b", "main"],
+            vec!["config", "user.email", "test@test.com"],
+            vec!["config", "user.name", "test"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(&p)
+                .status()
+                .unwrap();
+        }
+
+        // config with `implemented` satisfying deps
+        std::fs::write(
+            p.join("apm.toml"),
+            r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+"#,
+        )
+        .unwrap();
+
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+        for args in [
+            vec!["add", "apm.toml"],
+            vec!["-c", "commit.gpgsign=false", "commit", "-m", "init"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(&p)
+                .env("GIT_AUTHOR_NAME", "test")
+                .env("GIT_AUTHOR_EMAIL", "test@test.com")
+                .env("GIT_COMMITTER_NAME", "test")
+                .env("GIT_COMMITTER_EMAIL", "test@test.com")
+                .status()
+                .unwrap();
+        }
+
+        // helper: commit a ticket file to its own branch
+        let commit_ticket = |slug: &str, content: &str| {
+            let branch = format!("ticket/{slug}");
+            let filename = format!("tickets/{slug}.md");
+            let file_path = p.join(&filename);
+            std::fs::create_dir_all(p.join("tickets")).unwrap();
+            std::fs::write(&file_path, content).unwrap();
+            for args in [
+                vec!["checkout", "-b", branch.as_str()],
+                vec!["add", filename.as_str()],
+                vec!["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"],
+            ] {
+                std::process::Command::new("git")
+                    .args(&args)
+                    .current_dir(&p)
+                    .env("GIT_AUTHOR_NAME", "test")
+                    .env("GIT_AUTHOR_EMAIL", "test@test.com")
+                    .env("GIT_COMMITTER_NAME", "test")
+                    .env("GIT_COMMITTER_EMAIL", "test@test.com")
+                    .status()
+                    .unwrap();
+            }
+            std::process::Command::new("git")
+                .args(["checkout", "main"])
+                .current_dir(&p)
+                .status()
+                .unwrap();
+        };
+
+        // dep-satisfied: in `implemented` state (satisfies_deps=true)
+        commit_ticket(
+            "aabbccdd-dep-satisfied",
+            "+++\nid = \"aabbccdd-dep-satisfied\"\ntitle = \"Dep Satisfied\"\nstate = \"implemented\"\n+++\n\n",
+        );
+
+        // dep-blocking: in `in_progress` state (not satisfying)
+        commit_ticket(
+            "11223344-dep-blocking",
+            "+++\nid = \"11223344-dep-blocking\"\ntitle = \"Dep Blocking\"\nstate = \"in_progress\"\n+++\n\n",
+        );
+
+        // ticket with no depends_on
+        commit_ticket(
+            "aaaaaaaa-no-deps",
+            "+++\nid = \"aaaaaaaa-no-deps\"\ntitle = \"No Deps\"\nstate = \"ready\"\n+++\n\n",
+        );
+
+        // ticket depending on satisfied dep → blocking_deps should be []
+        commit_ticket(
+            "bbbbbbbb-dep-on-satisfied",
+            "+++\nid = \"bbbbbbbb-dep-on-satisfied\"\ntitle = \"Dep On Satisfied\"\nstate = \"ready\"\ndepends_on = [\"aabbccdd-dep-satisfied\"]\n+++\n\n",
+        );
+
+        // ticket depending on blocking dep → blocking_deps should be non-empty
+        commit_ticket(
+            "cccccccc-dep-on-blocking",
+            "+++\nid = \"cccccccc-dep-on-blocking\"\ntitle = \"Dep On Blocking\"\nstate = \"ready\"\ndepends_on = [\"11223344-dep-blocking\"]\n+++\n\n",
+        );
+
+        let app = build_app(p.clone());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+
+        let no_deps = arr.iter().find(|t| t["id"] == "aaaaaaaa-no-deps").unwrap();
+        assert_eq!(no_deps["blocking_deps"], serde_json::json!([]));
+
+        let on_satisfied = arr.iter().find(|t| t["id"] == "bbbbbbbb-dep-on-satisfied").unwrap();
+        assert_eq!(on_satisfied["blocking_deps"], serde_json::json!([]));
+
+        let on_blocking = arr.iter().find(|t| t["id"] == "cccccccc-dep-on-blocking").unwrap();
+        let blocking = on_blocking["blocking_deps"].as_array().unwrap();
+        assert_eq!(blocking.len(), 1);
+        assert_eq!(blocking[0]["id"], "11223344-dep-blocking");
+        assert_eq!(blocking[0]["state"], "in_progress");
     }
 
     #[tokio::test]
