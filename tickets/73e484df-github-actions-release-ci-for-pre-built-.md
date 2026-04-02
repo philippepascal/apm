@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/73e484df-github-actions-release-ci-for-pre-built-"
-depends_on = ["48105624"]
 created_at = "2026-04-02T20:54:44.627516Z"
 updated_at = "2026-04-02T20:54:44.627516Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["48105624"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+There is no automated release pipeline. Users must build from source via `cargo install`. Pre-built binaries for macOS arm64, macOS x86_64, Linux x86_64, and Linux aarch64 are needed on GitHub Releases to support Homebrew and direct download distribution. See `initial_specs/DESIGN-users.md` point 6.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
