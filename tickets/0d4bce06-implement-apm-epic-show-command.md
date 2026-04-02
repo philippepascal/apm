@@ -49,31 +49,42 @@ Two related pieces of infrastructure must land with this ticket because `apm epi
 
 ### Approach
 
-Step 1: Extend Frontmatter in apm-core/src/ticket.rs
+Step 1: Add `satisfies_deps` to `StateConfig` in `apm-core/src/config.rs`
 
-Add three optional fields after focus_section:
+Add one field after `actionable`:
+
+  #[serde(default)]
+  pub satisfies_deps: bool,
+
+This field defaults to `false`; existing workflow.toml files that omit it continue to deserialise cleanly.
+
+Step 2: Mark `satisfies_deps = true` on "implemented" in `.apm/workflow.toml`
+
+Add `satisfies_deps = true` to the `[[workflow.states]]` block whose `id = "implemented"`. Also update the default workflow template in `apm-core/src/init.rs` to match.
+
+Step 3: Extend Frontmatter in `apm-core/src/ticket.rs`
+
+Add three optional fields after `focus_section`:
 
   pub epic: Option<String>,            // #[serde(skip_serializing_if = "Option::is_none")]
   pub target_branch: Option<String>,   // #[serde(skip_serializing_if = "Option::is_none")]
   pub depends_on: Option<Vec<String>>, // #[serde(skip_serializing_if = "Option::is_none")]
 
-These are entirely additive; tickets lacking the fields deserialise to None.
+These are entirely additive; tickets lacking the fields deserialise to `None`.
 
-Step 2: Add epic_branches to apm-core/src/git.rs
+Step 4: Add `epic_branches` to `apm-core/src/git.rs`
 
-Mirror the existing ticket_branches function, listing local "epic/*" then
-remote "origin/epic/*" branches (stripping "origin/"), deduplicating via
-HashSet.
+Mirror the existing `ticket_branches` function, listing local `epic/*` then remote `origin/epic/*` branches (stripping `origin/`), deduplicating via `HashSet`.
 
-Step 3: New module apm-core/src/epic.rs
+Step 5: New module `apm-core/src/epic.rs`
 
-Expose via "pub mod epic" in apm-core/src/lib.rs.
+Expose via `pub mod epic` in `apm-core/src/lib.rs`.
 
 Provide:
 
   pub struct EpicRef {
       pub id: String,    // 8-char hex from branch name
-      pub title: String, // slug -> title-cased
+      pub title: String, // slug → title-cased
       pub branch: String,
   }
 
@@ -83,27 +94,30 @@ Provide:
 
   pub fn resolve_epic(branches: &[String], arg: &str) -> Result<EpicRef>
   - Matches branches whose ID starts with arg.
-  - 1 match -> Ok; 0 matches -> error "no epic matching '...'";
-  - 2+ matches -> error "ambiguous prefix '...', matches: ...".
+  - 1 match → Ok; 0 matches → error "no epic matching '...'";
+    2+ matches → error "ambiguous prefix '...', matches: ...".
 
-  pub fn derive_epic_state(tickets: &[&Ticket], config: &Config) -> &'static str
-  - No tickets -> "empty"
-  - Any ticket in "in_design" or "in_progress" -> "in_progress"
-  - All tickets at position >= "implemented" in workflow.states, or terminal = true -> "implemented"
-  - All tickets terminal -> "done"
-  - Otherwise -> "in_progress"
-  - "implemented or later": position >= position of "implemented" in config.workflow.states,
-    OR terminal = true. If "implemented" not in config, fall back to terminal = true only.
+  pub fn derive_epic_state(tickets: &[&Ticket], states: &[StateConfig]) -> &'static str
+  - Builds a lookup map: state_id → &StateConfig.
+  - No tickets → "empty".
+  - Any ticket whose state maps to a config where both `satisfies_deps` and `terminal`
+    are false → "in_progress".
+  - All tickets whose state maps to `satisfies_deps = true` or `terminal = true`,
+    but at least one is not terminal → "implemented".
+  - All tickets whose state maps to `terminal = true` (or state not found in config) → "done".
+  - Otherwise → "in_progress".
+  - Uses only `StateConfig` fields (`satisfies_deps`, `terminal`); no state ID string
+    comparisons.
 
-Step 4: New CLI file apm/src/cmd/epic.rs
+Step 6: New CLI file `apm/src/cmd/epic.rs`
 
   pub fn run_show(root: &Path, id: &str, no_aggressive: bool) -> Result<()>
 
-  1. If !no_aggressive: fetch origin (same helper as list.rs).
-  2. load_all_from_git for tickets; Config::load for config.
-  3. epic_branches(root) -> resolve via resolve_epic.
-  4. Filter tickets where frontmatter.epic.as_deref() == Some(&epic.id).
-  5. derive_epic_state on filtered tickets.
+  1. If `!no_aggressive`: fetch origin (same helper as list.rs).
+  2. `load_all_from_git` for tickets; `Config::load` for config.
+  3. `epic_branches(root)` → resolve via `resolve_epic`.
+  4. Filter tickets where `frontmatter.epic.as_deref() == Some(&epic.id)`.
+  5. `derive_epic_state` on filtered tickets, passing `&config.workflow.states`.
   6. Print header:
        Epic:   <title>
        Branch: <branch>
@@ -117,25 +131,28 @@ Step 4: New CLI file apm/src/cmd/epic.rs
 
      If no tickets: print "(no tickets)".
 
-Step 5: Wire up in apm/src/main.rs
+Step 7: Wire up in `apm/src/main.rs`
 
-Add Epic { subcommand: EpicSubcommand } variant to Command enum.
-Add EpicSubcommand enum with Show { id: String, no_aggressive: bool }.
-Dispatch: Command::Epic { subcommand } => match subcommand {
-    EpicSubcommand::Show { id, no_aggressive } => cmd::epic::run_show(&root, &id, no_aggressive),
-}.
+Add `Epic { subcommand: EpicSubcommand }` variant to `Command` enum.
+Add `EpicSubcommand` enum with `Show { id: String, no_aggressive: bool }`.
+Dispatch:
+  Command::Epic { subcommand } => match subcommand {
+      EpicSubcommand::Show { id, no_aggressive } =>
+          cmd::epic::run_show(&root, &id, no_aggressive),
+  }
 
-Step 6: Tests
+Step 8: Tests
 
-Integration tests in apm/tests/integration.rs:
-- Temp repo with epic/ab12cd34-user-auth branch + two tickets with epic = "ab12cd34" in frontmatter.
-- "apm epic show ab12cd34" output contains title, branch, ticket IDs.
-- "apm epic show ab12" (prefix) resolves correctly.
-- "apm epic show zzzzzzz" exits non-zero.
+Integration tests in `apm/tests/integration.rs`:
+- Temp repo with `epic/ab12cd34-user-auth` branch + two tickets with `epic = "ab12cd34"` in frontmatter.
+- `apm epic show ab12cd34` output contains title, branch, ticket IDs.
+- `apm epic show ab12` (prefix) resolves correctly.
+- `apm epic show zzzzzzz` exits non-zero.
+- `derive_epic_state` returns "in_progress" when a ticket's state lacks both `satisfies_deps` and `terminal`; "implemented" when all have `satisfies_deps`; "done" when all have `terminal`.
 
-Unit tests in apm-core/src/epic.rs:
-- parse_epic_branch: valid and invalid branch names.
-- derive_epic_state: each state-table condition.
+Unit tests in `apm-core/src/epic.rs`:
+- `parse_epic_branch`: valid and invalid branch names.
+- `derive_epic_state`: each condition using synthetic `StateConfig` values.
 
 ### Open questions
 
