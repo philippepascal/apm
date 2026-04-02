@@ -33,7 +33,13 @@ Without this command the epic workflow is incomplete: tickets can be created (`a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Merging the PR — that requires human approval on GitHub; this command only opens it
+- Creating the epic branch (`apm epic new`) — separate command, not covered here
+- Listing or showing epics (`apm epic list`, `apm epic show`) — separate commands
+- Adding the `epic` frontmatter field to tickets or the `--epic` flag on `apm new` — separate work
+- The `depends_on` scheduling feature described in `docs/epics.md`
+- apm-server / apm-ui API routes for epics
+- Any UI changes
 
 ### Approach
 
