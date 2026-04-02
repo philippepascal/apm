@@ -140,6 +140,9 @@ Add a test in `apm-server/src/main.rs` (alongside `list_tickets_includes_badge_f
 
 ### Amendment requests
 
+- [ ] Remove `"merged"` from the resolved states list — that state does not exist in the workflow.
+- [ ] The RESOLVED set must not be a hardcoded list of state names. Use `satisfies_deps = true` or `terminal = true` from `config.workflow.states` to determine whether a dep is resolved. The server must load config and use those flags; no string comparison against state IDs. Update AC and Approach accordingly.
+- [ ] Change `depends_on` field type to `Option<Vec<String>>` with `#[serde(skip_serializing_if = "Option::is_none")]`, consistent with d877bd37 and ba4e8499. Remove `#[serde(default)]` from a non-Option Vec; the Option approach handles absence cleanly.
 
 ### Code review
 
