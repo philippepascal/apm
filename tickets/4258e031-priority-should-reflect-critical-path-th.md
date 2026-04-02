@@ -34,7 +34,11 @@ Without critical-path elevation, the priority queue and `apm next` give a mislea
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Modifying the stored `priority` field in ticket frontmatter
+- Displaying in the UI which dependent(s) caused a ticket's priority to be elevated
+- Cycle detection beyond a simple visited-set (no topological-sort guarantee required)
+- Changing `apm set <id> priority` behaviour
+- Priority elevation for tickets already in terminal or satisfies_deps states (they are filtered out of the actionable list)
 
 ### Approach
 
