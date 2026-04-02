@@ -3,9 +3,9 @@ use apm_core::{clean, clean::CleanCandidate, config::Config};
 use std::io::IsTerminal;
 use std::path::Path;
 
-pub fn run(root: &Path, dry_run: bool, yes: bool) -> Result<()> {
+pub fn run(root: &Path, dry_run: bool, yes: bool, force: bool) -> Result<()> {
     let config = Config::load(root)?;
-    let (candidates, dirty) = clean::candidates(root, &config)?;
+    let (candidates, dirty) = clean::candidates(root, &config, force)?;
 
     if candidates.is_empty() && dirty.is_empty() {
         println!("Nothing to clean.");
@@ -59,7 +59,7 @@ pub fn run(root: &Path, dry_run: bool, yes: bool) -> Result<()> {
             if candidate.local_branch_exists {
                 println!("removed branch {}", candidate.branch);
             }
-            clean::remove(root, &candidate)?;
+            clean::remove(root, &candidate, false)?;
         } else if std::io::stdout().is_terminal() {
             eprint!("Remove {} file(s) and clean? [y/N] ", n);
             let mut input = String::new();
@@ -78,7 +78,7 @@ pub fn run(root: &Path, dry_run: bool, yes: bool) -> Result<()> {
                 if candidate.local_branch_exists {
                     println!("removed branch {}", candidate.branch);
                 }
-                clean::remove(root, &candidate)?;
+                clean::remove(root, &candidate, false)?;
             } else {
                 eprintln!("skipping {}", dw.branch);
             }
@@ -106,6 +106,25 @@ pub fn run(root: &Path, dry_run: bool, yes: bool) -> Result<()> {
                     candidate.branch, candidate.reason
                 );
             }
+        } else if force {
+            eprintln!(
+                "warning: force-removing {} — branch may not be merged",
+                candidate.branch
+            );
+            eprint!("Force-remove {}? [y/N] ", candidate.branch);
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            if input.trim().eq_ignore_ascii_case("y") {
+                if let Some(ref path) = candidate.worktree {
+                    println!("removed worktree {}", path.display());
+                }
+                if candidate.local_branch_exists {
+                    println!("removed branch {}", candidate.branch);
+                }
+                clean::remove(root, candidate, true)?;
+            } else {
+                eprintln!("skipping {}", candidate.branch);
+            }
         } else {
             if let Some(ref path) = candidate.worktree {
                 println!("removed worktree {}", path.display());
@@ -113,7 +132,7 @@ pub fn run(root: &Path, dry_run: bool, yes: bool) -> Result<()> {
             if candidate.local_branch_exists {
                 println!("removed branch {}", candidate.branch);
             }
-            clean::remove(root, candidate)?;
+            clean::remove(root, candidate, false)?;
         }
     }
 

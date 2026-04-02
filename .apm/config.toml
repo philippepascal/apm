@@ -19,7 +19,7 @@ poll_interval_secs = 60
 webhook_secret_env = "APM_WEBHOOK_SECRET"
 
 [agents]
-instructions   = "apm.agents.md"
+instructions   = ".apm/agents.md"
 max_concurrent = 1
 
 [sync]

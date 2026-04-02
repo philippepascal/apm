@@ -53,7 +53,7 @@ fn remove(root: &Path, config: &Config, id_arg: &str) -> Result<()> {
         bail!("no worktree found for ticket {id:?} (branch: {branch})");
     };
 
-    git::remove_worktree(root, &wt_path)?;
+    git::remove_worktree(root, &wt_path, false)?;
     println!("Removed worktree: {}", wt_path.display());
     Ok(())
 }
