@@ -1,7 +1,7 @@
 +++
 id = "4258e031"
 title = "Priority should reflect critical path through depends_on graph"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "86601"
 branch = "ticket/4258e031-priority-should-reflect-critical-path-th"
 created_at = "2026-04-02T05:23:36.689810Z"
-updated_at = "2026-04-02T18:16:37.002251Z"
+updated_at = "2026-04-02T18:23:32.007162Z"
 +++
 
 ## Spec
@@ -103,3 +103,4 @@ Filtering to non-terminal, non-satisfies_deps tickets before building the index 
 | 2026-04-02T18:12Z | in_design | specd | claude-0402-1810-c9d1 |
 | 2026-04-02T18:14Z | specd | ready | apm |
 | 2026-04-02T18:16Z | ready | in_progress | philippepascal |
+| 2026-04-02T18:23Z | in_progress | implemented | claude-0402-1816-x9k2 |
