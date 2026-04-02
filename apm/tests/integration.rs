@@ -64,6 +64,36 @@ label = "In Progress"
 id       = "closed"
 label    = "Closed"
 terminal = true
+
+[[ticket.sections]]
+name     = "Problem"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Acceptance criteria"
+type     = "tasks"
+required = true
+
+[[ticket.sections]]
+name     = "Out of scope"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Approach"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Open questions"
+type     = "qa"
+required = false
+
+[[ticket.sections]]
+name     = "Amendment requests"
+type     = "tasks"
+required = false
 "#,
     )
     .unwrap();
@@ -1712,8 +1742,10 @@ fn context_section_approach_places_text_under_approach() {
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Approach\n\nmy approach text\n\n"), "expected context under ### Approach");
-    // Problem section should be empty
-    assert!(content.contains("### Problem\n\n### Acceptance criteria"), "Problem should be empty");
+    // Problem section should be empty (no content between header and next section)
+    let after_problem = content.split("### Problem\n\n").nth(1).expect("Problem section not found in content");
+    let problem_body = after_problem.split("\n### ").next().unwrap_or("");
+    assert!(problem_body.trim().is_empty(), "Problem should be empty, got: {problem_body:?}");
 }
 
 #[test]
