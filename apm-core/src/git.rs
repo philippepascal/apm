@@ -777,6 +777,53 @@ pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)> 
 
 /// Merge `branch` into `default_branch` (fast-forward or merge commit).
 /// Pushes `default_branch` to origin when a remote exists.
+/// List remote ticket/* branches with their last commit date.
+/// Returns (branch_name_without_origin_prefix, commit_date) pairs.
+pub fn remote_ticket_branches_with_dates(
+    root: &Path,
+) -> Result<Vec<(String, chrono::DateTime<chrono::Utc>)>> {
+    use chrono::{TimeZone, Utc};
+    let out = Command::new("git")
+        .current_dir(root)
+        .args([
+            "for-each-ref",
+            "refs/remotes/origin/ticket/",
+            "--format=%(refname:short) %(creatordate:unix)",
+        ])
+        .output()
+        .context("git for-each-ref failed")?;
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let mut result = Vec::new();
+    for line in stdout.lines() {
+        let mut parts = line.splitn(2, ' ');
+        let refname = parts.next().unwrap_or("").trim();
+        let ts_str = parts.next().unwrap_or("").trim();
+        let branch = refname.trim_start_matches("origin/");
+        if branch.is_empty() {
+            continue;
+        }
+        if let Ok(ts) = ts_str.parse::<i64>() {
+            if let Some(dt) = Utc.timestamp_opt(ts, 0).single() {
+                result.push((branch.to_string(), dt));
+            }
+        }
+    }
+    Ok(result)
+}
+
+/// Delete a remote branch on origin.
+pub fn delete_remote_branch(root: &Path, branch: &str) -> Result<()> {
+    let status = Command::new("git")
+        .current_dir(root)
+        .args(["push", "origin", "--delete", branch])
+        .status()
+        .context("git push origin --delete failed")?;
+    if !status.success() {
+        anyhow::bail!("git push origin --delete {branch} failed");
+    }
+    Ok(())
+}
+
 pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str) -> Result<()> {
     let _ = run(root, &["fetch", "origin", default_branch]);
 
