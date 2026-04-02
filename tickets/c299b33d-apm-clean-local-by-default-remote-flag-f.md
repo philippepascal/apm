@@ -41,7 +41,7 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 - [ ] **With `--branches`:**
 - [x] `apm clean --branches` removes worktrees and deletes local `ticket/*` branches for terminal-state tickets
 - [x] `apm clean --branches` prunes the corresponding `origin/<branch>` remote-tracking ref after deleting the local branch (to prevent re-creation on next `apm sync`)
-- [ ] `apm clean --branches --dry-run` lists both worktrees and local branches that would be removed
+- [x] `apm clean --branches --dry-run` lists both worktrees and local branches that would be removed
 
 - [ ] **With `--remote --older-than`:**
 - [ ] `apm clean --remote --older-than 30d` deletes remote `ticket/*` branches in terminal states whose last commit is older than 30 days
