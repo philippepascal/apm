@@ -1,21 +1,21 @@
 +++
 id = "b8b91642"
 title = "make detail panel more reactive when other panels are updated (state of ticket selected might have changed)"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/b8b91642-make-detail-panel-more-reactive-when-oth"
 created_at = "2026-04-02T22:28:29.844602Z"
-updated_at = "2026-04-02T22:28:29.844602Z"
+updated_at = "2026-04-02T22:32:47.181707Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+state of ticket selected changed in another panel, detail panel becomes stale
 
 ### Acceptance criteria
 
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T22:28Z | — | new | apm |
+| 2026-04-02T22:32Z | new | groomed | apm |
