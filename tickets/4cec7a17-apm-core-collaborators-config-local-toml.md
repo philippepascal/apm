@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+There is no concept of collaborator identity in apm-core. The `author` field is currently set to agent names, and there is no local identity file or collaborators list. Resolving who created a ticket requires a real username, not an ephemeral agent string. See `initial_specs/DESIGN-users.md` points 1–3.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
