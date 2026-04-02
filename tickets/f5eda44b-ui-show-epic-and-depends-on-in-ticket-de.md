@@ -4,12 +4,12 @@ title = "UI: show epic and depends_on in ticket detail panel"
 state = "in_design"
 priority = 2
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "23932"
 branch = "ticket/f5eda44b-ui-show-epic-and-depends-on-in-ticket-de"
 created_at = "2026-04-01T21:56:10.584818Z"
-updated_at = "2026-04-02T00:55:46.833529Z"
+updated_at = "2026-04-02T00:55:51.767730Z"
 +++
 
 ## Spec
