@@ -46,7 +46,67 @@ The design for epic-scoped scheduling is specified in docs/epics.md (section: Wo
 
 ### Approach
 
-How the implementation will work.
+Four files change. Order of changes matters for compilation.
+
+1. apm-core/src/ticket.rs -- add epic field to Frontmatter
+   Add after the focus_section field:
+     #[serde(skip_serializing_if = "Option::is_none")]
+     pub epic: Option<String>,
+   This is the only change needed here; serde(flatten) in TicketResponse
+   propagates it to all existing API responses automatically.
+
+2. apm-core/src/start.rs -- add epic filter to spawn_next_worker
+   Change signature:
+     pub fn spawn_next_worker(root, no_aggressive, skip_permissions, epic: Option<&str>)
+   After loading tickets and before calling pick_next, filter candidates:
+     let tickets: Vec<Ticket> = match epic {
+         Some(eid) => tickets.into_iter()
+             .filter(|t| t.frontmatter.epic.as_deref() == Some(eid))
+             .collect(),
+         None => tickets,
+     };
+   Pass the (now owned) filtered vec to pick_next.
+   No other callers of spawn_next_worker exist outside apm-core/src/work.rs,
+   so no other call sites need updating.
+
+3. apm-core/src/work.rs -- thread epic through run_engine_loop
+   Change signature:
+     pub fn run_engine_loop(root, cancel, interval_secs, max_concurrent, skip_permissions, epic: Option<String>)
+   Store epic locally; pass epic.as_deref() to spawn_next_worker on each call.
+
+4. apm-server/src/work.rs -- request parsing, engine state, and status response
+   a. Add StartWorkRequest struct:
+        #[derive(serde::Deserialize, Default)]
+        pub struct StartWorkRequest { pub epic: Option<String> }
+   b. Add epic: Option<String> field to WorkEngine struct.
+   c. Change post_work_start signature to accept Option<Json<StartWorkRequest>>.
+      Extract epic = body.and_then(|b| b.0.epic).
+      Pass epic.clone() to run_engine_loop (last arg).
+      Store epic in the WorkEngine struct.
+      Note: Option<Json<T>> in Axum returns None when the body is absent or
+      the Content-Type is not application/json, which preserves backward
+      compat with the existing test that sends an empty body.
+   d. Change get_work_status to read epic from the engine guard in the same
+      lock used to check engine_is_alive:
+        let (alive, epic) = {
+            let guard = state.work_engine.lock().await;
+            match guard.as_ref() {
+                Some(e) => (engine_is_alive(e), e.epic.clone()),
+                None => (false, None),
+            }
+        };
+      Return {"status": "stopped"} (no epic key) when not alive.
+      Include "epic": epic in running/idle responses.
+
+5. Tests -- update existing tests and add new ones (inline in apm-server/src/work.rs)
+   - Existing work_start_without_git_root_returns_stopped: no change needed
+     (sends empty body -> Option<Json> -> None -> no epic filter -> same path).
+   - Add: work_start_with_epic_field_accepted -- POST with JSON body {"epic":"abc123"}, expect 200.
+   - Add: work_status_includes_epic_null_when_stopped -- confirm no "epic" key when stopped.
+   - The epic-filter integration (spawn_next_worker filtering) is best tested
+     in apm-core/src/start.rs unit tests: add a test that constructs tickets
+     with and without epic frontmatter and verifies pick_next only sees the
+     right ones when the filter is active.
 
 ### Open questions
 
