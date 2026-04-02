@@ -16,6 +16,9 @@ interface TicketDetail {
   body: string
   raw: string
   valid_transitions: { to: string; label: string }[]
+  epic?: string
+  depends_on?: string[]
+  blocking_deps?: Array<{ id: string; state: string }>
 }
 
 async function fetchTicket(id: string): Promise<TicketDetail> {
@@ -122,6 +125,9 @@ function TransitionButtons({ ticket, onTransitioned }: {
 export default function TicketDetail() {
   const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
   const setReviewMode = useLayoutStore((s) => s.setReviewMode)
+  const setSelectedTicketId = useLayoutStore((s) => s.setSelectedTicketId)
+  const epicFilter = useLayoutStore((s) => s.epicFilter)
+  const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
   const queryClient = useQueryClient()
   const [patchError, setPatchError] = useState<string | null>(null)
 
@@ -221,6 +227,47 @@ export default function TicketDetail() {
                 onCommit={(v) => patchMutation.mutate({ priority: v })}
               />
               {patchError && <span className="text-xs text-red-500">{patchError}</span>}
+            </div>
+          </div>
+        )}
+        {data?.epic && (
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wide">Epic</span>
+            <button
+              onClick={() => setEpicFilter(epicFilter === data.epic ? null : data.epic!)}
+              className={`text-xs px-2 py-0.5 rounded border font-mono ${epicFilter === data.epic ? 'border-blue-500 text-blue-300 bg-blue-900/30' : 'border-gray-600 text-gray-300 bg-gray-800 hover:bg-gray-700'}`}
+            >
+              {data.epic}
+            </button>
+          </div>
+        )}
+        {data?.depends_on && data.depends_on.length > 0 && (
+          <div className="flex items-start gap-2 mt-1.5">
+            <span className="text-[10px] text-gray-500 uppercase tracking-wide shrink-0">Depends on</span>
+            <div className="flex flex-wrap gap-1">
+              {data.depends_on.map((depId) => {
+                const allTickets = queryClient.getQueryData<Array<{ id: string }>>(['tickets'])
+                const known = allTickets?.find((t) => t.id === depId || t.id.startsWith(depId))
+                const fullId = known?.id ?? depId
+                const blockingSet = new Set((data.blocking_deps ?? []).map((d) => d.id))
+                const isBlocking = blockingSet.has(fullId) || blockingSet.has(depId)
+                if (!known) {
+                  return (
+                    <span key={depId} className="text-[10px] font-mono text-gray-500">
+                      {depId}
+                    </span>
+                  )
+                }
+                return (
+                  <button
+                    key={depId}
+                    onClick={() => setSelectedTicketId(fullId)}
+                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-300 ${!isBlocking ? 'line-through opacity-60' : ''}`}
+                  >
+                    {depId.slice(0, 8)}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

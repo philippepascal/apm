@@ -60,7 +60,7 @@ export default function WorkScreen() {
       }
       if (event.shiftKey && event.key === 'W') {
         if (inInput) return
-        fetchStatus().then((status) => {
+        fetchStatus().then(({ status }) => {
           if (status === 'running' || status === 'idle') {
             stopMutation.mutate()
           } else {
