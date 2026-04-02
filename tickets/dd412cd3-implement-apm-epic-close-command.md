@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "22058"
 branch = "ticket/dd412cd3-implement-apm-epic-close-command"
 created_at = "2026-04-01T21:55:18.313179Z"
-updated_at = "2026-04-02T01:55:59.478372Z"
+updated_at = "2026-04-02T01:57:30.374120Z"
 +++
 
 ## Spec
