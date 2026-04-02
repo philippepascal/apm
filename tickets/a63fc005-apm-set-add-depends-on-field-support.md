@@ -1,7 +1,7 @@
 +++
 id = "a63fc005"
 title = "apm set: add depends_on field support"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "80904"
 branch = "ticket/a63fc005-apm-set-add-depends-on-field-support"
 created_at = "2026-04-02T20:58:58.236289Z"
-updated_at = "2026-04-02T22:58:55.655867Z"
+updated_at = "2026-04-02T23:09:48.796832Z"
 +++
 
 ## Spec
@@ -95,3 +95,4 @@ The existing integration test next_skips_dep_blocked_returns_unblocked already c
 | 2026-04-02T22:55Z | specd | ready | apm |
 | 2026-04-02T22:55Z | ready | in_progress | philippepascal |
 | 2026-04-02T22:58Z | in_progress | implemented | claude-0402-2255-0228 |
+| 2026-04-02T23:09Z | implemented | closed | apm |
