@@ -16,9 +16,14 @@ updated_at = "2026-04-02T00:58:02.594592Z"
 
 ### Problem
 
-The engine controls panel has no way to start the engine in epic-exclusive mode, and when exclusive mode is active there is no visual indicator of which epic is running. Without this, the UI cannot drive focused epic sprints.
+The engine controls panel in the UI has no way to start the engine in epic-exclusive mode, and when exclusive mode is active there is no visual indicator of which epic is running. Without this, the UI cannot drive focused epic sprints.
 
-The full design is in `docs/epics.md` (§ apm-ui changes — Engine controls). Add an optional **Epic** selector dropdown (populated from `GET /api/epics`) before starting the engine. When exclusive mode is active, show a small label: `epic: <slug>` that links to the epic filter on the supervisor board.
+Currently `WorkEngineControls.tsx` exposes a plain Start/Stop toggle with no parameters. The desired behaviour is:
+
+1. Before starting: show an optional **Epic** selector dropdown (populated from `GET /api/epics`) so the user can choose to restrict the engine to one epic.
+2. While running in exclusive mode: display a small `epic: <slug>` label that links to the epic filter on the supervisor board.
+
+This requires extending the server's work engine API to accept and remember an optional epic filter, implementing a minimal `GET /api/epics` route, and adding the `epic` optional field to `Frontmatter` so the engine loop can filter on it.
 
 ### Acceptance criteria
 
