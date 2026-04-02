@@ -24,7 +24,7 @@ When a state transition with `completion = "merge"` is executed (e.g. `apm state
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The `pr` completion strategy (unchanged — PR creation/merge via GitHub API is a separate flow)\n- The `pull` and `none` completion strategies (unaffected)\n- Any UI or output changes to indicate that a manual push is now required\n- Adding a separate command or flag to let supervisors trigger the push later
 
 ### Approach
 
