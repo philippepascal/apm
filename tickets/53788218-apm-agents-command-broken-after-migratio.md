@@ -28,7 +28,7 @@ The `apm agents` command reads the agents instructions file path from `[agents] 
 
 ### Approach
 
-How the implementation will work.
+Single-file config change — no code changes required.\n\n1. Open `.apm/config.toml` (the project's own APM config, at the repo root)\n2. On the line `instructions = "apm.agents.md"` under `[agents]`, update it to `instructions = ".apm/agents.md"`\n3. Verify manually: `cargo run -p apm -- agents` should print the contents of `.apm/agents.md`\n4. Commit the change to the ticket branch:\n   `git -C <worktree> add .apm/config.toml`\n   `git -C <worktree> commit -m "Fix agents instructions path after .apm/ migration"`\n\nNo test changes needed — the existing test suite covers config loading; the fix is a data change, not a logic change.
 
 ### Open questions
 
