@@ -1,6 +1,7 @@
 pub mod clean;
 pub mod config;
 pub mod credentials;
+pub mod epic;
 pub mod git;
 pub mod init;
 pub mod logger;
