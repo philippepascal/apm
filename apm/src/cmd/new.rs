@@ -2,8 +2,6 @@ use anyhow::Result;
 use apm_core::{config::Config, ticket};
 use std::path::Path;
 
-const KNOWN_SECTIONS: &[&str] = &["Problem", "Acceptance criteria", "Out of scope", "Approach", "Open questions"];
-
 pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>) -> Result<()> {
     let config = Config::load(root)?;
 
@@ -22,14 +20,11 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         );
     }
 
-    let config_active = !config.ticket.sections.is_empty();
-    for name in &sections {
-        if config_active {
+    if !config.ticket.sections.is_empty() {
+        for name in &sections {
             if !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name)) {
                 anyhow::bail!("unknown section {:?}; not defined in [ticket.sections]", name);
             }
-        } else if !KNOWN_SECTIONS.iter().any(|s| s.eq_ignore_ascii_case(name)) {
-            anyhow::bail!("unknown section {:?}; valid sections: {}", name, KNOWN_SECTIONS.join(", "));
         }
     }
 
