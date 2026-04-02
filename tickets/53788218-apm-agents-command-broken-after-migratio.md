@@ -8,14 +8,14 @@ risk = 0
 author = "apm"
 branch = "ticket/53788218-apm-agents-command-broken-after-migratio"
 created_at = "2026-04-02T05:27:56.648370Z"
-updated_at = "2026-04-02T05:27:56.648370Z"
+updated_at = "2026-04-02T16:58:48.402621Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+it seems to be looking for the wrong file name
 
 ### Acceptance criteria
 
@@ -38,9 +38,6 @@ How the implementation will work.
 
 
 ### Code review
-
-
-
 ## History
 
 | When | From | To | By |
