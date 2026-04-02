@@ -33,7 +33,11 @@ The desired behaviour (per `docs/epics.md` § "Ticket cards") is: cards where `d
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Setting `depends_on` via the UI (creating or editing tickets with dependency lists)
+- The priority queue panel (`PriorityQueuePanel.tsx`) — it renders table rows, not cards; lock icon coverage there is a separate task
+- The ticket detail panel's `depends_on` display (also described in the epic, separate ticket)
+- Epic-related frontmatter fields (`epic`, `target_branch`)
+- Blocking the dispatch engine based on `depends_on` (separate concern)
 
 ### Approach
 
