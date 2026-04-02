@@ -78,11 +78,7 @@ Add to the existing `#[cfg(test)]` block using the existing `minimal_raw` / `dum
 
 ### Amendment requests
 
-- [x] Remove AC #6, #7, #8 (pick_next dep filtering) — those belong to ticket c1ff90de
-- [x] Remove AC #9 (apm state using target_branch for PR) — that belongs to ticket d3749f24
-- [x] Remove Approach step 2 (is_implemented_or_later, depends_satisfied, pick_next extension) — c1ff90de
-- [x] Remove Approach step 3 (state.rs target_branch PR targeting) — d3749f24
-- [x] This ticket's sole scope is adding the three optional fields to Frontmatter; nothing else
+- [ ] Delete the duplicate sections "### 2. filter blocked tickets in pick_next", "### 3. use target_branch for PR creation", and "### 4. Tests" that remain in the Approach body — they were not removed in the previous amendment and still instruct the worker to implement dep-scheduling and PR-targeting code that belongs to c1ff90de and d3749f24. The spec must contain only the Frontmatter field addition and its five parse/round-trip tests.
 
 ### Code review
 
