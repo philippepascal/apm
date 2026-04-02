@@ -15,7 +15,9 @@ updated_at = "2026-04-01T22:00:14.896579Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The `apm work` engine currently dispatches any ready ticket regardless of epic membership. When working an epic, the supervisor wants to focus the engine exclusively on that epic's tickets and ignore free tickets.
+
+The full design is in `docs/epics.md` (§ `apm work` — Exclusive mode). Adding `--epic <id>` filters candidates to `frontmatter.epic == id` before the priority sort. A config shorthand `[work] epic = "ab12cd34"` implies exclusive mode. No other modes (balanced, per-epic limits) are supported — the spec explicitly cuts them for simplicity. Dependency ordering within the epic still applies.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
