@@ -45,6 +45,55 @@ The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (
 
 ### Approach
 
+**1. `apm-core/src/ticket.rs` — Frontmatter struct**
+
+Add three new optional fields with `#[serde(skip_serializing_if = "Option::is_none")]` so they are omitted from TOML when absent (backward-compatible):
+
+```rust
+pub epic: Option<String>,
+pub target_branch: Option<String>,
+pub depends_on: Option<Vec<String>>,
+```
+
+**2. `apm-core/src/ticket.rs` — `create()` function**
+
+Add parameters (or extend the options struct if one exists) for the three new fields. When `epic`/`target_branch` are `Some`, populate them in the `Frontmatter` being constructed. Pass `base_branch` through to the git layer.
+
+**3. `apm-core/src/git.rs` — branch creation from base**
+
+`commit_to_branch()` (and its inner `try_worktree_commit()`) currently branches from `HEAD`. Add an optional `base_branch: Option<&str>` parameter. When `Some(b)`:
+
+- Resolve the base to a SHA via `git rev-parse origin/<b>` (fall back to local `<b>` if origin doesn't have it)
+- Pass that SHA as the start point to `git worktree add -b <ticket-branch> <path> <sha>`
+
+When `None`, existing behaviour (branch from `HEAD`) is preserved.
+
+**4. `apm/src/main.rs` — CLI flags**
+
+Add to the `New` subcommand variant:
+
+```
+--epic <ID>          Short epic ID (8 hex chars); resolves epic/<ID>-* branch
+--depends-on <IDS>   Comma-separated ticket IDs (repeatable flag also acceptable)
+```
+
+**5. `apm/src/cmd/new.rs` — flag handling**
+
+In `run()`:
+
+1. If `--epic <id>` is given:
+   - Run `git ls-remote origin 'refs/heads/epic/<id>-*'` to find the full branch name
+   - If no match: print error (`"No epic branch found for id '<id>'"`) and exit non-zero
+   - Set `target_branch = <full-branch-name>`, `epic = <id>`
+2. Parse `--depends-on` (split on commas, strip whitespace)
+3. Pass all three fields to `ticket::create()`
+
+**6. Tests**
+
+Unit (inline in `apm-core/src/ticket.rs`): Frontmatter with new fields round-trips through TOML serialize/deserialize; Frontmatter without new fields (legacy) parses without error.
+
+Integration (`apm/tests/integration.rs`): Create a temp git repo with an epic branch; `apm new --epic <id>` produces a ticket with correct frontmatter and a branch whose first parent is the epic branch tip; `apm new` without `--epic` still branches from `main` and has no epic fields; `apm new --epic <bad-id>` exits non-zero.
+
 ### 1. `apm-core/src/ticket.rs` — Frontmatter struct
 
 Add three new optional fields with `#[serde(skip_serializing_if = "Option::is_none")]` so they are omitted from TOML when absent (backward-compatible):
