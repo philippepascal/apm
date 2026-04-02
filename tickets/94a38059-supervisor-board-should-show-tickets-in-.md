@@ -24,7 +24,11 @@ Adding `new` to the visible states lets supervisors act on newly-created tickets
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The supervisor board renders a swimlane column for the `new` state
+- [ ] Tickets in `new` state appear as cards inside that column
+- [ ] The `new` column is visible by default (no extra toggle required)
+- [ ] The `new` column displays the correct state label ("new")
+- [ ] Existing columns for all other states (question, specd, ammend, blocked, implemented, accepted) are unaffected
 
 ### Out of scope
 
