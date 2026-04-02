@@ -36,7 +36,7 @@ The `apm epic` subcommand group does not yet exist and must be wired into the CL
 - [x] An `EPIC.md` file containing `# My Feature\n` is committed to the epic branch
 - [x] The epic branch tracks `origin/<branch>` (pushed with `--set-upstream`)
 - [x] `apm epic new` with no title argument exits non-zero and prints a usage error
-- [ ] Running `apm epic new` when `origin` has no `main` branch exits non-zero with a clear error message
+- [x] Running `apm epic new` when `origin` has no `main` branch exits non-zero with a clear error message
 - [ ] `apm epic --help` prints the `new` subcommand in the usage output
 
 ### Out of scope
