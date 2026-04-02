@@ -63,7 +63,12 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Deleting the ticket file from the `main` branch (that is `apm close`)
+- Pruning non-`ticket/*` remote branches
+- Any changes to `apm close` behavior
+- Configuring default flags via `apm.toml` (e.g. making `--branches` the default per-project)
+- Recovering or archiving branches before deletion
+- `--remote` without a ticket-state lookup (e.g. deleting any stale remote branch regardless of whether it has a ticket)
 
 ### Approach
 
