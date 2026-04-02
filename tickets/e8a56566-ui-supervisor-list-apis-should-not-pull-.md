@@ -22,13 +22,13 @@ The desired behaviour is that the server excludes closed (terminal) tickets from
 
 ### Acceptance criteria
 
-- [ ] `GET /api/tickets` without query parameters returns only non-closed tickets
-- [ ] `GET /api/tickets?include_closed=true` returns all tickets including closed ones
-- [ ] The UI supervisor view passes `include_closed=true` to the API when the "Show closed" checkbox is checked
-- [ ] The UI supervisor view does not pass `include_closed=true` (or omits the parameter) when the checkbox is unchecked
-- [ ] Closed tickets do not appear in the default supervisor list view on page load
-- [ ] Toggling "Show closed" on re-fetches the ticket list and closed tickets appear
-- [ ] Toggling "Show closed" off re-fetches the ticket list and closed tickets disappear
+- [x] `GET /api/tickets` without query parameters returns only non-closed tickets
+- [x] `GET /api/tickets?include_closed=true` returns all tickets including closed ones
+- [x] The UI supervisor view passes `include_closed=true` to the API when the "Show closed" checkbox is checked
+- [x] The UI supervisor view does not pass `include_closed=true` (or omits the parameter) when the checkbox is unchecked
+- [x] Closed tickets do not appear in the default supervisor list view on page load
+- [x] Toggling "Show closed" on re-fetches the ticket list and closed tickets appear
+- [x] Toggling "Show closed" off re-fetches the ticket list and closed tickets disappear
 
 ### Out of scope
 
