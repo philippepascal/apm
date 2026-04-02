@@ -17,7 +17,7 @@ pub fn derive_epic_state(states: &[&StateConfig]) -> &'static str {
     if states.is_empty() {
         return "empty";
     }
-    if states.iter().any(|s| !s.satisfies_deps && !s.terminal) {
+    if states.iter().any(|s| !matches!(s.satisfies_deps, crate::config::SatisfiesDeps::Bool(true)) && !s.terminal) {
         return "in_progress";
     }
     if states.iter().all(|s| s.terminal) {
@@ -37,7 +37,8 @@ mod tests {
             label: "x".to_string(),
             description: String::new(),
             terminal,
-            satisfies_deps,
+            satisfies_deps: crate::config::SatisfiesDeps::Bool(satisfies_deps),
+            dep_requires: None,
             transitions: vec![],
             actionable: actionable.into_iter().map(|s| s.to_string()).collect(),
             instructions: None,

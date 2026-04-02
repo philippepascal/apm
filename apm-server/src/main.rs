@@ -169,14 +169,14 @@ fn derive_epic_state(
     let all_satisfies_or_terminal = tickets.iter().all(|t| {
         state_map
             .get(t.frontmatter.state.as_str())
-            .map(|s| s.satisfies_deps || s.terminal)
+            .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
             .unwrap_or(false)
     });
     if all_satisfies_or_terminal {
         let any_satisfies = tickets.iter().any(|t| {
             state_map
                 .get(t.frontmatter.state.as_str())
-                .map(|s| s.satisfies_deps)
+                .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)))
                 .unwrap_or(false)
         });
         let all_terminal = tickets.iter().all(|t| {
@@ -376,7 +376,7 @@ fn compute_blocking_deps(
     deps.iter()
         .filter_map(|dep_id| {
             state_map.get(dep_id.as_str()).and_then(|&s| {
-                if apm_core::ticket::dep_satisfied(s, &config) {
+                if apm_core::ticket::dep_satisfied(s, None, &config) {
                     None
                 } else {
                     Some(BlockingDep { id: dep_id.clone(), state: s.to_string() })
@@ -466,7 +466,7 @@ async fn list_tickets(
         Some(root) => match apm_core::config::Config::load(root) {
             Ok(cfg) => {
                 let resolved = cfg.workflow.states.iter()
-                    .filter(|s| s.satisfies_deps || s.terminal)
+                    .filter(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
                     .map(|s| s.id.clone())
                     .collect();
                 let terminal = cfg.workflow.states.into_iter()
