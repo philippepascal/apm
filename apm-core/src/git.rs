@@ -755,6 +755,22 @@ pub fn has_remote(root: &Path) -> bool {
     run(root, &["remote", "get-url", "origin"]).is_ok()
 }
 
+/// Create a new epic branch at origin/main (or local main as fallback),
+/// seed it with a minimal EPIC.md, and push it.
+/// Returns `(id, branch_name)` where branch_name is `epic/<id>-<slug>`.
+pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)> {
+    let id = gen_hex_id();
+    let slug = crate::ticket::slugify(title);
+    let branch = format!("epic/{id}-{slug}");
+    let _ = run(root, &["fetch", "origin", "main"]);
+    if run(root, &["branch", &branch, "origin/main"]).is_err() {
+        run(root, &["branch", &branch, "main"])?;
+    }
+    commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")?;
+    let _ = push_branch(root, &branch);
+    Ok((id, branch))
+}
+
 /// Merge `branch` into `default_branch` (fast-forward or merge commit).
 /// Pushes `default_branch` to origin when a remote exists.
 pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str) -> Result<()> {
