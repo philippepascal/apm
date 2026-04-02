@@ -1,14 +1,15 @@
 +++
 id = "e35ef349"
 title = "CLI: apm register, apm sessions, and apm revoke commands"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/e35ef349-cli-apm-register-apm-sessions-and-apm-re"
 created_at = "2026-04-02T20:54:25.629052Z"
-updated_at = "2026-04-02T23:22:59.884235Z"
+updated_at = "2026-04-02T23:59:31.321375Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["8a08637c"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
+| 2026-04-02T23:59Z | groomed | in_design | philippepascal |
