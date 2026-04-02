@@ -35,7 +35,13 @@ The `ticket::create` function must also be extended to accept and persist these 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Epic CRUD routes (`GET /api/epics`, `POST /api/epics`, `GET /api/epics/:id`) — separate ticket
+- `apm epic new` / `apm epic list` / `apm epic show` CLI commands — separate ticket
+- `apm new --epic` CLI flag — separate ticket
+- `depends_on` scheduling in the engine loop — separate ticket
+- UI changes (epic dropdown in new-ticket modal, lock icons on cards, epic filter) — separate ticket
+- `POST /api/work/start` epic filter field — separate ticket
+- `apm start` worktree provisioning from `target_branch` — separate ticket
 
 ### Approach
 
