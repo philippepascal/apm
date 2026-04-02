@@ -1,15 +1,15 @@
 +++
 id = "54b043f7"
 title = "Add /api/epics server routes"
-state = "ammend"
+state = "in_design"
 priority = 4
 effort = 5
 risk = 3
 author = "claude-0401-2145-a8f3"
-agent = "27591"
+agent = "philippepascal"
 branch = "ticket/54b043f7-add-api-epics-server-routes"
 created_at = "2026-04-01T21:55:53.796830Z"
-updated_at = "2026-04-02T02:21:26.223986Z"
+updated_at = "2026-04-02T02:21:59.382379Z"
 +++
 
 ## Spec
@@ -187,3 +187,4 @@ Round-trip tests (create → list → get) may use the existing temp-repo helper
 | 2026-04-02T02:11Z | ammend | in_design | philippepascal |
 | 2026-04-02T02:12Z | in_design | specd | claude-0402-0215-spec4 |
 | 2026-04-02T02:21Z | specd | ammend | apm |
+| 2026-04-02T02:21Z | ammend | in_design | philippepascal |
