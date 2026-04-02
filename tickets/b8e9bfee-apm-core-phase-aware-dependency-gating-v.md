@@ -108,9 +108,11 @@ There is only one existing call site for `dep_satisfied`; update it to pass the 
 
 #### 3. `.apm/workflow.toml` — configure the project
 
-- Add `satisfies_deps = "spec"` to the `specd` state
+- Add `satisfies_deps = "spec"` to `specd`, `ready`, `in_progress`, and `ammend` states — all states where a ticket has a complete, committed spec
 - Add `dep_requires = "spec"` to the `groomed` state
 - Leave `implemented` and `closed` as `satisfies_deps = true` — no change
+
+Rationale: a `groomed` ticket A that depends on ticket B must remain unblocked as B advances through `ready`, `in_progress`, and `ammend`. Without tagging those states, A re-blocks the moment B advances past `specd`, which is the opposite of the intended behaviour.
 
 #### 4. Tests
 
@@ -122,7 +124,8 @@ Unit tests in `apm-core/src/ticket.rs` (inline `#[cfg(test)]` module):
 Integration test in the existing integration test file:
 - Ticket A in `groomed` (with `dep_requires = "spec"`) depends on ticket B
 - When B is in `specd` (with `satisfies_deps = "spec"`): `pick_next` returns A
-- When B is in `ready` (no `satisfies_deps`): `pick_next` does not return A
+- When B is in `ready` (with `satisfies_deps = "spec"`): `pick_next` still returns A
+- When B is only in a pre-spec state (no `satisfies_deps`): `pick_next` does not return A
 
 #### Order of steps
 
