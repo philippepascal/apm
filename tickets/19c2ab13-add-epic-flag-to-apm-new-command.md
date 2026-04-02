@@ -16,9 +16,9 @@ updated_at = "2026-04-02T00:49:01.961954Z"
 
 ### Problem
 
-Currently `apm new` always creates tickets branching from `main`. For tickets that belong to an epic, the ticket branch must instead be created from the epic branch tip, and the frontmatter must carry `epic` and `target_branch` so `apm start` and the PR creation step know where to target.
+Currently `apm new` always creates ticket branches from `main` (or the default branch) and writes no epic-related fields to frontmatter. For tickets that belong to an epic, the ticket branch must instead be created from the epic branch tip, and the frontmatter must carry `epic` and `target_branch` so that downstream commands (`apm start`, PR creation) know where to target. An optional `depends_on` field lets a ticket declare that it must not be dispatched until listed tickets are implemented.
 
-The full design is in `docs/epics.md` (§ Commands — `apm new --epic`). The flag pre-fills `epic`, `target_branch` (resolved from the epic branch name), and optionally `depends_on`. The ticket branch is created from the epic branch tip rather than `main`. Without this flag, `apm new` behaviour is unchanged.
+The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (and `--depends-on`) to `apm new`. Without the flag, `apm new` behaviour is completely unchanged.
 
 ### Acceptance criteria
 
