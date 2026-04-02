@@ -288,7 +288,7 @@ Full round-trip tests (branch creation + list + get) require a real git repo; us
 ### Amendment requests
 
 - [x] `derive_epic_state` in the Approach hardcodes "in_design", "in_progress", "accepted", "closed", "implemented". Replace with config-driven logic: the server loads workflow config and passes `&config.workflow.states` to the helper; the helper uses `actionable`, `satisfies_deps`, and `terminal` flags (same rules as a5e1ea24). No state ID string comparisons.
-- [ ] Update the epic `state` AC items to describe the four outcomes using config flags, not state names.
+- [x] Update the epic `state` AC items to describe the four outcomes using config flags, not state names.
 
 ### Code review
 
