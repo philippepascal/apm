@@ -1,14 +1,15 @@
 +++
 id = "558ae699"
 title = "Remove agent field from frontmatter, server API, and apm list/show output"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/558ae699-remove-agent-field-from-frontmatter-serv"
 created_at = "2026-04-02T20:53:58.923882Z"
-updated_at = "2026-04-02T23:22:33.350042Z"
+updated_at = "2026-04-02T23:33:33.489950Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["610be42e"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:53Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
+| 2026-04-02T23:33Z | groomed | in_design | philippepascal |
