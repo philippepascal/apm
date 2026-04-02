@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:57:35.927094Z"
 
 ### Problem
 
-The supervisor board filter bar has state and agent filters but no epic filter. When multiple epics are active, all their tickets appear together and the supervisor cannot isolate a single epic's view.
+The supervisor board filter bar has state and agent filters but no epic filter. When multiple epics are active, all their tickets appear together, making it impossible for the supervisor to isolate a single epic's work in the board view.
 
-The full design is in `docs/epics.md` (§ apm-ui changes — Supervisor board). Add an epic filter dropdown to the existing filter bar. Selecting an epic hides tickets from other epics. Selecting "All" restores the default view. The dropdown is populated from `GET /api/epics`.
+The desired behaviour: an epic dropdown in the filter bar (beside the existing state and agent dropdowns) lets the supervisor select one epic and hide all tickets that belong to other epics, or select "All" to restore the default view. The dropdown is populated from `GET /api/epics`.
+
+That API route does not yet exist. This ticket adds both the server-side endpoint (minimal: branch scan + name parsing, no ticket counts) and the UI dropdown.
 
 ### Acceptance criteria
 
