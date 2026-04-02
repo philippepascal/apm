@@ -32,7 +32,34 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] **Default behavior (worktrees only):**
+- [ ] `apm clean` removes the worktree for each terminal-state ticket that has one
+- [ ] `apm clean` does not delete any local branch
+- [ ] `apm clean --dry-run` lists worktrees that would be removed and exits without modifying anything
+- [ ] `apm clean --dry-run` does not list any local branch for deletion
+
+- [ ] **With `--branches`:**
+- [ ] `apm clean --branches` removes worktrees and deletes local `ticket/*` branches for terminal-state tickets
+- [ ] `apm clean --branches` prunes the corresponding `origin/<branch>` remote-tracking ref after deleting the local branch (to prevent re-creation on next `apm sync`)
+- [ ] `apm clean --branches --dry-run` lists both worktrees and local branches that would be removed
+
+- [ ] **With `--remote --older-than`:**
+- [ ] `apm clean --remote --older-than 30d` deletes remote `ticket/*` branches in terminal states whose last commit is older than 30 days
+- [ ] `apm clean --remote --older-than 2026-01-01` accepts ISO date (`YYYY-MM-DD`) as the threshold
+- [ ] `apm clean --remote` (without `--older-than`) exits with a non-zero status and an error message stating `--older-than` is required
+- [ ] `--older-than` without `--remote` exits with a non-zero status and an error message stating it requires `--remote`
+- [ ] `apm clean --remote --older-than 30d` only removes branches whose ticket is in a terminal state; non-terminal or non-ticket branches are never touched
+- [ ] `apm clean --remote --older-than 30d --yes` skips per-branch confirmation prompts
+- [ ] `apm clean --remote --older-than 30d --dry-run` lists remote branches that would be deleted without modifying anything
+
+- [ ] **With `--untracked`:**
+- [ ] `apm clean --untracked` removes a worktree that has only untracked non-temp files by deleting those files first, then removing the worktree
+- [ ] `apm clean` (without `--untracked`) prints a warning for any worktree with untracked non-temp files and leaves it in place
+- [ ] `apm clean --untracked` still skips a worktree that has modified tracked files, printing a warning
+
+- [ ] **Invariants:**
+- [ ] Remote branches are never deleted unless `--remote` is explicitly passed
+- [ ] Known-temp files (`.apm-worker.pid`, `.apm-worker.log`, `pr-body.md`, `body.md`, `ac.txt`) are auto-removed in all modes without requiring `--untracked`
 
 ### Out of scope
 
