@@ -31,7 +31,17 @@ Explicit list of what this ticket does not cover.
 
 ### Approach
 
-How the implementation will work.
+At query time, build a reverse dependency index from all loaded tickets and propagate max priority up the graph.
+
+**1. Reverse dep index** — `HashMap<&str, Vec<&Ticket>>`: for each ticket with `depends_on`, add an entry in the map from each dep ID to the dependent ticket.
+
+**2. Effective priority** — for each ticket, walk all direct and transitive dependents (BFS/DFS on the reverse index), collect their raw priority scores, and return `max(own_priority, max_dependent_priority)`. Cycles are safe to ignore (visit-set).
+
+**3. `sorted_actionable`** — replace `t.frontmatter.priority` in the score formula with `effective_priority(t, &reverse_index)`.
+
+**4. UI** — `TicketResponse` (or a new computed field `effective_priority`) carries the elevated score so the queue panel sorts correctly. The raw `priority` field stays unchanged.
+
+**Out of scope**: modifying the stored `priority` field; UI display of why a ticket's priority was elevated; multi-level cycle detection beyond simple visit-set.
 
 ### Open questions
 
