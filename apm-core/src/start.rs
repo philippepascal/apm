@@ -461,6 +461,7 @@ pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
     skip_permissions: bool,
+    epic_filter: Option<&str>,
 ) -> Result<Option<(String, std::process::Child, PathBuf)>> {
     let config = Config::load(root)?;
     let skip_permissions = skip_permissions || config.agents.skip_permissions;
@@ -471,7 +472,13 @@ pub fn spawn_next_worker(
         .collect();
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let all_tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let tickets: Vec<ticket::Ticket> = match epic_filter {
+        Some(epic_id) => all_tickets.into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+            .collect(),
+        None => all_tickets,
+    };
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
         return Ok(None);
