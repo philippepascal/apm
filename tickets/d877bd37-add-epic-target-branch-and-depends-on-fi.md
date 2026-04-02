@@ -33,10 +33,6 @@ All three fields are optional; omitting them preserves existing behaviour exactl
 - [ ] A ticket file with `depends_on = ["cd56ef78", "12ab34cd"]` in frontmatter parses without error and `ticket.frontmatter.depends_on` equals `["cd56ef78", "12ab34cd"]`
 - [ ] A ticket file with none of the three new fields parses without error, with all three fields absent/None (backward-compatible)
 - [ ] Serialising a ticket whose `epic`, `target_branch`, and `depends_on` fields are absent produces no mention of those keys in the TOML output
-- [ ] `pick_next` skips a ticket whose `depends_on` list contains at least one ID that corresponds to a ticket not yet in `implemented` or a terminal state
-- [ ] `pick_next` returns a ticket whose `depends_on` entries are all in `implemented` or a terminal state
-- [ ] `pick_next` does not skip a ticket whose `depends_on` references an ID that matches no known ticket (unknown dependency is treated as non-blocking)
-- [ ] `apm state <id> implemented` opens the PR against `target_branch` when that field is set, instead of the configured default branch
 
 ### Out of scope
 
