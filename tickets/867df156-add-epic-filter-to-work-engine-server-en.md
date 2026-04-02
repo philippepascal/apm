@@ -15,7 +15,9 @@ updated_at = "2026-04-01T22:00:44.536264Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The work engine server endpoint (`POST /api/work/start`) has no way to start the engine in epic-exclusive mode, and the status endpoint does not report whether an epic filter is active. This means the UI cannot drive epic-scoped engine sessions.
+
+The full design is in `docs/epics.md` (§ apm-server changes — Work engine — epic filter). `POST /api/work/start` gains an optional `"epic"` field; when set, `run_engine_loop` filters candidates to `frontmatter.epic == id` before the priority sort. `GET /api/work/status` includes `"epic": "<id>"` when exclusive mode is active, `null` otherwise.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
