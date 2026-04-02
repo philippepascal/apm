@@ -83,7 +83,7 @@ Four files change; changes are additive and do not touch non-force code paths.
 
 ### Amendment requests
 
-- [ ] Add an explicit Acceptance criterion: "`apm clean --force` still skips tickets with modified tracked files (same behaviour as without `--force`)". This case is mentioned in Out of scope but is not testable from AC alone.
+- [x] Add an explicit Acceptance criterion: "`apm clean --force` still skips tickets with modified tracked files (same behaviour as without `--force`)". This case is mentioned in Out of scope but is not testable from AC alone.
 - [ ] Merge AC #2 and AC #3 into one — "local tip not an ancestor of the default branch" and "local tip diverges from origin" describe the same guard. Remove the redundant one.
 - [ ] Remove the specific line number references from the Approach ("lines 127-130", "lines 179-187"). Those will be stale by implementation time. Replace with descriptions of the guard logic (e.g. "the not-merged check", "the is-ancestor check", "the divergence check") so the worker locates them by logic, not line number.
 
