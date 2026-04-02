@@ -132,6 +132,8 @@ Integration tests that require a live `gh` CLI and GitHub remote are out of scop
 
 ### Amendment requests
 
+- [ ] The gate check must not hardcode state names. Replace "ticket is in `implemented` or a later (terminal) state" with "ticket's state has `satisfies_deps = true` or `terminal = true` in workflow config". Update AC #1, AC #5, and the gate-check step in Approach accordingly.
+- [ ] The Approach step that checks `state.terminal == true || equals "implemented"` must become: look up the ticket's state in `config.workflow.states`; pass if `state.satisfies_deps || state.terminal`. No string comparison against a state name.
 
 ### Code review
 
