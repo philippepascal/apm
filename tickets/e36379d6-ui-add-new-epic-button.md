@@ -1,7 +1,7 @@
 +++
 id = "e36379d6"
 title = "UI: add new epic button"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "26175"
 branch = "ticket/e36379d6-ui-add-new-epic-button"
 created_at = "2026-04-02T20:47:05.242823Z"
-updated_at = "2026-04-02T21:13:06.571140Z"
+updated_at = "2026-04-02T21:13:19.538251Z"
 +++
 
 ## Spec
@@ -79,3 +79,4 @@ No server-side changes needed — POST /api/epics already exists in `apm-server`
 | 2026-04-02T20:47Z | — | new | apm |
 | 2026-04-02T20:50Z | new | groomed | apm |
 | 2026-04-02T20:56Z | groomed | in_design | philippepascal |
+| 2026-04-02T21:13Z | in_design | specd | claude-0402-2100-spec1 |
