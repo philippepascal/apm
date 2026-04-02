@@ -1,7 +1,7 @@
 +++
 id = "9b4d2c9c"
 title = "UI shows configured max workers and allow override"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm-ui"
 agent = "48994"
 branch = "ticket/9b4d2c9c-ui-shows-configured-max-workers-and-allo"
 created_at = "2026-04-02T19:20:21.647921Z"
-updated_at = "2026-04-02T19:26:58.717525Z"
+updated_at = "2026-04-02T20:05:05.187118Z"
 +++
 
 ## Spec
@@ -99,3 +99,4 @@ lives in memory and is lost when the apm-server is closed.
 | 2026-04-02T19:20Z | new | groomed | apm |
 | 2026-04-02T19:22Z | groomed | in_design | philippepascal |
 | 2026-04-02T19:26Z | in_design | specd | claude-0402-1930-sp9x |
+| 2026-04-02T20:05Z | specd | ammend | apm |
