@@ -33,7 +33,7 @@ Two related pieces of infrastructure must land with this ticket because `apm epi
 - [x] An ambiguous prefix (matches more than one epic branch) exits non-zero and prints a list of the matching branch names
 - [x] An ID or prefix that matches no epic branch exits non-zero with a clear error message
 - [x] Derived state is computed from config flags only — no state name strings are hardcoded: no tickets → `empty`; any ticket whose state has neither `satisfies_deps = true` nor `terminal = true` → `in_progress`; all tickets in states with `satisfies_deps = true` or `terminal = true`, but not all terminal → `implemented`; all tickets in states with `terminal = true` → `done`
-- [ ] `apm epic show` with no argument prints usage and exits non-zero
+- [x] `apm epic show` with no argument prints usage and exits non-zero
 - [ ] Adding `epic`, `target_branch`, and `depends_on` optional fields to `Frontmatter` does not break serialisation of any existing ticket that lacks those fields (they are omitted from output when `None`)
 - [ ] Adding `satisfies_deps` optional boolean field to `StateConfig` does not break deserialisation of any existing `workflow.toml` that lacks it (defaults to `false`)
 
