@@ -251,6 +251,114 @@ nginx proxies `https://apm.example.com/` → `http://host.docker.internal:3000` 
 
 ---
 
+## Point 7 — CLI changes
+
+### `apm init` additions
+
+- Prompts: "What is your username?" — writes `username` to `.apm/local.toml`
+- Adds `.apm/local.toml` to `.gitignore`
+- Adds `collaborators = ["<username>"]` to `[project]` in `.apm/config.toml` as a starting point
+- If GitHub plugin is configured, skips the username prompt and syncs collaborators from GitHub instead
+
+### `apm new` — no interface change
+
+`author` is set automatically from the resolved identity. No flag needed. The `agent` field is no longer written.
+
+### `apm list` additions
+
+| Flag | Behaviour |
+|---|---|
+| *(default)* | All non-terminal tickets, all authors — unchanged |
+| `--mine` | Filter to tickets where `author` matches current identity |
+| `--author <username>` | Filter to tickets by a specific collaborator |
+| `--unassigned` | Currently filters by `agent = null`; after this change, filters by `author = "unassigned"` |
+
+`apm list --mine` is the intended daily-driver view for a developer checking their own work.
+
+### `apm show` — no interface change
+
+Displays `author` field alongside existing fields. Drops `agent` from output.
+
+### `apm next` — no interface change
+
+`apm next` is for agents finding work; it does not filter by author. The author of a ticket has no bearing on which agent should implement it.
+
+### New: `apm register <username>`
+
+Calls `POST /api/auth/otp` on localhost (trusted, no auth). Server generates and stores OTP, returns it; CLI prints it. Username must be a known collaborator (warning if not).
+
+```
+$ apm register alice
+Registration code for alice: X7K2-M9QP
+Valid for 5 minutes. Open apm-server in a browser on the device to register.
+```
+
+### New: `apm sessions`
+
+Lists active WebAuthn sessions from `.apm/sessions.json`.
+
+```
+$ apm sessions
+USERNAME      DEVICE           LAST SEEN            EXPIRES
+alice         iPhone (Safari)  2026-04-02 19:30     2026-04-09
+alice         MacBook (Chrome) 2026-04-01 08:15     2026-04-08
+```
+
+### New: `apm revoke <username> [--device <hint>]`
+
+Invalidates all sessions (and registered credentials) for `<username>`. With `--device`, invalidates only the matching session. `--all` invalidates everything.
+
+### `apm epic` additions
+
+- `apm epic list --mine` — filter to epics where the current user authored at least one ticket
+- `apm epic new` writes `author` on the epic record from current identity (mirrors ticket behaviour)
+- No other epic command changes
+
+---
+
+## Point 8 — UI changes
+
+### `/api/me` endpoint
+
+apm-server exposes `GET /api/me` returning the current user's identity:
+- For authenticated (WebAuthn) sessions: returns the logged-in username
+- For localhost requests (always trusted): reads `.apm/local.toml` and returns `username`, or `"unassigned"` if absent
+
+The UI fetches this once on load and uses it to set the default author filter.
+
+### Supervisor board — default filter
+
+On load, the board defaults to showing only tickets where `author` matches the value returned by `/api/me`. A **"Show all"** toggle (or clearing the author filter) reveals all authors.
+
+This default makes sense even for a single developer: tickets created by agents (`author = "apm"` or side notes) are hidden by default, reducing noise. The developer sees their own work front and centre.
+
+### Supervisor board — filter bar additions
+
+| Control | Behaviour |
+|---|---|
+| Author dropdown | Filter by a specific collaborator; defaults to current user on load |
+| "Show all authors" toggle | Clears the author filter |
+
+The existing state, agent, epic, and search filters are unaffected and composable with the author filter.
+
+### Supervisor board — ticket card
+
+The `author` field is shown on the ticket card (small, subdued) when "Show all authors" is active, so the developer can see at a glance whose tickets are whose. Hidden when filtered to a single author (redundant).
+
+### Priority queue panel — no default filter
+
+The queue is for the work engine — it shows all actionable tickets regardless of author. No change.
+
+### Epic filter — existing + author
+
+The existing epic filter dropdown in the supervisor board remains. When an epic is selected, it combines with the author filter (AND logic): show tickets in this epic authored by me. The "Show all authors" toggle still works within the epic filter.
+
+### Worker activity panel — no change
+
+Shows live workers regardless of who authored the tickets they are working on.
+
+---
+
 ## Open questions
 
 - Should the collaborators list be validated strictly at `apm new` time (error if username not in list) or advisory (warn only)? Recommendation: warn only — strict validation breaks automated agents that may run before a collaborators list is configured.
