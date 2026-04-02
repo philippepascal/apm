@@ -1,14 +1,15 @@
 +++
 id = "a5e1ea24"
 title = "Implement apm epic list command"
-state = "groomed"
+state = "in_design"
 priority = 6
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
+agent = "philippepascal"
 branch = "ticket/a5e1ea24-implement-apm-epic-list-command"
 created_at = "2026-04-01T21:55:09.722953Z"
-updated_at = "2026-04-01T21:59:31.953632Z"
+updated_at = "2026-04-02T00:47:06.221425Z"
 +++
 
 ## Spec
@@ -48,3 +49,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T21:59Z | new | groomed | claude-0401-2145-a8f3 |
+| 2026-04-02T00:47Z | groomed | in_design | philippepascal |
