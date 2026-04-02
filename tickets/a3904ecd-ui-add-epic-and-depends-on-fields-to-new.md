@@ -1,7 +1,7 @@
 +++
 id = "a3904ecd"
 title = "UI: add epic and depends_on fields to new ticket modal"
-state = "in_design"
+state = "specd"
 priority = 2
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "8475"
 branch = "ticket/a3904ecd-ui-add-epic-and-depends-on-fields-to-new"
 created_at = "2026-04-01T21:56:06.583740Z"
-updated_at = "2026-04-02T00:57:48.484386Z"
+updated_at = "2026-04-02T00:57:56.422463Z"
 +++
 
 ## Spec
@@ -125,3 +125,4 @@ Tests
 | 2026-04-01T21:56Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:00Z | new | groomed | claude-0401-2145-a8f3 |
 | 2026-04-02T00:52Z | groomed | in_design | philippepascal |
+| 2026-04-02T00:57Z | in_design | specd | claude-0402-0100-s9x2 |
