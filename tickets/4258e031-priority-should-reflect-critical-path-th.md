@@ -35,7 +35,7 @@ Without critical-path elevation, the priority queue and `apm next` give a mislea
 ### Out of scope
 
 - Modifying the stored `priority` field in ticket frontmatter
-- Displaying in the UI which dependent(s) caused a ticket's priority to be elevated (see Visual considerations below)
+- Displaying in the UI or CLI which dependent(s) caused a ticket's priority to be elevated. The UI/CLI should eventually surface this — e.g. "effective priority 9 (driven by #abc123)" — but it is deferred. The `effective_priority` field on `QueueEntry` is the natural anchor; a companion `priority_driver_id` field could be added in a follow-on ticket without a schema change.
 - Cycle detection beyond a simple visited-set (no topological-sort guarantee required)
 - Changing `apm set <id> priority` behaviour
 - Priority elevation for tickets already in terminal or satisfies_deps states (they are filtered out of the actionable list)
