@@ -241,10 +241,6 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
   const epicFilter = useLayoutStore((s) => s.epicFilter)
   const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
   const queryClient = useQueryClient()
-
-  if (selectedTicketIds.length > 1) {
-    return <BatchDetailPanel ids={selectedTicketIds} />
-  }
   const [patchError, setPatchError] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useQuery({
@@ -291,6 +287,10 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
   }
 
   const stateColors = data ? getStateColors(data.state) : null
+
+  if (selectedTicketIds.length > 1) {
+    return <BatchDetailPanel ids={selectedTicketIds} />
+  }
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
