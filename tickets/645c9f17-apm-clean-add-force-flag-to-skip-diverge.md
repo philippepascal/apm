@@ -33,7 +33,7 @@ When using --force, it needs to be in interactive mode, asking the supervisor to
 - [x] `apm clean --force` still skips tickets that are not in a terminal state
 - [x] `apm clean --force` still skips tickets with a state mismatch between branch and main
 - [x] `apm clean --force` still skips tickets with modified tracked files
-- [ ] `apm clean --force --dry-run` prints what would be removed without modifying anything
+- [x] `apm clean --force --dry-run` prints what would be removed without modifying anything
 
 ### Out of scope
 
