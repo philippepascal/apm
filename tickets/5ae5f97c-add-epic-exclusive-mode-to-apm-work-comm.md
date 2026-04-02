@@ -37,7 +37,14 @@ The CLI flag takes precedence over the config value. This is the exclusive mode 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm work --epic ab12cd34` dispatches only tickets where `frontmatter.epic == "ab12cd34"`
+- [ ] `apm work --epic ab12cd34` does not dispatch free tickets (no `epic` field)
+- [ ] `apm work --epic ab12cd34` does not dispatch tickets from a different epic
+- [ ] `apm work --dry-run --epic ab12cd34` prints only epic-scoped candidates
+- [ ] When `[work] epic = "ab12cd34"` is set in `apm.toml` (or `.apm/config.toml`), `apm work` (with no flag) behaves identically to `apm work --epic ab12cd34`
+- [ ] `apm work --epic <id>` takes precedence over a `[work] epic` config value when both are present
+- [ ] When no epic-matching tickets are actionable, `apm work --epic <id>` exits with "No tickets to work." (non-daemon) or waits and polls (daemon)
+- [ ] `apm work` with no `--epic` flag and no `[work] epic` config behaves exactly as before (all actionable tickets eligible)
 
 ### Out of scope
 
