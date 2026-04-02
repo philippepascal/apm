@@ -24,7 +24,13 @@ Without critical-path elevation, the priority queue and `apm next` give a mislea
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm next` returns a lower-raw-priority ticket X before a higher-raw-priority ticket Y when X is a direct or transitive dependency of a ticket whose raw priority exceeds Y's raw priority
+- [ ] The `/api/queue` response lists a blocking ticket above independent tickets with higher raw priority when the blocker's effective priority (from its dependents) is higher
+- [ ] A ticket with no dependents sorts by its own raw priority, unchanged from current behavior
+- [ ] Effective priority propagates transitively: if A (priority 2) is blocked by B (priority 5) which is blocked by C (priority 9), A's effective priority is 9
+- [ ] A dependency cycle (A depends on B, B depends on A) does not panic or loop infinitely
+- [ ] The `priority` field stored in ticket TOML frontmatter is not modified by `apm next` or queue queries
+- [ ] Each entry in the `/api/queue` response includes an `effective_priority` field (u8) reflecting the elevated value
 
 ### Out of scope
 
