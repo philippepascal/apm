@@ -50,6 +50,72 @@ On the UI side, two small features are needed in the detail panel header: a clic
 
 ### Approach
 
+Four files change. Apply in this order:
+
+#### 1. `apm-core/src/ticket.rs` — extend `Frontmatter`
+
+Add two optional fields to the `Frontmatter` struct:
+
+```rust
+pub epic: Option<String>,
+pub depends_on: Option<Vec<String>>,
+```
+
+Decorate both with `#[serde(default, skip_serializing_if = "Option::is_none")]` so existing ticket files without these fields deserialize and round-trip correctly. No migration needed.
+
+`TicketDetailResponse` and `TicketResponse` in `apm-server/src/main.rs` both use `#[serde(flatten)] frontmatter`, so the new fields appear in all existing API responses automatically — no server-side struct changes required.
+
+#### 2. `apm-ui/src/store/useLayoutStore.ts` — add epic filter state
+
+Add to the `LayoutStore` interface and implementation:
+
+```ts
+epicFilter: string | null
+setEpicFilter: (id: string | null) => void
+```
+
+Initialise `epicFilter: null`. Setter: `set({ epicFilter: id })`.
+
+#### 3. `apm-ui/src/components/supervisor/types.ts` — extend `Ticket` type
+
+Add `epic?: string` and `depends_on?: string[]` to match the extended API response.
+
+#### 4. `apm-ui/src/components/supervisor/SupervisorView.tsx` — apply epic filter
+
+Read from store: `const epicFilter = useLayoutStore((s) => s.epicFilter)`.
+
+In the `columns` `useMemo`, after the existing `agentFilter` block:
+
+```ts
+if (epicFilter !== null) {
+  filtered = filtered.filter((t) => t.epic === epicFilter)
+}
+```
+
+Add `epicFilter` to the `useMemo` dependency array.
+
+#### 5. `apm-ui/src/components/TicketDetail.tsx` — render epic and depends_on rows
+
+Update the `TicketDetail` interface: add `epic?: string` and `depends_on?: string[]`.
+
+Add to component reads: `epicFilter` and `setEpicFilter` from layout store.
+
+**Epic row** — render below the state/E-R-P badge row, only when `data.epic` is present:
+- Label "Epic", value is a `<button>` showing the epic ID
+- Click toggles: if `epicFilter === data.epic` call `setEpicFilter(null)`, else call `setEpicFilter(data.epic)`
+- When filter is active for this epic, apply a blue-border highlight to the button
+
+**Depends on row** — render below the epic row, only when `data.depends_on?.length` is truthy:
+- Label "Depends on"
+- For each dep ID, look it up in the React Query cache via `useQueryClient().getQueryData<Ticket[]>(['tickets'])`
+- If found: render a `<button>` that calls `setSelectedTicketId(fullId)`. Apply `line-through` class if state is `implemented`, `accepted`, or `closed`
+- If not found: render the raw ID as plain text (no crash)
+- Use the existing `useQueryClient` import; do not add a new `useQuery` call
+
+#### Tests
+
+Add a unit test in `apm-core/src/ticket.rs` or `apm-core/tests/`: parse a ticket with `epic = "ab12cd34"` and `depends_on = ["cd56ef78"]` in frontmatter and assert both fields deserialize correctly. Parse a ticket without these fields and assert both are `None`. All existing tests must continue to pass.
+
 ### 1. `apm-core/src/ticket.rs` — extend `Frontmatter`
 
 Add two optional fields to the `Frontmatter` struct:
