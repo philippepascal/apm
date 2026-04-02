@@ -72,7 +72,131 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 
 ### Approach
 
-How the implementation will work.
+### Decision: local branch deletion becomes opt-in
+
+The default `apm clean` no longer deletes local branches. `--branches` is the new opt-in flag for that. This is a behavior change; no backward-compat shim is needed.
+
+---
+
+### 1. `apm/src/main.rs` — CLI flags
+
+Add to the `Clean` variant:
+
+```rust
+/// Also delete local ticket/* branches (default: worktrees only)
+#[arg(long)]
+branches: bool,
+
+/// Delete remote ticket/* branches in terminal states older than --older-than
+#[arg(long)]
+remote: bool,
+
+/// Age threshold for --remote: e.g. "30d" or "2026-01-01" (YYYY-MM-DD)
+#[arg(long, value_name = "THRESHOLD", requires = "remote")]
+older_than: Option<String>,
+
+/// Remove untracked non-temp files from worktrees before removal
+#[arg(long)]
+untracked: bool,
+```
+
+Use clap's `requires = "remote"` on `older_than` and validate in the handler that `--remote` requires `--older-than` (exit with error if missing). Update the `long_about` docstring to describe all modes.
+
+---
+
+### 2. `apm-core/src/clean.rs` — core logic
+
+**`remove()` signature change:**
+
+```rust
+pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool) -> Result<()>
+```
+
+The local-branch and remote-tracking-ref deletion blocks are now gated on `remove_branches`. All callers in `apm/src/cmd/clean.rs` pass the value of the `--branches` flag.
+
+**`--untracked` handling in `candidates()`:**
+
+The function gains an `untracked: bool` parameter. In the dirty-worktree branch (where `wt_clean` is false):
+
+- Current: if `force && modified_tracked.is_empty()` → add to candidates (git worktree remove --force handles files)
+- New: additionally, if `untracked && modified_tracked.is_empty()` → run `remove_untracked(path, &diagnosis.other_untracked)` then add to candidates with `worktree` set and `force: false` (worktree is now clean)
+
+Known-temp files continue to be removed unconditionally (existing `remove_untracked` call for `known_temp`).
+
+**New function: `remote_candidates()`**
+
+```rust
+pub fn remote_candidates(
+    root: &Path,
+    config: &Config,
+    older_than: chrono::DateTime<chrono::Utc>,
+) -> Result<Vec<RemoteCandidate>>
+```
+
+Where `RemoteCandidate` holds `branch: String` and `last_commit: DateTime<Utc>`.
+
+Steps:
+1. Build terminal-state set from config (same as `candidates()`).
+2. Call `git::remote_ticket_branches_with_dates(root)` → `Vec<(branch_name, commit_date)>`.
+3. For each branch older than `older_than`, load ticket state via `ticket::state_from_branch(root, default_branch, path)`.
+4. Keep only those in terminal states.
+5. Return as `Vec<RemoteCandidate>`.
+
+**`--older-than` parsing** (inline in `apm/src/cmd/clean.rs`):
+
+- If value ends with `d`: parse integer, subtract N days from `Utc::now()`
+- Otherwise: parse as `NaiveDate` with `chrono::NaiveDate::parse_from_str(..., "%Y-%m-%d")`, convert to `DateTime<Utc>`
+- Reject anything else with a clear error message
+
+---
+
+### 3. `apm-core/src/git.rs` — new functions
+
+**`remote_ticket_branches_with_dates(root: &Path) -> Result<Vec<(String, DateTime<Utc>)>>`**
+
+```
+git for-each-ref refs/remotes/origin/ticket/ \
+    --format=%(refname:short) %(creatordate:unix)
+```
+
+Parse each line: strip `origin/` prefix for the branch name, parse Unix timestamp as `DateTime<Utc>`.
+
+**`delete_remote_branch(root: &Path, branch: &str) -> Result<()>`**
+
+```
+git push origin --delete <branch>
+```
+
+Return error if the command fails (non-zero exit).
+
+---
+
+### 4. `apm/src/cmd/clean.rs` — handler updates
+
+- Thread `--branches` into `remove()`.
+- Thread `--untracked` into `candidates()`.
+- Add a new `--remote` code path after the existing worktree/branch cleanup:
+  1. Parse `--older-than` into `DateTime<Utc>`.
+  2. Call `clean::remote_candidates(root, &config, threshold)`.
+  3. For each candidate: prompt (unless `--yes`) then call `git::delete_remote_branch()`.
+  4. `--dry-run` prints without acting.
+
+---
+
+### 5. Tests
+
+- Unit tests in `apm-core/src/clean.rs`: add tests for `--older-than` parsing, remote candidate filtering by age and state.
+- Integration tests in `apm/tests/integration.rs`: add a test that `apm clean` leaves local branches intact, and a separate test that `apm clean --branches` removes them.
+
+---
+
+### Order of changes
+
+1. Add `delete_remote_branch` and `remote_ticket_branches_with_dates` to `git.rs`
+2. Update `clean.rs` (modify `remove`, `candidates`; add `remote_candidates`, `RemoteCandidate`)
+3. Update `main.rs` CLI flags
+4. Update `cmd/clean.rs` handler
+5. Update tests
 
 ### Open questions
 
