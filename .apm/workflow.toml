@@ -211,11 +211,12 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "implemented"
-label      = "Implemented"
-color      = "#06b6d4"
-layer      = 2
-actionable = ["supervisor"]
+id             = "implemented"
+label          = "Implemented"
+color          = "#06b6d4"
+layer          = 2
+actionable     = ["supervisor"]
+satisfies_deps = true
 
   [[workflow.states.transitions]]
   to             = "ready"
@@ -241,11 +242,12 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id       = "closed"
-label    = "Closed"
-color    = "#374151"
-layer    = 1
-terminal = true
+id             = "closed"
+label          = "Closed"
+color          = "#374151"
+layer          = 1
+terminal       = true
+satisfies_deps = true
 
 
 [workflow.prioritization]
