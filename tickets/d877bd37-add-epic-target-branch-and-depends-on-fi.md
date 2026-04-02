@@ -1,7 +1,7 @@
 +++
 id = "d877bd37"
 title = "Add epic, target_branch, and depends_on fields to ticket frontmatter"
-state = "specd"
+state = "ammend"
 priority = 10
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "14513"
 branch = "ticket/d877bd37-add-epic-target-branch-and-depends-on-fi"
 created_at = "2026-04-01T21:54:58.399434Z"
-updated_at = "2026-04-02T02:11:57.262405Z"
+updated_at = "2026-04-02T02:21:12.972732Z"
 +++
 
 ## Spec
@@ -101,3 +101,4 @@ Add to the existing `#[cfg(test)]` block using the existing `minimal_raw` / `dum
 | 2026-04-02T02:03Z | specd | ammend | apm |
 | 2026-04-02T02:11Z | ammend | in_design | philippepascal |
 | 2026-04-02T02:11Z | in_design | specd | claude-0402-0402-spec4 |
+| 2026-04-02T02:21Z | specd | ammend | apm |
