@@ -8,7 +8,7 @@ risk = 0
 author = "apm"
 branch = "ticket/645c9f17-apm-clean-add-force-flag-to-skip-diverge"
 created_at = "2026-04-02T05:35:39.235404Z"
-updated_at = "2026-04-02T05:35:39.235404Z"
+updated_at = "2026-04-02T17:00:30.051204Z"
 +++
 
 ## Spec
@@ -19,7 +19,9 @@ updated_at = "2026-04-02T05:35:39.235404Z"
 
 Both guards are sensible defaults but become obstacles once a supervisor has verified the tickets are genuinely done and wants to reclaim worktree disk space. There is currently no way to override them short of manually running `git worktree remove --force <path>` and `git branch -D <branch>` for each ticket.
 
-A `--force` flag on `apm clean` should bypass both the divergence check and the merge check for closed tickets, running `git worktree remove --force` and deleting the local branch regardless. It should still only act on tickets in a terminal state — force does not mean "clean everything".
+A `--force` flag on `apm clean` should bypass both the divergence check and the merge check for closed tickets, running `git worktree remove --force` and deleting the local branch regardless. It should still only act on tickets in a terminal state — force does not mean "clean everything". 
+
+When using --force, it needs to be in interactive mode, asking the supervisor to approve every `git worktree remove --force`
 
 ### Acceptance criteria
 
@@ -40,8 +42,6 @@ How the implementation will work.
 
 
 ### Code review
-
-
 ## History
 
 | When | From | To | By |
