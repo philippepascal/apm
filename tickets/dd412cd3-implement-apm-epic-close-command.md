@@ -3,13 +3,13 @@ id = "dd412cd3"
 title = "Implement apm epic close command"
 state = "in_design"
 priority = 6
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0401-2145-a8f3"
 agent = "27501"
 branch = "ticket/dd412cd3-implement-apm-epic-close-command"
 created_at = "2026-04-01T21:55:18.313179Z"
-updated_at = "2026-04-02T00:47:54.397879Z"
+updated_at = "2026-04-02T00:49:56.809430Z"
 +++
 
 ## Spec
