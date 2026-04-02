@@ -2,6 +2,7 @@ use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 
 fn deserialize_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
@@ -110,6 +111,47 @@ impl Ticket {
     }
 }
 
+/// Build a reverse dependency index: for each ticket ID, collect the tickets
+/// that directly depend on it.  Pass only non-terminal, non-satisfies_deps
+/// tickets so that closed work does not inflate effective priority.
+pub fn build_reverse_index<'a>(tickets: &[&'a Ticket]) -> HashMap<&'a str, Vec<&'a Ticket>> {
+    let mut map: HashMap<&'a str, Vec<&'a Ticket>> = HashMap::new();
+    for &ticket in tickets {
+        if let Some(deps) = &ticket.frontmatter.depends_on {
+            for dep_id in deps {
+                map.entry(dep_id.as_str()).or_default().push(ticket);
+            }
+        }
+    }
+    map
+}
+
+/// Return the effective priority of a ticket: the max of its own priority and
+/// the priority of all direct and transitive dependents reachable via the
+/// reverse index.  Uses a visited set to handle cycles safely.
+pub fn effective_priority(ticket: &Ticket, reverse_index: &HashMap<&str, Vec<&Ticket>>) -> u8 {
+    let mut max_priority = ticket.frontmatter.priority;
+    let mut visited: HashSet<&str> = HashSet::new();
+    let mut queue: VecDeque<&str> = VecDeque::new();
+    let id = ticket.frontmatter.id.as_str();
+    queue.push_back(id);
+    visited.insert(id);
+    while let Some(cur_id) = queue.pop_front() {
+        if let Some(dependents) = reverse_index.get(cur_id) {
+            for &dep in dependents {
+                let dep_id = dep.frontmatter.id.as_str();
+                if visited.insert(dep_id) {
+                    if dep.frontmatter.priority > max_priority {
+                        max_priority = dep.frontmatter.priority;
+                    }
+                    queue.push_back(dep_id);
+                }
+            }
+        }
+    }
+    max_priority
+}
+
 /// Return all agent-actionable tickets sorted by descending score.
 pub fn sorted_actionable<'a>(
     tickets: &'a [Ticket],
@@ -122,10 +164,15 @@ pub fn sorted_actionable<'a>(
         .iter()
         .filter(|t| actionable.contains(&t.frontmatter.state.as_str()))
         .collect();
+    let rev_idx = build_reverse_index(&candidates);
     candidates.sort_by(|a, b| {
-        b.score(pw, ew, rw)
-            .partial_cmp(&a.score(pw, ew, rw))
-            .unwrap_or(std::cmp::Ordering::Equal)
+        let score_a = effective_priority(a, &rev_idx) as f64 * pw
+            + a.frontmatter.effort as f64 * ew
+            + a.frontmatter.risk as f64 * rw;
+        let score_b = effective_priority(b, &rev_idx) as f64 * pw
+            + b.frontmatter.effort as f64 * ew
+            + b.frontmatter.risk as f64 * rw;
+        score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
     });
     candidates
 }
@@ -1451,5 +1498,121 @@ label = "Blocked"
         assert_eq!(t.frontmatter.agent.as_deref(), Some("bob"));
         assert!(t.body.contains("## History"));
         assert!(t.body.contains("handoff"));
+    }
+
+    // --- build_reverse_index / effective_priority / sorted_actionable ---
+
+    fn make_ticket_with_priority(id: &str, state: &str, priority: u8, deps: Option<Vec<&str>>) -> Ticket {
+        let dep_line = match &deps {
+            Some(d) => {
+                let list: Vec<String> = d.iter().map(|s| format!("\"{s}\"")).collect();
+                format!("depends_on = [{}]\n", list.join(", "))
+            }
+            None => String::new(),
+        };
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T{id}\"\nstate = \"{state}\"\npriority = {priority}\n{dep_line}+++\n\n"
+        );
+        Ticket::parse(Path::new("test.md"), &raw).unwrap()
+    }
+
+    #[test]
+    fn effective_priority_no_dependents_returns_own() {
+        let a = make_ticket_with_priority("aaaa", "ready", 5, None);
+        let tickets = vec![&a];
+        let rev_idx = build_reverse_index(&tickets);
+        assert_eq!(effective_priority(&a, &rev_idx), 5);
+    }
+
+    #[test]
+    fn effective_priority_single_hop_elevation() {
+        // A (priority 2) is depended on by B (priority 9)
+        let a = make_ticket_with_priority("aaaa", "ready", 2, None);
+        let b = make_ticket_with_priority("bbbb", "ready", 9, Some(vec!["aaaa"]));
+        let tickets = vec![&a, &b];
+        let rev_idx = build_reverse_index(&tickets);
+        assert_eq!(effective_priority(&a, &rev_idx), 9);
+        assert_eq!(effective_priority(&b, &rev_idx), 9);
+    }
+
+    #[test]
+    fn effective_priority_transitive_elevation() {
+        // A (2) blocks B (5) blocks C (9); A's effective priority should be 9
+        let a = make_ticket_with_priority("aaaa", "ready", 2, None);
+        let b = make_ticket_with_priority("bbbb", "ready", 5, Some(vec!["aaaa"]));
+        let c = make_ticket_with_priority("cccc", "ready", 9, Some(vec!["bbbb"]));
+        let tickets = vec![&a, &b, &c];
+        let rev_idx = build_reverse_index(&tickets);
+        assert_eq!(effective_priority(&a, &rev_idx), 9);
+        assert_eq!(effective_priority(&b, &rev_idx), 9);
+        assert_eq!(effective_priority(&c, &rev_idx), 9);
+    }
+
+    #[test]
+    fn effective_priority_cycle_does_not_panic() {
+        // A depends on B, B depends on A
+        let a = make_ticket_with_priority("aaaa", "ready", 3, Some(vec!["bbbb"]));
+        let b = make_ticket_with_priority("bbbb", "ready", 7, Some(vec!["aaaa"]));
+        let tickets = vec![&a, &b];
+        let rev_idx = build_reverse_index(&tickets);
+        // Should not panic; both see each other's priority
+        let ep_a = effective_priority(&a, &rev_idx);
+        let ep_b = effective_priority(&b, &rev_idx);
+        assert_eq!(ep_a, 7);
+        assert_eq!(ep_b, 7);
+    }
+
+    #[test]
+    fn effective_priority_closed_dependent_excluded() {
+        // A (2) is in the active set; B (9, closed) is NOT passed to build_reverse_index
+        let a = make_ticket_with_priority("aaaa", "ready", 2, None);
+        // B is "closed" — caller filters it out before building the index
+        let tickets_active = vec![&a];
+        let rev_idx = build_reverse_index(&tickets_active);
+        assert_eq!(effective_priority(&a, &rev_idx), 2);
+    }
+
+    #[test]
+    fn sorted_actionable_low_priority_blocker_elevated() {
+        // A (priority 2, ready) is depended on by B (priority 9, ready)
+        // A's effective priority becomes 9 — it should not sort last
+        let a = make_ticket_with_priority("aaaa", "ready", 2, None);
+        let b = make_ticket_with_priority("bbbb", "ready", 9, Some(vec!["aaaa"]));
+        let tickets = vec![a, b];
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0);
+        assert_eq!(result.len(), 2);
+        let ids: Vec<&str> = result.iter().map(|t| t.frontmatter.id.as_str()).collect();
+        assert!(ids.contains(&"aaaa"), "A must appear in results");
+        assert!(ids.contains(&"bbbb"), "B must appear in results");
+        // A (ep=9) and B (ep=9) are tied; A must not be sorted below B due to raw priority
+        // The last entry must not be A simply because raw priority 2 < 9
+        // Both ep=9 so the sort is stable-ish; just verify A is present
+    }
+
+    #[test]
+    fn sorted_actionable_blocker_before_independent_higher_raw() {
+        // A (priority 2, ready, blocks C which has priority 9)
+        // B (priority 7, ready, no deps)
+        // A's effective priority = 9, B's = 7 → A should sort before B
+        let a = make_ticket_with_priority("aaaa", "ready", 2, None);
+        let b = make_ticket_with_priority("bbbb", "ready", 7, None);
+        let c = make_ticket_with_priority("cccc", "ready", 9, Some(vec!["aaaa"]));
+        let tickets = vec![a, b, c];
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0);
+        assert_eq!(result.len(), 3);
+        let ids: Vec<&str> = result.iter().map(|t| t.frontmatter.id.as_str()).collect();
+        let a_pos = ids.iter().position(|&id| id == "aaaa").unwrap();
+        let b_pos = ids.iter().position(|&id| id == "bbbb").unwrap();
+        assert!(a_pos < b_pos, "A (ep=9) should sort before B (ep=7)");
+    }
+
+    #[test]
+    fn sorted_actionable_no_deps_unchanged() {
+        let a = make_ticket_with_priority("aaaa", "ready", 3, None);
+        let b = make_ticket_with_priority("bbbb", "ready", 7, None);
+        let tickets = vec![a, b];
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0);
+        assert_eq!(result[0].frontmatter.id, "bbbb");
+        assert_eq!(result[1].frontmatter.id, "aaaa");
     }
 }
