@@ -39,7 +39,14 @@ On the UI side, two small features are needed in the detail panel header: a clic
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `target_branch` frontmatter field (used by `apm start` for epic branching, not a UI concern here)
+- Epic creation, listing, or management commands (`apm epic new`, `apm epic list`, `apm epic show`, `apm epic close`)
+- New-ticket modal epic/depends_on input fields (separate ticket)
+- Lock icon on ticket cards in the queue or supervisor board for unresolved deps (separate ticket)
+- Epic column in the priority queue panel (separate ticket)
+- Engine scheduling changes that block dispatch on `depends_on` (separate ticket)
+- A standalone epic filter dropdown control on the supervisor board — the filter is set exclusively by clicking the epic label in the detail panel
+- `GET /api/epics` server routes — no epic-specific API routes are needed for this feature
 
 ### Approach
 
