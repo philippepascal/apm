@@ -57,6 +57,99 @@ The CLI flag takes precedence over the config value. This is the exclusive mode 
 
 ### Approach
 
+Eight files change in order (each step compiles before the next).
+
+#### 1. `apm-core/src/ticket.rs` — add `epic` to `Frontmatter`
+
+Add one optional field:
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub epic: Option<String>,
+```
+No migration needed — TOML deserialization is additive; existing tickets get `None`.
+
+#### 2. `apm-core/src/config.rs` — add `[work]` section
+
+New struct and field on `Config`:
+```rust
+#[derive(Debug, Deserialize, Default)]
+pub struct WorkConfig {
+    #[serde(default)]
+    pub epic: Option<String>,
+}
+// on Config:
+#[serde(default)]
+pub work: WorkConfig,
+```
+
+#### 3. `apm-core/src/start.rs` — add `epic_filter` to `spawn_next_worker`
+
+New signature:
+```rust
+pub fn spawn_next_worker(
+    root: &Path,
+    no_aggressive: bool,
+    skip_permissions: bool,
+    epic_filter: Option<&str>,
+) -> Result<Option<(String, std::process::Child, PathBuf)>>
+```
+After `ticket::load_all_from_git`, filter:
+```rust
+let tickets: Vec<ticket::Ticket> = match epic_filter {
+    Some(id) => tickets.into_iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+        .collect(),
+    None => tickets,
+};
+```
+`run_next()` (for `apm start --next`) does NOT get `epic_filter` — out of scope.
+
+#### 4. `apm/src/cmd/start.rs` — update thin wrapper
+
+Add `epic_filter: Option<&str>` to the `spawn_next_worker` wrapper and forward it to `apm_core::start::spawn_next_worker`.
+
+#### 5. `apm-core/src/work.rs` — thread `epic_filter` through `run_engine_loop`
+
+New signature adds `epic_filter: Option<String>`. Pass `epic_filter.as_deref()` to every `spawn_next_worker` call in the loop.
+
+#### 6. `apm-server/src/work.rs` — update call site with `None`
+
+The server calls `apm_core::work::run_engine_loop`. Add `None` as the `epic_filter` argument. No behaviour change — server epic integration is out of scope.
+
+#### 7. `apm/src/cmd/work.rs` — accept `epic`, resolve filter, apply in `run_dry`
+
+`run` gains `epic: Option<String>`. Resolve early:
+```rust
+let epic_filter: Option<String> = epic.or_else(|| config.work.epic.clone());
+```
+Pass `epic_filter.as_deref()` to `spawn_next_worker`.
+
+In `run_dry`, add filter clause:
+```rust
+&& epic_filter.as_deref()
+    .map_or(true, |id| t.frontmatter.epic.as_deref() == Some(id))
+```
+
+#### 8. `apm/src/main.rs` — add `--epic` flag to `Work` command
+
+```rust
+/// Restrict dispatching to tickets in this epic (8-char ID)
+#[arg(long, value_name = "EPIC_ID")]
+epic: Option<String>,
+```
+Pass to `cmd::work::run`.
+
+#### Tests
+
+Unit (`apm-core/src/config.rs`):
+- `[work] epic = "ab12cd34"` parses correctly
+- absent `[work]` section defaults to `None`
+
+Integration (`apm/tests/integration.rs`):
+- Two tickets (one with `epic = "ab12cd34"`, one free); `apm work --epic ab12cd34 --dry-run` shows only the epic ticket
+- One free ticket; `apm work --epic ab12cd34 --dry-run` shows zero candidates
+- One epic ticket; `apm work --dry-run` (no flag) still shows it (no regression)
+
 ### 1. Add `epic` to `Frontmatter` — `apm-core/src/ticket.rs`
 
 Add one optional field to the `Frontmatter` struct:
