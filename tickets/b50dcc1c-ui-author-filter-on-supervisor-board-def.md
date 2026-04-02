@@ -1,14 +1,14 @@
 +++
 id = "b50dcc1c"
 title = "UI: author filter on supervisor board, default to current user from /api/me"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/b50dcc1c-ui-author-filter-on-supervisor-board-def"
 created_at = "2026-04-02T20:54:34.590380Z"
-updated_at = "2026-04-02T20:54:34.590380Z"
+updated_at = "2026-04-02T23:23:08.948729Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["90ebf40b", "e2e3d958", "70d58b2d"]
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
+| 2026-04-02T23:23Z | new | groomed | apm |
