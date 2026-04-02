@@ -163,6 +163,8 @@ Round-trip tests (create → list → get) may use the existing temp-repo helper
 ### Amendment requests
 
 - [x] Delete the duplicate helper sections at the bottom of Approach that still contain the old `derive_epic_state` signature and implementation with hardcoded state names ("in_design", "in_progress", "accepted", "closed", "implemented"). The corrected Approach at the top is authoritative; the entire old duplicate block below must be removed.
+- [ ] The Acceptance criteria and `derive_epic_state` steps in the Approach use `"in_progress"` and `"implemented"` as epic state labels — these are ticket workflow state IDs being hardcoded as epic vocabulary. Replace throughout: `"in_progress"` → `"active"`, `"implemented"` → `"complete"`. This applies to AC items, the return values in `derive_epic_state` steps 3, 4, and 6, and any output examples. The epic state labels must match what ticket a5e1ea24 defines: `empty`, `active`, `done`, `complete`.
+- [ ] Remove the sentence in step 4 of the Approach that says "Find the `[[workflow.states]]` entry with `id = "implemented"` and add `satisfies_deps = true`" — this references a state by hardcoded name and is not this ticket's responsibility. That config change is owned by the workflow setup.
 
 ### Code review
 
