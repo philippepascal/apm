@@ -3,13 +3,13 @@ id = "e36379d6"
 title = "UI: add new epic button"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "apm"
 agent = "26175"
 branch = "ticket/e36379d6-ui-add-new-epic-button"
 created_at = "2026-04-02T20:47:05.242823Z"
-updated_at = "2026-04-02T20:56:20.210761Z"
+updated_at = "2026-04-02T21:12:58.625263Z"
 +++
 
 ## Spec
