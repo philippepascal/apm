@@ -208,7 +208,7 @@ The `Ticket` type in `apm-ui/src/components/supervisor/types.ts` should gain `ep
 
 ### Amendment requests
 
-- [x] The strikethrough condition "state is `implemented`, `accepted`, or `closed`" must not hardcode state names. The resolution check belongs server-side: `blocking_deps` (introduced by da95246d) already captures only unresolved deps using `satisfies_deps`/`terminal`. In the UI, a dep is "resolved" (strikethrough) when it does NOT appear in `blocking_deps`. Remove the state name list from the AC and Approach; replace with "dep is considered resolved when it is absent from `blocking_deps` in the API response".
+- [ ] Delete the duplicate "### 3." and "### 4." sections at the bottom of the spec. The "### 3." still instructs the worker to apply `line-through` when state is `implemented`, `accepted`, or `closed` — hardcoded state names. The corrected Approach above (using `blocking_deps` for resolution) is authoritative; the stale duplicate sections must be removed.
 
 ### Code review
 
