@@ -1,7 +1,7 @@
 +++
 id = "53788218"
 title = "apm agents command broken after migration to .apm/ directory"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "91210"
 branch = "ticket/53788218-apm-agents-command-broken-after-migratio"
 created_at = "2026-04-02T05:27:56.648370Z"
-updated_at = "2026-04-02T17:08:37.253486Z"
+updated_at = "2026-04-02T17:27:13.887994Z"
 +++
 
 ## Spec
@@ -49,3 +49,4 @@ Single-file config change — no code changes required.\n\n1. Open `.apm/config.
 | 2026-04-02T16:58Z | new | groomed | apm |
 | 2026-04-02T17:05Z | groomed | in_design | philippepascal |
 | 2026-04-02T17:08Z | in_design | specd | claude-0402-1710-b7f2 |
+| 2026-04-02T17:27Z | specd | ammend | apm |
