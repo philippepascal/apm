@@ -162,7 +162,7 @@ Round-trip tests (create → list → get) may use the existing temp-repo helper
 
 ### Amendment requests
 
-- [ ] Delete the duplicate helper sections at the bottom of Approach that still contain the old `derive_epic_state` signature and implementation with hardcoded state names ("in_design", "in_progress", "accepted", "closed", "implemented"). The corrected Approach at the top is authoritative; the entire old duplicate block below must be removed.
+- [x] Delete the duplicate helper sections at the bottom of Approach that still contain the old `derive_epic_state` signature and implementation with hardcoded state names ("in_design", "in_progress", "accepted", "closed", "implemented"). The corrected Approach at the top is authoritative; the entire old duplicate block below must be removed.
 
 ### Code review
 
