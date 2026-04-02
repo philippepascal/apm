@@ -1,14 +1,14 @@
 +++
 id = "b8e9bfee"
 title = "apm-core: phase-aware dependency gating via satisfies_deps tags and dep_requires"
-state = "new"
+state = "groomed"
 priority = 8
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/b8e9bfee-apm-core-phase-aware-dependency-gating-v"
 created_at = "2026-04-02T21:24:08.067343Z"
-updated_at = "2026-04-02T21:24:15.543520Z"
+updated_at = "2026-04-02T21:25:06.883342Z"
 +++
 
 ## Spec
@@ -52,3 +52,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T21:24Z | — | new | apm |
+| 2026-04-02T21:25Z | new | groomed | apm |
