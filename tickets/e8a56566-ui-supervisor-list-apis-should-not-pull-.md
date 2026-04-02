@@ -16,7 +16,9 @@ updated_at = "2026-04-02T18:13:05.178311Z"
 
 ### Problem
 
-api performance is impacted and prevents regular fast refresh  from UI. Only when user select "show closed" should the UI query them along with the other tickets.
+The `GET /api/tickets` endpoint currently returns all tickets unconditionally — including tickets in the `closed` state. The UI does all filtering client-side after receiving the full payload. Because closed tickets accumulate over time and can far outnumber active tickets, this causes progressively heavier API responses and slows the UI's fast-refresh polling loop.
+
+The desired behaviour is that the server excludes closed (terminal) tickets from the default response, and only includes them when the caller explicitly opts in. This mirrors how the CLI already works: `apm list` hides terminal states unless `--all` is passed.
 
 ### Acceptance criteria
 
