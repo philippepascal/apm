@@ -24,7 +24,7 @@ The `apm agents` command reads the agents instructions file path from `[agents] 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the `apm agents` command logic or output format\n- Migrating any other files or config keys that may still reference old paths\n- Adding validation that the instructions file exists at config-load time
 
 ### Approach
 
