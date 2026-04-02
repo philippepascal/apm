@@ -1,7 +1,7 @@
 +++
 id = "62ffd590"
 title = "UI: move minimize buttons to column header, show icon in top-left only when minimized"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "19457"
 branch = "ticket/62ffd590-ui-move-minimize-buttons-to-column-heade"
 created_at = "2026-04-02T18:22:08.087696Z"
-updated_at = "2026-04-02T18:26:53.952980Z"
+updated_at = "2026-04-02T19:18:43.979402Z"
 +++
 
 ## Spec
@@ -82,3 +82,4 @@ Wait — collapsedSize=3 means the panel collapses TO 3%, not 0. The onResize ca
 | 2026-04-02T18:22Z | new | groomed | apm |
 | 2026-04-02T18:23Z | groomed | in_design | philippepascal |
 | 2026-04-02T18:26Z | in_design | specd | claude-0402-1830-s9k2 |
+| 2026-04-02T19:18Z | specd | ready | apm |
