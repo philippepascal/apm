@@ -130,8 +130,19 @@ pub fn sorted_actionable<'a>(
     candidates
 }
 
+/// Returns true if a ticket in `state` satisfies the dependency check —
+/// i.e. dependents are unblocked by it.  True when the state has
+/// `satisfies_deps = true` OR `terminal = true`; false for unknown states.
+pub fn dep_satisfied(state: &str, config: &crate::config::Config) -> bool {
+    config.workflow.states.iter()
+        .find(|s| s.id == state)
+        .map(|s| s.satisfies_deps || s.terminal)
+        .unwrap_or(false)
+}
+
 /// Return the highest-scoring ticket from `tickets` whose state is in
-/// `actionable` and (if `startable` is non-empty) also in `startable`.
+/// `actionable` and (if `startable` is non-empty) also in `startable`,
+/// and whose `depends_on` deps are all satisfied.
 pub fn pick_next<'a>(
     tickets: &'a [Ticket],
     actionable: &[&str],
@@ -139,12 +150,25 @@ pub fn pick_next<'a>(
     pw: f64,
     ew: f64,
     rw: f64,
+    config: &crate::config::Config,
 ) -> Option<&'a Ticket> {
     sorted_actionable(tickets, actionable, pw, ew, rw)
         .into_iter()
         .find(|t| {
             let state = t.frontmatter.state.as_str();
-            startable.is_empty() || startable.contains(&state)
+            if !startable.is_empty() && !startable.contains(&state) {
+                return false;
+            }
+            if let Some(deps) = &t.frontmatter.depends_on {
+                for dep_id in deps {
+                    if let Some(dep) = tickets.iter().find(|d| d.frontmatter.id == *dep_id) {
+                        if !dep_satisfied(&dep.frontmatter.state, config) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            true
         })
 }
 
@@ -365,6 +389,10 @@ pub fn create(
     context_section: Option<String>,
     aggressive: bool,
     section_sets: Vec<(String, String)>,
+    epic: Option<String>,
+    target_branch: Option<String>,
+    depends_on: Option<Vec<String>>,
+    base_branch: Option<String>,
 ) -> Result<Ticket> {
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
@@ -389,9 +417,9 @@ pub fn create(
         created_at: Some(now),
         updated_at: Some(now),
         focus_section: None,
-        epic: None,
-        target_branch: None,
-        depends_on: None,
+        epic,
+        target_branch,
+        depends_on,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
     let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
@@ -445,6 +473,11 @@ pub fn create(
     }
 
     let content = t.serialize()?;
+
+    if let Some(base) = base_branch {
+        let sha = crate::git::resolve_branch_sha(root, &base)?;
+        crate::git::create_branch_at(root, &branch, &sha)?;
+    }
 
     crate::git::commit_to_branch(
         root,
@@ -834,6 +867,29 @@ mod tests {
         let raw = "+++\nid = not_a_number\n+++\n\nbody\n";
         let err = Ticket::parse(dummy_path(), raw).unwrap_err();
         assert!(err.to_string().contains("cannot parse frontmatter"));
+    }
+
+    #[test]
+    fn epic_and_depends_on_round_trip() {
+        let raw = minimal_raw(
+            "epic = \"ab12cd34\"\ndepends_on = [\"cd56ef78\", \"12ab34cd\"]\n",
+            "## Spec\n\ncontent\n",
+        );
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.epic, Some("ab12cd34".to_string()));
+        assert_eq!(
+            t.frontmatter.depends_on,
+            Some(vec!["cd56ef78".to_string(), "12ab34cd".to_string()])
+        );
+        let serialized = t.serialize().unwrap();
+        assert!(serialized.contains("epic = \"ab12cd34\""));
+        assert!(serialized.contains("depends_on = [\"cd56ef78\", \"12ab34cd\"]"));
+        let t2 = Ticket::parse(dummy_path(), &serialized).unwrap();
+        assert_eq!(t2.frontmatter.epic, Some("ab12cd34".to_string()));
+        assert_eq!(
+            t2.frontmatter.depends_on,
+            Some(vec!["cd56ef78".to_string(), "12ab34cd".to_string()])
+        );
     }
 
     #[test]
@@ -1243,6 +1299,125 @@ mod tests {
         fm.agent = Some("alice".to_string());
         set_field(&mut fm, "agent", "-").unwrap();
         assert!(fm.agent.is_none());
+    }
+
+    // ── dep_satisfied ─────────────────────────────────────────────────────
+
+    fn config_with_dep_states() -> crate::config::Config {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "done"
+label = "Done"
+satisfies_deps = true
+
+[[workflow.states]]
+id = "closed"
+label = "Closed"
+terminal = true
+
+[[workflow.states]]
+id = "blocked"
+label = "Blocked"
+"#;
+        toml::from_str(toml).unwrap()
+    }
+
+    #[test]
+    fn dep_satisfied_satisfies_deps_true() {
+        let config = config_with_dep_states();
+        assert!(dep_satisfied("done", &config));
+    }
+
+    #[test]
+    fn dep_satisfied_terminal_true() {
+        let config = config_with_dep_states();
+        assert!(dep_satisfied("closed", &config));
+    }
+
+    #[test]
+    fn dep_satisfied_both_false() {
+        let config = config_with_dep_states();
+        assert!(!dep_satisfied("blocked", &config));
+    }
+
+    #[test]
+    fn dep_satisfied_unknown_state() {
+        let config = config_with_dep_states();
+        assert!(!dep_satisfied("nonexistent", &config));
+    }
+
+    // ── pick_next dep filtering ────────────────────────────────────────────
+
+    fn make_ticket_with_deps(id: &str, state: &str, deps: Option<Vec<&str>>) -> Ticket {
+        let deps_line = match &deps {
+            None => String::new(),
+            Some(v) => {
+                let list: Vec<String> = v.iter().map(|d| format!("\"{d}\"")).collect();
+                format!("depends_on = [{}]\n", list.join(", "))
+            }
+        };
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T{id}\"\nstate = \"{state}\"\n{deps_line}+++\n\n"
+        );
+        Ticket::parse(dummy_path(), &raw).unwrap()
+    }
+
+    #[test]
+    fn pick_next_skips_dep_blocked_ticket() {
+        let config = config_with_dep_states();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "ready", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "ready", None),
+            make_ticket_with_deps("cccc0001", "ready", None),
+        ];
+        // aaaa0001 depends on bbbb0001 which is in "ready" (not satisfies_deps)
+        // should skip aaaa0001 and return bbbb0001 (next by score, no deps)
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config);
+        assert!(result.is_some());
+        let id = &result.unwrap().frontmatter.id;
+        assert_ne!(id, "aaaa0001", "dep-blocked ticket should be skipped");
+    }
+
+    #[test]
+    fn pick_next_returns_ticket_when_dep_satisfied() {
+        let config = config_with_dep_states();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "ready", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "done", None),
+        ];
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
+    }
+
+    #[test]
+    fn pick_next_unknown_dep_id_not_blocking() {
+        let config = config_with_dep_states();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "ready", Some(vec!["unknown1"])),
+        ];
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
+    }
+
+    #[test]
+    fn pick_next_empty_depends_on_not_blocking() {
+        let config = config_with_dep_states();
+        let raw = "+++\nid = \"aaaa0001\"\ntitle = \"T\"\nstate = \"ready\"\ndepends_on = []\n+++\n\n";
+        let t = Ticket::parse(dummy_path(), raw).unwrap();
+        let tickets = vec![t];
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
     }
 
     // ── handoff ───────────────────────────────────────────────────────────

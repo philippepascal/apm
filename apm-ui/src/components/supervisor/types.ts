@@ -8,4 +8,7 @@ export interface Ticket {
   body?: string
   has_open_questions?: boolean
   has_pending_amendments?: boolean
+  epic?: string
+  depends_on?: string[]
+  blocking_deps?: Array<{ id: string; state: string }>
 }
