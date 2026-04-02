@@ -1,15 +1,15 @@
 +++
 id = "4b663160"
 title = "Implement apm epic new command"
-state = "ready"
+state = "in_progress"
 priority = 8
 effort = 3
 risk = 2
 author = "claude-0401-2145-a8f3"
-agent = "68666"
+agent = "philippepascal"
 branch = "ticket/4b663160-implement-apm-epic-new-command"
 created_at = "2026-04-01T21:55:06.350633Z"
-updated_at = "2026-04-02T02:28:26.787889Z"
+updated_at = "2026-04-02T02:52:17.103464Z"
 +++
 
 ## Spec
@@ -186,3 +186,4 @@ Implement in this order to keep each step buildable:
 | 2026-04-02T00:43Z | groomed | in_design | philippepascal |
 | 2026-04-02T00:48Z | in_design | specd | claude-0401-2209-spec1 |
 | 2026-04-02T02:28Z | specd | ready | apm |
+| 2026-04-02T02:52Z | ready | in_progress | philippepascal |
