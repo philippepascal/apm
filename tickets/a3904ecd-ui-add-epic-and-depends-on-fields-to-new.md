@@ -42,7 +42,16 @@ Neither `GET /api/epics` nor the `epic` / `depends_on` frontmatter fields exist 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Ticket detail panel showing epic / depends_on values (separate ticket)
+- Ticket cards showing a lock icon for unresolved depends_on (separate ticket)
+- Queue panel epic column and epic filter dropdown (separate ticket)
+- Supervisor board epic filter (separate ticket)
+- Engine controls epic selector (separate ticket)
+- `apm epic new`, `apm epic list`, `apm epic show`, `apm epic close` CLI commands (separate ticket)
+- Setting `target_branch` when epic is chosen — tickets remain branched from main
+- Validating that a submitted epic ID corresponds to an existing branch
+- Validating that depends_on IDs correspond to existing tickets
+- The `apm new --epic` CLI flag
 
 ### Approach
 
