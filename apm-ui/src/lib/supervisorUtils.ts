@@ -1,6 +1,7 @@
 import type { Ticket } from '../components/supervisor/types'
 
 export const SUPERVISOR_STATES = [
+  'new',
   'question',
   'specd',
   'ammend',

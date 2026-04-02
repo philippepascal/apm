@@ -143,6 +143,14 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             git::push_branch(root, &branch)?;
             merge_into_default(root, &branch, &config.project.default_branch)?;
         }
+        CompletionStrategy::PrOrEpicMerge => {
+            git::push_branch(root, &branch)?;
+            if let Some(ref target) = t.frontmatter.target_branch {
+                merge_into_default(root, &branch, target)?;
+            } else {
+                gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
+            }
+        }
         CompletionStrategy::Pull => {
             pull_default(root, &config.project.default_branch)?;
         }
@@ -239,16 +247,7 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str) -> Result
         );
     }
 
-    let push = std::process::Command::new("git")
-        .args(["push", "origin", default_branch])
-        .current_dir(&merge_dir)
-        .output()?;
-
-    if !push.status.success() {
-        bail!("push failed: {}", String::from_utf8_lossy(&push.stderr).trim());
-    }
-
-    println!("Merged {branch} into {default_branch} and pushed.");
+    println!("Merged {branch} into {default_branch} locally.");
     Ok(())
 }
 
