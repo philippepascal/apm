@@ -47,7 +47,38 @@ This ticket adds the identity-resolution function in `apm-core`, wires it into `
 
 ### Approach
 
-How the implementation will work.
+**New file: `apm-core/src/identity.rs`**
+Add `pub fn resolve_current_user(root: &Path) -> String`:
+- Read `.apm/local.toml`; parse with `toml::from_str` into a minimal struct `{ username: Option<String> }`
+- Return `username` if present and non-empty
+- Return `"apm"` as fallback (covers CI, missing file, empty value)
+Add `pub mod identity;` to `apm-core/src/lib.rs`.
+
+**`apm-core/src/ticket.rs` — Frontmatter.agent**
+- Change the `agent` field to `#[serde(default, skip_serializing)]` so existing files with `agent = "..."` still parse, but new serializations omit the key entirely.
+- `handoff()`: agent is no longer required in frontmatter. Change the guard from `bail!("no agent assigned")` to proceed unconditionally — use `"unknown"` as the old-agent placeholder in the history row when `agent` is `None`.
+- `list_filtered()`: change the `--unassigned` predicate from `fm.agent.is_none()` to `fm.author.as_deref() == Some("unassigned")`.
+
+**`apm-core/src/start.rs`**
+- Remove `t.frontmatter.agent = Some(agent_name.to_string());`.
+
+**`apm/src/cmd/new.rs`**
+- Replace the `APM_AGENT_NAME` env-var lookup with `apm_core::identity::resolve_current_user(root)`.
+
+**`apm/src/cmd/list.rs`**
+- Remove the `agent` variable and `agent=…` segment from the `println!` format string.
+
+**`apm/src/cmd/show.rs`**
+- Remove the `if let Some(a) = &fm.agent { println!("agent:    {a}"); }` line.
+
+**`apm-core/src/init.rs`**
+- Add `".apm/local.toml"` to the `entries` array in `ensure_gitignore()` so `apm init` gitignores it even before the identity-setup ticket ships.
+
+**Tests**
+- Unit tests for `identity::resolve_current_user` in `apm-core/src/identity.rs`: covers file absent, file present with username, file present without username key.
+- Update existing tests in `ticket.rs` that construct `Frontmatter` with `agent` — remove or adjust the `agent` field.
+- Update `handoff` tests to cover the None-agent path.
+- All tests pass under `cargo test --workspace`.
 
 ### Open questions
 
