@@ -1,14 +1,15 @@
 +++
 id = "4258e031"
 title = "Priority should reflect critical path through depends_on graph"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/4258e031-priority-should-reflect-critical-path-th"
 created_at = "2026-04-02T05:23:36.689810Z"
-updated_at = "2026-04-02T16:57:31.396837Z"
+updated_at = "2026-04-02T17:01:08.034857Z"
 +++
 
 ## Spec
@@ -58,3 +59,4 @@ At query time, build a reverse dependency index from all loaded tickets and prop
 |------|------|----|----|
 | 2026-04-02T05:23Z | — | new | apm |
 | 2026-04-02T16:57Z | new | groomed | apm |
+| 2026-04-02T17:01Z | groomed | in_design | philippepascal |
