@@ -24,7 +24,14 @@ The `ticket::create` function must also be extended to accept and persist these 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `GET /api/tickets` response includes `epic`, `target_branch`, and `depends_on` keys for a ticket that has those frontmatter fields set
+- [ ] `GET /api/tickets/:id` response includes `epic`, `target_branch`, and `depends_on` keys for a ticket that has those frontmatter fields set
+- [ ] `GET /api/tickets` response omits `epic`, `target_branch`, and `depends_on` for a ticket that does not have those fields (keys absent, not null)
+- [ ] `POST /api/tickets` with `{"title": "T", "depends_on": ["ab12cd34"]}` creates a ticket whose frontmatter contains `depends_on = ["ab12cd34"]`
+- [ ] `POST /api/tickets` with `{"title": "T", "epic": "ab12cd34"}` where branch `epic/ab12cd34-some-slug` exists creates a ticket with `epic = "ab12cd34"` and `target_branch = "epic/ab12cd34-some-slug"` in frontmatter
+- [ ] `POST /api/tickets` with `{"title": "T", "epic": "ab12cd34"}` where no matching epic branch exists returns HTTP 400
+- [ ] `POST /api/tickets` response body includes `epic`, `target_branch`, and `depends_on` when those fields were set
+- [ ] Existing `POST /api/tickets` calls with no `epic` or `depends_on` fields continue to work unchanged
 
 ### Out of scope
 
