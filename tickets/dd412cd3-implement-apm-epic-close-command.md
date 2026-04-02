@@ -91,48 +91,6 @@ Add unit tests in `apm/src/cmd/epic.rs` (or `apm-core`) covering:
 
 Integration tests requiring a live `gh` CLI and GitHub remote are out of scope.
 
-### New subcommand plumbing
-
-Add `Epic { ... }` subcommand to `Command` enum in `apm/src/main.rs` with its own `Subcommand` enum:
-
-```
-Epic {
-    #[command(subcommand)]
-    action: EpicCommand,
-}
-```
-
-`EpicCommand` enum has a single variant for now: `Close { id: String }`. Wire the dispatch in `main` to `cmd::epic::run_close`.
-
-### New file: `apm/src/cmd/epic.rs`
-
-`pub fn run_close(root: &Path, id_arg: &str) -> Result<()>` does:
-
-1. Load config — `Config::load(root)`
-2. Find the epic branch — run `git branch -r` filtered to `epic/` branches. Collect all branches whose 8-char ID segment starts with `id_arg`. Error if 0 or >1 matches.
-3. Load all tickets — `ticket::load_all_from_git(root, &config.tickets.dir)`
-4. Identify epic tickets — filter to tickets where `frontmatter.epic` matches the full 8-char epic ID parsed from the branch name. If no tickets carry this epic ID, the gate check passes vacuously.
-5. Gate check — for each epic ticket, check whether its state is terminal (config: `state.terminal == true`) or equals `"implemented"`. Collect all non-passing tickets. If any exist, print them and bail.
-6. PR idempotency — run `gh pr list --head <epic-branch> --state open --json number --jq '.[0].number'`; if a PR number comes back, print "PR #N already open for <branch>" and return Ok.
-7. Create PR — `gh pr create --base <default_branch> --head <epic-branch> --title "<human title>" --body "Epic: <branch>"`. Print the URL on success.
-
-### Frontmatter field `epic`
-
-Add `pub epic: Option<String>` to `apm_core::ticket::Frontmatter` with `#[serde(skip_serializing_if = "Option::is_none")]`. This is the only struct change needed. No migration required — existing tickets without the field deserialise to `None`.
-
-### PR title derivation
-
-Strip `epic/` prefix and the `<8-char-id>-` segment from the branch name, replace remaining hyphens with spaces, title-case each word. Example: `epic/ab12cd34-user-authentication` becomes `"User Authentication"`.
-
-### Tests
-
-Add unit tests in `apm/src/cmd/epic.rs` (or extracted to `apm-core`) covering:
-- Branch-to-title conversion
-- ID prefix resolution (0 matches → error, 1 match → ok, >1 match → error)
-- Gate check logic: a slice with all-implemented tickets passes; a slice with one non-implemented ticket fails
-
-Integration tests that require a live `gh` CLI and GitHub remote are out of scope — skip for now.
-
 ### Open questions
 
 
