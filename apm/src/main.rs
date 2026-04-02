@@ -548,31 +548,46 @@ Example:
         no_aggressive: bool,
     },
     /// Remove worktrees and local branches for closed tickets
-    #[command(long_about = "Remove worktrees and local branches for closed tickets.
+    #[command(long_about = "Remove worktrees (and optionally branches) for terminal-state tickets.
 
-Scans all tickets in terminal states (closed, etc.) and removes:
-  * The permanent worktree under apm--worktrees/ (if it exists)
-  * The local git branch (ticket/<id>-<slug>)
+Default (no flags): removes worktrees only. Local and remote branches are
+never touched without an explicit flag.
 
-The remote branch is not deleted.
+  apm clean                              # remove worktrees only
+  apm clean --dry-run                    # preview worktree removals
+  apm clean --branches                   # also delete local ticket/* branches
+  apm clean --branches --dry-run         # preview worktrees + branches
+  apm clean --untracked                  # also remove untracked non-temp files
+  apm clean --force                      # bypass merge/divergence checks
+  apm clean --remote --older-than 30d    # delete remote branches older than 30 days
+  apm clean --remote --older-than 2026-01-01  # ISO date threshold
+  apm clean --remote --older-than 30d --yes   # skip per-branch confirmation
+  apm clean --remote --older-than 30d --dry-run  # preview remote deletions
 
-Always run --dry-run first to see exactly what would be removed before
-committing to the operation:
-  apm clean --dry-run          # preview
-  apm clean                    # actually remove
-  apm clean --yes              # auto-confirm all removal prompts (for scripts)
-  apm clean --force            # bypass merge and divergence checks; always prompts
-  apm clean --force --dry-run  # preview what --force would remove")]
+Known temp files (.apm-worker.pid, .apm-worker.log, pr-body.md, body.md,
+ac.txt) are always removed automatically without needing --untracked.")]
     Clean {
         /// Print what would be removed without modifying anything
         #[arg(long)]
         dry_run: bool,
-        /// Auto-confirm all removal prompts without reading stdin
+        /// Skip per-branch confirmation prompts (used with --remote)
         #[arg(long, short = 'y')]
         yes: bool,
         /// Bypass merge and divergence checks; always prompts before each removal
         #[arg(long)]
         force: bool,
+        /// Also delete local ticket/* branches (default: worktrees only)
+        #[arg(long)]
+        branches: bool,
+        /// Delete remote ticket/* branches in terminal states older than --older-than
+        #[arg(long)]
+        remote: bool,
+        /// Age threshold for --remote: e.g. "30d" or "2026-01-01" (YYYY-MM-DD)
+        #[arg(long, value_name = "THRESHOLD", requires = "remote")]
+        older_than: Option<String>,
+        /// Remove untracked non-temp files from worktrees before removal
+        #[arg(long)]
+        untracked: bool,
     },
     /// List and manage running worker processes
     Workers {
@@ -689,7 +704,7 @@ fn main() -> Result<()> {
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
-        Command::Clean { dry_run, yes, force } => cmd::clean::run(&root, dry_run, yes, force),
+        Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),

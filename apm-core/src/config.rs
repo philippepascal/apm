@@ -152,6 +152,17 @@ pub struct WorkflowConfig {
     pub prioritization: PrioritizationConfig,
 }
 
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum SatisfiesDeps {
+    Bool(bool),
+    Tag(String),
+}
+
+impl Default for SatisfiesDeps {
+    fn default() -> Self { SatisfiesDeps::Bool(false) }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct StateConfig {
     pub id: String,
@@ -161,7 +172,9 @@ pub struct StateConfig {
     #[serde(default)]
     pub terminal: bool,
     #[serde(default)]
-    pub satisfies_deps: bool,
+    pub satisfies_deps: SatisfiesDeps,
+    #[serde(default)]
+    pub dep_requires: Option<String>,
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
     /// Who can actively pick up / act on tickets in this state.
