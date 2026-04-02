@@ -19,7 +19,11 @@ depends_on = ["e2e3d958"]
 
 ### Problem
 
-There is no registration flow for external devices to enroll a passkey with apm-server. Without a WebAuthn registration ceremony and an embedded registration page, devices cannot authenticate. The OTP from `apm register` serves as the trust gate for this ceremony. See `initial_specs/DESIGN-users.md` point 5.
+There is no registration flow for external devices to enroll a passkey with apm-server. Ticket e2e3d958 (dependency) provides the OTP infrastructure, session store, and localhost bypass — the trust foundation. Without the WebAuthn registration ceremony and an embedded HTML registration page, a device that has received an OTP cannot complete enrollment and cannot authenticate at all.
+
+The desired behaviour: a device visits apm-server in a browser, sees a registration page, enters username + OTP, and completes a biometric-secured WebAuthn credential enrollment. After registration, the device holds a session cookie and can access apm-server.
+
+External devices (phone, remote laptop) are the affected audience. The OTP from `apm register` is the sole trust gate for the ceremony — it is never itself a persistent credential.
 
 ### Acceptance criteria
 
