@@ -88,7 +88,7 @@ Integration test in `apm/tests/integration.rs`:
 
 - [x] "Implemented or later" must not be hardcoded. Replace throughout with: a dep is satisfied when the referenced ticket's state has `satisfies_deps = true` OR `terminal = true` in `config.workflow.states`. The `satisfies_deps: bool` field (default false) must be added to `StateConfig` in `apm-core/src/config.rs` as part of this ticket.
 - [x] Rename `is_implemented_or_later` to `dep_satisfied(state: &str, config: &Config) -> bool` in all AC and Approach references.
-- [ ] Remove all mentions of the state name "implemented" from AC and Approach. Replace AC #1 with: "skips the ticket when any dep's state has neither `satisfies_deps = true` nor `terminal = true`". Replace AC #2 with: "returns the ticket when all dep states have `satisfies_deps = true` or `terminal = true`". Replace AC #7 with: "the check is driven entirely by `satisfies_deps` and `terminal` config flags — no state name is compared by string in the implementation".
+- [x] Remove all mentions of the state name "implemented" from AC and Approach. Replace AC #1 with: "skips the ticket when any dep's state has neither `satisfies_deps = true` nor `terminal = true`". Replace AC #2 with: "returns the ticket when all dep states have `satisfies_deps = true` or `terminal = true`". Replace AC #7 with: "the check is driven entirely by `satisfies_deps` and `terminal` config flags — no state name is compared by string in the implementation".
 
 ### Code review
 
