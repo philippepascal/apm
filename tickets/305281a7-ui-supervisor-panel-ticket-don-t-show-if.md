@@ -1,7 +1,7 @@
 +++
 id = "305281a7"
 title = "UI supervisor panel ticket don't show if they are part of epic"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "51125"
 branch = "ticket/305281a7-ui-supervisor-panel-ticket-don-t-show-if"
 created_at = "2026-04-02T22:32:22.237758Z"
-updated_at = "2026-04-02T22:51:20.541289Z"
+updated_at = "2026-04-02T22:55:56.704412Z"
 +++
 
 ## Spec
@@ -95,3 +95,4 @@ No tests are needed beyond manual verification — this is a purely presentation
 | 2026-04-02T22:32Z | new | groomed | apm |
 | 2026-04-02T22:48Z | groomed | in_design | philippepascal |
 | 2026-04-02T22:51Z | in_design | specd | claude-0402-2248-spec1 |
+| 2026-04-02T22:55Z | specd | ready | apm |
