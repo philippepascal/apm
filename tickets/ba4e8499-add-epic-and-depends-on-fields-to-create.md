@@ -15,7 +15,9 @@ updated_at = "2026-04-01T22:00:35.547814Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The ticket creation API and ticket response types do not include `epic`, `target_branch`, or `depends_on`. Without these, the UI cannot create epic-linked tickets via the API, and ticket list/detail responses omit epic membership information.
+
+The full design is in `docs/epics.md` (§ apm-server changes — CreateTicketRequest and Ticket routes). `CreateTicketRequest` gains two new optional fields: `epic: Option<String>` and `depends_on: Option<Vec<String>>`. When `epic` is set, the server resolves `target_branch` from the epic branch name before calling `apm new`. For `TicketResponse` and `TicketDetailResponse`, the new frontmatter fields appear automatically via `#[serde(flatten)]` — no struct changes required for read paths.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
