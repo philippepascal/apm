@@ -32,7 +32,7 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 
 ### Acceptance criteria
 
-- [ ] **Default behavior (worktrees only):**
+- [x] **Default behavior (worktrees only):**
 - [x] `apm clean` removes the worktree for each terminal-state ticket that has one
 - [x] `apm clean` does not delete any local branch
 - [x] `apm clean --dry-run` lists worktrees that would be removed and exits without modifying anything
