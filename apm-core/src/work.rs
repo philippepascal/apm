@@ -10,6 +10,7 @@ pub fn run_engine_loop(
     interval_secs: u64,
     max_concurrent: usize,
     skip_permissions: bool,
+    epic_filter: Option<String>,
 ) -> Result<()> {
     let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut no_more = false;
@@ -45,7 +46,7 @@ pub fn run_engine_loop(
         }
 
         if !no_more && workers.len() < max_concurrent {
-            match crate::start::spawn_next_worker(root, true, skip_permissions) {
+            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref()) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);
                     no_more = true;
@@ -75,7 +76,7 @@ mod tests {
     fn cancel_flag_stops_loop_immediately() {
         let cancel = Arc::new(AtomicBool::new(true));
         let root = std::path::Path::new("/nonexistent");
-        let result = run_engine_loop(root, cancel, 30, 1, false);
+        let result = run_engine_loop(root, cancel, 30, 1, false, None);
         assert!(result.is_ok());
     }
 }
