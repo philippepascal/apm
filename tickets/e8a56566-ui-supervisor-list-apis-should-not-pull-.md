@@ -40,7 +40,34 @@ The desired behaviour is that the server excludes closed (terminal) tickets from
 
 ### Approach
 
-How the implementation will work.
+**Backend — apm-server/src/main.rs**
+
+1. Add a query-string extractor struct to the `list_tickets` handler:
+
+   ```rust
+   #[derive(Deserialize, Default)]
+   struct ListTicketsQuery {
+       include_closed: Option<bool>,
+   }
+   ```
+
+2. Change the handler signature to also accept `Query(params): Query<ListTicketsQuery>`.
+
+3. After loading all tickets, filter before constructing `TicketResponse` objects:
+   - If `params.include_closed` is not `Some(true)`, skip tickets whose state is terminal.
+   - Use the existing `apm_core::ticket::list_filtered` with `all = params.include_closed.unwrap_or(false)` and all other filter params set to defaults (`state_filter: None`, `unassigned: false`, `supervisor_filter: None`, `actionable_filter: None`).
+
+**Frontend — apm-ui/src/components/supervisor/SupervisorView.tsx**
+
+1. Append `?include_closed=true` to the `/api/tickets` fetch URL when `showClosed` is `true`.
+2. Add `showClosed` as a dependency to the effect/query that drives the ticket fetch so toggling the checkbox triggers a re-fetch.
+3. The existing client-side guard that adds `'closed'` to `visibleStates` can remain; it becomes a no-op when the server already excludes closed tickets by default.
+
+**Order of changes**
+
+1. Backend first (backward-compatible: callers get fewer results by default).
+2. Frontend second (update fetch URL + dependency array).
+3. Add a server-side test verifying: default response omits closed tickets; `?include_closed=true` includes them.
 
 ### Open questions
 
