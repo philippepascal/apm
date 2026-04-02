@@ -1,7 +1,7 @@
 +++
 id = "b8b91642"
 title = "make detail panel more reactive when other panels are updated (state of ticket selected might have changed)"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "44819"
 branch = "ticket/b8b91642-make-detail-panel-more-reactive-when-oth"
 created_at = "2026-04-02T22:28:29.844602Z"
-updated_at = "2026-04-02T22:51:07.733918Z"
+updated_at = "2026-04-02T22:55:51.444201Z"
 +++
 
 ## Spec
@@ -88,3 +88,4 @@ No backend changes needed. No new dependencies.
 | 2026-04-02T22:32Z | new | groomed | apm |
 | 2026-04-02T22:47Z | groomed | in_design | philippepascal |
 | 2026-04-02T22:51Z | in_design | specd | claude-0402-2250-spec1 |
+| 2026-04-02T22:55Z | specd | ready | apm |
