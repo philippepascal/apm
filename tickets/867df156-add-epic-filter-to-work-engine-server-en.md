@@ -34,7 +34,15 @@ The design for epic-scoped scheduling is specified in docs/epics.md (section: Wo
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- apm epic CLI commands (apm epic new, list, show, close)
+- Epic CRUD API routes (GET/POST /api/epics, GET /api/epics/:id)
+- depends_on scheduling
+- target_branch / PR targeting for epic tickets
+- CreateTicketRequest epic or depends_on fields
+- apm new --epic flag
+- Balanced / multi-epic concurrent scheduling
+- Frontend / UI changes
+- apm work --epic CLI flag (separate from the server endpoint)
 
 ### Approach
 
