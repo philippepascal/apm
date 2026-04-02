@@ -1,14 +1,14 @@
 +++
 id = "645c9f17"
 title = "apm clean: add --force flag to skip divergence and merge checks for closed tickets"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/645c9f17-apm-clean-add-force-flag-to-skip-diverge"
 created_at = "2026-04-02T05:35:39.235404Z"
-updated_at = "2026-04-02T17:00:30.051204Z"
+updated_at = "2026-04-02T17:00:33.968130Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T05:35Z | — | new | apm |
+| 2026-04-02T17:00Z | new | groomed | apm |
