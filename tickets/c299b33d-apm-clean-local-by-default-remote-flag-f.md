@@ -16,17 +16,19 @@ updated_at = "2026-04-02T20:50:39.619949Z"
 
 ### Problem
 
-`apm clean` currently removes both worktrees and local branches, and the two concerns are conflated. In practice, worktree cleanup is a frequent local operation while branch deletion (local and remote) is rarer and more destructive.
+`apm clean` currently removes both worktrees and local branches in a single operation, conflating two concerns with very different frequency and risk profiles. Worktree cleanup is a routine local housekeeping task done regularly after tickets close; branch deletion (local or remote) is rarer and carries more consequence.
 
-Three separate concerns should be cleanly separated:
+The current default is too aggressive: deleting local branches removes the offline reference to merged work and requires a network round-trip to recover. More critically, there is no supported path to delete **remote** branches at all — accumulated `ticket/*` branches on origin grow indefinitely.
 
-1. **Worktree removal** (default, local-only): remove the worktree directory for closed/terminal tickets. No branch deletion. Already the safe, frequent operation.
+The fix is to split `apm clean` into three explicitly opt-in levels:
 
-2. **Local branch removal** (`--branches` or folded into default — TBD at spec time): delete local ticket branches for closed tickets. Harmless since the branch content is on the remote.
+1. **Worktree removal** (default, no flags): remove the worktree directory under `apm--worktrees/` for each terminal-state ticket. No branch is touched. This is the safe, high-frequency operation.
 
-3. **Remote branch removal** (`--remote`): delete branches from origin that are older than a given threshold. Accepts `--older-than <N>d` (number of days) or `--older-than <date>` (ISO date). Only acts on `ticket/*` branches in terminal states.
+2. **Local branch removal** (`--branches`): also delete the local `ticket/*` branch. Safe because the content is already on origin, but kept opt-in since losing local refs is annoying when offline.
 
-4. **Untracked file removal** (`--untracked`): run the equivalent of `git clean -fd` inside each worktree being removed, so worktrees with untracked files (e.g. build artifacts, `.apm-worker.pid`) are not skipped. Without this flag, worktrees with untracked files are left in place with a warning.
+3. **Remote branch removal** (`--remote --older-than <threshold>`): delete `ticket/*` branches from origin that are in a terminal state and whose last commit predates the given threshold. Requires an explicit age guard to prevent accidental mass deletion.
+
+A fourth flag, `--untracked`, extends worktree removal to cover worktrees that contain untracked non-temp files (build artifacts, etc.) that currently cause a skip-with-warning. Without `--untracked`, only the known-temp files (`.apm-worker.pid`, `.apm-worker.log`, etc.) are auto-removed; all other untracked files block removal with a warning.
 
 ### Acceptance criteria
 
