@@ -32,7 +32,11 @@ The desired behaviour is that the server excludes closed (terminal) tickets from
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding other server-side filter query parameters (state, agent, epic, etc.) — client-side filtering for those remains unchanged
+- Pagination or cursor-based loading of tickets
+- Any changes to the CLI `apm list` command (it already handles this correctly)
+- Caching or other performance optimisations beyond the closed-ticket exclusion
+- The `GET /api/tickets/:id` single-ticket endpoint (already filtered to a specific ticket)
 
 ### Approach
 
