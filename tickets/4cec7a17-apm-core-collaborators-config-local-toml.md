@@ -1,14 +1,15 @@
 +++
 id = "4cec7a17"
 title = "apm-core: collaborators config, local.toml, and identity resolution"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/4cec7a17-apm-core-collaborators-config-local-toml"
 created_at = "2026-04-02T20:53:47.546444Z"
-updated_at = "2026-04-02T23:21:28.551594Z"
+updated_at = "2026-04-02T23:21:53.468894Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
@@ -46,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:53Z | — | new | apm |
 | 2026-04-02T23:21Z | new | groomed | apm |
+| 2026-04-02T23:21Z | groomed | in_design | philippepascal |
