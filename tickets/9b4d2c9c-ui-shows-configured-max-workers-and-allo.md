@@ -1,7 +1,7 @@
 +++
 id = "9b4d2c9c"
 title = "UI shows configured max workers and allow override"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "apm-ui"
 agent = "10297"
 branch = "ticket/9b4d2c9c-ui-shows-configured-max-workers-and-allo"
 created_at = "2026-04-02T19:20:21.647921Z"
-updated_at = "2026-04-02T20:11:49.161419Z"
+updated_at = "2026-04-02T20:17:14.914542Z"
 +++
 
 ## Spec
@@ -117,3 +117,4 @@ The problem has two parts: (1) the UI omits the value entirely, and (2) even if 
 | 2026-04-02T20:08Z | in_design | specd | claude-0402-2010-sp9x |
 | 2026-04-02T20:11Z | specd | ready | apm |
 | 2026-04-02T20:11Z | ready | in_progress | philippepascal |
+| 2026-04-02T20:17Z | in_progress | implemented | claude-0402-2015-wk7z |
