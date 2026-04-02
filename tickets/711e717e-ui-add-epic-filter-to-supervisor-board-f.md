@@ -1,7 +1,7 @@
 +++
 id = "711e717e"
 title = "UI: add epic filter to supervisor board filter bar"
-state = "in_progress"
+state = "implemented"
 priority = 2
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "80465"
 branch = "ticket/711e717e-ui-add-epic-filter-to-supervisor-board-f"
 created_at = "2026-04-01T21:56:24.806901Z"
-updated_at = "2026-04-02T06:34:29.841856Z"
+updated_at = "2026-04-02T06:36:40.345091Z"
 +++
 
 ## Spec
@@ -136,3 +136,4 @@ Rust or JS tests are required.
 | 2026-04-02T01:06Z | in_design | specd | claude-0401-2300-spec1 |
 | 2026-04-02T02:29Z | specd | ready | apm |
 | 2026-04-02T06:34Z | ready | in_progress | philippepascal |
+| 2026-04-02T06:36Z | in_progress | implemented | claude-0401-0634-w711 |
