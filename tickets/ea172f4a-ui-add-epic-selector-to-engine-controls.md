@@ -1,7 +1,7 @@
 +++
 id = "ea172f4a"
 title = "UI: add epic selector to engine controls"
-state = "in_design"
+state = "specd"
 priority = 2
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "82526"
 branch = "ticket/ea172f4a-ui-add-epic-selector-to-engine-controls"
 created_at = "2026-04-01T21:56:28.916880Z"
-updated_at = "2026-04-02T01:45:49.526473Z"
+updated_at = "2026-04-02T01:45:55.683360Z"
 +++
 
 ## Spec
@@ -109,3 +109,4 @@ Tests:
 | 2026-04-02T01:02Z | in_design | specd | claude-0401-2333-spec1 |
 | 2026-04-02T01:37Z | specd | ammend | philippepascal |
 | 2026-04-02T01:43Z | ammend | in_design | philippepascal |
+| 2026-04-02T01:45Z | in_design | specd | claude-0401-2200-spec2 |
