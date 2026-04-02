@@ -36,7 +36,7 @@ export default function WorkScreen() {
   const queryClient = useQueryClient()
 
   const startMutation = useMutation({
-    mutationFn: startEngine,
+    mutationFn: () => startEngine(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['work-status'] }),
   })
   const stopMutation = useMutation({
