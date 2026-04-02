@@ -1,7 +1,7 @@
 +++
 id = "e8a56566"
 title = "UI supervisor list APIs should not pull closed ticket by default"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm-ui"
 agent = "33721"
 branch = "ticket/e8a56566-ui-supervisor-list-apis-should-not-pull-"
 created_at = "2026-04-02T18:12:19.697833Z"
-updated_at = "2026-04-02T19:27:13.851901Z"
+updated_at = "2026-04-02T19:34:14.383088Z"
 +++
 
 ## Spec
@@ -88,3 +88,4 @@ The desired behaviour is that the server excludes closed (terminal) tickets from
 | 2026-04-02T18:16Z | in_design | specd | claude-0402-1813-s9w1 |
 | 2026-04-02T19:09Z | specd | ready | apm |
 | 2026-04-02T19:27Z | ready | in_progress | philippepascal |
+| 2026-04-02T19:34Z | in_progress | implemented | claude-0402-1927-e9b8 |
