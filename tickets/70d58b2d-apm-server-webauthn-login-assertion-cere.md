@@ -19,7 +19,11 @@ depends_on = ["8a08637c"]
 
 ### Problem
 
-Registered devices have no way to authenticate on subsequent visits. A WebAuthn assertion ceremony (challenge → biometric sign → verify) and an embedded login page are needed to issue session cookies to returning users. See `initial_specs/DESIGN-users.md` point 5.
+Registered devices have no way to authenticate on subsequent visits to apm-server. Once a user has enrolled a passkey via the registration ceremony (ticket 8a08637c), there is no endpoint that issues a session cookie to a returning device. Without a WebAuthn assertion ceremony and a matching login page, every visit after the first requires re-registration, which defeats the purpose of passkeys.
+
+The desired behaviour: a returning browser that holds a registered passkey visits apm-server, sees a login page, enters their username, completes a biometric prompt, and receives a session cookie granting access. The server verifies the signed challenge against the stored public key — no shared secret is transmitted.
+
+External devices (phone, remote laptop) are the primary audience. Localhost requests bypass auth entirely (established in ticket e2e3d958) so the login flow is only reachable by non-loopback clients.
 
 ### Acceptance criteria
 
