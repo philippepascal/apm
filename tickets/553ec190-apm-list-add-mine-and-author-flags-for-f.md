@@ -34,7 +34,12 @@ There is no way to filter `apm list` output by ticket author. A developer workin
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic list --mine` — epic author filtering (separate ticket per DESIGN-users.md point 7)
+- UI/server author filter changes (`/api/me` endpoint, board author dropdown) — point 8
+- Git host plugin identity resolution — point 4
+- `apm init` prompting for username and writing `.apm/local.toml`
+- Validating `--author` value against the collaborators list
+- `apm list --unassigned` semantics change — covered by the dependency ticket 610be42e
 
 ### Approach
 
