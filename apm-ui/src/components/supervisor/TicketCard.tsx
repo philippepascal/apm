@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react'
+import { Ban } from 'lucide-react'
 import { useLayoutStore } from '../../store/useLayoutStore'
 import type { Ticket } from './types'
 
@@ -55,11 +55,9 @@ export default function TicketCard({ ticket }: TicketCardProps) {
             </span>
           )}
           {!!ticket.blocking_deps?.length && (
-            <Lock
-              size={12}
-              title={ticket.blocking_deps.map(d => `${d.id}: ${d.state}`).join('\n')}
-              className="text-gray-400 shrink-0"
-            />
+            <span title={ticket.blocking_deps.map(d => `${d.id}: ${d.state}`).join('\n')}>
+              <Ban size={12} className="text-gray-400 shrink-0" />
+            </span>
           )}
         </div>
       </div>
