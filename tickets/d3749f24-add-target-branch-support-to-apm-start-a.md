@@ -1,14 +1,15 @@
 +++
 id = "d3749f24"
 title = "Add target_branch support to apm start and worktree provisioning"
-state = "groomed"
+state = "in_design"
 priority = 8
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
+agent = "philippepascal"
 branch = "ticket/d3749f24-add-target-branch-support-to-apm-start-a"
 created_at = "2026-04-01T21:55:32.694733Z"
-updated_at = "2026-04-01T22:00:04.855735Z"
+updated_at = "2026-04-02T00:43:35.125120Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:00Z | new | groomed | claude-0401-2145-a8f3 |
+| 2026-04-02T00:43Z | groomed | in_design | philippepascal |
