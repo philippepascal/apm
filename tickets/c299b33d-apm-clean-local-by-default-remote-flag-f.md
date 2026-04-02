@@ -1,14 +1,15 @@
 +++
 id = "c299b33d"
 title = "apm clean: local by default, --remote flag for old branch cleanup"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/c299b33d-apm-clean-local-by-default-remote-flag-f"
 created_at = "2026-04-02T20:44:35.825711Z"
-updated_at = "2026-04-02T20:50:15.972425Z"
+updated_at = "2026-04-02T20:50:39.619949Z"
 +++
 
 ## Spec
@@ -54,3 +55,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:44Z | — | new | apm |
 | 2026-04-02T20:50Z | new | groomed | apm |
+| 2026-04-02T20:50Z | groomed | in_design | philippepascal |
