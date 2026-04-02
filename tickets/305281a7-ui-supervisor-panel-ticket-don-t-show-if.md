@@ -22,12 +22,12 @@ Tickets that belong to an epic are managed at the epic level. For the supervisor
 
 ### Acceptance criteria
 
-- [ ] By default (on first load), tickets whose `epic` field is non-null are not shown in the supervisor board swimlanes
-- [ ] A "Show epic tickets" checkbox appears in the supervisor filter bar alongside the existing "Show closed" checkbox
-- [ ] Checking "Show epic tickets" reveals epic-member tickets in the board
-- [ ] Unchecking "Show epic tickets" hides epic-member tickets again
-- [ ] When the epic filter dropdown is set to a specific epic, only that epic's tickets are shown regardless of the "Show epic tickets" toggle state
-- [ ] When an epic filter is active and cleared, the board returns to hiding epic-member tickets (if the toggle is still unchecked)
+- [x] By default (on first load), tickets whose `epic` field is non-null are not shown in the supervisor board swimlanes
+- [x] A "Show epic tickets" checkbox appears in the supervisor filter bar alongside the existing "Show closed" checkbox
+- [x] Checking "Show epic tickets" reveals epic-member tickets in the board
+- [x] Unchecking "Show epic tickets" hides epic-member tickets again
+- [x] When the epic filter dropdown is set to a specific epic, only that epic's tickets are shown regardless of the "Show epic tickets" toggle state
+- [x] When an epic filter is active and cleared, the board returns to hiding epic-member tickets (if the toggle is still unchecked)
 
 ### Out of scope
 
