@@ -47,7 +47,14 @@ The command lists all `epic/*` remote branches and for each shows: short ID, tit
 
 ### Approach
 
-Five files change, one is new, one is a new module.
+Six files change: one existing config struct gains a field, two existing modules gain functions, two new files are created, and `main.rs` is wired up.
+
+**`apm-core/src/config.rs`** — add `satisfies_deps` field to `StateConfig`:
+```rust
+#[serde(default)]
+pub satisfies_deps: bool,
+```
+States that mark dependency satisfaction (e.g. `implemented`) set `satisfies_deps = true` in `apm.toml`. Existing configs that omit the field default to `false`.
 
 **`apm-core/src/ticket.rs`** — add `epic` optional field to `Frontmatter`:
 ```rust
@@ -60,17 +67,20 @@ Existing tickets that omit the field deserialize fine (`Option` defaults to `Non
 Mirror `ticket_branches()`: collect local `epic/*` + remote `origin/epic/*` (strip prefix), deduplicate, return sorted.
 
 **`apm-core/src/epic.rs`** — new module, export from `lib.rs` as `pub mod epic`:
-`pub fn derive_epic_state(states: &[&str]) -> &'static str` with these rules in order:
-1. empty slice → `"empty"`
-2. any `"in_design"` or `"in_progress"` → `"in_progress"`
-3. all `"accepted"` or `"closed"` → `"done"`
-4. all `"implemented"`, `"accepted"`, or `"closed"` → `"implemented"`
-5. otherwise → `"in_progress"`
+```rust
+pub fn derive_epic_state(states: &[&StateConfig]) -> &'static str
+```
+Rules in order:
+1. Empty slice → `"empty"`
+2. Any state has `actionable` containing `"agent"` → `"active"`
+3. All states have `terminal = true` → `"done"`
+4. All states have `satisfies_deps = true` or `terminal = true`, and at least one has `satisfies_deps = true` → `"complete"`
+5. Otherwise → `"active"`
 
-State names are hard-coded strings. No `&Config` dependency needed.
+No state ID strings are compared anywhere. The function depends only on `StateConfig` boolean flags and the `actionable` vec.
 
 **`apm/src/cmd/epic.rs`** — new file, `pub fn run_list(root: &Path) -> Result<()>`:
-1. `Config::load(root)` — read aggressive-fetch flag and tickets dir
+1. `Config::load(root)` — read aggressive-fetch flag, tickets dir, and workflow states
 2. If aggressive, `git::fetch_all(root)` (warn on error, continue)
 3. `git::epic_branches(root)` — list branch names, sort alphabetically
 4. `ticket::load_all_from_git(root, &config.tickets.dir)` — all tickets
@@ -78,8 +88,9 @@ State names are hard-coded strings. No `&Config` dependency needed.
    - Strip `epic/` prefix; take first 8 chars as `id`, remainder after first `-` as slug
    - Humanize title: replace `-` with space, title-case each word
    - Filter tickets where `fm.epic.as_deref() == Some(id)`
-   - Collect state strings; call `epic::derive_epic_state()`
-   - Count per state; build non-zero counts string (`"2 in_progress, 1 ready"`)
+   - For each matching ticket, look up its `StateConfig` via `config.workflow.states.iter().find(|s| s.id == fm.state)`; collect `&StateConfig` references (skip tickets whose state is unknown)
+   - Call `epic::derive_epic_state(&state_configs)`
+   - Count per state ID; build non-zero counts string (`"2 in_progress, 1 ready"`)
    - `println!("{id:<8} [{derived_state:<12}] {title:<40} {counts}")`
 6. No output (and `Ok(())`) when no epics exist
 
@@ -87,13 +98,15 @@ State names are hard-coded strings. No `&Config` dependency needed.
 
 Output example:
 ```
-ab12cd34 [in_progress ] User Authentication       2 in_progress, 1 ready, 3 implemented
+ab12cd34 [active      ] User Authentication       2 in_progress, 1 ready, 3 implemented
 ef567890 [empty       ] Billing Overhaul
 ```
 
-Unit tests in `apm-core/src/epic.rs`: empty, all closed/done, all implemented, any in_progress, any in_design, mixed states.
+### Tests
 
-Integration test in `apm/tests/integration.rs`: temp git repo with two fake `epic/*` remote refs and ticket branches with `epic = "..."` in frontmatter; assert `apm epic list` stdout matches expected lines.
+Unit tests inline in `apm-core/src/epic.rs` for `derive_epic_state`: empty slice, all terminal, all satisfies_deps+terminal, any agent-actionable, mixed states.
+
+Integration test in `apm/tests/integration.rs`: temp git repo with two fake `epic/*` remote branches and ticket files (with `epic = "..."` frontmatter) on `ticket/*` branches; `apm.toml` defines workflow states with appropriate flags; assert `apm epic list` stdout matches expected lines.
 
 ### Files changed
 
