@@ -1,15 +1,15 @@
 +++
 id = "19c2ab13"
 title = "Add --epic flag to apm new command"
-state = "ready"
+state = "in_progress"
 priority = 6
 effort = 4
 risk = 3
 author = "claude-0401-2145-a8f3"
-agent = "64496"
+agent = "philippepascal"
 branch = "ticket/19c2ab13-add-epic-flag-to-apm-new-command"
 created_at = "2026-04-01T21:55:26.992429Z"
-updated_at = "2026-04-02T02:28:41.945038Z"
+updated_at = "2026-04-02T06:16:54.215290Z"
 +++
 
 ## Spec
@@ -160,3 +160,4 @@ In `run()`:
 | 2026-04-02T00:49Z | groomed | in_design | philippepascal |
 | 2026-04-02T00:52Z | in_design | specd | claude-0401-2200-sp01 |
 | 2026-04-02T02:28Z | specd | ready | apm |
+| 2026-04-02T06:16Z | ready | in_progress | philippepascal |
