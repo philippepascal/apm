@@ -22,7 +22,7 @@ The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (
 
 ### Acceptance criteria
 
-- [ ] `apm new --epic <id> "Title"` exits non-zero with a clear error message when no `epic/<id>-*` branch exists on origin or locally
+- [x] `apm new --epic <id> "Title"` exits non-zero with a clear error message when no `epic/<id>-*` branch exists on origin or locally
 - [ ] `apm new --epic <id> "Title"` creates a ticket whose frontmatter contains `epic = "<id>"`
 - [ ] `apm new --epic <id> "Title"` creates a ticket whose frontmatter contains `target_branch = "epic/<id>-<slug>"` (the full resolved branch name)
 - [ ] `apm new --epic <id> "Title"` creates the ticket branch from the tip of the epic branch, not from `main`
