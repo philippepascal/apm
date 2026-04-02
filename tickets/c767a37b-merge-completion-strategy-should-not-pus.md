@@ -8,14 +8,14 @@ risk = 0
 author = "apm"
 branch = "ticket/c767a37b-merge-completion-strategy-should-not-pus"
 created_at = "2026-04-02T03:15:29.694878Z"
-updated_at = "2026-04-02T03:15:29.694878Z"
+updated_at = "2026-04-02T16:55:34.683429Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+when doing an apm state with a completion = "merge", apm should not do the final push to origin main. this last step is a supervisor action.
 
 ### Acceptance criteria
 
@@ -38,9 +38,6 @@ How the implementation will work.
 
 
 ### Code review
-
-
-
 ## History
 
 | When | From | To | By |
