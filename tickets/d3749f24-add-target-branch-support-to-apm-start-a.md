@@ -33,7 +33,11 @@ The `target_branch` field does not yet exist on the `Frontmatter` struct in `apm
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Setting `target_branch` automatically when a ticket is created under an epic (covered by a separate epic-creation ticket)
+- The `epic` and `depends_on` frontmatter fields — not added here
+- Validating that `target_branch` actually exists in the repo at the time `apm start` runs
+- Any UI or `apm` CLI command changes to display or filter by `target_branch`
+- Epic branch lifecycle (creation, merging the epic branch back to main)
 
 ### Approach
 
