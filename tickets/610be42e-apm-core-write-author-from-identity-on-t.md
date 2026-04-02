@@ -19,7 +19,11 @@ depends_on = ["4cec7a17"]
 
 ### Problem
 
-New tickets write `author` from the agent name rather than resolving a real collaborator identity. The identity resolution function (git host plugin → local.toml → "unassigned") does not yet exist in apm-core, so `apm new` cannot populate `author` correctly. See `initial_specs/DESIGN-users.md` points 1 and 3.
+New tickets set `author` from the `APM_AGENT_NAME` environment variable (or fall back to `"apm"`), conflating the ephemeral worker name with a permanent creator identity. Meanwhile, the `agent` frontmatter field tracks the current worker name — but workers are single-use, resumability does not depend on it, and tying frontmatter to a specific naming convention is the wrong direction (DESIGN-users.md point 2).
+
+There is no mechanism today to resolve a real human username for `author`. The design calls for reading `.apm/local.toml` (a gitignored, per-machine file) for the `username` key, falling back to `"apm"` when absent (DESIGN-users.md points 1 and 3).
+
+This ticket adds the identity-resolution function in `apm-core`, wires it into `apm new`, and removes the `agent` field from frontmatter writes and from `apm list`/`apm show` output.
 
 ### Acceptance criteria
 
