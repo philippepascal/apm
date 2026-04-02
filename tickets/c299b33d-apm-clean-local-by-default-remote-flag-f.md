@@ -55,7 +55,7 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 - [ ] **With `--untracked`:**
 - [x] `apm clean --untracked` removes a worktree that has only untracked non-temp files by deleting those files first, then removing the worktree
 - [x] `apm clean` (without `--untracked`) prints a warning for any worktree with untracked non-temp files and leaves it in place
-- [ ] `apm clean --untracked` still skips a worktree that has modified tracked files, printing a warning
+- [x] `apm clean --untracked` still skips a worktree that has modified tracked files, printing a warning
 
 - [ ] **Invariants:**
 - [ ] Remote branches are never deleted unless `--remote` is explicitly passed
