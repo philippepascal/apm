@@ -1,44 +1,20 @@
 use anyhow::{bail, Result};
 use crate::config::SectionType;
-use crate::ticket::{ChecklistItem, TicketDocument};
+use crate::ticket::TicketDocument;
 
 pub fn get_section(doc: &TicketDocument, name: &str) -> Option<String> {
-    match name.to_lowercase().as_str() {
-        "problem" => Some(doc.problem.clone()),
-        "acceptance criteria" => Some(
-            doc.acceptance_criteria
-                .iter()
-                .map(|i| format!("- [{}] {}", if i.checked { "x" } else { " " }, i.text))
-                .collect::<Vec<_>>()
-                .join("\n"),
-        ),
-        "out of scope" => Some(doc.out_of_scope.clone()),
-        "approach" => Some(doc.approach.clone()),
-        "open questions" => doc.open_questions.clone(),
-        "amendment requests" => doc.amendment_requests.as_ref().map(|items| {
-            items
-                .iter()
-                .map(|i| format!("- [{}] {}", if i.checked { "x" } else { " " }, i.text))
-                .collect::<Vec<_>>()
-                .join("\n")
-        }),
-        _ => None,
-    }
+    let lower = name.to_lowercase();
+    doc.sections.iter()
+        .find(|(k, _)| k.to_lowercase() == lower)
+        .map(|(_, v)| v.clone())
 }
 
 pub fn set_section(doc: &mut TicketDocument, name: &str, value: String) {
-    match name.to_lowercase().as_str() {
-        "problem" => doc.problem = value,
-        "acceptance criteria" => {
-            doc.acceptance_criteria = parse_checklist(&value);
-        }
-        "out of scope" => doc.out_of_scope = value,
-        "approach" => doc.approach = value,
-        "open questions" => doc.open_questions = Some(value),
-        "amendment requests" => {
-            doc.amendment_requests = Some(parse_checklist(&value));
-        }
-        _ => {}
+    let lower = name.to_lowercase();
+    if let Some(k) = doc.sections.keys().find(|k| k.to_lowercase() == lower).cloned() {
+        doc.sections.insert(k, value);
+    } else {
+        doc.sections.insert(name.to_string(), value);
     }
 }
 
@@ -131,66 +107,6 @@ pub fn mark_item(content: &str, section: &str, item_text: &str) -> Result<String
     }
 }
 
-pub fn is_doc_field(name: &str) -> bool {
-    matches!(name.to_lowercase().as_str(),
-        "problem" | "acceptance criteria" | "out of scope" | "approach"
-        | "open questions" | "amendment requests")
-}
-
-pub fn get_section_body(body: &str, name: &str) -> Option<String> {
-    let heading = format!("### {name}\n");
-    let pos = body.find(&heading)?;
-    let after_heading = pos + heading.len();
-    let skip = body[after_heading..].len()
-        - body[after_heading..].trim_start_matches('\n').len();
-    let content_start = after_heading + skip;
-    let rest = &body[content_start..];
-    let end = rest
-        .find("\n## ")
-        .or_else(|| rest.find("\n### "))
-        .unwrap_or(rest.len());
-    Some(rest[..end].trim().to_string())
-}
-
-pub fn set_section_body(body: &mut String, name: &str, value: &str) {
-    let heading = format!("### {name}\n");
-    if let Some(pos) = body.find(&heading) {
-        let after_heading = pos + heading.len();
-        let skip = body[after_heading..].len()
-            - body[after_heading..].trim_start_matches('\n').len();
-        let content_start = after_heading + skip;
-        let rest = &body[content_start..];
-        let end = rest
-            .find("\n## ")
-            .or_else(|| rest.find("\n### "))
-            .map(|p| content_start + p + 1)
-            .unwrap_or(body.len());
-        let before = body[..after_heading].to_string();
-        let after = body[end..].to_string();
-        if value.is_empty() {
-            *body = format!("{}\n{}", before, after);
-        } else {
-            *body = format!("{}\n{}\n\n{}", before, value, after);
-        }
-    }
-}
-
-fn parse_checklist(value: &str) -> Vec<ChecklistItem> {
-    value
-        .lines()
-        .filter_map(|line| {
-            let l = line.trim();
-            if l.starts_with("- [ ] ") {
-                Some(ChecklistItem { checked: false, text: l[6..].to_string() })
-            } else if l.starts_with("- [x] ") || l.starts_with("- [X] ") {
-                Some(ChecklistItem { checked: true, text: l[6..].to_string() })
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,29 +145,44 @@ mod tests {
     }
 
     #[test]
+    fn get_section_case_insensitive() {
+        let doc = base_doc();
+        assert_eq!(get_section(&doc, "problem"), Some("A bug exists".to_string()));
+        assert_eq!(get_section(&doc, "PROBLEM"), Some("A bug exists".to_string()));
+    }
+
+    #[test]
     fn set_section_problem_case_insensitive() {
         let mut doc = base_doc();
         set_section(&mut doc, "problem", "New problem".to_string());
-        assert_eq!(doc.problem, "New problem");
+        assert_eq!(doc.sections.get("Problem").map(|s| s.as_str()), Some("New problem"));
     }
 
     #[test]
-    fn set_section_acceptance_criteria_parses_checklist() {
+    fn set_section_acceptance_criteria_stores_raw() {
         let mut doc = base_doc();
         set_section(&mut doc, "acceptance criteria", "- [ ] Item one\n- [x] Item two".to_string());
-        assert_eq!(doc.acceptance_criteria.len(), 2);
-        assert!(!doc.acceptance_criteria[0].checked);
-        assert_eq!(doc.acceptance_criteria[0].text, "Item one");
-        assert!(doc.acceptance_criteria[1].checked);
+        let val = doc.sections.get("Acceptance criteria").unwrap();
+        assert!(val.contains("- [ ] Item one"));
+        assert!(val.contains("- [x] Item two"));
     }
 
     #[test]
-    fn set_section_amendment_requests_parses_checklist() {
+    fn set_section_amendment_requests_stores_raw() {
         let mut doc = base_doc();
         set_section(&mut doc, "amendment requests", "- [ ] Fix docs".to_string());
-        let ar = doc.amendment_requests.unwrap();
-        assert_eq!(ar.len(), 1);
-        assert_eq!(ar[0].text, "Fix docs");
+        // Key inserted with supplied casing since no existing key matched
+        let val = doc.sections.iter()
+            .find(|(k, _)| k.to_lowercase() == "amendment requests")
+            .map(|(_, v)| v.as_str());
+        assert_eq!(val, Some("- [ ] Fix docs"));
+    }
+
+    #[test]
+    fn set_section_new_key_appended() {
+        let mut doc = base_doc();
+        set_section(&mut doc, "New section", "Some content".to_string());
+        assert_eq!(get_section(&doc, "New section"), Some("Some content".to_string()));
     }
 
     #[test]
