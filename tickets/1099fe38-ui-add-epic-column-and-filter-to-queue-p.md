@@ -1,7 +1,7 @@
 +++
 id = "1099fe38"
 title = "UI: add epic column and filter to queue panel"
-state = "in_design"
+state = "specd"
 priority = 2
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "40989"
 branch = "ticket/1099fe38-ui-add-epic-column-and-filter-to-queue-p"
 created_at = "2026-04-01T21:56:20.710748Z"
-updated_at = "2026-04-02T00:59:51.196316Z"
+updated_at = "2026-04-02T00:59:58.323874Z"
 +++
 
 ## Spec
@@ -86,3 +86,4 @@ The `epic` field does not yet exist on `Frontmatter` (apm-core) or `QueueEntry` 
 | 2026-04-01T21:56Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:01Z | new | groomed | claude-0401-2145-a8f3 |
 | 2026-04-02T00:56Z | groomed | in_design | philippepascal |
+| 2026-04-02T00:59Z | in_design | specd | claude-0402-0057-spec1 |
