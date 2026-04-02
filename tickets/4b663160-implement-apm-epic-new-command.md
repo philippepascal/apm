@@ -53,7 +53,78 @@ The `apm epic` subcommand group does not yet exist and must be wired into the CL
 
 ### Approach
 
-How the implementation will work.
+### Files to change
+
+**`apm-core/src/lib.rs`** — add `pub mod epic;`
+
+**`apm-core/src/epic.rs`** (new file) — `pub fn create(root: &Path, title: &str) -> Result<String>`:
+1. `id = git::gen_hex_id()`
+2. `slug = ticket::slugify(title)`
+3. `branch = format!("epic/{id}-{slug}")`
+4. Fetch origin/main: `git fetch origin main` (inline Command, propagate error)
+5. Build a unique temp path using PID + subsec_nanos + branch slug (same pattern as `try_worktree_commit`)
+6. `git worktree add -b <branch> <tmp_path> origin/main`
+7. Write `format!("# {title}\n")` to `<tmp_path>/EPIC.md`
+8. `git -C tmp add EPIC.md`
+9. `git -C tmp commit -m "epic({id}): create {title}"`
+10. `git worktree remove --force <tmp_path>` + `fs::remove_dir_all` (best-effort cleanup)
+11. `git::push_branch_tracking(root, &branch)` — push with `--set-upstream`
+12. Return `Ok(branch)`
+
+**`apm-core/src/git.rs`** — add `push_branch_tracking(root, branch)`:
+```
+git push --set-upstream origin <branch>:<branch>
+```
+Mirrors `push_branch` but adds `--set-upstream` before `origin`.
+
+**`apm/src/cmd/epic.rs`** (new file):
+```
+pub fn run_new(root: &Path, title: String) -> Result<()> {
+    let branch = apm_core::epic::create(root, &title)?;
+    println!("{branch}");
+    Ok(())
+}
+```
+
+**`apm/src/lib.rs`** — add `pub mod epic;` inside the `pub mod cmd` block
+
+**`apm/src/main.rs`** — three additions:
+1. New `EpicCommand` enum above or below `Command`:
+   ```
+   #[derive(Subcommand)]
+   enum EpicCommand {
+       /// Create a new epic branch
+       New { title: String }
+   }
+   ```
+2. New `Epic` variant in `Command`:
+   ```
+   /// Manage epics
+   Epic {
+       #[command(subcommand)]
+       command: EpicCommand,
+   }
+   ```
+3. Match arm in `main()`:
+   ```
+   Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
+   ```
+
+### Order of steps
+
+Implement in this order to keep each step buildable:
+1. `apm-core/src/git.rs` — add `push_branch_tracking`
+2. `apm-core/src/epic.rs` + update `lib.rs`
+3. `apm/src/cmd/epic.rs` + update `lib.rs`
+4. `apm/src/main.rs` — wire CLI
+
+### Constraints and gotchas
+
+- `std::env::temp_dir()` returns `/tmp` on macOS/Linux; the temp worktree is outside the repo — this is fine, git worktrees can be anywhere
+- After `git worktree remove --force`, the local branch ref for the epic still exists; the push in step 11 uses that ref
+- `git::gen_hex_id()` and `ticket::slugify()` are already `pub` — no visibility changes needed
+- `EPIC.md` commit is not optional; it is what makes the branch visible in `git log --oneline main..epic/...`
+- No config changes required; the command works with any existing `.apm/` setup
 
 ### Open questions
 
