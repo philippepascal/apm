@@ -3,13 +3,13 @@ id = "a5e1ea24"
 title = "Implement apm epic list command"
 state = "in_design"
 priority = 6
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0401-2145-a8f3"
 agent = "87256"
 branch = "ticket/a5e1ea24-implement-apm-epic-list-command"
 created_at = "2026-04-01T21:55:09.722953Z"
-updated_at = "2026-04-02T00:47:06.221425Z"
+updated_at = "2026-04-02T00:51:05.005571Z"
 +++
 
 ## Spec
