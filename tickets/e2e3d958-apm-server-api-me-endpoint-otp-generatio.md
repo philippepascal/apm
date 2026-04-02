@@ -52,7 +52,69 @@ Ticket #90ebf40b already implements the localhost case of `/api/me` (reading `.a
 
 ### Approach
 
-How the implementation will work.
+New file: apm-server/src/auth.rs
+
+OTP store:
+- OtpEntry containing username, otp string, and created_at timestamp; stored in a HashMap keyed by username (one active OTP per user at a time)
+- OtpStore wraps Arc<Mutex<HashMap<String, OtpEntry>>>
+- generate_otp(): 8 random uppercase alphanumeric chars via rand::distributions::Alphanumeric mapped to uppercase
+- OtpStore::insert(username, otp): stores or overwrites the entry for that username
+- OtpStore::validate(username, otp) -> Result<(), OtpError>: checks existence, TTL (5 min from created_at), and exact value match; removes entry on success so it cannot be reused; typed errors: NotFound, Expired, Invalid
+
+Session store:
+- Session struct containing username and expires_at (serde Serialize/Deserialize)
+- SessionStore holds Arc<Mutex<HashMap<String, Session>>> and the file path
+- generate_token(): 32 random bytes encoded as lowercase hex
+- SessionStore::load(path): reads .apm/sessions.json; starts empty if absent or unparseable (warn on parse failure)
+- SessionStore::insert(token, username): stores session expiring 7 days from now; calls save()
+- SessionStore::lookup(token) -> Option<String>: returns Some(username) if valid and not expired; removes expired entries and returns None
+- SessionStore::save(): writes JSON atomically to .apm/sessions.json via temp file + rename
+- File format: JSON object with a "sessions" array, each entry having token, username, expires_at fields
+
+AppState extension (main.rs):
+- Add otp_store: OtpStore and session_store: SessionStore fields
+- Initialise both in main before building the router; SessionStore::load called once with path to .apm/sessions.json in the repo root
+
+Localhost extractor:
+- struct IsLocalhost(bool) implementing axum::extract::FromRequestParts
+- Reads ConnectInfo<SocketAddr>, checks addr.ip().is_loopback()
+- Ensure main.rs uses into_make_service_with_connect_info::<SocketAddr>() (change from into_make_service() if needed)
+
+POST /api/auth/otp handler:
+1. Extract IsLocalhost — return 403 if not localhost
+2. Parse JSON body with username field — return 400 if missing, malformed, or empty
+3. Generate OTP, store via otp_store.insert(username, otp)
+4. Return JSON {otp: ...} with HTTP 200
+
+Extend GET /api/me (from ticket #90ebf40b):
+1. Extract IsLocalhost
+2. Localhost: unchanged — resolve via apm_core::resolve_identity, return username or "unassigned"
+3. Remote: read Cookie header, parse with the cookie crate, look up __Host-apm-session token value
+   - Valid non-expired session found: return {username: session_username}
+   - No cookie or expired: return {username: unassigned}
+
+Route change (main.rs):
+- Add .route("/api/auth/otp", post(otp_handler)) to the router
+
+New dependencies (apm-server/Cargo.toml):
+- rand = "0.8" for OTP and token generation
+- cookie = "0.18" for Cookie header parsing
+Neither needs workspace-level promotion.
+
+Tests:
+Unit tests in auth.rs:
+- OtpStore: insert+validate happy path; validate expired OTP; validate wrong value; validate twice (second call fails after entry removed on first success)
+- SessionStore: insert+lookup happy path; lookup expired session returns None
+
+Integration tests via tower::ServiceExt (matching existing test patterns in apm-server):
+- POST /api/auth/otp with loopback peer addr: HTTP 200, body is 8-char alphanumeric OTP
+- POST /api/auth/otp with non-loopback peer addr: HTTP 403
+- POST /api/auth/otp with malformed body: HTTP 400
+- GET /api/me from loopback with local.toml in temp repo: returns local.toml username
+- GET /api/me from loopback without local.toml: returns "unassigned"
+- GET /api/me from remote with valid session inserted directly into store and matching Cookie header: returns session username
+- GET /api/me from remote with expired session: returns "unassigned"
+- GET /api/me from remote with no Cookie header: returns "unassigned"
 
 ### Open questions
 
