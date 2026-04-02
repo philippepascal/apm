@@ -55,7 +55,52 @@ This requires extending the server's work engine API to accept and remember an o
 
 ### Approach
 
-How the implementation will work.
+1. apm-core/src/ticket.rs - add epic to Frontmatter
+
+Add optional field to Frontmatter (serde default so existing tickets without field deserialise cleanly):
+  pub epic: Option<String>
+
+2. apm-core/src/work.rs - thread epic filter through engine loop
+
+Change run_engine_loop signature to accept epic_filter: Option<String>.
+Add epic_filter: Option<&str> to spawn_next_worker. After loading tickets, when epic_filter is Some(id),
+filter slice to keep only tickets where frontmatter.epic.as_deref() == Some(id), then call pick_next on
+the filtered slice.
+
+3. apm-server/src/work.rs - extend WorkEngine, status, and start
+
+WorkEngine struct: add epic: Option<String> field to remember the filter.
+
+get_work_status: read engine.epic.clone() and include it in the JSON response as "epic" key (null when open mode).
+
+post_work_start: accept optional JSON body via axum Option<Json<StartRequest>> extractor where
+StartRequest has an optional epic: Option<String> field. Pass epic to run_engine_loop and store it on WorkEngine.
+
+4. apm-server - GET /api/epics route (new handler, can live in main.rs or new epics.rs)
+
+- Run git branch -r in git_root
+- Filter lines matching origin/epic/ prefix
+- Parse id (first 8 chars after prefix) and title (remainder with hyphens to spaces, title-cased)
+- Return Vec<EpicSummary> with id, title, branch fields
+- InMemory source returns empty array
+- Register .route("/api/epics", get(get_epics))
+
+5. apm-ui/src/components/WorkEngineControls.tsx
+
+- Add useQuery for epics calling GET /api/epics
+- Add selectedEpic local state string (empty = open mode)
+- Extend fetchStatus return type to include epic: string | null
+- When stopped: show Epic select before Start button (blank option + one per epic)
+- When running/idle: hide select; if status.epic non-null show label with link to /?epic=<id>
+- startEngine accepts optional epic param; include in POST body when non-empty
+
+Order of changes: ticket.rs -> core work.rs -> server work.rs -> epics route -> WorkEngineControls.tsx
+
+Tests:
+- Unit: branch-name parser extracts id and title correctly
+- Server: GET /api/epics on in-memory returns empty array
+- Server: POST /api/work/start with epic param -> GET /api/work/status returns that epic
+- All cargo test --workspace tests pass
 
 ### Open questions
 
