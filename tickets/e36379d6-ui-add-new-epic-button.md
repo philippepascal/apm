@@ -20,7 +20,13 @@ The web UI provides no way to create epics. The only paths to epic creation are 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The SupervisorView toolbar shows a "New epic" button next to the existing "New ticket" button
+- [ ] Clicking "New epic" opens a modal with a title input field
+- [ ] Submitting the modal with a non-empty title sends POST /api/epics and closes the modal on success
+- [ ] After successful creation the new epic appears in the SupervisorView epic-filter dropdown without a page refresh
+- [ ] Submitting the modal with an empty title shows a validation error and does not send a request
+- [ ] The modal can be dismissed by pressing Escape
+- [ ] The modal can be dismissed by clicking the backdrop
 
 ### Out of scope
 
