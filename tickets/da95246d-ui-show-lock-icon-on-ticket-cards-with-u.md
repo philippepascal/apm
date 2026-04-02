@@ -41,7 +41,99 @@ The desired behaviour (per `docs/epics.md` § "Ticket cards") is: cards where `d
 
 ### Approach
 
-How the implementation will work.
+**1. `apm-core/src/ticket.rs` — add `depends_on` to `Frontmatter`**
+
+Add below `focus_section`:
+
+```rust
+#[serde(default, skip_serializing_if = "Vec::is_empty")]
+pub depends_on: Vec<String>,
+```
+
+Using `Vec` (not `Option<Vec>`) with `#[serde(default)]` means absent fields deserialise to an empty vec and existing tickets without the field are unaffected.
+
+---
+
+**2. `apm-server/src/main.rs` — expose `blocking_deps` in the API**
+
+Add a serialisable struct above `TicketResponse`:
+
+```rust
+#[derive(serde::Serialize)]
+struct BlockingDep {
+    id: String,
+    state: String,
+}
+```
+
+Add the field to `TicketResponse`:
+
+```rust
+blocking_deps: Vec<BlockingDep>,
+```
+
+In `list_tickets`, build a state lookup map before the `.map()` call:
+
+```rust
+let state_map: std::collections::HashMap<&str, &str> = tickets
+    .iter()
+    .map(|t| (t.frontmatter.id.as_str(), t.frontmatter.state.as_str()))
+    .collect();
+```
+
+Then compute `blocking_deps` per ticket (resolved = `implemented`, `merged`, or `closed`):
+
+```rust
+const RESOLVED: &[&str] = &["implemented", "merged", "closed"];
+let blocking_deps = t.frontmatter.depends_on.iter()
+    .filter_map(|dep_id| {
+        state_map.get(dep_id.as_str()).and_then(|&s| {
+            if RESOLVED.contains(&s) { None }
+            else { Some(BlockingDep { id: dep_id.clone(), state: s.to_string() }) }
+        })
+    })
+    .collect();
+```
+
+Unknown dep IDs (not in the map) are silently skipped.
+
+---
+
+**3. `apm-ui/src/components/supervisor/types.ts` — extend `Ticket` interface**
+
+```ts
+blocking_deps?: { id: string; state: string }[]
+```
+
+---
+
+**4. `apm-ui/src/components/supervisor/TicketCard.tsx` — render the lock icon**
+
+Import `Lock` from `lucide-react`.
+
+Inside the badges `<div>`, after the `has_pending_amendments` block:
+
+```tsx
+{!!ticket.blocking_deps?.length && (
+  <Lock
+    size={12}
+    title={ticket.blocking_deps.map(d => `${d.id}: ${d.state}`).join('\n')}
+    className="text-gray-400 shrink-0"
+  />
+)}
+```
+
+The native `title` attribute matches the pattern used by the existing `?` and `A` badges.
+
+---
+
+**5. Tests**
+
+Add a test in `apm-server/src/main.rs` (alongside `list_tickets_includes_badge_fields`) asserting:
+
+- A ticket with no `depends_on` has `blocking_deps: []`
+- A ticket whose dep is in `implemented` has `blocking_deps: []`
+- A ticket whose dep is in `in_progress` has `blocking_deps: [{id, state}]`
 
 ### Open questions
 
