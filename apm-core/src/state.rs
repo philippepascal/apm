@@ -75,13 +75,13 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     match new_state.as_str() {
         "specd" => {
             if let Ok(doc) = t.document() {
-                let errors = doc.validate();
+                let errors = doc.validate(&config.ticket.sections);
                 if !errors.is_empty() {
                     let msgs: Vec<String> = errors.iter().map(|e| format!("  - {e}")).collect();
                     bail!("spec validation failed:\n{}", msgs.join("\n"));
                 }
                 if old_state == "ammend" {
-                    let unchecked = doc.unchecked_amendments();
+                    let unchecked = doc.unchecked_tasks("Amendment requests");
                     if !unchecked.is_empty() {
                         bail!("not all amendment requests are checked — mark them [x] before resubmitting");
                     }
@@ -90,7 +90,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         }
         "implemented" => {
             if let Ok(doc) = t.document() {
-                let unchecked = doc.unchecked_criteria();
+                let unchecked = doc.unchecked_tasks("Acceptance criteria");
                 if !unchecked.is_empty() {
                     bail!(
                         "not all acceptance criteria are checked — mark them [x] before transitioning to implemented"
