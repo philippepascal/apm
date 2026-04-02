@@ -1,7 +1,7 @@
 +++
 id = "b8e9bfee"
 title = "apm-core: phase-aware dependency gating via satisfies_deps tags and dep_requires"
-state = "in_progress"
+state = "implemented"
 priority = 8
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "46072"
 branch = "ticket/b8e9bfee-apm-core-phase-aware-dependency-gating-v"
 created_at = "2026-04-02T21:24:08.067343Z"
-updated_at = "2026-04-02T22:33:22.846822Z"
+updated_at = "2026-04-02T22:38:09.970427Z"
 +++
 
 ## Spec
@@ -164,3 +164,4 @@ Integration test in the existing integration test file:
 | 2026-04-02T22:31Z | in_design | specd | apm |
 | 2026-04-02T22:31Z | specd | ready | apm |
 | 2026-04-02T22:33Z | ready | in_progress | philippepascal |
+| 2026-04-02T22:38Z | in_progress | implemented | claude-0402-2235-impl1 |
