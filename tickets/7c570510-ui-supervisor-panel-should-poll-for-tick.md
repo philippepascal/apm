@@ -58,6 +58,7 @@ No backend changes are needed. The GET /api/tickets endpoint is already stateles
 
 ### Amendment requests
 
+- [ ] The Approach snippet shows a hardcoded `fetch('/api/tickets')` queryFn and a plain `queryKey: ['tickets']`. After e8a56566, SupervisorView already uses `queryKey: ['tickets', showClosed]` and a queryFn that appends `?include_closed=true` conditionally. A worker following the snippet literally would regress that feature. Replace the snippet with: "Add `refetchInterval: 10_000` to the existing useQuery call — do not change the queryFn or queryKey."
 
 ### Code review
 
