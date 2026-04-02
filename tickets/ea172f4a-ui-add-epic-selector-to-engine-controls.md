@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "82526"
 branch = "ticket/ea172f4a-ui-add-epic-selector-to-engine-controls"
 created_at = "2026-04-01T21:56:28.916880Z"
-updated_at = "2026-04-02T01:45:44.017295Z"
+updated_at = "2026-04-02T01:45:49.526473Z"
 +++
 
 ## Spec
