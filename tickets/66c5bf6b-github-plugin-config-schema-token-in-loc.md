@@ -1,14 +1,14 @@
 +++
 id = "66c5bf6b"
 title = "GitHub plugin: config schema, token in local.toml, API identity and collaborators sync"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/66c5bf6b-github-plugin-config-schema-token-in-loc"
 created_at = "2026-04-02T20:54:29.742423Z"
-updated_at = "2026-04-02T20:54:29.742423Z"
+updated_at = "2026-04-02T23:23:04.507193Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17"]
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
+| 2026-04-02T23:23Z | new | groomed | apm |
