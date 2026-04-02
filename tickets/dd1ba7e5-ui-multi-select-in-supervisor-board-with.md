@@ -26,17 +26,17 @@ When 2+ tickets are selected the detail panel switches to a batch summary view t
 
 ### Acceptance criteria
 
-- [ ] Shift-clicking a ticket when another ticket in the same column is already focused selects every ticket between them (inclusive) in column render order
-- [ ] Clicking a ticket normally (no modifier) clears any existing multi-selection and focuses only that ticket
-- [ ] Clicking the column header checkbox when no tickets in the column are selected selects all tickets in that column
-- [ ] Clicking the column header checkbox when all tickets in the column are selected deselects all tickets in that column
-- [ ] The column header checkbox appears in an indeterminate state when some but not all tickets in the column are selected
-- [ ] When 2 or more tickets are selected, the detail panel shows a batch summary listing each selected ticket's 8-char ID, title, and state badge instead of a single ticket's full detail
-- [ ] When all selected tickets share at least one common valid transition, that transition appears as a button in the batch summary panel
-- [ ] When selected tickets have no common valid transitions, only the priority field appears in the batch summary panel
-- [ ] Clicking a batch transition button transitions every selected ticket to the target state
-- [ ] The batch priority field applies the entered priority value to every selected ticket on submit
-- [ ] Pressing any arrow key while 2 or more tickets are selected clears the multi-selection and moves focus to a single ticket per the existing arrow-key navigation logic
+- [x] Shift-clicking a ticket when another ticket in the same column is already focused selects every ticket between them (inclusive) in column render order
+- [x] Clicking a ticket normally (no modifier) clears any existing multi-selection and focuses only that ticket
+- [x] Clicking the column header checkbox when no tickets in the column are selected selects all tickets in that column
+- [x] Clicking the column header checkbox when all tickets in the column are selected deselects all tickets in that column
+- [x] The column header checkbox appears in an indeterminate state when some but not all tickets in the column are selected
+- [x] When 2 or more tickets are selected, the detail panel shows a batch summary listing each selected ticket's 8-char ID, title, and state badge instead of a single ticket's full detail
+- [x] When all selected tickets share at least one common valid transition, that transition appears as a button in the batch summary panel
+- [x] When selected tickets have no common valid transitions, only the priority field appears in the batch summary panel
+- [x] Clicking a batch transition button transitions every selected ticket to the target state
+- [x] The batch priority field applies the entered priority value to every selected ticket on submit
+- [x] Pressing any arrow key while 2 or more tickets are selected clears the multi-selection and moves focus to a single ticket per the existing arrow-key navigation logic
 
 ### Out of scope
 
