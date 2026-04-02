@@ -29,7 +29,7 @@ The command lists all `epic/*` remote branches and for each shows: short ID, tit
 - [x] When no `epic/*` branches exist, the command exits 0 with no output
 - [x] Derived state is `empty` when no tickets reference the epic ID
 - [x] Derived state is `active` when any ticket's state config has `actionable` containing `"agent"`
-- [ ] Derived state is `done` when all tickets have `terminal = true` in their state config
+- [x] Derived state is `done` when all tickets have `terminal = true` in their state config
 - [ ] Derived state is `complete` when all tickets are dep-satisfied (`satisfies_deps = true`) or terminal, and at least one is dep-satisfied
 - [ ] Derived state falls back to `active` for any other mix of states
 - [ ] Ticket counts omit states with a zero count (e.g. `2 in_progress, 3 implemented`, not `2 in_progress, 0 ready, 3 implemented`)
