@@ -128,7 +128,7 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
 }
 
 pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
-    let mut warnings = Vec::new();
+    let mut warnings = config.load_warnings.clone();
     if let Some(container) = &config.workers.container {
         if !container.is_empty() {
             let docker_ok = std::process::Command::new("docker")
