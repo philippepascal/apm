@@ -1,15 +1,15 @@
 +++
 id = "c299b33d"
 title = "apm clean: local by default, --remote flag for old branch cleanup"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 4
 risk = 3
 author = "apm"
-agent = "5780"
+agent = "philippepascal"
 branch = "ticket/c299b33d-apm-clean-local-by-default-remote-flag-f"
 created_at = "2026-04-02T20:44:35.825711Z"
-updated_at = "2026-04-02T21:12:40.871881Z"
+updated_at = "2026-04-02T21:13:36.516765Z"
 +++
 
 ## Spec
@@ -322,3 +322,4 @@ Return error if the command fails (non-zero exit).
 | 2026-04-02T21:11Z | ammend | in_design | apm |
 | 2026-04-02T21:12Z | in_design | specd | apm |
 | 2026-04-02T21:12Z | specd | ammend | apm |
+| 2026-04-02T21:13Z | ammend | in_design | philippepascal |
