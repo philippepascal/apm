@@ -38,7 +38,13 @@ Two related pieces of infrastructure must land with this ticket because `apm epi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic list` — a separate ticket; this ticket only implements `show`
+- `apm epic new` and `apm epic close` — separate tickets
+- `depends_on` scheduling engine changes (blocking dispatch until deps are `implemented`) — separate ticket
+- Setting `epic`, `target_branch`, or `depends_on` automatically when creating a ticket with `apm new --epic` — separate ticket
+- Server API routes for epics (`GET /api/epics`, `GET /api/epics/:id`) — separate ticket
+- UI additions (epic column, filter dropdown, lock icon on cards) — separate ticket
+- `apm work --epic` exclusive-mode scheduling — separate ticket
 
 ### Approach
 
