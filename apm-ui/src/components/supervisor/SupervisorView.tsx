@@ -51,6 +51,8 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
   const epicFilter = useLayoutStore((s) => s.epicFilter)
   const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
+  const showEpicTickets = useLayoutStore((s) => s.showEpicTickets)
+  const setShowEpicTickets = useLayoutStore((s) => s.setShowEpicTickets)
   const [showClosed, setShowClosed] = useState(false)
 
   const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
@@ -109,6 +111,9 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         if (epicFilter !== null) {
           filtered = filtered.filter((t) => t.epic === epicFilter)
         }
+        if (!showEpicTickets && epicFilter === null) {
+          filtered = filtered.filter((t) => t.epic == null)
+        }
         if (query) {
           filtered = filtered.filter(
             (t) =>
@@ -119,7 +124,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         return [state, filtered]
       })
       .filter(([, group]) => group.length > 0)
-  }, [tickets, visibleStates, agentFilter, epicFilter, searchText])
+  }, [tickets, visibleStates, agentFilter, epicFilter, showEpicTickets, searchText])
 
   const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || epicFilter !== null || showClosed
 
@@ -223,6 +228,15 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
             className="rounded"
           />
           Show closed
+        </label>
+        <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showEpicTickets}
+            onChange={(e) => setShowEpicTickets(e.target.checked)}
+            className="rounded"
+          />
+          Show epic tickets
         </label>
       </div>
       <div className="flex-1 flex flex-row gap-4 overflow-x-auto p-3">

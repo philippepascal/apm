@@ -11,6 +11,7 @@ interface LayoutStore {
   newEpicOpen: boolean
   logPanelOpen: boolean
   epicFilter: string | null
+  showEpicTickets: boolean
   setSelectedTicketId: (id: string | null) => void
   toggleColumn: (col: ColumnKey) => void
   setColumnSizes: (sizes: [number, number, number]) => void
@@ -19,6 +20,7 @@ interface LayoutStore {
   setNewEpicOpen: (v: boolean) => void
   setLogPanelOpen: (v: boolean) => void
   setEpicFilter: (id: string | null) => void
+  setShowEpicTickets: (v: boolean) => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -30,6 +32,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   newEpicOpen: false,
   logPanelOpen: false,
   epicFilter: null,
+  showEpicTickets: false,
   setSelectedTicketId: (id) => set({ selectedTicketId: id }),
   toggleColumn: (col) =>
     set((state) => {
@@ -44,4 +47,5 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   setNewEpicOpen: (v) => set({ newEpicOpen: v }),
   setLogPanelOpen: (v) => set({ logPanelOpen: v }),
   setEpicFilter: (id) => set({ epicFilter: id }),
+  setShowEpicTickets: (v) => set({ showEpicTickets: v }),
 }))
