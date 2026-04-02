@@ -9,6 +9,7 @@ import SupervisorView from './SupervisorView'
 import TicketDetail from './TicketDetail'
 import ReviewEditor from './ReviewEditor'
 import NewTicketModal from './NewTicketModal'
+import NewEpicModal from './NewEpicModal'
 import LogPanel from './LogPanel'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
@@ -31,7 +32,7 @@ const CONTENT: Record<ColumnKey, (onMinimize: () => void) => React.ReactNode> = 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, reviewMode, newTicketOpen, setNewTicketOpen } =
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen } =
     useLayoutStore()
   const queryClient = useQueryClient()
 
@@ -161,6 +162,7 @@ export default function WorkScreen() {
     return (
       <div className="h-screen w-screen flex flex-col overflow-hidden">
         <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
+        <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel defaultSize={25} minSize={10}>
             <WorkerView />
@@ -177,6 +179,7 @@ export default function WorkScreen() {
   return (
     <div className="h-screen w-screen flex flex-col">
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
+      <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup orientation="horizontal">
           {COLS.map(({ key, defaultSize, Icon }, i) => (
