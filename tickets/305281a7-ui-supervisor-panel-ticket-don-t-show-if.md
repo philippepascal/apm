@@ -31,7 +31,11 @@ Tickets that belong to an epic are managed at the epic level. For the supervisor
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Showing epic summary cards or rows in the board (epic-level overview widgets)
+- Persisting the "Show epic tickets" toggle to localStorage across page reloads
+- Server-side filtering — this is a purely client-side change
+- Changes to the epic detail view or the epic filter dropdown itself
+- Filtering logic for any panel other than the supervisor board
 
 ### Approach
 
