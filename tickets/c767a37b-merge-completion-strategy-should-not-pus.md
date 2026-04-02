@@ -20,7 +20,7 @@ When a state transition with `completion = "merge"` is executed (e.g. `apm state
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm state <id> implemented` with `completion = "merge"`, the ticket branch is pushed to origin\n- [ ] After `apm state <id> implemented` with `completion = "merge"`, the ticket branch is merged into the local default branch\n- [ ] After `apm state <id> implemented` with `completion = "merge"`, the default branch is NOT pushed to origin\n- [ ] The local default branch (e.g. `main`) reflects the merge after the transition completes\n- [ ] All existing tests continue to pass
 
 ### Out of scope
 
