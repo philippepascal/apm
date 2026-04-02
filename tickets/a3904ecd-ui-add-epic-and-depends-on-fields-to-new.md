@@ -16,13 +16,13 @@ updated_at = "2026-04-02T00:52:55.544496Z"
 
 ### Problem
 
-The new ticket modal has no way to associate a ticket with an epic or declare dependencies. Without this, users cannot create epic-linked tickets from the UI — they must use the CLI.
+The new ticket modal offers only a title and four spec-section text areas. There is no way to associate a ticket with an epic or declare dependencies from the UI — users must resort to the CLI. This blocks teams that prefer managing epic-linked work through the web interface.
 
 The full design is in `docs/epics.md` (§ apm-ui changes — New ticket modal). Two optional fields are added below the title input:
-- **Epic** — dropdown populated from `GET /api/epics`; selecting one pre-fills the epic ID
-- **Depends on** — multi-value text input for ticket IDs, stored as `depends_on` array
+- **Epic** — dropdown populated from `GET /api/epics`; selecting one includes the short epic ID in the create payload.
+- **Depends on** — free-text input for space- or comma-separated ticket IDs, stored as a `depends_on` array.
 
-Omitting both preserves the current free-ticket creation behaviour.
+Neither `GET /api/epics` nor the `epic` / `depends_on` frontmatter fields exist yet. This ticket covers the UI modal changes plus the minimum server and core changes required to make those fields functional.
 
 ### Acceptance criteria
 
