@@ -1,7 +1,7 @@
 +++
 id = "e2e3d958"
 title = "apm-server: /api/me endpoint, OTP generation, session store, and localhost bypass"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "64526"
 branch = "ticket/e2e3d958-apm-server-api-me-endpoint-otp-generatio"
 created_at = "2026-04-02T20:54:13.959036Z"
-updated_at = "2026-04-02T23:51:18.055287Z"
+updated_at = "2026-04-02T23:51:24.111842Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17", "90ebf40b"]
@@ -132,3 +132,4 @@ Integration tests via tower::ServiceExt (matching existing test patterns in apm-
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
 | 2026-04-02T23:45Z | groomed | in_design | philippepascal |
+| 2026-04-02T23:51Z | in_design | specd | claude-0402-1445-b7e2 |
