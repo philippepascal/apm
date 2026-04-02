@@ -48,7 +48,12 @@ The CLI flag takes precedence over the config value. This is the exclusive mode 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Server-side epic filtering (`POST /api/work/start` body `epic` field) — covered by a separate server ticket
+- `apm start --next --epic <id>` — the `--epic` flag is for `apm work` only
+- Balanced or mixed scheduling (dispatching both epic and free tickets with any weighting)
+- Adding the `epic` field to tickets (`apm new --epic`, `apm epic` commands) — those are separate epic command tickets
+- UI engine controls epic selector (apm-ui) — separate ticket
+- `depends_on` scheduling within epics — that feature is independent and covered elsewhere
 
 ### Approach
 
