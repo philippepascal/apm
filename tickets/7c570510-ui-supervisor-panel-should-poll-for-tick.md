@@ -32,7 +32,10 @@ Every other panel in the UI already polls on a fixed interval: PriorityQueuePane
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- WebSocket or server-sent events — HTTP polling is sufficient and consistent with the rest of the UI
+- Making the poll interval configurable via UI settings or apm.toml
+- Polling for the POST /api/sync (remote fetch) on a background interval — the refresh only re-queries /api/tickets from the local server cache
+- Changes to any panel other than SupervisorView (PriorityQueuePanel, WorkEngineControls, WorkerActivityPanel already poll)
 
 ### Approach
 
