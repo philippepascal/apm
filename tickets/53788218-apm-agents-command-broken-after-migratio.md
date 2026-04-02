@@ -20,7 +20,9 @@ The `apm agents` command reads the agents instructions file path from `[agents] 
 
 ### Acceptance criteria
 
-- [x] `apm agents` exits with code 0 and prints the contents of `.apm/agents.md`\n- [ ] `apm agents` does not print an error about a missing file\n- [ ] No other `apm` commands are broken by the change
+- [x] `apm agents` exits with code 0 and prints the contents of `.apm/agents.md`
+- [x] `apm agents` does not print an error about a missing file
+- [x] No other `apm` commands are broken by the change
 
 ### Out of scope
 
