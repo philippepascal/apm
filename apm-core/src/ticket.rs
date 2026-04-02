@@ -54,6 +54,12 @@ pub struct Frontmatter {
     pub updated_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub focus_section: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epic: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub depends_on: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -383,6 +389,9 @@ pub fn create(
         created_at: Some(now),
         updated_at: Some(now),
         focus_section: None,
+        epic: None,
+        target_branch: None,
+        depends_on: None,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
     let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
@@ -767,6 +776,46 @@ mod tests {
     }
 
     #[test]
+    fn parse_epic_field() {
+        let raw = minimal_raw("epic = \"ab12cd34\"\n", "");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.epic, Some("ab12cd34".to_string()));
+    }
+
+    #[test]
+    fn parse_target_branch_field() {
+        let raw = minimal_raw("target_branch = \"epic/ab12cd34-user-auth\"\n", "");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.target_branch, Some("epic/ab12cd34-user-auth".to_string()));
+    }
+
+    #[test]
+    fn parse_depends_on_field() {
+        let raw = minimal_raw("depends_on = [\"cd56ef78\", \"12ab34cd\"]\n", "");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.depends_on, Some(vec!["cd56ef78".to_string(), "12ab34cd".to_string()]));
+    }
+
+    #[test]
+    fn parse_omits_new_fields() {
+        let raw = minimal_raw("", "");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert!(t.frontmatter.epic.is_none());
+        assert!(t.frontmatter.target_branch.is_none());
+        assert!(t.frontmatter.depends_on.is_none());
+    }
+
+    #[test]
+    fn serialize_omits_absent_fields() {
+        let raw = minimal_raw("", "## Spec\n\ncontent\n");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        let serialized = t.serialize().unwrap();
+        assert!(!serialized.contains("epic"));
+        assert!(!serialized.contains("target_branch"));
+        assert!(!serialized.contains("depends_on"));
+    }
+
+    #[test]
     fn parse_missing_opening_delimiter() {
         let raw = "id = \"0001\"\ntitle = \"Test\"\nstate = \"new\"\n+++\n\nbody\n";
         let err = Ticket::parse(dummy_path(), raw).unwrap_err();
@@ -1134,6 +1183,9 @@ mod tests {
             created_at: None,
             updated_at: None,
             focus_section: None,
+            epic: None,
+            target_branch: None,
+            depends_on: None,
         }
     }
 
