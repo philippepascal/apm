@@ -44,7 +44,7 @@ A fourth flag, `--untracked`, extends worktree removal to cover worktrees that c
 - [x] `apm clean --branches --dry-run` lists both worktrees and local branches that would be removed
 
 - [ ] **With `--remote --older-than`:**
-- [ ] `apm clean --remote --older-than 30d` deletes remote `ticket/*` branches in terminal states whose last commit is older than 30 days
+- [x] `apm clean --remote --older-than 30d` deletes remote `ticket/*` branches in terminal states whose last commit is older than 30 days
 - [ ] `apm clean --remote --older-than 2026-01-01` accepts ISO date (`YYYY-MM-DD`) as the threshold
 - [ ] `apm clean --remote` (without `--older-than`) exits with a non-zero status and an error message stating `--older-than` is required
 - [ ] `--older-than` without `--remote` exits with a non-zero status and an error message stating it requires `--remote`
