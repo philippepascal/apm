@@ -4,12 +4,12 @@ title = "UI supervisor list APIs should not pull closed ticket by default"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm-ui"
 agent = "16802"
 branch = "ticket/e8a56566-ui-supervisor-list-apis-should-not-pull-"
 created_at = "2026-04-02T18:12:19.697833Z"
-updated_at = "2026-04-02T18:15:46.838486Z"
+updated_at = "2026-04-02T18:15:54.056231Z"
 +++
 
 ## Spec
