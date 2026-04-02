@@ -33,8 +33,8 @@ Epic state is derived on demand from the states of associated tickets (those who
 - [ ] Each `EpicSummary` contains `id`, `title`, `branch`, `state`, and `ticket_counts` fields
 - [ ] `GET /api/epics` on an in-memory server returns HTTP 501
 - [ ] Epic `state` is `"empty"` when no tickets reference the epic (i.e. no ticket frontmatter carries `epic = "<id>"`)
-- [ ] Epic `state` is `"in_progress"` when any associated ticket is in a state whose `StateConfig.actionable` contains `"agent"`
-- [ ] Epic `state` is `"implemented"` when all associated tickets are in states where `satisfies_deps = true` or `terminal = true`, and at least one ticket is in a state where `satisfies_deps = true`
+- [ ] Epic `state` is `"active"` when any associated ticket is in a state whose `StateConfig.actionable` contains `"agent"`
+- [ ] Epic `state` is `"complete"` when all associated tickets are in states where `satisfies_deps = true` or `terminal = true`, and at least one ticket is in a state where `satisfies_deps = true`
 - [ ] Epic `state` is `"done"` when all associated tickets are in states where `terminal = true`
 - [ ] `POST /api/epics` with `{"title": "My Epic"}` returns HTTP 201 with a new `EpicSummary` (state `"empty"`, empty `ticket_counts`)
 - [ ] After `POST /api/epics`, an `epic/<id>-<slug>` branch exists at origin
