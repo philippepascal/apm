@@ -71,7 +71,7 @@ Add to the existing `#[cfg(test)]` block using the existing `minimal_raw` / `dum
 - `parse_target_branch_field` — extra frontmatter `target_branch = "epic/ab12cd34-foo"`, assert value
 - `parse_depends_on_field` — extra frontmatter `depends_on = ["cd56ef78"]`, assert vec
 - `parse_omits_new_fields` — ticket with no new fields, assert all three are `None`
-- `serialize_omits_absent_fields` — round-trip; serialized output must not contain the key names `epic`, `target_branch`, or `depends_on`
+- `serialize_omits_absent_fields` — round-trip; serialised output must not contain the key names `epic`, `target_branch`, or `depends_on`
 
 ### 1. `apm-core/src/ticket.rs` — add three optional fields to `Frontmatter`
 
