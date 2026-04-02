@@ -1,7 +1,7 @@
 +++
 id = "c299b33d"
 title = "apm clean: local by default, --remote flag for old branch cleanup"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "3805"
 branch = "ticket/c299b33d-apm-clean-local-by-default-remote-flag-f"
 created_at = "2026-04-02T20:44:35.825711Z"
-updated_at = "2026-04-02T21:19:45.181005Z"
+updated_at = "2026-04-02T21:44:14.191136Z"
 +++
 
 ## Spec
@@ -330,3 +330,4 @@ Return error if the command fails (non-zero exit).
 | 2026-04-02T21:15Z | in_design | specd | claude-0402-2115-f3a2 |
 | 2026-04-02T21:17Z | specd | ready | apm |
 | 2026-04-02T21:19Z | ready | in_progress | philippepascal |
+| 2026-04-02T21:44Z | in_progress | implemented | claude-0402-2130-x7k2 |
