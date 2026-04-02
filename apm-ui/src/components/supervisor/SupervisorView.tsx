@@ -20,8 +20,9 @@ const ALL_WORKFLOW_STATES = [
   'closed',
 ]
 
-async function fetchTickets(): Promise<Ticket[]> {
-  const res = await fetch('/api/tickets')
+async function fetchTickets(includeClosed: boolean): Promise<Ticket[]> {
+  const url = includeClosed ? '/api/tickets?include_closed=true' : '/api/tickets'
+  const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch tickets')
   return res.json()
 }
@@ -54,8 +55,8 @@ export default function SupervisorView() {
   const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
 
   const { data: tickets = [] } = useQuery({
-    queryKey: ['tickets'],
-    queryFn: fetchTickets,
+    queryKey: ['tickets', showClosed],
+    queryFn: () => fetchTickets(showClosed),
   })
 
   const syncMutation = useMutation({

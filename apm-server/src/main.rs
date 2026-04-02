@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, patch, post, put},
@@ -450,20 +450,38 @@ async fn sync_handler(
     Ok(Json(resp).into_response())
 }
 
+#[derive(serde::Deserialize, Default)]
+struct ListTicketsQuery {
+    include_closed: Option<bool>,
+}
+
 async fn list_tickets(
     State(state): State<Arc<AppState>>,
+    Query(params): Query<ListTicketsQuery>,
 ) -> Result<Json<Vec<TicketResponse>>, AppError> {
-    let tickets = load_tickets(&state).await?;
-    let resolved_ids: Vec<String> = match state.git_root() {
+    let mut tickets = load_tickets(&state).await?;
+    let (resolved_ids, terminal_ids): (Vec<String>, Vec<String>) = match state.git_root() {
         Some(root) => match apm_core::config::Config::load(root) {
-            Ok(cfg) => cfg.workflow.states.into_iter()
-                .filter(|s| s.satisfies_deps || s.terminal)
-                .map(|s| s.id)
-                .collect(),
-            Err(_) => vec![],
+            Ok(cfg) => {
+                let resolved = cfg.workflow.states.iter()
+                    .filter(|s| s.satisfies_deps || s.terminal)
+                    .map(|s| s.id.clone())
+                    .collect();
+                let terminal = cfg.workflow.states.into_iter()
+                    .filter(|s| s.terminal)
+                    .map(|s| s.id)
+                    .collect();
+                (resolved, terminal)
+            }
+            Err(_) => (vec![], vec!["closed".to_string()]),
         },
-        None => vec![],
+        None => (vec![], vec!["closed".to_string()]),
     };
+    if !params.include_closed.unwrap_or(false) {
+        let terminal_set: std::collections::HashSet<&str> =
+            terminal_ids.iter().map(|s| s.as_str()).collect();
+        tickets.retain(|t| !terminal_set.contains(t.frontmatter.state.as_str()));
+    }
     let resolved: std::collections::HashSet<&str> =
         resolved_ids.iter().map(|s| s.as_str()).collect();
     let state_map: std::collections::HashMap<String, String> = tickets
@@ -1141,6 +1159,50 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert!(json.is_array());
+        assert_eq!(json.as_array().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn list_tickets_excludes_closed_by_default() {
+        let mut closed_ticket = fake_ticket("aaaabbbb-closed-one", "Closed ticket");
+        closed_ticket.frontmatter.state = "closed".to_string();
+        let open_ticket = fake_ticket("ccccdddd-open-one", "Open ticket");
+        let app = build_app_with_tickets(vec![closed_ticket, open_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"].as_str().unwrap(), "ccccdddd-open-one");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_includes_closed_when_requested() {
+        let mut closed_ticket = fake_ticket("aaaabbbb-closed-two", "Closed ticket");
+        closed_ticket.frontmatter.state = "closed".to_string();
+        let open_ticket = fake_ticket("ccccdddd-open-two", "Open ticket");
+        let app = build_app_with_tickets(vec![closed_ticket, open_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?include_closed=true")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json.as_array().unwrap().len(), 2);
     }
 
