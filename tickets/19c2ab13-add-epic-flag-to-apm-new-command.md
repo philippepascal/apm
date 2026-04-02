@@ -28,7 +28,7 @@ The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (
 - [x] `apm new --epic <id> "Title"` creates the ticket branch from the tip of the epic branch, not from `main`
 - [x] `apm new --epic <id> --depends-on <id1>,<id2> "Title"` creates a ticket whose frontmatter contains `depends_on = ["<id1>", "<id2>"]`
 - [x] `apm new --depends-on <id1> "Title"` (no `--epic`) creates a ticket with `depends_on` set and no `epic` or `target_branch` fields
-- [ ] `apm new "Title"` (no epic flags) behaves exactly as before: branch from `main`, no `epic`/`target_branch`/`depends_on` fields in frontmatter
+- [x] `apm new "Title"` (no epic flags) behaves exactly as before: branch from `main`, no `epic`/`target_branch`/`depends_on` fields in frontmatter
 - [ ] Existing tickets without the new fields continue to parse and round-trip without errors
 
 ### Out of scope
