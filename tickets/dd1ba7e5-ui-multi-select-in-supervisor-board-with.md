@@ -128,6 +128,7 @@ In the arrow-key `handleKeyDown` handler (around line 74–100): before calling 
 
 ### Amendment requests
 
+- [ ] React hooks order violation in `TicketDetail.tsx`: `useState`, `useQuery`, and `useMutation` are called after the conditional early return `if (selectedTicketIds.length > 1) return <BatchDetailPanel />`. When the user goes from 1 to 2+ selected tickets, React stops calling those hooks mid-render and throws "Rendered fewer hooks than expected" — same crash pattern as the previous PriorityQueuePanel bug. Fix: hoist all hooks (patchError useState, useQuery, useMutation, and any others that follow the early return) to above the conditional return. The early return and all JSX below it can then use the already-computed values unchanged.
 
 ### Code review
 
