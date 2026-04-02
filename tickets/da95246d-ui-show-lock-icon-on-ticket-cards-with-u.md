@@ -25,7 +25,7 @@ The desired behaviour (per `docs/epics.md` § "Ticket cards") is: cards where `d
 ### Acceptance criteria
 
 - [x] A supervisor-board ticket card with at least one dependency whose state is not a `satisfies_deps` or `terminal` state (per `config.workflow.states`) shows a lock icon
-- [ ] A supervisor-board ticket card whose `depends_on` field is absent (`None`) or empty shows no lock icon
+- [x] A supervisor-board ticket card whose `depends_on` field is absent (`None`) or empty shows no lock icon
 - [ ] A supervisor-board ticket card where every `depends_on` entry is in a `satisfies_deps` or `terminal` state shows no lock icon
 - [ ] Hovering the lock icon reveals a tooltip that lists each unresolved dependency as `<id>: <state>` (one per line)
 - [ ] `GET /api/tickets` includes a `blocking_deps` array for every ticket (empty array when there are none)
