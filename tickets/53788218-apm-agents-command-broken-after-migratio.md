@@ -35,6 +35,8 @@ Single-file config change — no code changes required.\n\n1. Open `.apm/config.
 
 ### Amendment requests
 
+- [ ] Simplify the Approach — remove the exact git commands and manual verification steps. The worker knows how to commit; just say "update `instructions` under `[agents]` in `.apm/config.toml` to point to `.apm/agents.md`". The approach should state what to change, not how to run git.
+- [ ] Add a test — `apm agents` is a CLI command; add an integration test (or check if one exists) that verifies `apm agents` exits 0 and outputs the file contents when the path is correctly configured. "No test changes needed" is not acceptable for a fix that has a clear observable behaviour.
 
 ### Code review
 
