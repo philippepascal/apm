@@ -153,7 +153,7 @@ Add to the existing `#[cfg(test)]` block using the existing `minimal_raw` helper
 
 - [x] Remove AC #6, #7, #8 (pick_next dep filtering) — those belong to ticket c1ff90de
 - [x] Remove AC #9 (apm state using target_branch for PR) — that belongs to ticket d3749f24
-- [ ] Remove Approach step 2 (is_implemented_or_later, depends_satisfied, pick_next extension) — c1ff90de
+- [x] Remove Approach step 2 (is_implemented_or_later, depends_satisfied, pick_next extension) — c1ff90de
 - [ ] Remove Approach step 3 (state.rs target_branch PR targeting) — d3749f24
 - [ ] This ticket's sole scope is adding the three optional fields to Frontmatter; nothing else
 
