@@ -32,7 +32,12 @@ The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding `depends_on` to `Frontmatter` — that is ticket d877bd37
+- UI lock icon on ticket cards (separate UI ticket per the epic design)
+- Circular dependency detection or warnings
+- Changes to `apm list` output to surface blocked tickets
+- `apm work --dry-run` output (ticket 18c00750 covers that separately)
+- Epic-scoped filtering of the dispatch queue (separate ticket in the epic)
 
 ### Approach
 
