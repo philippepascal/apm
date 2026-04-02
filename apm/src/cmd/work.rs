@@ -10,16 +10,17 @@ fn log(msg: &str) {
     println!("[{ts}] {msg}");
 }
 
-pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, interval_secs: u64) -> Result<()> {
+pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, interval_secs: u64, epic: Option<String>) -> Result<()> {
     if daemon && dry_run {
         anyhow::bail!("--daemon and --dry-run cannot be used together");
     }
 
     let config = Config::load(root)?;
     let max_concurrent = config.agents.max_concurrent.max(1);
+    let epic_filter: Option<String> = epic.or_else(|| config.work.epic.clone());
 
     if dry_run {
-        return run_dry(root, &config);
+        return run_dry(root, &config, epic_filter.as_deref());
     }
 
     let sig_count = Arc::new(AtomicUsize::new(0));
@@ -109,7 +110,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
         }
 
         if !no_more && workers.len() < max_concurrent {
-            match super::start::spawn_next_worker(root, true, skip_permissions) {
+            match super::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref()) {
                 Ok(None) => {
                     if daemon {
                         let secs = interval_secs;
@@ -173,7 +174,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
     Ok(())
 }
 
-fn run_dry(root: &Path, config: &Config) -> Result<()> {
+fn run_dry(root: &Path, config: &Config, epic_filter: Option<&str>) -> Result<()> {
     let pw = config.workflow.prioritization.priority_weight;
     let ew = config.workflow.prioritization.effort_weight;
     let rw = config.workflow.prioritization.risk_weight;
@@ -191,7 +192,10 @@ fn run_dry(root: &Path, config: &Config) -> Result<()> {
         .iter()
         .filter(|t| {
             let state = t.frontmatter.state.as_str();
-            actionable.contains(&state) && (startable.is_empty() || startable.contains(&state))
+            actionable.contains(&state)
+                && (startable.is_empty() || startable.contains(&state))
+                && epic_filter
+                    .map_or(true, |id| t.frontmatter.epic.as_deref() == Some(id))
         })
         .collect();
     candidates.sort_by(|a, b| {
@@ -228,6 +232,7 @@ mod tests {
             true,  // dry_run
             true,  // daemon
             30,
+            None,
         );
         let err = result.unwrap_err();
         let msg = err.to_string();

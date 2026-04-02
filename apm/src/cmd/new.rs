@@ -1,8 +1,8 @@
 use anyhow::Result;
-use apm_core::{config::Config, ticket};
+use apm_core::{config::Config, git, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>) -> Result<()> {
+pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>, epic: Option<String>, depends_on: Vec<String>) -> Result<()> {
     let config = Config::load(root)?;
 
     if context_section.is_some() && context.is_none() {
@@ -37,8 +37,30 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         .ok()
         .unwrap_or_else(|| "apm".into());
 
+    let (epic_id, target_branch, base_branch) = if let Some(ref id) = epic {
+        match git::find_epic_branch(root, id) {
+            Some(branch) => (Some(id.clone()), Some(branch.clone()), Some(branch)),
+            None => anyhow::bail!("No epic branch found for id '{id}'"),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    let depends_on_parsed: Option<Vec<String>> = if depends_on.is_empty() {
+        None
+    } else {
+        Some(
+            depends_on
+                .iter()
+                .flat_map(|s| s.split(','))
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+        )
+    };
+
     let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
-    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets)?;
+    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch)?;
     let id = &t.frontmatter.id;
     let branch = t.frontmatter.branch.as_deref().unwrap_or("");
     let filename = t.path.file_name().unwrap().to_string_lossy();

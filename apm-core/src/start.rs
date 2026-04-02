@@ -161,6 +161,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     let default_branch = &config.project.default_branch;
+    let merge_base = t.frontmatter.target_branch.clone()
+        .unwrap_or_else(|| default_branch.to_string());
 
     if aggressive {
         if let Err(e) = git::fetch_branch(root, &branch) {
@@ -176,7 +178,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let worktrees_base = root.join(&config.worktrees.dir);
     let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
 
-    let remote_ref = format!("origin/{default_branch}");
+    let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")
         .args(["rev-parse", "--verify", &remote_ref])
         .current_dir(&wt_display)
@@ -186,7 +188,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     {
         remote_ref.as_str()
     } else {
-        default_branch.as_str()
+        merge_base.as_str()
     };
     let merge_message = match std::process::Command::new("git")
         .args(["merge", merge_ref, "--no-edit"])
@@ -316,7 +318,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
         println!("No actionable tickets.");
         return Ok(());
     };
@@ -459,6 +461,7 @@ pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
     skip_permissions: bool,
+    epic_filter: Option<&str>,
 ) -> Result<Option<(String, std::process::Child, PathBuf)>> {
     let config = Config::load(root)?;
     let skip_permissions = skip_permissions || config.agents.skip_permissions;
@@ -469,9 +472,15 @@ pub fn spawn_next_worker(
         .collect();
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let all_tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let tickets: Vec<ticket::Ticket> = match epic_filter {
+        Some(epic_id) => all_tickets.into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+            .collect(),
+        None => all_tickets,
+    };
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
         return Ok(None);
     };
 
@@ -753,5 +762,63 @@ mod tests {
         std::env::remove_var("USER");
         std::env::remove_var("USERNAME");
         assert_eq!(resolve_agent_name(), "apm");
+    }
+
+    #[test]
+    fn epic_filter_keeps_only_matching_tickets() {
+        use crate::ticket::Ticket;
+        use std::path::Path;
+
+        let make_ticket = |id: &str, epic: Option<&str>| {
+            let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+            let raw = format!(
+                "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"ready\"\n{epic_line}+++\n"
+            );
+            Ticket::parse(Path::new("tickets/dummy.md"), &raw).unwrap()
+        };
+
+        let all_tickets = vec![
+            make_ticket("aaa", Some("epic1")),
+            make_ticket("bbb", Some("epic2")),
+            make_ticket("ccc", None),
+        ];
+
+        let epic_id = "epic1";
+        let filtered: Vec<Ticket> = all_tickets.into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+            .collect();
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].frontmatter.id, "aaa");
+    }
+
+    #[test]
+    fn no_epic_filter_keeps_all_tickets() {
+        use crate::ticket::Ticket;
+        use std::path::Path;
+
+        let make_ticket = |id: &str, epic: Option<&str>| {
+            let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+            let raw = format!(
+                "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"ready\"\n{epic_line}+++\n"
+            );
+            Ticket::parse(Path::new("tickets/dummy.md"), &raw).unwrap()
+        };
+
+        let all_tickets: Vec<Ticket> = vec![
+            make_ticket("aaa", Some("epic1")),
+            make_ticket("bbb", Some("epic2")),
+            make_ticket("ccc", None),
+        ];
+
+        let count = all_tickets.len();
+        let epic_filter: Option<&str> = None;
+        let filtered: Vec<Ticket> = match epic_filter {
+            Some(eid) => all_tickets.into_iter()
+                .filter(|t| t.frontmatter.epic.as_deref() == Some(eid))
+                .collect(),
+            None => all_tickets,
+        };
+        assert_eq!(filtered.len(), count);
     }
 }
