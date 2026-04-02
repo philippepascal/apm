@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/558ae699-remove-agent-field-from-frontmatter-serv"
+depends_on = ["610be42e"]
 created_at = "2026-04-02T20:53:58.923882Z"
 updated_at = "2026-04-02T20:53:58.923882Z"
 epic = "8db73240"
