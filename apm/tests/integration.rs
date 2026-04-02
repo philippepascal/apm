@@ -3835,3 +3835,49 @@ fn pr_or_epic_merge_without_target_branch_attempts_pr() {
     let refs = String::from_utf8_lossy(&remote_refs.stdout);
     assert!(!refs.trim().is_empty(), "ticket branch should have been pushed before gh was called: {refs}");
 }
+
+#[test]
+fn agents_prints_instructions_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+instructions = "agents-instructions.md"
+max_concurrent = 1
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    std::fs::write(p.join("agents-instructions.md"), "hello from agents\n").unwrap();
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["agents"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "expected exit 0, got: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert_eq!(stdout, "hello from agents\n", "unexpected output: {stdout}");
+}
