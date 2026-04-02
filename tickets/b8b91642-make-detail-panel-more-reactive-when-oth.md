@@ -33,7 +33,10 @@ The same staleness occurs when the user clicks Sync (Shift+S): the sync mutation
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Real-time push (WebSocket / SSE) — polling is sufficient
+- Reducing or changing the board's 10-second poll interval
+- Invalidating the detail panel when a *different* ticket changes (only the selected ticket matters)
+- Cross-browser tab synchronisation
 
 ### Approach
 
