@@ -19,7 +19,11 @@ depends_on = ["4cec7a17"]
 
 ### Problem
 
-`apm init` does not prompt for a username or write `.apm/local.toml`. There is no collaborators list seeded at init time, and `.apm/local.toml` is not added to `.gitignore`. See `initial_specs/DESIGN-users.md` points 1 and 7.
+The `apm init` command does not prompt for a username, does not write `.apm/local.toml`, does not add `.apm/local.toml` to `.gitignore`, and does not seed a `collaborators` list in `.apm/config.toml`. As a result, a freshly initialised project has no local identity configured and no collaborator roster to build from.
+
+Per DESIGN-users.md points 1 and 7, each machine should carry a gitignored `.apm/local.toml` with the developer's `username`, the tracked `.apm/config.toml` should include a `collaborators` list seeded with that username, and `.apm/local.toml` must be excluded from version control so it is never accidentally committed.
+
+Ticket #4cec7a17 (dependency) adds the `LocalConfig` struct, the `collaborators` field on `ProjectConfig`, and `resolve_identity()` to `apm-core`. This ticket wires those building blocks into the `apm init` flow: the interactive prompt, the file writes, and the gitignore update.
 
 ### Acceptance criteria
 
