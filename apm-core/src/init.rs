@@ -29,6 +29,16 @@ pub fn setup(root: &Path) -> Result<()> {
         std::fs::write(&config_path, default_config(&name, &description, &branch))?;
         println!("Created .apm/config.toml");
     }
+    let workflow_path = apm_dir.join("workflow.toml");
+    if !workflow_path.exists() {
+        std::fs::write(&workflow_path, default_workflow_toml())?;
+        println!("Created .apm/workflow.toml");
+    }
+    let ticket_path = apm_dir.join("ticket.toml");
+    if !ticket_path.exists() {
+        std::fs::write(&ticket_path, default_ticket_toml())?;
+        println!("Created .apm/ticket.toml");
+    }
     let agents_path = apm_dir.join("agents.md");
     if !agents_path.exists() {
         std::fs::write(&agents_path, default_agents_md())?;
@@ -220,7 +230,15 @@ dir = "../{name}--worktrees"
 max_concurrent = 3
 instructions = ".apm/agents.md"
 
-[workflow.prioritization]
+[logging]
+enabled = false
+file = "{log_file}"
+"##
+    )
+}
+
+fn default_workflow_toml() -> &'static str {
+    r##"[workflow.prioritization]
 priority_weight = 10.0
 effort_weight = -2.0
 risk_weight = -1.0
@@ -313,12 +331,49 @@ id       = "closed"
 label    = "Closed"
 color    = "#374151"
 terminal = true
-
-[logging]
-enabled = false
-file = "{log_file}"
 "##
-    )
+}
+
+fn default_ticket_toml() -> &'static str {
+    r#"[[ticket.sections]]
+name        = "Problem"
+type        = "free"
+required    = true
+placeholder = "What is broken or missing, and why it matters."
+
+[[ticket.sections]]
+name        = "Acceptance criteria"
+type        = "tasks"
+required    = true
+placeholder = "Checkboxes; each one independently testable."
+
+[[ticket.sections]]
+name        = "Out of scope"
+type        = "free"
+required    = true
+placeholder = "Explicit list of what this ticket does not cover."
+
+[[ticket.sections]]
+name        = "Approach"
+type        = "free"
+required    = true
+placeholder = "How the implementation will work."
+
+[[ticket.sections]]
+name     = "Open questions"
+type     = "qa"
+required = false
+
+[[ticket.sections]]
+name     = "Amendment requests"
+type     = "tasks"
+required = false
+
+[[ticket.sections]]
+name     = "Code review"
+type     = "tasks"
+required = false
+"#
 }
 
 fn maybe_initial_commit(root: &Path) -> Result<()> {
@@ -334,7 +389,7 @@ fn maybe_initial_commit(root: &Path) -> Result<()> {
     }
 
     Command::new("git")
-        .args(["add", ".apm/config.toml", ".gitignore"])
+        .args(["add", ".apm/config.toml", ".apm/workflow.toml", ".apm/ticket.toml", ".gitignore"])
         .current_dir(root)
         .status()?;
 
@@ -485,6 +540,8 @@ mod tests {
 
         assert!(tmp.path().join("tickets").exists());
         assert!(tmp.path().join(".apm/config.toml").exists());
+        assert!(tmp.path().join(".apm/workflow.toml").exists());
+        assert!(tmp.path().join(".apm/ticket.toml").exists());
         assert!(tmp.path().join(".apm/agents.md").exists());
         assert!(tmp.path().join(".apm/apm.spec-writer.md").exists());
         assert!(tmp.path().join(".apm/apm.worker.md").exists());
