@@ -55,7 +55,59 @@ Neither `GET /api/epics` nor the `epic` / `depends_on` frontmatter fields exist 
 
 ### Approach
 
-How the implementation will work.
+Changes span three layers: core, server, UI. Apply in this order.
+
+1. apm-core/src/ticket.rs
+
+Add three optional fields to Frontmatter (after focus_section), each with
+serde(skip_serializing_if = Option::is_none):
+  pub epic: Option<String>
+  pub target_branch: Option<String>
+  pub depends_on: Option<Vec<String>>
+
+Add epic: Option<String> and depends_on: Option<Vec<String>> to create() params.
+Initialize both to None in the Frontmatter literal, then overwrite with passed values.
+
+2. apm/src/cmd/new.rs
+
+Pass None, None for the new epic and depends_on params in ticket::create(). No change visible to users.
+
+3. apm-server/src/main.rs
+
+Extend CreateTicketRequest with: pub epic: Option<String>, pub depends_on: Option<Vec<String>>.
+Pass both through to apm_core::ticket::create() in create_ticket handler.
+
+Add EpicSummary struct (derive Serialize) with fields id: String, title: String, branch: String.
+
+Add list_epics handler:
+  - If state.git_root() is None, return Json(vec![]).
+  - Otherwise run git branch -r, filter lines containing epic/, strip remote prefix.
+  - Parse epic/<8-char-id>-<slug>: id = first 8 chars after epic/;
+    title = remaining slug with hyphens replaced by spaces, each word title-cased.
+  - Return Json(Vec<EpicSummary>).
+
+Register .route("/api/epics", get(list_epics)) in both router builders.
+
+4. apm-ui/src/components/NewTicketModal.tsx
+
+Add state: epicId (string) and dependsOn (string). Reset both in the useEffect([open]) cleanup.
+Fetch GET /api/epics via useQuery with initialData: [].
+
+Render below the title field:
+  - Epic <select> with a leading (none) option and one option per epic (value = id).
+  - Depends on <input type=text> placeholder: e.g. ab12cd34 cd56ef78.
+
+Extend CreateTicketData: epic?: string, depends_on?: string[].
+In handleSubmit: if epicId set, assign data.epic = epicId;
+if dependsOn.trim() non-empty, split on whitespace/commas, filter empty, assign data.depends_on.
+
+Tests
+
+- apm-core/src/ticket.rs inline test: round-trip Frontmatter with epic and depends_on
+  through TOML serialize/deserialize; assert values survive.
+- apm-server/src/main.rs inline tests:
+    GET /api/epics returns 200 with [];
+    POST /api/tickets with epic and depends_on parses cleanly (returns 501 not 400/422).
 
 ### Open questions
 
