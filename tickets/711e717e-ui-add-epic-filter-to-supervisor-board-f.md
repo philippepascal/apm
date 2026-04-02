@@ -24,17 +24,17 @@ This is a UI-only ticket. Two server-side prerequisites must land first: ticket 
 
 ### Acceptance criteria
 
-- [ ] An "Epic" dropdown appears in the supervisor board filter bar, positioned after the "All agents" dropdown
-- [ ] The dropdown contains an "All epics" option that is selected by default and shows all tickets
-- [ ] The dropdown options are populated from `GET /api/epics` and show each epic's title
-- [ ] Selecting an epic hides all ticket cards whose `epic` field does not match the selected epic id
-- [ ] Tickets with no `epic` field are hidden when any specific epic is selected
-- [ ] Selecting "All epics" after a specific epic restores the full board view
-- [ ] The "No tickets match the current filters" empty state appears when an epic is selected and no tickets match
-- [ ] The epic filter composes with the existing state, agent, and search filters (all active simultaneously)
-- [ ] `GET /api/epics` returns a JSON array; each element has `id`, `title`, and `branch` string fields
-- [ ] `GET /api/epics` returns an empty array when no `epic/*` branches exist
-- [ ] The dropdown renders but shows only "All epics" when `GET /api/epics` returns an empty array
+- [x] An "Epic" dropdown appears in the supervisor board filter bar, positioned after the "All agents" dropdown
+- [x] The dropdown contains an "All epics" option that is selected by default and shows all tickets
+- [x] The dropdown options are populated from `GET /api/epics` and show each epic's title
+- [x] Selecting an epic hides all ticket cards whose `epic` field does not match the selected epic id
+- [x] Tickets with no `epic` field are hidden when any specific epic is selected
+- [x] Selecting "All epics" after a specific epic restores the full board view
+- [x] The "No tickets match the current filters" empty state appears when an epic is selected and no tickets match
+- [x] The epic filter composes with the existing state, agent, and search filters (all active simultaneously)
+- [x] `GET /api/epics` returns a JSON array; each element has `id`, `title`, and `branch` string fields
+- [x] `GET /api/epics` returns an empty array when no `epic/*` branches exist
+- [x] The dropdown renders but shows only "All epics" when `GET /api/epics` returns an empty array
 
 ### Out of scope
 
