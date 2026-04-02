@@ -32,7 +32,7 @@ const CONTENT: Record<ColumnKey, (onMinimize: () => void) => React.ReactNode> = 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen } =
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen } =
     useLayoutStore()
   const queryClient = useQueryClient()
 
@@ -130,13 +130,14 @@ export default function WorkScreen() {
 
       const newTicket = columns[newColIdx][1][newRowIdx]
       if (!newTicket) return
+      clearMultiSelection()
       setSelectedTicketId(newTicket.id)
       document.querySelector(`[data-ticket-id="${newTicket.id}"]`)?.scrollIntoView({ block: 'nearest' })
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTicketId, setSelectedTicketId, queryClient, startMutation, stopMutation, setNewTicketOpen])
+  }, [selectedTicketId, setSelectedTicketId, clearMultiSelection, queryClient, startMutation, stopMutation, setNewTicketOpen])
 
   function handleToggle(key: ColumnKey) {
     const panel = panelRefs.current[key]

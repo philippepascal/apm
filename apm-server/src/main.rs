@@ -86,6 +86,30 @@ struct TransitionRequest {
 }
 
 #[derive(serde::Deserialize)]
+struct BatchTransitionRequest {
+    ids: Vec<String>,
+    to: String,
+}
+
+#[derive(serde::Deserialize)]
+struct BatchPriorityRequest {
+    ids: Vec<String>,
+    priority: u8,
+}
+
+#[derive(serde::Serialize)]
+struct BatchFailure {
+    id: String,
+    error: String,
+}
+
+#[derive(serde::Serialize)]
+struct BatchResult {
+    succeeded: Vec<String>,
+    failed: Vec<BatchFailure>,
+}
+
+#[derive(serde::Deserialize)]
 struct PutBodyRequest {
     content: String,
 }
@@ -827,6 +851,99 @@ async fn patch_ticket(
     .into_response())
 }
 
+async fn batch_transition(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<BatchTransitionRequest>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let mut succeeded = Vec::new();
+    let mut failed = Vec::new();
+    for id in req.ids {
+        let root_clone = root.clone();
+        let id_clone = id.clone();
+        let to_clone = req.to.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            apm_core::state::transition(&root_clone, &id_clone, to_clone, false, false)
+        })
+        .await?;
+        match result {
+            Ok(_) => succeeded.push(id),
+            Err(e) => failed.push(BatchFailure { id, error: e.to_string() }),
+        }
+    }
+    Ok(Json(BatchResult { succeeded, failed }).into_response())
+}
+
+async fn batch_priority(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<BatchPriorityRequest>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let tickets = load_tickets(&state).await?;
+    let mut succeeded = Vec::new();
+    let mut failed = Vec::new();
+    for id in req.ids {
+        let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+            Ok(fid) => fid,
+            Err(e) => {
+                failed.push(BatchFailure { id, error: e.to_string() });
+                continue;
+            }
+        };
+        let ticket = match tickets.iter().find(|t| t.frontmatter.id == full_id) {
+            Some(t) => t.clone(),
+            None => {
+                failed.push(BatchFailure { id, error: "not found".to_string() });
+                continue;
+            }
+        };
+        let branch = match ticket.frontmatter.branch.clone() {
+            Some(b) => b,
+            None => {
+                failed.push(BatchFailure { id, error: "ticket has no branch".to_string() });
+                continue;
+            }
+        };
+        let rel_path = match ticket.path.strip_prefix(&root) {
+            Ok(p) => p.to_string_lossy().to_string(),
+            Err(_) => {
+                failed.push(BatchFailure { id, error: "cannot compute relative path".to_string() });
+                continue;
+            }
+        };
+        let mut fm = ticket.frontmatter.clone();
+        let body = ticket.body.clone();
+        if let Err(e) = apm_core::ticket::set_field(&mut fm, "priority", &req.priority.to_string()) {
+            failed.push(BatchFailure { id, error: e.to_string() });
+            continue;
+        }
+        let updated = apm_core::ticket::Ticket { frontmatter: fm, body, path: ticket.path.clone() };
+        let content = match updated.serialize() {
+            Ok(c) => c,
+            Err(e) => {
+                failed.push(BatchFailure { id, error: e.to_string() });
+                continue;
+            }
+        };
+        let root_clone = root.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            apm_core::git::commit_to_branch(&root_clone, &branch, &rel_path, &content, "ui: batch update priority")
+        })
+        .await?;
+        match result {
+            Ok(_) => succeeded.push(full_id),
+            Err(e) => failed.push(BatchFailure { id: updated.frontmatter.id, error: e.to_string() }),
+        }
+    }
+    Ok(Json(BatchResult { succeeded, failed }).into_response())
+}
+
 async fn create_ticket(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTicketRequest>,
@@ -1017,6 +1134,8 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
+        .route("/api/tickets/batch/transition", post(batch_transition))
+        .route("/api/tickets/batch/priority", post(batch_priority))
         .route("/api/queue", get(queue::queue_handler))
         .route("/api/workers", get(workers::workers_handler))
         .route("/api/workers/:pid", axum::routing::delete(workers::delete_worker))
