@@ -32,7 +32,11 @@ Adding `new` to the visible states lets supervisors act on newly-created tickets
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding `groomed`, `in_design`, `ready`, `in_progress`, or `closed` to the default board view
+- Any changes to the state machine or allowed transitions
+- Column ordering or layout changes beyond inserting the new column
+- A toggle/filter UI for showing/hiding individual states
+- Backend or CLI changes
 
 ### Approach
 
