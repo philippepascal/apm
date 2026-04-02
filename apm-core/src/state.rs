@@ -247,16 +247,7 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str) -> Result
         );
     }
 
-    let push = std::process::Command::new("git")
-        .args(["push", "origin", default_branch])
-        .current_dir(&merge_dir)
-        .output()?;
-
-    if !push.status.success() {
-        bail!("push failed: {}", String::from_utf8_lossy(&push.stderr).trim());
-    }
-
-    println!("Merged {branch} into {default_branch} and pushed.");
+    println!("Merged {branch} into {default_branch} locally.");
     Ok(())
 }
 
