@@ -27,7 +27,12 @@ This lets the workflow config express the intended policy once, without per-tick
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `"pr_or_epic_merge"` is a valid value for `completion` on a transition in `workflow.toml` and is parsed without error
+- [ ] When `completion = "pr_or_epic_merge"` and `target_branch` is absent: behaviour is identical to `completion = "pr"` — branch is pushed and a PR is opened targeting the default branch
+- [ ] When `completion = "pr_or_epic_merge"` and `target_branch` is set in frontmatter: branch is pushed and merged into `target_branch`; no PR is opened
+- [ ] Merge conflict on the epic branch: `apm state` aborts cleanly and reports the conflict; the ticket stays in its current state
+- [ ] `apm verify` lists `completion = pr_or_epic_merge` for transitions that use it
+- [ ] Existing `"pr"`, `"merge"`, and `"none"` strategies are unaffected
 
 ### Out of scope
 
