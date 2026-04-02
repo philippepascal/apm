@@ -1,14 +1,15 @@
 +++
 id = "c767a37b"
 title = "Merge completion strategy should not push main to origin"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/c767a37b-merge-completion-strategy-should-not-pus"
 created_at = "2026-04-02T03:15:29.694878Z"
-updated_at = "2026-04-02T16:55:38.895670Z"
+updated_at = "2026-04-02T16:56:03.666663Z"
 +++
 
 ## Spec
@@ -44,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T03:15Z | — | new | apm |
 | 2026-04-02T16:55Z | new | groomed | apm |
+| 2026-04-02T16:56Z | groomed | in_design | philippepascal |
