@@ -53,7 +53,64 @@ External devices (phone, remote laptop) are the primary audience. Localhost requ
 
 ### Approach
 
-How the implementation will work.
+This ticket builds directly on the types and infrastructure established by tickets e2e3d958 and 8a08637c. All changes are additive; nothing existing is removed or restructured.
+
+**Extend `WebauthnState` in `apm-server/src/webauthn_state.rs`:**
+- Add `AuthenticationSession { username: String, passkey_auth: PasskeyAuthentication, created_at: std::time::Instant }`
+- Add `pending_auth: Arc<Mutex<HashMap<String, AuthenticationSession>>>` field to `WebauthnState`
+- Initialise `pending_auth` to an empty map in `WebauthnState::new`
+
+**Extend `CredentialStore` in `apm-server/src/credential_store.rs`:**
+- Add `get(username) -> Option<Vec<Passkey>>`: acquires lock, clones and returns the vec for that username (None if absent or empty)
+- Add `update_credential(username: &str, auth_result: &AuthenticationResult)`: acquires lock, calls `passkey.update_credential(auth_result)` for every passkey in the user's vec (webauthn-rs updates the matching entry in place), then calls `save()`
+
+**New routes — add to `build_app` router in `apm-server/src/main.rs`:**
+- `GET /login` → `login_page_handler`
+- `POST /api/auth/login/challenge` → `login_challenge_handler`
+- `POST /api/auth/login/complete` → `login_complete_handler`
+
+**`login_page_handler`:**
+- Returns `include_str!("login.html")` as `text/html; charset=utf-8`, HTTP 200
+
+**`login_challenge_handler`:**
+1. Parse `{username: String}` — return 400 if malformed or missing
+2. `credential_store.get(&username)` — return 400 if None (user unknown or has no passkeys)
+3. `webauthn_state.webauthn.start_passkey_authentication(&credentials)` → `(challenge, passkey_auth)` — return 400 on error
+4. Generate `login_id` using `generate_token()` (already defined in `auth.rs` by e2e3d958)
+5. Store `AuthenticationSession { username, passkey_auth, created_at: Instant::now() }` in `pending_auth` under `login_id`
+6. Return HTTP 200: `{"login_id": login_id, "publicKey": <RequestChallengeResponse JSON>}`
+
+**`login_complete_handler`:**
+1. Parse `{login_id: String, response: PublicKeyCredential}` — return 400 if malformed
+2. Remove and retrieve `AuthenticationSession` by `login_id` from `pending_auth` — return 400 if not found (covers both unknown and already-consumed)
+3. Check `session.created_at.elapsed() < Duration::from_secs(300)` — return 400 if expired
+4. `credential_store.get(&session.username)` to fetch current passkeys — return 400 if gone
+5. `webauthn_state.webauthn.finish_passkey_authentication(&response, &session.passkey_auth)` → `auth_result` — return 400 on error
+6. `credential_store.update_credential(&session.username, &auth_result)` — persists updated counter
+7. `generate_token()` for session token; `session_store.insert(token.clone(), session.username)`
+8. Return HTTP 200 with `Set-Cookie: __Host-apm-session=<token>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`
+
+**New file `apm-server/src/login.html` (embedded via `include_str!`):**
+- Minimal HTML: username input, "Sign in with passkey" button, status div
+- Vanilla JS (no external dependencies):
+  1. POST `/api/auth/login/challenge` with `{username}`
+  2. Decode base64url fields to ArrayBuffer (challenge; credential id bytes in each `allowCredentials` entry)
+  3. `navigator.credentials.get({publicKey: ...})` — triggers OS biometric prompt
+  4. Encode response fields (clientDataJSON, authenticatorData, signature, userHandle) back to base64url
+  5. POST `/api/auth/login/complete` with `{login_id, response}`
+  6. Display success message; redirect to `/` after 2 seconds on success, or display error message on failure
+- Reuse the same base64url helper functions as `register.html` (copy inline — both pages are self-contained)
+
+**Tests:**
+Unit tests in `apm-server/src/webauthn_state.rs` or a new `login_tests` module:
+- `AuthenticationSession` with `created_at` 6 minutes in the past fails the TTL check (construct with overridden `created_at` via a helper)
+
+Integration tests (matching existing tower::ServiceExt test patterns):
+- `GET /login` returns 200 with content-type `text/html`
+- `POST /api/auth/login/challenge` with malformed body returns 400
+- `POST /api/auth/login/challenge` with username having no credentials returns 400 (empty `CredentialStore`)
+- `POST /api/auth/login/complete` with unknown `login_id` returns 400
+- Full WebAuthn assertion ceremony tests require a real authenticator and are excluded (same carve-out as registration ticket)
 
 ### Open questions
 
