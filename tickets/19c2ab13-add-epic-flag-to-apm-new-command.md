@@ -25,7 +25,7 @@ The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (
 - [x] `apm new --epic <id> "Title"` exits non-zero with a clear error message when no `epic/<id>-*` branch exists on origin or locally
 - [x] `apm new --epic <id> "Title"` creates a ticket whose frontmatter contains `epic = "<id>"`
 - [x] `apm new --epic <id> "Title"` creates a ticket whose frontmatter contains `target_branch = "epic/<id>-<slug>"` (the full resolved branch name)
-- [ ] `apm new --epic <id> "Title"` creates the ticket branch from the tip of the epic branch, not from `main`
+- [x] `apm new --epic <id> "Title"` creates the ticket branch from the tip of the epic branch, not from `main`
 - [ ] `apm new --epic <id> --depends-on <id1>,<id2> "Title"` creates a ticket whose frontmatter contains `depends_on = ["<id1>", "<id2>"]`
 - [ ] `apm new --depends-on <id1> "Title"` (no `--epic`) creates a ticket with `depends_on` set and no `epic` or `target_branch` fields
 - [ ] `apm new "Title"` (no epic flags) behaves exactly as before: branch from `main`, no `epic`/`target_branch`/`depends_on` fields in frontmatter
