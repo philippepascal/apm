@@ -9,10 +9,7 @@ interface Props {
 
 interface CreateTicketData {
   title: string
-  problem?: string
-  acceptance_criteria?: string
-  out_of_scope?: string
-  approach?: string
+  sections?: Record<string, string>
 }
 
 export default function NewTicketModal({ open, onOpenChange }: Props) {
@@ -73,11 +70,13 @@ export default function NewTicketModal({ open, onOpenChange }: Props) {
       return
     }
     setTitleError('')
+    const sections: Record<string, string> = {}
+    if (problem.trim()) sections['Problem'] = problem.trim()
+    if (acceptanceCriteria.trim()) sections['Acceptance criteria'] = acceptanceCriteria.trim()
+    if (outOfScope.trim()) sections['Out of scope'] = outOfScope.trim()
+    if (approach.trim()) sections['Approach'] = approach.trim()
     const data: CreateTicketData = { title: title.trim() }
-    if (problem.trim()) data.problem = problem.trim()
-    if (acceptanceCriteria.trim()) data.acceptance_criteria = acceptanceCriteria.trim()
-    if (outOfScope.trim()) data.out_of_scope = outOfScope.trim()
-    if (approach.trim()) data.approach = approach.trim()
+    if (Object.keys(sections).length > 0) data.sections = sections
     mutation.mutate(data)
   }
 
