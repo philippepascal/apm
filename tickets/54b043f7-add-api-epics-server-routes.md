@@ -16,14 +16,15 @@ updated_at = "2026-04-02T00:51:44.997275Z"
 
 ### Problem
 
-The apm-server has no API routes for epics, so the UI and external tools cannot list, create, or inspect them. Three new routes are needed.
+The apm-server has no API routes for epics. Clients (UI, external tooling) cannot list all epics, create a new epic, or inspect a single epic with its associated tickets.
 
-The full design is in `docs/epics.md` (§ apm-server changes — New routes):
-- `GET /api/epics` — list all epics (branch scan + derived state)
-- `POST /api/epics` — create a new epic (delegates to `apm epic new`)
-- `GET /api/epics/:id` — single epic detail with full ticket list
+Three routes are specified in `docs/epics.md` (§ apm-server changes — New routes):
 
-The response shape for a single epic includes `id`, `title`, `branch`, `state`, and `ticket_counts` map. The list endpoint returns `[EpicSummary]`; the detail endpoint adds a `tickets` array using the existing `TicketResponse` shape.
+- `GET /api/epics` — list all epics discovered from `epic/*` git branches, with derived state and per-state ticket counts
+- `POST /api/epics` — create a new epic branch (`epic/<id>-<slug>`) from the tip of `origin/main`, seed it with a minimal `EPIC.md`, and push it
+- `GET /api/epics/:id` — return a single epic with the same summary fields plus a full `tickets` array
+
+Epic state is derived on demand from the states of associated tickets (those whose frontmatter contains `epic = "<id>"`). That field does not yet exist on `Frontmatter`; it must be added as a prerequisite.
 
 ### Acceptance criteria
 
