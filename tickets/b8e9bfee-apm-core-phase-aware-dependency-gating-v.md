@@ -1,7 +1,7 @@
 +++
 id = "b8e9bfee"
 title = "apm-core: phase-aware dependency gating via satisfies_deps tags and dep_requires"
-state = "in_design"
+state = "specd"
 priority = 8
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "38126"
 branch = "ticket/b8e9bfee-apm-core-phase-aware-dependency-gating-v"
 created_at = "2026-04-02T21:24:08.067343Z"
-updated_at = "2026-04-02T22:25:53.159947Z"
+updated_at = "2026-04-02T22:26:12.567767Z"
 +++
 
 ## Spec
@@ -246,3 +246,4 @@ Leave `implemented` and `closed` as `satisfies_deps = true` — no change needed
 | 2026-04-02T21:48Z | in_design | specd | claude-0402-2144-spec1 |
 | 2026-04-02T22:25Z | specd | ammend | apm |
 | 2026-04-02T22:25Z | ammend | in_design | philippepascal |
+| 2026-04-02T22:26Z | in_design | specd | apm |
