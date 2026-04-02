@@ -42,7 +42,14 @@ The desired state (design doc points 1–3) is:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Git host plugin identity resolution (DESIGN-users.md point 4) — GitHub API / `gh auth status` as identity source
+- WebAuthn / OTP auth, `apm register`, `apm sessions`, `apm revoke` (point 5)
+- `apm list --mine`, `--author`, and `--unassigned` filter changes (point 7)
+- `/api/me` endpoint and UI author filter (point 8)
+- Distribution / packaging (point 6)
+- `assignee` field — deferred per design doc
+- Rewriting existing ticket files to replace legacy `author` values — existing values are left as-is
+- Validating `author` against the collaborators list at `apm new` time — warn-only is deferred to a later ticket
 
 ### Approach
 
