@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:52:44.574586Z"
 
 ### Problem
 
-The work engine server endpoint (`POST /api/work/start`) has no way to start the engine in epic-exclusive mode, and the status endpoint does not report whether an epic filter is active. This means the UI cannot drive epic-scoped engine sessions.
+The work engine server (POST /api/work/start) accepts no request body and always starts the engine in open mode -- dispatching any actionable ticket regardless of epic membership. There is no way for the UI (or any API caller) to start the engine in epic-exclusive mode, where only tickets belonging to a specific epic are dispatched.
 
-The full design is in `docs/epics.md` (§ apm-server changes — Work engine — epic filter). `POST /api/work/start` gains an optional `"epic"` field; when set, `run_engine_loop` filters candidates to `frontmatter.epic == id` before the priority sort. `GET /api/work/status` includes `"epic": "<id>"` when exclusive mode is active, `null` otherwise.
+Correspondingly, GET /api/work/status returns only a status field and has no way to communicate whether an active engine is running in epic-exclusive mode, which makes the UI unable to reflect that constraint to the user.
+
+The design for epic-scoped scheduling is specified in docs/epics.md (section: Work engine -- epic filter). This ticket implements that slice: the server-side plumbing connecting an optional "epic" field in the start request through to run_engine_loop and spawn_next_worker, and the corresponding status reporting.
 
 ### Acceptance criteria
 
