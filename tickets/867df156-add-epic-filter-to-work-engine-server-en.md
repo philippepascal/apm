@@ -24,7 +24,13 @@ The design for epic-scoped scheduling is specified in docs/epics.md (section: Wo
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] POST /api/work/start with an empty body starts the engine and returns a status response (no regression)
+- [ ] POST /api/work/start with body {"epic": "ab12cd34"} starts the engine without error
+- [ ] When the engine is started with {"epic": "ab12cd34"}, spawn_next_worker only considers tickets whose frontmatter.epic == "ab12cd34"
+- [ ] When the engine is started without an epic field, spawn_next_worker considers all actionable tickets (open mode, no regression)
+- [ ] GET /api/work/status returns {"status": "idle", "epic": "ab12cd34"} when the engine was started with that epic filter
+- [ ] GET /api/work/status returns {"status": "idle", "epic": null} when the engine was started without an epic filter
+- [ ] GET /api/work/status returns {"status": "stopped"} (no epic key) when no engine is running
 
 ### Out of scope
 
