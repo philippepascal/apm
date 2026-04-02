@@ -764,6 +764,18 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "agent"    => fm.agent    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
+        "depends_on" => {
+            if value == "-" {
+                fm.depends_on = None;
+            } else {
+                let ids: Vec<String> = value
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                fm.depends_on = if ids.is_empty() { None } else { Some(ids) };
+            }
+        }
         other => anyhow::bail!("unknown field: {other}"),
     }
     Ok(())

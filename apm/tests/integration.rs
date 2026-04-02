@@ -390,6 +390,57 @@ fn set_priority_updates_frontmatter() {
     assert!(content.contains("priority = 7"));
 }
 
+#[test]
+fn set_depends_on_single_id() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test single".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-single");
+    let id = find_ticket_id(dir.path(), "dep-test-single");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("depends_on = [\"abc12345\"]"));
+}
+
+#[test]
+fn set_depends_on_comma_separated() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test multi".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-multi");
+    let id = find_ticket_id(dir.path(), "dep-test-multi");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345,def67890".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("abc12345"));
+    assert!(content.contains("def67890"));
+}
+
+#[test]
+fn set_depends_on_clear() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test clear".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-clear");
+    let id = find_ticket_id(dir.path(), "dep-test-clear");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345".into(), true).unwrap();
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "-".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(!content.contains("depends_on"));
+}
+
+#[test]
+fn set_depends_on_trims_whitespace() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test trim".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-trim");
+    let id = find_ticket_id(dir.path(), "dep-test-trim");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), " id1 , id2 ".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("\"id1\""));
+    assert!(content.contains("\"id2\""));
+}
+
 // --- next ---
 
 #[test]

@@ -234,16 +234,20 @@ Valid field names:
   agent       — name of the assigned agent (use \"-\" to clear)
   supervisor  — name of the assigned supervisor (use \"-\" to clear)
   branch      — override the ticket's branch name (use \"-\" to clear)
+  depends_on  — comma-separated list of blocker IDs (use \"-\" to clear)
 
 Examples:
   apm set 42 priority 5
   apm set 42 agent alice
-  apm set 42 agent -          # clear agent field")]
+  apm set 42 agent -               # clear agent field
+  apm set 42 depends_on abc123     # single blocker
+  apm set 42 depends_on \"abc123,def456\"  # multiple blockers
+  apm set 42 depends_on -          # clear depends_on")]
     Set {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
         id: String,
-        /// Field to update: priority, effort, risk, title, agent, supervisor, branch
+        /// Field to update: priority, effort, risk, title, agent, supervisor, branch, depends_on
         #[arg(value_name = "FIELD")]
         field: String,
         /// New value for the field (use "-" to clear agent/supervisor/branch)
