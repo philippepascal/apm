@@ -47,13 +47,7 @@ The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (
 
 **1. `apm-core/src/ticket.rs` — Frontmatter struct**
 
-Add three new optional fields with `#[serde(skip_serializing_if = "Option::is_none")]` so they are omitted from TOML when absent (backward-compatible):
-
-```rust
-pub epic: Option<String>,
-pub target_branch: Option<String>,
-pub depends_on: Option<Vec<String>>,
-```
+`epic`, `target_branch`, and `depends_on` are already present on `main` (landed via d877bd37). Skip this step.
 
 **2. `apm-core/src/ticket.rs` — `create()` function**
 
@@ -90,7 +84,7 @@ In `run()`:
 
 **6. Tests**
 
-Unit (inline in `apm-core/src/ticket.rs`): Frontmatter with new fields round-trips through TOML serialize/deserialize; Frontmatter without new fields (legacy) parses without error.
+Unit (inline in `apm-core/src/ticket.rs`): Frontmatter with new fields round-trips through TOML serialize/deserialize; Frontmatter without new fields (legacy) parses without error. These tests already exist on main (d877bd37) — skip if present.
 
 Integration (`apm/tests/integration.rs`): Create a temp git repo with an epic branch; `apm new --epic <id>` produces a ticket with correct frontmatter and a branch whose first parent is the epic branch tip; `apm new` without `--epic` still branches from `main` and has no epic fields; `apm new --epic <bad-id>` exits non-zero.
 
