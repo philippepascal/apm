@@ -1,14 +1,14 @@
 +++
 id = "a63fc005"
 title = "apm set: add depends_on field support"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/a63fc005-apm-set-add-depends-on-field-support"
 created_at = "2026-04-02T20:58:58.236289Z"
-updated_at = "2026-04-02T20:58:58.236289Z"
+updated_at = "2026-04-02T22:47:21.099722Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T20:58Z | — | new | apm |
+| 2026-04-02T22:47Z | new | groomed | apm |
