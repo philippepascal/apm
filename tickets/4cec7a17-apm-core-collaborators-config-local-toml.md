@@ -3,13 +3,13 @@ id = "4cec7a17"
 title = "apm-core: collaborators config, local.toml, and identity resolution"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 agent = "50192"
 branch = "ticket/4cec7a17-apm-core-collaborators-config-local-toml"
 created_at = "2026-04-02T20:53:47.546444Z"
-updated_at = "2026-04-02T23:21:53.468894Z"
+updated_at = "2026-04-02T23:24:47.037347Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
