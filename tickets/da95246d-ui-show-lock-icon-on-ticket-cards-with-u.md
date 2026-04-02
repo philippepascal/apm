@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:54:39.595316Z"
 
 ### Problem
 
-Ticket cards in the queue and supervisor board give no visual signal when a ticket is blocked by unresolved `depends_on` entries. An engineer looking at the board cannot tell at a glance which tickets are waiting on others and why they are not being dispatched.
+Ticket cards on the supervisor board give no visual signal when a ticket is waiting on unresolved `depends_on` entries. An engineer looking at the board cannot tell at a glance which tickets are blocked by dependencies and why they are not being dispatched.
 
-The full design is in `docs/epics.md` (§ apm-ui changes — Ticket cards). Cards where `depends_on` has at least one unresolved entry (dependency not yet `implemented` or later) show a small lock icon. Hovering shows a tooltip listing the blocking ticket IDs and their current states.
+The `depends_on` field is not yet part of the `Frontmatter` struct in `apm-core`, so no dependency data is tracked or surfaced through the API. Adding it and exposing it to the UI unlocks this and future dependency-aware features.
+
+The desired behaviour (per `docs/epics.md` § "Ticket cards") is: cards where `depends_on` has at least one unresolved entry show a small lock icon; hovering the icon shows a tooltip listing the blocking ticket IDs and their current states.
 
 ### Acceptance criteria
 
