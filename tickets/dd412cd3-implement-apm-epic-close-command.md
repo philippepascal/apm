@@ -97,6 +97,7 @@ Integration tests requiring a live `gh` CLI and GitHub remote are out of scope.
 ### Amendment requests
 
 - [x] The duplicate "### New file: apm/src/cmd/epic.rs" section at the bottom of Approach still contains step 5 reading `state.terminal == true || equals "implemented"` — a hardcoded state name comparison. Remove this entire duplicate section; the corrected approach above it is the authoritative one.
+- [ ] The `### Problem` section contains two hardcoded references that must be updated: (1) "verify that every ticket in the epic is in `implemented` or a later state" — replace with "verify that all epic tickets are in a state with `satisfies_deps = true` or `terminal = true` in workflow config"; (2) "gh pr create --base main" — replace `main` with `<default_branch>` to match the Approach, which correctly uses `config.project.default_branch`.
 
 ### Code review
 
