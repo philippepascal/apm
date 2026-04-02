@@ -16,7 +16,11 @@ updated_at = "2026-04-02T19:19:30.815976Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The supervisor panel (SupervisorView.tsx) does not automatically refresh its ticket data. It fetches tickets once on mount and only updates when the user manually triggers a sync via Shift+S (which also calls POST /api/sync to fetch from the remote).
+
+This means that as worker agents transition tickets through states — from ready → in_progress → implemented — the supervisor's kanban board stays frozen on whatever snapshot it loaded at startup. The supervisor has no live view of progress without repeatedly pressing Shift+S.
+
+Every other panel in the UI already polls on a fixed interval: PriorityQueuePanel refreshes every 10 seconds, WorkEngineControls every 3 seconds, WorkerActivityPanel every 5 seconds. The supervisor panel is the odd one out and the most important view for monitoring concurrent agent activity.
 
 ### Acceptance criteria
 
@@ -33,13 +37,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
