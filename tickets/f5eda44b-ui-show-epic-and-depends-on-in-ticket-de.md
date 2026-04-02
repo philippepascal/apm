@@ -1,7 +1,7 @@
 +++
 id = "f5eda44b"
 title = "UI: show epic and depends_on in ticket detail panel"
-state = "in_design"
+state = "specd"
 priority = 2
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "51590"
 branch = "ticket/f5eda44b-ui-show-epic-and-depends-on-in-ticket-de"
 created_at = "2026-04-01T21:56:10.584818Z"
-updated_at = "2026-04-02T01:42:42.939430Z"
+updated_at = "2026-04-02T01:45:07.265881Z"
 +++
 
 ## Spec
@@ -223,3 +223,4 @@ The `Ticket` type in `apm-ui/src/components/supervisor/types.ts` should gain `ep
 | 2026-04-02T00:56Z | in_design | specd | claude-0402-0100-b7e2 |
 | 2026-04-02T01:37Z | specd | ammend | philippepascal |
 | 2026-04-02T01:42Z | ammend | in_design | philippepascal |
+| 2026-04-02T01:45Z | in_design | specd | claude-0402-0200-c9f1 |
