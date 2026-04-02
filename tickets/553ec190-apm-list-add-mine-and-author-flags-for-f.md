@@ -1,14 +1,15 @@
 +++
 id = "553ec190"
 title = "apm list: add --mine and --author flags for filtering by collaborator"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/553ec190-apm-list-add-mine-and-author-flags-for-f"
 created_at = "2026-04-02T20:54:04.874772Z"
-updated_at = "2026-04-02T23:22:37.828493Z"
+updated_at = "2026-04-02T23:39:38.498948Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["610be42e"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
+| 2026-04-02T23:39Z | groomed | in_design | philippepascal |
