@@ -54,6 +54,37 @@ pub fn find_epic_branch(root: &Path, short_id: &str) -> Option<String> {
     None
 }
 
+/// Return all epic branches (local + remote, deduplicated) whose 8-char ID
+/// segment starts with `id_prefix`.  The returned names are short
+/// (`epic/<id>-<slug>`, no `origin/` prefix).
+pub fn find_epic_branches(root: &Path, id_prefix: &str) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+
+    let local = run(root, &["branch", "--list", "epic/*"]).unwrap_or_default();
+    for b in local.lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
+        .filter(|l| !l.is_empty())
+    {
+        // branch format: epic/<8-char-id>-<slug>
+        let id_part = b.trim_start_matches("epic/").split('-').next().unwrap_or("");
+        if id_part.starts_with(id_prefix) && seen.insert(b.to_string()) {
+            result.push(b.to_string());
+        }
+    }
+
+    let remote = run(root, &["branch", "-r", "--list", "origin/epic/*"]).unwrap_or_default();
+    for b in remote.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        let short = b.trim_start_matches("origin/");
+        let id_part = short.trim_start_matches("epic/").split('-').next().unwrap_or("");
+        if id_part.starts_with(id_prefix) && seen.insert(short.to_string()) {
+            result.push(short.to_string());
+        }
+    }
+
+    result
+}
+
 /// All ticket/* branch names visible locally or remotely (deduplicated).
 /// Local branches are included even when a remote exists, so that
 /// unpushed branches (e.g. just created) are visible without a push.

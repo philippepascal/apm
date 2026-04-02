@@ -41,6 +41,11 @@ enum EpicCommand {
         /// Title for the epic
         title: String,
     },
+    /// Open a PR from the epic branch to the default branch
+    Close {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -664,6 +669,7 @@ fn main() -> Result<()> {
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
+        Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
     }
 }
 
