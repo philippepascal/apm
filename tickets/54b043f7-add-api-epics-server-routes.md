@@ -56,7 +56,18 @@ Epic state is derived on demand from the states of associated tickets (those who
 
 ### Approach
 
-Four files change in order.
+Five files change in order.
+
+**0. `apm-core/src/config.rs` — add `satisfies_deps` flag to `StateConfig`**
+
+Add to `StateConfig`:
+
+```rust
+#[serde(default)]
+pub satisfies_deps: bool,
+```
+
+This flag marks states where a ticket is considered "done enough" to unblock dependents (e.g. `implemented`). Defaults to `false`. The canonical `apm.toml` must set `satisfies_deps = true` on the `implemented` state.
 
 **1. `apm-core/src/ticket.rs` — add three optional frontmatter fields**
 
@@ -113,15 +124,21 @@ struct CreateEpicRequest {
 
 `parse_epic_branch(branch: &str) -> Option<(String, String)>` — strips `epic/` prefix, splits on first `-`, title-cases the slug. Returns `None` for malformed names.
 
-`derive_epic_state(tickets: &[&Ticket]) -> String` — implements the table from `docs/epics.md`: empty slice → `"empty"`; any `in_design`/`in_progress` → `"in_progress"`; all in `{accepted, closed}` → `"done"`; all in `{implemented, accepted, closed}` → `"implemented"`; otherwise → `"in_progress"`.
+`derive_epic_state(tickets: &[&Ticket], states: &[apm_core::config::StateConfig]) -> String` — config-driven; no hardcoded state ID strings:
+1. Build a `HashMap<&str, &StateConfig>` keyed by `state.id`
+2. Empty ticket slice → `"empty"`
+3. Any ticket in a state where `actionable` contains `"agent"` → `"in_progress"`
+4. All tickets in states where `satisfies_deps || terminal`, and at least one `satisfies_deps` → `"implemented"`
+5. All tickets in states where `terminal` → `"done"`
+6. Otherwise → `"in_progress"`
 
-`build_epic_summary(branch: &str, all_tickets: &[Ticket]) -> Option<EpicSummary>` — calls `parse_epic_branch`, filters tickets by `frontmatter.epic`, counts states, derives state, returns the summary.
+`build_epic_summary(branch: &str, all_tickets: &[Ticket], states: &[StateConfig]) -> Option<EpicSummary>` — calls `parse_epic_branch`, filters tickets by `frontmatter.epic`, counts states, calls `derive_epic_state(tickets, states)`, returns the summary.
 
-`list_epics`: guard 501 if in-memory; `spawn_blocking` → `epic_branches`; `load_tickets`; map branches through `build_epic_summary`; return vec.
+`list_epics`: guard 501 if in-memory; load config via `Config::load(&root)`; `spawn_blocking` → `epic_branches`; `load_tickets`; map branches through `build_epic_summary`; return vec.
 
 `create_epic`: guard 501 if in-memory; validate title non-empty → 400; `spawn_blocking` → `create_epic_branch`; return 201 with `EpicSummary` (empty counts, state `"empty"`).
 
-`get_epic`: guard 501 if in-memory; `spawn_blocking` → `epic_branches`; find branch matching `:id` → 404 if absent; `load_tickets` filtered by epic id; return `EpicDetailResponse`.
+`get_epic`: guard 501 if in-memory; load config; `spawn_blocking` → `epic_branches`; find branch matching `/:id` → 404 if absent; `load_tickets` filtered by epic id; return `EpicDetailResponse`.
 
 Route registration — add to both `build_app` and `build_app_with_tickets`:
 
@@ -130,7 +147,11 @@ Route registration — add to both `build_app` and `build_app_with_tickets`:
 .route("/api/epics/:id", get(get_epic))
 ```
 
-**4. Tests (inline `#[cfg(test)]` in `apm-server/src/main.rs`)**
+**4. `apm.toml` — set `satisfies_deps = true` on the `implemented` state**
+
+Find the `[[workflow.states]]` entry with `id = "implemented"` and add `satisfies_deps = true`. This is required for `derive_epic_state` to correctly identify the `"implemented"` epic state.
+
+**5. Tests (inline `#[cfg(test)]` in `apm-server/src/main.rs`)**
 
 Required: `list_epics_in_memory_returns_501`, `create_epic_missing_title_returns_400`, `create_epic_empty_title_returns_400`, `create_epic_in_memory_returns_501`, `get_epic_in_memory_returns_501`.
 
