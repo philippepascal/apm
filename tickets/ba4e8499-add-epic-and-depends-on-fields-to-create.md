@@ -45,7 +45,61 @@ The `ticket::create` function must also be extended to accept and persist these 
 
 ### Approach
 
-How the implementation will work.
+Step 1 - apm-core/src/ticket.rs - extend Frontmatter
+
+Add three optional fields to Frontmatter with skip_serializing_if Option::is_none:
+  pub epic: Option<String>
+  pub target_branch: Option<String>
+  pub depends_on: Option<Vec<String>>
+
+Because TicketResponse and TicketDetailResponse both use #[serde(flatten)] frontmatter: Frontmatter,
+these fields appear automatically in all existing read-path API responses.
+No server struct changes needed for reads.
+
+Step 2 - apm-core/src/ticket.rs - extend ticket::create
+
+Add three new optional parameters at the end of the signature:
+  epic: Option<String>
+  target_branch: Option<String>
+  depends_on: Option<Vec<String>>
+
+Set them in the Frontmatter literal constructed inside create.
+
+Update all existing call sites to pass None, None, None for the new params:
+- apm-server/src/main.rs (handler at line ~533, test helper at line ~1142)
+- apm-core/tests/ticket_create.rs (four call sites)
+- apm/src/cmd/new.rs (one call site)
+
+Step 3 - apm-server/src/main.rs - extend CreateTicketRequest
+
+Add fields:
+  epic: Option<String>
+  depends_on: Option<Vec<String>>
+
+Step 4 - apm-server/src/main.rs - update create_ticket handler
+
+Before the spawn_blocking closure, if req.epic is Some(short_id):
+1. Scan local branches with git branch --list epic/short_id-* and remote branches
+   with git branch -r --list origin/epic/short_id-* (stripping origin/ prefix),
+   using apm_core::git::run or equivalent.
+2. If no branch is found, return HTTP 400 with error message immediately.
+3. Pass resolved epic (short ID), target_branch (full branch name), and depends_on
+   values through to ticket::create.
+
+Keep the branch resolution in a small helper:
+  fn find_epic_branch(root: &Path, short_id: &str) -> Option<String>
+
+Step 5 - Tests
+
+Add to the inline tests in apm-server/src/main.rs:
+
+- create_ticket_with_depends_on_persists_to_git: git_setup, post with title and
+  depends_on array, read back ticket branch content, assert depends_on in frontmatter TOML.
+- create_ticket_with_unknown_epic_returns_400: git_setup, post with epic ID that
+  has no matching branch, assert HTTP 400.
+- create_ticket_with_epic_resolves_target_branch: git_setup, create branch
+  epic/ab12cd34-foo locally (empty commit), post with title and epic ab12cd34,
+  assert response JSON contains epic and target_branch fields with correct values.
 
 ### Open questions
 
