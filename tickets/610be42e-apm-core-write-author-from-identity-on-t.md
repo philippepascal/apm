@@ -1,14 +1,15 @@
 +++
 id = "610be42e"
 title = "apm-core: write author from identity on ticket creation, remove agent field"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/610be42e-apm-core-write-author-from-identity-on-t"
 created_at = "2026-04-02T20:53:55.085303Z"
-updated_at = "2026-04-02T23:22:28.881149Z"
+updated_at = "2026-04-02T23:30:06.435781Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:53Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
+| 2026-04-02T23:30Z | groomed | in_design | philippepascal |
