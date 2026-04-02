@@ -26,7 +26,15 @@ Two related pieces of infrastructure must land with this ticket because `apm epi
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic show <id>` prints a header block with the epic title, branch name, and derived state
+- [ ] `apm epic show <id>` prints a table of associated tickets, one row per ticket, showing: short ID, title, current state, assigned agent (or — if none), and `depends_on` entries (or — if none)
+- [ ] Tickets with no `epic` frontmatter field set to the epic's ID are not shown in the table
+- [ ] A 4-or-more character prefix that uniquely identifies one epic branch is accepted and resolves correctly
+- [ ] An ambiguous prefix (matches more than one epic branch) exits non-zero and prints a list of the matching branch names
+- [ ] An ID or prefix that matches no epic branch exits non-zero with a clear error message
+- [ ] Derived state follows the rules in `docs/epics.md`: no tickets → `empty`; any ticket `in_design` or `in_progress` → `in_progress`; all tickets `implemented` or later → `implemented`; all tickets `accepted` or `closed` → `done`; otherwise → `in_progress`
+- [ ] `apm epic show` with no argument prints usage and exits non-zero
+- [ ] Adding `epic`, `target_branch`, and `depends_on` optional fields to `Frontmatter` does not break serialisation of any existing ticket that lacks those fields (they are omitted from output when `None`)
 
 ### Out of scope
 
