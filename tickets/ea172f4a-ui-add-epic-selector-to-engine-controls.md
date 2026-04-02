@@ -45,13 +45,13 @@ This requires extending the server's work engine API to accept and remember an o
 
 - Epic commands (`apm epic new`, `apm epic list`, `apm epic show`, `apm epic close`)
 - `POST /api/epics` (create) and `GET /api/epics/:id` (detail) server routes
-- `depends_on` scheduling and lock-icon UI
-- Epic column and filter on the queue panel
+- `depends_on` scheduling and lock-icon UI on ticket cards
+- Epic column and filter dropdown on the queue panel
 - Epic filter on the supervisor board filter bar
 - Epic and depends-on fields in the new-ticket modal
 - Epic and depends-on display in the ticket detail panel
 - `target_branch` frontmatter field and worktree provisioning from epic branch
-- Actual engine-loop filtering by epic (the engine accepts the parameter and stores it; filtering tickets to `frontmatter.epic == id` requires the `Frontmatter.epic` field — adding that field is in scope, wiring it through the loop is in scope only to the extent needed for `GET /api/work/status` to report it accurately; full dispatch filtering may be a follow-on once tickets carry the field)
+- `derived state` computation (in_progress / done / etc.) on epics — the list endpoint returns title, branch, and ID only
 
 ### Approach
 
