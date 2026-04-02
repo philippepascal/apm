@@ -16,7 +16,9 @@ updated_at = "2026-04-02T02:12:02.984057Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When `apm init` sets up a new project, it creates `.apm/apm.spec-writer.md` with a minimal two-line placeholder stub. Every other template file written during init (`apm.worker.md`, `apm.agents.md`) is embedded from a real source file in `apm-core/src/` via `include_str!()`, so new projects get working, complete instructions out of the box. The spec-writer file is the only exception — it ships empty, leaving spec-writer agents with no guidance until a human manually fills it in.
+
+This matters because spec-writer agents run autonomously on `groomed`, `ammend`, and `in_design` state tickets; they depend on `.apm/apm.spec-writer.md` for their instructions. A placeholder produces low-quality or incomplete specs.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
