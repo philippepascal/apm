@@ -50,6 +50,87 @@ All three fields are optional; omitting them preserves existing behaviour exactl
 
 ### Approach
 
+**1. `apm-core/src/ticket.rs` — add three optional fields to `Frontmatter`**
+
+Add after the existing optional fields:
+
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub epic: Option<String>,
+
+#[serde(skip_serializing_if = "Option::is_none")]
+pub target_branch: Option<String>,
+
+#[serde(skip_serializing_if = "Option::is_none")]
+pub depends_on: Option<Vec<String>>,
+```
+
+All three use `skip_serializing_if = "Option::is_none"` so existing ticket files are unchanged on round-trip. No `#[serde(default)]` needed — missing TOML fields deserialise as `None` automatically.
+
+**2. `apm-core/src/ticket.rs` — filter blocked tickets in `pick_next`**
+
+Add a private helper:
+
+```rust
+fn is_implemented_or_later(state: &str, config: &crate::config::Config) -> bool {
+    if config.workflow.states.iter()
+        .find(|s| s.id == state)
+        .map(|s| s.terminal)
+        .unwrap_or(false) {
+        return true;
+    }
+    let mut seen_implemented = false;
+    for s in &config.workflow.states {
+        if s.id == "implemented" { seen_implemented = true; }
+        if seen_implemented && s.id == state { return true; }
+    }
+    false
+}
+
+fn depends_satisfied(ticket: &Ticket, all: &[Ticket], config: &crate::config::Config) -> bool {
+    let Some(deps) = &ticket.frontmatter.depends_on else { return true; };
+    deps.iter().all(|dep_id| {
+        match all.iter().find(|t| t.frontmatter.id.starts_with(dep_id.as_str())) {
+            None => true,  // unknown dep -> not blocking
+            Some(t) => is_implemented_or_later(&t.frontmatter.state, config),
+        }
+    })
+}
+```
+
+Update `pick_next` signature to accept config and filter with `depends_satisfied`:
+
+```rust
+pub fn pick_next<'a>(
+    tickets: &'a [Ticket],
+    actionable: &[&str],
+    startable: &[&str],
+    pw: f64, ew: f64, rw: f64,
+    config: &crate::config::Config,
+) -> Option<&'a Ticket>
+```
+
+In the `.find()` closure, add `depends_satisfied(t, tickets, config)` to the existing condition. Update both call sites in `start.rs` (`run_next` and `spawn_next_worker`) to pass `&config`.
+
+**3. `apm-core/src/state.rs` — use `target_branch` for PR creation**
+
+In `transition`, at the `CompletionStrategy::Pr` arm, `t` (the loaded ticket) is in scope. Change the call to `gh_pr_create_or_update` to resolve the base branch from `t.frontmatter.target_branch`, falling back to `config.project.default_branch` when absent.
+
+**4. Tests — inline in `apm-core/src/ticket.rs`**
+
+Add to the existing `#[cfg(test)]` block using the existing `minimal_raw` / `dummy_path` helpers:
+
+- `parse_epic_field` — extra frontmatter `epic = "ab12cd34"`, assert `frontmatter.epic == Some("ab12cd34")`
+- `parse_target_branch_field` — extra frontmatter `target_branch = "epic/ab12cd34-foo"`, assert value
+- `parse_depends_on_field` — extra frontmatter `depends_on = ["cd56ef78"]`, assert vec
+- `parse_omits_new_fields` — ticket with no new fields, assert all three are `None`
+- `serialize_omits_absent_fields` — round-trip; serialized output must not contain the key names `epic`, `target_branch`, or `depends_on`
+- `pick_next_skips_blocked_ticket` — two tickets A and B; B has `depends_on` pointing to A; A is in `ready` state; `pick_next` returns only A (the one without unresolved deps)
+- `pick_next_returns_satisfied_dep` — A is in `implemented` state; `pick_next` returns B (dep satisfied)
+- `pick_next_unknown_dep_not_blocking` — B's `depends_on` ID matches no ticket in the list; `pick_next` returns B
+
+Tests for `pick_next` need a minimal `Config` — build it from a small inline TOML string via `toml::from_str`.
+
 ### 1. `apm-core/src/ticket.rs` — add three optional fields to `Frontmatter`
 
 ```rust
