@@ -4,12 +4,12 @@ title = "UI: show lock icon on ticket cards with unresolved depends_on"
 state = "in_design"
 priority = 2
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "64122"
 branch = "ticket/da95246d-ui-show-lock-icon-on-ticket-cards-with-u"
 created_at = "2026-04-01T21:56:15.495249Z"
-updated_at = "2026-04-02T00:58:43.204473Z"
+updated_at = "2026-04-02T00:58:48.419870Z"
 +++
 
 ## Spec
