@@ -16,7 +16,7 @@ updated_at = "2026-04-02T20:56:20.210761Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The web UI provides no way to create epics. The only paths to epic creation are the CLI (`apm epic new`) and direct API calls. The SupervisorView toolbar already has a "New ticket" button that opens a modal, but there is no parallel affordance for epics, forcing supervisors to drop out of the UI whenever they need to define a new epic grouping.
 
 ### Acceptance criteria
 
@@ -33,13 +33,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
