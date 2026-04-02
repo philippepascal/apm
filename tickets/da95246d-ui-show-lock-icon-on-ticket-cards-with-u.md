@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "68956"
 branch = "ticket/da95246d-ui-show-lock-icon-on-ticket-cards-with-u"
 created_at = "2026-04-01T21:56:15.495249Z"
-updated_at = "2026-04-02T01:46:23.142154Z"
+updated_at = "2026-04-02T01:46:26.896117Z"
 +++
 
 ## Spec
