@@ -4,12 +4,12 @@ title = "Merge completion strategy should not push main to origin"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "apm"
 agent = "4076"
 branch = "ticket/c767a37b-merge-completion-strategy-should-not-pus"
 created_at = "2026-04-02T03:15:29.694878Z"
-updated_at = "2026-04-02T16:57:43.820791Z"
+updated_at = "2026-04-02T16:57:50.992348Z"
 +++
 
 ## Spec
