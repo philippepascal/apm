@@ -40,7 +40,13 @@ All three fields are optional; omitting them preserves existing behaviour exactl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic` subcommands (new, list, show, close) — covered by a separate ticket
+- `apm new --epic` flag and epic-aware ticket creation — separate ticket
+- apm-server epic API routes (`GET/POST /api/epics`) — separate ticket
+- apm-ui epic filter, ticket card lock icon, and engine epic selector — separate ticket
+- `apm work --epic` exclusive-mode flag — separate ticket
+- `apm epic sync` / merging epic branches — explicitly not planned
+- Validation that `epic` and `target_branch` are consistent with each other
 
 ### Approach
 
