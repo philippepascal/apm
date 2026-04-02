@@ -52,7 +52,74 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 
 ### Approach
 
-How the implementation will work.
+**Dependencies — `apm-server/Cargo.toml`:**
+- Add `webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }`
+  (default features provide passkey support; the serialisation feature is included for flexibility but in-flight state stays in memory)
+- Add `uuid = { version = "1", features = ["v5"] }` for deterministic per-user UUID generation
+
+**Config change — `apm-core/src/config.rs`:**
+- Add `ServerConfig` struct: `origin: String` (default `"http://localhost:3000"`)
+- Add `pub server: ServerConfig` to `Config` with `#[serde(default)]`
+- This lets operators set `[server] origin = "https://apm.example.com"` in `apm.toml` for external access via apm-proxy
+
+**New file `apm-server/src/webauthn_state.rs`:**
+- `RegistrationSession { username: String, passkey_reg: PasskeyRegistration }`
+- `WebauthnState { webauthn: Webauthn, pending: Arc<Mutex<HashMap<String, RegistrationSession>>> }`
+- `WebauthnState::new(origin: &str) -> anyhow::Result<Self>`: parse origin URL, extract hostname as rp_id, call `WebauthnBuilder::new(rp_id, &origin_url)?.build()`
+
+**New file `apm-server/src/credential_store.rs`:**
+- `CredentialStore { inner: Arc<Mutex<HashMap<String, Vec<Passkey>>>>, path: PathBuf }`
+- `CredentialStore::load(path) -> Self`: read `.apm/credentials.json`; start empty on absent file (log warning on parse failure)
+- `CredentialStore::insert(username, passkey)`: append passkey to user's vec; call `save()`
+- `CredentialStore::save()`: write JSON atomically (temp file + rename) to `.apm/credentials.json`
+- File format: `{"credentials": {"alice": [<Passkey JSON>, ...]}}`
+
+**Extend `AppState` in `apm-server/src/main.rs`:**
+- Add `webauthn_state: Arc<WebauthnState>` and `credential_store: CredentialStore` fields
+- Initialise in `build_app(root)`: read `config.server.origin`, call `WebauthnState::new(&origin)`, call `CredentialStore::load(root.join(".apm/credentials.json"))`
+
+**New routes (add to `build_app` router):**
+- `GET /register` → `register_page_handler` (returns `include_str!("register.html")` with content-type `text/html`)
+- `POST /api/auth/register/challenge` → `register_challenge_handler`
+- `POST /api/auth/register/complete` → `register_complete_handler`
+
+**`register_challenge_handler`:**
+1. Parse `{username: String, otp: String}` — 400 if malformed
+2. `otp_store.validate(username, otp)` — 400 with message if invalid/expired (OTP is consumed here)
+3. Build a deterministic `Uuid` per username: `Uuid::new_v5(&Uuid::NAMESPACE_OID, username.as_bytes())`
+4. `webauthn.start_passkey_registration(user_uuid, username, username, None)` → `(challenge, passkey_reg)`
+5. Generate `reg_id` (16 random bytes as lowercase hex, reuse `generate_token()` from `auth.rs`)
+6. Store `RegistrationSession { username, passkey_reg }` in `webauthn_state.pending` under `reg_id`
+7. Return `{"reg_id": reg_id, "publicKey": <CreationChallengeResponse JSON>}` — 200
+
+**`register_complete_handler`:**
+1. Parse `{reg_id: String, response: RegisterPublicKeyCredential}` — 400 if malformed
+2. Remove and retrieve `RegistrationSession` by `reg_id` from `webauthn_state.pending` — 400 if not found
+3. `webauthn.finish_passkey_registration(&response, &passkey_reg)` — 400 if verification fails
+4. `credential_store.insert(username, passkey)` — persists credential
+5. Generate new session token, `session_store.insert(token, username)`
+6. Return HTTP 200 with `Set-Cookie: __Host-apm-session=<token>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`
+   Note: `__Host-` prefix requires HTTPS; browsers on plain HTTP will reject it. This is intentional — local access bypasses auth entirely (localhost bypass from e2e3d958), and external access uses apm-proxy with TLS.
+
+**`apm-server/src/register.html`** (embedded via `include_str!`):
+- Minimal HTML: username input, OTP input, Register button, status div
+- Vanilla JS on button click:
+  1. POST `/api/auth/register/challenge` with `{username, otp}`
+  2. Convert base64url fields to ArrayBuffer (challenge, user.id)
+  3. `navigator.credentials.create({publicKey: ...})` — triggers biometric prompt
+  4. Encode response fields (clientDataJSON, attestationObject, id) back to base64url
+  5. POST `/api/auth/register/complete` with `{reg_id, response}`
+  6. Display success or error message; on success, redirect to `/` after 2 seconds
+- No external JS dependencies; base64url helpers inline (~20 lines)
+
+**Tests (unit, in `apm-server/src/`):**
+- `CredentialStore::load` on absent file returns empty store
+- `CredentialStore::insert` + reload round-trip preserves passkey count
+- `WebauthnState::new` with `"http://localhost:3000"` succeeds
+- `register_page_handler` returns 200 HTML (integration test via `build_app_with_auth` test helper)
+- Challenge endpoint returns 400 for missing fields (integration test)
+- Challenge endpoint returns 400 for invalid OTP (integration test, using a seeded OTP store)
+- Full WebAuthn ceremony tests require a real authenticator and are excluded
 
 ### Open questions
 
