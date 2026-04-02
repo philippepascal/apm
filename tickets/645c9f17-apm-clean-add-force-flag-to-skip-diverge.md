@@ -4,12 +4,12 @@ title = "apm clean: add --force flag to skip divergence and merge checks for clo
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "56092"
 branch = "ticket/645c9f17-apm-clean-add-force-flag-to-skip-diverge"
 created_at = "2026-04-02T05:35:39.235404Z"
-updated_at = "2026-04-02T17:12:43.188901Z"
+updated_at = "2026-04-02T17:12:50.526936Z"
 +++
 
 ## Spec
