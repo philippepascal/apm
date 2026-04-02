@@ -41,7 +41,15 @@ The `apm epic` subcommand group does not yet exist and must be wired into the CL
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic list` — listing epics (separate future ticket)
+- `apm epic show <id>` — showing epic details (separate future ticket)
+- `apm epic close <id>` — opening a PR to merge the epic (separate future ticket)
+- `apm new --epic <id>` — creating tickets inside an epic (separate future ticket)
+- `epic`, `target_branch`, and `depends_on` fields in ticket frontmatter
+- `depends_on` scheduling in the work engine
+- `apm work --epic` exclusive-mode filtering
+- apm-server API routes for epics (`GET/POST /api/epics`)
+- apm-ui changes (epic column, filter dropdown, engine controls)
 
 ### Approach
 
