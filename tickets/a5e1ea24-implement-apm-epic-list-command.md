@@ -47,6 +47,54 @@ The command lists all `epic/*` remote branches and for each shows: short ID, tit
 
 ### Approach
 
+Five files change, one is new, one is a new module.
+
+**`apm-core/src/ticket.rs`** — add `epic` optional field to `Frontmatter`:
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub epic: Option<String>,
+```
+Existing tickets that omit the field deserialize fine (`Option` defaults to `None`).
+
+**`apm-core/src/git.rs`** — add `epic_branches() -> Result<Vec<String>>`:
+Mirror `ticket_branches()`: collect local `epic/*` + remote `origin/epic/*` (strip prefix), deduplicate, return sorted.
+
+**`apm-core/src/epic.rs`** — new module, export from `lib.rs` as `pub mod epic`:
+`pub fn derive_epic_state(states: &[&str]) -> &'static str` with these rules in order:
+1. empty slice → `"empty"`
+2. any `"in_design"` or `"in_progress"` → `"in_progress"`
+3. all `"accepted"` or `"closed"` → `"done"`
+4. all `"implemented"`, `"accepted"`, or `"closed"` → `"implemented"`
+5. otherwise → `"in_progress"`
+
+State names are hard-coded strings. No `&Config` dependency needed.
+
+**`apm/src/cmd/epic.rs`** — new file, `pub fn run_list(root: &Path) -> Result<()>`:
+1. `Config::load(root)` — read aggressive-fetch flag and tickets dir
+2. If aggressive, `git::fetch_all(root)` (warn on error, continue)
+3. `git::epic_branches(root)` — list branch names, sort alphabetically
+4. `ticket::load_all_from_git(root, &config.tickets.dir)` — all tickets
+5. For each epic branch:
+   - Strip `epic/` prefix; take first 8 chars as `id`, remainder after first `-` as slug
+   - Humanize title: replace `-` with space, title-case each word
+   - Filter tickets where `fm.epic.as_deref() == Some(id)`
+   - Collect state strings; call `epic::derive_epic_state()`
+   - Count per state; build non-zero counts string (`"2 in_progress, 1 ready"`)
+   - `println!("{id:<8} [{derived_state:<12}] {title:<40} {counts}")`
+6. No output (and `Ok(())`) when no epics exist
+
+**`apm/src/main.rs`** — add `Epic { #[command(subcommand)] cmd: EpicCommand }` to `Command` enum; add `enum EpicCommand { List }`; dispatch to `cmd::epic::run_list(&root)?`.
+
+Output example:
+```
+ab12cd34 [in_progress ] User Authentication       2 in_progress, 1 ready, 3 implemented
+ef567890 [empty       ] Billing Overhaul
+```
+
+Unit tests in `apm-core/src/epic.rs`: empty, all closed/done, all implemented, any in_progress, any in_design, mixed states.
+
+Integration test in `apm/tests/integration.rs`: temp git repo with two fake `epic/*` remote refs and ticket branches with `epic = "..."` in frontmatter; assert `apm epic list` stdout matches expected lines.
+
 ### Files changed
 
 **1. `apm-core/src/ticket.rs` — add `epic` field to `Frontmatter`**
