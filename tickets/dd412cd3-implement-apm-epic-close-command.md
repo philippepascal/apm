@@ -28,7 +28,7 @@ Without this command the epic workflow is incomplete: tickets can be created (`a
 - [x] `apm epic close <id>` exits non-zero with a clear error message listing the non-ready tickets when one or more epic tickets have a state with neither `satisfies_deps` nor `terminal` set to `true` in workflow config
 - [x] `apm epic close <id>` exits non-zero with a clear error message when no epic branch matching the given ID prefix is found
 - [x] `apm epic close <id>` exits 0 and prints "PR #N already open" (without creating a duplicate) when an open PR already exists for the epic branch
-- [ ] `apm epic close <id>` accepts a 4–8 character prefix of the epic ID (same prefix-matching behaviour used by other apm commands)
+- [x] `apm epic close <id>` accepts a 4–8 character prefix of the epic ID (same prefix-matching behaviour used by other apm commands)
 - [ ] The created PR targets `config.project.default_branch` (not a hardcoded "main")
 
 ### Out of scope
