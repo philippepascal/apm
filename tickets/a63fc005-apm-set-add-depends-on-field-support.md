@@ -22,7 +22,7 @@ Without CLI access to `depends_on`, callers must hand-edit ticket branch files t
 
 ### Acceptance criteria
 
-- [ ] `apm set <id> depends_on <id1>` sets depends_on to a single-element list and the ticket branch TOML contains `depends_on = ["<id1>"]`
+- [x] `apm set <id> depends_on <id1>` sets depends_on to a single-element list and the ticket branch TOML contains `depends_on = ["<id1>"]`
 - [ ] `apm set <id> depends_on "<id1>,<id2>"` sets depends_on to a two-element list and both IDs appear in the serialized TOML
 - [ ] `apm set <id> depends_on -` clears depends_on so the field is absent from the serialized TOML
 - [ ] `apm set <id> depends_on <id1>` updates the `updated_at` timestamp on the ticket
