@@ -41,7 +41,14 @@ Ticket #90ebf40b already implements the localhost case of `/api/me` (reading `.a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- WebAuthn registration ceremony (POST /api/auth/register challenge/response)
+- WebAuthn login ceremony (POST /api/auth/login challenge/response)
+- Session cookie issuance — the session store is built here but sessions are only created by the registration/login ceremonies (separate tickets); this ticket only reads the cookie and looks up existing sessions
+- OTP consumption during registration — `validate_otp` is implemented and tested here, but it is only called by the registration handler (separate ticket)
+- `apm register <username>` CLI command — it calls `POST /api/auth/otp` but the CLI side is a separate ticket
+- `apm sessions` and `apm revoke` CLI commands
+- Auth enforcement on existing routes — all existing API routes remain publicly accessible; this ticket only adds identity resolution, not access control
+- Adding `.apm/sessions.json` to `.gitignore` — this is handled by `apm init` (ticket #4cec7a17 or a follow-up); the server reads/writes the file regardless
 
 ### Approach
 
