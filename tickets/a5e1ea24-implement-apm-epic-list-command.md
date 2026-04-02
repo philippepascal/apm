@@ -18,7 +18,7 @@ updated_at = "2026-04-02T01:40:30.684744Z"
 
 Once epic branches exist there is no way to see them or their status at a glance. Engineers and the supervisor need to know which epics are active, how many tickets are in each state, and whether an epic is done.
 
-The full design is in `docs/epics.md` (§ Commands — `apm epic list`). Epic state is always derived — never stored — using these rules: no tickets → `empty`; any ticket `in_design` or `in_progress` → `in_progress`; all `implemented` or later → `implemented`; all `accepted`/`closed` → `done`; otherwise → `in_progress`.
+The full design is in `docs/epics.md` (§ Commands — `apm epic list`). Epic state is always derived — never stored — using config-driven rules based on `StateConfig` flags, not hard-coded state ID strings: no tickets → `empty`; any ticket whose state has `actionable` containing `"agent"` → `active`; all tickets terminal (`terminal = true`) → `done`; all tickets dep-satisfied (`satisfies_deps = true`) or terminal with at least one dep-satisfied → `complete`; otherwise → `active`.
 
 The command lists all `epic/*` remote branches and for each shows: short ID, title (from slug), derived state, and per-state ticket counts (e.g. `2 in_progress, 1 ready, 3 implemented`).
 
