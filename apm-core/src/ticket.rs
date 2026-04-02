@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Utc};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -385,9 +386,7 @@ pub fn create(
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
     let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
-    let body_template = if config.ticket.sections.is_empty() {
-        format!("## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n{history_footer}")
-    } else {
+    let body_template = {
         let mut s = String::from("## Spec\n\n");
         for sec in &config.ticket.sections {
             let placeholder = sec.placeholder.as_deref().unwrap_or("");
@@ -405,11 +404,14 @@ pub fn create(
             .clone()
             .or(transition_section)
             .unwrap_or_else(|| "Problem".to_string());
-        let heading = format!("### {section}\n\n");
-        if !body_template.contains(&heading) {
+        if !config.ticket.sections.is_empty()
+            && !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(&section))
+        {
             anyhow::bail!("section '### {section}' not found in ticket body template");
         }
-        body_template.replacen(&heading, &format!("### {section}\n\n{ctx}\n\n"), 1)
+        let mut doc = TicketDocument::parse(&body_template)?;
+        crate::spec::set_section(&mut doc, &section, ctx.clone());
+        doc.serialize()
     } else {
         body_template
     };
@@ -417,27 +419,20 @@ pub fn create(
     let mut t = Ticket { frontmatter: fm, body, path };
 
     if !section_sets.is_empty() {
-        let config_active = !config.ticket.sections.is_empty();
+        let mut doc = t.document()?;
         for (name, value) in &section_sets {
             let trimmed = value.trim().to_string();
-            if config_active {
+            let formatted = if !config.ticket.sections.is_empty() {
                 let section_config = config.ticket.sections.iter()
                     .find(|s| s.name.eq_ignore_ascii_case(name))
                     .ok_or_else(|| anyhow::anyhow!("unknown section {:?}", name))?;
-                let formatted = crate::spec::apply_section_type(&section_config.type_, trimmed);
-                if crate::spec::is_doc_field(name) {
-                    let mut doc = t.document()?;
-                    crate::spec::set_section(&mut doc, name, formatted);
-                    t.body = doc.serialize();
-                } else {
-                    crate::spec::set_section_body(&mut t.body, name, &formatted);
-                }
+                crate::spec::apply_section_type(&section_config.type_, trimmed)
             } else {
-                let mut doc = t.document()?;
-                crate::spec::set_section(&mut doc, name, trimmed);
-                t.body = doc.serialize();
-            }
+                trimmed
+            };
+            crate::spec::set_section(&mut doc, name, formatted);
         }
+        t.body = doc.serialize();
     }
 
     let content = t.serialize()?;
@@ -482,10 +477,8 @@ pub struct ChecklistItem {
 
 #[derive(Debug, Clone)]
 pub enum ValidationError {
-    EmptySection(&'static str),
+    EmptySection(String),
     NoAcceptanceCriteria,
-    UncheckedCriterion(usize),
-    UncheckedAmendment(usize),
 }
 
 impl std::fmt::Display for ValidationError {
@@ -493,20 +486,13 @@ impl std::fmt::Display for ValidationError {
         match self {
             Self::EmptySection(s) => write!(f, "### {s} section is empty"),
             Self::NoAcceptanceCriteria => write!(f, "### Acceptance criteria has no checklist items"),
-            Self::UncheckedCriterion(i) => write!(f, "acceptance criterion #{} is not checked", i + 1),
-            Self::UncheckedAmendment(i) => write!(f, "amendment request #{} is not checked", i + 1),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct TicketDocument {
-    pub problem: String,
-    pub acceptance_criteria: Vec<ChecklistItem>,
-    pub out_of_scope: String,
-    pub approach: String,
-    pub open_questions: Option<String>,
-    pub amendment_requests: Option<Vec<ChecklistItem>>,
+    pub sections: IndexMap<String, String>,
     raw_history: String,
 }
 
@@ -532,32 +518,6 @@ fn serialize_checklist(items: &[ChecklistItem]) -> String {
         .join("\n")
 }
 
-fn extract_sections(text: &str) -> std::collections::HashMap<String, String> {
-    let mut map = std::collections::HashMap::new();
-    let mut current: Option<String> = None;
-    let mut lines: Vec<&str> = Vec::new();
-    for line in text.lines() {
-        if let Some(name) = line.strip_prefix("### ") {
-            if let Some(prev) = current.take() {
-                map.insert(prev, lines.join("\n").trim().to_string());
-            }
-            current = Some(name.trim().to_string());
-            lines.clear();
-        } else if line.starts_with("## ") {
-            if let Some(prev) = current.take() {
-                map.insert(prev, lines.join("\n").trim().to_string());
-            }
-            lines.clear();
-        } else if current.is_some() {
-            lines.push(line);
-        }
-    }
-    if let Some(name) = current {
-        map.insert(name, lines.join("\n").trim().to_string());
-    }
-    map
-}
-
 impl TicketDocument {
     pub fn parse(body: &str) -> Result<Self> {
         let (spec_part, raw_history) = if let Some(pos) = body.find("\n## History") {
@@ -566,56 +526,42 @@ impl TicketDocument {
             (body, String::new())
         };
 
-        let sections = extract_sections(spec_part);
+        let mut sections = IndexMap::new();
+        let mut current_name: Option<String> = None;
+        let mut current_lines: Vec<&str> = Vec::new();
 
-        for name in ["Problem", "Acceptance criteria", "Out of scope", "Approach"] {
-            if !sections.contains_key(name) {
-                anyhow::bail!("missing required section: ### {name}");
+        for line in spec_part.lines() {
+            if let Some(name) = line.strip_prefix("### ") {
+                if let Some(prev) = current_name.take() {
+                    sections.insert(prev, current_lines.join("\n").trim().to_string());
+                }
+                current_name = Some(name.trim().to_string());
+                current_lines.clear();
+            } else if line.starts_with("## ") {
+                if let Some(prev) = current_name.take() {
+                    sections.insert(prev, current_lines.join("\n").trim().to_string());
+                }
+                current_lines.clear();
+            } else if current_name.is_some() {
+                current_lines.push(line);
             }
         }
+        if let Some(name) = current_name {
+            sections.insert(name, current_lines.join("\n").trim().to_string());
+        }
 
-        Ok(Self {
-            problem: sections["Problem"].clone(),
-            acceptance_criteria: parse_checklist(&sections["Acceptance criteria"]),
-            out_of_scope: sections["Out of scope"].clone(),
-            approach: sections["Approach"].clone(),
-            open_questions: sections.get("Open questions").cloned(),
-            amendment_requests: sections.get("Amendment requests").map(|s| parse_checklist(s)),
-            raw_history,
-        })
+        Ok(Self { sections, raw_history })
     }
 
     pub fn serialize(&self) -> String {
         let mut out = String::from("## Spec\n");
 
-        out.push_str("\n### Problem\n\n");
-        out.push_str(&self.problem);
-        out.push('\n');
-
-        out.push_str("\n### Acceptance criteria\n\n");
-        if !self.acceptance_criteria.is_empty() {
-            out.push_str(&serialize_checklist(&self.acceptance_criteria));
-            out.push('\n');
-        }
-
-        out.push_str("\n### Out of scope\n\n");
-        out.push_str(&self.out_of_scope);
-        out.push('\n');
-
-        out.push_str("\n### Approach\n\n");
-        out.push_str(&self.approach);
-        out.push('\n');
-
-        if let Some(oq) = &self.open_questions {
-            out.push_str("\n### Open questions\n\n");
-            out.push_str(oq);
-            out.push('\n');
-        }
-
-        if let Some(ar) = &self.amendment_requests {
-            out.push_str("\n### Amendment requests\n\n");
-            out.push_str(&serialize_checklist(ar));
-            out.push('\n');
+        for (name, value) in &self.sections {
+            out.push_str(&format!("\n### {}\n\n", name));
+            if !value.is_empty() {
+                out.push_str(value);
+                out.push('\n');
+            }
         }
 
         if !self.raw_history.is_empty() {
@@ -626,42 +572,45 @@ impl TicketDocument {
         out
     }
 
-    pub fn validate(&self) -> Vec<ValidationError> {
+    pub fn validate(&self, config_sections: &[crate::config::TicketSection]) -> Vec<ValidationError> {
+        use crate::config::SectionType;
         let mut errors = Vec::new();
-        if self.problem.is_empty() {
-            errors.push(ValidationError::EmptySection("Problem"));
-        }
-        if self.acceptance_criteria.is_empty() {
-            errors.push(ValidationError::NoAcceptanceCriteria);
-        }
-        if self.out_of_scope.is_empty() {
-            errors.push(ValidationError::EmptySection("Out of scope"));
-        }
-        if self.approach.is_empty() {
-            errors.push(ValidationError::EmptySection("Approach"));
+        for sec in config_sections {
+            if !sec.required {
+                continue;
+            }
+            let val = self.sections.get(&sec.name).map(|s| s.as_str()).unwrap_or("");
+            if val.is_empty() {
+                if sec.type_ == SectionType::Tasks {
+                    errors.push(ValidationError::NoAcceptanceCriteria);
+                } else {
+                    errors.push(ValidationError::EmptySection(sec.name.clone()));
+                }
+                continue;
+            }
+            if sec.type_ == SectionType::Tasks && parse_checklist(val).is_empty() {
+                errors.push(ValidationError::NoAcceptanceCriteria);
+            }
         }
         errors
     }
 
-    pub fn unchecked_criteria(&self) -> Vec<usize> {
-        self.acceptance_criteria.iter().enumerate()
-            .filter(|(_, c)| !c.checked)
-            .map(|(i, _)| i)
-            .collect()
-    }
-
-    pub fn unchecked_amendments(&self) -> Vec<usize> {
-        self.amendment_requests.as_deref().unwrap_or(&[]).iter().enumerate()
+    pub fn unchecked_tasks(&self, section_name: &str) -> Vec<usize> {
+        let val = self.sections.get(section_name).map(|s| s.as_str()).unwrap_or("");
+        parse_checklist(val).into_iter().enumerate()
             .filter(|(_, c)| !c.checked)
             .map(|(i, _)| i)
             .collect()
     }
 
     pub fn toggle_criterion(&mut self, index: usize, checked: bool) -> Result<()> {
-        if index >= self.acceptance_criteria.len() {
-            anyhow::bail!("criterion index {index} out of range (have {})", self.acceptance_criteria.len());
+        let val = self.sections.get("Acceptance criteria").cloned().unwrap_or_default();
+        let mut items = parse_checklist(&val);
+        if index >= items.len() {
+            anyhow::bail!("criterion index {index} out of range (have {})", items.len());
         }
-        self.acceptance_criteria[index].checked = checked;
+        items[index].checked = checked;
+        self.sections.insert("Acceptance criteria".to_string(), serialize_checklist(&items));
         Ok(())
     }
 }
@@ -970,23 +919,53 @@ mod tests {
         )
     }
 
+    fn minimal_ticket_sections() -> Vec<crate::config::TicketSection> {
+        use crate::config::{SectionType, TicketSection};
+        vec![
+            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None },
+            TicketSection { name: "Acceptance criteria".into(), type_: SectionType::Tasks, required: true, placeholder: None },
+            TicketSection { name: "Out of scope".into(), type_: SectionType::Free, required: true, placeholder: None },
+            TicketSection { name: "Approach".into(), type_: SectionType::Free, required: true, placeholder: None },
+        ]
+    }
+
     #[test]
     fn document_parse_required_sections() {
         let body = full_body("- [ ] item one\n- [x] item two");
         let doc = TicketDocument::parse(&body).unwrap();
-        assert_eq!(doc.problem, "Some problem.");
-        assert_eq!(doc.acceptance_criteria.len(), 2);
-        assert!(!doc.acceptance_criteria[0].checked);
-        assert!(doc.acceptance_criteria[1].checked);
-        assert_eq!(doc.out_of_scope, "Nothing.");
-        assert_eq!(doc.approach, "Do it.");
+        assert_eq!(doc.sections.get("Problem").map(|s| s.as_str()), Some("Some problem."));
+        let ac = doc.sections.get("Acceptance criteria").unwrap();
+        assert!(ac.contains("- [ ] item one"));
+        assert!(ac.contains("- [x] item two"));
+        assert_eq!(doc.sections.get("Out of scope").map(|s| s.as_str()), Some("Nothing."));
+        assert_eq!(doc.sections.get("Approach").map(|s| s.as_str()), Some("Do it."));
     }
 
     #[test]
-    fn document_parse_missing_section_errors() {
+    fn document_parse_missing_section_fails_validate() {
         let body = "## Spec\n\n### Problem\n\nSome problem.\n\n## History\n\n";
-        let err = TicketDocument::parse(body).unwrap_err();
-        assert!(err.to_string().contains("missing required section"));
+        let doc = TicketDocument::parse(body).unwrap();
+        let errs = doc.validate(&minimal_ticket_sections());
+        assert!(!errs.is_empty(), "expected validation errors for missing required sections");
+    }
+
+    #[test]
+    fn document_parse_unknown_section_preserved() {
+        let body = "## Spec\n\n### Problem\n\nfoo\n\n### Acceptance criteria\n\n- [x] done\n\n### Out of scope\n\nbar\n\n### Approach\n\nbaz\n\n### Foo\n\nsome custom content\n\n## History\n\n";
+        let doc = TicketDocument::parse(body).unwrap();
+        assert_eq!(doc.sections.get("Foo").map(|s| s.as_str()), Some("some custom content"));
+        let s = doc.serialize();
+        assert!(s.contains("### Foo"), "unknown section should be preserved in serialization");
+        assert!(s.contains("some custom content"));
+    }
+
+    #[test]
+    fn document_parse_code_review_preserved() {
+        let body = "## Spec\n\n### Problem\n\nfoo\n\n### Acceptance criteria\n\n- [x] done\n\n### Out of scope\n\nbar\n\n### Approach\n\nbaz\n\n### Code review\n\n- [ ] Check tests\n\n## History\n\n";
+        let doc = TicketDocument::parse(body).unwrap();
+        let s = doc.serialize();
+        assert!(s.contains("### Code review"), "Code review section should survive round-trip");
+        assert!(s.contains("- [ ] Check tests"));
     }
 
     #[test]
@@ -995,19 +974,17 @@ mod tests {
         let doc = TicketDocument::parse(&body).unwrap();
         let serialized = doc.serialize();
         let doc2 = TicketDocument::parse(&serialized).unwrap();
-        assert_eq!(doc2.problem, doc.problem);
-        assert_eq!(doc2.acceptance_criteria.len(), doc.acceptance_criteria.len());
-        assert_eq!(doc2.acceptance_criteria[0].checked, false);
-        assert_eq!(doc2.acceptance_criteria[1].checked, true);
-        assert_eq!(doc2.out_of_scope, doc.out_of_scope);
-        assert_eq!(doc2.approach, doc.approach);
+        assert_eq!(doc2.sections.get("Problem"), doc.sections.get("Problem"));
+        assert_eq!(doc2.sections.get("Acceptance criteria"), doc.sections.get("Acceptance criteria"));
+        assert_eq!(doc2.sections.get("Out of scope"), doc.sections.get("Out of scope"));
+        assert_eq!(doc2.sections.get("Approach"), doc.sections.get("Approach"));
     }
 
     #[test]
     fn document_validate_empty_sections() {
         let body = "## Spec\n\n### Problem\n\n\n### Acceptance criteria\n\n- [ ] x\n\n### Out of scope\n\n\n### Approach\n\ncontent\n";
         let doc = TicketDocument::parse(body).unwrap();
-        let errs = doc.validate();
+        let errs = doc.validate(&minimal_ticket_sections());
         let msgs: Vec<String> = errs.iter().map(|e| e.to_string()).collect();
         assert!(msgs.iter().any(|m| m.contains("Problem")));
         assert!(msgs.iter().any(|m| m.contains("Out of scope")));
@@ -1018,24 +995,41 @@ mod tests {
     fn document_validate_no_criteria() {
         let body = "## Spec\n\n### Problem\n\nfoo\n\n### Acceptance criteria\n\n\n### Out of scope\n\nbar\n\n### Approach\n\nbaz\n";
         let doc = TicketDocument::parse(body).unwrap();
-        let errs = doc.validate();
+        let errs = doc.validate(&minimal_ticket_sections());
         assert!(errs.iter().any(|e| matches!(e, ValidationError::NoAcceptanceCriteria)));
+    }
+
+    #[test]
+    fn document_validate_required_from_config() {
+        use crate::config::{SectionType, TicketSection};
+        let body = "## Spec\n\n### Problem\n\nfoo\n\n";
+        let doc = TicketDocument::parse(body).unwrap();
+        let sections = vec![
+            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None },
+            TicketSection { name: "Context".into(), type_: SectionType::Free, required: true, placeholder: None },
+        ];
+        let errs = doc.validate(&sections);
+        let msgs: Vec<String> = errs.iter().map(|e| e.to_string()).collect();
+        assert!(msgs.iter().any(|m| m.contains("Context")), "required config section should be validated");
+        assert!(!msgs.iter().any(|m| m.contains("Problem")), "present section should not error");
     }
 
     #[test]
     fn document_toggle_criterion() {
         let body = full_body("- [ ] item one\n- [ ] item two");
         let mut doc = TicketDocument::parse(&body).unwrap();
-        assert!(!doc.acceptance_criteria[0].checked);
+        let ac = doc.sections.get("Acceptance criteria").unwrap();
+        assert!(ac.contains("- [ ] item one"));
         doc.toggle_criterion(0, true).unwrap();
-        assert!(doc.acceptance_criteria[0].checked);
+        let ac = doc.sections.get("Acceptance criteria").unwrap();
+        assert!(ac.contains("- [x] item one"));
     }
 
     #[test]
-    fn document_unchecked_criteria() {
+    fn document_unchecked_tasks() {
         let body = full_body("- [ ] one\n- [x] two\n- [ ] three");
         let doc = TicketDocument::parse(&body).unwrap();
-        assert_eq!(doc.unchecked_criteria(), vec![0, 2]);
+        assert_eq!(doc.unchecked_tasks("Acceptance criteria"), vec![0, 2]);
     }
 
     #[test]
