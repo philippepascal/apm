@@ -28,11 +28,11 @@ All three fields are optional; omitting them preserves existing behaviour exactl
 
 ### Acceptance criteria
 
-- [ ] A ticket file with `epic = "ab12cd34"` in frontmatter parses without error and `ticket.frontmatter.epic` equals `"ab12cd34"`
-- [ ] A ticket file with `target_branch = "epic/ab12cd34-user-auth"` in frontmatter parses without error and `ticket.frontmatter.target_branch` equals `"epic/ab12cd34-user-auth"`
-- [ ] A ticket file with `depends_on = ["cd56ef78", "12ab34cd"]` in frontmatter parses without error and `ticket.frontmatter.depends_on` equals `["cd56ef78", "12ab34cd"]`
-- [ ] A ticket file with none of the three new fields parses without error, with all three fields absent/None (backward-compatible)
-- [ ] Serialising a ticket whose `epic`, `target_branch`, and `depends_on` fields are absent produces no mention of those keys in the TOML output
+- [x] A ticket file with `epic = "ab12cd34"` in frontmatter parses without error and `ticket.frontmatter.epic` equals `"ab12cd34"`
+- [x] A ticket file with `target_branch = "epic/ab12cd34-user-auth"` in frontmatter parses without error and `ticket.frontmatter.target_branch` equals `"epic/ab12cd34-user-auth"`
+- [x] A ticket file with `depends_on = ["cd56ef78", "12ab34cd"]` in frontmatter parses without error and `ticket.frontmatter.depends_on` equals `["cd56ef78", "12ab34cd"]`
+- [x] A ticket file with none of the three new fields parses without error, with all three fields absent/None (backward-compatible)
+- [x] Serialising a ticket whose `epic`, `target_branch`, and `depends_on` fields are absent produces no mention of those keys in the TOML output
 
 ### Out of scope
 
