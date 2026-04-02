@@ -24,7 +24,7 @@ The command lists all `epic/*` remote branches and for each shows: short ID, tit
 
 ### Acceptance criteria
 
-- [ ] `apm epic list` outputs one line per `epic/*` remote branch
+- [x] `apm epic list` outputs one line per `epic/*` remote branch
 - [ ] Each line shows the 8-char ID, the humanized title (hyphens → spaces, title-cased), derived state, and non-zero per-state ticket counts
 - [ ] When no `epic/*` branches exist, the command exits 0 with no output
 - [ ] Derived state is `empty` when no tickets reference the epic ID
