@@ -1,14 +1,15 @@
 +++
 id = "54b043f7"
 title = "Add /api/epics server routes"
-state = "groomed"
+state = "in_design"
 priority = 4
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
+agent = "philippepascal"
 branch = "ticket/54b043f7-add-api-epics-server-routes"
 created_at = "2026-04-01T21:55:53.796830Z"
-updated_at = "2026-04-01T22:00:26.051726Z"
+updated_at = "2026-04-02T00:51:44.997275Z"
 +++
 
 ## Spec
@@ -51,3 +52,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:00Z | new | groomed | claude-0401-2145-a8f3 |
+| 2026-04-02T00:51Z | groomed | in_design | philippepascal |
