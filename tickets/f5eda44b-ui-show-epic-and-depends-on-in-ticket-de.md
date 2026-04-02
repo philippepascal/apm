@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:53:14.903037Z"
 
 ### Problem
 
-The ticket detail panel shows the ticket's core fields but not `epic` or `depends_on`. Engineers inspecting a ticket cannot see which epic it belongs to or which tickets it is waiting on.
+The ticket detail panel (`apm-ui/src/components/TicketDetail.tsx`) renders core fields — title, state, effort, risk, priority — but has no awareness of `epic` or `depends_on`. Engineers cannot tell from the UI which epic a ticket belongs to, or which tickets it is waiting on before it can be dispatched.
 
-The full design is in `docs/epics.md` (§ apm-ui changes — Ticket detail panel). When `epic` is present, show a clickable label that sets the epic filter on the supervisor board. When `depends_on` is present, show a list of ticket IDs — each links to that ticket's detail panel, and resolved tickets (state `implemented` or later) are shown with strikethrough.
+The underlying `Frontmatter` struct in `apm-core/src/ticket.rs` does not yet declare `epic` or `depends_on` fields, so they are stripped during parsing even when present in the TOML frontmatter. Adding them to the struct is the minimal server-side change needed; the `TicketDetailResponse` already flattens `Frontmatter`, so the new fields will appear in the API automatically.
+
+On the UI side, two small features are needed in the detail panel header: a clickable epic label (that sets the epic filter on the supervisor board so engineers can quickly scope to the same epic) and a dependency list (ticket IDs that link to each dep's detail panel, with strikethrough on resolved deps).
 
 ### Acceptance criteria
 
