@@ -1,7 +1,7 @@
 +++
 id = "a3904ecd"
 title = "UI: add epic and depends_on fields to new ticket modal"
-state = "implemented"
+state = "closed"
 priority = 2
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "82968"
 branch = "ticket/a3904ecd-ui-add-epic-and-depends-on-fields-to-new"
 created_at = "2026-04-01T21:56:06.583740Z"
-updated_at = "2026-04-02T06:52:09.022947Z"
+updated_at = "2026-04-02T19:07:32.007545Z"
 +++
 
 ## Spec
@@ -129,3 +129,4 @@ Tests
 | 2026-04-02T02:29Z | specd | ready | apm |
 | 2026-04-02T06:47Z | ready | in_progress | philippepascal |
 | 2026-04-02T06:52Z | in_progress | implemented | claude-0401-2200-w7k3 |
+| 2026-04-02T19:07Z | implemented | closed | apm-sync |
