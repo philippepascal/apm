@@ -113,8 +113,7 @@ Integration test in `apm/tests/integration.rs`: temp git repo with two fake `epi
 
 ### Amendment requests
 
-- [x] `derive_epic_state` must not reference ticket state names. Remove hardcoded "in_design", "in_progress", "accepted", "closed", "implemented" from AC and Approach. Replace with config-driven rules: a ticket is "actively worked" when its state config has `actionable` containing "agent"; a ticket is "dep-satisfied" when its state has `satisfies_deps = true`; a ticket is "done" when its state has `terminal = true`. Update the AC to describe the four epic states using these flags: empty (no tickets), active (any agent-actionable ticket), complete (all tickets satisfies_deps or terminal, at least one satisfies_deps), done (all tickets terminal).
-- [x] Update the Approach's `derive_epic_state` implementation to accept `&[StateConfig]` and use the flags above instead of comparing state ID strings.
+- [ ] Delete the duplicate "### Files changed" and "### State derivation note" and "### Tests" sections that remain at the bottom of the spec. They still contain the old `derive_epic_state(states: &[&str])` signature with hardcoded state names ("in_design", "in_progress", "accepted", "closed", "implemented"). The corrected Approach above those sections is authoritative; the stale duplicates must be removed entirely.
 
 ### Code review
 
