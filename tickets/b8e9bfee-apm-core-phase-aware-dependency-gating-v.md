@@ -43,7 +43,8 @@ Example for this project's `apm.toml`:
 - Multiple gate tags per state (e.g. a state satisfying both `"spec"` and `"impl"` gates simultaneously)
 - Per-dependency-edge gate overrides (gate is declared on the dependent's state, not on individual dep links)
 - Any display or UI changes to how blocked/unblocked status is shown
-- Changing how `in_design`, `ammend`, or `question` states interact with dependency gating
+- Setting `dep_requires` on `in_design`, `question`, or other mid-flight states (only `groomed` needs it)
+- Changing which states `in_design` or `question` require from their own deps
 
 ### Approach
 
@@ -135,99 +136,6 @@ Integration test in the existing integration test file:
 3. Update `workflow.toml`
 4. Add unit and integration tests
 5. Run `cargo test --workspace`
-
-### 1. `apm-core/src/config.rs` — extend `StateConfig`
-
-Add an untagged enum to handle the union TOML type:
-
-```rust
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(untagged)]
-pub enum SatisfiesDeps {
-    Bool(bool),
-    Tag(String),
-}
-
-impl Default for SatisfiesDeps {
-    fn default() -> Self { SatisfiesDeps::Bool(false) }
-}
-```
-
-Change `StateConfig`:
-- `satisfies_deps: bool` -> `satisfies_deps: SatisfiesDeps`  (keep `#[serde(default)]`)
-- Add `#[serde(default)] pub dep_requires: Option<String>`
-
-The `SatisfiesDeps` enum must be `pub` so `ticket.rs` can match on it.
-
-### 2. `apm-core/src/ticket.rs` — update `dep_satisfied` and `pick_next`
-
-**`dep_satisfied`** — add `required_gate: Option<&str>` parameter:
-
-```rust
-pub fn dep_satisfied(dep_state: &str, required_gate: Option<&str>, config: &Config) -> bool {
-    config.workflow.states.iter()
-        .find(|s| s.id == dep_state)
-        .map(|s| {
-            if s.terminal { return true; }
-            match &s.satisfies_deps {
-                SatisfiesDeps::Bool(true) => true,
-                SatisfiesDeps::Tag(tag) => required_gate == Some(tag.as_str()),
-                SatisfiesDeps::Bool(false) => false,
-            }
-        })
-        .unwrap_or(false)
-}
-```
-
-**`pick_next`** — before the dep loop, resolve the candidate ticket's `dep_requires`:
-
-```rust
-let required_gate = config.workflow.states.iter()
-    .find(|s| s.id == state)
-    .and_then(|s| s.dep_requires.as_deref());
-
-// inside the dep loop:
-if !dep_satisfied(&dep.frontmatter.state, required_gate, config) {
-    return false;
-}
-```
-
-Update every existing call to `dep_satisfied` (only the one in `pick_next`) to pass the gate.
-
-### 3. `.apm/workflow.toml` — configure the project
-
-Add to the `specd` state:
-```toml
-satisfies_deps = "spec"
-```
-
-Add to the `groomed` state:
-```toml
-dep_requires = "spec"
-```
-
-Leave `implemented` and `closed` as `satisfies_deps = true` — no change needed.
-
-### 4. Tests
-
-**Unit tests** in `apm-core/src/ticket.rs` (inline):
-- `dep_satisfied` with `Tag("spec")` dep state and `required_gate = Some("spec")` -> true
-- `dep_satisfied` with `Tag("spec")` dep state and `required_gate = None` -> false
-- `dep_satisfied` with `Bool(true)` dep state and `required_gate = None` -> true (backward compat)
-
-**Integration test** in existing integration test file:
-- Build a two-ticket scenario: ticket A in `groomed` (with `dep_requires = "spec"`) depends on ticket B
-- When B is in `specd` (with `satisfies_deps = "spec"`): `pick_next` returns A
-- When B is only in `ready` (no `satisfies_deps`): `pick_next` does not return A
-
-### Order of steps
-
-1. Extend `StateConfig` in `config.rs` (add enum + `dep_requires` field)
-2. Update `dep_satisfied` signature and logic in `ticket.rs`
-3. Update `pick_next` to resolve and pass `required_gate`
-4. Update `workflow.toml`
-5. Add unit and integration tests
-6. Run `cargo test --workspace`
 
 ### Open questions
 
