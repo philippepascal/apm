@@ -32,8 +32,8 @@ On the UI side, two small features are needed in the detail panel header: a clic
 - [ ] When a ticket has no `depends_on` field (or an empty array), the detail panel shows no dependencies row
 - [ ] When a ticket has a `depends_on` field, the detail panel lists each dep ticket ID
 - [ ] Clicking a dep ticket ID in the detail panel sets `selectedTicketId` in the layout store to that dep's full ID, opening its detail panel
-- [ ] Dep tickets whose state is `implemented`, `accepted`, or `closed` are shown with strikethrough text
-- [ ] Dep tickets whose state is any other value are shown without strikethrough
+- [ ] Dep tickets that are absent from `blocking_deps` in the API response are shown with strikethrough text
+- [ ] Dep tickets that appear in `blocking_deps` in the API response are shown without strikethrough
 - [ ] A dep ticket ID that does not resolve to any known ticket renders as plain text (no link, no crash)
 - [ ] Existing tickets without `epic` or `depends_on` in their frontmatter continue to load and display correctly
 
