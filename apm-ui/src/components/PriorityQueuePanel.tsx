@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLayoutStore } from '../store/useLayoutStore'
 import {
@@ -28,6 +28,7 @@ interface QueueEntry {
   effort: number
   risk: number
   score: number
+  epic?: string
 }
 
 async function fetchQueue(): Promise<QueueEntry[]> {
@@ -135,6 +136,9 @@ function SortableRow({
           {entry.state}
         </span>
       </td>
+      <td className="px-2 py-1.5 font-mono text-gray-500 text-[10px]">
+        {entry.epic ? entry.epic.slice(0, 8) : '—'}
+      </td>
       <td className="px-2 py-1.5 text-right text-gray-400 text-[10px]">{entry.effort}</td>
       <td className="px-2 py-1.5 text-right text-gray-400 text-[10px]">{entry.risk}</td>
       <td className="px-2 py-1.5 text-right text-gray-400 text-[10px]">{entry.score.toFixed(1)}</td>
@@ -156,6 +160,7 @@ export default function PriorityQueuePanel() {
   const [localQueue, setLocalQueue] = useState<QueueEntry[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isMutating, setIsMutating] = useState(false)
+  const [epicFilter, setEpicFilter] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isMutating && data) {
@@ -239,6 +244,18 @@ export default function PriorityQueuePanel() {
 
   const displayQueue = localQueue.length > 0 ? localQueue : data
 
+  const availableEpics = useMemo(() => {
+    const seen = new Set<string>()
+    for (const e of displayQueue) {
+      if (e.epic) seen.add(e.epic.slice(0, 8))
+    }
+    return Array.from(seen).sort()
+  }, [displayQueue])
+
+  const filteredQueue = epicFilter
+    ? displayQueue.filter((e) => (e.epic ? e.epic.slice(0, 8) === epicFilter : false))
+    : displayQueue
+
   return (
     <div className="overflow-auto h-full flex flex-col">
       {errorMsg && (
@@ -250,6 +267,20 @@ export default function PriorityQueuePanel() {
           >
             ×
           </button>
+        </div>
+      )}
+      {availableEpics.length > 0 && (
+        <div className="px-2 py-1.5 shrink-0">
+          <select
+            className="text-[10px] bg-gray-800 text-gray-300 border border-gray-700 rounded px-1 py-0.5"
+            value={epicFilter ?? ''}
+            onChange={(e) => setEpicFilter(e.target.value || null)}
+          >
+            <option value="">All epics</option>
+            {availableEpics.map((id) => (
+              <option key={id} value={id}>{id}</option>
+            ))}
+          </select>
         </div>
       )}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -265,24 +296,28 @@ export default function PriorityQueuePanel() {
                 <th className="px-2 py-1.5 text-left font-medium">ID</th>
                 <th className="px-2 py-1.5 text-left font-medium">Title</th>
                 <th className="px-2 py-1.5 text-left font-medium">State</th>
+                <th className="px-2 py-1.5 text-left font-medium">Epic</th>
                 <th className="px-2 py-1.5 text-right font-medium w-6">E</th>
                 <th className="px-2 py-1.5 text-right font-medium w-6">R</th>
                 <th className="px-2 py-1.5 text-right font-medium">Score</th>
               </tr>
             </thead>
             <tbody>
-              {displayQueue.map((entry, index) => (
-                <SortableRow
-                  key={entry.id}
-                  entry={entry}
-                  isSelected={entry.id === selectedTicketId}
-                  index={index}
-                  total={displayQueue.length}
-                  onSelect={() => setSelectedTicketId(entry.id)}
-                  onMoveUp={() => handleMoveUp(index)}
-                  onMoveDown={() => handleMoveDown(index)}
-                />
-              ))}
+              {filteredQueue.map((entry) => {
+                const index = displayQueue.findIndex((e) => e.id === entry.id)
+                return (
+                  <SortableRow
+                    key={entry.id}
+                    entry={entry}
+                    isSelected={entry.id === selectedTicketId}
+                    index={index}
+                    total={displayQueue.length}
+                    onSelect={() => setSelectedTicketId(entry.id)}
+                    onMoveUp={() => handleMoveUp(index)}
+                    onMoveDown={() => handleMoveDown(index)}
+                  />
+                )
+              })}
             </tbody>
           </table>
         </SortableContext>
