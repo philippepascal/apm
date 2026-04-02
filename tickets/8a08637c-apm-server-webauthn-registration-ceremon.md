@@ -1,14 +1,15 @@
 +++
 id = "8a08637c"
 title = "apm-server: WebAuthn registration ceremony and embedded registration page"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/8a08637c-apm-server-webauthn-registration-ceremon"
 created_at = "2026-04-02T20:54:17.589009Z"
-updated_at = "2026-04-02T23:22:51.104439Z"
+updated_at = "2026-04-02T23:51:42.897497Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["e2e3d958"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
+| 2026-04-02T23:51Z | groomed | in_design | philippepascal |
