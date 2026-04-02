@@ -60,6 +60,10 @@ At query time, build a reverse dependency index from all loaded tickets and prop
 
 5. In `queue_handler`, build the reverse index once (from `tickets`) before the `.map()` loop. Set `effective_priority` from `effective_priority(t, &rev_idx)` on each entry; compute `score` using the same elevated value so it stays consistent with the sort order returned by `sorted_actionable`.
 
+**Performance note**
+
+`apm next` calls `sorted_actionable` on every invocation, so `build_reverse_index` is called once per invocation — acceptable at ticket scale. For `apm list` and the `/api/queue` endpoint, which may be called frequently, the reverse index and all derived effective priorities must be built **once per request** and reused across the response. Do not call `build_reverse_index` inside a per-ticket loop (e.g. inside `.map()`) — that would make it O(n²) unnecessarily.
+
 **Step order**
 
 1. Implement `build_reverse_index` and `effective_priority` in `ticket.rs` with unit tests covering: single-hop elevation, transitive elevation, no-dependents (identity), and cycle safety.
