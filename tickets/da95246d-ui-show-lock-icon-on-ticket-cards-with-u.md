@@ -1,15 +1,15 @@
 +++
 id = "da95246d"
 title = "UI: show lock icon on ticket cards with unresolved depends_on"
-state = "ammend"
+state = "in_design"
 priority = 2
 effort = 3
 risk = 2
 author = "claude-0401-2145-a8f3"
-agent = "64122"
+agent = "philippepascal"
 branch = "ticket/da95246d-ui-show-lock-icon-on-ticket-cards-with-u"
 created_at = "2026-04-01T21:56:15.495249Z"
-updated_at = "2026-04-02T01:37:34.683327Z"
+updated_at = "2026-04-02T01:43:19.005823Z"
 +++
 
 ## Spec
@@ -156,3 +156,4 @@ Add a test in `apm-server/src/main.rs` (alongside `list_tickets_includes_badge_f
 | 2026-04-02T00:54Z | groomed | in_design | philippepascal |
 | 2026-04-02T00:58Z | in_design | specd | claude-0402-0100-spec1 |
 | 2026-04-02T01:37Z | specd | ammend | philippepascal |
+| 2026-04-02T01:43Z | ammend | in_design | philippepascal |
