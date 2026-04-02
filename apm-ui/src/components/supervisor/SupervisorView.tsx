@@ -47,7 +47,8 @@ export default function SupervisorView() {
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
-  const [epicFilter, setEpicFilter] = useState<string | null>(null)
+  const epicFilter = useLayoutStore((s) => s.epicFilter)
+  const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
   const [showClosed, setShowClosed] = useState(false)
 
   const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
