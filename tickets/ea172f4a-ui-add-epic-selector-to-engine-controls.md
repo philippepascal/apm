@@ -94,7 +94,7 @@ Tests:
 ### Amendment requests
 
 - [x] Remove step 4 from Approach (GET /api/epics route implementation) — that route is owned by ticket 54b043f7. This ticket should declare 54b043f7 as a prerequisite and consume the existing route, not re-implement it.
-- [ ] Remove the two AC items that test GET /api/epics behaviour — they belong to 54b043f7. The only AC items for this ticket should be about the UI epic selector and the engine start/status API fields.
+- [x] Remove the two AC items that test GET /api/epics behaviour — they belong to 54b043f7. The only AC items for this ticket should be about the UI epic selector and the engine start/status API fields.
 
 ### Code review
 
