@@ -115,13 +115,24 @@ be low-risk if the path is clear.
 ## Handling `ammend` tickets
 
 When the ticket is in `ammend` state:
-1. Read the Amendment requests in `## History` carefully — each item is a
-   checkbox the supervisor expects you to check when addressed
-2. Transition to `in_design` before editing
-3. Address every item; check its box in the ticket
+1. `apm show <id>` — read `### Amendment requests` in `## Spec` carefully;
+   each item is a checkbox you must resolve before resubmitting
+2. `apm state <id> in_design` — claim the ticket and provision its worktree;
+   prints the worktree path
+3. For each checkbox, make the requested change to the relevant spec section,
+   then mark it done:
+   ```bash
+   apm spec <id> --section "Amendment requests" --mark "<exact checkbox text>"
+   ```
 4. Update `### Approach` if the amendments change the implementation plan
-5. Do not delete or overwrite previous spec content — it is the decision record
-6. Transition to `specd` only when **all** amendment boxes are checked
+5. Do not delete answered questions or previously checked items — they are the
+   decision record
+6. Commit the updated ticket file via the worktree path:
+   ```bash
+   git -C <worktree-path> add tickets/<id>-<slug>.md
+   git -C <worktree-path> commit -m "ticket(<id>): address amendments"
+   ```
+7. `apm state <id> specd` — resubmit only when **all** amendment boxes are checked
 
 ---
 

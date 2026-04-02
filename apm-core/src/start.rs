@@ -161,6 +161,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     let default_branch = &config.project.default_branch;
+    let merge_base = t.frontmatter.target_branch.clone()
+        .unwrap_or_else(|| default_branch.to_string());
 
     if aggressive {
         if let Err(e) = git::fetch_branch(root, &branch) {
@@ -176,7 +178,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let worktrees_base = root.join(&config.worktrees.dir);
     let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
 
-    let remote_ref = format!("origin/{default_branch}");
+    let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")
         .args(["rev-parse", "--verify", &remote_ref])
         .current_dir(&wt_display)
@@ -186,7 +188,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     {
         remote_ref.as_str()
     } else {
-        default_branch.as_str()
+        merge_base.as_str()
     };
     let merge_message = match std::process::Command::new("git")
         .args(["merge", merge_ref, "--no-edit"])
