@@ -1,7 +1,7 @@
 +++
 id = "53788218"
 title = "apm agents command broken after migration to .apm/ directory"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "93051"
 branch = "ticket/53788218-apm-agents-command-broken-after-migratio"
 created_at = "2026-04-02T05:27:56.648370Z"
-updated_at = "2026-04-02T17:39:38.989822Z"
+updated_at = "2026-04-02T17:45:38.185101Z"
 +++
 
 ## Spec
@@ -64,3 +64,4 @@ The test should use the existing `setup()` helper pattern from the integration t
 | 2026-04-02T17:29Z | in_design | specd | claude-0402-1800-c9d1 |
 | 2026-04-02T17:39Z | specd | ready | apm |
 | 2026-04-02T17:39Z | ready | in_progress | philippepascal |
+| 2026-04-02T17:45Z | in_progress | implemented | claude-0402-1745-f2e1 |
