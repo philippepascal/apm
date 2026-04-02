@@ -836,6 +836,26 @@ mod tests {
         assert!(err.to_string().contains("cannot parse frontmatter"));
     }
 
+    #[test]
+    fn target_branch_round_trips() {
+        let raw = minimal_raw("target_branch = \"epic/abc\"\n", "## Spec\n\ncontent\n");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        let serialized = t.serialize().unwrap();
+        assert!(serialized.contains("target_branch = \"epic/abc\""));
+        let t2 = Ticket::parse(dummy_path(), &serialized).unwrap();
+        assert_eq!(t2.frontmatter.target_branch, Some("epic/abc".to_string()));
+    }
+
+    #[test]
+    fn target_branch_absent_not_added_on_round_trip() {
+        let raw = minimal_raw("", "## Spec\n\ncontent\n");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        let serialized = t.serialize().unwrap();
+        assert!(!serialized.contains("target_branch"));
+        let t2 = Ticket::parse(dummy_path(), &serialized).unwrap();
+        assert!(t2.frontmatter.target_branch.is_none());
+    }
+
     // --- serialize round-trip ---
 
     #[test]

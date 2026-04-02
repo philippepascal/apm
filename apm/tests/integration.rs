@@ -2912,3 +2912,89 @@ fn sync_detect_regular_merge_still_detected() {
         "regular-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
 }
+
+#[test]
+fn start_uses_target_branch_as_merge_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[sync]
+aggressive = false
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+"#,
+    )
+    .unwrap();
+
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    // Create epic/e1-foo branch with a unique commit.
+    git(p, &["checkout", "-b", "epic/e1-foo"]);
+    std::fs::write(p.join("epic-marker.txt"), "epic content").unwrap();
+    git(p, &["add", "epic-marker.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic unique commit"]);
+
+    // Back to main.
+    git(p, &["checkout", "main"]);
+
+    // Create ticket branch with target_branch = "epic/e1-foo".
+    let ticket_branch = "ticket/abc1-epic-task";
+    git(p, &["checkout", "-b", ticket_branch]);
+    let ticket_content = concat!(
+        "+++\n",
+        "id = \"abc1\"\n",
+        "title = \"Epic task\"\n",
+        "state = \"ready\"\n",
+        "branch = \"ticket/abc1-epic-task\"\n",
+        "target_branch = \"epic/e1-foo\"\n",
+        "+++\n\n",
+    );
+    std::fs::write(p.join("tickets/abc1-epic-task.md"), ticket_content).unwrap();
+    git(p, &["add", "tickets/abc1-epic-task.md"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+
+    git(p, &["checkout", "main"]);
+
+    apm::cmd::start::run(p, "abc1", true, false, false, "test-agent").unwrap();
+
+    // The worktree should exist.
+    let wt_path = p.join("worktrees").join("ticket-abc1-epic-task");
+    assert!(wt_path.exists(), "worktree should be created at {}", wt_path.display());
+
+    // The unique commit from epic/e1-foo should appear in the worktree history.
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline"])
+        .current_dir(&wt_path)
+        .output()
+        .unwrap();
+    let log_str = String::from_utf8(log.stdout).unwrap();
+    assert!(
+        log_str.contains("epic unique commit"),
+        "epic branch commit should be in worktree history; got:\n{log_str}"
+    );
+}
