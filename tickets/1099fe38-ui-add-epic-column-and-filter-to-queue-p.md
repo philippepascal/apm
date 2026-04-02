@@ -15,7 +15,9 @@ updated_at = "2026-04-01T22:01:18.358221Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The queue panel shows tickets without any grouping or filtering by epic. When multiple epics are in flight, all tickets are mixed together and there is no way to focus on a single epic's work queue.
+
+The full design is in `docs/epics.md` (§ apm-ui changes — Queue panel). Add an **Epic** column showing the short epic ID or "—" for free tickets. Add an epic filter dropdown following the same pattern as the existing state filter — selecting an epic hides tickets from other epics.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
