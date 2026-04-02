@@ -1,7 +1,7 @@
 +++
 id = "c767a37b"
 title = "Merge completion strategy should not push main to origin"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "1915"
 branch = "ticket/c767a37b-merge-completion-strategy-should-not-pus"
 created_at = "2026-04-02T03:15:29.694878Z"
-updated_at = "2026-04-02T17:24:55.486834Z"
+updated_at = "2026-04-02T19:07:47.341978Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ Single change in one file:\n\n**`apm-core/src/state.rs`** — `merge_into_defaul
 | 2026-04-02T17:22Z | specd | ready | apm |
 | 2026-04-02T17:23Z | ready | in_progress | philippepascal |
 | 2026-04-02T17:24Z | in_progress | implemented | claude-0402-1730-w0rk |
+| 2026-04-02T19:07Z | implemented | closed | apm-sync |

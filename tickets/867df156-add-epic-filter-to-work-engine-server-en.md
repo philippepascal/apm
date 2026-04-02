@@ -1,7 +1,7 @@
 +++
 id = "867df156"
 title = "Add epic filter to work engine server endpoint"
-state = "implemented"
+state = "closed"
 priority = 4
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "73276"
 branch = "ticket/867df156-add-epic-filter-to-work-engine-server-en"
 created_at = "2026-04-01T21:56:02.797958Z"
-updated_at = "2026-04-02T06:30:11.102344Z"
+updated_at = "2026-04-02T19:07:18.153896Z"
 +++
 
 ## Spec
@@ -128,3 +128,4 @@ Four files change. Order of changes matters for compilation.
 | 2026-04-02T02:29Z | specd | ready | apm |
 | 2026-04-02T06:27Z | ready | in_progress | philippepascal |
 | 2026-04-02T06:30Z | in_progress | implemented | claude-0401-2300-c9d2 |
+| 2026-04-02T19:07Z | implemented | closed | apm-sync |
