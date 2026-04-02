@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:43:35.125120Z"
 
 ### Problem
 
-When a ticket belongs to an epic, its worktree must be provisioned from the epic branch (not `main`), and its PR must target the epic branch (not `main`). Currently `apm start` always uses the default branch for both.
+When a ticket belongs to an epic, its worktree must be provisioned from the epic branch (not `main`), and its PR must target the epic branch (not `main`). Currently `apm start` always uses `config.project.default_branch` for both: as the merge source when setting up the worktree, and as the `--base` argument when creating the PR via `gh_pr_create_or_update`.
 
-The full design is in `docs/epics.md` (§ Workflow integration — `apm start` and Completion strategy). When `target_branch` is set in the ticket frontmatter, `apm start` provisions the worktree from that branch tip instead of the default branch. The `gh_pr_create_or_update` call site passes `ticket.frontmatter.target_branch.as_deref().unwrap_or(default_branch)` — described in the spec as a one-line change. Tickets without `target_branch` are completely unaffected.
+The `docs/epics.md` design (§ Workflow integration) specifies that when `target_branch` is set in ticket frontmatter, `apm start` should merge from that branch into the worktree instead of the default branch. The PR creation call site should also pass `target_branch` as the base. Tickets without `target_branch` are completely unaffected.
+
+The `target_branch` field does not yet exist on the `Frontmatter` struct in `apm-core/src/ticket.rs`, so it must be added before the two call-site changes can be made.
 
 ### Acceptance criteria
 
