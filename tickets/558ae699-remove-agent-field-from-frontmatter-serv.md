@@ -47,7 +47,32 @@ The fix removes `agent` from the `Frontmatter` struct, the server worker respons
 
 ### Approach
 
-How the implementation will work.
+This ticket depends on 610be42e landing first. By that point `agent` is no longer written to frontmatter and is absent from CLI output; the changes below complete the cleanup.
+
+**1. `apm-core/src/ticket.rs` — remove `agent` field from `Frontmatter`**
+- Delete the `pub agent: Option<String>` field and its `#[serde(...)]` attribute entirely.
+- The `toml` crate silently drops unknown keys on parse, so existing ticket files containing `agent = "..."` continue to load without error.
+- The `handoff()` function was already updated by 610be42e to not reference `agent`; no further change needed there.
+
+**2. Fix all `Frontmatter` struct literals that break at compile time**
+- `apm-server/src/queue.rs` — `fake_ticket()` helper: remove the `agent: None` line.
+- `apm-server/src/main.rs` — in-memory test helper (`make_ticket()` or similar): remove the `agent: None` line.
+- Any other in-test struct literals found by the compiler; fix them the same way.
+
+**3. `apm-server/src/workers.rs` — remove `agent` from `WorkerInfo`**
+- Delete `agent: String` from the `WorkerInfo` struct.
+- In `collect_workers()`, change the tuple destructure (line ~80) from `(ticket_title, branch, state, agent)` to `(ticket_title, branch, state)`, removing the `t.frontmatter.agent.clone().unwrap_or_default()` arm.
+- Remove `agent` from the `results.push(WorkerInfo { ... })` call.
+
+**4. `apm-server/src/main.rs` — clean up `take_ticket` handler**
+- Remove the fallback branch (`Err(e) if e.to_string().contains("no agent assigned")`) that writes `ticket.frontmatter.agent = Some(agent_name.clone())`. After 610be42e, `handoff()` succeeds unconditionally on tickets with no agent; this branch is dead code.
+- Update the commit message from `"ticket({id}): reassign agent to {agent_name}"` to `"ticket({id}): take ticket"`.
+- Remove the now-unused `agent_name_clone` binding (was only referenced in the commit message format string).
+
+**Order of operations**
+1. Remove struct field and fix all struct literals (step 1 + 2) — get the code to compile.
+2. Apply server-only changes (steps 3 + 4).
+3. Run `cargo test --workspace` — all tests must pass before transitioning to `implemented`.
 
 ### Open questions
 
