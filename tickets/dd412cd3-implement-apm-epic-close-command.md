@@ -15,7 +15,9 @@ updated_at = "2026-04-01T21:59:48.475634Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When all tickets in an epic are implemented, the epic branch must be merged to `main` as a single coherent unit. There is currently no command to initiate this — engineers would have to create the PR manually.
+
+The full design is in `docs/epics.md` (§ Commands — `apm epic close`). The command runs `gh pr create` from the epic branch targeting `main`. It does not merge — merging requires human approval as usual. The command should refuse (with a clear error) if not all tickets are `implemented` or later, since merging a partial epic would leave incomplete work on main.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
