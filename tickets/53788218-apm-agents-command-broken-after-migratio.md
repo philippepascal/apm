@@ -28,7 +28,15 @@ The `apm agents` command reads the agents instructions file path from `[agents] 
 
 ### Approach
 
-Single-file config change — no code changes required.\n\n1. Open `.apm/config.toml` (the project's own APM config, at the repo root)\n2. On the line `instructions = "apm.agents.md"` under `[agents]`, update it to `instructions = ".apm/agents.md"`\n3. Verify manually: `cargo run -p apm -- agents` should print the contents of `.apm/agents.md`\n4. Commit the change to the ticket branch:\n   `git -C <worktree> add .apm/config.toml`\n   `git -C <worktree> commit -m "Fix agents instructions path after .apm/ migration"`\n\nNo test changes needed — the existing test suite covers config loading; the fix is a data change, not a logic change.
+Update `instructions` under `[agents]` in `.apm/config.toml` from `apm.agents.md` to `.apm/agents.md`.
+
+Add an integration test in `apm/tests/integration.rs` that:
+- Creates a temp git repo with an apm.toml that sets `[agents] instructions = "agents-instructions.md"`
+- Writes a file `agents-instructions.md` with known content to the repo root
+- Calls `apm::cmd::agents::run(&root)` (or captures stdout and calls the binary)
+- Asserts the call returns `Ok(())` and the file contents are printed to stdout
+
+The test should use the existing `setup()` helper pattern from the integration test file and capture stdout via a suitable mechanism (e.g. `std::io::Write` redirect or capturing `print!` output). Look at how similar tests call `apm::cmd` functions directly.
 
 ### Open questions
 
