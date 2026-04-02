@@ -3229,9 +3229,9 @@ fn epic_list_shows_epics_with_derived_state_and_counts() {
     let lines: Vec<&str> = stdout.lines().collect();
     assert_eq!(lines.len(), 2, "expected 2 lines, got:\n{stdout}");
 
-    // Epic 1: active (has agent-actionable ticket), counts show ready and implemented
+    // Epic 1: in_progress (has ticket with neither satisfies_deps nor terminal)
     assert!(lines[0].contains(epic1_id), "line 0 should contain epic1 id: {}", lines[0]);
-    assert!(lines[0].contains("active"), "line 0 should be active: {}", lines[0]);
+    assert!(lines[0].contains("in_progress"), "line 0 should be in_progress: {}", lines[0]);
     assert!(lines[0].contains("User Authentication"), "line 0 should have title: {}", lines[0]);
     assert!(lines[0].contains("1 ready"), "line 0 should show 1 ready: {}", lines[0]);
     assert!(lines[0].contains("1 implemented"), "line 0 should show 1 implemented: {}", lines[0]);
@@ -3240,6 +3240,180 @@ fn epic_list_shows_epics_with_derived_state_and_counts() {
     assert!(lines[1].contains(epic2_id), "line 1 should contain epic2 id: {}", lines[1]);
     assert!(lines[1].contains("empty"), "line 1 should be empty: {}", lines[1]);
     assert!(lines[1].contains("Billing Overhaul"), "line 1 should have title: {}", lines[1]);
+}
+
+// --- epic show ---
+
+fn setup_epic_show() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[sync]
+aggressive = false
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn epic_show_displays_header_and_ticket_table() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-user-auth");
+    create_epic_branch(p, &epic_branch);
+
+    // Ticket 1: belongs to epic, ready state
+    let t1 = format!(
+        "+++\nid = \"t2000001\"\ntitle = \"Implement login\"\nstate = \"ready\"\nbranch = \"ticket/t2000001-impl-login\"\nepic = \"{epic_id}\"\nagent = \"alice\"\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t2000001-impl-login", "tickets/t2000001-impl-login.md", &t1);
+
+    // Ticket 2: belongs to epic, implemented state, with depends_on
+    let t2 = format!(
+        "+++\nid = \"t2000002\"\ntitle = \"Add OAuth\"\nstate = \"implemented\"\nbranch = \"ticket/t2000002-add-oauth\"\nepic = \"{epic_id}\"\ndepends_on = [\"t2000001\"]\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t2000002-add-oauth", "tickets/t2000002-add-oauth.md", &t2);
+
+    // Ticket 3: does NOT belong to epic
+    let t3 = "+++\nid = \"t2000003\"\ntitle = \"Unrelated\"\nstate = \"ready\"\nbranch = \"ticket/t2000003-unrelated\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/t2000003-unrelated", "tickets/t2000003-unrelated.md", t3);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", epic_id])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "exit: {}\nstderr: {}",
+        out.status,
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    // Header block
+    assert!(stdout.contains("User Auth"), "should contain title: {stdout}");
+    assert!(stdout.contains(&epic_branch), "should contain branch: {stdout}");
+    assert!(stdout.contains("in_progress"), "should contain derived state: {stdout}");
+    // Ticket table rows
+    assert!(stdout.contains("t2000001"), "should contain ticket1 id: {stdout}");
+    assert!(stdout.contains("t2000002"), "should contain ticket2 id: {stdout}");
+    assert!(stdout.contains("alice"), "should contain agent name: {stdout}");
+    assert!(stdout.contains("t2000001"), "ticket2 depends_on should show t2000001: {stdout}");
+    // Unrelated ticket must NOT appear
+    assert!(!stdout.contains("t2000003"), "unrelated ticket must not appear: {stdout}");
+    assert!(!stdout.contains("Unrelated"), "unrelated ticket title must not appear: {stdout}");
+}
+
+#[test]
+fn epic_show_prefix_resolves_correctly() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-user-auth");
+    create_epic_branch(p, &epic_branch);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", "ab12"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "exit: {}\nstderr: {}",
+        out.status,
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains(&epic_branch), "should resolve via prefix: {stdout}");
+}
+
+#[test]
+fn epic_show_no_match_exits_nonzero() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", "zzzzzzz"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected non-zero exit");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("zzzzzzz"), "error should mention the prefix: {stderr}");
+}
+
+#[test]
+fn epic_show_ambiguous_prefix_exits_nonzero() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    // Create two epics with the same prefix "aa"
+    create_epic_branch(p, "epic/aa000001-first");
+    create_epic_branch(p, "epic/aa000002-second");
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", "aa"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected non-zero exit for ambiguous prefix");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("ambiguous"), "error should say ambiguous: {stderr}");
+}
+
+#[test]
+fn epic_show_no_tickets_prints_no_tickets() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let epic_id = "cc112233";
+    create_epic_branch(p, &format!("epic/{epic_id}-empty-epic"));
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", epic_id])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "exit: {}", out.status);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("(no tickets)"), "should print no tickets message: {stdout}");
+    assert!(stdout.contains("empty"), "derived state should be empty: {stdout}");
 }
 
 // --- apm work --epic ---
