@@ -389,6 +389,9 @@ pub fn create(
     context_section: Option<String>,
     aggressive: bool,
     section_sets: Vec<(String, String)>,
+    epic: Option<String>,
+    target_branch: Option<String>,
+    depends_on: Option<Vec<String>>,
 ) -> Result<Ticket> {
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
@@ -413,9 +416,9 @@ pub fn create(
         created_at: Some(now),
         updated_at: Some(now),
         focus_section: None,
-        epic: None,
-        target_branch: None,
-        depends_on: None,
+        epic,
+        target_branch,
+        depends_on,
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
     let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");

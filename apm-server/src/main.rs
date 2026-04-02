@@ -91,6 +91,12 @@ struct PatchTicketRequest {
 struct CreateTicketRequest {
     title: Option<String>,
     sections: Option<std::collections::HashMap<String, String>>,
+    epic: Option<String>,
+    depends_on: Option<Vec<String>>,
+}
+
+fn find_epic_branch(root: &std::path::Path, short_id: &str) -> Option<String> {
+    apm_core::git::find_epic_branch(root, short_id)
 }
 
 fn extract_frontmatter_raw(content: &str) -> Option<&str> {
@@ -528,6 +534,22 @@ async fn create_ticket(
         .into_iter()
         .filter(|(_, v)| !v.trim().is_empty())
         .collect();
+    let depends_on = req.depends_on;
+    let (epic, target_branch) = match req.epic {
+        None => (None, None),
+        Some(ref short_id) => {
+            match find_epic_branch(&root, short_id) {
+                Some(branch) => (Some(short_id.clone()), Some(branch)),
+                None => {
+                    return Ok((
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({"error": format!("no epic branch found for id {short_id}")})),
+                    )
+                        .into_response());
+                }
+            }
+        }
+    };
     let result = tokio::task::spawn_blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         apm_core::ticket::create(
@@ -539,6 +561,9 @@ async fn create_ticket(
             None,
             false,
             section_sets,
+            epic,
+            target_branch,
+            depends_on,
         )
     })
     .await?;
@@ -1151,6 +1176,9 @@ label = "In Progress"
             None,
             false,
             vec![],
+            None,
+            None,
+            None,
         )
         .unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
@@ -1246,5 +1274,89 @@ label = "In Progress"
             .unwrap();
         // In-memory has no git root so returns 501 before ID resolution
         assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
+    async fn create_ticket_with_depends_on_persists_to_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let app = build_app(p.clone());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"title":"dep ticket","depends_on":["ab12cd34"]}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["depends_on"][0], "ab12cd34");
+
+        let branch = json["branch"].as_str().unwrap().to_string();
+        let id = json["id"].as_str().unwrap().to_string();
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let rel_path = format!("{}/{}-dep-ticket.md", config.tickets.dir.to_string_lossy(), id);
+        let content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
+        assert!(content.contains(r#"depends_on = ["ab12cd34"]"#), "expected depends_on in: {content}");
+    }
+
+    #[tokio::test]
+    async fn create_ticket_with_unknown_epic_returns_400() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let app = build_app(p.clone());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"title":"orphan","epic":"deadbeef"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn create_ticket_with_epic_resolves_target_branch() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        // Create an epic branch locally
+        std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "branch", "epic/ab12cd34-foo"])
+            .current_dir(&p)
+            .status()
+            .unwrap();
+
+        let app = build_app(p.clone());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"title":"epic child","epic":"ab12cd34"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["epic"], "ab12cd34");
+        assert_eq!(json["target_branch"], "epic/ab12cd34-foo");
     }
 }
