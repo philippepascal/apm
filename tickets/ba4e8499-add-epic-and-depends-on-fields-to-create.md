@@ -4,12 +4,12 @@ title = "Add epic and depends_on fields to CreateTicketRequest and ticket API re
 state = "in_design"
 priority = 8
 effort = 4
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "85628"
 branch = "ticket/ba4e8499-add-epic-and-depends-on-fields-to-create"
 created_at = "2026-04-01T21:55:57.801343Z"
-updated_at = "2026-04-02T00:46:54.050900Z"
+updated_at = "2026-04-02T00:46:58.919270Z"
 +++
 
 ## Spec
