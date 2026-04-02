@@ -34,7 +34,11 @@ The desired behaviour: each column's own header contains its minimize button; wh
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Log panel collapse behaviour (already has its own in-header toggle; unchanged)
+- Keyboard shortcuts for toggling columns
+- Persisting collapsed state across page reloads (store already handles this; no changes needed)
+- ReviewEditor mode layout (the two-panel layout used when reviewMode=true is unchanged)
+- Resizing columns — only the minimize/expand affordance changes
 
 ### Approach
 
