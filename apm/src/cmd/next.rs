@@ -17,7 +17,7 @@ pub fn run(root: &Path, json: bool, no_aggressive: bool) -> Result<()> {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p = &config.workflow.prioritization;
 
-    match ticket::pick_next(&tickets, &actionable, &[], p.priority_weight, p.effort_weight, p.risk_weight) {
+    match ticket::pick_next(&tickets, &actionable, &[], p.priority_weight, p.effort_weight, p.risk_weight, &config) {
         None => {
             if json {
                 println!("null");

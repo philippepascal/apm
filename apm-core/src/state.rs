@@ -135,7 +135,9 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     match completion {
         CompletionStrategy::Pr => {
             git::push_branch(root, &branch)?;
-            gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
+            let pr_base = t.frontmatter.target_branch.as_deref()
+                .unwrap_or(&config.project.default_branch);
+            gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title)?;
         }
         CompletionStrategy::Merge => {
             git::push_branch(root, &branch)?;
