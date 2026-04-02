@@ -3,13 +3,13 @@ id = "9b4d2c9c"
 title = "UI shows configured max workers and allow override"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "apm-ui"
 agent = "48994"
 branch = "ticket/9b4d2c9c-ui-shows-configured-max-workers-and-allo"
 created_at = "2026-04-02T19:20:21.647921Z"
-updated_at = "2026-04-02T19:22:24.726022Z"
+updated_at = "2026-04-02T19:26:45.605519Z"
 +++
 
 ## Spec
