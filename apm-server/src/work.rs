@@ -116,7 +116,10 @@ pub async fn post_work_start(
     let config =
         tokio::task::spawn_blocking(move || apm_core::config::Config::load(&root_clone)).await??;
 
-    let max_concurrent = config.agents.max_concurrent.max(1);
+    let max_concurrent = {
+        let ov = state.max_concurrent_override.lock().await;
+        ov.unwrap_or_else(|| config.agents.max_concurrent.max(1))
+    };
     let skip_permissions = config.agents.skip_permissions;
 
     let cancel = Arc::new(AtomicBool::new(false));
@@ -174,12 +177,13 @@ pub async fn get_work_dry_run(
             return Ok(Json(DryRunResponse { candidates: vec![] }))
         }
     };
+    let override_val = *state.max_concurrent_override.lock().await;
     let candidates = tokio::task::spawn_blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         let pw = config.workflow.prioritization.priority_weight;
         let ew = config.workflow.prioritization.effort_weight;
         let rw = config.workflow.prioritization.risk_weight;
-        let max_concurrent = config.agents.max_concurrent.max(1);
+        let max_concurrent = override_val.unwrap_or_else(|| config.agents.max_concurrent.max(1));
 
         let startable: Vec<String> = config
             .workflow
