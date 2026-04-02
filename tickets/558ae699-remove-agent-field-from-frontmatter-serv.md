@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/558ae699-remove-agent-field-from-frontmatter-serv"
-depends_on = ["610be42e"]
 created_at = "2026-04-02T20:53:58.923882Z"
 updated_at = "2026-04-02T20:53:58.923882Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["610be42e"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The `agent` field appears in ticket frontmatter (deserialized on read), server API responses, and `apm list`/`apm show` output. Workers are spawned once per ticket and the agent name has no durable value after implementation. The field adds noise and ties frontmatter to a specific agent naming convention. See `initial_specs/DESIGN-users.md` point 2.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
