@@ -40,7 +40,36 @@ The same staleness occurs when the user clicks Sync (Shift+S): the sync mutation
 
 ### Approach
 
-How the implementation will work.
+Two small changes, both in the frontend:
+
+**1. apm-ui/src/components/TicketDetail.tsx** — add `refetchInterval` to the detail query
+
+```ts
+const { data, isLoading, isError, error } = useQuery({
+  queryKey: ['ticket', selectedTicketId],
+  queryFn: () => fetchTicket(selectedTicketId!),
+  enabled: !!selectedTicketId,
+  refetchInterval: 10_000,   // ← add this line
+})
+```
+
+React Query's default behaviour when `refetchInterval` is set is to keep showing the previous data (`staleTime` semantics) while the background refetch is in flight — so there is no flash to a loading skeleton on each poll tick.
+
+**2. apm-ui/src/components/supervisor/SupervisorView.tsx** — also invalidate the detail query family when sync completes
+
+In the `syncMutation.onSuccess` handler, add a second invalidation that matches the `['ticket']` prefix (React Query prefix-matches partial keys):
+
+```ts
+onSuccess: () => {
+  setSyncError(null)
+  queryClient.invalidateQueries({ queryKey: ['tickets'] })
+  queryClient.invalidateQueries({ queryKey: ['ticket'] })   // ← add this line
+},
+```
+
+This covers the explicit Sync flow independently of the polling cadence.
+
+No backend changes needed. No new dependencies.
 
 ### Open questions
 
