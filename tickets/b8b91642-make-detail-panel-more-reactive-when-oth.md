@@ -3,13 +3,13 @@ id = "b8b91642"
 title = "make detail panel more reactive when other panels are updated (state of ticket selected might have changed)"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "apm"
 agent = "44819"
 branch = "ticket/b8b91642-make-detail-panel-more-reactive-when-oth"
 created_at = "2026-04-02T22:28:29.844602Z"
-updated_at = "2026-04-02T22:47:54.439219Z"
+updated_at = "2026-04-02T22:50:55.274039Z"
 +++
 
 ## Spec
