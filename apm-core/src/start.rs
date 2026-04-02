@@ -763,4 +763,62 @@ mod tests {
         std::env::remove_var("USERNAME");
         assert_eq!(resolve_agent_name(), "apm");
     }
+
+    #[test]
+    fn epic_filter_keeps_only_matching_tickets() {
+        use crate::ticket::Ticket;
+        use std::path::Path;
+
+        let make_ticket = |id: &str, epic: Option<&str>| {
+            let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+            let raw = format!(
+                "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"ready\"\n{epic_line}+++\n"
+            );
+            Ticket::parse(Path::new("tickets/dummy.md"), &raw).unwrap()
+        };
+
+        let all_tickets = vec![
+            make_ticket("aaa", Some("epic1")),
+            make_ticket("bbb", Some("epic2")),
+            make_ticket("ccc", None),
+        ];
+
+        let epic_id = "epic1";
+        let filtered: Vec<Ticket> = all_tickets.into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+            .collect();
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].frontmatter.id, "aaa");
+    }
+
+    #[test]
+    fn no_epic_filter_keeps_all_tickets() {
+        use crate::ticket::Ticket;
+        use std::path::Path;
+
+        let make_ticket = |id: &str, epic: Option<&str>| {
+            let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+            let raw = format!(
+                "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"ready\"\n{epic_line}+++\n"
+            );
+            Ticket::parse(Path::new("tickets/dummy.md"), &raw).unwrap()
+        };
+
+        let all_tickets: Vec<Ticket> = vec![
+            make_ticket("aaa", Some("epic1")),
+            make_ticket("bbb", Some("epic2")),
+            make_ticket("ccc", None),
+        ];
+
+        let count = all_tickets.len();
+        let epic_filter: Option<&str> = None;
+        let filtered: Vec<Ticket> = match epic_filter {
+            Some(eid) => all_tickets.into_iter()
+                .filter(|t| t.frontmatter.epic.as_deref() == Some(eid))
+                .collect(),
+            None => all_tickets,
+        };
+        assert_eq!(filtered.len(), count);
+    }
 }
