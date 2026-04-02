@@ -125,90 +125,12 @@ Resolution is determined entirely by `blocking_deps` — do not check state fiel
 
 Add a unit test in `apm-core/src/ticket.rs` or `apm-core/tests/`: parse a ticket with `epic = "ab12cd34"` and `depends_on = ["cd56ef78"]` in frontmatter and assert both fields deserialize correctly. Parse a ticket without these fields and assert both are `None`. All existing tests must continue to pass.
 
-### 1. `apm-core/src/ticket.rs` — extend `Frontmatter`
-
-Add two optional fields to the `Frontmatter` struct:
-
-```rust
-pub epic: Option<String>,
-pub depends_on: Option<Vec<String>>,
-```
-
-Both fields should be decorated with `#[serde(default, skip_serializing_if = "Option::is_none")]` (or equivalent) so existing ticket files without these fields continue to deserialize and round-trip correctly. No migration needed — TOML omits absent optional fields automatically.
-
-`TicketDetailResponse` and `TicketResponse` in `apm-server/src/main.rs` both use `#[serde(flatten)] frontmatter`, so the new fields appear in all existing API responses with no server-side struct changes.
-
-### 2. `apm-ui/src/store/useLayoutStore.ts` — add epic filter state
-
-Add to `LayoutStore`:
-
-```ts
-epicFilter: string | null
-setEpicFilter: (id: string | null) => void
-```
-
-Initialise `epicFilter: null`. The setter is a plain `set({ epicFilter: id })`.
-
-### 3. `apm-ui/src/components/TicketDetail.tsx` — render the two new fields
-
-**Interface update**: add `epic?: string` and `depends_on?: string[]` to the `TicketDetail` interface.
-
-**Epic row** (render below the state badge / E-R-P row, conditional on `data.epic`):
-
-- Label: "Epic"
-- Value: a `<button>` showing the epic ID
-- On click: if `epicFilter === data.epic`, call `setEpicFilter(null)`; otherwise call `setEpicFilter(data.epic)`
-- Active state: highlight the button (e.g. blue border) when `epicFilter === data.epic`
-
-**Depends on row** (render below epic row, conditional on `data.depends_on?.length`):
-
-- Label: "Depends on"
-- For each dep ID in the array, look it up in the `['tickets']` React Query cache (`useQueryClient().getQueryData<Ticket[]>(['tickets'])`) to get its current state
-- If the dep resolves: render a `<button>` that calls `setSelectedTicketId(fullId)`. Apply `line-through` class when state is `implemented`, `accepted`, or `closed`
-- If the dep does not resolve (not in cache): render the raw ID as plain text
-- The tickets list query (`['tickets']`) is already populated by `SupervisorView`; no extra fetch needed in the detail component
-
-Use `useQueryClient` (already imported) to read the cache; do not add a new `useQuery` call.
-
-### 4. `apm-ui/src/components/supervisor/SupervisorView.tsx` — apply epic filter
-
-Read `epicFilter` from the layout store:
-
-```ts
-const epicFilter = useLayoutStore((s) => s.epicFilter)
-```
-
-In the `columns` `useMemo`, after the existing `agentFilter` check, add:
-
-```ts
-if (epicFilter !== null) {
-  filtered = filtered.filter((t) => t.epic === epicFilter)
-}
-```
-
-Add `epicFilter` to the dependency array of the `useMemo`.
-
-The `Ticket` type in `apm-ui/src/components/supervisor/types.ts` should gain `epic?: string` and `depends_on?: string[]` to match the extended API response.
-
-### Order of changes
-
-1. `apm-core/src/ticket.rs` — struct fields first (unblocks API)
-2. `apm-ui/src/store/useLayoutStore.ts` — store additions
-3. `apm-ui/src/components/supervisor/types.ts` — type extension
-4. `apm-ui/src/components/supervisor/SupervisorView.tsx` — consume `epicFilter`
-5. `apm-ui/src/components/TicketDetail.tsx` — render epic + depends_on rows
-
-### Tests
-
-- Unit test in `apm-core/src/ticket.rs` (or `apm-core/tests/`): parse a ticket with `epic = "ab12cd34"` and `depends_on = ["cd56ef78"]` in frontmatter; assert fields deserialize correctly. Parse a ticket without these fields; assert fields are `None`.
-- Existing integration tests must continue to pass (`cargo test --workspace`).
-
 ### Open questions
 
 
 ### Amendment requests
 
-- [ ] Delete the duplicate "### 3." and "### 4." sections at the bottom of the spec. The "### 3." still instructs the worker to apply `line-through` when state is `implemented`, `accepted`, or `closed` — hardcoded state names. The corrected Approach above (using `blocking_deps` for resolution) is authoritative; the stale duplicate sections must be removed.
+- [x] Delete the duplicate "### 3." and "### 4." sections at the bottom of the spec. The "### 3." still instructs the worker to apply `line-through` when state is `implemented`, `accepted`, or `closed` — hardcoded state names. The corrected Approach above (using `blocking_deps` for resolution) is authoritative; the stale duplicate sections must be removed.
 
 ### Code review
 
