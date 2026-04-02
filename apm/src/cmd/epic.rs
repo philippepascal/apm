@@ -2,6 +2,60 @@ use anyhow::Result;
 use std::path::Path;
 use std::process::Command;
 
+pub fn run_list(root: &Path) -> Result<()> {
+    let config = apm_core::config::Config::load(root)?;
+
+    if config.sync.aggressive {
+        if let Err(e) = apm_core::git::fetch_all(root) {
+            eprintln!("warning: git fetch failed: {e}");
+        }
+    }
+
+    let epic_branches = apm_core::git::epic_branches(root)?;
+    if epic_branches.is_empty() {
+        return Ok(());
+    }
+
+    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+
+    for branch in &epic_branches {
+        // branch = "epic/<8-char-id>-<slug>"
+        let after_prefix = branch.trim_start_matches("epic/");
+        let id = &after_prefix[..after_prefix.find('-').unwrap_or(after_prefix.len()).min(8)];
+        let title = branch_to_title(branch);
+
+        // Find tickets belonging to this epic.
+        let epic_tickets: Vec<_> = tickets
+            .iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+            .collect();
+
+        // Collect StateConfig references for each ticket (skip unknown states).
+        let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
+            .iter()
+            .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+            .collect();
+
+        let derived = apm_core::epic::derive_epic_state(&state_configs);
+
+        // Build per-state counts (non-zero only).
+        let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        for t in &epic_tickets {
+            *counts.entry(t.frontmatter.state.clone()).or_insert(0) += 1;
+        }
+        let counts_str: String = counts
+            .iter()
+            .filter(|(_, &v)| v > 0)
+            .map(|(k, v)| format!("{v} {k}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        println!("{id:<8} [{derived:<12}] {title:<40} {counts_str}");
+    }
+
+    Ok(())
+}
+
 pub fn run_new(root: &Path, title: String) -> Result<()> {
     let branch = apm_core::epic::create(root, &title)?;
     println!("{branch}");

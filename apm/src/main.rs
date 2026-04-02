@@ -46,6 +46,8 @@ enum EpicCommand {
         /// Epic ID (4–8 char hex prefix)
         id: String,
     },
+    /// List all epics with derived state and ticket counts
+    List,
 }
 
 #[derive(Subcommand)]
@@ -670,6 +672,7 @@ fn main() -> Result<()> {
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
+        Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
     }
 }
 

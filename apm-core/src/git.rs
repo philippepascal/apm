@@ -85,6 +85,35 @@ pub fn find_epic_branches(root: &Path, id_prefix: &str) -> Vec<String> {
     result
 }
 
+/// All epic/* branch names visible locally or remotely (deduplicated), sorted.
+pub fn epic_branches(root: &Path) -> Result<Vec<String>> {
+    let mut seen = std::collections::HashSet::new();
+    let mut branches = Vec::new();
+
+    let local = run(root, &["branch", "--list", "epic/*"]).unwrap_or_default();
+    for b in local.lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
+        .filter(|l| !l.is_empty())
+    {
+        if seen.insert(b.to_string()) {
+            branches.push(b.to_string());
+        }
+    }
+
+    let remote = run(root, &["branch", "-r", "--list", "origin/epic/*"]).unwrap_or_default();
+    for b in remote.lines()
+        .map(|l| l.trim().trim_start_matches("origin/").to_string())
+        .filter(|l| !l.is_empty())
+    {
+        if seen.insert(b.clone()) {
+            branches.push(b);
+        }
+    }
+
+    branches.sort();
+    Ok(branches)
+}
+
 /// All ticket/* branch names visible locally or remotely (deduplicated).
 /// Local branches are included even when a remote exists, so that
 /// unpushed branches (e.g. just created) are visible without a push.
