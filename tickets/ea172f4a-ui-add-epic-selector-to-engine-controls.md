@@ -27,7 +27,19 @@ This requires extending the server's work engine API to accept and remember an o
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `GET /api/epics` returns a JSON array of epic objects with at least `id`, `title`, and `branch` fields, derived from `epic/*` remote git branches
+- [ ] `GET /api/epics` returns an empty array when no `epic/*` branches exist
+- [ ] `POST /api/work/start` with body `{"epic": "ab12cd34"}` starts the engine in exclusive mode
+- [ ] `POST /api/work/start` with no body (or body without `epic`) starts the engine in open mode, identical to current behaviour
+- [ ] `GET /api/work/status` includes `"epic": "ab12cd34"` when the engine is running in exclusive mode
+- [ ] `GET /api/work/status` includes `"epic": null` when the engine is running in open mode
+- [ ] The engine controls panel shows an Epic dropdown when the engine is stopped
+- [ ] The Epic dropdown is populated with epics from `GET /api/epics`; a blank/"All" option is present as the default (open mode)
+- [ ] Clicking Start with an epic selected sends `{"epic": "<id>"}` in the start request body
+- [ ] Clicking Start with no epic selected sends no epic in the start request body
+- [ ] When the engine is running in exclusive mode, a label `epic: <slug>` is shown next to the status badge
+- [ ] The `epic: <slug>` label is not shown when the engine is running in open mode
+- [ ] When the engine is stopped or idle the Epic dropdown is visible; when running it is hidden (replaced by the label if applicable)
 
 ### Out of scope
 
