@@ -27,7 +27,13 @@ Together these gaps block the supervisor-board author filter and the per-author 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `GET /api/tickets` response objects always include an `author` field (never omitted), using `"unassigned"` when the frontmatter has no author set
+- [ ] `GET /api/tickets/:id` response object always includes an `author` field, using `"unassigned"` when the frontmatter has no author set
+- [ ] `GET /api/tickets?author=<username>` returns only tickets where `author` equals `<username>`
+- [ ] `GET /api/tickets?author=unassigned` returns only tickets whose frontmatter author is absent or equal to `"unassigned"`
+- [ ] `GET /api/me` returns `{"username": "<value>"}` where `<value>` is the `username` from `.apm/local.toml` when that file exists and contains a non-empty key
+- [ ] `GET /api/me` returns `{"username": "unassigned"}` when `.apm/local.toml` is absent or contains no `username` key
+- [ ] Existing tests continue to pass after the change
 
 ### Out of scope
 
