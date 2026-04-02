@@ -28,7 +28,7 @@ Every other panel in the UI already polls on a fixed interval: PriorityQueuePane
 - [x] The automatic refresh interval is 10 seconds
 - [x] Ticket cards appear in the correct swimlane within 10 seconds of a state transition happening elsewhere
 - [x] The manual sync button (Shift+S) continues to work and still triggers a POST /api/sync followed by a data refresh
-- [ ] No visible flicker or full-board re-render disrupts the user while background polling occurs
+- [x] No visible flicker or full-board re-render disrupts the user while background polling occurs
 
 ### Out of scope
 
