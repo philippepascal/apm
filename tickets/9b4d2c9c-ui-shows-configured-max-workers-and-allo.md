@@ -84,7 +84,9 @@ Key constraints:
 
 
 ### Amendment requests
-
+Incorrect feature: we don't want the UI to be able to change the configured max workers. The configured max worker is always visible as readonly. 
+We want the UI to be able to locally (in the apm-server) use a override value instead of the configured value. That override is only for the apm-server,
+lives in memory and is lost when the apm-server is closed.
 
 ### Code review
 
