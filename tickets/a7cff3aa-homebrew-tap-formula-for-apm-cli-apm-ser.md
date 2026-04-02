@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/a7cff3aa-homebrew-tap-formula-for-apm-cli-apm-ser"
-depends_on = ["73e484df"]
 created_at = "2026-04-02T20:54:55.761604Z"
 updated_at = "2026-04-02T20:54:55.761604Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["73e484df"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+There is no Homebrew tap for apm. Users must run `cargo install` or download binaries manually. A Homebrew formula pointing at GitHub Releases pre-built binaries is the standard macOS distribution path. See `initial_specs/DESIGN-users.md` point 6.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
