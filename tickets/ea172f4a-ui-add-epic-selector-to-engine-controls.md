@@ -27,8 +27,6 @@ This requires extending the server's work engine API to accept and remember an o
 
 ### Acceptance criteria
 
-- [ ] `GET /api/epics` returns a JSON array of epic objects with at least `id`, `title`, and `branch` fields, derived from `epic/*` remote git branches
-- [ ] `GET /api/epics` returns an empty array when no `epic/*` branches exist
 - [ ] `POST /api/work/start` with body `{"epic": "ab12cd34"}` starts the engine in exclusive mode
 - [ ] `POST /api/work/start` with no body (or body without `epic`) starts the engine in open mode, identical to current behaviour
 - [ ] `GET /api/work/status` includes `"epic": "ab12cd34"` when the engine is running in exclusive mode
