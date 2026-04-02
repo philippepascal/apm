@@ -28,22 +28,22 @@ Epic state is derived on demand from the states of associated tickets (those who
 
 ### Acceptance criteria
 
-- [ ] `GET /api/epics` returns `[]` when no `epic/*` branches exist locally or at origin
-- [ ] `GET /api/epics` returns one `EpicSummary` entry per `epic/*` branch found (local or `origin/*`)
-- [ ] Each `EpicSummary` contains `id`, `title`, `branch`, `state`, and `ticket_counts` fields
-- [ ] `GET /api/epics` on an in-memory server returns HTTP 501
-- [ ] Epic `state` is `"empty"` when no tickets reference the epic (i.e. no ticket frontmatter carries `epic = "<id>"`)
-- [ ] Epic `state` is `"active"` when any associated ticket is in a state whose `StateConfig.actionable` contains `"agent"`
-- [ ] Epic `state` is `"complete"` when all associated tickets are in states where `satisfies_deps = true` or `terminal = true`, and at least one ticket is in a state where `satisfies_deps = true`
-- [ ] Epic `state` is `"done"` when all associated tickets are in states where `terminal = true`
-- [ ] `POST /api/epics` with `{"title": "My Epic"}` returns HTTP 201 with a new `EpicSummary` (state `"empty"`, empty `ticket_counts`)
-- [ ] After `POST /api/epics`, an `epic/<id>-<slug>` branch exists at origin
-- [ ] `POST /api/epics` with missing or empty `title` returns HTTP 400
-- [ ] `POST /api/epics` on an in-memory server returns HTTP 501
-- [ ] `GET /api/epics/:id` returns the matching epic with all `EpicSummary` fields plus a `tickets` array
-- [ ] Each entry in `tickets` uses the same shape as `TicketResponse` (flattened frontmatter + `body`, `has_open_questions`, `has_pending_amendments`)
-- [ ] `GET /api/epics/:id` returns HTTP 404 when no `epic/*` branch whose ID segment matches `/:id` exists
-- [ ] `GET /api/epics/:id` on an in-memory server returns HTTP 501
+- [x] `GET /api/epics` returns `[]` when no `epic/*` branches exist locally or at origin
+- [x] `GET /api/epics` returns one `EpicSummary` entry per `epic/*` branch found (local or `origin/*`)
+- [x] Each `EpicSummary` contains `id`, `title`, `branch`, `state`, and `ticket_counts` fields
+- [x] `GET /api/epics` on an in-memory server returns HTTP 501
+- [x] Epic `state` is `"empty"` when no tickets reference the epic (i.e. no ticket frontmatter carries `epic = "<id>"`)
+- [x] Epic `state` is `"active"` when any associated ticket is in a state whose `StateConfig.actionable` contains `"agent"`
+- [x] Epic `state` is `"complete"` when all associated tickets are in states where `satisfies_deps = true` or `terminal = true`, and at least one ticket is in a state where `satisfies_deps = true`
+- [x] Epic `state` is `"done"` when all associated tickets are in states where `terminal = true`
+- [x] `POST /api/epics` with `{"title": "My Epic"}` returns HTTP 201 with a new `EpicSummary` (state `"empty"`, empty `ticket_counts`)
+- [x] After `POST /api/epics`, an `epic/<id>-<slug>` branch exists at origin
+- [x] `POST /api/epics` with missing or empty `title` returns HTTP 400
+- [x] `POST /api/epics` on an in-memory server returns HTTP 501
+- [x] `GET /api/epics/:id` returns the matching epic with all `EpicSummary` fields plus a `tickets` array
+- [x] Each entry in `tickets` uses the same shape as `TicketResponse` (flattened frontmatter + `body`, `has_open_questions`, `has_pending_amendments`)
+- [x] `GET /api/epics/:id` returns HTTP 404 when no `epic/*` branch whose ID segment matches `/:id` exists
+- [x] `GET /api/epics/:id` on an in-memory server returns HTTP 501
 
 ### Out of scope
 
