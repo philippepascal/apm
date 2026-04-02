@@ -35,6 +35,22 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+enum EpicCommand {
+    /// Create a new epic branch
+    New {
+        /// Title for the epic
+        title: String,
+    },
+    /// Open a PR from the epic branch to the default branch
+    Close {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+    },
+    /// List all epics with derived state and ticket counts
+    List,
+}
+
+#[derive(Subcommand)]
 enum Command {
     /// Initialize apm in the current repository
     #[command(long_about = "Initialize apm in the current repository.
@@ -545,6 +561,11 @@ committing to the operation:
         #[arg(long, value_name = "ID")]
         kill: Option<String>,
     },
+    /// Manage epics
+    Epic {
+        #[command(subcommand)]
+        command: EpicCommand,
+    },
     /// Read or write individual spec sections of a ticket
     #[command(long_about = "Read or write individual sections of a ticket's spec.
 
@@ -649,6 +670,9 @@ fn main() -> Result<()> {
         Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
+        Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
+        Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
+        Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
     }
 }
 
