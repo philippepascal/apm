@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/73e484df-github-actions-release-ci-for-pre-built-"
+depends_on = ["48105624"]
 created_at = "2026-04-02T20:54:44.627516Z"
 updated_at = "2026-04-02T20:54:44.627516Z"
 epic = "8db73240"
