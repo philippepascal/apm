@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/610be42e-apm-core-write-author-from-identity-on-t"
-depends_on = ["4cec7a17"]
 created_at = "2026-04-02T20:53:55.085303Z"
 updated_at = "2026-04-02T20:53:55.085303Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["4cec7a17"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+New tickets write `author` from the agent name rather than resolving a real collaborator identity. The identity resolution function (git host plugin → local.toml → "unassigned") does not yet exist in apm-core, so `apm new` cannot populate `author` correctly. See `initial_specs/DESIGN-users.md` points 1 and 3.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
