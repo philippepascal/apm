@@ -42,31 +42,33 @@ Without critical-path elevation, the priority queue and `apm next` give a mislea
 
 ### Approach
 
-At query time, build a reverse dependency index from all loaded tickets and propagate max priority up the graph. No stored fields are mutated.
+At query time, build a reverse dependency index from the active (non-terminal, non-satisfies_deps) tickets and propagate max priority up the graph. No stored fields are mutated.
 
 **Files that change**
 
 `apm-core/src/ticket.rs`:
 
-1. Add `pub fn build_reverse_index<'a>(tickets: &'a [Ticket]) -> HashMap<&'a str, Vec<&'a Ticket>>`: iterate all tickets; for each ID in `depends_on`, push the current ticket into `map[dep_id]`. Tickets without `depends_on` contribute nothing.
+1. Add `pub fn build_reverse_index<'a>(tickets: &'a [Ticket]) -> HashMap<&'a str, Vec<&'a Ticket>>`: iterate the provided tickets; for each ID in `depends_on`, push the current ticket into `map[dep_id]`. Tickets without `depends_on` contribute nothing. The caller is responsible for passing only non-terminal, non-satisfies_deps tickets — closed tickets that once depended on X must not inflate X's effective priority after the work is done.
 
 2. Add `pub fn effective_priority(ticket: &Ticket, reverse_index: &HashMap<&str, Vec<&Ticket>>) -> u8`: BFS from `ticket.frontmatter.id` over the reverse index using a `HashSet<&str>` visited set. Collect `frontmatter.priority` of every reachable dependent; return `max(ticket.frontmatter.priority, max_dependent_priority)`.
 
-3. Modify `sorted_actionable`: call `build_reverse_index(tickets)` once before sorting. In the sort closure, replace each `t.score(pw, ew, rw)` call with an inline formula using `effective_priority(t, &rev_idx)` in place of `t.frontmatter.priority`. The existing `score()` method is unchanged; only the sort closure diverges.
+3. Modify `sorted_actionable`: call `build_reverse_index(actionable_tickets)` once before sorting, passing the same filtered slice used for actionability. In the sort closure, replace each `t.score(pw, ew, rw)` call with an inline formula using `effective_priority(t, &rev_idx)` in place of `t.frontmatter.priority`. The existing `score()` method is unchanged; only the sort closure diverges.
 
 `apm-server/src/queue.rs`:
 
 4. Add `effective_priority: u8` field to `QueueEntry`.
 
-5. In `queue_handler`, build the reverse index once (from `tickets`) before the `.map()` loop. Set `effective_priority` from `effective_priority(t, &rev_idx)` on each entry; compute `score` using the same elevated value so it stays consistent with the sort order returned by `sorted_actionable`.
+5. In `queue_handler`, filter `tickets` to the non-terminal, non-satisfies_deps set first. Build the reverse index once from that filtered set before the `.map()` loop. Set `effective_priority` from `effective_priority(t, &rev_idx)` on each entry; compute `score` using the same elevated value so it stays consistent with the sort order returned by `sorted_actionable`.
 
 **Performance note**
 
 `apm next` calls `sorted_actionable` on every invocation, so `build_reverse_index` is called once per invocation — acceptable at ticket scale. For `apm list` and the `/api/queue` endpoint, which may be called frequently, the reverse index and all derived effective priorities must be built **once per request** and reused across the response. Do not call `build_reverse_index` inside a per-ticket loop (e.g. inside `.map()`) — that would make it O(n²) unnecessarily.
 
+Filtering to non-terminal, non-satisfies_deps tickets before building the index is also important for long-term correctness: as a project accumulates closed tickets, passing them all to `build_reverse_index` would let finished work inflate the effective priority of unrelated open tickets. The filtering cost is O(n) and stays negligible.
+
 **Step order**
 
-1. Implement `build_reverse_index` and `effective_priority` in `ticket.rs` with unit tests covering: single-hop elevation, transitive elevation, no-dependents (identity), and cycle safety.
+1. Implement `build_reverse_index` and `effective_priority` in `ticket.rs` with unit tests covering: single-hop elevation, transitive elevation, no-dependents (identity), cycle safety, and a closed-dependent that must not elevate the blocker.
 2. Modify `sorted_actionable` to use effective priority in the sort closure; add unit tests for the new ordering.
 3. Update `QueueEntry` and the handler in `queue.rs`.
 4. Add an integration test verifying that `pick_next` selects the low-priority blocking ticket first when its dependent has higher priority.
