@@ -37,7 +37,13 @@ The command lists all `epic/*` remote branches and for each shows: short ID, tit
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic new`, `apm epic show`, `apm epic close` commands
+- Adding the `target_branch` or `depends_on` fields to `Frontmatter`
+- `depends_on` scheduling / engine loop changes
+- apm-server epic API routes
+- apm-ui epic UI additions
+- `apm new --epic` flag
+- `apm work --epic` exclusive mode
 
 ### Approach
 
