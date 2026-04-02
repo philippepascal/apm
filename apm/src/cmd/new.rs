@@ -38,7 +38,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         .unwrap_or_else(|| "apm".into());
 
     let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
-    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets)?;
+    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, None, None, None)?;
     let id = &t.frontmatter.id;
     let branch = t.frontmatter.branch.as_deref().unwrap_or("");
     let filename = t.path.file_name().unwrap().to_string_lossy();
