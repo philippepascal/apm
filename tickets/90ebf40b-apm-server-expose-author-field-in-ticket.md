@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/90ebf40b-apm-server-expose-author-field-in-ticket"
+depends_on = ["610be42e"]
 created_at = "2026-04-02T20:54:08.576527Z"
 updated_at = "2026-04-02T20:54:08.576527Z"
 epic = "8db73240"
