@@ -36,7 +36,27 @@ This matters because spec-writer agents run autonomously on `groomed`, `ammend`,
 
 ### Approach
 
-How the implementation will work.
+Two files change:
+
+**1. Create `/apm-core/src/apm.spec-writer.md`**
+Copy the contents of the current `/.apm/apm.spec-writer.md` (the live instructions file in this repo, 147 lines) verbatim into `/apm-core/src/apm.spec-writer.md`. This is the canonical source that will be embedded at compile time.
+
+**2. Update `/apm-core/src/init.rs` lines 47-54**
+Replace the inline placeholder write:
+```rust
+std::fs::write(
+    &spec_writer_path,
+    "# APM Spec-Writer Agent\n\n_Fill in spec-writing instructions here._\n",
+)?;
+```
+with the `include_str!` pattern already used for `apm.worker.md`:
+```rust
+std::fs::write(&spec_writer_path, include_str!("apm.spec-writer.md"))?;
+```
+
+No other files change. The `!spec_writer_path.exists()` guard is already in place and must be kept (no overwrite on re-init).
+
+Order: create the source file first, then update `init.rs`, then run `cargo test --workspace`.
 
 ### Open questions
 
