@@ -2912,3 +2912,212 @@ fn sync_detect_regular_merge_still_detected() {
         "regular-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
 }
+
+#[test]
+fn start_uses_target_branch_as_merge_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[sync]
+aggressive = false
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+"#,
+    )
+    .unwrap();
+
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    // Create epic/e1-foo branch with a unique commit.
+    git(p, &["checkout", "-b", "epic/e1-foo"]);
+    std::fs::write(p.join("epic-marker.txt"), "epic content").unwrap();
+    git(p, &["add", "epic-marker.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic unique commit"]);
+
+    // Back to main.
+    git(p, &["checkout", "main"]);
+
+    // Create ticket branch with target_branch = "epic/e1-foo".
+    let ticket_branch = "ticket/abc1-epic-task";
+    git(p, &["checkout", "-b", ticket_branch]);
+    let ticket_content = concat!(
+        "+++\n",
+        "id = \"abc1\"\n",
+        "title = \"Epic task\"\n",
+        "state = \"ready\"\n",
+        "branch = \"ticket/abc1-epic-task\"\n",
+        "target_branch = \"epic/e1-foo\"\n",
+        "+++\n\n",
+    );
+    std::fs::write(p.join("tickets/abc1-epic-task.md"), ticket_content).unwrap();
+    git(p, &["add", "tickets/abc1-epic-task.md"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+
+    git(p, &["checkout", "main"]);
+
+    apm::cmd::start::run(p, "abc1", true, false, false, "test-agent").unwrap();
+
+    // The worktree should exist.
+    let wt_path = p.join("worktrees").join("ticket-abc1-epic-task");
+    assert!(wt_path.exists(), "worktree should be created at {}", wt_path.display());
+
+    // The unique commit from epic/e1-foo should appear in the worktree history.
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline"])
+        .current_dir(&wt_path)
+        .output()
+        .unwrap();
+    let log_str = String::from_utf8(log.stdout).unwrap();
+    assert!(
+        log_str.contains("epic unique commit"),
+        "epic branch commit should be in worktree history; got:\n{log_str}"
+    );
+}
+
+// ── depends_on scheduling ─────────────────────────────────────────────────────
+
+fn setup_with_satisfies_deps() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+fn commit_ticket_to_branch(dir: &std::path::Path, branch: &str, path: &str, content: &str) {
+    // Create branch from main, write file, commit, return to main.
+    let main_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", "main"])
+        .current_dir(dir)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    let base = if main_exists { "main" } else { "HEAD" };
+
+    // Create branch from base if it doesn't exist, else just check it out.
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if branch_exists {
+        git(dir, &["checkout", branch]);
+    } else {
+        git(dir, &["checkout", "-b", branch, base]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(path), content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+    git(dir, &["checkout", "-"]);
+}
+
+#[test]
+fn next_skips_dep_blocked_returns_unblocked() {
+    use apm_core::{config::Config, ticket};
+
+    let dir = setup_with_satisfies_deps();
+    let p = dir.path();
+
+    // Ticket A: ready, no deps — should be returned by apm next
+    let content_a = "+++\nid = \"aaaa0001\"\ntitle = \"Ticket A\"\nstate = \"ready\"\nbranch = \"ticket/aaaa0001-ticket-a\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/aaaa0001-ticket-a", "tickets/aaaa0001-ticket-a.md", content_a);
+
+    // Ticket B: ready, depends_on A (which is in "ready", not satisfies_deps)
+    let content_b = "+++\nid = \"bbbb0001\"\ntitle = \"Ticket B\"\nstate = \"ready\"\nbranch = \"ticket/bbbb0001-ticket-b\"\ndepends_on = [\"aaaa0001\"]\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/bbbb0001-ticket-b", "tickets/bbbb0001-ticket-b.md", content_b);
+
+    let config = Config::load(p).unwrap();
+    let tickets = ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
+    let p_cfg = &config.workflow.prioritization;
+
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    assert!(next.is_some(), "should find an actionable ticket");
+    assert_eq!(next.unwrap().frontmatter.id, "aaaa0001", "dep-blocked ticket B should be skipped, A returned");
+}
+
+#[test]
+fn next_returns_dep_blocked_after_dep_satisfies() {
+    use apm_core::{config::Config, ticket};
+
+    let dir = setup_with_satisfies_deps();
+    let p = dir.path();
+
+    // Ticket A: implemented (satisfies_deps = true)
+    let content_a = "+++\nid = \"aaaa0002\"\ntitle = \"Ticket A\"\nstate = \"implemented\"\nbranch = \"ticket/aaaa0002-ticket-a\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/aaaa0002-ticket-a", "tickets/aaaa0002-ticket-a.md", content_a);
+
+    // Ticket B: ready, depends_on A (implemented = satisfies_deps)
+    let content_b = "+++\nid = \"bbbb0002\"\ntitle = \"Ticket B\"\nstate = \"ready\"\nbranch = \"ticket/bbbb0002-ticket-b\"\ndepends_on = [\"aaaa0002\"]\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/bbbb0002-ticket-b", "tickets/bbbb0002-ticket-b.md", content_b);
+
+    let config = Config::load(p).unwrap();
+    let tickets = ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
+    let p_cfg = &config.workflow.prioritization;
+
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    assert!(next.is_some(), "should find an actionable ticket");
+    assert_eq!(next.unwrap().frontmatter.id, "bbbb0002", "ticket B should be returned once dep A satisfies_deps");
+}

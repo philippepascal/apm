@@ -647,6 +647,17 @@ pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub fn push_branch_tracking(root: &Path, branch: &str) -> anyhow::Result<()> {
+    let status = std::process::Command::new("git")
+        .args(["push", "--set-upstream", "origin", &format!("{branch}:{branch}")])
+        .current_dir(root)
+        .status()?;
+    if !status.success() {
+        anyhow::bail!("git push failed");
+    }
+    Ok(())
+}
+
 pub fn has_remote(root: &Path) -> bool {
     run(root, &["remote", "get-url", "origin"]).is_ok()
 }
