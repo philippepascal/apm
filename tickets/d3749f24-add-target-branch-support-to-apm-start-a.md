@@ -1,7 +1,7 @@
 +++
 id = "d3749f24"
 title = "Add target_branch support to apm start and worktree provisioning"
-state = "in_design"
+state = "specd"
 priority = 8
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "77938"
 branch = "ticket/d3749f24-add-target-branch-support-to-apm-start-a"
 created_at = "2026-04-01T21:55:32.694733Z"
-updated_at = "2026-04-02T00:46:24.345941Z"
+updated_at = "2026-04-02T00:46:46.803204Z"
 +++
 
 ## Spec
@@ -105,3 +105,4 @@ A unit test in `apm-core/src/ticket.rs` verifying round-trip serialization of th
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:00Z | new | groomed | claude-0401-2145-a8f3 |
 | 2026-04-02T00:43Z | groomed | in_design | philippepascal |
+| 2026-04-02T00:46Z | in_design | specd | claude-0402-spec-d3749f24 |
