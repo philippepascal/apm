@@ -42,17 +42,31 @@ Without critical-path elevation, the priority queue and `apm next` give a mislea
 
 ### Approach
 
-At query time, build a reverse dependency index from all loaded tickets and propagate max priority up the graph.
+At query time, build a reverse dependency index from all loaded tickets and propagate max priority up the graph. No stored fields are mutated.
 
-**1. Reverse dep index** — `HashMap<&str, Vec<&Ticket>>`: for each ticket with `depends_on`, add an entry in the map from each dep ID to the dependent ticket.
+**Files that change**
 
-**2. Effective priority** — for each ticket, walk all direct and transitive dependents (BFS/DFS on the reverse index), collect their raw priority scores, and return `max(own_priority, max_dependent_priority)`. Cycles are safe to ignore (visit-set).
+`apm-core/src/ticket.rs`:
 
-**3. `sorted_actionable`** — replace `t.frontmatter.priority` in the score formula with `effective_priority(t, &reverse_index)`.
+1. Add `pub fn build_reverse_index<'a>(tickets: &'a [Ticket]) -> HashMap<&'a str, Vec<&'a Ticket>>`: iterate all tickets; for each ID in `depends_on`, push the current ticket into `map[dep_id]`. Tickets without `depends_on` contribute nothing.
 
-**4. UI** — `TicketResponse` (or a new computed field `effective_priority`) carries the elevated score so the queue panel sorts correctly. The raw `priority` field stays unchanged.
+2. Add `pub fn effective_priority(ticket: &Ticket, reverse_index: &HashMap<&str, Vec<&Ticket>>) -> u8`: BFS from `ticket.frontmatter.id` over the reverse index using a `HashSet<&str>` visited set. Collect `frontmatter.priority` of every reachable dependent; return `max(ticket.frontmatter.priority, max_dependent_priority)`.
 
-**Out of scope**: modifying the stored `priority` field; UI display of why a ticket's priority was elevated; multi-level cycle detection beyond simple visit-set.
+3. Modify `sorted_actionable`: call `build_reverse_index(tickets)` once before sorting. In the sort closure, replace each `t.score(pw, ew, rw)` call with an inline formula using `effective_priority(t, &rev_idx)` in place of `t.frontmatter.priority`. The existing `score()` method is unchanged; only the sort closure diverges.
+
+`apm-server/src/queue.rs`:
+
+4. Add `effective_priority: u8` field to `QueueEntry`.
+
+5. In `queue_handler`, build the reverse index once (from `tickets`) before the `.map()` loop. Set `effective_priority` from `effective_priority(t, &rev_idx)` on each entry; compute `score` using the same elevated value so it stays consistent with the sort order returned by `sorted_actionable`.
+
+**Step order**
+
+1. Implement `build_reverse_index` and `effective_priority` in `ticket.rs` with unit tests covering: single-hop elevation, transitive elevation, no-dependents (identity), and cycle safety.
+2. Modify `sorted_actionable` to use effective priority in the sort closure; add unit tests for the new ordering.
+3. Update `QueueEntry` and the handler in `queue.rs`.
+4. Add an integration test verifying that `pick_next` selects the low-priority blocking ticket first when its dependent has higher priority.
+5. Run `cargo test --workspace` — all tests must pass.
 
 ### Open questions
 
