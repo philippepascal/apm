@@ -30,7 +30,7 @@ Two related pieces of infrastructure must land with this ticket because `apm epi
 - [x] `apm epic show <id>` prints a table of associated tickets, one row per ticket, showing: short ID, title, current state, assigned agent (or — if none), and `depends_on` entries (or — if none)
 - [x] Tickets with no `epic` frontmatter field set to the epic's ID are not shown in the table
 - [x] A 4-or-more character prefix that uniquely identifies one epic branch is accepted and resolves correctly
-- [ ] An ambiguous prefix (matches more than one epic branch) exits non-zero and prints a list of the matching branch names
+- [x] An ambiguous prefix (matches more than one epic branch) exits non-zero and prints a list of the matching branch names
 - [ ] An ID or prefix that matches no epic branch exits non-zero with a clear error message
 - [ ] Derived state is computed from config flags only — no state name strings are hardcoded: no tickets → `empty`; any ticket whose state has neither `satisfies_deps = true` nor `terminal = true` → `in_progress`; all tickets in states with `satisfies_deps = true` or `terminal = true`, but not all terminal → `implemented`; all tickets in states with `terminal = true` → `done`
 - [ ] `apm epic show` with no argument prints usage and exits non-zero
