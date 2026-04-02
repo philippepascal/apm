@@ -689,6 +689,19 @@ pub fn branch_tip(root: &Path, branch: &str) -> Option<String> {
     run(root, &["rev-parse", &format!("refs/heads/{branch}")]).ok()
 }
 
+/// Resolve a branch name to a commit SHA.
+/// Prefers `origin/<branch>`; falls back to local `<branch>`.
+pub fn resolve_branch_sha(root: &Path, branch: &str) -> Result<String> {
+    run(root, &["rev-parse", &format!("origin/{branch}")])
+        .or_else(|_| run(root, &["rev-parse", branch]))
+        .with_context(|| format!("branch '{branch}' not found locally or on origin"))
+}
+
+/// Create a local branch pointing at a specific commit SHA.
+pub fn create_branch_at(root: &Path, branch: &str, sha: &str) -> Result<()> {
+    run(root, &["branch", branch, sha]).map(|_| ())
+}
+
 /// Get the commit SHA at the tip of the remote tracking ref for a branch.
 pub fn remote_branch_tip(root: &Path, branch: &str) -> Option<String> {
     run(root, &["rev-parse", &format!("refs/remotes/origin/{branch}")]).ok()
