@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import InlineNumberField from './InlineNumberField'
 
 type EngineStatus = 'running' | 'idle' | 'stopped'
 
@@ -37,6 +38,27 @@ async function startEngine(epic?: string): Promise<StatusResponse> {
   if (!res.ok) throw new Error('start failed')
   const data = await res.json()
   return { status: data.status as EngineStatus, epic: data.epic ?? null }
+}
+
+type AgentsConfig = {
+  max_concurrent: number
+  override: number | null
+}
+
+async function fetchAgentsConfig(): Promise<AgentsConfig> {
+  const res = await fetch('/api/agents/config')
+  if (!res.ok) throw new Error('fetch failed')
+  return res.json()
+}
+
+async function patchAgentsConfig(n: number): Promise<AgentsConfig> {
+  const res = await fetch('/api/agents/config', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ override: n }),
+  })
+  if (!res.ok) throw new Error('patch failed')
+  return res.json()
 }
 
 async function stopEngine(): Promise<StatusResponse> {
@@ -83,6 +105,16 @@ export default function WorkEngineControls() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['work-status'] }),
   })
 
+  const { data: agentsConfig } = useQuery({
+    queryKey: ['agents-config'],
+    queryFn: fetchAgentsConfig,
+  })
+
+  const overrideMutation = useMutation({
+    mutationFn: patchAgentsConfig,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agents-config'] }),
+  })
+
   const status = statusData.status
   const isEngineActive = status === 'running' || status === 'idle'
   const isPending = startMutation.isPending || stopMutation.isPending
@@ -99,6 +131,22 @@ export default function WorkEngineControls() {
   return (
     <div className="flex items-center gap-2">
       <span className={STATUS_CLASSES[status]}>{STATUS_LABELS[status]}</span>
+      {agentsConfig && (
+        <>
+          <span className="text-xs text-gray-500">config: {agentsConfig.max_concurrent}</span>
+          {!isEngineActive ? (
+            <InlineNumberField
+              label="workers"
+              value={agentsConfig.override ?? agentsConfig.max_concurrent}
+              min={1}
+              max={99}
+              onCommit={(n) => overrideMutation.mutate(n)}
+            />
+          ) : (
+            <span className="text-xs text-gray-400">workers: {agentsConfig.override ?? agentsConfig.max_concurrent}</span>
+          )}
+        </>
+      )}
       {isEngineActive && statusData.epic && (
         <a href={`/?epic=${statusData.epic}`} className="text-xs text-blue-400 hover:underline">
           epic: {statusData.epic}
