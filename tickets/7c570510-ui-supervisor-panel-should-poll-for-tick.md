@@ -39,7 +39,19 @@ Every other panel in the UI already polls on a fixed interval: PriorityQueuePane
 
 ### Approach
 
-How the implementation will work.
+Single-file change: apm-ui/src/components/supervisor/SupervisorView.tsx
+
+The useQuery call for tickets (currently around line 24) does not pass refetchInterval. Add it:
+
+  const { data: tickets = [], isError: syncError } = useQuery({
+    queryKey: ['tickets'],
+    queryFn: () => fetch('/api/tickets').then(r => r.json()),
+    refetchInterval: 10_000,   // add this line
+  })
+
+That is the entire code change. TanStack Query v5 will re-run the queryFn every 10 seconds in the background and update the board reactively. The existing manual sync path (invalidateQueries after POST /api/sync) is unaffected — it triggers an out-of-band immediate refetch on top of the interval.
+
+No backend changes are needed. The GET /api/tickets endpoint is already stateless and cheap (reads from local git refs, no remote fetch).
 
 ### Open questions
 
