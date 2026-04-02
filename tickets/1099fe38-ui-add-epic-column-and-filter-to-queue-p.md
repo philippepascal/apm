@@ -46,7 +46,29 @@ The `epic` field does not yet exist on `Frontmatter` (apm-core) or `QueueEntry` 
 
 ### Approach
 
-How the implementation will work.
+**1. apm-core/src/ticket.rs** - Add optional epic field to Frontmatter after focus_section. Use serde skip_serializing_if Option::is_none. Tickets without epic in frontmatter deserialize fine because Option defaults to None. Update fake_ticket test helper and any other Frontmatter constructors in test code to include epic: None.
+
+**2. apm-server/src/queue.rs** - Add epic: Option<String> to QueueEntry struct. Populate it from fm.epic.clone() in the mapping closure.
+
+**3. apm-ui/src/components/PriorityQueuePanel.tsx** - Four sub-changes:
+
+(a) Extend QueueEntry interface: add epic field as optional string.
+
+(b) Add epicFilter state (string or null, default null). Derive availableEpics array with useMemo by collecting distinct non-null entry.epic values from displayQueue, sorted alphabetically.
+
+(c) Compute filteredQueue: when epicFilter is set, filter displayQueue to rows where entry.epic matches; otherwise use displayQueue unchanged. Use filteredQueue only for SortableRow rendering. Keep displayQueue (unfiltered) for SortableContext items list and all reorder operations, so drag and keyboard reordering continue to act on the full queue.
+
+(d) When availableEpics is non-empty, render an epic filter bar above the DndContext block. A select element with All epics option (empty value) plus one option per epic ID. Selecting empty sets filter to null; selecting an ID sets filter to that string.
+
+(e) In the table header, insert an Epic th between State and E columns.
+
+(f) In SortableRow, add epic to props and insert a td after the state cell showing entry.epic or the dash character in font-mono text-gray-500 text-[10px] style.
+
+**Order of changes:**
+1. apm-core/src/ticket.rs - add epic field
+2. apm-server/src/queue.rs - add epic field, fix test helpers
+3. apm-ui/src/components/PriorityQueuePanel.tsx - UI
+4. cargo test --workspace must pass
 
 ### Open questions
 
