@@ -15,7 +15,14 @@ updated_at = "2026-04-01T22:00:26.051726Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The apm-server has no API routes for epics, so the UI and external tools cannot list, create, or inspect them. Three new routes are needed.
+
+The full design is in `docs/epics.md` (§ apm-server changes — New routes):
+- `GET /api/epics` — list all epics (branch scan + derived state)
+- `POST /api/epics` — create a new epic (delegates to `apm epic new`)
+- `GET /api/epics/:id` — single epic detail with full ticket list
+
+The response shape for a single epic includes `id`, `title`, `branch`, `state`, and `ticket_counts` map. The list endpoint returns `[EpicSummary]`; the detail endpoint adds a `tickets` array using the existing `TicketResponse` shape.
 
 ### Acceptance criteria
 
@@ -32,13 +39,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
