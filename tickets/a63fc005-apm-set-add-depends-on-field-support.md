@@ -4,12 +4,12 @@ title = "apm set: add depends_on field support"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 agent = "37037"
 branch = "ticket/a63fc005-apm-set-add-depends-on-field-support"
 created_at = "2026-04-02T20:58:58.236289Z"
-updated_at = "2026-04-02T22:50:52.316635Z"
+updated_at = "2026-04-02T22:50:58.420230Z"
 +++
 
 ## Spec
