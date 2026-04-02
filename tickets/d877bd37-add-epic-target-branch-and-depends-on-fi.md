@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "15054"
 branch = "ticket/d877bd37-add-epic-target-branch-and-depends-on-fi"
 created_at = "2026-04-01T21:54:58.399434Z"
-updated_at = "2026-04-02T01:58:08.198506Z"
+updated_at = "2026-04-02T01:58:17.031474Z"
 +++
 
 ## Spec
