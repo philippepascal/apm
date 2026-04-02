@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/e35ef349-cli-apm-register-apm-sessions-and-apm-re"
+depends_on = ["8a08637c"]
 created_at = "2026-04-02T20:54:25.629052Z"
 updated_at = "2026-04-02T20:54:25.629052Z"
 epic = "8db73240"
