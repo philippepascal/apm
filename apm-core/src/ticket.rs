@@ -870,6 +870,29 @@ mod tests {
     }
 
     #[test]
+    fn epic_and_depends_on_round_trip() {
+        let raw = minimal_raw(
+            "epic = \"ab12cd34\"\ndepends_on = [\"cd56ef78\", \"12ab34cd\"]\n",
+            "## Spec\n\ncontent\n",
+        );
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.epic, Some("ab12cd34".to_string()));
+        assert_eq!(
+            t.frontmatter.depends_on,
+            Some(vec!["cd56ef78".to_string(), "12ab34cd".to_string()])
+        );
+        let serialized = t.serialize().unwrap();
+        assert!(serialized.contains("epic = \"ab12cd34\""));
+        assert!(serialized.contains("depends_on = [\"cd56ef78\", \"12ab34cd\"]"));
+        let t2 = Ticket::parse(dummy_path(), &serialized).unwrap();
+        assert_eq!(t2.frontmatter.epic, Some("ab12cd34".to_string()));
+        assert_eq!(
+            t2.frontmatter.depends_on,
+            Some(vec!["cd56ef78".to_string(), "12ab34cd".to_string()])
+        );
+    }
+
+    #[test]
     fn target_branch_round_trips() {
         let raw = minimal_raw("target_branch = \"epic/abc\"\n", "## Spec\n\ncontent\n");
         let t = Ticket::parse(dummy_path(), &raw).unwrap();

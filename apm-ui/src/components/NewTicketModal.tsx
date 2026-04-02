@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 
 interface Props {
@@ -7,9 +7,17 @@ interface Props {
   onOpenChange: (v: boolean) => void
 }
 
+interface EpicSummary {
+  id: string
+  title: string
+  branch: string
+}
+
 interface CreateTicketData {
   title: string
   sections?: Record<string, string>
+  epic?: string
+  depends_on?: string[]
 }
 
 export default function NewTicketModal({ open, onOpenChange }: Props) {
@@ -21,6 +29,13 @@ export default function NewTicketModal({ open, onOpenChange }: Props) {
   const [outOfScope, setOutOfScope] = useState('')
   const [approach, setApproach] = useState('')
   const [titleError, setTitleError] = useState('')
+  const [epicId, setEpicId] = useState('')
+  const [dependsOn, setDependsOn] = useState('')
+
+  const { data: epics = [] } = useQuery<EpicSummary[]>({
+    queryKey: ['epics'],
+    queryFn: () => fetch('/api/epics').then((r) => r.json()),
+  })
 
   const mutation = useMutation({
     mutationFn: (data: CreateTicketData) =>
@@ -51,6 +66,8 @@ export default function NewTicketModal({ open, onOpenChange }: Props) {
       setOutOfScope('')
       setApproach('')
       setTitleError('')
+      setEpicId('')
+      setDependsOn('')
       mutation.reset()
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -77,6 +94,11 @@ export default function NewTicketModal({ open, onOpenChange }: Props) {
     if (approach.trim()) sections['Approach'] = approach.trim()
     const data: CreateTicketData = { title: title.trim() }
     if (Object.keys(sections).length > 0) data.sections = sections
+    if (epicId) data.epic = epicId
+    if (dependsOn.trim()) {
+      const ids = dependsOn.trim().split(/[\s,]+/).filter(Boolean)
+      if (ids.length > 0) data.depends_on = ids
+    }
     mutation.mutate(data)
   }
 
@@ -106,6 +128,31 @@ export default function NewTicketModal({ open, onOpenChange }: Props) {
               placeholder="Short, imperative description"
             />
             {titleError && <p className="text-xs text-red-500 mt-1">{titleError}</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Epic</label>
+            <select
+              value={epicId}
+              onChange={(e) => setEpicId(e.target.value)}
+              className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">(none)</option>
+              {epics.map((epic) => (
+                <option key={epic.id} value={epic.id}>
+                  {epic.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Depends on</label>
+            <input
+              type="text"
+              value={dependsOn}
+              onChange={(e) => setDependsOn(e.target.value)}
+              className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="e.g. ab12cd34 cd56ef78"
+            />
           </div>
           {(
             [

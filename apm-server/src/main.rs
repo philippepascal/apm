@@ -1344,6 +1344,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_ticket_with_epic_and_depends_on_in_memory_returns_501() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/tickets")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"title":"t","epic":"ab12cd34","depends_on":["cd56ef78"]}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
     async fn patch_ticket_in_memory_returns_501() {
         let app = build_app_with_tickets(test_tickets());
         let response = app
