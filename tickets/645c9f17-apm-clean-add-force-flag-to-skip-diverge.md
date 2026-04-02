@@ -26,7 +26,7 @@ When using --force, it needs to be in interactive mode, asking the supervisor to
 
 ### Acceptance criteria
 
-- [ ] `apm clean --force` removes the worktree and local branch for a closed ticket whose branch is not merged into main
+- [x] `apm clean --force` removes the worktree and local branch for a closed ticket whose branch is not merged into main
 - [ ] `apm clean --force` removes the worktree and local branch for a closed ticket whose local tip diverges from origin
 - [ ] `apm clean --force` uses `git worktree remove --force` for each worktree removal
 - [ ] `apm clean --force` prompts for confirmation before each removal, even when `--yes` is also supplied
