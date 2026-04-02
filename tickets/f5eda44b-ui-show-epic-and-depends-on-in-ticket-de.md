@@ -1,15 +1,15 @@
 +++
 id = "f5eda44b"
 title = "UI: show epic and depends_on in ticket detail panel"
-state = "ready"
+state = "in_progress"
 priority = 2
 effort = 3
 risk = 2
 author = "claude-0401-2145-a8f3"
-agent = "32978"
+agent = "philippepascal"
 branch = "ticket/f5eda44b-ui-show-epic-and-depends-on-in-ticket-de"
 created_at = "2026-04-01T21:56:10.584818Z"
-updated_at = "2026-04-02T02:29:09.149251Z"
+updated_at = "2026-04-02T06:36:54.911210Z"
 +++
 
 ## Spec
@@ -153,3 +153,4 @@ Add a unit test in `apm-core/src/ticket.rs` or `apm-core/tests/`: parse a ticket
 | 2026-04-02T02:11Z | ammend | in_design | philippepascal |
 | 2026-04-02T02:14Z | in_design | specd | claude-0402-0215-d4e1 |
 | 2026-04-02T02:29Z | specd | ready | apm |
+| 2026-04-02T06:36Z | ready | in_progress | philippepascal |
