@@ -15,7 +15,9 @@ updated_at = "2026-04-01T22:01:34.640318Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The engine controls panel has no way to start the engine in epic-exclusive mode, and when exclusive mode is active there is no visual indicator of which epic is running. Without this, the UI cannot drive focused epic sprints.
+
+The full design is in `docs/epics.md` (§ apm-ui changes — Engine controls). Add an optional **Epic** selector dropdown (populated from `GET /api/epics`) before starting the engine. When exclusive mode is active, show a small label: `epic: <slug>` that links to the epic filter on the supervisor board.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
