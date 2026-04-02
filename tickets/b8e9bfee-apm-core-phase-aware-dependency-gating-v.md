@@ -29,7 +29,13 @@ Example for this project's `apm.toml`:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `StateConfig` deserialises `satisfies_deps` as either a boolean (`true`/`false`) or a string tag (e.g. `"spec"`) without error
+- [ ] `StateConfig` accepts a new optional `dep_requires` string field (e.g. `dep_requires = "spec"`)
+- [ ] A ticket whose state has `dep_requires = "X"` is considered unblocked when every dep is in a state that has `satisfies_deps = "X"`, `satisfies_deps = true`, or `terminal = true`
+- [ ] A ticket whose state has no `dep_requires` still requires every dep to have `satisfies_deps = true` or `terminal = true` (unchanged behaviour)
+- [ ] `apm next` returns a `groomed` ticket (which has `dep_requires = "spec"`) when its only dependency is in state `specd` (which has `satisfies_deps = "spec"`)
+- [ ] `apm next` does NOT return a `ready` ticket (no `dep_requires`) when its only dependency is in state `specd` only — it still requires `implemented` or `closed`
+- [ ] The project `workflow.toml` has `satisfies_deps = "spec"` on the `specd` state and `dep_requires = "spec"` on the `groomed` state
 
 ### Out of scope
 
