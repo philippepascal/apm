@@ -16,7 +16,9 @@ updated_at = "2026-04-02T22:47:47.130236Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The `apm set` command lets callers update scalar ticket fields (priority, effort, risk, title, agent, supervisor, branch) from the CLI. The `depends_on` field is already modelled in `Frontmatter` as `Option<Vec<String>>` and is fully wired into dependency-gate logic in `pick_next`, effective-priority boosting, and TOML serialization — but `set_field` in `apm-core/src/ticket.rs` does not handle it, so `apm set <id> depends_on ...` is rejected with "unknown field".
+
+Without CLI access to `depends_on`, callers must hand-edit ticket branch files to link tickets, which is error-prone and bypasses the normal update path (timestamp, branch commit). Adding the field to `set_field` closes this gap with a minimal, self-contained change.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
