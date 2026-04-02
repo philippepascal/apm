@@ -3,13 +3,13 @@ id = "305281a7"
 title = "UI supervisor panel ticket don't show if they are part of epic"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "apm"
 agent = "51125"
 branch = "ticket/305281a7-ui-supervisor-panel-ticket-don-t-show-if"
 created_at = "2026-04-02T22:32:22.237758Z"
-updated_at = "2026-04-02T22:48:01.338860Z"
+updated_at = "2026-04-02T22:50:48.892807Z"
 +++
 
 ## Spec
