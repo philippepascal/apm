@@ -29,7 +29,7 @@ The desired behaviour (per `docs/epics.md` § "Ticket cards") is: cards where `d
 - [x] A supervisor-board ticket card where every `depends_on` entry is in a `satisfies_deps` or `terminal` state shows no lock icon
 - [x] Hovering the lock icon reveals a tooltip that lists each unresolved dependency as `<id>: <state>` (one per line)
 - [x] `GET /api/tickets` includes a `blocking_deps` array for every ticket (empty array when there are none)
-- [ ] `blocking_deps` entries are computed server-side by checking each dep's state against the set of states where `satisfies_deps = true` or `terminal = true` in `config.workflow.states`; no hardcoded state-name comparisons
+- [x] `blocking_deps` entries are computed server-side by checking each dep's state against the set of states where `satisfies_deps = true` or `terminal = true` in `config.workflow.states`; no hardcoded state-name comparisons
 
 ### Out of scope
 
