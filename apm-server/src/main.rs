@@ -90,10 +90,7 @@ struct PatchTicketRequest {
 #[derive(serde::Deserialize)]
 struct CreateTicketRequest {
     title: Option<String>,
-    problem: Option<String>,
-    acceptance_criteria: Option<String>,
-    out_of_scope: Option<String>,
-    approach: Option<String>,
+    sections: Option<std::collections::HashMap<String, String>>,
 }
 
 fn extract_frontmatter_raw(content: &str) -> Option<&str> {
@@ -526,15 +523,11 @@ async fn create_ticket(
         Some(r) => r.clone(),
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
-    let section_sets: Vec<(String, String)> = [
-        ("Problem", req.problem),
-        ("Acceptance criteria", req.acceptance_criteria),
-        ("Out of scope", req.out_of_scope),
-        ("Approach", req.approach),
-    ]
-    .into_iter()
-    .filter_map(|(name, val)| val.filter(|v| !v.trim().is_empty()).map(|v| (name.to_string(), v)))
-    .collect();
+    let section_sets: Vec<(String, String)> = req.sections
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(_, v)| !v.trim().is_empty())
+        .collect();
     let result = tokio::task::spawn_blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         apm_core::ticket::create(
