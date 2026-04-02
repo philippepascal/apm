@@ -4,12 +4,12 @@ title = "Add --epic flag to apm new command"
 state = "in_design"
 priority = 6
 effort = 4
-risk = 0
+risk = 3
 author = "claude-0401-2145-a8f3"
 agent = "64496"
 branch = "ticket/19c2ab13-add-epic-flag-to-apm-new-command"
 created_at = "2026-04-01T21:55:26.992429Z"
-updated_at = "2026-04-02T00:52:03.510148Z"
+updated_at = "2026-04-02T00:52:08.921218Z"
 +++
 
 ## Spec
