@@ -1,14 +1,14 @@
 +++
 id = "61a98148"
 title = "apm init: embed apm.spec-writer.md from source instead of placeholder stub"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/61a98148-apm-init-embed-apm-spec-writer-md-from-s"
 created_at = "2026-04-02T02:09:54.035008Z"
-updated_at = "2026-04-02T02:09:54.035008Z"
+updated_at = "2026-04-02T02:10:02.652338Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-02T02:09Z | — | new | apm |
+| 2026-04-02T02:10Z | new | groomed | apm |
