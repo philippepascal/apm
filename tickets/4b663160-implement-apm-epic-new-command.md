@@ -1,7 +1,7 @@
 +++
 id = "4b663160"
 title = "Implement apm epic new command"
-state = "implemented"
+state = "closed"
 priority = 8
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "33478"
 branch = "ticket/4b663160-implement-apm-epic-new-command"
 created_at = "2026-04-01T21:55:06.350633Z"
-updated_at = "2026-04-02T02:55:57.848309Z"
+updated_at = "2026-04-02T03:12:28.705793Z"
 +++
 
 ## Spec
@@ -188,3 +188,4 @@ Implement in this order to keep each step buildable:
 | 2026-04-02T02:28Z | specd | ready | apm |
 | 2026-04-02T02:52Z | ready | in_progress | philippepascal |
 | 2026-04-02T02:55Z | in_progress | implemented | claude-0402-0300-b7e2 |
+| 2026-04-02T03:12Z | implemented | closed | apm-sync |
