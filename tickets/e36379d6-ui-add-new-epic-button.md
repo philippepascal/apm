@@ -30,7 +30,11 @@ The web UI provides no way to create epics. The only paths to epic creation are 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Editing or renaming an existing epic
+- Closing or archiving an epic from the UI
+- An epic detail view in the UI
+- A keyboard shortcut to open the new-epic modal
+- Adding tickets to an epic during epic creation
 
 ### Approach
 
