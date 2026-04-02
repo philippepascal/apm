@@ -33,7 +33,7 @@ The `apm epic` subcommand group does not yet exist and must be wired into the CL
 - [x] `apm epic new "My Feature"` prints a branch name of the form `epic/<8-hex-id>-my-feature`
 - [x] The printed branch exists on `origin` after the command completes
 - [x] The epic branch is created from `origin/main` HEAD (not from the local `HEAD` or current branch)
-- [ ] An `EPIC.md` file containing `# My Feature\n` is committed to the epic branch
+- [x] An `EPIC.md` file containing `# My Feature\n` is committed to the epic branch
 - [ ] The epic branch tracks `origin/<branch>` (pushed with `--set-upstream`)
 - [ ] `apm epic new` with no title argument exits non-zero and prints a usage error
 - [ ] Running `apm epic new` when `origin` has no `main` branch exits non-zero with a clear error message
