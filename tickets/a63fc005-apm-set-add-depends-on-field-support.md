@@ -39,7 +39,41 @@ Without CLI access to `depends_on`, callers must hand-edit ticket branch files t
 
 ### Approach
 
-How the implementation will work.
+**One file to change for the core fix:** apm-core/src/ticket.rs — the set_field function (currently around line 757).
+
+Add a "depends_on" match arm before the catch-all arm:
+
+    "depends_on" => {
+        if value == "-" {
+            fm.depends_on = None;
+        } else {
+            let ids: Vec<String> = value
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            fm.depends_on = if ids.is_empty() { None } else { Some(ids) };
+        }
+    }
+
+This mirrors the pattern used in apm/src/cmd/new.rs (lines 49-60) for parsing the --depends-on flag.
+
+**CLI help text:** In apm/src/main.rs, update the /// Field to update: doc comment on the field argument to include depends_on. Add a usage example showing the comma-separated form and the - clear form.
+
+**Tests to add** in apm/tests/integration.rs (follow the pattern of set_priority_updates_frontmatter):
+
+1. set_depends_on_single_id — set one ID, verify TOML contains depends_on = ["<id>"]
+2. set_depends_on_comma_separated — set two comma-separated IDs, verify both in TOML
+3. set_depends_on_clear — set then clear with -, verify field absent from TOML
+4. set_depends_on_trims_whitespace — value " id1 , id2 " yields ["id1", "id2"]
+
+The existing integration test next_skips_dep_blocked_returns_unblocked already covers the end-to-end scheduling effect; no new scheduling tests are needed.
+
+**Order of steps:**
+1. Add the match arm to set_field in apm-core/src/ticket.rs
+2. Update CLI help/examples in apm/src/main.rs
+3. Add the four integration tests
+4. Run cargo test --workspace — all tests must pass
 
 ### Open questions
 
