@@ -97,7 +97,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
             .states
             .iter()
             .find(|s| &s.id == state_id)
-            .map(|s| s.satisfies_deps || s.terminal)
+            .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
             .unwrap_or(false);
         if !passes {
             not_ready.push(format!("  {} — {} (state: {})", t.frontmatter.id, t.frontmatter.title, state_id));
@@ -299,7 +299,7 @@ mod tests {
 
         // Both states satisfy the gate
         for s in &wf.states {
-            assert!(s.satisfies_deps || s.terminal, "state {} should pass", s.id);
+            assert!(matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal, "state {} should pass", s.id);
         }
     }
 
@@ -314,10 +314,10 @@ mod tests {
         let wf = WorkflowConfig { states, ..Default::default() };
 
         let in_prog = wf.states.iter().find(|s| s.id == "in_progress").unwrap();
-        assert!(!in_prog.satisfies_deps && !in_prog.terminal);
+        assert!(!matches!(in_prog.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) && !in_prog.terminal);
 
         let implemented = wf.states.iter().find(|s| s.id == "implemented").unwrap();
-        assert!(implemented.satisfies_deps || implemented.terminal);
+        assert!(matches!(implemented.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || implemented.terminal);
     }
 
     fn make_state(id: &str, satisfies_deps: bool, terminal: bool) -> apm_core::config::StateConfig {
@@ -326,7 +326,8 @@ mod tests {
             label: id.to_string(),
             description: String::new(),
             terminal,
-            satisfies_deps,
+            satisfies_deps: apm_core::config::SatisfiesDeps::Bool(satisfies_deps),
+            dep_requires: None,
             transitions: vec![],
             actionable: vec![],
             instructions: None,
