@@ -3521,6 +3521,38 @@ fn next_returns_dep_blocked_after_dep_satisfies() {
     assert_eq!(next.unwrap().frontmatter.id, "bbbb0002", "ticket B should be returned once dep A satisfies_deps");
 }
 
+#[test]
+fn next_picks_low_priority_blocker_before_higher_raw_independent() {
+    use apm_core::{config::Config, ticket};
+
+    // A: priority 2, ready, no deps (blocks C)
+    // B: priority 7, ready, no deps (independent)
+    // C: priority 9, ready, depends_on A (dep not satisfied, so C won't be returned)
+    // Expected: pick_next returns A (ep=9 > B's ep=7)
+    let dir = setup_with_satisfies_deps();
+    let p = dir.path();
+
+    let content_a = "+++\nid = \"aaaa0003\"\ntitle = \"Ticket A\"\nstate = \"ready\"\npriority = 2\nbranch = \"ticket/aaaa0003-ticket-a\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/aaaa0003-ticket-a", "tickets/aaaa0003-ticket-a.md", content_a);
+
+    let content_b = "+++\nid = \"bbbb0003\"\ntitle = \"Ticket B\"\nstate = \"ready\"\npriority = 7\nbranch = \"ticket/bbbb0003-ticket-b\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/bbbb0003-ticket-b", "tickets/bbbb0003-ticket-b.md", content_b);
+
+    let content_c = "+++\nid = \"cccc0003\"\ntitle = \"Ticket C\"\nstate = \"ready\"\npriority = 9\nbranch = \"ticket/cccc0003-ticket-c\"\ndepends_on = [\"aaaa0003\"]\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/cccc0003-ticket-c", "tickets/cccc0003-ticket-c.md", content_c);
+
+    let config = Config::load(p).unwrap();
+    let tickets = ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
+    let p_cfg = &config.workflow.prioritization;
+
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    assert!(next.is_some(), "should find an actionable ticket");
+    // C is dep-blocked (A not satisfied), so the contest is A (ep=9) vs B (ep=7)
+    assert_eq!(next.unwrap().frontmatter.id, "aaaa0003", "A (ep=9) should beat B (ep=7)");
+}
+
 // --- epic list ---
 
 fn setup_epic_list() -> TempDir {
