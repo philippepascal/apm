@@ -40,7 +40,27 @@ Adding `new` to the visible states lets supervisors act on newly-created tickets
 
 ### Approach
 
-How the implementation will work.
+**File: `apm-ui/src/lib/supervisorUtils.ts`**
+
+Prepend `'new'` to the `SUPERVISOR_STATES` array. Current value:
+
+```ts
+export const SUPERVISOR_STATES = ['question', 'specd', 'ammend', 'blocked', 'implemented', 'accepted']
+```
+
+New value:
+
+```ts
+export const SUPERVISOR_STATES = ['new', 'question', 'specd', 'ammend', 'blocked', 'implemented', 'accepted']
+```
+
+Placing `new` first puts it at the leftmost column, matching the natural left-to-right flow of the ticket lifecycle.
+
+**File: `apm-ui/src/lib/stateColors.ts`** (conditional)
+
+Inspect the file. If `new` already has a colour entry, no change needed. If it falls through to a default, add an explicit entry using the grey colour that matches `workflow.toml` (e.g. `new: GRAY`).
+
+No other files need changing. `SupervisorView.tsx`, `Swimlane.tsx`, and `TicketCard.tsx` are all state-agnostic and pick up the new state automatically.
 
 ### Open questions
 
