@@ -24,7 +24,16 @@ The command lists all `epic/*` remote branches and for each shows: short ID, tit
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic list` outputs one line per `epic/*` remote branch
+- [ ] Each line shows the 8-char ID, the humanized title (hyphens → spaces, title-cased), derived state, and non-zero per-state ticket counts
+- [ ] When no `epic/*` branches exist, the command exits 0 with no output
+- [ ] Derived state is `empty` when no tickets reference the epic ID
+- [ ] Derived state is `in_progress` when at least one ticket is in state `in_design` or `in_progress`
+- [ ] Derived state is `implemented` when all tickets are in state `implemented` or a later non-terminal state (but not all accepted/closed)
+- [ ] Derived state is `done` when all tickets are in state `accepted` or `closed`
+- [ ] Derived state falls back to `in_progress` for any other mix of states
+- [ ] Ticket counts omit states with a zero count (e.g. `2 in_progress, 3 implemented`, not `2 in_progress, 0 ready, 3 implemented`)
+- [ ] The command respects the aggressive-fetch setting (same behaviour as `apm list`)
 
 ### Out of scope
 
