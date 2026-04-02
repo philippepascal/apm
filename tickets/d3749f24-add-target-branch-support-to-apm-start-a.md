@@ -41,7 +41,53 @@ The `target_branch` field does not yet exist on the `Frontmatter` struct in `apm
 
 ### Approach
 
-How the implementation will work.
+Three files change; all changes are small.
+
+**1. `apm-core/src/ticket.rs` — add `target_branch` to `Frontmatter`**
+
+Add one field to the struct after the existing optional fields:
+
+```rust
+#[serde(skip_serializing_if = "Option::is_none")]
+pub target_branch: Option<String>,
+```
+
+The `skip_serializing_if` attribute ensures existing ticket files are not affected.
+
+**2. `apm-core/src/start.rs` — use `target_branch` as the merge source**
+
+Around line 163, `default_branch` is read from `config.project.default_branch`. The merge logic (lines 179-216) currently uses `default_branch` to build the merge ref (`origin/{default_branch}` or local `default_branch`). Replace every use of `default_branch` in that merge block with a local variable:
+
+```rust
+let merge_base = ticket.frontmatter.target_branch.as_deref().unwrap_or(default_branch);
+```
+
+Then use `merge_base` in place of `default_branch` when constructing the remote ref and the fallback ref. The `default_branch` binding is still needed for nothing else in that function after this substitution.
+
+**3. `apm-core/src/state.rs` — pass `target_branch` to PR creation**
+
+At the call site around line 138:
+
+```rust
+// before
+gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
+
+// after
+let pr_base = t.frontmatter.target_branch.as_deref().unwrap_or(&config.project.default_branch);
+gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title)?;
+```
+
+No change to the `gh_pr_create_or_update` function signature is needed.
+
+**Tests**
+
+Add an integration test in `apm/tests/integration.rs` that:
+1. Creates a temp repo with a `main` branch and an `epic/e1-foo` branch that has a unique commit
+2. Creates a ticket with `target_branch = "epic/e1-foo"` in its frontmatter
+3. Calls `apm start` on that ticket
+4. Asserts the worktree was created and that the unique commit from the epic branch is present in the worktree history (confirming the merge source was `epic/e1-foo`)
+
+A unit test in `apm-core/src/ticket.rs` verifying round-trip serialization of the new field (present and absent) covers acceptance criteria 5 and 6.
 
 ### Open questions
 
