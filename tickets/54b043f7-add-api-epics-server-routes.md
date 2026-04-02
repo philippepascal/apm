@@ -127,10 +127,10 @@ struct CreateEpicRequest {
 `derive_epic_state(tickets: &[&Ticket], states: &[apm_core::config::StateConfig]) -> String` — config-driven; no hardcoded state ID strings:
 1. Build a `HashMap<&str, &StateConfig>` keyed by `state.id`
 2. Empty ticket slice → `"empty"`
-3. Any ticket in a state where `actionable` contains `"agent"` → `"in_progress"`
-4. All tickets in states where `satisfies_deps || terminal`, and at least one `satisfies_deps` → `"implemented"`
+3. Any ticket in a state where `actionable` contains `"agent"` → `"active"`
+4. All tickets in states where `satisfies_deps || terminal`, and at least one `satisfies_deps` → `"complete"`
 5. All tickets in states where `terminal` → `"done"`
-6. Otherwise → `"in_progress"`
+6. Otherwise → `"active"`
 
 `build_epic_summary(branch: &str, all_tickets: &[Ticket], states: &[StateConfig]) -> Option<EpicSummary>` — calls `parse_epic_branch`, filters tickets by `frontmatter.epic`, counts states, calls `derive_epic_state(tickets, states)`, returns the summary.
 
@@ -147,11 +147,7 @@ Route registration — add to both `build_app` and `build_app_with_tickets`:
 .route("/api/epics/:id", get(get_epic))
 ```
 
-**4. `apm.toml` — set `satisfies_deps = true` on the `implemented` state**
-
-Find the `[[workflow.states]]` entry with `id = "implemented"` and add `satisfies_deps = true`. This is required for `derive_epic_state` to correctly identify the `"implemented"` epic state.
-
-**5. Tests (inline `#[cfg(test)]` in `apm-server/src/main.rs`)**
+**4. Tests (inline `#[cfg(test)]` in `apm-server/src/main.rs`)**
 
 Required: `list_epics_in_memory_returns_501`, `create_epic_missing_title_returns_400`, `create_epic_empty_title_returns_400`, `create_epic_in_memory_returns_501`, `get_epic_in_memory_returns_501`.
 
