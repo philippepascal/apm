@@ -31,7 +31,11 @@ Without CLI access to `depends_on`, callers must hand-edit ticket branch files t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Validating that listed IDs correspond to existing tickets (unknown IDs are already silently ignored by pick_next; that behaviour is unchanged)
+- Adding depends_on support to `apm new` (already implemented via the --depends-on flag)
+- Changing dependency-gate resolution logic in pick_next or effective_priority
+- A `depends_on append` or `depends_on remove` sub-command for incremental edits (set replaces the whole list)
+- UI or server changes
 
 ### Approach
 
