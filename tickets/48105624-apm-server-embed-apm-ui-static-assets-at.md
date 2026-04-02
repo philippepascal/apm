@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+apm-server requires a separately running Vite dev server to serve the UI. For distribution as a single binary, the built UI static assets must be embedded in the server at compile time using `include_dir!` or equivalent. Without this, deploying apm-server requires a separate static file deployment step. See `initial_specs/DESIGN-users.md` point 6.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
