@@ -160,7 +160,7 @@ Unit tests in `apm-core/src/epic.rs`:
 ### Amendment requests
 
 - [x] Same as a5e1ea24: `derive_epic_state` in the Approach must not hardcode state names. Remove all hardcoded "in_design", "in_progress", "accepted", "closed", "implemented" from AC and Approach. Use `actionable`, `satisfies_deps`, and `terminal` state config flags to determine epic aggregate state. The function signature should accept `&[StateConfig]` (or pass the full config) rather than comparing state ID strings.
-- [ ] Update the Derived state AC items to describe the rules in terms of those config flags, not specific state names.
+- [x] Update the Derived state AC items to describe the rules in terms of those config flags, not specific state names.
 
 ### Code review
 
