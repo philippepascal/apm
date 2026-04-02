@@ -96,7 +96,7 @@ Integration tests requiring a live `gh` CLI and GitHub remote are out of scope.
 
 ### Amendment requests
 
-- [ ] The duplicate "### New file: apm/src/cmd/epic.rs" section at the bottom of Approach still contains step 5 reading `state.terminal == true || equals "implemented"` — a hardcoded state name comparison. Remove this entire duplicate section; the corrected approach above it is the authoritative one.
+- [x] The duplicate "### New file: apm/src/cmd/epic.rs" section at the bottom of Approach still contains step 5 reading `state.terminal == true || equals "implemented"` — a hardcoded state name comparison. Remove this entire duplicate section; the corrected approach above it is the authoritative one.
 
 ### Code review
 
