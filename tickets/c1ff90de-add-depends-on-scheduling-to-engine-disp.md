@@ -16,9 +16,9 @@ updated_at = "2026-04-02T00:43:15.939908Z"
 
 ### Problem
 
-Once `depends_on` is stored in ticket frontmatter (ticket d877bd37), the engine dispatch loop must honour it. Currently the loop picks the highest-priority ready ticket and dispatches it immediately — it has no concept of blocked tickets.
+Once `depends_on` is stored in ticket frontmatter (ticket d877bd37), the engine dispatch loop must honour it. Currently `pick_next` returns the highest-priority actionable ticket unconditionally — neither the dispatch loop in `spawn_next_worker` nor the `apm next` command has any awareness of ticket dependencies.
 
-The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop change). Before dispatching a candidate, the loop must check each entry in `depends_on`: if any referenced ticket is not yet `implemented` or later, the candidate is skipped. The check is config-driven: "implemented or later" is determined by position in the workflow states list or by `terminal = true`, not hardcoded state names. Unknown dep IDs are treated as non-blocking.
+The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop change). Before a candidate ticket is dispatched, every entry in its `depends_on` list must be checked: if any referenced ticket exists and is not yet in state `implemented` or later, the candidate must be skipped and the next highest-scoring non-blocked ticket tried instead. An unknown dep ID (no matching ticket found) is treated as non-blocking. The check is config-driven: "implemented or later" means the dep ticket's state appears at the same position or later than `implemented` in `config.workflow.states`, or the dep ticket's state has `terminal = true`.
 
 ### Acceptance criteria
 
