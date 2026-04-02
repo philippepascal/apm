@@ -62,12 +62,19 @@ fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
 }
 
 #[derive(serde::Serialize)]
+struct BlockingDep {
+    id: String,
+    state: String,
+}
+
+#[derive(serde::Serialize)]
 struct TicketDetailResponse {
     #[serde(flatten)]
     frontmatter: apm_core::ticket::Frontmatter,
     body: String,
     raw: String,
     valid_transitions: Vec<TransitionOption>,
+    blocking_deps: Vec<BlockingDep>,
 }
 
 #[derive(serde::Deserialize)]
@@ -346,6 +353,35 @@ impl From<tokio::task::JoinError> for AppError {
     }
 }
 
+fn compute_blocking_deps(
+    ticket: &apm_core::ticket::Ticket,
+    all_tickets: &[apm_core::ticket::Ticket],
+    root: &PathBuf,
+) -> Vec<BlockingDep> {
+    let deps = match &ticket.frontmatter.depends_on {
+        Some(d) if !d.is_empty() => d,
+        _ => return vec![],
+    };
+    let Ok(config) = apm_core::config::Config::load(root) else {
+        return vec![];
+    };
+    let state_map: std::collections::HashMap<&str, &str> = all_tickets
+        .iter()
+        .map(|t| (t.frontmatter.id.as_str(), t.frontmatter.state.as_str()))
+        .collect();
+    deps.iter()
+        .filter_map(|dep_id| {
+            state_map.get(dep_id.as_str()).and_then(|&s| {
+                if apm_core::ticket::dep_satisfied(s, &config) {
+                    None
+                } else {
+                    Some(BlockingDep { id: dep_id.clone(), state: s.to_string() })
+                }
+            })
+        })
+        .collect()
+}
+
 fn compute_valid_transitions(root: &PathBuf, state: &str) -> Vec<TransitionOption> {
     let Ok(config) = apm_core::config::Config::load(root) else {
         return vec![];
@@ -449,21 +485,25 @@ async fn get_ticket(
             }
         }
         Ok(full_id) => {
-            let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
-            let valid_transitions = match state.git_root() {
-                None => vec![],
+            let (blocking_deps, valid_transitions) = match state.git_root() {
+                None => (vec![], vec![]),
                 Some(root) => {
                     let root = root.clone();
-                    let state_str = ticket.frontmatter.state.clone();
-                    tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?
+                    let ticket_ref = tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap();
+                    let deps = compute_blocking_deps(ticket_ref, &tickets, &root);
+                    let state_str = ticket_ref.frontmatter.state.clone();
+                    let transitions = tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
+                    (deps, transitions)
                 }
             };
+            let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
             let raw = ticket.serialize().unwrap_or_default();
             Ok(Json(TicketDetailResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
                 raw,
                 valid_transitions,
+                blocking_deps,
             })
             .into_response())
         }
@@ -510,6 +550,11 @@ async fn transition_ticket(
             match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
                 Err(e) => Err(AppError(e)),
                 Ok(full_id) => {
+                    let blocking_deps = compute_blocking_deps(
+                        tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
+                        &tickets,
+                        &root,
+                    );
                     let ticket =
                         tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
                     let state_str = ticket.frontmatter.state.clone();
@@ -524,6 +569,7 @@ async fn transition_ticket(
                         body: ticket.body,
                         raw,
                         valid_transitions,
+                        blocking_deps,
                     })
                     .into_response())
                 }
@@ -660,6 +706,11 @@ async fn patch_ticket(
         }
         Ok(id) => id,
     };
+    let blocking_deps = compute_blocking_deps(
+        tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
+        &tickets,
+        &root,
+    );
     let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
     let branch = match ticket.frontmatter.branch.clone() {
         Some(b) => b,
@@ -721,6 +772,7 @@ async fn patch_ticket(
         body: updated.body,
         raw,
         valid_transitions,
+        blocking_deps,
     })
     .into_response())
 }
@@ -870,9 +922,11 @@ async fn take_ticket(
     })
     .await??;
     let tickets2 = load_tickets(&state).await?;
-    match tickets2.into_iter().find(|t| t.frontmatter.id == full_id) {
+    match tickets2.iter().position(|t| t.frontmatter.id == full_id) {
         None => Ok(StatusCode::NOT_FOUND.into_response()),
-        Some(t) => {
+        Some(idx) => {
+            let blocking_deps = compute_blocking_deps(&tickets2[idx], &tickets2, &root);
+            let t = tickets2.into_iter().nth(idx).unwrap();
             let state_str = t.frontmatter.state.clone();
             let root2 = root.clone();
             let valid_transitions =
@@ -884,6 +938,7 @@ async fn take_ticket(
                 body: t.body,
                 raw,
                 valid_transitions,
+                blocking_deps,
             })
             .into_response())
         }
