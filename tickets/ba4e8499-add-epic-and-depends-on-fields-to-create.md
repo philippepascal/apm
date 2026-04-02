@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:43:44.702702Z"
 
 ### Problem
 
-The ticket creation API and ticket response types do not include `epic`, `target_branch`, or `depends_on`. Without these, the UI cannot create epic-linked tickets via the API, and ticket list/detail responses omit epic membership information.
+The `CreateTicketRequest` struct in `apm-server/src/main.rs` accepts only `title` and `sections`. It has no `epic` or `depends_on` fields, so the UI cannot create epic-linked or dependency-declared tickets via the API.
 
-The full design is in `docs/epics.md` (§ apm-server changes — CreateTicketRequest and Ticket routes). `CreateTicketRequest` gains two new optional fields: `epic: Option<String>` and `depends_on: Option<Vec<String>>`. When `epic` is set, the server resolves `target_branch` from the epic branch name before calling `apm new`. For `TicketResponse` and `TicketDetailResponse`, the new frontmatter fields appear automatically via `#[serde(flatten)]` — no struct changes required for read paths.
+The `Frontmatter` struct in `apm-core/src/ticket.rs` also has no `epic`, `target_branch`, or `depends_on` fields. Because `TicketResponse` and `TicketDetailResponse` both serialize frontmatter via `#[serde(flatten)]`, adding these fields to `Frontmatter` is sufficient to make them appear in all existing ticket API read responses — no struct changes are needed in `apm-server`.
+
+The `ticket::create` function must also be extended to accept and persist these three optional fields so the server (and the CLI in a future ticket) can populate them at creation time.
 
 ### Acceptance criteria
 
