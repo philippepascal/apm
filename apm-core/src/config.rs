@@ -151,6 +151,8 @@ pub struct StateConfig {
     #[serde(default)]
     pub terminal: bool,
     #[serde(default)]
+    pub satisfies_deps: bool,
+    #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
     /// Who can actively pick up / act on tickets in this state.
     /// Values: "agent", "supervisor", "engineer", "any".
