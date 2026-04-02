@@ -4,12 +4,12 @@ title = "UI: supervisor panel should poll for ticket updates to stay fresh"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "apm"
 agent = "88876"
 branch = "ticket/7c570510-ui-supervisor-panel-should-poll-for-tick"
 created_at = "2026-04-02T18:24:16.100111Z"
-updated_at = "2026-04-02T19:21:54.481369Z"
+updated_at = "2026-04-02T19:22:04.537569Z"
 +++
 
 ## Spec
