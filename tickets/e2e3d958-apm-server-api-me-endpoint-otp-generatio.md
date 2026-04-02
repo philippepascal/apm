@@ -19,7 +19,9 @@ depends_on = ["4cec7a17", "90ebf40b"]
 
 ### Problem
 
-apm-server has no authentication and no way to identify the current user. Any client that can reach the server gets full access. External clients (phone, remote laptop) need a secure auth scheme, and the UI needs a `/api/me` endpoint to know the current user for default filtering. The auth foundation (OTP generation, session store, localhost bypass, session cookie) must be in place before registration and login ceremonies can be built. See `initial_specs/DESIGN-users.md` point 5.
+apm-server has no authentication and no way to identify the current user beyond the localhost case implemented in ticket #90ebf40b. Any client that can reach the server gets full access. External clients (phone, remote laptop) need a secure auth scheme, but before the WebAuthn registration and login ceremonies can be built, the underlying infrastructure must exist: a place to store short-lived OTPs, a place to store authenticated sessions, a mechanism for localhost requests to bypass auth entirely, and a `/api/me` endpoint that answers correctly for all three request categories (localhost, authenticated session, unauthenticated remote).
+
+Ticket #90ebf40b already implements the localhost case of `/api/me` (reading `.apm/local.toml`). This ticket extends that endpoint to also handle session-authenticated remote requests, and adds the OTP generation endpoint (`POST /api/auth/otp`) that `apm register` will call (CLI command is a separate ticket). It does not implement the WebAuthn ceremonies or any session issuance — those depend on this foundation.
 
 ### Acceptance criteria
 
