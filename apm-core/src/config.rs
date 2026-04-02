@@ -78,6 +78,19 @@ pub struct Config {
     pub provider: Option<ProviderConfig>,
     #[serde(default)]
     pub workers: WorkersConfig,
+    /// Warnings generated during load (e.g. conflicting split/monolithic files).
+    #[serde(skip)]
+    pub load_warnings: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct WorkflowFile {
+    workflow: WorkflowConfig,
+}
+
+#[derive(Deserialize)]
+struct TicketFile {
+    ticket: TicketConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -235,16 +248,47 @@ impl Config {
     }
 
     pub fn load(repo_root: &Path) -> Result<Self> {
-        let apm_dir_path = repo_root.join(".apm").join("config.toml");
-        let path = if apm_dir_path.exists() {
-            apm_dir_path
+        let apm_dir = repo_root.join(".apm");
+        let apm_dir_config = apm_dir.join("config.toml");
+        let path = if apm_dir_config.exists() {
+            apm_dir_config
         } else {
             repo_root.join("apm.toml")
         };
         let contents = std::fs::read_to_string(&path)
             .with_context(|| format!("cannot read {}", path.display()))?;
-        toml::from_str(&contents)
-            .with_context(|| format!("cannot parse {}", path.display()))
+        let mut config: Config = toml::from_str(&contents)
+            .with_context(|| format!("cannot parse {}", path.display()))?;
+
+        let workflow_path = apm_dir.join("workflow.toml");
+        if workflow_path.exists() {
+            let wf_contents = std::fs::read_to_string(&workflow_path)
+                .with_context(|| format!("cannot read {}", workflow_path.display()))?;
+            let wf: WorkflowFile = toml::from_str(&wf_contents)
+                .with_context(|| format!("cannot parse {}", workflow_path.display()))?;
+            if !config.workflow.states.is_empty() {
+                config.load_warnings.push(
+                    "both .apm/workflow.toml and [workflow] in config.toml exist; workflow.toml takes precedence".into()
+                );
+            }
+            config.workflow = wf.workflow;
+        }
+
+        let ticket_path = apm_dir.join("ticket.toml");
+        if ticket_path.exists() {
+            let tk_contents = std::fs::read_to_string(&ticket_path)
+                .with_context(|| format!("cannot read {}", ticket_path.display()))?;
+            let tk: TicketFile = toml::from_str(&tk_contents)
+                .with_context(|| format!("cannot parse {}", ticket_path.display()))?;
+            if !config.ticket.sections.is_empty() {
+                config.load_warnings.push(
+                    "both .apm/ticket.toml and [[ticket.sections]] in config.toml exist; ticket.toml takes precedence".into()
+                );
+            }
+            config.ticket = tk.ticket;
+        }
+
+        Ok(config)
     }
 }
 

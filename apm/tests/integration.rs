@@ -64,6 +64,36 @@ label = "In Progress"
 id       = "closed"
 label    = "Closed"
 terminal = true
+
+[[ticket.sections]]
+name     = "Problem"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Acceptance criteria"
+type     = "tasks"
+required = true
+
+[[ticket.sections]]
+name     = "Out of scope"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Approach"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Open questions"
+type     = "qa"
+required = false
+
+[[ticket.sections]]
+name     = "Amendment requests"
+type     = "tasks"
+required = false
 "#,
     )
     .unwrap();
@@ -155,6 +185,8 @@ fn init_creates_expected_files() {
     apm::cmd::init::run(p, true, false, false).unwrap();
     assert!(p.join("tickets").is_dir());
     assert!(p.join(".apm/config.toml").exists());
+    assert!(p.join(".apm/workflow.toml").exists());
+    assert!(p.join(".apm/ticket.toml").exists());
     assert!(p.join(".gitignore").exists());
     assert!(!p.join(".git/hooks/pre-push").exists());
     assert!(!p.join(".git/hooks/post-merge").exists());
@@ -183,7 +215,7 @@ fn init_generated_config_has_all_workflow_states() {
     git(p, &["config", "user.name", "test"]);
     apm::cmd::init::run(p, true, false, false).unwrap();
 
-    let toml = std::fs::read_to_string(p.join(".apm/config.toml")).unwrap();
+    let toml = std::fs::read_to_string(p.join(".apm/workflow.toml")).unwrap();
     for state in &["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
@@ -1710,8 +1742,10 @@ fn context_section_approach_places_text_under_approach() {
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Approach\n\nmy approach text\n\n"), "expected context under ### Approach");
-    // Problem section should be empty
-    assert!(content.contains("### Problem\n\n### Acceptance criteria"), "Problem should be empty");
+    // Problem section should be empty (no content between header and next section)
+    let after_problem = content.split("### Problem\n\n").nth(1).expect("Problem section not found in content");
+    let problem_body = after_problem.split("\n### ").next().unwrap_or("");
+    assert!(problem_body.trim().is_empty(), "Problem should be empty, got: {problem_body:?}");
 }
 
 #[test]
