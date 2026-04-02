@@ -1,7 +1,7 @@
 +++
 id = "19c2ab13"
 title = "Add --epic flag to apm new command"
-state = "implemented"
+state = "closed"
 priority = 6
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "48176"
 branch = "ticket/19c2ab13-add-epic-flag-to-apm-new-command"
 created_at = "2026-04-01T21:55:26.992429Z"
-updated_at = "2026-04-02T06:26:43.506864Z"
+updated_at = "2026-04-02T19:06:29.209537Z"
 +++
 
 ## Spec
@@ -162,3 +162,4 @@ In `run()`:
 | 2026-04-02T02:28Z | specd | ready | apm |
 | 2026-04-02T06:16Z | ready | in_progress | philippepascal |
 | 2026-04-02T06:26Z | in_progress | implemented | claude-0402-0620-b7c4 |
+| 2026-04-02T19:06Z | implemented | closed | apm-sync |
