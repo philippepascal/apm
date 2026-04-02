@@ -16,9 +16,11 @@ updated_at = "2026-04-02T00:47:54.397879Z"
 
 ### Problem
 
-When all tickets in an epic are implemented, the epic branch must be merged to `main` as a single coherent unit. There is currently no command to initiate this — engineers would have to create the PR manually.
+There is no command to create a PR from an epic branch to `main`. When an engineering team finishes all tickets in an epic, the epic branch must be merged to `main` as a coherent unit. Currently this requires running `gh pr create` manually, knowing the exact branch name and base branch.
 
-The full design is in `docs/epics.md` (§ Commands — `apm epic close`). The command runs `gh pr create` from the epic branch targeting `main`. It does not merge — merging requires human approval as usual. The command should refuse (with a clear error) if not all tickets are `implemented` or later, since merging a partial epic would leave incomplete work on main.
+`apm epic close <id>` should automate this: look up the epic branch by its short ID, verify that every ticket in the epic is in `implemented` or a later state, then run `gh pr create --base main --head epic/<id>-<slug>` and print the PR URL. The command does not merge — merging is left to human reviewers on GitHub.
+
+Without this command the epic workflow is incomplete: tickets can be created (`apm new --epic`), listed (`apm epic list/show`), but never promoted to a PR as a group.
 
 ### Acceptance criteria
 
