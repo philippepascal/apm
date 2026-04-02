@@ -3,13 +3,13 @@ id = "53788218"
 title = "apm agents command broken after migration to .apm/ directory"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "apm"
 agent = "91210"
 branch = "ticket/53788218-apm-agents-command-broken-after-migratio"
 created_at = "2026-04-02T05:27:56.648370Z"
-updated_at = "2026-04-02T17:05:42.504353Z"
+updated_at = "2026-04-02T17:08:15.086745Z"
 +++
 
 ## Spec
