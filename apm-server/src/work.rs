@@ -22,9 +22,15 @@ pub struct DryRunResponse {
     candidates: Vec<DryRunCandidate>,
 }
 
+#[derive(serde::Deserialize, Default)]
+pub struct StartWorkRequest {
+    pub epic: Option<String>,
+}
+
 pub struct WorkEngine {
     pub cancel: Arc<AtomicBool>,
     pub handle: tokio::task::JoinHandle<()>,
+    pub epic: Option<String>,
 }
 
 pub type WorkEngineState = Arc<Mutex<Option<WorkEngine>>>;
@@ -62,9 +68,12 @@ fn check_workers_alive(root: &Path) -> bool {
 pub async fn get_work_status(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let alive = {
+    let (alive, epic) = {
         let guard = state.work_engine.lock().await;
-        guard.as_ref().map(engine_is_alive).unwrap_or(false)
+        match guard.as_ref() {
+            Some(e) => (engine_is_alive(e), e.epic.clone()),
+            None => (false, None),
+        }
     };
 
     if !alive {
@@ -73,18 +82,19 @@ pub async fn get_work_status(
 
     let root = match state.git_root() {
         Some(r) => r.clone(),
-        None => return Ok(Json(serde_json::json!({"status": "idle"}))),
+        None => return Ok(Json(serde_json::json!({"status": "idle", "epic": epic}))),
     };
 
     let has_alive_worker =
         tokio::task::spawn_blocking(move || check_workers_alive(&root)).await?;
 
     let status = if has_alive_worker { "running" } else { "idle" };
-    Ok(Json(serde_json::json!({"status": status})))
+    Ok(Json(serde_json::json!({"status": status, "epic": epic})))
 }
 
 pub async fn post_work_start(
     State(state): State<Arc<AppState>>,
+    body: Option<Json<StartWorkRequest>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     {
         let guard = state.work_engine.lock().await;
@@ -94,6 +104,8 @@ pub async fn post_work_start(
             return get_work_status(State(state)).await;
         }
     }
+
+    let epic = body.and_then(|b| b.0.epic);
 
     let root = match state.git_root() {
         Some(r) => r.clone(),
@@ -109,6 +121,7 @@ pub async fn post_work_start(
 
     let cancel = Arc::new(AtomicBool::new(false));
     let cancel_clone = cancel.clone();
+    let epic_clone = epic.clone();
     let handle = tokio::task::spawn_blocking(move || {
         let _ = apm_core::work::run_engine_loop(
             &root,
@@ -116,12 +129,13 @@ pub async fn post_work_start(
             30,
             max_concurrent,
             skip_permissions,
+            epic_clone,
         );
     });
 
     {
         let mut guard = state.work_engine.lock().await;
-        *guard = Some(WorkEngine { cancel, handle });
+        *guard = Some(WorkEngine { cancel, handle, epic });
     }
 
     Ok(Json(serde_json::json!({"status": "idle"})))
@@ -276,6 +290,42 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["status"], "stopped");
+    }
+
+    #[tokio::test]
+    async fn work_start_with_epic_field_accepted() {
+        let app = crate::build_app_in_memory_for_work();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/work/start")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"epic":"abc123"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn work_status_has_no_epic_key_when_stopped() {
+        let app = crate::build_app_in_memory_for_work();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/work/status")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["status"], "stopped");
+        assert!(json.get("epic").is_none());
     }
 
     #[tokio::test]
