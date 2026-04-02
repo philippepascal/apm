@@ -33,7 +33,11 @@ The problem has two parts: (1) the UI omits the value entirely, and (2) even if 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Editing any other `[agents]` config fields (instructions, skip_permissions, side_tickets)
+- Editing any config section other than `[agents]`
+- Showing or editing max_concurrent when the engine is started via the CLI (only the UI is covered)
+- Validation that max_concurrent does not exceed available system resources
+- Undo / history of config changes
 
 ### Approach
 
