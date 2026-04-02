@@ -3,13 +3,13 @@ id = "ea172f4a"
 title = "UI: add epic selector to engine controls"
 state = "in_design"
 priority = 2
-effort = 0
+effort = 4
 risk = 0
 author = "claude-0401-2145-a8f3"
 agent = "87245"
 branch = "ticket/ea172f4a-ui-add-epic-selector-to-engine-controls"
 created_at = "2026-04-01T21:56:28.916880Z"
-updated_at = "2026-04-02T00:58:02.594592Z"
+updated_at = "2026-04-02T01:01:56.874685Z"
 +++
 
 ## Spec
