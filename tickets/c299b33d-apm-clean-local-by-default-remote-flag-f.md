@@ -91,6 +91,10 @@ remote: bool,
 #[arg(long, value_name = "THRESHOLD", requires = "remote")]
 older_than: Option<String>,
 
+/// Skip per-branch confirmation prompts for --remote
+#[arg(long)]
+yes: bool,
+
 /// Remove untracked non-temp files from worktrees before removal
 #[arg(long)]
 untracked: bool,
