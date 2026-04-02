@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/bb7d2a61-apm-proxy-docker-image-with-nginx-and-ce"
+depends_on = ["48105624", "73e484df"]
 created_at = "2026-04-02T20:54:51.005928Z"
 updated_at = "2026-04-02T20:54:51.005928Z"
 epic = "8db73240"
