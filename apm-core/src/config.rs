@@ -33,6 +33,8 @@ pub enum CompletionStrategy {
     Pr,
     Merge,
     Pull,
+    #[serde(rename = "pr_or_epic_merge")]
+    PrOrEpicMerge,
     #[default]
     None,
 }
@@ -358,6 +360,8 @@ type = "qa"
         assert_eq!(pull.c, CompletionStrategy::Pull);
         let none: W = toml::from_str("c = \"none\"").unwrap();
         assert_eq!(none.c, CompletionStrategy::None);
+        let prem: W = toml::from_str("c = \"pr_or_epic_merge\"").unwrap();
+        assert_eq!(prem.c, CompletionStrategy::PrOrEpicMerge);
     }
 
     #[test]
