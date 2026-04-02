@@ -41,21 +41,17 @@ discipline. This file covers the implementation phase only.
 - Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
 - Integration tests in `apm/tests/integration.rs` — use temp git repos, no
   fixture files needed
-- Run `cargo test --workspace` before opening a PR
-- All tests must pass before opening a PR
+- Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
 
 ---
 
-## Opening a PR
+## Finishing implementation
 
-- Target `main`
-- Title mirrors the ticket title (kept short)
-- Body must include:
-  - `Closes #<n>` (ticket number)
-  - Brief summary of the approach (1–3 bullets)
-  - Test plan (what was run, what to verify manually if anything)
-- Do not push to `main` directly
-- After opening the PR: `apm state <id> implemented`
+Run `cargo test --workspace` — all tests must pass.
+
+Then: `apm state <id> implemented`
+
+`apm state` pushes the branch and opens the PR automatically. Do not open a PR manually.
 
 ---
 
@@ -104,20 +100,20 @@ apm list --state ready
 **Do not use `$()` subshells:**
 ```bash
 # Wrong
-gh pr create --body "$(cat /tmp/body.md)"
+apm spec 1234 --section Problem --set "$(cat /tmp/problem.md)"
 
-# Right — write body with the Write tool, then reference by file
-gh pr create --body-file /tmp/body.md
+# Right — write content with the Write tool, then reference by file
+apm spec 1234 --section Problem --set-file /tmp/problem.md
 ```
 
 **Do not use background jobs (`&`):**
 ```bash
 # Wrong
-gh pr merge 1 & gh pr merge 2 & wait
+cargo test & cargo clippy & wait
 
 # Right — sequential calls
-gh pr merge 1
-gh pr merge 2
+cargo test
+cargo clippy
 ```
 
 **Use `git -C` for all git operations in worktrees:**
