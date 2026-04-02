@@ -309,7 +309,7 @@ Return error if the command fails (non-zero exit).
 ### Amendment requests
 
 - [x] Add `--yes` flag to the CLI flags snippet in the Approach (`main.rs` section): `#[arg(long)] yes: bool` with a docstring like "Skip per-branch confirmation prompts for --remote". The AC requires it but the approach omits it.
-- [ ] Remove the duplicate approach content. The Approach section already contains the full plan under `####` subsections; the identical content is repeated as top-level `###` sections ("### Decision", "### 1.", "### 2.", etc.) after the Approach section. Delete the duplicates, keeping only the `### Approach` version.
+- [x] Remove the duplicate approach content. The Approach section already contains the full plan under `####` subsections; the identical content is repeated as top-level `###` sections ("### Decision", "### 1.", "### 2.", etc.) after the Approach section. Delete the duplicates, keeping only the `### Approach` version.
 
 ### Code review
 
