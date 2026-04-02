@@ -43,7 +43,30 @@ This lets the workflow config express the intended policy once, without per-tick
 
 ### Approach
 
-How the implementation will work.
+**`apm-core/src/config.rs`** — add `PrOrEpicMerge` variant to `CompletionStrategy` enum. Ensure it deserializes from `"pr_or_epic_merge"` and serializes back to the same string.
+
+**`apm-core/src/state.rs`** — in the `match completion` block, add:
+
+```rust
+CompletionStrategy::PrOrEpicMerge => {
+    git::push_branch(root, &branch)?;
+    if let Some(ref target) = t.frontmatter.target_branch {
+        merge_into_default(root, &branch, target)?;
+    } else {
+        gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
+    }
+}
+```
+
+`merge_into_default` and `gh_pr_create_or_update` already exist and accept the target branch as a parameter — no new git logic needed.
+
+**`apm/src/cmd/verify.rs`** — the existing loop that prints `completion` values already handles any `CompletionStrategy` variant via `Display`; add `PrOrEpicMerge` to the `Display` impl and it appears automatically.
+
+**`workflow.toml`** — change `completion = "pr"` on `in_progress → implemented` to `completion = "pr_or_epic_merge"`.
+
+**Tests** — in `apm-core` unit tests or integration tests, add:
+- `pr_or_epic_merge` with no `target_branch` → confirm PR path taken
+- `pr_or_epic_merge` with `target_branch` set → confirm merge path taken
 
 ### Open questions
 
