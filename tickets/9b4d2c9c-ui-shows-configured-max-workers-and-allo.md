@@ -41,7 +41,44 @@ The problem has two parts: (1) the UI omits the value entirely, and (2) even if 
 
 ### Approach
 
-How the implementation will work.
+Backend — new apm-server/src/agents.rs
+
+1. Add GET /api/agents/config handler:
+   - Load Config from state.git_root() (same pattern as post_work_start)
+   - Return {"max_concurrent": config.agents.max_concurrent.max(1)}
+   - When git_root is None (in-memory), return the compiled-in default (3)
+
+2. Add PATCH /api/agents/config handler:
+   - Accept {"max_concurrent": usize}; return 422 if value < 1
+   - Resolve config file path: .apm/config.toml if it exists, else apm.toml
+   - Read the file as a toml::Value, set value["agents"]["max_concurrent"] to the new integer,
+     serialize with toml::to_string_pretty, overwrite the file
+   - If the [agents] table does not exist yet, insert it
+   - Return {"max_concurrent": N} on success
+
+3. Register routes in build_app() in main.rs:
+     .route("/api/agents/config", get(agents::get_agents_config).patch(agents::patch_agents_config))
+
+4. Add unit tests in agents.rs:
+   - GET with no git root returns default (3)
+   - PATCH persists value and GET returns updated value afterward
+   - PATCH with 0 returns 422
+
+Frontend — apm-ui/src/components/WorkEngineControls.tsx
+
+1. Add fetchAgentsConfig: GET /api/agents/config -> {max_concurrent: number}
+2. Add patchAgentsConfig(n): PATCH /api/agents/config with body {max_concurrent: n}
+3. Add useQuery(['agents-config'], fetchAgentsConfig)
+4. Add useMutation that calls patchAgentsConfig and invalidates ['agents-config'] on success
+5. Render an InlineNumberField (label="workers", min=1, max=99) in the existing flex row:
+   - When isEngineActive, render as read-only plain text (label + value, no click target)
+   - When engine is stopped, onCommit fires the mutation
+
+Key constraints:
+- toml::Value round-trip will reformat the config file (comments and key ordering lost).
+  This is acceptable — the config is machine-managed.
+- No new crate dependencies needed; toml is already in the workspace.
+- InlineNumberField is already implemented — do not duplicate it.
 
 ### Open questions
 
