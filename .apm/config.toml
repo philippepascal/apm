@@ -20,7 +20,7 @@ webhook_secret_env = "APM_WEBHOOK_SECRET"
 
 [agents]
 instructions   = "apm.agents.md"
-max_concurrent = 5
+max_concurrent = 1
 
 [sync]
 aggressive = true

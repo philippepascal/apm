@@ -35,6 +35,30 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+enum EpicCommand {
+    /// Create a new epic branch
+    New {
+        /// Title for the epic
+        title: String,
+    },
+    /// Open a PR from the epic branch to the default branch
+    Close {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+    },
+    /// List all epics with derived state and ticket counts
+    List,
+    /// Show an epic and its tickets
+    Show {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+        /// Skip automatic git fetch before reading data
+        #[arg(long)]
+        no_aggressive: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum Command {
     /// Initialize apm in the current repository
     #[command(long_about = "Initialize apm in the current repository.
@@ -489,6 +513,9 @@ Example:
         /// Poll interval in seconds when running as a daemon (default: 30)
         #[arg(long, default_value = "30")]
         interval: u64,
+        /// Restrict dispatching to tickets in this epic (8-char ID)
+        #[arg(long, value_name = "EPIC_ID")]
+        epic: Option<String>,
     },
     /// Force-close a ticket from any state (supervisor only)
     #[command(long_about = "Force-close a ticket from any state (supervisor only).
@@ -544,6 +571,11 @@ committing to the operation:
         /// Kill the worker for the given ticket ID
         #[arg(long, value_name = "ID")]
         kill: Option<String>,
+    },
+    /// Manage epics
+    Epic {
+        #[command(subcommand)]
+        command: EpicCommand,
     },
     /// Read or write individual spec sections of a ticket
     #[command(long_about = "Read or write individual sections of a ticket's spec.
@@ -644,11 +676,15 @@ fn main() -> Result<()> {
         Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
-        Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
+        Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
+        Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
+        Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
+        Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
+        Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
     }
 }
 
