@@ -11,13 +11,14 @@ created_at = "2026-04-02T20:53:51.576153Z"
 updated_at = "2026-04-02T20:53:51.576153Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["4cec7a17"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm init` does not prompt for a username or write `.apm/local.toml`. There is no collaborators list seeded at init time, and `.apm/local.toml` is not added to `.gitignore`. See `initial_specs/DESIGN-users.md` points 1 and 7.
 
 ### Acceptance criteria
 
@@ -34,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
