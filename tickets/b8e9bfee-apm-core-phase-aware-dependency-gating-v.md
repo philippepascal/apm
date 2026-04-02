@@ -3,13 +3,13 @@ id = "b8e9bfee"
 title = "apm-core: phase-aware dependency gating via satisfies_deps tags and dep_requires"
 state = "in_design"
 priority = 8
-effort = 0
+effort = 3
 risk = 0
 author = "apm"
 agent = "50734"
 branch = "ticket/b8e9bfee-apm-core-phase-aware-dependency-gating-v"
 created_at = "2026-04-02T21:24:08.067343Z"
-updated_at = "2026-04-02T21:44:34.423045Z"
+updated_at = "2026-04-02T21:47:37.530289Z"
 +++
 
 ## Spec
