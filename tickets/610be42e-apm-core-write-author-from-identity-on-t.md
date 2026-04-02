@@ -38,7 +38,12 @@ This ticket adds the identity-resolution function in `apm-core`, wires it into `
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Git host plugin identity resolution (DESIGN-users.md point 4) — no GitHub API calls
+- `apm init` prompting for username and writing `.apm/local.toml` (a later ticket)
+- Validating `author` against a collaborators list at `apm new` time
+- `apm list --mine` and `apm list --author` filter flags
+- `apm epic new` writing `author` (mirrors ticket behaviour, separate change)
+- UI/server changes (author display, board filters, `/api/me` endpoint)
 
 ### Approach
 
