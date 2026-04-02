@@ -72,7 +72,7 @@ pub fn verify_tickets(
 
         // Validate document structure (required sections non-empty, AC items present).
         if let Ok(doc) = t.document() {
-            for err in doc.validate() {
+            for err in doc.validate(&config.ticket.sections) {
                 issues.push(format!("{prefix}: {err}"));
             }
         }
