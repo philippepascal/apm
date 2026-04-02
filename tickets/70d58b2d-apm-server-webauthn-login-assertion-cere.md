@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/70d58b2d-apm-server-webauthn-login-assertion-cere"
+depends_on = ["8a08637c"]
 created_at = "2026-04-02T20:54:21.301151Z"
 updated_at = "2026-04-02T20:54:21.301151Z"
 epic = "8db73240"
