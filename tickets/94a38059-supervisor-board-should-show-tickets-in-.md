@@ -16,7 +16,11 @@ updated_at = "2026-04-02T16:58:11.384007Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The supervisor board (apm-ui) hard-codes which ticket states appear as swimlane columns in the `SUPERVISOR_STATES` constant inside `apm-ui/src/lib/supervisorUtils.ts`. The `new` state is not in that list, so newly-created tickets are invisible on the board until a supervisor manually transitions them to `groomed`.
+
+Every ticket is born in `new` state (`apm-core/src/ticket.rs`). Supervisors are supposed to review `new` tickets and promote them to `groomed` (or close them), but they cannot see those tickets on the board — the primary tool for day-to-day supervision. They must resort to `apm list --state new` on the CLI, which breaks the board-centric workflow.
+
+Adding `new` to the visible states lets supervisors act on newly-created tickets directly from the board.
 
 ### Acceptance criteria
 
@@ -33,13 +37,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
