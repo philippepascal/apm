@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/e35ef349-cli-apm-register-apm-sessions-and-apm-re"
-depends_on = ["8a08637c"]
 created_at = "2026-04-02T20:54:25.629052Z"
 updated_at = "2026-04-02T20:54:25.629052Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["8a08637c"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+There are no CLI commands for managing the WebAuthn auth lifecycle: generating OTPs to bootstrap device registration (`apm register`), inspecting active sessions (`apm sessions`), or revoking compromised sessions (`apm revoke`). See `initial_specs/DESIGN-users.md` points 5 and 7.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
