@@ -50,7 +50,7 @@ On the UI side, two small features are needed in the detail panel header: a clic
 
 ### Approach
 
-Four files change. Apply in this order:
+Five files change. Apply in this order:
 
 #### 1. `apm-core/src/ticket.rs` — extend `Frontmatter`
 
@@ -63,7 +63,7 @@ pub depends_on: Option<Vec<String>>,
 
 Decorate both with `#[serde(default, skip_serializing_if = "Option::is_none")]` so existing ticket files without these fields deserialize and round-trip correctly. No migration needed.
 
-`TicketDetailResponse` and `TicketResponse` in `apm-server/src/main.rs` both use `#[serde(flatten)] frontmatter`, so the new fields appear in all existing API responses automatically — no server-side struct changes required.
+`TicketDetailResponse` and `TicketResponse` in `apm-server/src/main.rs` both use `#[serde(flatten)] frontmatter`, so the new fields appear in all existing API responses automatically — no server-side struct changes required beyond those in ticket da95246d (which adds `blocking_deps`).
 
 #### 2. `apm-ui/src/store/useLayoutStore.ts` — add epic filter state
 
@@ -78,7 +78,13 @@ Initialise `epicFilter: null`. Setter: `set({ epicFilter: id })`.
 
 #### 3. `apm-ui/src/components/supervisor/types.ts` — extend `Ticket` type
 
-Add `epic?: string` and `depends_on?: string[]` to match the extended API response.
+Add the following to the `Ticket` type to match the extended API response:
+
+```ts
+epic?: string
+depends_on?: string[]
+blocking_deps?: Array<{ id: string; state: string }>
+```
 
 #### 4. `apm-ui/src/components/supervisor/SupervisorView.tsx` — apply epic filter
 
@@ -96,7 +102,7 @@ Add `epicFilter` to the `useMemo` dependency array.
 
 #### 5. `apm-ui/src/components/TicketDetail.tsx` — render epic and depends_on rows
 
-Update the `TicketDetail` interface: add `epic?: string` and `depends_on?: string[]`.
+Update the `TicketDetail` interface: add `epic?: string`, `depends_on?: string[]`, and `blocking_deps?: Array<{ id: string; state: string }>`.
 
 Add to component reads: `epicFilter` and `setEpicFilter` from layout store.
 
@@ -107,10 +113,13 @@ Add to component reads: `epicFilter` and `setEpicFilter` from layout store.
 
 **Depends on row** — render below the epic row, only when `data.depends_on?.length` is truthy:
 - Label "Depends on"
-- For each dep ID, look it up in the React Query cache via `useQueryClient().getQueryData<Ticket[]>(['tickets'])`
-- If found: render a `<button>` that calls `setSelectedTicketId(fullId)`. Apply `line-through` class if state is `implemented`, `accepted`, or `closed`
+- Build a set of unresolved dep IDs: `const blockingSet = new Set((data.blocking_deps ?? []).map(d => d.id))`
+- For each dep ID, look it up in the React Query cache via `useQueryClient().getQueryData<Ticket[]>(['tickets'])` to determine if it is a known ticket
+- If found: render a `<button>` that calls `setSelectedTicketId(fullId)`. Apply `line-through` class if the dep ID is **absent** from `blockingSet` (i.e. it is resolved)
 - If not found: render the raw ID as plain text (no crash)
 - Use the existing `useQueryClient` import; do not add a new `useQuery` call
+
+Resolution is determined entirely by `blocking_deps` — do not check state field names.
 
 #### Tests
 
