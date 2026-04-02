@@ -37,7 +37,13 @@ Together these gaps block the supervisor-board author filter and the per-author 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- WebAuthn / OTP authentication (DESIGN-users.md point 5)
+- `GET /api/me` for WebAuthn-authenticated sessions (returns local identity only; session-cookie resolution is a later auth ticket)
+- `apm list --mine` / `apm list --author` CLI flags (ticket #610be42e out of scope, separate ticket)
+- Supervisor board UI changes — filter bar, default author filter, card display (separate UI ticket)
+- Collaborators list validation or sync from GitHub (DESIGN-users.md point 4)
+- `apm init` prompting for username
+- Removing or migrating existing `agent` field values in frontmatter (ticket #610be42e)
 
 ### Approach
 
