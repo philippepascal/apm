@@ -56,7 +56,130 @@ Epic state is derived on demand from the states of associated tickets (those who
 
 ### Approach
 
-How the implementation will work.
+### 1. `apm-core/src/ticket.rs` — add three optional frontmatter fields
+
+Add to `Frontmatter` (all with `#[serde(skip_serializing_if = "Option::is_none")]`):
+
+```rust
+pub epic: Option<String>,
+pub target_branch: Option<String>,
+pub depends_on: Option<Vec<String>>,
+```
+
+The `epic` field is the minimum required for filtering tickets by epic. The other two are added now so all ticket routes expose them automatically via `#[serde(flatten)]` (no extra work needed per the design doc).
+
+### 2. `apm-core/src/git.rs` — two new public functions
+
+**`pub fn epic_branches(root: &Path) -> Result<Vec<String>>`**
+
+Mirror `ticket_branches` but use `epic/*` / `origin/epic/*` patterns. Deduplicate local and remote entries the same way.
+
+**`pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)>`**
+
+Returns `(id, branch_name)`.
+
+1. Call `gen_hex_id()` for the 8-char ID
+2. Call `crate::ticket::slugify(title)` for the slug
+3. Compose `branch = format!("epic/{id}-{slug}")`
+4. Best-effort `run(root, &["fetch", "origin", "main"])` (ignore error — offline repos must still work in tests)
+5. `run(root, &["branch", &branch, "origin/main"])` — create the local branch ref at remote main's tip; if that fails (no remote), fall back to `run(root, &["branch", &branch, "main"])`
+6. `commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")`
+7. Best-effort `push_branch(root, &branch)`
+8. Return `(id, branch)`
+
+### 3. `apm-server/src/main.rs` — new structs, helpers, handlers, and route registrations
+
+**Structs** (add near the other response/request structs):
+
+```rust
+#[derive(serde::Serialize)]
+struct EpicSummary {
+    id: String,
+    title: String,
+    branch: String,
+    state: String,
+    ticket_counts: std::collections::HashMap<String, usize>,
+}
+
+#[derive(serde::Serialize)]
+struct EpicDetailResponse {
+    #[serde(flatten)]
+    summary: EpicSummary,
+    tickets: Vec<TicketResponse>,
+}
+
+#[derive(serde::Deserialize)]
+struct CreateEpicRequest {
+    title: Option<String>,
+}
+```
+
+**Helper: `parse_epic_branch(branch: &str) -> Option<(String, String)>`**
+
+- Strip the `epic/` prefix
+- Split on the first `-` to separate `id` (8 chars) from `slug`
+- Convert slug to title: replace `-` with space, title-case each word
+- Return `Some((id, title))`; return `None` for malformed branch names
+
+**Helper: `derive_epic_state(tickets: &[&apm_core::ticket::Ticket]) -> String`**
+
+Implements the table from `docs/epics.md`:
+- `tickets` is empty → `"empty"`
+- Any ticket state is `in_design` or `in_progress` → `"in_progress"`
+- All ticket states are in `{"accepted", "closed"}` → `"done"`
+- All ticket states are in `{"implemented", "accepted", "closed"}` → `"implemented"`
+- Otherwise → `"in_progress"`
+
+**Helper: `build_epic_summary(branch: &str, all_tickets: &[apm_core::ticket::Ticket]) -> Option<EpicSummary>`**
+
+- Call `parse_epic_branch` — return `None` on failure
+- Filter `all_tickets` to those where `frontmatter.epic.as_deref() == Some(id)`
+- Build `ticket_counts: HashMap<String, usize>` by counting each state
+- Call `derive_epic_state`
+- Return `Some(EpicSummary { ... })`
+
+**Handler: `list_epics`**
+
+1. Guard: return 501 if `state.git_root()` is `None`
+2. `spawn_blocking`: call `apm_core::git::epic_branches(root)`
+3. `load_tickets` (reuse existing helper)
+4. For each branch, call `build_epic_summary`; collect non-None results
+5. Return `Json(summaries)`
+
+**Handler: `create_epic`**
+
+1. Guard: 501 if in-memory
+2. Validate title is non-empty — return 400 if not
+3. `spawn_blocking`: call `apm_core::git::create_epic_branch(root, &title)` → `(id, branch)`
+4. Build `EpicSummary` with empty `ticket_counts` and state `"empty"`
+5. Return `(StatusCode::CREATED, Json(summary))`
+
+**Handler: `get_epic`**
+
+1. Guard: 501 if in-memory
+2. `spawn_blocking`: call `apm_core::git::epic_branches(root)`; find the branch whose `epic/<id>-` prefix matches; return 404 if not found
+3. `load_tickets`; filter to those where `frontmatter.epic.as_deref() == Some(&id)`
+4. Call `build_epic_summary` for the branch
+5. Build `TicketResponse` for each matched ticket (same as `list_tickets`)
+6. Return `Json(EpicDetailResponse { summary, tickets })`
+
+**Route registration** — add to both `build_app` and `build_app_with_tickets` Router chains:
+
+```
+.route("/api/epics", get(list_epics).post(create_epic))
+.route("/api/epics/:id", get(get_epic))
+```
+
+### 4. Tests (inline in `apm-server/src/main.rs` `#[cfg(test)]` block)
+
+Add unit tests covering at minimum:
+- `list_epics_in_memory_returns_501`
+- `create_epic_missing_title_returns_400`
+- `create_epic_empty_title_returns_400`
+- `create_epic_in_memory_returns_501`
+- `get_epic_in_memory_returns_501`
+
+Full round-trip tests (branch creation + list + get) require a real git repo; use the existing temp-repo test helpers if the pattern is already established in `apm-server` tests.
 
 ### Open questions
 
