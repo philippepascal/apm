@@ -22,14 +22,16 @@ The problem has two parts: (1) the UI omits the value entirely, and (2) even if 
 
 ### Acceptance criteria
 
-- [ ] `WorkEngineControls` fetches `GET /api/agents/config` on mount and displays the `max_concurrent` value
-- [ ] `GET /api/agents/config` returns `{"max_concurrent": N}` where N matches what is in `.apm/config.toml` (defaulting to 3 when absent)
-- [ ] When the engine is stopped, clicking the displayed value opens an inline number field (min 1, max 99) pre-filled with the current value
-- [ ] Pressing Enter or blurring the field with a valid value calls `PATCH /api/agents/config` with `{"max_concurrent": N}`
-- [ ] After a successful PATCH, the displayed value updates to the new number
-- [ ] `PATCH /api/agents/config` writes `max_concurrent` to the `[agents]` section of `.apm/config.toml` and the change survives a server restart
+- [ ] `WorkEngineControls` fetches `GET /api/agents/config` on mount and displays the `max_concurrent` value as read-only text (always, regardless of engine state)
+- [ ] `GET /api/agents/config` returns `{"max_concurrent": N, "override": N | null}` where `max_concurrent` is the value from `.apm/config.toml` (defaulting to 3 when absent) and `override` is the current in-memory override (null if none set)
+- [ ] The UI displays the effective worker count (override if set, otherwise configured value) in an editable field when the engine is stopped; the configured value is always shown as read-only alongside it
+- [ ] When the engine is stopped, clicking the effective worker count opens an inline number field (min 1, max 99) pre-filled with the current effective value
+- [ ] Pressing Enter or blurring the field with a valid value calls `PATCH /api/agents/config` with `{"override": N}`
+- [ ] `PATCH /api/agents/config` stores the override in `AppState` memory only — no file is written — and the override is lost when the apm-server restarts
+- [ ] After a successful PATCH, the displayed effective value updates to the new number
+- [ ] `post_work_start` uses the in-memory override value when present, falling back to `config.agents.max_concurrent` when no override is set
 - [ ] `PATCH /api/agents/config` with a value less than 1 or a non-integer returns HTTP 422
-- [ ] When the engine is running or idle, the max-workers field is read-only (no click-to-edit)
+- [ ] When the engine is running or idle, the effective worker count field is read-only (no click-to-edit)
 
 ### Out of scope
 
@@ -84,6 +86,7 @@ Key constraints:
 
 
 ### Amendment requests
+
 Incorrect feature: we don't want the UI to be able to change the configured max workers. The configured max worker is always visible as readonly. 
 We want the UI to be able to locally (in the apm-server) use a override value instead of the configured value. That override is only for the apm-server,
 lives in memory and is lost when the apm-server is closed.
