@@ -227,8 +227,8 @@ fn init_generated_config_has_all_workflow_states() {
 #[test]
 fn list_excludes_terminal_tickets_by_default() {
     let dir = setup();
-apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
-    apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Closed ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let closed_id = find_ticket_id(dir.path(), "closed-ticket");
     apm::cmd::state::run(dir.path(), &closed_id, "closed".into(), false, false).unwrap();
 
@@ -254,7 +254,7 @@ apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, tr
 #[test]
 fn new_creates_ticket_file() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "My first ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     // File lives on the ticket branch, not in the working tree.
     let branch = find_ticket_branch(dir.path(), "my-first-ticket");
     let rel_path = ticket_rel_path(&branch);
@@ -265,7 +265,7 @@ fn new_creates_ticket_file() {
 #[test]
 fn new_ticket_has_correct_frontmatter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Hello World".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "hello-world");
     let rel_path = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel_path);
@@ -277,8 +277,8 @@ fn new_ticket_has_correct_frontmatter() {
 #[test]
 fn new_increments_ids() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true, vec![], vec![]).unwrap();
-    apm::cmd::new::run(dir.path(), "Second".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Second".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id1 = find_ticket_id(dir.path(), "first");
     let id2 = find_ticket_id(dir.path(), "second");
     assert_ne!(id1, id2, "ticket IDs must be unique");
@@ -293,10 +293,10 @@ fn new_increments_ids() {
 #[test]
 fn list_shows_all_tickets() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b1 = find_ticket_branch(dir.path(), "alpha");
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
     apm::cmd::list::run(dir.path(), None, false, false, None, None, true).unwrap();
@@ -305,11 +305,11 @@ fn list_shows_all_tickets() {
 #[test]
 fn list_state_filter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Alpha".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b1 = find_ticket_branch(dir.path(), "alpha");
     let alpha_id = find_ticket_id(dir.path(), "alpha");
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
     write_valid_spec_to_branch(dir.path(), &b1, &ticket_rel_path(&b1));
@@ -324,7 +324,7 @@ fn list_state_filter() {
 #[test]
 fn show_existing_ticket() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Show me".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(dir.path(), "show-me");
     apm::cmd::show::run(dir.path(), &id, false, false).unwrap();
 }
@@ -340,7 +340,7 @@ fn show_missing_ticket_errors() {
 #[test]
 fn state_transition_updates_file() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Transition test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "transition-test");
     let id = find_ticket_id(dir.path(), "transition-test");
     let rel = ticket_rel_path(&branch);
@@ -354,7 +354,7 @@ fn state_transition_updates_file() {
 #[test]
 fn state_transition_appends_history_row() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "History test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "History test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "history-test");
     let id = find_ticket_id(dir.path(), "history-test");
     let rel = ticket_rel_path(&branch);
@@ -367,7 +367,7 @@ fn state_transition_appends_history_row() {
 #[test]
 fn state_ammend_inserts_amendment_section() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "ammend-test");
     let id = find_ticket_id(dir.path(), "ammend-test");
     let rel = ticket_rel_path(&branch);
@@ -381,7 +381,7 @@ fn state_ammend_inserts_amendment_section() {
 #[test]
 fn set_priority_updates_frontmatter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Set test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "set-test");
     let id = find_ticket_id(dir.path(), "set-test");
     let rel = ticket_rel_path(&branch);
@@ -395,10 +395,10 @@ fn set_priority_updates_frontmatter() {
 #[test]
 fn next_returns_highest_priority() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Low priority".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b1 = find_ticket_branch(dir.path(), "low-priority");
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "High priority".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "high-priority");
     let high_id = find_ticket_id(dir.path(), "high-priority");
     apm::cmd::set::run(dir.path(), &high_id, "priority".into(), "10".into(), true).unwrap();
@@ -409,7 +409,7 @@ fn next_returns_highest_priority() {
 #[test]
 fn next_json_is_valid() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Json test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b = find_ticket_branch(dir.path(), "json-test");
     sync_from_branch(dir.path(), &b, &ticket_rel_path(&b));
     apm::cmd::next::run(dir.path(), true, true).unwrap();
@@ -426,7 +426,7 @@ fn next_null_when_no_actionable() {
 #[test]
 fn new_ticket_creates_branch() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Branch test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     // Branch should exist locally after apm new.
     let branch = find_ticket_branch(dir.path(), "branch-test");
     assert!(branch.starts_with("ticket/"), "expected ticket/ branch, got: {branch}");
@@ -436,7 +436,7 @@ fn new_ticket_creates_branch() {
 #[test]
 fn new_ticket_sets_branch_in_frontmatter() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Frontmatter branch".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(dir.path(), "Frontmatter branch".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "frontmatter-branch");
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
@@ -973,7 +973,7 @@ fn spec_mark_case_insensitive() {
 fn close_transitions_from_any_state() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Close me".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Close me".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(p, "close-me");
     let id = find_ticket_id(p, "close-me");
     let rel = ticket_rel_path(&branch);
@@ -988,7 +988,7 @@ fn close_transitions_from_any_state() {
 fn close_with_reason_appends_to_history() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Close reason".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Close reason".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(p, "close-reason");
     let id = find_ticket_id(p, "close-reason");
     let rel = ticket_rel_path(&branch);
@@ -1002,7 +1002,7 @@ fn close_with_reason_appends_to_history() {
 fn close_already_closed_is_error() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Already closed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "already-closed");
     apm::cmd::close::run(p, &id, None, true).unwrap();
     let result = apm::cmd::close::run(p, &id, None, true);
@@ -1023,7 +1023,7 @@ fn close_nonexistent_ticket_is_error() {
 fn validate_does_not_flag_closed_state() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Validate closed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "validate-closed");
     apm::cmd::close::run(p, &id, None, true).unwrap();
     // apm validate should not flag the closed ticket as having an unknown state.
@@ -1043,7 +1043,7 @@ fn validate_does_not_flag_closed_state() {
 fn state_to_closed_bypasses_transition_rules() {
     let dir = setup();
     let p = dir.path();
-    apm::cmd::new::run(p, "State closed".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "State closed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(p, "state-closed");
     let id = find_ticket_id(p, "state-closed");
     let rel = ticket_rel_path(&branch);
@@ -1122,7 +1122,7 @@ terminal = true
 fn aggressive_no_remote_does_not_abort_next() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "Aggressive next".into(), true, false, None, None, false, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Aggressive next".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
     // No remote configured — fetch_all will fail; must not propagate as error.
     apm::cmd::next::run(p, false, false).unwrap();
 }
@@ -1131,7 +1131,7 @@ fn aggressive_no_remote_does_not_abort_next() {
 fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
     apm::cmd::list::run(p, None, false, false, None, None, false).unwrap();
 }
 
@@ -1139,7 +1139,7 @@ fn aggressive_no_remote_does_not_abort_list() {
 fn aggressive_no_remote_does_not_abort_close() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "Aggressive close".into(), true, false, None, None, false, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Aggressive close".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "aggressive-close");
     // No remote: fetch and push will warn but not abort.
     apm::cmd::close::run(p, &id, None, false).unwrap();
@@ -1154,7 +1154,7 @@ fn aggressive_no_remote_does_not_abort_close() {
 fn no_aggressive_flag_suppresses_fetch_on_next() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "No agg next".into(), true, false, None, None, false, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "No agg next".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
     // --no-aggressive = true means fetch is skipped entirely (no warning printed,
     // no error). We verify the command still succeeds.
     apm::cmd::next::run(p, false, true).unwrap();
@@ -1164,7 +1164,7 @@ fn no_aggressive_flag_suppresses_fetch_on_next() {
 fn no_aggressive_flag_suppresses_fetch_on_spec() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "No agg spec".into(), true, false, None, None, false, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "No agg spec".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "no-agg-spec");
     // no_aggressive=true: fetch and push are skipped.
     apm::cmd::spec::run(
@@ -1183,7 +1183,7 @@ fn no_aggressive_flag_suppresses_fetch_on_spec() {
 fn no_aggressive_flag_suppresses_fetch_on_set() {
     let dir = setup_aggressive();
     let p = dir.path();
-    apm::cmd::new::run(p, "No agg set".into(), true, false, None, None, false, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "No agg set".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "no-agg-set");
     apm::cmd::set::run(p, &id, "priority".into(), "5".into(), true).unwrap();
     let branch = find_ticket_branch(p, "no-agg-set");
@@ -1690,7 +1690,7 @@ fn work_dry_run_lists_actionable_tickets() {
     write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "ready", 2, "beta");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     // dry-run should succeed without touching worktrees or spawning anything
-    apm::cmd::work::run(p, false, true, false, 30).unwrap();
+    apm::cmd::work::run(p, false, true, false, 30, None).unwrap();
 }
 
 #[test]
@@ -1698,7 +1698,7 @@ fn work_dry_run_no_tickets() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::work::run(p, false, true, false, 30).unwrap();
+    apm::cmd::work::run(p, false, true, false, 30, None).unwrap();
 }
 
 // --- sync direct close ---
@@ -1737,6 +1737,8 @@ fn context_section_approach_places_text_under_approach() {
         true,
         vec![],
         vec![],
+        None,
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "section-test");
     let rel = ticket_rel_path(&branch);
@@ -1761,6 +1763,8 @@ fn context_section_defaults_to_problem_without_config() {
         true,
         vec![],
         vec![],
+        None,
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "default-section-test");
     let rel = ticket_rel_path(&branch);
@@ -1781,6 +1785,8 @@ fn context_section_without_context_is_error() {
         true,
         vec![],
         vec![],
+        None,
+        vec![],
     );
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("--context-section requires --context"));
@@ -1798,6 +1804,8 @@ fn context_section_unknown_section_is_error() {
         Some("Nonexistent".into()),
         true,
         vec![],
+        vec![],
+        None,
         vec![],
     );
     assert!(result.is_err());
@@ -1847,6 +1855,8 @@ context_section = "Approach"
         true,
         vec![],
         vec![],
+        None,
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(p, "transition-context-test");
     let rel = ticket_rel_path(&branch);
@@ -1869,6 +1879,8 @@ fn new_section_set_prepopulates_multiple_sections() {
         true,
         vec!["Problem".into(), "Approach".into()],
         vec!["Something is broken".into(), "Fix it with a hammer".into()],
+        None,
+        vec![],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "pre-populated-ticket");
     let rel = ticket_rel_path(&branch);
@@ -1898,6 +1910,8 @@ fn new_section_set_mismatched_counts_is_error() {
         true,
         vec!["Problem".into(), "Approach".into()],
         vec!["Only one set".into()],
+        None,
+        vec![],
     );
     assert!(result.is_err());
     let msg = result.unwrap_err().to_string();
@@ -1917,6 +1931,8 @@ fn new_set_without_section_is_error() {
         true,
         vec![],
         vec!["Orphaned value".into()],
+        None,
+        vec![],
     );
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("--set requires --section"));
@@ -1935,9 +1951,201 @@ fn new_section_unknown_name_is_error() {
         true,
         vec!["Nonexistent".into()],
         vec!["some text".into()],
+        None,
+        vec![],
     );
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("unknown section"));
+}
+
+// --- --epic / --depends-on ---
+
+fn setup_with_epic() -> (tempfile::TempDir, String) {
+    let dir = setup();
+    let p = dir.path();
+    // Create an epic branch: epic/<8-hex-id>-my-epic
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    git(p, &["-c", "commit.gpgsign=false", "checkout", "-b", &epic_branch]);
+    // Add a commit on the epic branch so it has a distinct tip
+    std::fs::write(p.join("epic.txt"), "epic content").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "epic.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic commit"]);
+    // Return to main
+    git(p, &["checkout", "main"]);
+    (dir, epic_id.to_string())
+}
+
+#[test]
+fn new_epic_sets_frontmatter_fields() {
+    let (dir, epic_id) = setup_with_epic();
+    apm::cmd::new::run(
+        dir.path(),
+        "Epic child ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec![],
+        Some(epic_id.clone()),
+        vec![],
+    ).unwrap();
+    let branch = find_ticket_branch(dir.path(), "epic-child-ticket");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains(&format!("epic = \"{epic_id}\"")), "epic field missing in frontmatter");
+    let expected_target = format!("epic/{epic_id}-my-epic");
+    assert!(content.contains(&format!("target_branch = \"{expected_target}\"")), "target_branch missing");
+}
+
+#[test]
+fn new_epic_branch_created_from_epic_tip() {
+    let (dir, epic_id) = setup_with_epic();
+    // Get the SHA of the epic branch tip before creating the ticket
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    let epic_tip = std::process::Command::new("git")
+        .args(["rev-parse", &epic_branch])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let epic_tip_sha = String::from_utf8(epic_tip.stdout).unwrap().trim().to_string();
+
+    apm::cmd::new::run(
+        dir.path(),
+        "Branched ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec![],
+        Some(epic_id.clone()),
+        vec![],
+    ).unwrap();
+
+    let ticket_branch = find_ticket_branch(dir.path(), "branched-ticket");
+    // The parent of the ticket creation commit should be the epic branch tip.
+    // The ticket branch has exactly one commit above the epic tip, so ticket^1 = epic tip.
+    let parent = std::process::Command::new("git")
+        .args(["rev-parse", &format!("{ticket_branch}^1")])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let parent_sha = String::from_utf8(parent.stdout).unwrap().trim().to_string();
+    assert_eq!(parent_sha, epic_tip_sha, "ticket branch should be created from the epic branch tip");
+}
+
+#[test]
+fn new_epic_bad_id_is_error() {
+    let dir = setup();
+    let result = apm::cmd::new::run(
+        dir.path(),
+        "Orphan ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec![],
+        Some("deadbeef".into()),
+        vec![],
+    );
+    assert!(result.is_err());
+    assert!(
+        result.unwrap_err().to_string().contains("No epic branch found for id 'deadbeef'"),
+        "error message should mention the bad id"
+    );
+}
+
+#[test]
+fn new_depends_on_sets_frontmatter() {
+    let dir = setup();
+    apm::cmd::new::run(
+        dir.path(),
+        "Dependent ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec![],
+        None,
+        vec!["aabbccdd".into(), "11223344".into()],
+    ).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dependent-ticket");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("depends_on"), "depends_on field missing");
+    assert!(content.contains("aabbccdd"), "first dep missing");
+    assert!(content.contains("11223344"), "second dep missing");
+    assert!(!content.contains("epic ="), "epic should be absent");
+    assert!(!content.contains("target_branch ="), "target_branch should be absent");
+}
+
+#[test]
+fn new_depends_on_comma_separated() {
+    let dir = setup();
+    apm::cmd::new::run(
+        dir.path(),
+        "Comma deps ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec![],
+        None,
+        vec!["aabbccdd,11223344".into()],
+    ).unwrap();
+    let branch = find_ticket_branch(dir.path(), "comma-deps-ticket");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("aabbccdd"), "first dep missing");
+    assert!(content.contains("11223344"), "second dep missing");
+}
+
+#[test]
+fn new_without_epic_flags_is_unchanged() {
+    let dir = setup();
+    apm::cmd::new::run(
+        dir.path(),
+        "Plain ticket".into(),
+        true,
+        false,
+        None,
+        None,
+        true,
+        vec![],
+        vec![],
+        None,
+        vec![],
+    ).unwrap();
+    let branch = find_ticket_branch(dir.path(), "plain-ticket");
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(!content.contains("epic ="), "epic should not be present");
+    assert!(!content.contains("target_branch ="), "target_branch should not be present");
+    assert!(!content.contains("depends_on"), "depends_on should not be present");
+    // Ticket branch should be rooted from main (parent of the ticket commit is main's tip)
+    let main_tip = std::process::Command::new("git")
+        .args(["rev-parse", "main"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let main_sha = String::from_utf8(main_tip.stdout).unwrap().trim().to_string();
+    let parent = std::process::Command::new("git")
+        .args(["rev-parse", &format!("{branch}^1")])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let parent_sha = String::from_utf8(parent.stdout).unwrap().trim().to_string();
+    assert_eq!(parent_sha, main_sha, "ticket branch should be rooted from main");
 }
 
 #[test]
@@ -1984,7 +2192,7 @@ type = "free"
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    apm::cmd::new::run(p, "Scaffold test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Scaffold test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
 
     let scaffold_branch = find_ticket_branch(p, "scaffold-test");
     let scaffold_rel = ticket_rel_path(&scaffold_branch);
@@ -2063,7 +2271,7 @@ fn review_ammend_normalises_plain_bullets_to_checkboxes() {
     let dir = setup();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "Review checkbox test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "Review checkbox test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
 
     let branch = find_ticket_branch(p, "review-checkbox-test");
     let ticket_path = ticket_rel_path(&branch);
@@ -2506,7 +2714,7 @@ fn workers_kill_no_pid_file_errors() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
-    apm::cmd::new::run(p, "kill test ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "kill test ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "kill-test-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
 
@@ -2529,7 +2737,7 @@ fn workers_stale_pid_file_detected() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
-    apm::cmd::new::run(p, "stale pid ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "stale pid ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "stale-pid-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
     let branch = find_ticket_branch(p, "stale-pid-ticket");
@@ -2556,7 +2764,7 @@ fn workers_kill_stale_pid_errors() {
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
-    apm::cmd::new::run(p, "kill stale ticket".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "kill stale ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "kill-stale-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
     let branch = find_ticket_branch(p, "kill-stale-ticket");
@@ -2656,7 +2864,7 @@ fn state_force_bypasses_transition_rules() {
     let dir = setup_with_strict_transitions();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force test".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "force test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "force-test");
 
     // Advance to in_progress (new → in_progress is valid).
@@ -2680,7 +2888,7 @@ fn state_force_implemented_from_in_progress() {
     let dir = setup_with_strict_transitions();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force progress".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "force progress".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "force-progress");
 
     // Advance to in_progress.
@@ -2703,7 +2911,7 @@ fn state_force_still_rejects_unknown_state() {
     let dir = setup();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force unknown".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "force unknown".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "force-unknown");
 
     // --force does not allow transitioning to a state that doesn't exist in config.
@@ -2716,7 +2924,7 @@ fn state_force_does_not_skip_doc_validation() {
     let dir = setup();
     let p = dir.path();
 
-    apm::cmd::new::run(p, "force doc valid".into(), true, false, None, None, true, vec![], vec![]).unwrap();
+    apm::cmd::new::run(p, "force doc valid".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let id = find_ticket_id(p, "force-doc-valid");
 
     // Transitioning to "specd" without a valid spec should still fail even with --force.
@@ -2911,4 +3119,590 @@ fn sync_detect_regular_merge_still_detected() {
         close_branches.contains(&branch),
         "regular-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
+}
+
+#[test]
+fn start_uses_target_branch_as_merge_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[sync]
+aggressive = false
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+"#,
+    )
+    .unwrap();
+
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    // Create epic/e1-foo branch with a unique commit.
+    git(p, &["checkout", "-b", "epic/e1-foo"]);
+    std::fs::write(p.join("epic-marker.txt"), "epic content").unwrap();
+    git(p, &["add", "epic-marker.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic unique commit"]);
+
+    // Back to main.
+    git(p, &["checkout", "main"]);
+
+    // Create ticket branch with target_branch = "epic/e1-foo".
+    let ticket_branch = "ticket/abc1-epic-task";
+    git(p, &["checkout", "-b", ticket_branch]);
+    let ticket_content = concat!(
+        "+++\n",
+        "id = \"abc1\"\n",
+        "title = \"Epic task\"\n",
+        "state = \"ready\"\n",
+        "branch = \"ticket/abc1-epic-task\"\n",
+        "target_branch = \"epic/e1-foo\"\n",
+        "+++\n\n",
+    );
+    std::fs::write(p.join("tickets/abc1-epic-task.md"), ticket_content).unwrap();
+    git(p, &["add", "tickets/abc1-epic-task.md"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+
+    git(p, &["checkout", "main"]);
+
+    apm::cmd::start::run(p, "abc1", true, false, false, "test-agent").unwrap();
+
+    // The worktree should exist.
+    let wt_path = p.join("worktrees").join("ticket-abc1-epic-task");
+    assert!(wt_path.exists(), "worktree should be created at {}", wt_path.display());
+
+    // The unique commit from epic/e1-foo should appear in the worktree history.
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline"])
+        .current_dir(&wt_path)
+        .output()
+        .unwrap();
+    let log_str = String::from_utf8(log.stdout).unwrap();
+    assert!(
+        log_str.contains("epic unique commit"),
+        "epic branch commit should be in worktree history; got:\n{log_str}"
+    );
+}
+
+// ── depends_on scheduling ─────────────────────────────────────────────────────
+
+fn setup_with_satisfies_deps() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+fn commit_ticket_to_branch(dir: &std::path::Path, branch: &str, path: &str, content: &str) {
+    // Create branch from main, write file, commit, return to main.
+    let main_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", "main"])
+        .current_dir(dir)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    let base = if main_exists { "main" } else { "HEAD" };
+
+    // Create branch from base if it doesn't exist, else just check it out.
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if branch_exists {
+        git(dir, &["checkout", branch]);
+    } else {
+        git(dir, &["checkout", "-b", branch, base]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(path), content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+    git(dir, &["checkout", "-"]);
+}
+
+#[test]
+fn next_skips_dep_blocked_returns_unblocked() {
+    use apm_core::{config::Config, ticket};
+
+    let dir = setup_with_satisfies_deps();
+    let p = dir.path();
+
+    // Ticket A: ready, no deps — should be returned by apm next
+    let content_a = "+++\nid = \"aaaa0001\"\ntitle = \"Ticket A\"\nstate = \"ready\"\nbranch = \"ticket/aaaa0001-ticket-a\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/aaaa0001-ticket-a", "tickets/aaaa0001-ticket-a.md", content_a);
+
+    // Ticket B: ready, depends_on A (which is in "ready", not satisfies_deps)
+    let content_b = "+++\nid = \"bbbb0001\"\ntitle = \"Ticket B\"\nstate = \"ready\"\nbranch = \"ticket/bbbb0001-ticket-b\"\ndepends_on = [\"aaaa0001\"]\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/bbbb0001-ticket-b", "tickets/bbbb0001-ticket-b.md", content_b);
+
+    let config = Config::load(p).unwrap();
+    let tickets = ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
+    let p_cfg = &config.workflow.prioritization;
+
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    assert!(next.is_some(), "should find an actionable ticket");
+    assert_eq!(next.unwrap().frontmatter.id, "aaaa0001", "dep-blocked ticket B should be skipped, A returned");
+}
+
+#[test]
+fn next_returns_dep_blocked_after_dep_satisfies() {
+    use apm_core::{config::Config, ticket};
+
+    let dir = setup_with_satisfies_deps();
+    let p = dir.path();
+
+    // Ticket A: implemented (satisfies_deps = true)
+    let content_a = "+++\nid = \"aaaa0002\"\ntitle = \"Ticket A\"\nstate = \"implemented\"\nbranch = \"ticket/aaaa0002-ticket-a\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/aaaa0002-ticket-a", "tickets/aaaa0002-ticket-a.md", content_a);
+
+    // Ticket B: ready, depends_on A (implemented = satisfies_deps)
+    let content_b = "+++\nid = \"bbbb0002\"\ntitle = \"Ticket B\"\nstate = \"ready\"\nbranch = \"ticket/bbbb0002-ticket-b\"\ndepends_on = [\"aaaa0002\"]\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/bbbb0002-ticket-b", "tickets/bbbb0002-ticket-b.md", content_b);
+
+    let config = Config::load(p).unwrap();
+    let tickets = ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
+    let p_cfg = &config.workflow.prioritization;
+
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    assert!(next.is_some(), "should find an actionable ticket");
+    assert_eq!(next.unwrap().frontmatter.id, "bbbb0002", "ticket B should be returned once dep A satisfies_deps");
+}
+
+// --- epic list ---
+
+fn setup_epic_list() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[sync]
+aggressive = false
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+/// Create a bare local branch (simulates an epic branch).
+fn create_epic_branch(dir: &std::path::Path, branch: &str) {
+    git(dir, &["checkout", "-b", branch]);
+    // Write a placeholder file so the branch has a commit.
+    std::fs::write(dir.join("EPIC.md"), format!("# {branch}\n")).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", "EPIC.md"]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "create epic"]);
+    git(dir, &["checkout", "-"]);
+    // Remove placeholder from main worktree.
+    let _ = std::fs::remove_file(dir.join("EPIC.md"));
+}
+
+#[test]
+fn epic_list_no_epics_exits_zero_no_output() {
+    let dir = setup_epic_list();
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "list"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "exit status: {}", out.status);
+    assert!(out.stdout.is_empty(), "expected no output, got: {}", String::from_utf8_lossy(&out.stdout));
+}
+
+#[test]
+fn epic_list_shows_epics_with_derived_state_and_counts() {
+    let dir = setup_epic_list();
+    let p = dir.path();
+
+    // Epic 1: "ab12cd34-user-authentication"
+    let epic1_id = "ab12cd34";
+    let epic1_branch = format!("epic/{epic1_id}-user-authentication");
+    create_epic_branch(p, &epic1_branch);
+
+    // Epic 2: "ef567890-billing-overhaul" — no tickets (empty)
+    let epic2_id = "ef567890";
+    let epic2_branch = format!("epic/{epic2_id}-billing-overhaul");
+    create_epic_branch(p, &epic2_branch);
+
+    // Ticket for epic 1: state = ready (actionable by agent → "active")
+    let t1 = format!(
+        "+++\nid = \"t1000001\"\ntitle = \"Auth ticket\"\nstate = \"ready\"\nbranch = \"ticket/t1000001-auth-ticket\"\nepic = \"{epic1_id}\"\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t1000001-auth-ticket", "tickets/t1000001-auth-ticket.md", &t1);
+
+    // Second ticket for epic 1: state = implemented
+    let t2 = format!(
+        "+++\nid = \"t1000002\"\ntitle = \"Auth impl\"\nstate = \"implemented\"\nbranch = \"ticket/t1000002-auth-impl\"\nepic = \"{epic1_id}\"\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t1000002-auth-impl", "tickets/t1000002-auth-impl.md", &t2);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "list"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines.len(), 2, "expected 2 lines, got:\n{stdout}");
+
+    // Epic 1: in_progress (has ticket with neither satisfies_deps nor terminal)
+    assert!(lines[0].contains(epic1_id), "line 0 should contain epic1 id: {}", lines[0]);
+    assert!(lines[0].contains("in_progress"), "line 0 should be in_progress: {}", lines[0]);
+    assert!(lines[0].contains("User Authentication"), "line 0 should have title: {}", lines[0]);
+    assert!(lines[0].contains("1 ready"), "line 0 should show 1 ready: {}", lines[0]);
+    assert!(lines[0].contains("1 implemented"), "line 0 should show 1 implemented: {}", lines[0]);
+
+    // Epic 2: empty (no tickets)
+    assert!(lines[1].contains(epic2_id), "line 1 should contain epic2 id: {}", lines[1]);
+    assert!(lines[1].contains("empty"), "line 1 should be empty: {}", lines[1]);
+    assert!(lines[1].contains("Billing Overhaul"), "line 1 should have title: {}", lines[1]);
+}
+
+// --- epic show ---
+
+fn setup_epic_show() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[sync]
+aggressive = false
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn epic_show_displays_header_and_ticket_table() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-user-auth");
+    create_epic_branch(p, &epic_branch);
+
+    // Ticket 1: belongs to epic, ready state
+    let t1 = format!(
+        "+++\nid = \"t2000001\"\ntitle = \"Implement login\"\nstate = \"ready\"\nbranch = \"ticket/t2000001-impl-login\"\nepic = \"{epic_id}\"\nagent = \"alice\"\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t2000001-impl-login", "tickets/t2000001-impl-login.md", &t1);
+
+    // Ticket 2: belongs to epic, implemented state, with depends_on
+    let t2 = format!(
+        "+++\nid = \"t2000002\"\ntitle = \"Add OAuth\"\nstate = \"implemented\"\nbranch = \"ticket/t2000002-add-oauth\"\nepic = \"{epic_id}\"\ndepends_on = [\"t2000001\"]\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t2000002-add-oauth", "tickets/t2000002-add-oauth.md", &t2);
+
+    // Ticket 3: does NOT belong to epic
+    let t3 = "+++\nid = \"t2000003\"\ntitle = \"Unrelated\"\nstate = \"ready\"\nbranch = \"ticket/t2000003-unrelated\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/t2000003-unrelated", "tickets/t2000003-unrelated.md", t3);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", epic_id])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "exit: {}\nstderr: {}",
+        out.status,
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    // Header block
+    assert!(stdout.contains("User Auth"), "should contain title: {stdout}");
+    assert!(stdout.contains(&epic_branch), "should contain branch: {stdout}");
+    assert!(stdout.contains("in_progress"), "should contain derived state: {stdout}");
+    // Ticket table rows
+    assert!(stdout.contains("t2000001"), "should contain ticket1 id: {stdout}");
+    assert!(stdout.contains("t2000002"), "should contain ticket2 id: {stdout}");
+    assert!(stdout.contains("alice"), "should contain agent name: {stdout}");
+    assert!(stdout.contains("t2000001"), "ticket2 depends_on should show t2000001: {stdout}");
+    // Unrelated ticket must NOT appear
+    assert!(!stdout.contains("t2000003"), "unrelated ticket must not appear: {stdout}");
+    assert!(!stdout.contains("Unrelated"), "unrelated ticket title must not appear: {stdout}");
+}
+
+#[test]
+fn epic_show_prefix_resolves_correctly() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-user-auth");
+    create_epic_branch(p, &epic_branch);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", "ab12"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "exit: {}\nstderr: {}",
+        out.status,
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains(&epic_branch), "should resolve via prefix: {stdout}");
+}
+
+#[test]
+fn epic_show_no_match_exits_nonzero() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", "zzzzzzz"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected non-zero exit");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("zzzzzzz"), "error should mention the prefix: {stderr}");
+}
+
+#[test]
+fn epic_show_ambiguous_prefix_exits_nonzero() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    // Create two epics with the same prefix "aa"
+    create_epic_branch(p, "epic/aa000001-first");
+    create_epic_branch(p, "epic/aa000002-second");
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", "aa"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected non-zero exit for ambiguous prefix");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("ambiguous"), "error should say ambiguous: {stderr}");
+}
+
+#[test]
+fn epic_show_no_tickets_prints_no_tickets() {
+    let dir = setup_epic_show();
+    let p = dir.path();
+
+    let epic_id = "cc112233";
+    create_epic_branch(p, &format!("epic/{epic_id}-empty-epic"));
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "show", epic_id])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "exit: {}", out.status);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("(no tickets)"), "should print no tickets message: {stdout}");
+    assert!(stdout.contains("empty"), "derived state should be empty: {stdout}");
+}
+
+// --- apm work --epic ---
+
+fn write_ticket_with_epic(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, epic: Option<&str>) {
+    let path = format!("tickets/{filename}");
+    let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\n{epic_line}created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn work_dry_run_epic_filter_shows_only_epic_ticket() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    write_ticket_with_epic(p, "ticket/0001-epic-ticket", "0001-epic-ticket.md", "ready", 1, "epic ticket", Some("ab12cd34"));
+    write_ticket_with_epic(p, "ticket/0002-free-ticket", "0002-free-ticket.md", "ready", 2, "free ticket", None);
+
+    // Capture stdout
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["work", "--dry-run", "--epic", "ab12cd34"])
+        .current_dir(p)
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("epic ticket"), "should show epic ticket: {stdout}");
+    assert!(!stdout.contains("free ticket"), "should not show free ticket: {stdout}");
+}
+
+#[test]
+fn work_dry_run_epic_filter_no_candidates() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    write_ticket_with_epic(p, "ticket/0001-free-ticket", "0001-free-ticket.md", "ready", 1, "free ticket", None);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["work", "--dry-run", "--epic", "ab12cd34"])
+        .current_dir(p)
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("no actionable tickets"), "should show no candidates: {stdout}");
+}
+
+#[test]
+fn work_dry_run_no_flag_shows_epic_ticket() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    write_ticket_with_epic(p, "ticket/0001-epic-ticket", "0001-epic-ticket.md", "ready", 1, "epic ticket", Some("ab12cd34"));
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["work", "--dry-run"])
+        .current_dir(p)
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("epic ticket"), "should show epic ticket without filter: {stdout}");
 }
