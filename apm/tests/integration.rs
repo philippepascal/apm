@@ -3121,3 +3121,123 @@ fn next_returns_dep_blocked_after_dep_satisfies() {
     assert!(next.is_some(), "should find an actionable ticket");
     assert_eq!(next.unwrap().frontmatter.id, "bbbb0002", "ticket B should be returned once dep A satisfies_deps");
 }
+
+// --- epic list ---
+
+fn setup_epic_list() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[sync]
+aggressive = false
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id             = "implemented"
+label          = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+/// Create a bare local branch (simulates an epic branch).
+fn create_epic_branch(dir: &std::path::Path, branch: &str) {
+    git(dir, &["checkout", "-b", branch]);
+    // Write a placeholder file so the branch has a commit.
+    std::fs::write(dir.join("EPIC.md"), format!("# {branch}\n")).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", "EPIC.md"]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "create epic"]);
+    git(dir, &["checkout", "-"]);
+    // Remove placeholder from main worktree.
+    let _ = std::fs::remove_file(dir.join("EPIC.md"));
+}
+
+#[test]
+fn epic_list_no_epics_exits_zero_no_output() {
+    let dir = setup_epic_list();
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "list"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "exit status: {}", out.status);
+    assert!(out.stdout.is_empty(), "expected no output, got: {}", String::from_utf8_lossy(&out.stdout));
+}
+
+#[test]
+fn epic_list_shows_epics_with_derived_state_and_counts() {
+    let dir = setup_epic_list();
+    let p = dir.path();
+
+    // Epic 1: "ab12cd34-user-authentication"
+    let epic1_id = "ab12cd34";
+    let epic1_branch = format!("epic/{epic1_id}-user-authentication");
+    create_epic_branch(p, &epic1_branch);
+
+    // Epic 2: "ef567890-billing-overhaul" — no tickets (empty)
+    let epic2_id = "ef567890";
+    let epic2_branch = format!("epic/{epic2_id}-billing-overhaul");
+    create_epic_branch(p, &epic2_branch);
+
+    // Ticket for epic 1: state = ready (actionable by agent → "active")
+    let t1 = format!(
+        "+++\nid = \"t1000001\"\ntitle = \"Auth ticket\"\nstate = \"ready\"\nbranch = \"ticket/t1000001-auth-ticket\"\nepic = \"{epic1_id}\"\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t1000001-auth-ticket", "tickets/t1000001-auth-ticket.md", &t1);
+
+    // Second ticket for epic 1: state = implemented
+    let t2 = format!(
+        "+++\nid = \"t1000002\"\ntitle = \"Auth impl\"\nstate = \"implemented\"\nbranch = \"ticket/t1000002-auth-impl\"\nepic = \"{epic1_id}\"\n+++\n\nbody\n"
+    );
+    commit_ticket_to_branch(p, "ticket/t1000002-auth-impl", "tickets/t1000002-auth-impl.md", &t2);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "list"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines.len(), 2, "expected 2 lines, got:\n{stdout}");
+
+    // Epic 1: active (has agent-actionable ticket), counts show ready and implemented
+    assert!(lines[0].contains(epic1_id), "line 0 should contain epic1 id: {}", lines[0]);
+    assert!(lines[0].contains("active"), "line 0 should be active: {}", lines[0]);
+    assert!(lines[0].contains("User Authentication"), "line 0 should have title: {}", lines[0]);
+    assert!(lines[0].contains("1 ready"), "line 0 should show 1 ready: {}", lines[0]);
+    assert!(lines[0].contains("1 implemented"), "line 0 should show 1 implemented: {}", lines[0]);
+
+    // Epic 2: empty (no tickets)
+    assert!(lines[1].contains(epic2_id), "line 1 should contain epic2 id: {}", lines[1]);
+    assert!(lines[1].contains("empty"), "line 1 should be empty: {}", lines[1]);
+    assert!(lines[1].contains("Billing Overhaul"), "line 1 should have title: {}", lines[1]);
+}
