@@ -3,13 +3,13 @@ id = "4b663160"
 title = "Implement apm epic new command"
 state = "in_design"
 priority = 8
-effort = 0
+effort = 3
 risk = 0
 author = "claude-0401-2145-a8f3"
 agent = "68666"
 branch = "ticket/4b663160-implement-apm-epic-new-command"
 created_at = "2026-04-01T21:55:06.350633Z"
-updated_at = "2026-04-02T00:43:25.666912Z"
+updated_at = "2026-04-02T00:47:21.489005Z"
 +++
 
 ## Spec
