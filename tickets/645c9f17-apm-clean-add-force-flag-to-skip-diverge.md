@@ -26,7 +26,14 @@ When using --force, it needs to be in interactive mode, asking the supervisor to
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm clean --force` removes the worktree and local branch for a closed ticket whose branch is not merged into main
+- [ ] `apm clean --force` removes the worktree and local branch for a closed ticket whose local tip is not an ancestor of the default branch
+- [ ] `apm clean --force` removes the worktree and local branch for a closed ticket whose local tip diverges from origin (dirty worktree, tips differ)
+- [ ] `apm clean --force` uses `git worktree remove --force` for each worktree removal
+- [ ] `apm clean --force` prompts for confirmation before each removal, even when `--yes` is also supplied
+- [ ] `apm clean --force` still skips tickets that are not in a terminal state
+- [ ] `apm clean --force` still skips tickets with a state mismatch between branch and main
+- [ ] `apm clean --force --dry-run` prints what would be removed without modifying anything
 
 ### Out of scope
 
@@ -43,6 +50,8 @@ How the implementation will work.
 
 
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
