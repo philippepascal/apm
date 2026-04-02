@@ -4,12 +4,12 @@ title = "Add /api/epics server routes"
 state = "in_design"
 priority = 4
 effort = 4
-risk = 0
+risk = 3
 author = "claude-0401-2145-a8f3"
 agent = "52023"
 branch = "ticket/54b043f7-add-api-epics-server-routes"
 created_at = "2026-04-01T21:55:53.796830Z"
-updated_at = "2026-04-02T00:56:34.017609Z"
+updated_at = "2026-04-02T00:56:41.180042Z"
 +++
 
 ## Spec
