@@ -42,7 +42,13 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- WebAuthn login ceremony (`POST /api/auth/login`) — separate ticket
+- `apm register <username>` CLI command — separate ticket
+- `apm sessions` and `apm revoke` CLI commands — separate ticket
+- Auth enforcement on existing API routes (all existing routes remain publicly accessible) — separate ticket
+- TLS termination — handled by apm-proxy
+- Attestation verification policy — any authenticator type is accepted (no attestation constraints)
+- Redirect flow: after registration, the server returns 200 JSON; redirect to the main UI is left for a follow-up
 
 ### Approach
 
