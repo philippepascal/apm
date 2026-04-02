@@ -1,7 +1,7 @@
 +++
 id = "645c9f17"
 title = "apm clean: add --force flag to skip divergence and merge checks for closed tickets"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "56092"
 branch = "ticket/645c9f17-apm-clean-add-force-flag-to-skip-diverge"
 created_at = "2026-04-02T05:35:39.235404Z"
-updated_at = "2026-04-02T17:13:44.363586Z"
+updated_at = "2026-04-02T17:27:07.559316Z"
 +++
 
 ## Spec
@@ -97,3 +97,4 @@ Four files change; changes are additive and do not touch non-force code paths.
 | 2026-04-02T17:00Z | new | groomed | apm |
 | 2026-04-02T17:09Z | groomed | in_design | philippepascal |
 | 2026-04-02T17:13Z | in_design | specd | claude-0402-1709-spec1 |
+| 2026-04-02T17:27Z | specd | ammend | apm |
