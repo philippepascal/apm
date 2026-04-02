@@ -4,12 +4,12 @@ title = "make detail panel more reactive when other panels are updated (state of
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "apm"
 agent = "44819"
 branch = "ticket/b8b91642-make-detail-panel-more-reactive-when-oth"
 created_at = "2026-04-02T22:28:29.844602Z"
-updated_at = "2026-04-02T22:50:55.274039Z"
+updated_at = "2026-04-02T22:51:01.213630Z"
 +++
 
 ## Spec
