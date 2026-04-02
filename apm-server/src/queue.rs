@@ -13,6 +13,7 @@ pub struct QueueEntry {
     effort: u8,
     risk: u8,
     score: f64,
+    effective_priority: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     epic: Option<String>,
 }
@@ -30,6 +31,11 @@ pub async fn queue_handler(
         let actionable_owned = config.actionable_states_for("agent");
         let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
         let p = &config.workflow.prioritization;
+        let active: Vec<&apm_core::ticket::Ticket> = tickets
+            .iter()
+            .filter(|t| !apm_core::ticket::dep_satisfied(&t.frontmatter.state, &config))
+            .collect();
+        let rev_idx = apm_core::ticket::build_reverse_index(&active);
         let sorted = apm_core::ticket::sorted_actionable(
             &tickets,
             &actionable,
@@ -42,7 +48,10 @@ pub async fn queue_handler(
             .enumerate()
             .map(|(i, t)| {
                 let fm = &t.frontmatter;
-                let raw_score = t.score(p.priority_weight, p.effort_weight, p.risk_weight);
+                let ep = apm_core::ticket::effective_priority(t, &rev_idx);
+                let raw_score = ep as f64 * p.priority_weight
+                    + fm.effort as f64 * p.effort_weight
+                    + fm.risk as f64 * p.risk_weight;
                 let score = (raw_score * 100.0).round() / 100.0;
                 QueueEntry {
                     rank: i + 1,
@@ -53,6 +62,7 @@ pub async fn queue_handler(
                     effort: fm.effort,
                     risk: fm.risk,
                     score,
+                    effective_priority: ep,
                     epic: fm.epic.clone(),
                 }
             })

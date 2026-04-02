@@ -1,7 +1,7 @@
 +++
 id = "1099fe38"
 title = "UI: add epic column and filter to queue panel"
-state = "implemented"
+state = "closed"
 priority = 2
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "39624"
 branch = "ticket/1099fe38-ui-add-epic-column-and-filter-to-queue-p"
 created_at = "2026-04-01T21:56:20.710748Z"
-updated_at = "2026-04-02T06:47:35.315254Z"
+updated_at = "2026-04-02T19:06:23.656182Z"
 +++
 
 ## Spec
@@ -90,3 +90,4 @@ The `epic` field does not yet exist on `Frontmatter` (apm-core) or `QueueEntry` 
 | 2026-04-02T02:29Z | specd | ready | apm |
 | 2026-04-02T06:45Z | ready | in_progress | philippepascal |
 | 2026-04-02T06:47Z | in_progress | implemented | claude-0402-0645-w1k9 |
+| 2026-04-02T19:06Z | implemented | closed | apm-sync |
