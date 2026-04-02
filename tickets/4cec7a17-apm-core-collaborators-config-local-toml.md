@@ -18,7 +18,15 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-There is no concept of collaborator identity in apm-core. The `author` field is currently set to agent names, and there is no local identity file or collaborators list. Resolving who created a ticket requires a real username, not an ephemeral agent string. See `initial_specs/DESIGN-users.md` points 1–3.
+There is no concept of stable human identity in apm-core. The `author` field is currently set to the `APM_AGENT_NAME` environment variable (an ephemeral agent session string like `claude-0402-1430-a3f9`) or the literal string `"apm"` for automated actions. There is no collaborators list in config, no per-machine identity file, and no resolution function. As a result, there is no reliable way to track which human created a ticket — only which short-lived agent process ran at the time.
+
+The desired state (design doc points 1–3) is:
+- `.apm/config.toml` carries a `collaborators` list under `[project]`
+- `.apm/local.toml` (gitignored, per-machine) stores the local user's `username`
+- A `resolve_identity(repo_root)` function returns the username from `local.toml` or `"unassigned"` as a fallback
+- `apm new` uses the resolved identity as `author` instead of the agent env var
+- `apm init` prompts for a username, writes `local.toml`, updates `collaborators`, and adds `local.toml` to `.gitignore`
+- The `agent` field is dropped from frontmatter writes (silently tolerated on read for backward compatibility)
 
 ### Acceptance criteria
 
