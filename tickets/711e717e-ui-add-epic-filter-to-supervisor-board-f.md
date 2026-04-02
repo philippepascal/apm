@@ -4,12 +4,12 @@ title = "UI: add epic filter to supervisor board filter bar"
 state = "in_design"
 priority = 2
 effort = 2
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "66037"
 branch = "ticket/711e717e-ui-add-epic-filter-to-supervisor-board-f"
 created_at = "2026-04-01T21:56:24.806901Z"
-updated_at = "2026-04-02T01:06:29.535607Z"
+updated_at = "2026-04-02T01:06:37.057115Z"
 +++
 
 ## Spec
