@@ -7,18 +7,18 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/90ebf40b-apm-server-expose-author-field-in-ticket"
-depends_on = ["610be42e"]
 created_at = "2026-04-02T20:54:08.576527Z"
 updated_at = "2026-04-02T20:54:08.576527Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["610be42e"]
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The server's ticket API responses do not include the `author` field. The UI cannot implement author filtering or display ticket ownership without it. See `initial_specs/DESIGN-users.md` points 1 and 8.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
