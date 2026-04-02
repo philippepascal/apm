@@ -96,8 +96,7 @@ Integration tests requiring a live `gh` CLI and GitHub remote are out of scope.
 
 ### Amendment requests
 
-- [x] The gate check must not hardcode state names. Replace "ticket is in `implemented` or a later (terminal) state" with "ticket's state has `satisfies_deps = true` or `terminal = true` in workflow config". Update AC #1, AC #5, and the gate-check step in Approach accordingly.
-- [x] The Approach step that checks `state.terminal == true || equals "implemented"` must become: look up the ticket's state in `config.workflow.states`; pass if `state.satisfies_deps || state.terminal`. No string comparison against a state name.
+- [ ] The duplicate "### New file: apm/src/cmd/epic.rs" section at the bottom of Approach still contains step 5 reading `state.terminal == true || equals "implemented"` — a hardcoded state name comparison. Remove this entire duplicate section; the corrected approach above it is the authoritative one.
 
 ### Code review
 
