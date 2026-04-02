@@ -53,7 +53,41 @@ The desired state (design doc points 1–3) is:
 
 ### Approach
 
-How the implementation will work.
+### 1. `apm-core/src/config.rs` — add collaborators and LocalConfig
+
+Add `collaborators: Vec<String>` to `ProjectConfig` with `#[serde(default)]`.
+
+Add `LocalConfig` struct with a `username: Option<String>` field and a `load(repo_root)` method that reads `.apm/local.toml`, returning a default if absent.
+
+Add `resolve_identity(repo_root: &Path) -> String` that returns the non-empty username from `LocalConfig`, or `"unassigned"` as fallback.
+
+### 2. `apm-core/src/ticket.rs` — drop agent from writes
+
+Change the `agent` field in `Frontmatter` from `#[serde(skip_serializing_if = "Option::is_none")]` to `#[serde(default, skip_serializing)]`. This means existing files with `agent = "..."` parse without error (value still deserialised into the field) but `agent` is never written on next save.
+
+### 3. `apm/src/cmd/new.rs` — use resolved identity
+
+Replace the `APM_AGENT_NAME` env-var lookup with a call to `apm_core::config::resolve_identity(root)`.
+
+### 4. `apm-core/src/init.rs` — prompt, local.toml, gitignore
+
+a) Gitignore: add `.apm/local.toml` to the `entries` array in `ensure_gitignore`.
+
+b) Add `prompt_username() -> Result<String>` helper (mirrors `prompt_project_info`).
+
+c) Add `write_local_config(root: &Path, username: &str) -> Result<()>` that writes `username = "<username>"` to `.apm/local.toml`.
+
+d) Add `username: Option<&str>` parameter to `default_config`. When `Some`, include `collaborators = ["<username>"]` in the `[project]` section; when `None`, omit it.
+
+e) In `setup()`: after the project-info prompt block (TTY path), call `prompt_username()` and pass the result to both `default_config` and `write_local_config`. In the non-TTY path, pass `None` to `default_config` and skip writing `local.toml`. Writing `local.toml` happens regardless of whether config already exists (it is gitignored and safe to overwrite); adding `collaborators` to the config only happens on first creation when config is freshly written.
+
+### Order of changes
+
+1. `config.rs`: `collaborators`, `LocalConfig`, `resolve_identity`
+2. `ticket.rs`: `agent` serde attributes
+3. `init.rs`: gitignore entry, prompt, write helpers, `default_config` signature
+4. `cmd/new.rs`: swap author source
+5. Tests: unit tests for `LocalConfig::load` (file present / absent / empty username), `resolve_identity`, collaborators parse, gitignore includes `.apm/local.toml`; integration test confirming `apm new` sets `author` from `local.toml`
 
 ### Open questions
 
