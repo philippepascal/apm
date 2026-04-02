@@ -1,26 +1,49 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 type EngineStatus = 'running' | 'idle' | 'stopped'
 
-async function fetchStatus(): Promise<EngineStatus> {
+type StatusResponse = {
+  status: EngineStatus
+  epic: string | null
+}
+
+type Epic = {
+  id: string
+  title: string
+  branch: string
+}
+
+async function fetchStatus(): Promise<StatusResponse> {
   const res = await fetch('/api/work/status')
   if (!res.ok) throw new Error('fetch failed')
   const data = await res.json()
-  return data.status as EngineStatus
+  return { status: data.status as EngineStatus, epic: data.epic ?? null }
 }
 
-async function startEngine(): Promise<EngineStatus> {
-  const res = await fetch('/api/work/start', { method: 'POST' })
+async function fetchEpics(): Promise<Epic[]> {
+  const res = await fetch('/api/epics')
+  if (!res.ok) return []
+  return res.json()
+}
+
+async function startEngine(epic?: string): Promise<StatusResponse> {
+  const body = epic ? JSON.stringify({ epic }) : undefined
+  const res = await fetch('/api/work/start', {
+    method: 'POST',
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body,
+  })
   if (!res.ok) throw new Error('start failed')
   const data = await res.json()
-  return data.status as EngineStatus
+  return { status: data.status as EngineStatus, epic: data.epic ?? null }
 }
 
-async function stopEngine(): Promise<EngineStatus> {
+async function stopEngine(): Promise<StatusResponse> {
   const res = await fetch('/api/work/stop', { method: 'POST' })
   if (!res.ok) throw new Error('stop failed')
   const data = await res.json()
-  return data.status as EngineStatus
+  return { status: data.status as EngineStatus, epic: data.epic ?? null }
 }
 
 const STATUS_CLASSES: Record<EngineStatus, string> = {
@@ -37,15 +60,21 @@ const STATUS_LABELS: Record<EngineStatus, string> = {
 
 export default function WorkEngineControls() {
   const queryClient = useQueryClient()
+  const [selectedEpic, setSelectedEpic] = useState('')
 
-  const { data: status = 'stopped' } = useQuery({
+  const { data: statusData = { status: 'stopped' as EngineStatus, epic: null } } = useQuery({
     queryKey: ['work-status'],
     queryFn: fetchStatus,
     refetchInterval: 3000,
   })
 
+  const { data: epics = [] } = useQuery({
+    queryKey: ['epics'],
+    queryFn: fetchEpics,
+  })
+
   const startMutation = useMutation({
-    mutationFn: startEngine,
+    mutationFn: () => startEngine(selectedEpic || undefined),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['work-status'] }),
   })
 
@@ -54,6 +83,7 @@ export default function WorkEngineControls() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['work-status'] }),
   })
 
+  const status = statusData.status
   const isEngineActive = status === 'running' || status === 'idle'
   const isPending = startMutation.isPending || stopMutation.isPending
 
@@ -69,6 +99,23 @@ export default function WorkEngineControls() {
   return (
     <div className="flex items-center gap-2">
       <span className={STATUS_CLASSES[status]}>{STATUS_LABELS[status]}</span>
+      {isEngineActive && statusData.epic && (
+        <a href={`/?epic=${statusData.epic}`} className="text-xs text-blue-400 hover:underline">
+          epic: {statusData.epic}
+        </a>
+      )}
+      {!isEngineActive && (
+        <select
+          value={selectedEpic}
+          onChange={e => setSelectedEpic(e.target.value)}
+          className="px-1.5 py-0.5 rounded border border-gray-600 bg-gray-800 text-gray-300 text-xs"
+        >
+          <option value="">All</option>
+          {epics.map(e => (
+            <option key={e.id} value={e.id}>{e.title}</option>
+          ))}
+        </select>
+      )}
       <button
         onClick={handleToggle}
         disabled={isPending}

@@ -46,10 +46,7 @@ pub fn setup(root: &Path) -> Result<()> {
     }
     let spec_writer_path = apm_dir.join("apm.spec-writer.md");
     if !spec_writer_path.exists() {
-        std::fs::write(
-            &spec_writer_path,
-            "# APM Spec-Writer Agent\n\n_Fill in spec-writing instructions here._\n",
-        )?;
+        std::fs::write(&spec_writer_path, include_str!("apm.spec-writer.md"))?;
         println!("Created .apm/apm.spec-writer.md");
     }
     let worker_md_path = apm_dir.join("apm.worker.md");
