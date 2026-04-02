@@ -39,7 +39,10 @@ Example for this project's `apm.toml`:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Multiple gate tags per state (e.g. a state satisfying both `"spec"` and `"impl"` gates simultaneously)
+- Per-dependency-edge gate overrides (gate is declared on the dependent's state, not on individual dep links)
+- Any display or UI changes to how blocked/unblocked status is shown
+- Changing how `in_design`, `ammend`, or `question` states interact with dependency gating
 
 ### Approach
 
