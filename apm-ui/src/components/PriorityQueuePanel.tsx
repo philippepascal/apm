@@ -216,6 +216,16 @@ export default function PriorityQueuePanel() {
     doReorder(newQueue)
   }
 
+  const displayQueue = localQueue.length > 0 ? localQueue : (data ?? [])
+
+  const availableEpics = useMemo(() => {
+    const seen = new Set<string>()
+    for (const e of displayQueue) {
+      if (e.epic) seen.add(e.epic.slice(0, 8))
+    }
+    return Array.from(seen).sort()
+  }, [displayQueue])
+
   if (isLoading) {
     return (
       <div className="p-3 space-y-2">
@@ -241,16 +251,6 @@ export default function PriorityQueuePanel() {
       </div>
     )
   }
-
-  const displayQueue = localQueue.length > 0 ? localQueue : data
-
-  const availableEpics = useMemo(() => {
-    const seen = new Set<string>()
-    for (const e of displayQueue) {
-      if (e.epic) seen.add(e.epic.slice(0, 8))
-    }
-    return Array.from(seen).sort()
-  }, [displayQueue])
 
   const filteredQueue = epicFilter
     ? displayQueue.filter((e) => (e.epic ? e.epic.slice(0, 8) === epicFilter : false))

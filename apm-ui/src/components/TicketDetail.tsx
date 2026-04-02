@@ -2,6 +2,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Minimize2 } from 'lucide-react'
 import { useLayoutStore } from '../store/useLayoutStore'
 import InlineNumberField from './InlineNumberField'
 import { getStateColors } from '../lib/stateColors'
@@ -122,7 +123,7 @@ function TransitionButtons({ ticket, onTransitioned }: {
   )
 }
 
-export default function TicketDetail() {
+export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }) {
   const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
   const setReviewMode = useLayoutStore((s) => s.setReviewMode)
   const setSelectedTicketId = useLayoutStore((s) => s.setSelectedTicketId)
@@ -189,14 +190,21 @@ export default function TicketDetail() {
               <span className="text-sm font-medium text-gray-300">Detail</span>
             )}
           </div>
-          {data && (
-            <button
-              onClick={() => setReviewMode(true)}
-              className="px-2 py-0.5 text-xs rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 shrink-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              Review
-            </button>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {data && (
+              <button
+                onClick={() => setReviewMode(true)}
+                className="px-2 py-0.5 text-xs rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              >
+                Review
+              </button>
+            )}
+            {onMinimize && (
+              <button onClick={onMinimize} className="p-1 rounded hover:bg-gray-700 text-gray-400">
+                <Minimize2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
         {data && stateColors && (
           <div className="flex items-center gap-2 mt-2 flex-wrap">

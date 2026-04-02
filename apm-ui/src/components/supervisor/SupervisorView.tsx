@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Loader2, Plus, X } from 'lucide-react'
+import { RefreshCw, Loader2, Plus, X, Minimize2 } from 'lucide-react'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
 import { SUPERVISOR_STATES } from '../../lib/supervisorUtils'
@@ -20,8 +20,9 @@ const ALL_WORKFLOW_STATES = [
   'closed',
 ]
 
-async function fetchTickets(): Promise<Ticket[]> {
-  const res = await fetch('/api/tickets')
+async function fetchTickets(includeClosed: boolean): Promise<Ticket[]> {
+  const url = includeClosed ? '/api/tickets?include_closed=true' : '/api/tickets'
+  const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch tickets')
   return res.json()
 }
@@ -39,7 +40,7 @@ async function postSync(): Promise<void> {
   if (!res.ok) throw new Error('Sync failed')
 }
 
-export default function SupervisorView() {
+export default function SupervisorView({ onMinimize }: { onMinimize?: () => void }) {
   const queryClient = useQueryClient()
   const [syncError, setSyncError] = useState<string | null>(null)
   const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
@@ -54,8 +55,8 @@ export default function SupervisorView() {
   const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
 
   const { data: tickets = [] } = useQuery({
-    queryKey: ['tickets'],
-    queryFn: fetchTickets,
+    queryKey: ['tickets', showClosed],
+    queryFn: () => fetchTickets(showClosed),
   })
 
   const syncMutation = useMutation({
@@ -149,6 +150,11 @@ export default function SupervisorView() {
             )}
             Sync
           </button>
+          {onMinimize && (
+            <button onClick={onMinimize} className="p-1 rounded hover:bg-gray-700 text-gray-400">
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
       <div className="px-3 py-2 border-b shrink-0 flex flex-wrap items-center gap-2">
