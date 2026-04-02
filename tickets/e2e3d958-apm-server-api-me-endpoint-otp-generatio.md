@@ -7,6 +7,7 @@ effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/e2e3d958-apm-server-api-me-endpoint-otp-generatio"
+depends_on = ["4cec7a17", "90ebf40b"]
 created_at = "2026-04-02T20:54:13.959036Z"
 updated_at = "2026-04-02T20:54:13.959036Z"
 epic = "8db73240"
