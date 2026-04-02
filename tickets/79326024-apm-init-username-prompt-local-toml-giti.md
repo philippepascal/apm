@@ -50,7 +50,42 @@ Ticket #4cec7a17 (dependency) adds the `LocalConfig` struct, the `collaborators`
 
 ### Approach
 
-How the implementation will work.
+All changes are confined to `apm-core/src/init.rs`. The building blocks (`LocalConfig`, `write_local_config`, `collaborators` on `ProjectConfig`) are provided by ticket #4cec7a17 and assumed available.
+
+**1. `ensure_gitignore` — add `.apm/local.toml` entry**
+
+Extend the `entries` array in `ensure_gitignore` from `["tickets/NEXT_ID"]` to `["tickets/NEXT_ID", ".apm/local.toml"]`. The existing idempotency logic (check-before-append) handles both entries uniformly. No other changes needed to this function.
+
+**2. `prompt_username` helper**
+
+Add a `fn prompt_username() -> Result<String>` that prints `Username []: ` to stdout, reads a line from stdin, and returns the trimmed string (may be empty). Mirrors the existing `prompt_project_info` pattern.
+
+**3. `write_local_toml` helper**
+
+Add a `fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()>` that writes `.apm/local.toml` with content `username = "<username>"`. Only writes if the file does not already exist (idempotency guard: check `!local_toml_path.exists()` before writing).
+
+**4. `default_config` — optional collaborators parameter**
+
+Add `collaborators: &[&str]` parameter to `default_config`. When non-empty, append `collaborators = ["..."]` to the `[project]` section. When empty, still emit `collaborators = []`. This keeps the field discoverable in all generated configs.
+
+**5. `setup` — orchestrate new steps**
+
+In `setup()`, make two changes:
+
+*Username and local.toml (TTY path only):* After the existing `prompt_project_info` block, add a username prompt guarded by `stdin().is_terminal() && !local_toml.exists()`. If the user enters a non-empty value, call `write_local_toml`. Store the username for use in step below.
+
+*Pass username to config generation:* Change the call to `default_config` to pass the username as a single-element slice when present, or `&[]` when absent (non-TTY or empty input).
+
+The non-TTY path skips username entirely and passes `&[]` to `default_config`, producing `collaborators = []` in the written config.
+
+**6. Tests (in `apm-core/src/init.rs`)**
+
+- Extend `ensure_gitignore_creates_file` and `ensure_gitignore_appends_missing_entry` to also assert `.apm/local.toml` appears in the output.
+- Add `write_local_toml_creates_file`: call the new helper, assert file contains `username = "alice"`.
+- Add `write_local_toml_idempotent`: call twice; assert the file is not overwritten on the second call.
+- Add `setup_non_tty_no_local_toml`: call `setup()` in non-TTY context (matches existing non-TTY test setup); assert `.apm/local.toml` does NOT exist.
+- Add `default_config_with_collaborators`: call `default_config` with `collaborators = &["alice"]`; parse output as TOML; assert `project.collaborators == ["alice"]`.
+- Add `default_config_empty_collaborators`: call with `&[]`; assert `project.collaborators == []`.
 
 ### Open questions
 
