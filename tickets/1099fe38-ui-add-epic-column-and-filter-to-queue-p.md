@@ -4,12 +4,12 @@ title = "UI: add epic column and filter to queue panel"
 state = "in_design"
 priority = 2
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "40989"
 branch = "ticket/1099fe38-ui-add-epic-column-and-filter-to-queue-p"
 created_at = "2026-04-01T21:56:20.710748Z"
-updated_at = "2026-04-02T00:59:45.972847Z"
+updated_at = "2026-04-02T00:59:51.196316Z"
 +++
 
 ## Spec
