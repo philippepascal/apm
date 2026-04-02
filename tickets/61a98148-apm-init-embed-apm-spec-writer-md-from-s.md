@@ -1,7 +1,7 @@
 +++
 id = "61a98148"
 title = "apm init: embed apm.spec-writer.md from source instead of placeholder stub"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "60691"
 branch = "ticket/61a98148-apm-init-embed-apm-spec-writer-md-from-s"
 created_at = "2026-04-02T02:09:54.035008Z"
-updated_at = "2026-04-02T07:06:26.743285Z"
+updated_at = "2026-04-02T19:06:57.380663Z"
 +++
 
 ## Spec
@@ -78,3 +78,4 @@ Order: create the source file first, then update `init.rs`, then run `cargo test
 | 2026-04-02T02:29Z | specd | ready | apm |
 | 2026-04-02T07:04Z | ready | in_progress | philippepascal |
 | 2026-04-02T07:06Z | in_progress | implemented | claude-0402-0704-w61a |
+| 2026-04-02T19:06Z | implemented | closed | apm-sync |
