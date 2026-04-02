@@ -38,7 +38,16 @@ That API route does not yet exist. This ticket adds both the server-side endpoin
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Epic filter in the Queue panel (separate item in docs/epics.md UI section)
+- Epic column in the Queue panel
+- Epic selector in Engine controls
+- POST /api/epics (create epic)
+- GET /api/epics/:id (epic detail with ticket list)
+- Ticket lock icon for unresolved `depends_on` entries
+- Clickable epic label in Ticket detail panel
+- Derived epic state or ticket counts in the `GET /api/epics` response
+- `epic` and `target_branch` fields on `CreateTicketRequest`
+- Any changes to `apm work --epic` or the work engine epic filter
 
 ### Approach
 
