@@ -53,6 +53,48 @@ The `apm epic` subcommand group does not yet exist and must be wired into the CL
 
 ### Approach
 
+**Files to change**
+
+`apm-core/src/lib.rs` — add `pub mod epic;`
+
+`apm-core/src/epic.rs` (new file) — `pub fn create(root: &Path, title: &str) -> Result<String>`:
+1. `id = git::gen_hex_id()`
+2. `slug = ticket::slugify(title)`
+3. `branch = format!("epic/{id}-{slug}")`
+4. Fetch origin/main: inline `git fetch origin main` Command, propagate error on failure
+5. Build a unique temp path using PID + subsec_nanos + branch slug (same pattern as `try_worktree_commit` in git.rs)
+6. `git worktree add -b <branch> <tmp_path> origin/main`
+7. Write `"# {title}\n"` to `<tmp_path>/EPIC.md`
+8. `git -C tmp add EPIC.md`
+9. `git -C tmp commit -m "epic({id}): create {title}"`
+10. `git worktree remove --force <tmp_path>` + `fs::remove_dir_all` (best-effort cleanup)
+11. `git::push_branch_tracking(root, &branch)` — see below
+12. Return `Ok(branch)`
+
+`apm-core/src/git.rs` — add `push_branch_tracking(root: &Path, branch: &str) -> Result<()>`:
+mirrors `push_branch` but passes `--set-upstream` before `origin` in the git push args.
+
+`apm/src/cmd/epic.rs` (new file) — thin handler: calls `apm_core::epic::create(root, &title)`, prints the returned branch name.
+
+`apm/src/lib.rs` — add `pub mod epic;` inside the `pub mod cmd` block.
+
+`apm/src/main.rs` — add `EpicCommand` enum with a `New { title: String }` variant; add `Epic { #[command(subcommand)] command: EpicCommand }` variant to `Command`; route it to `cmd::epic::run_new(&root, title)`.
+
+**Implementation order**
+
+1. `git.rs` — add `push_branch_tracking`
+2. `apm-core/src/epic.rs` + update `lib.rs`
+3. `apm/src/cmd/epic.rs` + update `lib.rs`
+4. `apm/src/main.rs` — wire CLI
+
+**Constraints and gotchas**
+
+- The temp worktree lives outside the repo (in `std::env::temp_dir()`); git worktrees can be anywhere, this is fine.
+- After `git worktree remove --force`, the local branch ref still exists; the push uses that ref.
+- `git::gen_hex_id()` and `ticket::slugify()` are already `pub` — no visibility changes needed.
+- `EPIC.md` commit is always created (not optional); it establishes branch divergence from main.
+- No config changes required.
+
 ### Files to change
 
 **`apm-core/src/lib.rs`** — add `pub mod epic;`
