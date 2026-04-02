@@ -4,12 +4,12 @@ title = "Add target_branch support to apm start and worktree provisioning"
 state = "in_design"
 priority = 8
 effort = 2
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "77938"
 branch = "ticket/d3749f24-add-target-branch-support-to-apm-start-a"
 created_at = "2026-04-01T21:55:32.694733Z"
-updated_at = "2026-04-02T00:46:17.016671Z"
+updated_at = "2026-04-02T00:46:24.345941Z"
 +++
 
 ## Spec
