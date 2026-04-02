@@ -33,7 +33,15 @@ The full design is in `docs/epics.md`. This ticket adds the `--epic <id>` flag (
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm epic new` command (creating an epic branch) — separate ticket
+- `apm epic list`, `apm epic show`, `apm epic close` commands
+- `apm start` using `target_branch` to provision the worktree from the epic branch tip
+- PR creation targeting `target_branch` instead of `main`
+- `apm work --epic` exclusive scheduling mode
+- `depends_on` dispatch blocking in the engine loop
+- UI additions (epic column, lock icons, filter dropdowns)
+- apm-server API changes (`/api/epics` routes, `CreateTicketRequest` additions)
+- Moving a ticket into or out of an epic after creation
 
 ### Approach
 
