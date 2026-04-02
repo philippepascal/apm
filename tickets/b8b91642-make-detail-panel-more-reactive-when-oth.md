@@ -26,10 +26,10 @@ The same staleness occurs when the user clicks Sync (Shift+S): the sync mutation
 
 ### Acceptance criteria
 
-- [ ] When an external agent transitions the selected ticket's state, the detail panel shows the updated state badge within 15 seconds without any user interaction
-- [ ] When the user clicks Sync (Shift+S) and the selected ticket has changed, the detail panel reflects the post-sync state immediately after sync completes
-- [ ] The detail panel's transition buttons update to reflect the new valid transitions whenever the ticket state changes remotely
-- [ ] The detail panel continues to show stale data correctly during a fetch (no flash to empty/loading state on background refetch)
+- [x] When an external agent transitions the selected ticket's state, the detail panel shows the updated state badge within 15 seconds without any user interaction
+- [x] When the user clicks Sync (Shift+S) and the selected ticket has changed, the detail panel reflects the post-sync state immediately after sync completes
+- [x] The detail panel's transition buttons update to reflect the new valid transitions whenever the ticket state changes remotely
+- [x] The detail panel continues to show stale data correctly during a fetch (no flash to empty/loading state on background refetch)
 
 ### Out of scope
 
