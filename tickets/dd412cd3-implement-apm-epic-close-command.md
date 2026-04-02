@@ -18,7 +18,7 @@ updated_at = "2026-04-02T02:21:53.562790Z"
 
 There is no command to create a PR from an epic branch to `main`. When an engineering team finishes all tickets in an epic, the epic branch must be merged to `main` as a coherent unit. Currently this requires running `gh pr create` manually, knowing the exact branch name and base branch.
 
-`apm epic close <id>` should automate this: look up the epic branch by its short ID, verify that every ticket in the epic is in `implemented` or a later state, then run `gh pr create --base main --head epic/<id>-<slug>` and print the PR URL. The command does not merge — merging is left to human reviewers on GitHub.
+`apm epic close <id>` should automate this: look up the epic branch by its short ID, verify that all epic tickets are in a state with `satisfies_deps = true` or `terminal = true` in workflow config, then run `gh pr create --base <default_branch> --head epic/<id>-<slug>` and print the PR URL. The command does not merge — merging is left to human reviewers on GitHub.
 
 Without this command the epic workflow is incomplete: tickets can be created (`apm new --epic`), listed (`apm epic list/show`), but never promoted to a PR as a group.
 
