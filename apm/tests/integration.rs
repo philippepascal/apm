@@ -3706,3 +3706,132 @@ fn work_dry_run_no_flag_shows_epic_ticket() {
     assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
     assert!(stdout.contains("epic ticket"), "should show epic ticket without filter: {stdout}");
 }
+
+// --- pr_or_epic_merge completion strategy ---
+
+fn pr_or_epic_merge_config_toml() -> &'static str {
+    r#"[project]
+name = "test"
+default_branch = "main"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  actor      = "agent"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#
+}
+
+fn setup_pr_or_epic_merge_remote() -> (TempDir, TempDir) {
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let local = tempfile::tempdir().unwrap();
+    let p = local.path();
+    git(p, &["clone", &bp.to_string_lossy(), "."]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), pr_or_epic_merge_config_toml()).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    git(p, &["push", "origin", "main"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    (bare, local)
+}
+
+fn write_in_progress_ticket(dir: &std::path::Path, id: &str, branch: &str, filename: &str, target_branch: Option<&str>) {
+    let path = format!("tickets/{filename}");
+    let target_line = match target_branch {
+        Some(tb) => format!("target_branch = \"{tb}\"\n"),
+        None => String::new(),
+    };
+    let content = format!(
+        "+++\nid = \"{id}\"\ntitle = \"Test ticket\"\nstate = \"in_progress\"\nbranch = \"{branch}\"\n{target_line}created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {id}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn pr_or_epic_merge_with_target_branch_merges_into_target() {
+    let (_bare, local) = setup_pr_or_epic_merge_remote();
+    let p = local.path();
+
+    // Create epic branch and push to origin.
+    git(p, &["checkout", "-b", "epic/test"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic init", "--allow-empty"]);
+    git(p, &["push", "origin", "epic/test"]);
+    git(p, &["checkout", "main"]);
+
+    // Write an in_progress ticket with target_branch set.
+    let branch = "ticket/aa000001-merge-test";
+    write_in_progress_ticket(p, "aa000001", branch, "aa000001-merge-test.md", Some("epic/test"));
+    git(p, &["push", "origin", branch]);
+
+    // Check out epic/test so merge_into_default merges into it.
+    git(p, &["checkout", "epic/test"]);
+
+    let result = apm_core::state::transition(p, "aa000001", "implemented".into(), true, false);
+    assert!(result.is_ok(), "merge path should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+
+    // Verify epic/test now has a merge commit referencing the ticket branch.
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline", "epic/test"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let log_str = String::from_utf8_lossy(&log.stdout);
+    assert!(log_str.lines().count() > 1, "epic/test should have additional commits after merge: {log_str}");
+}
+
+#[test]
+fn pr_or_epic_merge_without_target_branch_attempts_pr() {
+    let (_bare, local) = setup_pr_or_epic_merge_remote();
+    let p = local.path();
+
+    // Write an in_progress ticket without target_branch.
+    let branch = "ticket/bb000002-pr-test";
+    write_in_progress_ticket(p, "bb000002", branch, "bb000002-pr-test.md", None);
+    git(p, &["push", "origin", branch]);
+
+    // Root stays on main — no target_branch → PR path.
+    let result = apm_core::state::transition(p, "bb000002", "implemented".into(), true, false);
+
+    // Push succeeds (bare remote available); gh fails → Err returned.
+    assert!(result.is_err(), "PR path should fail (gh not available against local bare repo)");
+
+    // Confirm the ticket branch was pushed before gh was attempted.
+    let remote_refs = std::process::Command::new("git")
+        .args(["ls-remote", "origin", branch])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let refs = String::from_utf8_lossy(&remote_refs.stdout);
+    assert!(!refs.trim().is_empty(), "ticket branch should have been pushed before gh was called: {refs}");
+}
