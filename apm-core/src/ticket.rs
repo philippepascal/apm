@@ -392,6 +392,7 @@ pub fn create(
     epic: Option<String>,
     target_branch: Option<String>,
     depends_on: Option<Vec<String>>,
+    base_branch: Option<String>,
 ) -> Result<Ticket> {
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
@@ -472,6 +473,11 @@ pub fn create(
     }
 
     let content = t.serialize()?;
+
+    if let Some(base) = base_branch {
+        let sha = crate::git::resolve_branch_sha(root, &base)?;
+        crate::git::create_branch_at(root, &branch, &sha)?;
+    }
 
     crate::git::commit_to_branch(
         root,

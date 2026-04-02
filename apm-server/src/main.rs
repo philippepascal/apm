@@ -564,6 +564,7 @@ async fn create_ticket(
             epic,
             target_branch,
             depends_on,
+            None,
         )
     })
     .await?;
@@ -1176,6 +1177,7 @@ label = "In Progress"
             None,
             false,
             vec![],
+            None,
             None,
             None,
             None,

@@ -182,6 +182,12 @@ After creating a ticket the typical next step is:
         /// Content for the section named by the preceding --section (repeat paired with --section)
         #[arg(long, value_name = "TEXT")]
         set: Vec<String>,
+        /// Epic ID (8 hex chars); ticket branch will be created from epic/<ID>-* tip
+        #[arg(long, value_name = "ID")]
+        epic: Option<String>,
+        /// Comma-separated ticket IDs this ticket depends on (repeatable)
+        #[arg(long, value_name = "IDS")]
+        depends_on: Vec<String>,
     },
     /// Transition a ticket's state
     #[command(long_about = "Transition a ticket to a new state.
@@ -652,7 +658,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
         Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
-        Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set),
+        Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
         Command::Set { id, field, value, no_aggressive } => cmd::set::run(&root, &id, field, value, no_aggressive),
