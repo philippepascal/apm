@@ -1,14 +1,15 @@
 +++
 id = "c1ff90de"
 title = "Add depends_on scheduling to engine dispatch loop"
-state = "groomed"
+state = "in_design"
 priority = 8
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
+agent = "philippepascal"
 branch = "ticket/c1ff90de-add-depends-on-scheduling-to-engine-disp"
 created_at = "2026-04-01T21:55:02.787625Z"
-updated_at = "2026-04-01T21:59:16.184446Z"
+updated_at = "2026-04-02T00:43:15.939908Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T21:59Z | new | groomed | claude-0401-2145-a8f3 |
+| 2026-04-02T00:43Z | groomed | in_design | philippepascal |
