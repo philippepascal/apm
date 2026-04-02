@@ -40,7 +40,13 @@ When 2+ tickets are selected the detail panel switches to a batch summary view t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Cross-column multi-select (shift-click or header checkbox spanning multiple states)
+- Ctrl/Cmd-click for non-contiguous individual toggle
+- Drag-to-select
+- Batch editing of spec sections or markdown body content
+- Batch effort or risk assignment
+- Undo/redo for batch operations
+- Keyboard shortcut for select-all (Ctrl+A)
 
 ### Approach
 
