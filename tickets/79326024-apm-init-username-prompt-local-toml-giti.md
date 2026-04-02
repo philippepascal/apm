@@ -38,7 +38,15 @@ Ticket #4cec7a17 (dependency) adds the `LocalConfig` struct, the `collaborators`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `LocalConfig`, `resolve_identity()`, and `ProjectConfig.collaborators` data structures — those are implemented in ticket #4cec7a17
+- Dropping `agent` from frontmatter writes — also ticket #4cec7a17
+- Using `resolve_identity()` in `apm new` — also ticket #4cec7a17
+- Git host plugin (GitHub API) identity resolution — DESIGN-users.md point 4, future ticket
+- Validating username against the collaborators list at `apm new` time — deferred, warn-only per design doc
+- WebAuthn / OTP / `apm register` / `apm sessions` / `apm revoke` — DESIGN-users.md point 5, separate tickets
+- `apm list --mine` / `--author` / `--unassigned` filter additions — DESIGN-users.md point 7, separate ticket
+- `/api/me` endpoint and UI author filter — DESIGN-users.md point 8, separate ticket
+- Manually adding collaborators to an existing project (post-init) — out of scope for init bootstrapping
 
 ### Approach
 
