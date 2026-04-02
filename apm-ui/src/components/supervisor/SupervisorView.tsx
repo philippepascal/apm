@@ -66,6 +66,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
     onSuccess: () => {
       setSyncError(null)
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['ticket'] })
     },
     onError: (err: Error) => {
       setSyncError(err.message)
