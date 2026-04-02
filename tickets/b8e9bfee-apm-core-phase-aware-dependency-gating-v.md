@@ -46,6 +46,92 @@ Example for this project's `apm.toml`:
 
 ### Approach
 
+**Files changed:** `apm-core/src/config.rs`, `apm-core/src/ticket.rs`, `.apm/workflow.toml`
+
+#### 1. `apm-core/src/config.rs` — extend `StateConfig`
+
+Add an untagged enum to handle the union TOML type (bool or string):
+
+```rust
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum SatisfiesDeps {
+    Bool(bool),
+    Tag(String),
+}
+
+impl Default for SatisfiesDeps {
+    fn default() -> Self { SatisfiesDeps::Bool(false) }
+}
+```
+
+In `StateConfig`:
+- Change `satisfies_deps: bool` to `satisfies_deps: SatisfiesDeps` (keep `#[serde(default)]`)
+- Add `#[serde(default)] pub dep_requires: Option<String>`
+
+Make `SatisfiesDeps` `pub` so `ticket.rs` can match on it.
+
+#### 2. `apm-core/src/ticket.rs` — update `dep_satisfied` and `pick_next`
+
+`dep_satisfied` gains a `required_gate: Option<&str>` parameter:
+
+```rust
+pub fn dep_satisfied(dep_state: &str, required_gate: Option<&str>, config: &Config) -> bool {
+    config.workflow.states.iter()
+        .find(|s| s.id == dep_state)
+        .map(|s| {
+            if s.terminal { return true; }
+            match &s.satisfies_deps {
+                SatisfiesDeps::Bool(true) => true,
+                SatisfiesDeps::Tag(tag) => required_gate == Some(tag.as_str()),
+                SatisfiesDeps::Bool(false) => false,
+            }
+        })
+        .unwrap_or(false)
+}
+```
+
+In `pick_next`, before the dep loop, resolve the candidate ticket's `dep_requires`:
+
+```rust
+let required_gate = config.workflow.states.iter()
+    .find(|s| s.id == state)
+    .and_then(|s| s.dep_requires.as_deref());
+
+// inside the dep loop:
+if !dep_satisfied(&dep.frontmatter.state, required_gate, config) {
+    return false;
+}
+```
+
+There is only one existing call site for `dep_satisfied`; update it to pass the gate.
+
+#### 3. `.apm/workflow.toml` — configure the project
+
+- Add `satisfies_deps = "spec"` to the `specd` state
+- Add `dep_requires = "spec"` to the `groomed` state
+- Leave `implemented` and `closed` as `satisfies_deps = true` — no change
+
+#### 4. Tests
+
+Unit tests in `apm-core/src/ticket.rs` (inline `#[cfg(test)]` module):
+- `dep_satisfied` with `Tag("spec")` dep state + `required_gate = Some("spec")` -> true
+- `dep_satisfied` with `Tag("spec")` dep state + `required_gate = None` -> false
+- `dep_satisfied` with `Bool(true)` dep state + `required_gate = None` -> true (backward compat)
+
+Integration test in the existing integration test file:
+- Ticket A in `groomed` (with `dep_requires = "spec"`) depends on ticket B
+- When B is in `specd` (with `satisfies_deps = "spec"`): `pick_next` returns A
+- When B is in `ready` (no `satisfies_deps`): `pick_next` does not return A
+
+#### Order of steps
+
+1. Add `SatisfiesDeps` enum and update `StateConfig` in `config.rs`
+2. Update `dep_satisfied` and `pick_next` in `ticket.rs`
+3. Update `workflow.toml`
+4. Add unit and integration tests
+5. Run `cargo test --workspace`
+
 ### 1. `apm-core/src/config.rs` — extend `StateConfig`
 
 Add an untagged enum to handle the union TOML type:
