@@ -158,6 +158,86 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> anyhow::Result<()> {
+    let config = apm_core::config::Config::load(root)?;
+
+    if !no_aggressive {
+        if let Err(e) = apm_core::git::fetch_all(root) {
+            eprintln!("warning: git fetch failed: {e}");
+        }
+    }
+
+    let matches = apm_core::git::find_epic_branches(root, id_arg);
+    let branch = match matches.len() {
+        0 => anyhow::bail!("no epic matching '{id_arg}'"),
+        1 => matches.into_iter().next().unwrap(),
+        _ => anyhow::bail!(
+            "ambiguous prefix '{id_arg}', matches:\n  {}",
+            matches.join("\n  ")
+        ),
+    };
+
+    // Parse the 8-char epic ID from the branch: epic/<id>-<slug>
+    let after_prefix = branch.trim_start_matches("epic/");
+    let epic_id = after_prefix.split('-').next().unwrap_or("");
+    let title = branch_to_title(&branch);
+
+    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let epic_tickets: Vec<_> = tickets
+        .iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+        .collect();
+
+    let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
+        .iter()
+        .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+        .collect();
+
+    let derived = apm_core::epic::derive_epic_state(&state_configs);
+
+    println!("Epic:   {title}");
+    println!("Branch: {branch}");
+    println!("State:  {derived}");
+
+    if epic_tickets.is_empty() {
+        println!();
+        println!("(no tickets)");
+        return Ok(());
+    }
+
+    // Column widths
+    let id_w = 8usize;
+    let state_w = 13usize;
+    let agent_w = 17usize;
+    let title_w = 32usize;
+
+    println!();
+    println!(
+        "{:<id_w$}  {:<state_w$}  {:<agent_w$}  {:<title_w$}  {}",
+        "ID", "State", "Agent", "Title", "Depends on"
+    );
+    println!(
+        "{:-<id_w$}  {:-<state_w$}  {:-<agent_w$}  {:-<title_w$}  {}",
+        "", "", "", "", "----------"
+    );
+
+    for t in &epic_tickets {
+        let fm = &t.frontmatter;
+        let agent = fm.agent.as_deref().unwrap_or("-");
+        let deps = fm
+            .depends_on
+            .as_deref()
+            .map(|d| d.join(", "))
+            .unwrap_or_else(|| "-".to_string());
+        println!(
+            "{:<id_w$}  {:<state_w$}  {:<agent_w$}  {:<title_w$}  {}",
+            fm.id, fm.state, agent, fm.title, deps
+        );
+    }
+
+    Ok(())
+}
+
 /// Convert an epic branch name to a human-readable PR title.
 /// `epic/ab12cd34-user-authentication` → `"User Authentication"`
 pub fn branch_to_title(branch: &str) -> String {

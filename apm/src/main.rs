@@ -48,6 +48,14 @@ enum EpicCommand {
     },
     /// List all epics with derived state and ticket counts
     List,
+    /// Show an epic and its tickets
+    Show {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+        /// Skip automatic git fetch before reading data
+        #[arg(long)]
+        no_aggressive: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -676,6 +684,7 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
+        Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
     }
 }
 

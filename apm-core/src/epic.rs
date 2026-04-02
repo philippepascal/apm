@@ -8,27 +8,22 @@ use crate::config::StateConfig;
 ///
 /// Rules (evaluated in order):
 /// 1. Empty slice → "empty"
-/// 2. Any state has `actionable` containing "agent" → "active"
+/// 2. Any state has neither `satisfies_deps` nor `terminal` → "in_progress"
 /// 3. All states have `terminal = true` → "done"
-/// 4. All states have `satisfies_deps = true` or `terminal = true`, and at
-///    least one has `satisfies_deps = true` → "complete"
-/// 5. Otherwise → "active"
+/// 4. All states have `satisfies_deps = true` or `terminal = true`, but not
+///    all are terminal → "implemented"
+/// 5. Otherwise → "in_progress"
 pub fn derive_epic_state(states: &[&StateConfig]) -> &'static str {
     if states.is_empty() {
         return "empty";
     }
-    if states.iter().any(|s| s.actionable.iter().any(|a| a == "agent")) {
-        return "active";
+    if states.iter().any(|s| !s.satisfies_deps && !s.terminal) {
+        return "in_progress";
     }
     if states.iter().all(|s| s.terminal) {
         return "done";
     }
-    if states.iter().all(|s| s.satisfies_deps || s.terminal)
-        && states.iter().any(|s| s.satisfies_deps)
-    {
-        return "complete";
-    }
-    "active"
+    "implemented"
 }
 
 #[cfg(test)]
@@ -62,31 +57,24 @@ mod tests {
     }
 
     #[test]
-    fn all_satisfies_deps_or_terminal_with_at_least_one_satisfies_is_complete() {
+    fn all_satisfies_deps_not_all_terminal_is_implemented() {
         let a = make_state(false, true, vec![]);
         let b = make_state(true, false, vec![]);
-        assert_eq!(derive_epic_state(&[&a, &b]), "complete");
+        assert_eq!(derive_epic_state(&[&a, &b]), "implemented");
     }
 
     #[test]
-    fn any_agent_actionable_is_active() {
-        let a = make_state(false, false, vec!["agent"]);
+    fn any_neither_satisfies_nor_terminal_is_in_progress() {
+        let a = make_state(false, false, vec![]);
         let b = make_state(true, false, vec![]);
-        assert_eq!(derive_epic_state(&[&a, &b]), "active");
+        assert_eq!(derive_epic_state(&[&a, &b]), "in_progress");
     }
 
     #[test]
-    fn mixed_non_terminal_non_satisfies_is_active() {
-        let a = make_state(false, false, vec!["supervisor"]);
+    fn mixed_non_terminal_non_satisfies_is_in_progress() {
+        let a = make_state(false, false, vec![]);
         let b = make_state(true, false, vec![]);
-        assert_eq!(derive_epic_state(&[&a, &b]), "active");
-    }
-
-    #[test]
-    fn agent_actionable_checked_before_terminal() {
-        // Even if all are terminal, if any is agent-actionable → active
-        let a = make_state(true, false, vec!["agent"]);
-        assert_eq!(derive_epic_state(&[&a]), "active");
+        assert_eq!(derive_epic_state(&[&a, &b]), "in_progress");
     }
 }
 
