@@ -47,7 +47,49 @@ Together these gaps block the supervisor-board author filter and the per-author 
 
 ### Approach
 
-How the implementation will work.
+**apm-server/src/main.rs**
+
+1. **Always-present author in responses** — in both `list_tickets` and `get_ticket` handlers, normalise the author before building the response struct:
+   ```rust
+   if t.frontmatter.author.is_none() {
+       t.frontmatter.author = Some("unassigned".to_string());
+   }
+   ```
+   This guarantees `skip_serializing_if = "Option::is_none"` will never fire for the `author` field in API responses without touching the TOML serialisation path.
+
+2. **Author filter on `GET /api/tickets`** — add `author: Option<String>` to `ListTicketsQuery`. After the existing `include_closed` filter, add:
+   ```rust
+   if let Some(ref author) = params.author {
+       tickets.retain(|t| {
+           let a = t.frontmatter.author.as_deref().unwrap_or("unassigned");
+           a == author.as_str()
+       });
+   }
+   ```
+
+3. **`GET /api/me` endpoint** — add a handler:
+   ```rust
+   async fn me_handler(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+       let username = state.git_root()
+           .and_then(|root| apm_core::identity::read_local_username(root).ok())
+           .flatten()
+           .unwrap_or_else(|| "unassigned".to_string());
+       Json(serde_json::json!({ "username": username }))
+   }
+   ```
+   Register as `.route("/api/me", get(me_handler))`.
+
+   This depends on `apm_core::identity` being available (landed in ticket #610be42e). If the function name differs, match whatever #610be42e exposes. The function should read `.apm/local.toml`, return `Option<String>`.
+
+**Tests to add (in apm-server/src/main.rs #[cfg(test)] block)**
+
+- `list_tickets_author_field_always_present` — ticket with `author: None`; assert response JSON includes `"author": "unassigned"`
+- `list_tickets_author_filter` — two tickets with different authors; `?author=alice` returns only Alice's
+- `list_tickets_author_unassigned_filter` — ticket with `author: None`; `?author=unassigned` returns it
+- `get_ticket_author_field_always_present` — ticket with `author: None`; assert detail response includes `"author": "unassigned"`
+- `me_handler_returns_unassigned_when_no_local_toml` — in-memory source, no git root; assert `{"username":"unassigned"}`
+
+**Dependency note**: This ticket is listed as depending on #610be42e (identity module). If `apm_core::identity` is not yet available when this is implemented, stub the `/api/me` read with a direct inline read of `.apm/local.toml` using `toml` crate, and leave a `// TODO: use apm_core::identity once #610be42e lands` comment. Do not block on it.
 
 ### Open questions
 
