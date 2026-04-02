@@ -38,7 +38,30 @@ The web UI provides no way to create epics. The only paths to epic creation are 
 
 ### Approach
 
-How the implementation will work.
+**1. `apm-ui/src/store/useLayoutStore.ts`**
+- Add `newEpicOpen: boolean` field (default `false`) to the store interface and initial state
+- Add `setNewEpicOpen: (v: boolean) => void` action
+
+**2. `apm-ui/src/components/NewEpicModal.tsx` (new file)**
+Follow the same pattern as `NewTicketModal.tsx`:
+- Props: `{ open: boolean; onOpenChange: (v: boolean) => void }`
+- Single required `title` field with a `titleRef` for auto-focus
+- On submit: validate non-empty title, then POST /api/epics with the title
+- On success: `queryClient.invalidateQueries` on the `epics` query key, then close
+- On error: show inline error message
+- Escape key and backdrop click both dismiss the modal
+- Reset state when `open` transitions to `false`
+
+**3. `apm-ui/src/components/supervisor/SupervisorView.tsx`**
+- Import `setNewEpicOpen` from `useLayoutStore`
+- Add a "New epic" button in the toolbar div immediately after the existing "New ticket" button, matching its className
+
+**4. `apm-ui/src/components/WorkScreen.tsx`**
+- Import `NewEpicModal`
+- Destructure `newEpicOpen` and `setNewEpicOpen` from `useLayoutStore()`
+- Render `<NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />` alongside `<NewTicketModal>` in both render paths (resizable-panel branch and fallback branch)
+
+No server-side changes needed — POST /api/epics already exists in `apm-server`.
 
 ### Open questions
 
