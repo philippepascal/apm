@@ -1,15 +1,15 @@
 +++
 id = "7c570510"
 title = "UI: supervisor panel should poll for ticket updates to stay fresh"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
 author = "apm"
-agent = "62609"
+agent = "philippepascal"
 branch = "ticket/7c570510-ui-supervisor-panel-should-poll-for-tick"
 created_at = "2026-04-02T18:24:16.100111Z"
-updated_at = "2026-04-02T20:06:21.058748Z"
+updated_at = "2026-04-02T20:08:43.835941Z"
 +++
 
 ## Spec
@@ -69,3 +69,4 @@ No backend changes are needed. The GET /api/tickets endpoint is already stateles
 | 2026-04-02T20:02Z | ammend | in_design | philippepascal |
 | 2026-04-02T20:03Z | in_design | specd | claude-0402-2010-x4k2 |
 | 2026-04-02T20:06Z | specd | ready | apm |
+| 2026-04-02T20:08Z | ready | in_progress | philippepascal |
