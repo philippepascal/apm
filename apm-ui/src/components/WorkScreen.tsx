@@ -22,10 +22,10 @@ const COLS: { key: ColumnKey; label: string; defaultSize: number; Icon: React.El
   { key: 'ticketDetail', label: 'Detail', defaultSize: 25, Icon: FileText },
 ]
 
-const CONTENT: Record<ColumnKey, React.ReactNode> = {
-  workerView: <WorkerView />,
-  supervisorView: <SupervisorView />,
-  ticketDetail: <TicketDetail />,
+const CONTENT: Record<ColumnKey, (onMinimize: () => void) => React.ReactNode> = {
+  workerView: (onMinimize) => <WorkerView onMinimize={onMinimize} />,
+  supervisorView: (onMinimize) => <SupervisorView onMinimize={onMinimize} />,
+  ticketDetail: (onMinimize) => <TicketDetail onMinimize={onMinimize} />,
 }
 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
@@ -149,7 +149,7 @@ export default function WorkScreen() {
   }
 
   function handleResize(key: ColumnKey, size: { asPercentage: number }) {
-    const isCollapsed = size.asPercentage === 0
+    const isCollapsed = size.asPercentage <= 3
     if (isCollapsed && columnVisibility[key]) {
       toggleColumn(key)
     } else if (!isCollapsed && !columnVisibility[key]) {
@@ -177,32 +177,31 @@ export default function WorkScreen() {
   return (
     <div className="h-screen w-screen flex flex-col">
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
-      <div className="flex gap-1 px-2 py-1 border-b bg-gray-900 shrink-0">
-        {COLS.map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            onClick={() => handleToggle(key)}
-            title={columnVisibility[key] ? `Hide ${label}` : `Show ${label}`}
-            className={`p-1.5 rounded hover:bg-gray-700 transition-opacity ${!columnVisibility[key] ? 'opacity-30' : 'text-gray-400'}`}
-          >
-            <Icon className="w-4 h-4" />
-          </button>
-        ))}
-      </div>
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup orientation="horizontal">
-          {COLS.map(({ key, defaultSize }, i) => (
+          {COLS.map(({ key, defaultSize, Icon }, i) => (
             <React.Fragment key={key}>
               {i > 0 && <ResizableHandle withHandle />}
               <ResizablePanel
                 panelRef={(el) => { panelRefs.current[key] = el }}
                 collapsible
-                collapsedSize={0}
+                collapsedSize={3}
                 minSize={10}
                 defaultSize={defaultSize}
                 onResize={(size) => handleResize(key, size)}
               >
-                {columnVisibility[key] ? CONTENT[key] : null}
+                {!columnVisibility[key] ? (
+                  <div className="h-full flex flex-col items-center pt-2 bg-gray-900">
+                    <button
+                      onClick={() => handleToggle(key)}
+                      className="p-1 rounded hover:bg-gray-700"
+                    >
+                      <Icon className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
+                ) : (
+                  CONTENT[key](() => handleToggle(key))
+                )}
               </ResizablePanel>
             </React.Fragment>
           ))}
