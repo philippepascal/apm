@@ -56,6 +56,86 @@ Epic state is derived on demand from the states of associated tickets (those who
 
 ### Approach
 
+Four files change in order.
+
+**1. `apm-core/src/ticket.rs` — add three optional frontmatter fields**
+
+Add to `Frontmatter` (all with `#[serde(skip_serializing_if = "Option::is_none")]`):
+
+```rust
+pub epic: Option<String>,
+pub target_branch: Option<String>,
+pub depends_on: Option<Vec<String>>,
+```
+
+`epic` is required for filtering tickets by epic. `target_branch` and `depends_on` are included now so all existing ticket routes expose them automatically through `#[serde(flatten)]` — no struct changes to `TicketResponse` or `TicketDetailResponse` needed.
+
+**2. `apm-core/src/git.rs` — two new public functions**
+
+`pub fn epic_branches(root: &Path) -> Result<Vec<String>>` — mirrors `ticket_branches` but matches `epic/*` and `origin/epic/*` patterns. Deduplicates local and remote entries the same way.
+
+`pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)>` — returns `(id, branch_name)`:
+1. `gen_hex_id()` for the 8-char ID
+2. `crate::ticket::slugify(title)` for the slug
+3. `branch = format!("epic/{id}-{slug}")`
+4. Best-effort `run(root, &["fetch", "origin", "main"])` — ignore error so tests without remotes still pass
+5. `run(root, &["branch", &branch, "origin/main"])` — create local branch at remote main tip; fall back to `run(root, &["branch", &branch, "main"])` if that fails
+6. `commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")`
+7. Best-effort `push_branch(root, &branch)`
+8. Return `(id, branch)`
+
+**3. `apm-server/src/main.rs` — structs, helpers, handlers, routes**
+
+New structs (near the other response/request types):
+
+```rust
+#[derive(serde::Serialize)]
+struct EpicSummary {
+    id: String,
+    title: String,
+    branch: String,
+    state: String,
+    ticket_counts: std::collections::HashMap<String, usize>,
+}
+
+#[derive(serde::Serialize)]
+struct EpicDetailResponse {
+    #[serde(flatten)]
+    summary: EpicSummary,
+    tickets: Vec<TicketResponse>,
+}
+
+#[derive(serde::Deserialize)]
+struct CreateEpicRequest {
+    title: Option<String>,
+}
+```
+
+`parse_epic_branch(branch: &str) -> Option<(String, String)>` — strips `epic/` prefix, splits on first `-`, title-cases the slug. Returns `None` for malformed names.
+
+`derive_epic_state(tickets: &[&Ticket]) -> String` — implements the table from `docs/epics.md`: empty slice → `"empty"`; any `in_design`/`in_progress` → `"in_progress"`; all in `{accepted, closed}` → `"done"`; all in `{implemented, accepted, closed}` → `"implemented"`; otherwise → `"in_progress"`.
+
+`build_epic_summary(branch: &str, all_tickets: &[Ticket]) -> Option<EpicSummary>` — calls `parse_epic_branch`, filters tickets by `frontmatter.epic`, counts states, derives state, returns the summary.
+
+`list_epics`: guard 501 if in-memory; `spawn_blocking` → `epic_branches`; `load_tickets`; map branches through `build_epic_summary`; return vec.
+
+`create_epic`: guard 501 if in-memory; validate title non-empty → 400; `spawn_blocking` → `create_epic_branch`; return 201 with `EpicSummary` (empty counts, state `"empty"`).
+
+`get_epic`: guard 501 if in-memory; `spawn_blocking` → `epic_branches`; find branch matching `:id` → 404 if absent; `load_tickets` filtered by epic id; return `EpicDetailResponse`.
+
+Route registration — add to both `build_app` and `build_app_with_tickets`:
+
+```
+.route("/api/epics", get(list_epics).post(create_epic))
+.route("/api/epics/:id", get(get_epic))
+```
+
+**4. Tests (inline `#[cfg(test)]` in `apm-server/src/main.rs`)**
+
+Required: `list_epics_in_memory_returns_501`, `create_epic_missing_title_returns_400`, `create_epic_empty_title_returns_400`, `create_epic_in_memory_returns_501`, `get_epic_in_memory_returns_501`.
+
+Round-trip tests (create → list → get) may use the existing temp-repo helpers already present in the test module.
+
 ### 1. `apm-core/src/ticket.rs` — add three optional frontmatter fields
 
 Add to `Frontmatter` (all with `#[serde(skip_serializing_if = "Option::is_none")]`):
