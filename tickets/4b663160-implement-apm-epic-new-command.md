@@ -4,12 +4,12 @@ title = "Implement apm epic new command"
 state = "in_design"
 priority = 8
 effort = 3
-risk = 0
+risk = 2
 author = "claude-0401-2145-a8f3"
 agent = "68666"
 branch = "ticket/4b663160-implement-apm-epic-new-command"
 created_at = "2026-04-01T21:55:06.350633Z"
-updated_at = "2026-04-02T00:47:21.489005Z"
+updated_at = "2026-04-02T00:47:29.814374Z"
 +++
 
 ## Spec
