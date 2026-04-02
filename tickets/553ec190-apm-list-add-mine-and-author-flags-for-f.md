@@ -43,7 +43,49 @@ There is no way to filter `apm list` output by ticket author. A developer workin
 
 ### Approach
 
-How the implementation will work.
+This ticket sits on top of 610be42e which adds `apm_core::identity::resolve_current_user`. All four changes are mechanical.
+
+**1. `apm-core/src/ticket.rs` — extend `list_filtered`**
+
+Add one parameter: `author_filter: Option<&str>`.
+
+Inside the filter closure add a predicate:
+  `let author_ok = author_filter.map_or(true, |a| fm.author.as_deref() == Some(a));`
+Include `author_ok` in the final boolean conjunction.
+Update every direct `list_filtered` call in unit tests to pass `None` as the new last argument.
+
+**2. `apm/src/cmd/list.rs` — wire up the new parameter**
+
+Change the `run` signature to accept `mine: bool` and `author: Option<String>`.
+Resolve the effective author filter before calling `list_filtered`:
+  if mine is true  -> call identity::resolve_current_user(root), use result as author_filter
+  if author is set -> use it as author_filter
+  else             -> None
+Pass `author_filter.as_deref()` to `list_filtered`.
+
+**3. `apm/src/main.rs` — add CLI flags**
+
+Inside the `List` variant add:
+- `#[arg(long)] mine: bool` — show only tickets authored by the current user
+- `#[arg(long, value_name = "USERNAME", conflicts_with = "mine")] author: Option<String>`
+
+`conflicts_with = "mine"` gives Clap-level mutual exclusion with an automatic error message.
+Update the `Command::List { ... }` match arm to forward the two new fields to `cmd::list::run`.
+Add examples to the long-about string: `apm list --mine` and `apm list --author alice`.
+
+**4. Tests**
+
+Unit tests in `apm-core/src/ticket.rs`:
+- `list_filtered_by_author`: two tickets with different author values; assert only the matching one is returned.
+- `list_filtered_author_none`: author_filter = None returns all tickets regardless of author.
+
+If an integration test for `apm list` exists in `apm/tests/integration.rs`, extend it to cover `--mine` by writing a `.apm/local.toml` with a test username and asserting only matching tickets appear.
+
+**Order of steps**
+1. Update `list_filtered` + unit tests in ticket.rs
+2. Update `cmd/list.rs` run signature + author resolution
+3. Update `main.rs` CLI struct + match arm
+4. `cargo test --workspace`
 
 ### Open questions
 
