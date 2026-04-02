@@ -15,7 +15,9 @@ updated_at = "2026-04-01T21:59:16.184446Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Once `depends_on` is stored in ticket frontmatter (ticket d877bd37), the engine dispatch loop must honour it. Currently the loop picks the highest-priority ready ticket and dispatches it immediately — it has no concept of blocked tickets.
+
+The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop change). Before dispatching a candidate, the loop must check each entry in `depends_on`: if any referenced ticket is not yet `implemented` or later, the candidate is skipped. The check is config-driven: "implemented or later" is determined by position in the workflow states list or by `terminal = true`, not hardcoded state names. Unknown dep IDs are treated as non-blocking.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
