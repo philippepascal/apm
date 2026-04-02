@@ -558,9 +558,11 @@ The remote branch is not deleted.
 
 Always run --dry-run first to see exactly what would be removed before
 committing to the operation:
-  apm clean --dry-run    # preview
-  apm clean              # actually remove
-  apm clean --yes        # auto-confirm all removal prompts (for scripts)")]
+  apm clean --dry-run          # preview
+  apm clean                    # actually remove
+  apm clean --yes              # auto-confirm all removal prompts (for scripts)
+  apm clean --force            # bypass merge and divergence checks; always prompts
+  apm clean --force --dry-run  # preview what --force would remove")]
     Clean {
         /// Print what would be removed without modifying anything
         #[arg(long)]
@@ -568,6 +570,9 @@ committing to the operation:
         /// Auto-confirm all removal prompts without reading stdin
         #[arg(long, short = 'y')]
         yes: bool,
+        /// Bypass merge and divergence checks; always prompts before each removal
+        #[arg(long)]
+        force: bool,
     },
     /// List and manage running worker processes
     Workers {
@@ -684,7 +689,7 @@ fn main() -> Result<()> {
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
-        Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
+        Command::Clean { dry_run, yes, force } => cmd::clean::run(&root, dry_run, yes, force),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
