@@ -28,7 +28,7 @@ Adding `new` to the visible states lets supervisors act on newly-created tickets
 - [x] Tickets in `new` state appear as cards inside that column
 - [x] The `new` column is visible by default (no extra toggle required)
 - [x] The `new` column displays the correct state label ("new")
-- [ ] Existing columns for all other states (question, specd, ammend, blocked, implemented, accepted) are unaffected
+- [x] Existing columns for all other states (question, specd, ammend, blocked, implemented, accepted) are unaffected
 
 ### Out of scope
 
