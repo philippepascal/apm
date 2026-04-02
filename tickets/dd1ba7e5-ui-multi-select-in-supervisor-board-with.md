@@ -1,7 +1,7 @@
 +++
 id = "dd1ba7e5"
 title = "UI: multi-select in supervisor board with batch actions"
-state = "in_progress"
+state = "implemented"
 priority = 3
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "1112"
 branch = "ticket/dd1ba7e5-ui-multi-select-in-supervisor-board-with"
 created_at = "2026-04-02T21:27:15.261676Z"
-updated_at = "2026-04-02T23:13:04.888717Z"
+updated_at = "2026-04-02T23:14:46.376764Z"
 +++
 
 ## Spec
@@ -152,3 +152,4 @@ In the arrow-key `handleKeyDown` handler (around line 74–100): before calling 
 | 2026-04-02T23:11Z | in_design | specd | claude-0402-2310-1340 |
 | 2026-04-02T23:12Z | specd | ready | apm |
 | 2026-04-02T23:13Z | ready | in_progress | philippepascal |
+| 2026-04-02T23:14Z | in_progress | implemented | claude-0402-2359-w7k4 |
