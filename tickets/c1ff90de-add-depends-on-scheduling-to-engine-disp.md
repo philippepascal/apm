@@ -22,7 +22,7 @@ The full design is in `docs/epics.md` (§ depends_on scheduling — Engine loop 
 
 ### Acceptance criteria
 
-- [ ] When a ticket has `depends_on = ["<id>"]` and the referenced ticket's state has neither `satisfies_deps = true` nor `terminal = true`, `spawn_next_worker` skips it and dispatches the next highest-priority non-blocked ticket instead
+- [x] When a ticket has `depends_on = ["<id>"]` and the referenced ticket's state has neither `satisfies_deps = true` nor `terminal = true`, `spawn_next_worker` skips it and dispatches the next highest-priority non-blocked ticket instead
 - [ ] When all entries in `depends_on` reference tickets whose states have `satisfies_deps = true` or `terminal = true`, the ticket is eligible for dispatch as normal
 - [ ] A state with `terminal = true` satisfies the dependency check regardless of its position in the workflow states list or its `satisfies_deps` value
 - [ ] A `depends_on` entry whose ID does not match any known ticket is treated as non-blocking (the candidate is not skipped due to that entry)
