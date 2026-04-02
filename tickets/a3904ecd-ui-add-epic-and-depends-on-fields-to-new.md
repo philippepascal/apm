@@ -15,7 +15,13 @@ updated_at = "2026-04-01T22:00:54.073602Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The new ticket modal has no way to associate a ticket with an epic or declare dependencies. Without this, users cannot create epic-linked tickets from the UI — they must use the CLI.
+
+The full design is in `docs/epics.md` (§ apm-ui changes — New ticket modal). Two optional fields are added below the title input:
+- **Epic** — dropdown populated from `GET /api/epics`; selecting one pre-fills the epic ID
+- **Depends on** — multi-value text input for ticket IDs, stored as `depends_on` array
+
+Omitting both preserves the current free-ticket creation behaviour.
 
 ### Acceptance criteria
 
@@ -32,13 +38,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
