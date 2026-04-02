@@ -251,6 +251,7 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
     queryKey: ['ticket', selectedTicketId],
     queryFn: () => fetchTicket(selectedTicketId!),
     enabled: !!selectedTicketId,
+    refetchInterval: 10_000,
   })
 
   const patchMutation = useMutation({
