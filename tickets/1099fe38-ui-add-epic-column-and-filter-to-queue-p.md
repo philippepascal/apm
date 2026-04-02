@@ -24,14 +24,14 @@ The `epic` field does not yet exist on `Frontmatter` (apm-core) or `QueueEntry` 
 
 ### Acceptance criteria
 
-- [ ] The queue table has an "Epic" column header between "State" and "E" (effort)
-- [ ] Each queue row shows the short 8-char epic ID when `epic` is set in the ticket frontmatter
-- [ ] Each queue row shows "—" in the Epic column when the ticket has no `epic` field
-- [ ] A filter dropdown above the queue table lists all distinct epic IDs present in the current queue, plus an "All epics" option
-- [ ] Selecting an epic ID from the dropdown hides all rows whose Epic column does not match that value
-- [ ] Selecting "All epics" restores the unfiltered view
-- [ ] The epic filter has no effect on drag-to-reorder or arrow-key reordering (reordering still works on the unfiltered, full queue)
-- [ ] Tickets with no `epic` field in frontmatter parse and display correctly — the absence of the field does not cause a parse error or panic
+- [x] The queue table has an "Epic" column header between "State" and "E" (effort)
+- [x] Each queue row shows the short 8-char epic ID when `epic` is set in the ticket frontmatter
+- [x] Each queue row shows "—" in the Epic column when the ticket has no `epic` field
+- [x] A filter dropdown above the queue table lists all distinct epic IDs present in the current queue, plus an "All epics" option
+- [x] Selecting an epic ID from the dropdown hides all rows whose Epic column does not match that value
+- [x] Selecting "All epics" restores the unfiltered view
+- [x] The epic filter has no effect on drag-to-reorder or arrow-key reordering (reordering still works on the unfiltered, full queue)
+- [x] Tickets with no `epic` field in frontmatter parse and display correctly — the absence of the field does not cause a parse error or panic
 
 ### Out of scope
 
