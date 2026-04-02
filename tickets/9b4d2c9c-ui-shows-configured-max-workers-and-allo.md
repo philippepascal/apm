@@ -22,7 +22,14 @@ The problem has two parts: (1) the UI omits the value entirely, and (2) even if 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `WorkEngineControls` fetches `GET /api/agents/config` on mount and displays the `max_concurrent` value
+- [ ] `GET /api/agents/config` returns `{"max_concurrent": N}` where N matches what is in `.apm/config.toml` (defaulting to 3 when absent)
+- [ ] When the engine is stopped, clicking the displayed value opens an inline number field (min 1, max 99) pre-filled with the current value
+- [ ] Pressing Enter or blurring the field with a valid value calls `PATCH /api/agents/config` with `{"max_concurrent": N}`
+- [ ] After a successful PATCH, the displayed value updates to the new number
+- [ ] `PATCH /api/agents/config` writes `max_concurrent` to the `[agents]` section of `.apm/config.toml` and the change survives a server restart
+- [ ] `PATCH /api/agents/config` with a value less than 1 or a non-integer returns HTTP 422
+- [ ] When the engine is running or idle, the max-workers field is read-only (no click-to-edit)
 
 ### Out of scope
 
