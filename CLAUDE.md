@@ -9,15 +9,9 @@
 - Don't add: `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
 - Do not amend published commits — create new ones
 
-## Pull requests
+## Merging
 
-- Title: mirrors the ticket title (kept short)
-- Body must include:
-  - Link: `Closes #<n>` (ticket number)
-  - Brief summary of the approach (1–3 bullets)
-  - Test plan (what was run, what to verify manually if anything)
-- Do not push to `main` directly — always use a PR
-- Do not merge without user approval
+`apm state <id> implemented` handles push, PR creation, and merging based on the workflow config. Do not push branches or open PRs manually.
 
 ## Code style
 
@@ -31,7 +25,7 @@
 
 - Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
 - Integration tests in `apm/tests/integration.rs` — use temp git repos, no fixture files needed
-- Run `cargo test --workspace` before opening a PR
+- Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
 
 ## Performance
 
