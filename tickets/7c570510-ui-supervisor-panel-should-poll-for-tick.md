@@ -25,7 +25,7 @@ Every other panel in the UI already polls on a fixed interval: PriorityQueuePane
 ### Acceptance criteria
 
 - [x] The supervisor kanban board refreshes its ticket list automatically without any user interaction
-- [ ] The automatic refresh interval is 10 seconds
+- [x] The automatic refresh interval is 10 seconds
 - [ ] Ticket cards appear in the correct swimlane within 10 seconds of a state transition happening elsewhere
 - [ ] The manual sync button (Shift+S) continues to work and still triggers a POST /api/sync followed by a data refresh
 - [ ] No visible flicker or full-board re-render disrupts the user while background polling occurs
