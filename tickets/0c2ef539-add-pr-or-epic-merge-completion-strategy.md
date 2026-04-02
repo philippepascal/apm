@@ -4,11 +4,11 @@ title = "Add pr_or_epic_merge completion strategy"
 state = "groomed"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 branch = "ticket/0c2ef539-add-pr-or-epic-merge-completion-strategy"
 created_at = "2026-04-02T00:38:36.244478Z"
-updated_at = "2026-04-02T00:39:35.830158Z"
+updated_at = "2026-04-02T00:39:41.129869Z"
 +++
 
 ## Spec
