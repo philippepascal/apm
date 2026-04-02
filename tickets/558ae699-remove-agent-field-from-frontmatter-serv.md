@@ -37,7 +37,13 @@ The fix removes `agent` from the `Frontmatter` struct, the server worker respons
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing `agent` from `apm list` / `apm show` CLI output — handled by ticket 610be42e
+- Stopping new writes of `agent` in `apm start` / `apm new` — handled by ticket 610be42e
+- Updating `handoff()` to not require a prior agent value — handled by ticket 610be42e
+- Changing `--unassigned` to filter by `author == "unassigned"` — handled by ticket 610be42e
+- Identity resolution (`.apm/local.toml`, `apm init` prompts) — separate tickets
+- UI board author filter and `/api/me` endpoint — separate tickets
+- Rewriting existing ticket files to remove the `agent` key — no migration pass needed
 
 ### Approach
 
