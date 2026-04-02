@@ -29,7 +29,10 @@ This matters because spec-writer agents run autonomously on `groomed`, `ammend`,
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the content of the spec-writer instructions themselves (the content is taken as-is from the current `.apm/apm.spec-writer.md` in this repo)
+- Updating `apm.worker.md` or `apm.agents.md` content
+- Any changes to the workflow state machine or `apm.toml` defaults
+- Migration logic for projects that already have a `.apm/apm.spec-writer.md`
 
 ### Approach
 
