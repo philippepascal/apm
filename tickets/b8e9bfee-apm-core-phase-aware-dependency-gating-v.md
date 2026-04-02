@@ -29,14 +29,14 @@ Example for this project's `apm.toml`:
 
 ### Acceptance criteria
 
-- [ ] `StateConfig` deserialises `satisfies_deps` as either a boolean (`true`/`false`) or a string tag (e.g. `"spec"`) without error
-- [ ] `StateConfig` accepts a new optional `dep_requires` string field (e.g. `dep_requires = "spec"`)
-- [ ] A ticket whose state has `dep_requires = "X"` is considered unblocked when every dep is in a state that has `satisfies_deps = "X"`, `satisfies_deps = true`, or `terminal = true`
-- [ ] A ticket whose state has no `dep_requires` still requires every dep to have `satisfies_deps = true` or `terminal = true` (unchanged behaviour)
-- [ ] `apm next` returns a `groomed` ticket (which has `dep_requires = "spec"`) when its only dependency is in state `specd` (which has `satisfies_deps = "spec"`)
-- [ ] `apm next` still returns a `groomed` ticket when its dependency advances from `specd` to `ready` or `in_progress` (both carry `satisfies_deps = "spec"`)
-- [ ] `apm next` does NOT return a `ready` ticket (no `dep_requires`) when its only dependency is in state `specd` only — it still requires `implemented` or `closed`
-- [ ] The project `workflow.toml` has `satisfies_deps = "spec"` on the `specd`, `ready`, `in_progress`, and `ammend` states and `dep_requires = "spec"` on the `groomed` state
+- [x] `StateConfig` deserialises `satisfies_deps` as either a boolean (`true`/`false`) or a string tag (e.g. `"spec"`) without error
+- [x] `StateConfig` accepts a new optional `dep_requires` string field (e.g. `dep_requires = "spec"`)
+- [x] A ticket whose state has `dep_requires = "X"` is considered unblocked when every dep is in a state that has `satisfies_deps = "X"`, `satisfies_deps = true`, or `terminal = true`
+- [x] A ticket whose state has no `dep_requires` still requires every dep to have `satisfies_deps = true` or `terminal = true` (unchanged behaviour)
+- [x] `apm next` returns a `groomed` ticket (which has `dep_requires = "spec"`) when its only dependency is in state `specd` (which has `satisfies_deps = "spec"`)
+- [x] `apm next` still returns a `groomed` ticket when its dependency advances from `specd` to `ready` or `in_progress` (both carry `satisfies_deps = "spec"`)
+- [x] `apm next` does NOT return a `ready` ticket (no `dep_requires`) when its only dependency is in state `specd` only — it still requires `implemented` or `closed`
+- [x] The project `workflow.toml` has `satisfies_deps = "spec"` on the `specd`, `ready`, `in_progress`, and `ammend` states and `dep_requires = "spec"` on the `groomed` state
 
 ### Out of scope
 
