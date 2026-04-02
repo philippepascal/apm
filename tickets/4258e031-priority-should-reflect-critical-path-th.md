@@ -4,12 +4,12 @@ title = "Priority should reflect critical path through depends_on graph"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "apm"
 agent = "11220"
 branch = "ticket/4258e031-priority-should-reflect-critical-path-th"
 created_at = "2026-04-02T05:23:36.689810Z"
-updated_at = "2026-04-02T17:05:03.298036Z"
+updated_at = "2026-04-02T17:05:10.485429Z"
 +++
 
 ## Spec
