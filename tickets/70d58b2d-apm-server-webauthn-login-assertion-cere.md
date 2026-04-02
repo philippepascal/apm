@@ -1,7 +1,7 @@
 +++
 id = "70d58b2d"
 title = "apm-server: WebAuthn login/assertion ceremony and embedded login page"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "21293"
 branch = "ticket/70d58b2d-apm-server-webauthn-login-assertion-cere"
 created_at = "2026-04-02T20:54:21.301151Z"
-updated_at = "2026-04-02T23:59:06.116832Z"
+updated_at = "2026-04-02T23:59:13.453937Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["8a08637c"]
@@ -128,3 +128,4 @@ Integration tests (matching existing tower::ServiceExt test patterns):
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:22Z | new | groomed | apm |
 | 2026-04-02T23:56Z | groomed | in_design | philippepascal |
+| 2026-04-02T23:59Z | in_design | specd | claude-0402-2356-b7f2 |
