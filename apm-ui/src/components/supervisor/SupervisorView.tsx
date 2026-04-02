@@ -26,6 +26,14 @@ async function fetchTickets(): Promise<Ticket[]> {
   return res.json()
 }
 
+interface Epic { id: string; title: string; branch: string }
+
+async function fetchEpics(): Promise<Epic[]> {
+  const res = await fetch('/api/epics')
+  if (!res.ok) return []
+  return res.json()
+}
+
 async function postSync(): Promise<void> {
   const res = await fetch('/api/sync', { method: 'POST' })
   if (!res.ok) throw new Error('Sync failed')
@@ -39,7 +47,10 @@ export default function SupervisorView() {
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
+  const [epicFilter, setEpicFilter] = useState<string | null>(null)
   const [showClosed, setShowClosed] = useState(false)
+
+  const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['tickets'],
@@ -91,6 +102,9 @@ export default function SupervisorView() {
         if (agentFilter !== null) {
           filtered = filtered.filter((t) => t.agent === agentFilter)
         }
+        if (epicFilter !== null) {
+          filtered = filtered.filter((t) => t.epic === epicFilter)
+        }
         if (query) {
           filtered = filtered.filter(
             (t) =>
@@ -101,9 +115,9 @@ export default function SupervisorView() {
         return [state, filtered]
       })
       .filter(([, group]) => group.length > 0)
-  }, [tickets, visibleStates, agentFilter, searchText])
+  }, [tickets, visibleStates, agentFilter, epicFilter, searchText])
 
-  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || showClosed
+  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || epicFilter !== null || showClosed
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
@@ -172,6 +186,16 @@ export default function SupervisorView() {
           <option value="">All agents</option>
           {availableAgents.map((a) => (
             <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+        <select
+          value={epicFilter ?? ''}
+          onChange={(e) => setEpicFilter(e.target.value || null)}
+          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+        >
+          <option value="">All epics</option>
+          {epics.map((ep) => (
+            <option key={ep.id} value={ep.id}>{ep.title || ep.id}</option>
           ))}
         </select>
         <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
