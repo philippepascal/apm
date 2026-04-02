@@ -22,7 +22,7 @@ The full design is in `docs/epics.md` (§ Data model — Ticket frontmatter addi
 
 - `epic = "<8-char-id>"` — associates the ticket with an epic branch
 - `target_branch = "epic/<id>-<slug>"` — the branch the worktree and PR target (defaults to `main` when absent)
-- `depends_on = ["<ticket-id>", ...]` — ticket IDs that must reach `implemented` before this ticket can be dispatched
+- `depends_on = ["<ticket-id>", ...]` — ticket IDs that must reach a state with `satisfies_deps = true` in workflow config before this ticket can be dispatched
 
 All three fields are optional; omitting them preserves existing behaviour exactly. This ticket is the data-model foundation that all other epics tickets build on.
 
