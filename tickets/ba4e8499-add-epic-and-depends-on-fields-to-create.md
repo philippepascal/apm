@@ -1,7 +1,7 @@
 +++
 id = "ba4e8499"
 title = "Add epic and depends_on fields to CreateTicketRequest and ticket API responses"
-state = "in_design"
+state = "specd"
 priority = 8
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "85628"
 branch = "ticket/ba4e8499-add-epic-and-depends-on-fields-to-create"
 created_at = "2026-04-01T21:55:57.801343Z"
-updated_at = "2026-04-02T00:46:58.919270Z"
+updated_at = "2026-04-02T00:47:06.338039Z"
 +++
 
 ## Spec
@@ -117,3 +117,4 @@ Add to the inline tests in apm-server/src/main.rs:
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T22:00Z | new | groomed | claude-0401-2145-a8f3 |
 | 2026-04-02T00:43Z | groomed | in_design | philippepascal |
+| 2026-04-02T00:47Z | in_design | specd | claude-0402-0050-spec1 |
