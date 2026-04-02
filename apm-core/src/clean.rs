@@ -91,7 +91,7 @@ pub fn remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()> {
     Ok(())
 }
 
-pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
+pub fn candidates(root: &Path, config: &Config, force: bool) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
     let mut terminal_states: std::collections::HashSet<String> = config
         .workflow
         .states
@@ -124,18 +124,20 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
         let id = t.frontmatter.id.clone();
         let branch_state = &t.frontmatter.state;
 
-        if !merged_set.contains(branch.as_str()) {
+        if !force && !merged_set.contains(branch.as_str()) {
             eprintln!("warning: {branch} not merged — skipping");
             continue;
         }
 
         let local_tip = git::branch_tip(root, &branch);
-        if let Some(ref tip) = local_tip {
-            if !git::is_ancestor(root, tip, default_branch) {
-                eprintln!(
-                    "warning: {branch} tip is not a git ancestor of {default_branch} — skipping"
-                );
-                continue;
+        if !force {
+            if let Some(ref tip) = local_tip {
+                if !git::is_ancestor(root, tip, default_branch) {
+                    eprintln!(
+                        "warning: {branch} tip is not a git ancestor of {default_branch} — skipping"
+                    );
+                    continue;
+                }
             }
         }
 
@@ -176,13 +178,15 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
             true
         };
 
-        let remote_tip = git::remote_branch_tip(root, &branch);
-        if let (Some(ref lt), Some(ref rt)) = (&local_tip, &remote_tip) {
-            if lt != rt && !wt_clean {
-                eprintln!(
-                    "warning: {branch} local tip differs from origin/{branch} — skipping"
-                );
-                continue;
+        if !force {
+            let remote_tip = git::remote_branch_tip(root, &branch);
+            if let (Some(ref lt), Some(ref rt)) = (&local_tip, &remote_tip) {
+                if lt != rt && !wt_clean {
+                    eprintln!(
+                        "warning: {branch} local tip differs from origin/{branch} — skipping"
+                    );
+                    continue;
+                }
             }
         }
 
@@ -201,7 +205,20 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
                     .unwrap_or(false);
                 let diagnosis =
                     diagnose_worktree(path, &id, &t.frontmatter.title, &branch, lbe)?;
-                dirty_result.push(diagnosis);
+                if force && diagnosis.modified_tracked.is_empty() {
+                    // Force mode: dirty-but-no-modified-tracked goes to candidates;
+                    // git worktree remove --force will handle the untracked files.
+                    result.push(CleanCandidate {
+                        ticket_id: id,
+                        ticket_title: t.frontmatter.title.clone(),
+                        branch: branch.clone(),
+                        worktree: wt_path,
+                        reason: branch_state.clone(),
+                        local_branch_exists: lbe,
+                    });
+                } else {
+                    dirty_result.push(diagnosis);
+                }
                 continue;
             }
         }
@@ -235,9 +252,9 @@ pub fn candidates(root: &Path, config: &Config) -> Result<(Vec<CleanCandidate>, 
     Ok((result, dirty_result))
 }
 
-pub fn remove(root: &Path, candidate: &CleanCandidate) -> Result<()> {
+pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool) -> Result<()> {
     if let Some(ref path) = candidate.worktree {
-        git::remove_worktree(root, path)?;
+        git::remove_worktree(root, path, force)?;
     }
 
     if candidate.local_branch_exists {

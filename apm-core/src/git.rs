@@ -340,9 +340,13 @@ pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()> {
 }
 
 /// Remove a permanent worktree.
-pub fn remove_worktree(root: &Path, wt_path: &Path) -> Result<()> {
-    run(root, &["worktree", "remove", &wt_path.to_string_lossy()])
-        .map(|_| ())
+pub fn remove_worktree(root: &Path, wt_path: &Path, force: bool) -> Result<()> {
+    let path_str = wt_path.to_string_lossy();
+    if force {
+        run(root, &["worktree", "remove", "--force", &path_str]).map(|_| ())
+    } else {
+        run(root, &["worktree", "remove", &path_str]).map(|_| ())
+    }
 }
 
 /// Commit a file to a specific branch without disturbing the current working tree.
