@@ -1,7 +1,7 @@
 +++
 id = "da95246d"
 title = "UI: show lock icon on ticket cards with unresolved depends_on"
-state = "in_design"
+state = "specd"
 priority = 2
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "claude-0401-2145-a8f3"
 agent = "68956"
 branch = "ticket/da95246d-ui-show-lock-icon-on-ticket-cards-with-u"
 created_at = "2026-04-01T21:56:15.495249Z"
-updated_at = "2026-04-02T01:46:26.896117Z"
+updated_at = "2026-04-02T01:46:33.155972Z"
 +++
 
 ## Spec
@@ -210,3 +210,4 @@ The test config must include at least one state with `satisfies_deps = true` (e.
 | 2026-04-02T00:58Z | in_design | specd | claude-0402-0100-spec1 |
 | 2026-04-02T01:37Z | specd | ammend | philippepascal |
 | 2026-04-02T01:43Z | ammend | in_design | philippepascal |
+| 2026-04-02T01:46Z | in_design | specd | claude-0402-0200-spec2 |
