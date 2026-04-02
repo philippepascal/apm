@@ -6,10 +6,10 @@ priority = 3
 effort = 5
 risk = 3
 author = "apm"
-agent = "25392"
+agent = "1112"
 branch = "ticket/dd1ba7e5-ui-multi-select-in-supervisor-board-with"
 created_at = "2026-04-02T21:27:15.261676Z"
-updated_at = "2026-04-02T23:02:49.443404Z"
+updated_at = "2026-04-02T23:14:46.376764Z"
 +++
 
 ## Spec
@@ -85,7 +85,10 @@ Update `setSelectedTicketId(id)` to also clear `selectedTicketIds` and set `last
 
 **4. `apm-ui/src/components/TicketDetail.tsx`**
 
+**Hooks order constraint (critical):** All hooks — including `useState` for `patchError`, `useQuery` for the single ticket, `useMutation` for transition and patch, and any other hooks — must be declared unconditionally at the top of the component, before any conditional early return. The check `if (selectedTicketIds.length > 1) return <BatchDetailPanel />` must appear after all hook calls. The early return and all JSX below it can then use the already-computed hook values unchanged. Violating this rule causes React's "Rendered fewer hooks than expected" crash when the user toggles between single and multi-select.
+
 - Read `selectedTicketIds` from store
+- Call all hooks unconditionally at the top
 - If `selectedTicketIds.length > 1`, render `<BatchDetailPanel ids={selectedTicketIds} />` instead of the existing single-ticket content
 
 `BatchDetailPanel` (new component, same file or a separate `BatchDetailPanel.tsx`):
@@ -107,7 +110,7 @@ Add two new route handlers:
 - Return `200 { succeeded: Vec<String>, failed: Vec<{ id: String, error: String }> }`
 - Register route alongside the existing `/api/tickets/:id/transition` route
 
-`POST /api/tickets/batch/priority`  
+`POST /api/tickets/batch/priority`
 - Body: `{ ids: Vec<String>, priority: i64 }`
 - For each id: PATCH priority field (reuse or call the same logic as the existing PATCH `/api/tickets/:id` handler)
 - Return same `succeeded/failed` shape
@@ -120,7 +123,7 @@ In the arrow-key `handleKeyDown` handler (around line 74–100): before calling 
 1. Store changes (foundation for everything)
 2. Backend batch endpoints (needed by frontend batch panel)
 3. `Swimlane` header checkbox + `TicketCard` shift-click
-4. `BatchDetailPanel` in `TicketDetail`
+4. `BatchDetailPanel` in `TicketDetail` — hoist all hooks first, then add conditional render
 5. `WorkScreen` arrow-key clear
 
 ### Open questions
@@ -128,6 +131,7 @@ In the arrow-key `handleKeyDown` handler (around line 74–100): before calling 
 
 ### Amendment requests
 
+- [x] React hooks order violation in `TicketDetail.tsx`: `useState`, `useQuery`, and `useMutation` are called after the conditional early return `if (selectedTicketIds.length > 1) return <BatchDetailPanel />`. When the user goes from 1 to 2+ selected tickets, React stops calling those hooks mid-render and throws "Rendered fewer hooks than expected" — same crash pattern as the previous PriorityQueuePanel bug. Fix: hoist all hooks (patchError useState, useQuery, useMutation, and any others that follow the early return) to above the conditional return. The early return and all JSX below it can then use the already-computed values unchanged.
 
 ### Code review
 
@@ -143,3 +147,9 @@ In the arrow-key `handleKeyDown` handler (around line 74–100): before calling 
 | 2026-04-02T22:55Z | specd | ready | apm |
 | 2026-04-02T22:59Z | ready | in_progress | philippepascal |
 | 2026-04-02T23:02Z | in_progress | implemented | claude-0402-2359-w7k4 |
+| 2026-04-02T23:10Z | implemented | ammend | apm |
+| 2026-04-02T23:10Z | ammend | in_design | philippepascal |
+| 2026-04-02T23:11Z | in_design | specd | claude-0402-2310-1340 |
+| 2026-04-02T23:12Z | specd | ready | apm |
+| 2026-04-02T23:13Z | ready | in_progress | philippepascal |
+| 2026-04-02T23:14Z | in_progress | implemented | claude-0402-2359-w7k4 |
