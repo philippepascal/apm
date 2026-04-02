@@ -41,6 +41,21 @@ enum EpicCommand {
         /// Title for the epic
         title: String,
     },
+    /// Open a PR from the epic branch to the default branch
+    Close {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+    },
+    /// List all epics with derived state and ticket counts
+    List,
+    /// Show an epic and its tickets
+    Show {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+        /// Skip automatic git fetch before reading data
+        #[arg(long)]
+        no_aggressive: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -167,6 +182,12 @@ After creating a ticket the typical next step is:
         /// Content for the section named by the preceding --section (repeat paired with --section)
         #[arg(long, value_name = "TEXT")]
         set: Vec<String>,
+        /// Epic ID (8 hex chars); ticket branch will be created from epic/<ID>-* tip
+        #[arg(long, value_name = "ID")]
+        epic: Option<String>,
+        /// Comma-separated ticket IDs this ticket depends on (repeatable)
+        #[arg(long, value_name = "IDS")]
+        depends_on: Vec<String>,
     },
     /// Transition a ticket's state
     #[command(long_about = "Transition a ticket to a new state.
@@ -498,6 +519,9 @@ Example:
         /// Poll interval in seconds when running as a daemon (default: 30)
         #[arg(long, default_value = "30")]
         interval: u64,
+        /// Restrict dispatching to tickets in this epic (8-char ID)
+        #[arg(long, value_name = "EPIC_ID")]
+        epic: Option<String>,
     },
     /// Force-close a ticket from any state (supervisor only)
     #[command(long_about = "Force-close a ticket from any state (supervisor only).
@@ -634,7 +658,7 @@ fn main() -> Result<()> {
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
         Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
-        Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set),
+        Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
         Command::Set { id, field, value, no_aggressive } => cmd::set::run(&root, &id, field, value, no_aggressive),
@@ -658,12 +682,15 @@ fn main() -> Result<()> {
         Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
-        Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
+        Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
+        Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
+        Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
+        Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
     }
 }
 

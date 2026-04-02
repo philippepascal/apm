@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react'
 import { useLayoutStore } from '../../store/useLayoutStore'
 import type { Ticket } from './types'
 
@@ -52,6 +53,13 @@ export default function TicketCard({ ticket }: TicketCardProps) {
             >
               A
             </span>
+          )}
+          {!!ticket.blocking_deps?.length && (
+            <Lock
+              size={12}
+              title={ticket.blocking_deps.map(d => `${d.id}: ${d.state}`).join('\n')}
+              className="text-gray-400 shrink-0"
+            />
           )}
         </div>
       </div>

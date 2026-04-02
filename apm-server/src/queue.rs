@@ -13,6 +13,8 @@ pub struct QueueEntry {
     effort: u8,
     risk: u8,
     score: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    epic: Option<String>,
 }
 
 pub async fn queue_handler(
@@ -51,6 +53,7 @@ pub async fn queue_handler(
                     effort: fm.effort,
                     risk: fm.risk,
                     score,
+                    epic: fm.epic.clone(),
                 }
             })
             .collect();
