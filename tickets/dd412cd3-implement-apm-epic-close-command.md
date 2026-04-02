@@ -1,14 +1,15 @@
 +++
 id = "dd412cd3"
 title = "Implement apm epic close command"
-state = "groomed"
+state = "in_design"
 priority = 6
 effort = 0
 risk = 0
 author = "claude-0401-2145-a8f3"
+agent = "philippepascal"
 branch = "ticket/dd412cd3-implement-apm-epic-close-command"
 created_at = "2026-04-01T21:55:18.313179Z"
-updated_at = "2026-04-01T21:59:48.475634Z"
+updated_at = "2026-04-02T00:47:54.397879Z"
 +++
 
 ## Spec
@@ -46,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-01T21:55Z | — | new | claude-0401-2145-a8f3 |
 | 2026-04-01T21:59Z | new | groomed | claude-0401-2145-a8f3 |
+| 2026-04-02T00:47Z | groomed | in_design | philippepascal |
