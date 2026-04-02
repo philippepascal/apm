@@ -3,13 +3,13 @@ id = "c299b33d"
 title = "apm clean: local by default, --remote flag for old branch cleanup"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "apm"
 agent = "5780"
 branch = "ticket/c299b33d-apm-clean-local-by-default-remote-flag-f"
 created_at = "2026-04-02T20:44:35.825711Z"
-updated_at = "2026-04-02T20:50:39.619949Z"
+updated_at = "2026-04-02T20:54:37.432373Z"
 +++
 
 ## Spec
