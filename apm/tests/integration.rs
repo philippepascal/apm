@@ -1690,7 +1690,7 @@ fn work_dry_run_lists_actionable_tickets() {
     write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "ready", 2, "beta");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     // dry-run should succeed without touching worktrees or spawning anything
-    apm::cmd::work::run(p, false, true, false, 30).unwrap();
+    apm::cmd::work::run(p, false, true, false, 30, None).unwrap();
 }
 
 #[test]
@@ -1698,7 +1698,7 @@ fn work_dry_run_no_tickets() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::work::run(p, false, true, false, 30).unwrap();
+    apm::cmd::work::run(p, false, true, false, 30, None).unwrap();
 }
 
 // --- sync direct close ---
@@ -3240,4 +3240,87 @@ fn epic_list_shows_epics_with_derived_state_and_counts() {
     assert!(lines[1].contains(epic2_id), "line 1 should contain epic2 id: {}", lines[1]);
     assert!(lines[1].contains("empty"), "line 1 should be empty: {}", lines[1]);
     assert!(lines[1].contains("Billing Overhaul"), "line 1 should have title: {}", lines[1]);
+}
+
+// --- apm work --epic ---
+
+fn write_ticket_with_epic(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, epic: Option<&str>) {
+    let path = format!("tickets/{filename}");
+    let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\n{epic_line}created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn work_dry_run_epic_filter_shows_only_epic_ticket() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    write_ticket_with_epic(p, "ticket/0001-epic-ticket", "0001-epic-ticket.md", "ready", 1, "epic ticket", Some("ab12cd34"));
+    write_ticket_with_epic(p, "ticket/0002-free-ticket", "0002-free-ticket.md", "ready", 2, "free ticket", None);
+
+    // Capture stdout
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["work", "--dry-run", "--epic", "ab12cd34"])
+        .current_dir(p)
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("epic ticket"), "should show epic ticket: {stdout}");
+    assert!(!stdout.contains("free ticket"), "should not show free ticket: {stdout}");
+}
+
+#[test]
+fn work_dry_run_epic_filter_no_candidates() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    write_ticket_with_epic(p, "ticket/0001-free-ticket", "0001-free-ticket.md", "ready", 1, "free ticket", None);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["work", "--dry-run", "--epic", "ab12cd34"])
+        .current_dir(p)
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("no actionable tickets"), "should show no candidates: {stdout}");
+}
+
+#[test]
+fn work_dry_run_no_flag_shows_epic_ticket() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    write_ticket_with_epic(p, "ticket/0001-epic-ticket", "0001-epic-ticket.md", "ready", 1, "epic ticket", Some("ab12cd34"));
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["work", "--dry-run"])
+        .current_dir(p)
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "exit: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("epic ticket"), "should show epic ticket without filter: {stdout}");
 }

@@ -57,6 +57,12 @@ pub struct WorkersConfig {
     pub keychain: std::collections::HashMap<String, String>,
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct WorkConfig {
+    #[serde(default)]
+    pub epic: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
@@ -78,6 +84,8 @@ pub struct Config {
     pub provider: Option<ProviderConfig>,
     #[serde(default)]
     pub workers: WorkersConfig,
+    #[serde(default)]
+    pub work: WorkConfig,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,
@@ -494,6 +502,35 @@ actionable = ["supervisor"]
         assert!(states.contains(&"ready".to_string()));
         assert!(!states.contains(&"specd".to_string()));
         assert!(!states.contains(&"in_progress".to_string()));
+    }
+
+    #[test]
+    fn work_epic_parses() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[work]
+epic = "ab12cd34"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.work.epic.as_deref(), Some("ab12cd34"));
+    }
+
+    #[test]
+    fn work_config_defaults_to_none() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.work.epic.is_none());
     }
 
     #[test]

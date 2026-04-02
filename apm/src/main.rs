@@ -505,6 +505,9 @@ Example:
         /// Poll interval in seconds when running as a daemon (default: 30)
         #[arg(long, default_value = "30")]
         interval: u64,
+        /// Restrict dispatching to tickets in this epic (8-char ID)
+        #[arg(long, value_name = "EPIC_ID")]
+        epic: Option<String>,
     },
     /// Force-close a ticket from any state (supervisor only)
     #[command(long_about = "Force-close a ticket from any state (supervisor only).
@@ -665,7 +668,7 @@ fn main() -> Result<()> {
         Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
-        Command::Work { skip_permissions, dry_run, daemon, interval } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval),
+        Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Clean { dry_run, yes } => cmd::clean::run(&root, dry_run, yes),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
