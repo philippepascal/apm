@@ -31,7 +31,11 @@ apm-server requires a separately running Vite dev server to serve the UI. For di
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Serving assets in development mode (Vite dev server continues to be used for local development)
+- Automating the `npm run build` step from within the Rust build (no build.rs UI compilation)
+- Asset compression or Brotli/gzip pre-encoding of embedded files
+- Cache-control headers, ETags, or conditional GET support
+- Any changes to the apm-ui source or build configuration
 
 ### Approach
 
