@@ -38,7 +38,7 @@ The fix is to move the spawn command definition into tracked TOML config (`[work
 - [x] `apm init` adds `.apm/local.toml` to `.gitignore` if not already present
 - [x] The three native spawn sites (`run`, `run_next`, `spawn_next_worker`) are consolidated into a single `build_spawn_command` function that reads the merged config
 - [x] The container spawn path (`spawn_container_worker`) is unchanged by this ticket
-- [ ] Existing behavior with no config changes is identical to current hardcoded behavior (backward compatible)
+- [x] Existing behavior with no config changes is identical to current hardcoded behavior (backward compatible)
 
 ### Out of scope
 
