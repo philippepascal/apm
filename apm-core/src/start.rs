@@ -303,10 +303,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
-    let pid_path_cleanup = pid_path.clone();
     std::thread::spawn(move || {
         let _ = child.wait();
-        let _ = std::fs::remove_file(&pid_path_cleanup);
     });
 
     t.frontmatter.agent = Some(pid.to_string());
@@ -440,10 +438,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
-    let pid_path_cleanup = pid_path.clone();
     std::thread::spawn(move || {
         let _ = child.wait();
-        let _ = std::fs::remove_file(&pid_path_cleanup);
     });
 
     let mut t_pid = t.clone();
