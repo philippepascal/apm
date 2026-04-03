@@ -55,7 +55,52 @@ apm-server itself is not changed — it continues to serve plain HTTP on localho
 
 ### Approach
 
-How the implementation will work.
+Create a new top-level directory `apm-proxy/` containing three files. No existing files change.
+
+**`apm-proxy/Dockerfile`**
+
+Base image: `nginx:alpine`. Install `certbot`, `openssl`, `bash`, and `gettext` (provides `envsubst`). Copy `nginx.conf`, `nginx.conf.template`, and `entrypoint.sh`. Mark entrypoint executable. Expose 80 and 443. Set `CMD ["/entrypoint.sh"]`.
+
+**`apm-proxy/nginx.conf`**
+
+Replaces the default `/etc/nginx/nginx.conf`. Must include an `http { }` block with a WebSocket upgrade map and `include /etc/nginx/conf.d/*.conf`. The map block maps `$http_upgrade` to `$connection_upgrade` (default: `upgrade`, empty string: `close`). This must live in the `http` block, not a server block.
+
+**`apm-proxy/nginx.conf.template`**
+
+Template rendered at container startup via `envsubst` with only `DOMAIN` and `UPSTREAM` substituted. All other nginx variables are left untouched by passing an explicit variable list.
+
+HTTP server block (port 80):
+- `/.well-known/acme-challenge/` served from `/var/www/certbot` (webroot for certbot renewal)
+- All other requests redirected 301 to `https://DOMAIN/`
+
+HTTPS server block (port 443):
+- SSL cert at `/etc/letsencrypt/live/DOMAIN/fullchain.pem` and `privkey.pem`
+- `proxy_pass UPSTREAM`
+- `proxy_http_version 1.1`
+- Upgrade/Connection headers forwarded for WebSocket support
+- `proxy_buffering off` for SSE
+
+**`apm-proxy/entrypoint.sh`**
+
+Steps in order:
+
+1. Apply defaults: UPSTREAM defaults to `http://host.docker.internal:3000`, TLS_MODE defaults to `letsencrypt`
+2. Render nginx config from template into `/etc/nginx/conf.d/default.conf`
+3. Create `/var/www/certbot`
+4. If TLS_MODE=self-signed: generate self-signed cert with openssl into `/etc/letsencrypt/live/DOMAIN/` and skip certbot
+5. If TLS_MODE=letsencrypt:
+   - Check for `/etc/letsencrypt/live/DOMAIN/cert.pem` (written by certbot; absent when only a bootstrap cert exists). Presence means a real LE cert is already on the mounted volume.
+   - If no real cert: generate temp self-signed cert, start nginx in background, run `certbot certonly --webroot` to obtain LE cert, reload nginx
+   - If real cert present: start nginx in background (skip issuance)
+   - Start background renewal loop every 12 hours: `certbot renew --webroot` then `nginx -s reload`
+6. `exec nginx -g 'daemon off;'`
+
+**Cert path consistency:** Both modes write to `/etc/letsencrypt/live/DOMAIN/fullchain.pem` and `privkey.pem`. The nginx template references this path unconditionally.
+
+**Known constraints:**
+- `host.docker.internal` works on macOS and Windows Docker Desktop. On Linux, users must set `-e UPSTREAM=http://<host-ip>:3000` or pass `--add-host=host.docker.internal:host-gateway`
+- Webroot approach (not --standalone) avoids nginx downtime during cert renewal
+- The `cert.pem` presence check distinguishes a real LE cert from a temporary bootstrap self-signed cert on container restart
 
 ### Open questions
 
