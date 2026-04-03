@@ -4,11 +4,11 @@ title = "Configurable agent spawn: TOML config with local overrides replaces har
 state = "in_design"
 priority = 7
 effort = 5
-risk = 0
+risk = 3
 author = "apm"
 branch = "ticket/e1582fd0-configurable-agent-spawn-toml-config-wit"
 created_at = "2026-04-03T21:53:31.381487Z"
-updated_at = "2026-04-03T21:58:06.053031Z"
+updated_at = "2026-04-03T21:58:10.387292Z"
 +++
 
 ## Spec
