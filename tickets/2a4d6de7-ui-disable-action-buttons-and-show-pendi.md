@@ -49,7 +49,11 @@ React Query's `useMutation` already exposes `isPending` (true from the moment `m
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Optimistic updates for state transitions (server must compute `valid_transitions`)
+- Global loading bar or toast notifications
+- Debouncing or throttling of rapid clicks (disabled state is sufficient)
+- Retry logic for failed mutations
+- Disabling non-action UI (e.g. markdown body, navigation) during mutations
 
 ### Approach
 
