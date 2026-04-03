@@ -1,14 +1,14 @@
 +++
 id = "e1582fd0"
 title = "Configurable agent spawn: TOML config with local overrides replaces hardcoded Command"
-state = "in_design"
+state = "specd"
 priority = 7
 effort = 5
 risk = 3
 author = "apm"
 branch = "ticket/e1582fd0-configurable-agent-spawn-toml-config-wit"
 created_at = "2026-04-03T21:53:31.381487Z"
-updated_at = "2026-04-03T21:58:10.387292Z"
+updated_at = "2026-04-03T21:58:17.566214Z"
 +++
 
 ## Spec
@@ -181,3 +181,4 @@ Unit test in `apm-core/src/start.rs`:
 | 2026-04-03T21:53Z | — | new | apm |
 | 2026-04-03T21:54Z | new | groomed | apm |
 | 2026-04-03T21:54Z | groomed | in_design | apm |
+| 2026-04-03T21:58Z | in_design | specd | apm |
