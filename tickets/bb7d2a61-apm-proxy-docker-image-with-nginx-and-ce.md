@@ -19,7 +19,13 @@ depends_on = ["48105624", "73e484df"]
 
 ### Problem
 
-External access to apm-server (from a phone or remote laptop) requires TLS, but apm-server speaks plain HTTP and WebAuthn is blocked by browsers on plain HTTP for non-localhost origins. A lightweight Docker image containing only nginx (reverse proxy) and certbot (automatic Let's Encrypt cert renewal) handles TLS termination without adding complexity to the native server binary. See `initial_specs/DESIGN-users.md` point 6.
+External access to apm-server (from a phone or remote laptop) requires TLS, but apm-server speaks plain HTTP and WebAuthn is blocked by browsers on plain HTTP for non-localhost origins. A lightweight Docker image containing only nginx (reverse proxy) and certbot (automatic Let's Encrypt cert renewal) handles TLS termination without adding complexity to the native server binary.
+
+Currently there is no Docker image or nginx config in the repo. A developer who wants to expose apm-server externally has no supported path. This ticket creates the `apm-proxy/` directory containing a Dockerfile and supporting config files that implement the deployment model described in `initial_specs/DESIGN-users.md` point 6:
+
+  phone/laptop ──HTTPS──▶ apm-proxy (Docker, nginx+certbot) ──HTTP──▶ apm-server (native, :3000)
+
+apm-server itself is not changed — it continues to serve plain HTTP on localhost.
 
 ### Acceptance criteria
 
