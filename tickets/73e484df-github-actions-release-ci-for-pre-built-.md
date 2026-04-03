@@ -43,7 +43,15 @@ The project produces two binaries — `apm` (CLI) and `apm-server` (HTTP server)
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Homebrew formula generation or tap repository updates
+- Docker image builds for apm-proxy
+- Windows binaries
+- macOS code signing or notarization (no Developer ID required for initial release)
+- Publishing to crates.io or any package registry
+- Automatic changelog generation from commit history
+- Pre-release or nightly builds on non-tag pushes
+- Static asset embedding in apm-server (covered by ticket #48105624, a declared dependency)
+- CI for pull requests or pushes to branches (this workflow is release-only)
 
 ### Approach
 
