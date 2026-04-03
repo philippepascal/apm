@@ -314,6 +314,7 @@ id           = "groomed"
 label        = "Groomed"
 color        = "#6366f1"
 actionable   = ["agent"]
+dep_requires = "spec"
 instructions = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
@@ -323,31 +324,36 @@ color      = "#f59e0b"
 actionable = ["supervisor"]
 
 [[workflow.states]]
-id         = "specd"
-label      = "Specd"
-color      = "#3b82f6"
-actionable = ["supervisor"]
+id             = "specd"
+label          = "Specd"
+color          = "#3b82f6"
+actionable     = ["supervisor"]
+satisfies_deps = "spec"
 
 [[workflow.states]]
-id           = "ammend"
-label        = "Ammend"
-color        = "#ef4444"
-actionable   = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
+id             = "ammend"
+label          = "Ammend"
+color          = "#ef4444"
+actionable     = ["agent"]
+dep_requires   = "spec"
+satisfies_deps = "spec"
+instructions   = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
-id           = "in_design"
-label        = "In Design"
-color        = "#f97316"
-actionable   = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
+id             = "in_design"
+label          = "In Design"
+color          = "#f97316"
+actionable     = ["agent"]
+satisfies_deps = "spec"
+instructions   = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
-id           = "ready"
-label        = "Ready"
-color        = "#10b981"
-actionable   = ["agent"]
-instructions = ".apm/apm.worker.md"
+id             = "ready"
+label          = "Ready"
+color          = "#10b981"
+actionable     = ["agent"]
+satisfies_deps = "spec"
+instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -355,10 +361,11 @@ instructions = ".apm/apm.worker.md"
   actor   = "agent"
 
 [[workflow.states]]
-id           = "in_progress"
-label        = "In Progress"
-color        = "#8b5cf6"
-instructions = ".apm/apm.worker.md"
+id             = "in_progress"
+label          = "In Progress"
+color          = "#8b5cf6"
+satisfies_deps = "spec"
+instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "implemented"
@@ -382,10 +389,11 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "implemented"
-label      = "Implemented"
-color      = "#06b6d4"
-actionable = ["supervisor"]
+id             = "implemented"
+label          = "Implemented"
+color          = "#06b6d4"
+actionable     = ["supervisor"]
+satisfies_deps = true
 
 [[workflow.states]]
 id       = "closed"
