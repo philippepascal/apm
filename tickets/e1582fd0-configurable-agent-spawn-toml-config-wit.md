@@ -34,7 +34,7 @@ The fix is to move the spawn command definition into tracked TOML config (`[work
 - [x] When `workers.model` is set, `--model <value>` is prepended to the args passed to the agent CLI
 - [x] When `workers.env` contains entries, each is injected as an env var on the spawned process
 - [x] `apm init` writes a default `[workers]` section with `command = "claude"` and `args = ["--print"]` into the tracked config
-- [ ] A `.apm/local.toml` file (gitignored) can contain `[workers]` with the same fields; values in `local.toml` override/extend the tracked config
+- [x] A `.apm/local.toml` file (gitignored) can contain `[workers]` with the same fields; values in `local.toml` override/extend the tracked config
 - [ ] `apm init` adds `.apm/local.toml` to `.gitignore` if not already present
 - [ ] The three native spawn sites (`run`, `run_next`, `spawn_next_worker`) are consolidated into a single `build_spawn_command` function that reads the merged config
 - [ ] The container spawn path (`spawn_container_worker`) is unchanged by this ticket
