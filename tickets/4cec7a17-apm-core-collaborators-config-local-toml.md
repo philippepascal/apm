@@ -89,7 +89,7 @@ Add `.apm/sessions.json` and `.apm/credentials.json` to the `entries` array in `
 - [x] `.apm/local.toml` is already in `.gitignore` (added by e1582fd0). Remove the gitignore AC item and update the approach to note this is already done.
 - [x] `Config::load` already reads and merges `.apm/local.toml` for worker overrides (added by e1582fd0). The `username` field will be available automatically through the existing `LocalConfig` load path — no new file-reading code needed.
 - [x] The `apm init` AC items (prompt for username, write local.toml, add to gitignore) overlap with ticket 79326024 which is specifically scoped to init changes. Clarify: this ticket adds the data structures and `resolve_identity()` only; all init-flow changes are in 79326024.
-- [ ] Add `.apm/sessions.json` and `.apm/credentials.json` to the `ensure_gitignore` entries array — these files are created by e2e3d958 and 8a08637c respectively and must not be committed.
+- [x] Add `.apm/sessions.json` and `.apm/credentials.json` to the `ensure_gitignore` entries array — these files are created by e2e3d958 and 8a08637c respectively and must not be committed.
 - [ ] Set effort and risk to non-zero values.
 
 ### Code review
