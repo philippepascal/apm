@@ -19,7 +19,20 @@ depends_on = ["4cec7a17"]
 
 ### Problem
 
-When a repo is hosted on GitHub, collaborator identity and the collaborators list could be resolved directly from the GitHub API, removing the need for manual configuration of `.apm/local.toml` and `collaborators` in config.toml. Without this plugin, teams on GitHub must manage identity configuration by hand. See `initial_specs/DESIGN-users.md` point 4.
+When a repo is hosted on GitHub, APM currently requires users to manually
+configure their identity in `.apm/local.toml` (`username`) and maintain the
+`collaborators` list in `.apm/config.toml` by hand. This is error-prone and
+creates drift whenever team membership changes on GitHub.
+
+DESIGN-users.md (point 4) specifies an optional GitHub plugin that solves
+both problems: the current user's identity is resolved via `GET /user` using a
+stored token, and the collaborators list is synced from
+`GET /repos/{owner}/{repo}/collaborators`. When the plugin is not configured,
+the system falls back to the manual approach introduced by ticket 4cec7a17.
+
+This ticket implements the plugin foundation: the `[git_host]` config schema,
+`github_token` storage in `.apm/local.toml`, and the two API resolution paths
+wired into `resolve_identity()` and a new `resolve_collaborators()` helper.
 
 ### Acceptance criteria
 
