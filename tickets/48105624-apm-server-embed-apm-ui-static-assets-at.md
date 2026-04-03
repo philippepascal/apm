@@ -1,14 +1,15 @@
 +++
 id = "48105624"
 title = "apm-server: embed apm-ui static assets at build time via include_dir"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/48105624-apm-server-embed-apm-ui-static-assets-at"
 created_at = "2026-04-02T20:54:40.869103Z"
-updated_at = "2026-04-02T23:23:13.238734Z"
+updated_at = "2026-04-03T00:14:22.830748Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
@@ -46,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:23Z | new | groomed | apm |
+| 2026-04-03T00:14Z | groomed | in_design | philippepascal |
