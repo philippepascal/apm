@@ -26,7 +26,13 @@ The fix is to make dep-blocked status prominently visible on the ticket card: us
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] A ticket card with non-empty `blocking_deps` has a visually distinct background or border treatment (not just the existing grey icon) that signals dep-blocked status at a glance
+- [ ] A ticket card with empty or absent `blocking_deps` has no dep-blocked visual treatment
+- [ ] Each blocking dependency's short ID (first 8 chars) and current state are displayed as text directly on the card face, not just in a hover tooltip
+- [ ] The blocking dep IDs on the card are clickable and navigate to the blocking ticket's detail view (call `setSelectedTicketId`)
+- [ ] The existing `Ban` icon is replaced or augmented with a more prominent coloured indicator (e.g. amber/orange) when deps are blocking
+- [ ] The dep-blocked treatment applies regardless of which swimlane column the ticket appears in (groomed, specd, ready, etc.)
+- [ ] When all blocking deps are resolved (ticket refreshes and `blocking_deps` becomes empty), the dep-blocked visual treatment disappears without a page reload
 
 ### Out of scope
 
