@@ -40,7 +40,13 @@ This ticket creates the tap repository and the formula. It does not automate for
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automated formula version bumps when a new release is tagged (follow-up ticket)
+- Linux Homebrew (Linuxbrew) support — Linux users download binaries directly or use cargo install
+- Building from source via Homebrew (`brew install --build-from-source`) — formula uses pre-built bottles only
+- The release CI itself (ticket #73e484df)
+- Publishing to Homebrew core (requires significant adoption; tap is the right path for now)
+- Windows package managers (scoop, chocolatey, winget)
+- Formula for apm-proxy Docker image
 
 ### Approach
 
