@@ -39,7 +39,28 @@ apm-server requires a separately running Vite dev server to serve the UI. For di
 
 ### Approach
 
-How the implementation will work.
+Add `include_dir` to the workspace and to `apm-server`:
+
+In Cargo.toml root workspace, add: include_dir = "0.7"
+In apm-server/Cargo.toml, add: include_dir = { workspace = true }, mime_guess = "2"
+
+Remove the `fs` feature from `tower-http` in `apm-server/Cargo.toml` since filesystem-based static serving is no longer needed.
+
+In `apm-server/src/main.rs`, add a compile-time static using include_dir's include_dir! macro pointing to `$CARGO_MANIFEST_DIR/../apm-ui/dist`. `$CARGO_MANIFEST_DIR` resolves to the `apm-server/` directory at compile time, so the path navigates correctly to `apm-ui/dist` in the workspace root.
+
+Replace the current `ServeDir::new("apm-ui/dist")` / `.nest_service("/", serve_dir)` with a plain Axum fallback handler that:
+1. Extracts the URI path, strips the leading `/`
+2. Looks up the path in UI_DIR (the embedded include_dir! static)
+3. If found, returns the file bytes with a Content-Type derived from the file extension via mime_guess::from_path(...).first_or_octet_stream()
+4. If not found, falls back to serving the embedded `index.html` (SPA routing)
+5. Registers as `.fallback(serve_ui)` instead of `.nest_service("/", serve_dir)`
+
+Build prerequisite: The include_dir! macro fails at compile time if `apm-ui/dist` does not exist. Developers and CI must run `npm run build` in `apm-ui/` before building `apm-server`. No `build.rs` needed.
+
+Files changed:
+- Cargo.toml (root): add `include_dir = "0.7"` to [workspace.dependencies]
+- apm-server/Cargo.toml: add `include_dir` and `mime_guess`; remove `fs` feature from `tower-http`
+- apm-server/src/main.rs: replace ServeDir/ServeFile imports and usage with UI_DIR static and serve_ui fallback handler
 
 ### Open questions
 
