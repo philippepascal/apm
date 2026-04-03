@@ -27,7 +27,16 @@ The `author` field is already present in ticket frontmatter and will be guarante
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] On load, the board fetches `GET /api/me` and uses the returned `username` as the initial author filter value
+- [ ] When `/api/me` returns `"unassigned"`, the author filter is left unset ("Show all authors" mode), not filtered to "unassigned"
+- [ ] An "Author" dropdown appears in the filter bar showing all unique author values from the currently loaded ticket set
+- [ ] The author dropdown has a "Show all authors" option that clears the filter
+- [ ] When an author is selected in the dropdown, only tickets with a matching `author` value are shown on the board
+- [ ] The author filter composes with the existing state, agent, epic, and search filters using AND logic
+- [ ] When the author filter is active (single author selected), ticket cards do not display the author label
+- [ ] When "Show all authors" is active, ticket cards display the author value in small subdued text
+- [ ] The `Ticket` TypeScript interface includes an `author` field (string)
+- [ ] If `/api/me` fails (network error or non-OK response), the board falls back to "Show all authors" mode with no console error visible to the user
 
 ### Out of scope
 
