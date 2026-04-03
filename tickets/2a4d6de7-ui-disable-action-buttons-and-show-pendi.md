@@ -57,7 +57,52 @@ React Query's `useMutation` already exposes `isPending` (true from the moment `m
 
 ### Approach
 
-How the implementation will work.
+Three files change: `TicketDetail.tsx`, `InlineNumberField.tsx`, and `WorkScreen.tsx`.
+
+#### 1. `InlineNumberField.tsx` — add `disabled` prop
+
+- Add optional `disabled?: boolean` to `InlineNumberFieldProps`
+- When `disabled` is true, the display-mode `<span>` ignores click/keydown (don't call `activate()`) and applies `opacity-50 cursor-not-allowed` instead of `cursor-pointer hover:bg-gray-100`
+- When `disabled` is true and already in editing mode, the input and commit are also disabled (edge case: user clicks field, then a sibling mutation starts)
+
+#### 2. `TicketDetail.tsx` — `TransitionButtons`
+
+The current `TransitionButtons` uses manual `useState` for `pending` / `reassigning`. Refactor both to `useMutation`:
+
+- Create `transitionMutation = useMutation({ mutationFn: (to: string) => fetch(...) })` replacing the manual `doTransition` function
+- Create `reassignMutation = useMutation({ mutationFn: () => fetch(...) })` replacing the manual `handleReassign` function
+- Derive `anyPending = transitionMutation.isPending || reassignMutation.isPending`
+- All transition buttons and "Keep" button: `disabled={anyPending}`
+- "Reassign to me" button: `disabled={anyPending}`
+- Track which transition target is in flight (e.g. `transitionMutation.variables`) — the button whose `tr.to` matches the in-flight variable shows `<Loader2 className="w-3 h-3 animate-spin" />` instead of `{tr.label}`
+- Reassign button: when `reassignMutation.isPending`, show `<Loader2>` spinner
+
+#### 3. `TicketDetail.tsx` — inline fields
+
+- Pass `disabled={patchMutation.isPending}` to each `<InlineNumberField>` for effort, risk, and priority
+
+#### 4. `TicketDetail.tsx` — `BatchDetailPanel`
+
+Refactor `doBatchTransition` and `doBatchPriority` to `useMutation`:
+
+- `batchTransitionMutation = useMutation({ mutationFn: (to: string) => fetch(...) })`
+- `batchPriorityMutation = useMutation({ mutationFn: (priority: number) => fetch(...) })`
+- Derive `batchPending = batchTransitionMutation.isPending || batchPriorityMutation.isPending`
+- All batch transition buttons: `disabled={batchPending}`, clicked button shows spinner via `batchTransitionMutation.variables`
+- Batch priority field: `disabled={batchPending}`
+
+#### 5. `WorkScreen.tsx` — Shift+W guard
+
+- In the `Shift+W` handler, check `startMutation.isPending || stopMutation.isPending` before calling `fetchStatus()`. If either is pending, return early.
+
+#### Import
+
+- Add `Loader2` to the lucide-react import in `TicketDetail.tsx` (already declared in `lucide-react.d.ts`)
+
+#### Spinner style
+
+- Use `<Loader2 className="w-3 h-3 animate-spin" />` consistently for all button spinners
+- Disabled buttons already have `disabled:opacity-50` in the existing Tailwind classes
 
 ### Open questions
 
