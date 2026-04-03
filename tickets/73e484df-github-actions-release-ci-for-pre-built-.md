@@ -55,7 +55,64 @@ The project produces two binaries — `apm` (CLI) and `apm-server` (HTTP server)
 
 ### Approach
 
-How the implementation will work.
+Create a single file: `.github/workflows/release.yml`
+
+**Triggers**
+
+```yaml
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+```
+
+**Job 1: `test` (ubuntu-22.04)**
+- Checkout
+- `cargo test --workspace`
+
+All subsequent jobs declare `needs: test`.
+
+**Job 2: `build` (matrix)**
+
+Matrix of 4 entries — each entry is a distinct runner/target combination:
+
+| os | target | notes |
+|----|--------|-------|
+| macos-14 | aarch64-apple-darwin | native Apple Silicon |
+| macos-13 | x86_64-apple-darwin | native Intel |
+| ubuntu-22.04 | x86_64-unknown-linux-musl | native + musl-tools |
+| ubuntu-22.04 | aarch64-unknown-linux-musl | cross via cargo-zigbuild |
+
+Steps per matrix entry:
+1. `actions/checkout@v4`
+2. `actions/setup-node@v4` (Node 20), then `npm ci && npm run build` inside `apm-ui/`
+3. `rustup target add <matrix.target>`
+4. Linux musl only: `sudo apt-get install -y musl-tools`
+5. Linux aarch64 only: install Zig via `mlugg/setup-zig@v1` action and `cargo install cargo-zigbuild`
+6. Build:
+   - macOS and Linux x86_64: `cargo build --release --target <matrix.target> -p apm -p apm-server`
+   - Linux aarch64: `cargo zigbuild --release --target <matrix.target> -p apm -p apm-server`
+7. Strip binaries with `strip` to reduce size (~50%)
+8. Package: `tar -czf apm-<tag>-<matrix.target>.tar.gz -C target/<matrix.target>/release apm apm-server`
+9. Upload archive as a workflow artifact via `actions/upload-artifact@v4`
+
+**Job 3: `release` (ubuntu-22.04)**
+
+`needs: build` — runs only after all 4 build matrix jobs succeed.
+
+Steps:
+1. Download all 4 artifacts via `actions/download-artifact@v4`
+2. Generate checksums: `sha256sum *.tar.gz > checksums.txt`
+3. Create GitHub Release via `softprops/action-gh-release@v2` with all four `.tar.gz` files and `checksums.txt` as assets. Requires `permissions: contents: write` on the job.
+
+**Caching**
+Add `actions/cache@v4` for `~/.cargo/registry` and `~/.cargo/git` keyed on `Cargo.lock` to speed up repeat runs.
+
+**Gotchas**
+- `cargo-zigbuild` for Linux aarch64 musl requires Zig on PATH. Use the `mlugg/setup-zig@v1` action rather than `pip3 install ziglang` to avoid PATH issues in GitHub Actions.
+- The `apm-ui/dist` directory must exist before `cargo build -p apm-server` runs, because ticket #48105624 makes the build fail at compile time if `dist` is absent. The Node build step must come before the cargo build step on every matrix runner.
+- Release job needs `GITHUB_TOKEN` (available automatically) and `permissions: contents: write` to create releases.
+- Archive filename should use the git tag name (e.g. `v0.1.0`) so filenames are deterministic and match what Homebrew formulas will reference later.
 
 ### Open questions
 
