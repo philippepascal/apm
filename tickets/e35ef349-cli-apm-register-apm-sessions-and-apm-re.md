@@ -54,7 +54,127 @@ The desired behaviour is three new subcommands — `apm register`, `apm sessions
 
 ### Approach
 
-How the implementation will work.
+### Dependencies assumed present
+Tickets e2e3d958 and 8a08637c will have landed on `epic/8db73240-user-mgmt` before this ticket is implemented. `apm-server/src/auth.rs` (with `OtpStore`, `SessionStore`, `IsLocalhost`) and `apm-server/src/credential_store.rs` are expected to exist.
+
+### 1. reqwest in CLI
+
+Add to `apm/Cargo.toml`:
+```toml
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+serde_json = "1"
+```
+
+### 2. Server URL from config
+
+In `apm-core/src/config.rs`, add an optional `[server]` table:
+```rust
+#[derive(Deserialize, Default)]
+pub struct ServerConfig {
+    #[serde(default = "default_server_url")]
+    pub url: String,
+}
+fn default_server_url() -> String { "http://127.0.0.1:3000".to_owned() }
+```
+Add `pub server: ServerConfig` to the top-level `Config` struct (optional, default).
+
+Add a small helper in `apm/src/cmd/mod.rs` (or a new `apm/src/server_client.rs`):
+```rust
+pub fn server_url(cfg: &Config) -> &str { &cfg.server.url }
+```
+
+### 3. `apm register <username>` — `apm/src/cmd/register.rs`
+
+- POST `{server_url}/api/auth/otp` with `Content-Type: application/json`, body `{"username":"<u>"}`
+- On HTTP 200: parse `{"otp":"XXXXXXXX"}`, print the OTP string
+- On connection error or non-200: print error to stderr, exit 1
+
+Wire up in `apm/src/main.rs`:
+```rust
+Register { username: String }
+```
+
+### 4. `apm sessions` — `apm/src/cmd/sessions.rs`
+
+- GET `{server_url}/api/auth/sessions`
+- Response: `Vec<SessionInfo>` (JSON), where `SessionInfo` has `username`, `device_hint: Option<String>`, `last_seen: DateTime<Utc>`, `expires_at: DateTime<Utc>`
+- If empty vec: print "No active sessions."
+- Otherwise: print aligned table, e.g.:
+  ```
+  USERNAME   DEVICE      LAST SEEN             EXPIRES
+  alice      MacBook     2026-04-01 14:32 UTC  2026-04-08 14:32 UTC
+  bob        iPhone      2026-03-30 09:11 UTC  2026-04-06 09:11 UTC
+  ```
+
+### 5. `apm revoke` — `apm/src/cmd/revoke.rs`
+
+Args:
+```
+apm revoke [<username>] [--device <hint>] [--all]
+```
+- `--all`: no username required; mutually exclusive with `--device`
+- `<username>` required unless `--all` is set (clap validation)
+
+- DELETE `{server_url}/api/auth/sessions` with JSON body:
+  ```json
+  {"username": "alice", "device": "MacBook", "all": false}
+  ```
+- Response: `{"revoked": N}`
+- Print `"Revoked N session(s)."` or `"No sessions found for <username>."` when N == 0
+
+### 6. New server endpoints — `apm-server/src/auth.rs`
+
+Add alongside existing OTP handlers (the `IsLocalhost` extractor from e2e3d958 enforces localhost-only):
+
+```rust
+async fn list_sessions(
+    IsLocalhost: IsLocalhost,
+    State(state): State<AppState>,
+) -> Json<Vec<SessionInfo>>
+```
+- Reads `state.session_store`, filters out expired sessions, returns `Vec<SessionInfo>` (no tokens exposed)
+
+```rust
+async fn revoke_sessions(
+    IsLocalhost: IsLocalhost,
+    State(state): State<AppState>,
+    Json(req): Json<RevokeRequest>,
+) -> Json<RevokeResponse>
+```
+- `RevokeRequest { username: Option<String>, device: Option<String>, all: bool }`
+- `RevokeResponse { revoked: usize }`
+- Removes matching sessions from the store; if `all == true`, clears everything regardless of other fields
+
+Add new types:
+```rust
+pub struct SessionInfo {
+    pub username: String,
+    pub device_hint: Option<String>,
+    pub last_seen: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+}
+```
+
+### 7. Route registration — `apm-server/src/main.rs`
+
+```rust
+.route("/api/auth/sessions", get(list_sessions).delete(revoke_sessions))
+```
+
+### 8. Tests
+
+- Integration test in `apm/tests/integration.rs`: spin up a mock HTTP server (use `wiremock` or `mockito`) to verify each CLI command sends the correct request and formats output correctly
+- Unit tests in `apm-server/src/auth.rs`: `list_sessions` returns only non-expired sessions; `revoke_sessions` with `all=true` clears the store; `revoke_sessions` with username filters correctly
+
+### Order of implementation
+
+1. `apm-core/src/config.rs` — add `ServerConfig`
+2. `apm-server/src/auth.rs` — add `SessionInfo`, `RevokeRequest`, `RevokeResponse`, `list_sessions`, `revoke_sessions`
+3. `apm-server/src/main.rs` — register routes
+4. `apm/Cargo.toml` — add reqwest + serde_json
+5. `apm/src/cmd/register.rs`, `sessions.rs`, `revoke.rs`
+6. `apm/src/main.rs` — wire commands
+7. Tests
 
 ### Open questions
 
