@@ -1,14 +1,15 @@
 +++
 id = "73e484df"
 title = "GitHub Actions: release CI for pre-built binaries on 4 platforms"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/73e484df-github-actions-release-ci-for-pre-built-"
 created_at = "2026-04-02T20:54:44.627516Z"
-updated_at = "2026-04-02T23:23:18.175171Z"
+updated_at = "2026-04-03T00:18:09.955596Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["48105624"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:23Z | new | groomed | apm |
+| 2026-04-03T00:18Z | groomed | in_design | philippepascal |
