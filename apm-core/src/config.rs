@@ -52,12 +52,36 @@ pub struct ProviderConfig {
     pub type_: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct WorkersConfig {
     pub container: Option<String>,
     #[serde(default)]
     pub keychain: std::collections::HashMap<String, String>,
+    #[serde(default = "default_command")]
+    pub command: String,
+    #[serde(default = "default_args")]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
 }
+
+impl Default for WorkersConfig {
+    fn default() -> Self {
+        Self {
+            container: None,
+            keychain: std::collections::HashMap::new(),
+            command: default_command(),
+            args: default_args(),
+            model: None,
+            env: std::collections::HashMap::new(),
+        }
+    }
+}
+
+fn default_command() -> String { "claude".to_string() }
+fn default_args() -> Vec<String> { vec!["--print".to_string()] }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct WorkConfig {
@@ -262,6 +286,38 @@ impl Default for AgentsConfig {
     }
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalConfig {
+    #[serde(default)]
+    pub workers: LocalWorkersOverride,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalWorkersOverride {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+}
+
+impl WorkersConfig {
+    pub fn merge_local(&mut self, local: &LocalWorkersOverride) {
+        if let Some(ref cmd) = local.command {
+            self.command = cmd.clone();
+        }
+        if let Some(ref args) = local.args {
+            self.args = args.clone();
+        }
+        if let Some(ref model) = local.model {
+            self.model = Some(model.clone());
+        }
+        for (k, v) in &local.env {
+            self.env.insert(k.clone(), v.clone());
+        }
+    }
+}
+
 impl Config {
     /// States where `actor` can actively pick up / act on tickets.
     /// Matches "any" as a wildcard in addition to the literal actor name.
@@ -311,6 +367,15 @@ impl Config {
                 );
             }
             config.ticket = tk.ticket;
+        }
+
+        let local_path = apm_dir.join("local.toml");
+        if local_path.exists() {
+            let local_contents = std::fs::read_to_string(&local_path)
+                .with_context(|| format!("cannot read {}", local_path.display()))?;
+            let local: LocalConfig = toml::from_str(&local_contents)
+                .with_context(|| format!("cannot parse {}", local_path.display()))?;
+            config.workers.merge_local(&local.workers);
         }
 
         Ok(config)
@@ -465,6 +530,71 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
+        assert_eq!(config.workers.command, "claude");
+        assert_eq!(config.workers.args, vec!["--print"]);
+        assert!(config.workers.model.is_none());
+        assert!(config.workers.env.is_empty());
+    }
+
+    #[test]
+    fn workers_config_all_fields() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+command = "codex"
+args = ["--full-auto"]
+model = "o3"
+
+[workers.env]
+CUSTOM_VAR = "value"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.workers.command, "codex");
+        assert_eq!(config.workers.args, vec!["--full-auto"]);
+        assert_eq!(config.workers.model.as_deref(), Some("o3"));
+        assert_eq!(config.workers.env.get("CUSTOM_VAR").map(|s| s.as_str()), Some("value"));
+    }
+
+    #[test]
+    fn local_config_parses() {
+        let toml = r#"
+[workers]
+command = "aider"
+model = "gpt-4"
+
+[workers.env]
+OPENAI_API_KEY = "sk-test"
+"#;
+        let local: LocalConfig = toml::from_str(toml).unwrap();
+        assert_eq!(local.workers.command.as_deref(), Some("aider"));
+        assert_eq!(local.workers.model.as_deref(), Some("gpt-4"));
+        assert_eq!(local.workers.env.get("OPENAI_API_KEY").map(|s| s.as_str()), Some("sk-test"));
+        assert!(local.workers.args.is_none());
+    }
+
+    #[test]
+    fn merge_local_overrides_and_extends() {
+        let mut wc = WorkersConfig::default();
+        assert_eq!(wc.command, "claude");
+        assert_eq!(wc.args, vec!["--print"]);
+
+        let local = LocalWorkersOverride {
+            command: Some("aider".to_string()),
+            args: None,
+            model: Some("gpt-4".to_string()),
+            env: [("KEY".to_string(), "val".to_string())].into(),
+        };
+        wc.merge_local(&local);
+
+        assert_eq!(wc.command, "aider");
+        assert_eq!(wc.args, vec!["--print"]); // unchanged
+        assert_eq!(wc.model.as_deref(), Some("gpt-4"));
+        assert_eq!(wc.env.get("KEY").map(|s| s.as_str()), Some("val"));
     }
 
     #[test]
