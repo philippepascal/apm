@@ -49,7 +49,14 @@ wired into `resolve_identity()` and a new `resolve_collaborators()` helper.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- GitLab and Gitea provider implementations (schema can accommodate them, but only GitHub is wired up)
+- `apm init` interactively prompting for a GitHub token (users write `github_token` to `local.toml` manually or set `GITHUB_TOKEN` env var)
+- Caching or TTL for GitHub API responses
+- Any new `apm` CLI subcommands (`whoami`, `collaborators list`, etc.)
+- Webhook integration, PR sync, or any use of the existing `[provider]` section
+- Validating `author` against the collaborators list at `apm new` time
+- UI or server changes
+- Rewriting existing ticket files to update `author` fields
 
 ### Approach
 
