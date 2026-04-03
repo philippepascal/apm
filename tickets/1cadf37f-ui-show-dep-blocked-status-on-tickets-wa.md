@@ -1,15 +1,15 @@
 +++
 id = "1cadf37f"
 title = "UI: show dep-blocked status on tickets waiting in queue"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
-agent = "94697"
+agent = "philippepascal"
 branch = "ticket/1cadf37f-ui-show-dep-blocked-status-on-tickets-wa"
 created_at = "2026-04-02T23:21:21.478449Z"
-updated_at = "2026-04-03T22:47:41.097693Z"
+updated_at = "2026-04-03T22:49:16.260316Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ How the implementation will work.
 | 2026-04-02T23:23Z | new | groomed | apm |
 | 2026-04-03T00:27Z | groomed | in_design | philippepascal |
 | 2026-04-03T22:47Z | in_design | ready | apm |
+| 2026-04-03T22:49Z | ready | in_progress | philippepascal |
