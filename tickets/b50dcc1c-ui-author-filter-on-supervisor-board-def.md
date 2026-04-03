@@ -19,7 +19,11 @@ depends_on = ["90ebf40b", "e2e3d958", "70d58b2d"]
 
 ### Problem
 
-The supervisor board shows all tickets from all authors with no filtering. In a multi-collaborator project, or when automated agents have created tickets (`author = "apm"`), the board is noisy. There is no way to default to the current user's tickets or filter by author. See `initial_specs/DESIGN-users.md` point 8.
+The supervisor board shows all tickets from all authors with no filtering. In a multi-collaborator project, or when automated agents have created tickets (`author = "apm"`), the board is noisy. A developer cannot focus on their own work without manually scanning through unrelated tickets.
+
+DESIGN-users.md point 8 specifies the desired behaviour: on load, the board defaults to showing only tickets where `author` matches the current user (fetched from `GET /api/me`), with an explicit control to reveal all authors. This default is also useful for solo developers: it filters out the noise of agent-authored side notes and automated tickets.
+
+The `author` field is already present in ticket frontmatter and will be guaranteed present in API responses by ticket #90ebf40b. The `GET /api/me` endpoint is established by #90ebf40b (localhost case) and extended by #e2e3d958 (session-authenticated case). This ticket is purely a UI change: add the author filter control to the supervisor board and wire the default to `/api/me`.
 
 ### Acceptance criteria
 
