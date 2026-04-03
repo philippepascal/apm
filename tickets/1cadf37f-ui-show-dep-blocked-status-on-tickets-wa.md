@@ -36,7 +36,12 @@ The fix is to make dep-blocked status prominently visible on the ticket card: us
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Server-side `blocking_deps` computation — already implemented in ticket da95246d
+- Adding or editing `depends_on` via the UI
+- The ticket detail panel's dep display (already shows blocking deps with click-through)
+- The priority queue panel (`PriorityQueuePanel.tsx`) — uses table rows, not cards
+- Filtering or sorting swimlanes by dep-blocked status
+- Notifications or alerts when a ticket becomes dep-blocked or unblocked
 
 ### Approach
 
