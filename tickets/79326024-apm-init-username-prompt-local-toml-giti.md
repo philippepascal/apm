@@ -92,6 +92,10 @@ The non-TTY path skips username entirely and passes `&[]` to `default_config`, p
 
 ### Amendment requests
 
+- [ ] `.apm/local.toml` is already in `.gitignore` and `ensure_gitignore` already handles it (added by e1582fd0). Remove the gitignore-related AC items and approach steps — they are already shipped.
+- [ ] `LocalConfig` already exists and is loaded by `Config::load` (added by e1582fd0). The approach should use the existing struct and load path, not create new ones. `write_local_toml` writes the file; the existing `Config::load` merge logic will pick it up.
+- [ ] The approach step "Extend the `entries` array in `ensure_gitignore` from `["tickets/NEXT_ID"]` to include `.apm/local.toml`" is already done — the current array is `["tickets/NEXT_ID", ".apm/local.toml", ".apm/*.init"]`.
+- [ ] Set effort and risk to non-zero values.
 
 ### Code review
 
