@@ -1,7 +1,7 @@
 +++
 id = "2a4d6de7"
 title = "UI: disable action buttons and show pending state during mutations"
-state = "ready"
+state = "ammend"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "apm"
 agent = "5072"
 branch = "ticket/2a4d6de7-ui-disable-action-buttons-and-show-pendi"
 created_at = "2026-04-02T23:24:43.919654Z"
-updated_at = "2026-04-03T22:48:53.041030Z"
+updated_at = "2026-04-03T22:50:41.620273Z"
 +++
 
 ## Spec
@@ -64,3 +64,4 @@ How the implementation will work.
 | 2026-04-02T23:31Z | new | groomed | apm |
 | 2026-04-03T00:27Z | groomed | in_design | philippepascal |
 | 2026-04-03T22:48Z | in_design | ready | apm |
+| 2026-04-03T22:50Z | ready | ammend | apm |
