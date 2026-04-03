@@ -15,7 +15,16 @@ updated_at = "2026-04-03T21:54:24.258763Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The worker spawn command is hardcoded in `apm-core/src/start.rs`. Three nearly identical blocks (in `run`, `run_next`, `spawn_next_worker`) each build `Command::new("claude")` with `--print`, `--system-prompt`, and optionally `--dangerously-skip-permissions`. Users cannot:
+
+- Change the model (`--model opus`)
+- Add extra CLI flags or env vars
+- Swap `claude` for a different agent CLI (Codex, Aider, custom wrapper)
+- Override per-machine without recompiling
+
+The container path (`docker run ... claude`) has the same problem.
+
+The fix is to move the spawn command definition into tracked TOML config (`[workers]` in `.apm/agents.toml` or `workflow.toml`) with per-machine overrides via a gitignored `local.toml`. apm reads the config and builds the `Command` at runtime — no shell scripts, no OS-specific files, cross-platform by default.
 
 ### Acceptance criteria
 
@@ -32,13 +41,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
