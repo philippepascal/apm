@@ -19,7 +19,9 @@ depends_on = ["48105624"]
 
 ### Problem
 
-There is no automated release pipeline. Users must build from source via `cargo install`. Pre-built binaries for macOS arm64, macOS x86_64, Linux x86_64, and Linux aarch64 are needed on GitHub Releases to support Homebrew and direct download distribution. See `initial_specs/DESIGN-users.md` point 6.
+There is no automated release pipeline. Users must build from source via `cargo install`, which requires Rust toolchain and ~10 minutes of compile time. Pre-built binaries for macOS arm64, macOS x86_64, Linux x86_64, and Linux aarch64 are needed on GitHub Releases to support Homebrew and direct download distribution — and to unblock the distribution strategy described in `initial_specs/DESIGN-users.md` point 6.
+
+The project produces two binaries — `apm` (CLI) and `apm-server` (HTTP server). The server currently reads UI static assets from the filesystem at runtime (`apm-ui/dist`). Ticket #48105624 (a dependency of this ticket) changes `apm-server` to embed those assets at compile time via `include_dir!`, making the server binary self-contained. The release CI must build `apm-ui` first so the assets exist when `apm-server` is compiled.
 
 ### Acceptance criteria
 
