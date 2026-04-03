@@ -30,7 +30,7 @@ The fix is to move the spawn command definition into tracked TOML config (`[work
 ### Acceptance criteria
 
 - [x] `WorkersConfig` gains `command: Option<String>` (default `"claude"`), `args: Vec<String>` (default `["--print"]`), `model: Option<String>`, and `env: HashMap<String, String>`
-- [ ] When `workers.command` is set in tracked config, `apm start --spawn` uses it instead of hardcoded `"claude"`
+- [x] When `workers.command` is set in tracked config, `apm start --spawn` uses it instead of hardcoded `"claude"`
 - [ ] When `workers.model` is set, `--model <value>` is prepended to the args passed to the agent CLI
 - [ ] When `workers.env` contains entries, each is injected as an env var on the spawned process
 - [ ] `apm init` writes a default `[workers]` section with `command = "claude"` and `args = ["--print"]` into the tracked config
