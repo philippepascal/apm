@@ -20,7 +20,9 @@ A ticket in `groomed` (or any actionable state) that has unsatisfied `depends_on
 
 This creates confusion: the supervisor sees a `groomed` ticket sitting in the column, assumes it will be picked up shortly, and has no immediate way to know it is waiting on another ticket that hasn't reached the required dep gate yet. Diagnosing the stall requires manually running `apm show` and cross-referencing dep states.
 
-The fix is to make dep-blocked status visible directly on the ticket card in the supervisor board. The server already computes `blocking_deps` in ticket responses (used for the existing lock icon on `ready` tickets); the same field should drive a clear visual on any ticket whose actionable state is gated by a dep that hasn't cleared. The card should show which tickets are blocking it and their current states, so the supervisor can act without leaving the board.
+The existing lock icon (`Ban` from lucide-react) is rendered at 12px in grey (`text-gray-400`) and blocking details are only available via the browser's native `title` tooltip on hover. This is too subtle — the supervisor needs to see at a glance that a ticket is dep-blocked without hovering, and ideally see which specific tickets are blocking it directly on the card.
+
+The fix is to make dep-blocked status prominently visible on the ticket card: use a coloured background/border treatment to distinguish dep-blocked tickets from actionable ones, and display the blocking ticket IDs and their states directly on the card face rather than hiding them behind a tooltip.
 
 ### Acceptance criteria
 
