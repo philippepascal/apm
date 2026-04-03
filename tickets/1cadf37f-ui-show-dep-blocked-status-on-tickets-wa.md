@@ -4,12 +4,12 @@ title = "UI: show dep-blocked status on tickets waiting in queue"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 agent = "4980"
 branch = "ticket/1cadf37f-ui-show-dep-blocked-status-on-tickets-wa"
 created_at = "2026-04-02T23:21:21.478449Z"
-updated_at = "2026-04-03T22:55:25.209146Z"
+updated_at = "2026-04-03T22:55:29.988009Z"
 +++
 
 ## Spec
