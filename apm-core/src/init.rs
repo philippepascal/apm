@@ -119,7 +119,7 @@ pub fn detect_default_branch(root: &Path) -> String {
 }
 
 pub fn ensure_gitignore(path: &Path) -> Result<()> {
-    let entries = ["tickets/NEXT_ID"];
+    let entries = ["tickets/NEXT_ID", ".apm/local.toml"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;
@@ -226,6 +226,10 @@ dir = "../{name}--worktrees"
 [agents]
 max_concurrent = 3
 instructions = ".apm/agents.md"
+
+[workers]
+command = "claude"
+args = ["--print"]
 
 [logging]
 enabled = false

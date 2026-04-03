@@ -105,6 +105,43 @@ fn spawn_container_worker(
     Ok(child)
 }
 
+fn build_spawn_command(
+    config: &Config,
+    wt: &Path,
+    worker_name: &str,
+    worker_system: &str,
+    ticket_content: &str,
+    skip_permissions: bool,
+    log_path: &Path,
+) -> Result<std::process::Child> {
+    let wc = &config.workers;
+    let mut cmd = std::process::Command::new(&wc.command);
+    for arg in &wc.args {
+        cmd.arg(arg);
+    }
+    if let Some(ref model) = wc.model {
+        cmd.args(["--model", model]);
+    }
+    cmd.args(["--system-prompt", worker_system]);
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
+    }
+    cmd.arg(ticket_content);
+    cmd.env("APM_AGENT_NAME", worker_name);
+    for (k, v) in &wc.env {
+        cmd.env(k, v);
+    }
+    cmd.current_dir(wt);
+
+    let log_file = std::fs::File::create(log_path)?;
+    let log_clone = log_file.try_clone()?;
+    cmd.stdout(log_file);
+    cmd.stderr(log_clone);
+    cmd.process_group(0);
+
+    Ok(cmd.spawn()?)
+}
+
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -260,23 +297,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             &log_path,
         )?
     } else {
-        let mut cmd = std::process::Command::new("claude");
-        cmd.arg("--print");
-        cmd.args(["--system-prompt", &worker_system]);
-        if skip_permissions {
-            cmd.arg("--dangerously-skip-permissions");
-        }
-        cmd.arg(&ticket_content);
-        cmd.env("APM_AGENT_NAME", &worker_name);
-        cmd.current_dir(&wt_display);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
-        cmd.process_group(0);
-
-        cmd.spawn()?
+        build_spawn_command(&config, &wt_display, &worker_name, &worker_system, &ticket_content, skip_permissions, &log_path)?
     };
     let pid = child.id();
 
@@ -413,23 +434,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             &log_path,
         )?
     } else {
-        let mut cmd = std::process::Command::new("claude");
-        cmd.arg("--print");
-        cmd.args(["--system-prompt", &worker_system]);
-        if skip_permissions {
-            cmd.arg("--dangerously-skip-permissions");
-        }
-        cmd.arg(&ticket_content);
-        cmd.env("APM_AGENT_NAME", &worker_name);
-        cmd.current_dir(&wt_display);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
-        cmd.process_group(0);
-
-        cmd.spawn()?
+        build_spawn_command(&config, &wt_display, &worker_name, &worker_system, &ticket_content, skip_permissions, &log_path)?
     };
     let pid = child.id();
 
@@ -567,23 +572,7 @@ pub fn spawn_next_worker(
             &log_path,
         )?
     } else {
-        let mut cmd = std::process::Command::new("claude");
-        cmd.arg("--print");
-        cmd.args(["--system-prompt", &worker_system]);
-        if skip_permissions {
-            cmd.arg("--dangerously-skip-permissions");
-        }
-        cmd.arg(&ticket_content);
-        cmd.env("APM_AGENT_NAME", &worker_name);
-        cmd.current_dir(&wt_display);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
-        cmd.process_group(0);
-
-        cmd.spawn()?
+        build_spawn_command(&config, &wt_display, &worker_name, &worker_system, &ticket_content, skip_permissions, &log_path)?
     };
     let pid = child.id();
 
