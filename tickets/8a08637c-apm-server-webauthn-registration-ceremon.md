@@ -126,6 +126,8 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 
 ### Amendment requests
 
+- [ ] Move `ServerConfig { origin }` and `pub server: ServerConfig` on `Config` out of this ticket and into ticket 90ebf40b (expose author in API / `/api/me`). The server origin is needed as soon as `/api/me` exists — not only for WebAuthn. 90ebf40b's approach should include the config addition; this ticket should assume `config.server.origin` already exists.
+- [ ] Set effort and risk to non-zero values.
 
 ### Code review
 
