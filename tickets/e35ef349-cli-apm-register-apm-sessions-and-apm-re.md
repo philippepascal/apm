@@ -44,7 +44,13 @@ The desired behaviour is three new subcommands — `apm register`, `apm sessions
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Revoking WebAuthn credentials (passkeys stored in `.apm/credentials.json`) — only session tokens are revoked
+- The WebAuthn registration ceremony itself (covered by ticket 8a08637c)
+- OTP generation and session-store server logic (covered by ticket e2e3d958)
+- `apm login` or any client-side WebAuthn authentication flow
+- `apm init` prompting for username (separate ticket)
+- `apm list --mine` / `--author <username>` filtering (separate ticket)
+- TLS or remote-access configuration for apm-server
 
 ### Approach
 
