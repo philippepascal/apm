@@ -1,7 +1,7 @@
 +++
 id = "b50dcc1c"
 title = "UI: author filter on supervisor board, default to current user from /api/me"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "43395"
 branch = "ticket/b50dcc1c-ui-author-filter-on-supervisor-board-def"
 created_at = "2026-04-02T20:54:34.590380Z"
-updated_at = "2026-04-03T00:13:56.629432Z"
+updated_at = "2026-04-03T00:14:02.607291Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["90ebf40b", "e2e3d958", "70d58b2d"]
@@ -130,3 +130,4 @@ All changes are in `apm-ui/src/`. No backend changes.
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:23Z | new | groomed | apm |
 | 2026-04-03T00:10Z | groomed | in_design | philippepascal |
+| 2026-04-03T00:14Z | in_design | specd | claude-0402-2010-spec1 |
