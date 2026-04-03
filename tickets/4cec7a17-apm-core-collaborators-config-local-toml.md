@@ -32,14 +32,11 @@ Init-flow changes (prompting for username, writing `local.toml` during init) are
 ### Acceptance criteria
 
 - [ ] `ProjectConfig` has a `collaborators: Vec<String>` field (default: empty) that parses from `[project] collaborators = ["alice", "bob"]` in `.apm/config.toml`
-- [ ] A `LocalConfig` struct with an optional `username` field loads from `.apm/local.toml`; if the file is absent, loading returns a default (no error)
+- [ ] The existing `LocalConfig` struct (which already has `workers: LocalWorkersOverride`) gains a `username: Option<String>` field that deserializes from `.apm/local.toml`
 - [ ] `resolve_identity(repo_root)` returns the `username` from `.apm/local.toml` when present and non-empty, and returns `"unassigned"` otherwise
 - [ ] `apm new` sets `author` to the value returned by `resolve_identity` instead of `APM_AGENT_NAME`
-- [ ] `apm init` (interactive TTY) prompts "What is your username?", writes the answer to `.apm/local.toml` as `username = "..."`
-- [ ] `apm init` adds the entered username to `collaborators` in the newly created `.apm/config.toml`
-- [ ] `apm init` adds `.apm/local.toml` to `.gitignore`
-- [ ] `apm init` (non-interactive / no TTY) skips the username prompt and does not write `.apm/local.toml`
 - [ ] Existing ticket files with `agent = "..."` in frontmatter parse without error; new tickets written by `apm` do not include an `agent` field
+- [ ] `ensure_gitignore` entries include `.apm/sessions.json` and `.apm/credentials.json`
 
 ### Out of scope
 
