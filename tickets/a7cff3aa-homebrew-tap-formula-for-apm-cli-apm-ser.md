@@ -50,7 +50,78 @@ This ticket creates the tap repository and the formula. It does not automate for
 
 ### Approach
 
-How the implementation will work.
+This ticket creates a new GitHub repository and a single Ruby formula file. No changes to the apm repo itself.
+
+**Step 1: Create the tap repository**
+
+Create `philippepascal/homebrew-tap` on GitHub (public). This is the standard Homebrew tap naming convention — `brew tap philippepascal/tap` automatically resolves to `github.com/philippepascal/homebrew-tap`.
+
+**Step 2: Write `Formula/apm.rb`**
+
+The formula uses Homebrew's `on_macos` + `on_intel`/`on_arm` DSL to select the correct archive URL and checksum per architecture. The release CI (ticket #73e484df) produces archives with these names:
+
+- `apm-v{VERSION}-aarch64-apple-darwin.tar.gz` (macOS arm64)
+- `apm-v{VERSION}-x86_64-apple-darwin.tar.gz` (macOS x86_64)
+
+Each archive contains both `apm` and `apm-server` binaries at the top level.
+
+Formula structure:
+
+```ruby
+class Apm < Formula
+  desc "Agentic project manager — CLI and server"
+  homepage "https://github.com/philippepascal/apm"
+  version "0.1.0"  # Update on each release
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/philippepascal/apm/releases/download/v#{version}/apm-v#{version}-aarch64-apple-darwin.tar.gz"
+      sha256 "<sha256-for-arm64>"
+    end
+    on_intel do
+      url "https://github.com/philippepascal/apm/releases/download/v#{version}/apm-v#{version}-x86_64-apple-darwin.tar.gz"
+      sha256 "<sha256-for-x86_64>"
+    end
+  end
+
+  def install
+    bin.install "apm"
+    bin.install "apm-server"
+  end
+
+  test do
+    assert_match "apm", shell_output("#{bin}/apm --help")
+    assert_match "apm-server", shell_output("#{bin}/apm-server --help")
+  end
+end
+```
+
+Key points:
+- `url` uses `version` interpolation so only the `version` line and SHA-256 hashes need updating per release
+- Both binaries are installed to `bin/` via `bin.install`
+- The `test` block runs `--help` on both binaries to verify they execute
+- SHA-256 values come from `checksums.txt` in the GitHub Release (produced by ticket #73e484df)
+
+**Step 3: Populate with real checksums**
+
+This ticket depends on #73e484df (release CI). The formula must be populated with real SHA-256 checksums from an actual release. The initial commit can use placeholder checksums with a clear comment, and the first real release triggers updating them.
+
+**Step 4: Verify**
+
+```bash
+brew tap philippepascal/tap
+brew install philippepascal/tap/apm
+apm --help
+apm-server --help
+brew test apm
+brew uninstall apm
+```
+
+**Gotchas**
+- Homebrew requires the tap repo to be public. If the main apm repo is private, the release assets must still be downloadable (GitHub Releases on private repos require auth tokens, which Homebrew doesn't support natively). For now, the main repo is public so this is not an issue.
+- The formula file must be named `apm.rb` (lowercase, matching the formula class name `Apm`).
+- If the license field in the formula doesn't match the repo's license file, `brew audit` will warn. Use whatever license the repo uses.
 
 ### Open questions
 
