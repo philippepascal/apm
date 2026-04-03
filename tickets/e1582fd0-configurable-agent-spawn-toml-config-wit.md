@@ -45,7 +45,125 @@ Explicit list of what this ticket does not cover.
 
 ### Approach
 
-How the implementation will work.
+#### 1. `apm-core/src/config.rs` — extend `WorkersConfig`
+
+Add fields to the existing `WorkersConfig`:
+
+```rust
+pub struct WorkersConfig {
+    pub container: Option<String>,
+    #[serde(default)]
+    pub keychain: std::collections::HashMap<String, String>,
+    #[serde(default = "default_command")]
+    pub command: String,
+    #[serde(default = "default_args")]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+}
+
+fn default_command() -> String { "claude".to_string() }
+fn default_args() -> Vec<String> { vec!["--print".to_string()] }
+```
+
+When `container` is `Some`, the container path is used (unchanged). When `container` is `None`, the new fields drive the native spawn.
+
+#### 2. `apm-core/src/config.rs` — add `LocalConfig` and merge logic
+
+Add a minimal struct for `.apm/local.toml`:
+
+```rust
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalConfig {
+    #[serde(default)]
+    pub workers: LocalWorkersOverride,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalWorkersOverride {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+}
+```
+
+Add `Config::load_local(root: &Path) -> Option<LocalConfig>` that reads `.apm/local.toml` if present. Add `WorkersConfig::merge_local(&mut self, local: &LocalWorkersOverride)` that overrides non-None fields and extends the env map.
+
+Call `merge_local` in `Config::load` after loading the tracked config, so all downstream code sees the merged result transparently.
+
+#### 3. `apm-core/src/start.rs` — extract `build_spawn_command`
+
+Create a single function that replaces the three identical native-spawn blocks:
+
+```rust
+fn build_spawn_command(
+    config: &Config,
+    wt: &Path,
+    worker_name: &str,
+    worker_system: &str,
+    ticket_content: &str,
+    skip_permissions: bool,
+    log_path: &Path,
+) -> Result<std::process::Child> {
+    let wc = &config.workers;
+    let mut cmd = std::process::Command::new(&wc.command);
+    for arg in &wc.args {
+        cmd.arg(arg);
+    }
+    if let Some(ref model) = wc.model {
+        cmd.args(["--model", model]);
+    }
+    cmd.args(["--system-prompt", worker_system]);
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
+    }
+    cmd.arg(ticket_content);
+    cmd.env("APM_AGENT_NAME", worker_name);
+    for (k, v) in &wc.env {
+        cmd.env(k, v);
+    }
+    cmd.current_dir(wt);
+
+    let log_file = std::fs::File::create(log_path)?;
+    let log_clone = log_file.try_clone()?;
+    cmd.stdout(log_file);
+    cmd.stderr(log_clone);
+    cmd.process_group(0);
+
+    Ok(cmd.spawn()?)
+}
+```
+
+Replace the native-spawn blocks in `run` (line ~263), `run_next` (line ~416), and `spawn_next_worker` (line ~570) with calls to `build_spawn_command`. The container path (`spawn_container_worker`) is unchanged.
+
+#### 4. `apm/src/cmd/init.rs` — write defaults and gitignore
+
+- In the init flow, write `[workers]\ncommand = "claude"\nargs = ["--print"]\n` into the tracked config file if the `[workers]` section is absent
+- Add `.apm/local.toml` to `.gitignore` if not already present
+
+#### 5. Tests
+
+Unit tests in `apm-core/src/config.rs`:
+- Parse `WorkersConfig` with all new fields set
+- Parse `WorkersConfig` with no fields (verify defaults: command="claude", args=["--print"])
+- Parse `LocalConfig` with `[workers]` override
+- `merge_local` overrides command, extends env, leaves model None when not in local
+
+Unit test in `apm-core/src/start.rs`:
+- `build_spawn_command` is called with custom command/args from config (test that the function constructs correctly — can verify by inspecting the Command struct, or test end-to-end with a dummy script)
+
+#### Order of changes
+
+1. Extend `WorkersConfig` with new fields + defaults
+2. Add `LocalConfig` struct + load + merge
+3. Extract `build_spawn_command` in `start.rs`, replace three call sites
+4. Update `init.rs` for defaults + gitignore
+5. Add tests
+6. Run `cargo test --workspace`
 
 ### Open questions
 
