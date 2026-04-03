@@ -29,7 +29,18 @@ The desired behaviour is three new subcommands — `apm register`, `apm sessions
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm register <username>` prints an 8-character OTP on stdout when apm-server is running on localhost
+- [ ] `apm register <username>` exits non-zero and prints a human-readable error when the server is not reachable
+- [ ] `apm sessions` prints a table of active (non-expired) sessions with columns: Username, Device, Last Seen, Expires
+- [ ] `apm sessions` prints "No active sessions." when the session store is empty or all sessions are expired
+- [ ] `apm sessions` exits non-zero and prints a human-readable error when the server is not reachable
+- [ ] `apm revoke <username>` removes all sessions for that user and prints how many were revoked
+- [ ] `apm revoke <username>` exits 0 and prints "No sessions found for <username>." when no sessions exist for that user
+- [ ] `apm revoke <username> --device <hint>` removes only sessions whose device hint matches and exits 0
+- [ ] `apm revoke --all` removes every session for every user and prints the total count revoked
+- [ ] `apm revoke` exits non-zero and prints a human-readable error when the server is not reachable
+- [ ] `GET /api/auth/sessions` returns HTTP 403 when the request originates from a non-localhost address
+- [ ] `DELETE /api/auth/sessions` returns HTTP 403 when the request originates from a non-localhost address
 
 ### Out of scope
 
