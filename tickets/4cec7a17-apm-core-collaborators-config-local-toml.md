@@ -48,6 +48,7 @@ Init-flow changes (prompting for username, writing `local.toml` during init) are
 - `assignee` field — deferred per design doc
 - Rewriting existing ticket files to replace legacy `author` values — existing values are left as-is
 - Validating `author` against the collaborators list at `apm new` time — warn-only is deferred to a later ticket
+- All `apm init` flow changes (username prompt, writing `local.toml`, adding collaborators to config) — covered by ticket 79326024
 
 ### Approach
 
