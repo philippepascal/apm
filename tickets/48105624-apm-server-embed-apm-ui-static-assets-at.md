@@ -4,12 +4,12 @@ title = "apm-server: embed apm-ui static assets at build time via include_dir"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "apm"
 agent = "52530"
 branch = "ticket/48105624-apm-server-embed-apm-ui-static-assets-at"
 created_at = "2026-04-02T20:54:40.869103Z"
-updated_at = "2026-04-03T00:17:14.544385Z"
+updated_at = "2026-04-03T00:17:24.407469Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
