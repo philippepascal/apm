@@ -1,14 +1,15 @@
 +++
 id = "bb7d2a61"
 title = "apm-proxy: Docker image with nginx and certbot for TLS termination"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
+agent = "philippepascal"
 branch = "ticket/bb7d2a61-apm-proxy-docker-image-with-nginx-and-ce"
 created_at = "2026-04-02T20:54:51.005928Z"
-updated_at = "2026-04-02T23:23:22.485205Z"
+updated_at = "2026-04-03T00:22:47.984502Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["48105624", "73e484df"]
@@ -47,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-02T20:54Z | — | new | apm |
 | 2026-04-02T23:23Z | new | groomed | apm |
+| 2026-04-03T00:22Z | groomed | in_design | philippepascal |
