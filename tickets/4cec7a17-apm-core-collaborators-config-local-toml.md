@@ -1,7 +1,7 @@
 +++
 id = "4cec7a17"
 title = "apm-core: collaborators config, local.toml, and identity resolution"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "14401"
 branch = "ticket/4cec7a17-apm-core-collaborators-config-local-toml"
 created_at = "2026-04-02T20:53:47.546444Z"
-updated_at = "2026-04-03T23:50:02.584803Z"
+updated_at = "2026-04-03T23:50:24.627406Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
@@ -105,3 +105,4 @@ Add `.apm/sessions.json` and `.apm/credentials.json` to the `entries` array in `
 | 2026-04-02T23:25Z | in_design | specd | claude-0402-2321-b7f2 |
 | 2026-04-03T23:42Z | specd | ammend | apm |
 | 2026-04-03T23:45Z | ammend | in_design | philippepascal |
+| 2026-04-03T23:50Z | in_design | specd | claude-0403-2350-d1a7 |
