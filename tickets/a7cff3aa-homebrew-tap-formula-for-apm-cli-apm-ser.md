@@ -1,15 +1,15 @@
 +++
 id = "a7cff3aa"
 title = "Homebrew tap formula for apm CLI + apm-server"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
-agent = "79166"
+agent = "philippepascal"
 branch = "ticket/a7cff3aa-homebrew-tap-formula-for-apm-cli-apm-ser"
 created_at = "2026-04-02T20:54:55.761604Z"
-updated_at = "2026-04-03T22:50:34.971906Z"
+updated_at = "2026-04-03T23:20:44.923085Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["73e484df"]
@@ -51,3 +51,4 @@ How the implementation will work.
 | 2026-04-03T00:26Z | groomed | in_design | philippepascal |
 | 2026-04-03T22:47Z | in_design | ready | apm |
 | 2026-04-03T22:50Z | ready | ammend | apm |
+| 2026-04-03T23:20Z | ammend | in_design | philippepascal |
