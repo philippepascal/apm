@@ -40,7 +40,13 @@ The `author` field is already present in ticket frontmatter and will be guarante
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Backend changes: `author` always-present in API responses, `GET /api/tickets?author=`, `GET /api/me` endpoint — all covered by tickets #90ebf40b, #e2e3d958, and #70d58b2d
+- Priority queue panel — no author filter applied there (queue is for the work engine, all actionable tickets regardless of author)
+- Worker activity panel — no change
+- Epic filter persistence-level author filter (the author filter uses local component state, same as the existing agent and state filters)
+- `apm list --mine` and `apm list --author` CLI flags — separate ticket
+- WebAuthn authentication UI — separate tickets
+- Persisting the author filter selection across browser sessions (beyond the current page load)
 
 ### Approach
 
