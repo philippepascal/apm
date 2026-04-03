@@ -1,7 +1,7 @@
 +++
 id = "4cec7a17"
 title = "apm-core: collaborators config, local.toml, and identity resolution"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "50192"
 branch = "ticket/4cec7a17-apm-core-collaborators-config-local-toml"
 created_at = "2026-04-02T20:53:47.546444Z"
-updated_at = "2026-04-02T23:25:55.627236Z"
+updated_at = "2026-04-03T23:42:17.211350Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
@@ -147,3 +147,4 @@ e) In `setup()`: after the project-info prompt block (TTY path), call `prompt_us
 | 2026-04-02T23:21Z | new | groomed | apm |
 | 2026-04-02T23:21Z | groomed | in_design | philippepascal |
 | 2026-04-02T23:25Z | in_design | specd | claude-0402-2321-b7f2 |
+| 2026-04-03T23:42Z | specd | ammend | apm |
