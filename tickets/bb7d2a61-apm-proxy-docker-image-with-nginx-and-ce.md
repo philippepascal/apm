@@ -44,7 +44,14 @@ apm-server itself is not changed — it continues to serve plain HTTP on localho
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Publishing the image to `ghcr.io/philippepascal/apm-proxy` (no CI workflow for the Docker image in this ticket)
+- DNS configuration (operator responsibility)
+- Multi-domain or wildcard TLS cert support
+- HTTP/2, HSTS preloading, or other advanced TLS hardening beyond basic HTTPS
+- Rate limiting, IP allowlists, or access control in nginx
+- docker-compose file (the `docker run` command in DESIGN-users.md is the reference)
+- Any changes to apm-server (it continues to serve plain HTTP)
+- Homebrew or native binary distribution (covered by ticket #73e484df)
 
 ### Approach
 
