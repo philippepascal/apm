@@ -90,7 +90,7 @@ Add `pub mod identity;` to `apm-core/src/lib.rs`.
 
 ### Amendment requests
 
-- [ ] The approach step "Add `.apm/local.toml` to the `entries` array in `ensure_gitignore()`" is already done (shipped in e1582fd0). Remove this from the approach — no init.rs changes needed in this ticket.
+- [x] The approach step "Add `.apm/local.toml` to the `entries` array in `ensure_gitignore()`" is already done (shipped in e1582fd0). Remove this from the approach — no init.rs changes needed in this ticket.
 - [ ] Set effort and risk to non-zero values.
 
 ### Code review
