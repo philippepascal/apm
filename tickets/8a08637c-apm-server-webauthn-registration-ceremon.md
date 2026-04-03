@@ -1,15 +1,15 @@
 +++
 id = "8a08637c"
 title = "apm-server: WebAuthn registration ceremony and embedded registration page"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 5
 risk = 4
 author = "apm"
-agent = "12166"
+agent = "philippepascal"
 branch = "ticket/8a08637c-apm-server-webauthn-registration-ceremon"
 created_at = "2026-04-02T20:54:17.589009Z"
-updated_at = "2026-04-03T23:42:30.297346Z"
+updated_at = "2026-04-03T23:55:47.084204Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["e2e3d958"]
@@ -141,3 +141,4 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 | 2026-04-02T23:51Z | groomed | in_design | philippepascal |
 | 2026-04-02T23:56Z | in_design | specd | claude-0402-2351-spec1 |
 | 2026-04-03T23:42Z | specd | ammend | apm |
+| 2026-04-03T23:55Z | ammend | in_design | philippepascal |
