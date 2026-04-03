@@ -19,7 +19,11 @@ depends_on = ["73e484df"]
 
 ### Problem
 
-There is no Homebrew tap for apm. Users must run `cargo install` or download binaries manually. A Homebrew formula pointing at GitHub Releases pre-built binaries is the standard macOS distribution path. See `initial_specs/DESIGN-users.md` point 6.
+There is no Homebrew tap for apm. Users on macOS must either install the Rust toolchain and run `cargo install` (~10 minutes compile time) or manually download binaries from GitHub Releases and place them on PATH. Neither path is acceptable for a tool that targets single developers who want a quick setup.
+
+A Homebrew tap (`philippepascal/tap`) with a formula pointing at the pre-built GitHub Release archives is the standard macOS distribution path. Once the release CI (ticket #73e484df) publishes `apm-<tag>-<target-triple>.tar.gz` archives, a formula can install both `apm` and `apm-server` with a single `brew install` command. See `initial_specs/DESIGN-users.md` point 6.
+
+This ticket creates the tap repository and the formula. It does not automate formula updates on new releases — that is a follow-up concern.
 
 ### Acceptance criteria
 
