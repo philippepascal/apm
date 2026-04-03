@@ -52,13 +52,13 @@ Init-flow changes (prompting for username, writing `local.toml` during init) are
 
 ### Approach
 
-**1. `apm-core/src/config.rs` — collaborators and LocalConfig**
+**1. `apm-core/src/config.rs` — collaborators and username on existing LocalConfig**
 
 Add `collaborators: Vec<String>` to `ProjectConfig` with `#[serde(default)]`.
 
-Add `LocalConfig` struct with a `username: Option<String>` field and a `load(repo_root)` method that reads `.apm/local.toml`, returning a default if absent.
+Add `username: Option<String>` with `#[serde(default)]` to the **existing** `LocalConfig` struct (which already has `workers: LocalWorkersOverride` from e1582fd0). Since `Config::load` already reads and parses `.apm/local.toml` into `LocalConfig`, the `username` field is automatically available — no new file-reading code is needed.
 
-Add `resolve_identity(repo_root: &Path) -> String` that returns the non-empty username from `LocalConfig`, or `"unassigned"` as fallback.
+Add `pub fn resolve_identity(repo_root: &Path) -> String` as a standalone function that reads `.apm/local.toml`, deserializes it into `LocalConfig`, and returns the non-empty `username` if present or `"unassigned"` as fallback. This avoids requiring a full `Config::load` just to get the identity.
 
 **2. `apm-core/src/ticket.rs` — drop agent from writes**
 
@@ -68,25 +68,17 @@ Change the `agent` field in `Frontmatter` from `#[serde(skip_serializing_if = "O
 
 Replace the `APM_AGENT_NAME` env-var lookup with a call to `apm_core::config::resolve_identity(root)`.
 
-**4. `apm-core/src/init.rs` — prompt, local.toml, gitignore**
+**4. `apm-core/src/init.rs` — add sessions/credentials to gitignore**
 
-a) Gitignore: add `.apm/local.toml` to the `entries` array in `ensure_gitignore`.
-
-b) Add `prompt_username() -> Result<String>` helper (mirrors `prompt_project_info`). Returns the trimmed input.
-
-c) Add `write_local_config(root: &Path, username: &str) -> Result<()>` that writes `username = "<username>"` to `.apm/local.toml`.
-
-d) Add `username: Option<&str>` parameter to `default_config`. When `Some`, include `collaborators = ["<username>"]` in the `[project]` section; when `None`, omit it.
-
-e) In `setup()`: TTY path — after the existing project-info prompt, call `prompt_username()`, pass the result to `default_config` and `write_local_config`. Non-TTY path — pass `None` to `default_config`, skip writing `local.toml`. Collaborators are only written into freshly-created config; `local.toml` is always safe to write/overwrite (gitignored).
+Add `.apm/sessions.json` and `.apm/credentials.json` to the `entries` array in `ensure_gitignore`. Note: `.apm/local.toml` is already present in the entries array (added by e1582fd0).
 
 **Order of changes**
 
-1. `config.rs`: `collaborators`, `LocalConfig`, `resolve_identity`
+1. `config.rs`: `collaborators` on `ProjectConfig`, `username` on `LocalConfig`, `resolve_identity`
 2. `ticket.rs`: `agent` serde attributes
-3. `init.rs`: gitignore entry, prompt, write helpers, `default_config` signature
+3. `init.rs`: add `.apm/sessions.json` and `.apm/credentials.json` to gitignore entries
 4. `cmd/new.rs`: swap author source
-5. Tests: unit tests for `LocalConfig::load` (file present / absent / empty username), `resolve_identity`, collaborators parse, gitignore includes `.apm/local.toml`; integration test confirming `apm new` sets `author` from `local.toml`
+5. Tests: unit tests for `resolve_identity` (username present / absent / empty), collaborators parse round-trip, `ensure_gitignore` includes sessions.json and credentials.json; integration test confirming `apm new` sets `author` from `local.toml`
 
 ### 1. `apm-core/src/config.rs` — add collaborators and LocalConfig
 
