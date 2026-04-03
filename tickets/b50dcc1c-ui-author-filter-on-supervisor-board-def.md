@@ -50,7 +50,69 @@ The `author` field is already present in ticket frontmatter and will be guarante
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-ui/src/`. No backend changes.
+
+**`apm-ui/src/components/supervisor/types.ts`**
+- Add `author?: string` to the `Ticket` interface
+
+**`apm-ui/src/components/supervisor/SupervisorView.tsx`**
+
+1. Fetch `/api/me` once on mount; initialise `authorFilter` from the result:
+   ```typescript
+   const [authorFilter, setAuthorFilter] = useState<string | null>(null)
+   useEffect(() => {
+     fetch('/api/me')
+       .then(r => r.ok ? r.json() : Promise.reject())
+       .then((data: { username: string }) => {
+         if (data.username && data.username !== 'unassigned') {
+           setAuthorFilter(data.username)
+         }
+       })
+       .catch(() => { /* leave authorFilter null — show all */ })
+   }, [])
+   ```
+
+2. Build `availableAuthors` from loaded tickets (same pattern as existing `availableAgents`):
+   ```typescript
+   const availableAuthors = useMemo(() => {
+     const authors = new Set<string>()
+     for (const t of tickets) {
+       if (t.author) authors.add(t.author)
+     }
+     return Array.from(authors).sort()
+   }, [tickets])
+   ```
+
+3. Apply author filter in the `columns` useMemo after existing filters:
+   ```typescript
+   if (authorFilter !== null) {
+     filtered = filtered.filter(t => t.author === authorFilter)
+   }
+   ```
+   Add `authorFilter` to the dependency array of the useMemo.
+
+4. Add author dropdown to the filter bar (after the agent dropdown, same DOM structure):
+   - A `<select>` or equivalent with a "Show all authors" option (`value=""`) and one option per entry in `availableAuthors`
+   - Selecting "Show all authors" calls `setAuthorFilter(null)`
+   - Selecting an author calls `setAuthorFilter(value)`
+   - Current `authorFilter` value drives the `value` prop of the control
+
+5. Pass `showAuthor={authorFilter === null}` down to each `<TicketCard>` instance
+
+**`apm-ui/src/components/supervisor/TicketCard.tsx`**
+- Add `showAuthor?: boolean` prop
+- When `showAuthor` is true and `ticket.author` is set (and not empty), render the author value below the title/ID in small, gray/muted text (e.g. `text-xs text-gray-400` or equivalent using the existing Tailwind classes in the file)
+- When `showAuthor` is false (or `ticket.author` is absent), render nothing
+
+**Order of work**
+1. Add `author` to the `Ticket` type
+2. Update `TicketCard` to accept and display `showAuthor`
+3. Update `SupervisorView` — fetch, state, filter logic, dropdown, pass `showAuthor` to cards
+
+**Constraints**
+- No new dependencies; use the existing fetch pattern and Tailwind classes already in the codebase
+- The `/api/me` call is fire-and-forget; it must not block rendering the board
+- Do not rename or restructure existing filter state variables — only add alongside them
 
 ### Open questions
 
