@@ -45,7 +45,38 @@ The fix is to make dep-blocked status prominently visible on the ticket card: us
 
 ### Approach
 
-How the implementation will work.
+All changes are in a single file: `apm-ui/src/components/supervisor/TicketCard.tsx`. No server or type changes needed — `blocking_deps` is already computed server-side and typed in `types.ts`.
+
+**1. Card-level dep-blocked styling**
+
+Add a conditional class to the outermost `<div>` of `TicketCard`. When `ticket.blocking_deps?.length` is truthy, apply a border accent and slightly different background to make dep-blocked cards visually distinct:
+
+- Non-blocked cards keep existing: `border-gray-600 bg-gray-800 hover:bg-gray-700`
+- Dep-blocked cards get: `border-amber-700/60 bg-amber-950/20 hover:bg-amber-950/30`
+
+Extract an `isDepBlocked` boolean at the top of the component and use it in the className expression. The amber tint stands out against the grey board without being garish. Selection ring classes (`ring-2 ring-blue-400` / `ring-2 ring-blue-500`) remain unchanged and layer on top.
+
+**2. Replace grey Ban icon with coloured indicator**
+
+Change the existing `Ban` icon's `className` from `text-gray-400` to `text-amber-400` so the icon colour matches the card accent.
+
+**3. Show blocking dep details on the card face**
+
+Below the title `<p>` and above the bottom ID/agent row, add a new section that renders when deps are blocking. For each entry in `blocking_deps`, render a small amber pill button showing `<short-id>: <state>`:
+
+- Use `text-[10px] font-mono px-1 rounded bg-amber-900/40 text-amber-300 hover:bg-amber-800/50`
+- On click, call `e.stopPropagation()` then `setSelectedTicketId(dep.id)` to navigate to the blocking ticket
+- Wrap in a flex container with `gap-1 mt-1`
+
+This pattern matches the dep display in `TicketDetail.tsx` (line 386) where dep IDs are clickable buttons that navigate to the dep's detail view.
+
+**4. Wire `setSelectedTicketId` into the component**
+
+`setSelectedTicketId` is already destructured from `useLayoutStore()` on line 11, so no additional wiring is needed.
+
+**Reactivity:** The ticket list auto-refreshes via react-query polling. When blocking deps are resolved server-side, the next poll returns empty `blocking_deps` and the amber treatment disappears automatically — no special handling needed.
+
+**No tests needed:** This is a purely cosmetic UI change in a React component. The server-side `blocking_deps` computation is already tested (see `list_tickets_blocking_deps` test in `apm-server/src/main.rs`). The UI change is best verified visually on the supervisor board.
 
 ### Open questions
 
