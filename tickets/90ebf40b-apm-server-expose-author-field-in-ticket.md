@@ -47,6 +47,28 @@ Together these gaps block the supervisor-board author filter and the per-author 
 
 ### Approach
 
+**apm-core/src/config.rs**
+
+0. **Add `ServerConfig` struct and field** — add a new config struct and wire it into `Config`:
+   ```rust
+   #[derive(Debug, Clone, Deserialize)]
+   pub struct ServerConfig {
+       #[serde(default = "default_server_origin")]
+       pub origin: String,
+   }
+
+   fn default_server_origin() -> String {
+       "http://localhost:3000".to_string()
+   }
+
+   impl Default for ServerConfig {
+       fn default() -> Self {
+           Self { origin: default_server_origin() }
+       }
+   }
+   ```
+   Add `pub server: ServerConfig` to the `Config` struct with `#[serde(default)]` so existing config files without a `[server]` section continue to parse. Add a test (`server_config_defaults`) that verifies the default origin is `"http://localhost:3000"` when the section is absent, and a test (`server_config_custom_origin`) that verifies a custom origin parses correctly.
+
 **apm-server/src/main.rs**
 
 1. **Always-present author in responses** — in both `list_tickets` and `get_ticket` handlers, normalise the author before building the response struct:
@@ -67,29 +89,24 @@ Together these gaps block the supervisor-board author filter and the per-author 
    }
    ```
 
-3. **`GET /api/me` endpoint** — add a handler:
-   ```rust
-   async fn me_handler(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
-       let username = state.git_root()
-           .and_then(|root| apm_core::identity::read_local_username(root).ok())
-           .flatten()
-           .unwrap_or_else(|| "unassigned".to_string());
-       Json(serde_json::json!({ "username": username }))
-   }
-   ```
-   Register as `.route("/api/me", get(me_handler))`.
+3. **`GET /api/me` endpoint** — add a handler that reads the local username from `.apm/local.toml` via `apm_core::identity::read_local_username` (from ticket #610be42e) and returns JSON with the username (or "unassigned" as fallback). Register as `.route("/api/me", get(me_handler))`.
 
-   This depends on `apm_core::identity` being available (landed in ticket #610be42e). If the function name differs, match whatever #610be42e exposes. The function should read `.apm/local.toml`, return `Option<String>`.
+   If `apm_core::identity` is not yet available when this is implemented, stub the `/api/me` read with a direct inline read of `.apm/local.toml` using `toml` crate. Do not block on it.
 
-**Tests to add (in apm-server/src/main.rs #[cfg(test)] block)**
+**Tests to add (in apm-server/src/main.rs tests)**
 
 - `list_tickets_author_field_always_present` — ticket with `author: None`; assert response JSON includes `"author": "unassigned"`
 - `list_tickets_author_filter` — two tickets with different authors; `?author=alice` returns only Alice's
 - `list_tickets_author_unassigned_filter` — ticket with `author: None`; `?author=unassigned` returns it
 - `get_ticket_author_field_always_present` — ticket with `author: None`; assert detail response includes `"author": "unassigned"`
-- `me_handler_returns_unassigned_when_no_local_toml` — in-memory source, no git root; assert `{"username":"unassigned"}`
+- `me_handler_returns_unassigned_when_no_local_toml` — in-memory source, no git root; assert username is "unassigned"
 
-**Dependency note**: This ticket is listed as depending on #610be42e (identity module). If `apm_core::identity` is not yet available when this is implemented, stub the `/api/me` read with a direct inline read of `.apm/local.toml` using `toml` crate, and leave a `// TODO: use apm_core::identity once #610be42e lands` comment. Do not block on it.
+**Tests to add (in apm-core/src/config.rs tests)**
+
+- `server_config_defaults` — config without `[server]` section; assert `config.server.origin == "http://localhost:3000"`
+- `server_config_custom_origin` — config with custom `[server]` origin; assert it parses correctly
+
+**Dependency note**: This ticket depends on #610be42e (identity module). If `apm_core::identity` is not yet available when this is implemented, stub the `/api/me` read with a direct inline read of `.apm/local.toml` using `toml` crate. Do not block on it.
 
 ### Open questions
 
