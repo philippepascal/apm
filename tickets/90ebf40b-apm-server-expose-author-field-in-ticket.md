@@ -113,7 +113,7 @@ Together these gaps block the supervisor-board author filter and the per-author 
 
 ### Amendment requests
 
-- [ ] Add `ServerConfig { origin: String }` (default `"http://localhost:3000"`) to `apm-core/src/config.rs` and `pub server: ServerConfig` to `Config`. This was originally in ticket 8a08637c but is needed here since `/api/me` is the first endpoint that benefits from knowing the server origin. Ticket 8a08637c will assume this config exists.
+- [x] Add `ServerConfig { origin: String }` (default `"http://localhost:3000"`) to `apm-core/src/config.rs` and `pub server: ServerConfig` to `Config`. This was originally in ticket 8a08637c but is needed here since `/api/me` is the first endpoint that benefits from knowing the server origin. Ticket 8a08637c will assume this config exists.
 - [ ] Set effort and risk to non-zero values.
 
 ### Code review
