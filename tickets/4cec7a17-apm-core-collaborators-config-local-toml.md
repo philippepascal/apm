@@ -85,7 +85,7 @@ Add `.apm/sessions.json` and `.apm/credentials.json` to the `entries` array in `
 
 ### Amendment requests
 
-- [ ] `LocalConfig` already exists in `config.rs` (added by e1582fd0 for worker spawn config) with a `workers: LocalWorkersOverride` field. This ticket must **extend** the existing `LocalConfig` by adding `username: Option<String>` to it, not create a new struct. Update the approach accordingly.
+- [x] `LocalConfig` already exists in `config.rs` (added by e1582fd0 for worker spawn config) with a `workers: LocalWorkersOverride` field. This ticket must **extend** the existing `LocalConfig` by adding `username: Option<String>` to it, not create a new struct. Update the approach accordingly.
 - [ ] `.apm/local.toml` is already in `.gitignore` (added by e1582fd0). Remove the gitignore AC item and update the approach to note this is already done.
 - [ ] `Config::load` already reads and merges `.apm/local.toml` for worker overrides (added by e1582fd0). The `username` field will be available automatically through the existing `LocalConfig` load path — no new file-reading code needed.
 - [ ] The `apm init` AC items (prompt for username, write local.toml, add to gitignore) overlap with ticket 79326024 which is specifically scoped to init changes. Clarify: this ticket adds the data structures and `resolve_identity()` only; all init-flow changes are in 79326024.
