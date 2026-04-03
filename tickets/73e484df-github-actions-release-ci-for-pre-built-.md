@@ -25,7 +25,21 @@ The project produces two binaries — `apm` (CLI) and `apm-server` (HTTP server)
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] A workflow file `.github/workflows/release.yml` exists and triggers on pushes of tags matching `v*.*.*`
+- [ ] The workflow can also be triggered manually via `workflow_dispatch`
+- [ ] `cargo test --workspace` runs as a gate before any build step; the workflow fails and no release is created if tests fail
+- [ ] `apm-ui` assets are built (`npm ci && npm run build` inside `apm-ui/`) before `apm-server` is compiled on every platform
+- [ ] The workflow produces an `apm` binary for macOS arm64 (native `macos-14` runner)
+- [ ] The workflow produces an `apm-server` binary for macOS arm64
+- [ ] The workflow produces an `apm` binary for macOS x86_64 (native `macos-13` runner)
+- [ ] The workflow produces an `apm-server` binary for macOS x86_64
+- [ ] The workflow produces an `apm` binary for Linux x86_64, statically linked (musl target on `ubuntu-22.04`)
+- [ ] The workflow produces an `apm-server` binary for Linux x86_64, statically linked
+- [ ] The workflow produces an `apm` binary for Linux aarch64, statically linked (cross-compiled via `cargo-zigbuild` on `ubuntu-22.04`)
+- [ ] The workflow produces an `apm-server` binary for Linux aarch64, statically linked
+- [ ] Each platform's binaries are packaged into a `.tar.gz` archive named `apm-<tag>-<target-triple>.tar.gz` containing both `apm` and `apm-server`
+- [ ] A `checksums.txt` file containing SHA-256 hashes for all four archives is included in the release
+- [ ] A GitHub Release is created automatically for the tag with all four archives and `checksums.txt` as release assets
 
 ### Out of scope
 
