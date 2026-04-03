@@ -84,6 +84,7 @@ label          = "Ammend"
 color          = "#ef4444"
 layer          = 1
 actionable     = ["agent"]
+dep_requires   = "spec"
 satisfies_deps = "spec"
 instructions   = ".apm/apm.spec-writer.md"
 
