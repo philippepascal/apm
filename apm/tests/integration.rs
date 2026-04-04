@@ -746,80 +746,6 @@ fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, 
     git(dir, &["checkout", "main"]);
 }
 
-#[test]
-fn take_succeeds_on_ammend_state() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    write_ticket_with_agent(p, "ticket/0001-ammend-me", "0001-ammend-me.md", "ammend", 1, "ammend me", "old-agent");
-    std::env::set_var("APM_AGENT_NAME", "new-agent");
-    apm::cmd::take::run(p, "1", true).unwrap();
-    let content = branch_content(p, "ticket/0001-ammend-me", "tickets/0001-ammend-me.md");
-    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
-}
-
-#[test]
-fn take_succeeds_on_blocked_state() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    write_ticket_with_agent(p, "ticket/0001-blocked", "0001-blocked.md", "blocked", 1, "blocked", "old-agent");
-    std::env::set_var("APM_AGENT_NAME", "new-agent");
-    apm::cmd::take::run(p, "1", true).unwrap();
-    let content = branch_content(p, "ticket/0001-blocked", "tickets/0001-blocked.md");
-    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
-}
-
-#[test]
-fn take_appends_handoff_history() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    write_ticket_with_agent(p, "ticket/0001-handoff", "0001-handoff.md", "in_progress", 1, "handoff", "old-agent");
-    std::env::set_var("APM_AGENT_NAME", "new-agent");
-    apm::cmd::take::run(p, "1", true).unwrap();
-    let content = branch_content(p, "ticket/0001-handoff", "tickets/0001-handoff.md");
-    assert!(content.contains("handoff"), "handoff history entry should be appended: {content}");
-    assert!(content.contains("new-agent"), "new agent should appear in history: {content}");
-}
-
-#[test]
-fn take_succeeds_when_no_agent_assigned() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    // Ticket with no agent field — take should succeed using "unknown" as placeholder
-    write_ticket_to_branch(p, "ticket/0001-unassigned", "0001-unassigned.md", "new", 1, "unassigned");
-    std::env::set_var("APM_AGENT_NAME", "some-agent");
-    apm::cmd::take::run(p, "1", true).unwrap();
-    let content = branch_content(p, "ticket/0001-unassigned", "tickets/0001-unassigned.md");
-    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
-    assert!(content.contains("unknown"), "old agent placeholder should be 'unknown': {content}");
-}
-
-#[test]
-fn take_without_apm_agent_name_falls_back_to_apm() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    write_ticket_with_agent(p, "ticket/0001-fallback", "0001-fallback.md", "in_design", 1, "fallback", "old-agent");
-    std::env::remove_var("APM_AGENT_NAME");
-    std::env::remove_var("USER");
-    std::env::remove_var("USERNAME");
-    apm::cmd::take::run(p, "1", true).unwrap();
-    let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
-    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
-    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
-}
-
-#[test]
-fn take_without_apm_agent_name_uses_user_env() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    write_ticket_with_agent(p, "ticket/0001-user-env", "0001-user-env.md", "in_design", 1, "user env", "old-agent");
-    std::env::remove_var("APM_AGENT_NAME");
-    std::env::set_var("USER", "alice");
-    apm::cmd::take::run(p, "1", true).unwrap();
-    let content = branch_content(p, "ticket/0001-user-env", "tickets/0001-user-env.md");
-    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
-    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
-}
-
 // ── apm spec ────────────────────────────────────────────────────────────────
 
 fn write_spec_ticket(dir: &std::path::Path, id: u32, problem: &str, approach: &str) {
@@ -4489,4 +4415,36 @@ fn revoke_with_device_hint() {
     mock.assert();
     assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
     assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 1 session(s)."));
+}
+
+#[test]
+fn assign_sets_owner_field() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Assign test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "assign-test");
+    let id = find_ticket_id(dir.path(), "assign-test");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::assign::run(dir.path(), &id, "alice", true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("owner = \"alice\""));
+}
+
+#[test]
+fn assign_clears_owner_field() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Assign clear test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "assign-clear-test");
+    let id = find_ticket_id(dir.path(), "assign-clear-test");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::assign::run(dir.path(), &id, "alice", true).unwrap();
+    apm::cmd::assign::run(dir.path(), &id, "-", true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(!content.contains("owner ="));
+}
+
+#[test]
+fn assign_unknown_id_errors() {
+    let dir = setup();
+    let result = apm::cmd::assign::run(dir.path(), "9999", "alice", true);
+    assert!(result.is_err());
 }
