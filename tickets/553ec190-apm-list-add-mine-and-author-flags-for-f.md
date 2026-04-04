@@ -30,7 +30,7 @@ There is no way to filter `apm list` output by ticket author. A developer workin
 - [x] `--mine` and `--author` are mutually exclusive: passing both produces an error and non-zero exit code
 - [x] `apm list --mine --state ready` shows only tickets matching both the author and state filters (AND logic)
 - [x] `apm list --author <username> --state <state>` combines with all other existing filters (AND logic)
-- [ ] All existing `apm list` filters continue to work unchanged after this addition
+- [x] All existing `apm list` filters continue to work unchanged after this addition
 
 ### Out of scope
 
