@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The supervisor board UI has an "agent" filter dropdown in the filter bar (SupervisorView.tsx) that reads `ticket.agent`, but no such field exists in the API response. The filter renders but never matches anything. It should be renamed to "owner", wired to the real `owner` field from the API, and populated from the collaborators list or distinct values.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
