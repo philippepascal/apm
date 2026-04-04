@@ -727,6 +727,7 @@ pub fn list_filtered<'a>(
     all: bool,
     supervisor_filter: Option<&str>,
     actionable_filter: Option<&str>,
+    author_filter: Option<&str>,
 ) -> Vec<&'a Ticket> {
     let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
         .filter(|s| s.terminal)
@@ -747,7 +748,8 @@ pub fn list_filtered<'a>(
             actionable_map.get(fm.state.as_str())
                 .map_or(false, |actors| actors.iter().any(|a| a == actor || a == "any"))
         });
-        state_ok && agent_ok && terminal_ok && supervisor_ok && actionable_ok
+        let author_ok = author_filter.map_or(true, |a| fm.author.as_deref() == Some(a));
+        state_ok && agent_ok && terminal_ok && supervisor_ok && actionable_ok && author_ok
     }).collect()
 }
 
@@ -1260,7 +1262,7 @@ mod tests {
             make_ticket("0002", "ready", None),
             make_ticket("0003", "new", None),
         ];
-        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None);
+        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.state == "new"));
     }
@@ -1273,16 +1275,16 @@ mod tests {
             make_ticket("0002", "closed", None),
         ];
         // By default, terminal states are hidden.
-        let result = list_filtered(&tickets, &config, None, false, false, None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.state, "new");
 
         // With all=true, terminal states are shown.
-        let result_all = list_filtered(&tickets, &config, None, false, true, None, None);
+        let result_all = list_filtered(&tickets, &config, None, false, true, None, None, None);
         assert_eq!(result_all.len(), 2);
 
         // With state_filter matching the terminal state, it's shown.
-        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None);
+        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None, None);
         assert_eq!(result_filtered.len(), 1);
         assert_eq!(result_filtered[0].frontmatter.state, "closed");
     }
@@ -1303,9 +1305,41 @@ mod tests {
             make_with_author("0003", Some("unassigned")),
             make_with_author("0004", None),
         ];
-        let result = list_filtered(&tickets, &config, None, true, false, None, None);
+        let result = list_filtered(&tickets, &config, None, true, false, None, None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("unassigned")));
+    }
+
+    fn make_ticket_with_author(id: &str, state: &str, author: Option<&str>) -> Ticket {
+        let author_line = author.map(|a| format!("author = \"{a}\"\n")).unwrap_or_default();
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T{id}\"\nstate = \"{state}\"\n{author_line}+++\n\n"
+        );
+        Ticket::parse(dummy_path(), &raw).unwrap()
+    }
+
+    #[test]
+    fn list_filtered_by_author() {
+        let config = test_config_with_states(&[]);
+        let tickets = vec![
+            make_ticket_with_author("0001", "new", Some("alice")),
+            make_ticket_with_author("0002", "new", Some("bob")),
+            make_ticket_with_author("0003", "ready", Some("alice")),
+        ];
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, Some("alice"));
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("alice")));
+    }
+
+    #[test]
+    fn list_filtered_author_none() {
+        let config = test_config_with_states(&[]);
+        let tickets = vec![
+            make_ticket_with_author("0001", "new", Some("alice")),
+            make_ticket_with_author("0002", "new", Some("bob")),
+        ];
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None);
+        assert_eq!(result.len(), 2);
     }
 
     // ── set_field ─────────────────────────────────────────────────────────
