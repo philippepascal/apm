@@ -45,7 +45,49 @@ With the `owner` field, `apm take` becomes redundant and underspecified. What's 
 
 ### Approach
 
-How the implementation will work.
+This ticket depends on `ffaad988`, which adds the `agent` field to `Frontmatter`. All changes branch from `epic/8db73240-user-mgmt` after that ticket is merged.
+
+**1. `apm-core/src/ticket.rs` — extend `set_field` and remove `handoff`**
+
+Add `agent` as a settable field in `set_field()`, following the same pattern as `supervisor` (use `"-"` to clear):
+
+```rust
+"agent" => fm.agent = if value == "-" { None } else { Some(value.to_string()) },
+```
+
+Delete `pub fn handoff()` and its two inline unit tests (`handoff_no_agent_uses_unknown_placeholder` and `handoff_successful`).
+
+**2. `apm/src/cmd/assign.rs` — new file**
+
+Identical structure to `set.rs`: load tickets, resolve id, call `ticket::set_field(&mut t.frontmatter, "agent", &username)`, update `updated_at`, serialize, commit to the ticket branch with message `ticket(<id>): assign agent = <username>`, push if aggressive. Print `<id>: agent = <username>` on success (or `<id>: agent cleared` when `-` is passed).
+
+**3. `apm/src/main.rs` — register `Assign`, remove `Take`**
+
+Add an `Assign` variant with `id: String`, `username: String`, `no_aggressive: bool`. Remove the `Take { id, no_aggressive }` variant and its dispatch arm. Delete `apm/src/cmd/take.rs` entirely. Update `apm/src/cmd/mod.rs` to remove `pub mod take;` and add `pub mod assign;`.
+
+**4. `apm-server/src/main.rs` — remove take endpoint**
+
+Delete the `take_ticket` async function and the route `.route("/api/tickets/:id/take", post(take_ticket))`.
+
+**5. `apm/tests/integration.rs` — replace take tests with assign tests**
+
+Delete the four `take_*` test functions. Add:
+
+- `assign_sets_agent_field`: create a ticket in any state, run `cmd::assign::run(p, "1", "alice", true)`, read back the branch content, assert `agent = "alice"` appears in frontmatter.
+- `assign_clears_agent_field`: start with `agent = "alice"`, run `cmd::assign::run(p, "1", "-", true)`, assert `agent` key is absent from frontmatter.
+- `assign_unknown_id_errors`: run `cmd::assign::run(p, "9999", "alice", true)`, assert it returns `Err`.
+
+**Order**
+
+1. Extend `set_field` in `apm-core/src/ticket.rs`; delete `handoff` and its tests
+2. Add `apm/src/cmd/assign.rs`; update `mod.rs`
+3. Patch `apm/src/main.rs`: add `Assign`, remove `Take`
+4. Delete `apm/src/cmd/take.rs`
+5. Patch `apm-server/src/main.rs`: remove `take_ticket` and its route
+6. Replace take integration tests with assign tests
+7. `cargo test --workspace`
+
+**Gotcha**: the `agent` field must exist on `Frontmatter` before step 1 compiles. This ticket must be implemented on top of the `epic/8db73240-user-mgmt` branch after `ffaad988` is merged.
 
 ### Open questions
 
