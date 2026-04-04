@@ -4,11 +4,11 @@ title = "UI filter error"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm-ui"
 branch = "ticket/717f9b6b-ui-filter-error"
 created_at = "2026-04-04T16:05:39.699619Z"
-updated_at = "2026-04-04T16:43:18.477369Z"
+updated_at = "2026-04-04T16:43:23.013737Z"
 +++
 
 ## Spec
