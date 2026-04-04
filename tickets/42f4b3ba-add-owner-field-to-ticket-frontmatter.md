@@ -33,7 +33,10 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Clearing `agent` automatically when a ticket leaves an active state (e.g. transitions to `specd`, `blocked`, or `closed`) — ownership tracking is intentionally sticky
+- UI changes to the TicketCard or TicketDetail components (the UI already reads `ticket.agent` and renders it; once the API returns the field the UI will work)
+- Back-filling `agent` on existing tickets in git history
+- Enforcing that only one agent can own a ticket at a time
 
 ### Approach
 
