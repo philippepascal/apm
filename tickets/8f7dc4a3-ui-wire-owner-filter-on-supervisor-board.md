@@ -42,31 +42,33 @@ This ticket wires the UI filter to the real owner field returned by the API. Con
 
 ### Approach
 
-All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx`.
+Two files change.
 
-**1. Rename state variable and computed value**
+**1. apm-ui/src/types.ts**
 
-- `agentFilter` → `ownerFilter` (useState declaration and all read/write sites)
-- `availableAgents` → `availableOwners` (useMemo declaration and all read sites)
+Change the Ticket interface field from agent?: string to owner?: string. This aligns the TypeScript model with what the API returns (the owner key, as defined by #42f4b3ba and exposed by #2b7c4c97).
 
-The filter logic itself (`t.agent === ownerFilter`) is already correct — it reads `ticket.agent` which is the field the API returns once #42f4b3ba lands. No logic change is needed, only identifier rename.
+**2. apm-ui/src/components/supervisor/SupervisorView.tsx**
 
-**2. Update the dropdown label**
+Rename state variable and computed value:
+- agentFilter → ownerFilter (useState declaration and all read/write sites, use replace_all)
+- availableAgents → availableOwners (useMemo declaration and all read sites, use replace_all)
 
-Change the placeholder option text from `"All agents"` to `"All owners"`.
+Update filter logic: change t.agent === ownerFilter to t.owner === ownerFilter (and the useMemo that builds the list: t.owner instead of t.agent).
 
-**3. Update `hasActiveFilters`**
+Update the dropdown label: change "All agents" to "All owners".
 
-Replace the `agentFilter !== null` reference with `ownerFilter !== null`.
+hasActiveFilters is updated automatically by the agentFilter → ownerFilter rename.
 
-**No other files need to change.** The `Ticket` interface in `types.ts` already has `agent?: string` which maps to what the API returns. The Swimlane component does not reference the filter state. No tests exist for this component (it is pure UI).
+**No other files need to change.**
 
 **Order of steps**
-
-1. Rename `agentFilter` to `ownerFilter` (replace_all)
-2. Rename `availableAgents` to `availableOwners` (replace_all)
-3. Change the option label string
-4. Verify the file compiles: `cd apm-ui && npx tsc --noEmit`
+1. Edit types.ts: agent?: string → owner?: string
+2. Edit SupervisorView.tsx: replace_all agentFilter → ownerFilter
+3. Edit SupervisorView.tsx: replace_all availableAgents → availableOwners
+4. Edit SupervisorView.tsx: replace t.agent with t.owner in filter logic and option-list memo
+5. Edit SupervisorView.tsx: change label string "All agents" → "All owners"
+6. Verify: cd apm-ui && npx tsc --noEmit
 
 ### Open questions
 
