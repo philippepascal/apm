@@ -1,14 +1,14 @@
 +++
 id = "02f36f58"
 title = "apm show: display depends_on, epic, and target_branch frontmatter fields"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/02f36f58-apm-show-display-depends-on-epic-and-tar"
 created_at = "2026-04-04T00:27:04.270671Z"
-updated_at = "2026-04-04T00:27:04.270671Z"
+updated_at = "2026-04-04T06:01:59.245637Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-04T00:27Z | — | new | apm |
+| 2026-04-04T06:01Z | new | groomed | apm |
