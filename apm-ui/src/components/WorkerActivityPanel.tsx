@@ -79,9 +79,12 @@ export default function WorkerActivityPanel() {
     )
   }
 
+  const STATUS_ORDER: Record<WorkerInfo['status'], number> = { running: 0, crashed: 1, ended: 2 }
+  const sorted = [...data].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+
   return (
     <div className="p-2 space-y-1.5 overflow-y-auto h-full">
-      {data.map((w) => (
+      {sorted.map((w) => (
         <div
           key={w.pid}
           tabIndex={0}
