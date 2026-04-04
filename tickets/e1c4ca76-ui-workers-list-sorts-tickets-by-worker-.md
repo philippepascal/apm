@@ -1,14 +1,14 @@
 +++
 id = "e1c4ca76"
 title = "UI Workers list sorts tickets by worker status, with crashed and ended last"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
 author = "apm-ui"
 branch = "ticket/e1c4ca76-ui-workers-list-sorts-tickets-by-worker-"
 created_at = "2026-04-04T03:16:37.369960Z"
-updated_at = "2026-04-04T07:25:44.882423Z"
+updated_at = "2026-04-04T17:00:32.586690Z"
 +++
 
 ## Spec
@@ -80,3 +80,4 @@ No other files change. No new state, hooks, or deps needed.
 | 2026-04-04T07:15Z | specd | ready | apm |
 | 2026-04-04T07:23Z | ready | in_progress | philippepascal |
 | 2026-04-04T07:25Z | in_progress | implemented | claude-0404-0723-w9k2 |
+| 2026-04-04T17:00Z | implemented | closed | apm-sync |
