@@ -266,6 +266,8 @@ pub struct TransitionConfig {
     pub focus_section: Option<String>,
     #[serde(default)]
     pub context_section: Option<String>,
+    #[serde(default)]
+    pub warning: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -367,15 +369,23 @@ pub fn resolve_identity(repo_root: &Path) -> String {
         .and_then(|s| toml::from_str(&s).ok());
 
     let git_host = config.as_ref().map(|c| &c.git_host).cloned().unwrap_or_default();
-    if git_host.provider.as_deref() == Some("github") {
-        if let Some(token) = effective_github_token(&local, &git_host) {
-            match crate::github::fetch_authenticated_user(&token) {
-                Ok(login) => return login,
-                Err(e) => eprintln!("apm: GitHub identity fetch failed: {e}"),
+    if git_host.provider.is_some() {
+        // git_host is the identity authority — do not fall back to local.toml
+        if git_host.provider.as_deref() == Some("github") {
+            if let Some(login) = crate::github::gh_username() {
+                return login;
+            }
+            if let Some(token) = effective_github_token(&local, &git_host) {
+                if let Ok(login) = crate::github::fetch_authenticated_user(&token) {
+                    return login;
+                }
             }
         }
+        eprintln!("apm: could not resolve identity from git_host");
+        return "unassigned".to_string();
     }
 
+    // No git_host — use local.toml username (local-only dev)
     if let Some(ref u) = local.username {
         if !u.is_empty() {
             return u.clone();
@@ -387,6 +397,9 @@ pub fn resolve_identity(repo_root: &Path) -> String {
 pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     if git_host.provider.as_deref() != Some("github") {
         return None;
+    }
+    if let Some(login) = crate::github::gh_username() {
+        return Some(login);
     }
     let local = LocalConfig::default();
     let token = effective_github_token(&local, git_host)?;

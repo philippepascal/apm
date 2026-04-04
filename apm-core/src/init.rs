@@ -78,31 +78,18 @@ pub fn setup(root: &Path) -> Result<()> {
     let local_toml = apm_dir.join("local.toml");
     let is_tty = std::io::stdin().is_terminal();
 
-    // Try to resolve username from GitHub if config exists
-    let github_username = {
+    // Check if git_host is configured — if so, identity comes from the provider
+    let has_git_host = {
         let config_path = apm_dir.join("config.toml");
-        if config_path.exists() {
-            if let Ok(cfg) = crate::config::Config::load(root) {
-                crate::config::try_github_username(&cfg.git_host)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        config_path.exists() && crate::config::Config::load(root)
+            .map(|cfg| cfg.git_host.provider.is_some())
+            .unwrap_or(false)
     };
 
-    // Resolve or prompt for username, then write local.toml
-    let username = if !local_toml.exists() {
-        let u = if let Some(ref gh) = github_username {
-            if is_tty {
-                let prompted = prompt_username(Some(gh))?;
-                if prompted.is_empty() { gh.clone() } else { prompted }
-            } else {
-                gh.clone()
-            }
-        } else if is_tty {
-            prompt_username(None)?
+    // Only prompt for local username when there is no git_host
+    let username = if !has_git_host && !local_toml.exists() {
+        let u = if is_tty {
+            prompt_username()?
         } else {
             String::new()
         };
@@ -350,11 +337,10 @@ file = "{log_file}"
     )
 }
 
-fn prompt_username(default: Option<&str>) -> Result<String> {
+fn prompt_username() -> Result<String> {
     let mut stdout = std::io::stdout();
     let stdin = std::io::stdin();
-    let def = default.unwrap_or("");
-    print!("Username [{def}]: ");
+    print!("Username []: ");
     stdout.flush()?;
     let mut input = String::new();
     stdin.read_line(&mut input)?;
@@ -448,6 +434,13 @@ instructions   = ".apm/apm.worker.md"
   to      = "blocked"
   trigger = "command:block"
   actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+  warning      = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
 
 [[workflow.states]]
 id         = "blocked"

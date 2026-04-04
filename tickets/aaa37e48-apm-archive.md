@@ -1,14 +1,14 @@
 +++
 id = "aaa37e48"
 title = "apm archive"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
 author = "apm"
 branch = "ticket/aaa37e48-apm-archive"
 created_at = "2026-04-03T00:33:18.924269Z"
-updated_at = "2026-04-04T08:00:47.165337Z"
+updated_at = "2026-04-04T17:00:26.997802Z"
 +++
 
 ## Spec
@@ -126,3 +126,4 @@ When a ticket is not found via `load_all_from_git` (no matching ticket branch), 
 | 2026-04-04T07:15Z | specd | ready | apm |
 | 2026-04-04T07:47Z | ready | in_progress | philippepascal |
 | 2026-04-04T08:00Z | in_progress | implemented | claude-0404-1200-b8c2 |
+| 2026-04-04T17:00Z | implemented | closed | apm-sync |

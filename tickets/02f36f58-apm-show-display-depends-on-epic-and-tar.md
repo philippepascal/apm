@@ -1,14 +1,14 @@
 +++
 id = "02f36f58"
 title = "apm show: display depends_on, epic, and target_branch frontmatter fields"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
 author = "apm"
 branch = "ticket/02f36f58-apm-show-display-depends-on-epic-and-tar"
 created_at = "2026-04-04T00:27:04.270671Z"
-updated_at = "2026-04-04T07:23:09.464806Z"
+updated_at = "2026-04-04T17:00:09.978255Z"
 +++
 
 ## Spec
@@ -79,3 +79,4 @@ Add a unit/integration test in `apm/tests/integration.rs` that:
 | 2026-04-04T07:15Z | specd | ready | apm |
 | 2026-04-04T07:17Z | ready | in_progress | philippepascal |
 | 2026-04-04T07:23Z | in_progress | implemented | claude-0404-0717-w02f |
+| 2026-04-04T17:00Z | implemented | closed | apm-sync |

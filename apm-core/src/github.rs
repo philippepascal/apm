@@ -1,5 +1,17 @@
 use anyhow::{Context, Result};
 
+pub fn gh_username() -> Option<String> {
+    std::process::Command::new("gh")
+        .args(["api", "user", "-q", ".login"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| {
+            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if s.is_empty() { None } else { Some(s) }
+        })
+}
+
 pub fn fetch_authenticated_user(token: &str) -> Result<String> {
     let client = reqwest::blocking::Client::new();
     let resp: serde_json::Value = client
