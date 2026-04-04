@@ -24,7 +24,7 @@ This ticket adds `apm archive`, a command that moves closed ticket files from th
 - [x] `apm archive` errors with a clear message when `archive_dir` is not set in `[tickets]` config
 - [x] `apm archive` moves all terminal-state ticket files from `tickets/<id>-<slug>.md` to `<archive_dir>/<id>-<slug>.md` on the default branch in a single commit
 - [x] `apm archive --dry-run` prints the list of files that would be moved without modifying any branches
-- [ ] `apm archive --older-than 30d` limits the batch to tickets whose `updated_at` is older than the threshold (same syntax as `apm clean --older-than`)
+- [x] `apm archive --older-than 30d` limits the batch to tickets whose `updated_at` is older than the threshold (same syntax as `apm clean --older-than`)
 - [ ] `apm archive` skips ticket files that are not present in `tickets/` on the default branch and emits a per-ticket warning
 - [ ] `apm archive` skips ticket files that are in a non-terminal state and emits a per-ticket warning
 - [ ] `apm archive` prints a summary line: `archived N ticket(s)` (or `nothing to archive` when N = 0)
