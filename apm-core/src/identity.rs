@@ -6,6 +6,19 @@ struct LocalIdentity {
 }
 
 pub fn resolve_current_user(root: &Path) -> String {
+    // If git_host is configured, it is the identity authority
+    if let Ok(cfg) = crate::config::Config::load(root) {
+        if cfg.git_host.provider.is_some() {
+            if cfg.git_host.provider.as_deref() == Some("github") {
+                if let Some(login) = crate::github::gh_username() {
+                    return login;
+                }
+            }
+            return "apm".to_string();
+        }
+    }
+
+    // No git_host — use local.toml username (local-only dev)
     let local_path = root.join(".apm").join("local.toml");
     if let Ok(contents) = std::fs::read_to_string(&local_path) {
         if let Ok(local) = toml::from_str::<LocalIdentity>(&contents) {
@@ -13,14 +26,6 @@ pub fn resolve_current_user(root: &Path) -> String {
                 if !u.is_empty() {
                     return u.clone();
                 }
-            }
-        }
-    }
-    // Fall back to GitHub identity if git_host is configured
-    if let Ok(cfg) = crate::config::Config::load(root) {
-        if cfg.git_host.provider.as_deref() == Some("github") {
-            if let Some(login) = crate::github::gh_username() {
-                return login;
             }
         }
     }
