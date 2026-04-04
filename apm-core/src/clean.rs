@@ -1,5 +1,6 @@
 use crate::{config::Config, git, ticket};
 use anyhow::Result;
+use chrono::{DateTime, NaiveDate, Utc};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -10,6 +11,11 @@ const KNOWN_TEMP_FILES: &[&str] = &[
     ".apm-worker.pid",
     ".apm-worker.log",
 ];
+
+pub struct RemoteCandidate {
+    pub branch: String,
+    pub last_commit: DateTime<Utc>,
+}
 
 pub struct CleanCandidate {
     pub ticket_id: String,
@@ -91,7 +97,7 @@ pub fn remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()> {
     Ok(())
 }
 
-pub fn candidates(root: &Path, config: &Config, force: bool) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
+pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dry_run: bool) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
     let mut terminal_states: std::collections::HashSet<String> = config
         .workflow
         .states
@@ -205,17 +211,37 @@ pub fn candidates(root: &Path, config: &Config, force: bool) -> Result<(Vec<Clea
                     .unwrap_or(false);
                 let diagnosis =
                     diagnose_worktree(path, &id, &t.frontmatter.title, &branch, lbe)?;
-                if force && diagnosis.modified_tracked.is_empty() {
-                    // Force mode: dirty-but-no-modified-tracked goes to candidates;
-                    // git worktree remove --force will handle the untracked files.
-                    result.push(CleanCandidate {
-                        ticket_id: id,
-                        ticket_title: t.frontmatter.title.clone(),
-                        branch: branch.clone(),
-                        worktree: wt_path,
-                        reason: branch_state.clone(),
-                        local_branch_exists: lbe,
-                    });
+                if diagnosis.modified_tracked.is_empty() {
+                    if force {
+                        // Force mode: git worktree remove --force handles remaining files.
+                        result.push(CleanCandidate {
+                            ticket_id: id,
+                            ticket_title: t.frontmatter.title.clone(),
+                            branch: branch.clone(),
+                            worktree: wt_path,
+                            reason: branch_state.clone(),
+                            local_branch_exists: lbe,
+                        });
+                    } else if untracked || diagnosis.other_untracked.is_empty() {
+                        // Auto-remove: known_temp always; other_untracked if --untracked.
+                        // Skip actual file removal in dry-run mode.
+                        if !dry_run {
+                            remove_untracked(path, &diagnosis.known_temp)?;
+                            if untracked {
+                                remove_untracked(path, &diagnosis.other_untracked)?;
+                            }
+                        }
+                        result.push(CleanCandidate {
+                            ticket_id: id,
+                            ticket_title: t.frontmatter.title.clone(),
+                            branch: branch.clone(),
+                            worktree: wt_path,
+                            reason: branch_state.clone(),
+                            local_branch_exists: lbe,
+                        });
+                    } else {
+                        dirty_result.push(diagnosis);
+                    }
                 } else {
                     dirty_result.push(diagnosis);
                 }
@@ -252,12 +278,12 @@ pub fn candidates(root: &Path, config: &Config, force: bool) -> Result<(Vec<Clea
     Ok((result, dirty_result))
 }
 
-pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool) -> Result<()> {
+pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool) -> Result<()> {
     if let Some(ref path) = candidate.worktree {
         git::remove_worktree(root, path, force)?;
     }
 
-    if candidate.local_branch_exists {
+    if remove_branches && candidate.local_branch_exists {
         let result = Command::new("git")
             .args([
                 "-C",
@@ -298,4 +324,90 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool) -> Result<()
     }
 
     Ok(())
+}
+
+/// Parse an --older-than threshold into a UTC DateTime.
+/// Accepts "Nd" (N days ago) or "YYYY-MM-DD" (ISO date).
+pub fn parse_older_than(s: &str) -> anyhow::Result<DateTime<Utc>> {
+    if let Some(days_str) = s.strip_suffix('d') {
+        let days: i64 = days_str
+            .parse()
+            .map_err(|_| anyhow::anyhow!("--older-than: invalid days value {:?}", s))?;
+        return Ok(Utc::now() - chrono::Duration::days(days));
+    }
+    if let Ok(date) = NaiveDate::parse_from_str(s, "%Y-%m-%d") {
+        return Ok(date.and_hms_opt(0, 0, 0).unwrap().and_utc());
+    }
+    anyhow::bail!(
+        "--older-than: unrecognised format {:?}; use \"30d\" or \"YYYY-MM-DD\"",
+        s
+    )
+}
+
+/// Return remote ticket/* branches in terminal states older than `older_than`.
+pub fn remote_candidates(
+    root: &Path,
+    config: &Config,
+    older_than: DateTime<Utc>,
+) -> Result<Vec<RemoteCandidate>> {
+    let terminal_states: std::collections::HashSet<String> = {
+        let mut s: std::collections::HashSet<String> = config
+            .workflow
+            .states
+            .iter()
+            .filter(|st| st.terminal)
+            .map(|st| st.id.clone())
+            .collect();
+        s.insert("closed".to_string());
+        s
+    };
+    let default_branch = &config.project.default_branch;
+    let branches = git::remote_ticket_branches_with_dates(root)?;
+    let mut result = Vec::new();
+    for (branch, last_commit) in branches {
+        if last_commit >= older_than {
+            continue;
+        }
+        let suffix = branch.trim_start_matches("ticket/");
+        let rel_path = format!("{}/{suffix}.md", config.tickets.dir.to_string_lossy());
+        if let Some(state) = ticket::state_from_branch(root, default_branch, &rel_path) {
+            if terminal_states.contains(&state) {
+                result.push(RemoteCandidate { branch, last_commit });
+            }
+        }
+    }
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_older_than_days() {
+        let threshold = parse_older_than("30d").unwrap();
+        let expected = Utc::now() - chrono::Duration::days(30);
+        // Allow a few seconds of skew between the two Utc::now() calls.
+        assert!((threshold - expected).num_seconds().abs() < 5);
+    }
+
+    #[test]
+    fn parse_older_than_iso_date() {
+        let threshold = parse_older_than("2026-01-01").unwrap();
+        assert_eq!(threshold.format("%Y-%m-%d").to_string(), "2026-01-01");
+    }
+
+    #[test]
+    fn parse_older_than_invalid_rejects() {
+        assert!(parse_older_than("notadate").is_err());
+        assert!(parse_older_than("30").is_err());
+        assert!(parse_older_than("").is_err());
+    }
+
+    #[test]
+    fn parse_older_than_zero_days() {
+        let threshold = parse_older_than("0d").unwrap();
+        let now = Utc::now();
+        assert!((threshold - now).num_seconds().abs() < 5);
+    }
 }
