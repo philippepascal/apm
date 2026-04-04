@@ -17,7 +17,9 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm take` exists today as a "takeover" command — it writes a handoff entry to History and provisions a worktree, but it doesn't track the old or new owner in frontmatter (always logs "unknown"). It also only works for the current agent taking over, not for a supervisor assigning someone else.
+
+With the `owner` field, `apm take` becomes redundant and underspecified. What's needed instead is `apm assign <id> <username>` — a supervisor action that sets the `owner` field on any ticket regardless of state. This replaces both the self-takeover use case (I want to own this ticket) and the delegation use case (supervisor assigns a ticket to someone). The old `apm take` command, its CLI entry, server endpoint (`/api/tickets/:id/take`), and `handoff()` function should be removed.
 
 ### Acceptance criteria
 
@@ -34,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
