@@ -435,6 +435,13 @@ instructions   = ".apm/apm.worker.md"
   trigger = "command:block"
   actor   = "agent"
 
+  [[workflow.states.transitions]]
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+  warning      = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
+
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"

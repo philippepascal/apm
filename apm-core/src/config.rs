@@ -266,6 +266,8 @@ pub struct TransitionConfig {
     pub focus_section: Option<String>,
     #[serde(default)]
     pub context_section: Option<String>,
+    #[serde(default)]
+    pub warning: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
