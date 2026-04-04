@@ -122,6 +122,8 @@ pub struct ProjectConfig {
     pub description: String,
     #[serde(default = "default_branch_main")]
     pub default_branch: String,
+    #[serde(default)]
+    pub collaborators: Vec<String>,
 }
 
 fn default_branch_main() -> String {
@@ -247,6 +249,37 @@ impl Default for AgentsConfig {
             skip_permissions: false,
         }
     }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalConfig {
+    #[serde(default)]
+    pub workers: LocalWorkersOverride,
+    #[serde(default)]
+    pub username: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalWorkersOverride {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+}
+
+pub fn resolve_identity(repo_root: &Path) -> String {
+    let local_path = repo_root.join(".apm").join("local.toml");
+    if let Ok(contents) = std::fs::read_to_string(&local_path) {
+        if let Ok(local) = toml::from_str::<LocalConfig>(&contents) {
+            if let Some(ref u) = local.username {
+                if !u.is_empty() {
+                    return u.clone();
+                }
+            }
+        }
+    }
+    "unassigned".to_string()
 }
 
 impl Config {
@@ -559,5 +592,71 @@ dir = "tickets"
         let explicit_true = format!("{base}[sync]\naggressive = true\n");
         let config: Config = toml::from_str(&explicit_true).unwrap();
         assert!(config.sync.aggressive, "explicit aggressive = true should be true");
+    }
+
+    #[test]
+    fn collaborators_parses() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.project.collaborators, vec!["alice", "bob"]);
+    }
+
+    #[test]
+    fn collaborators_defaults_empty() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.project.collaborators.is_empty());
+    }
+
+    #[test]
+    fn resolve_identity_returns_username_when_present() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "alice");
+    }
+
+    #[test]
+    fn resolve_identity_returns_unassigned_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
+    fn resolve_identity_returns_unassigned_when_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
+    fn local_config_username_parses() {
+        let toml = r#"
+username = "bob"
+"#;
+        let local: LocalConfig = toml::from_str(toml).unwrap();
+        assert_eq!(local.username.as_deref(), Some("bob"));
+    }
+
+    #[test]
+    fn local_config_username_defaults_none() {
+        let local: LocalConfig = toml::from_str("").unwrap();
+        assert!(local.username.is_none());
     }
 }

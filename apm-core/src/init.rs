@@ -119,7 +119,7 @@ pub fn detect_default_branch(root: &Path) -> String {
 }
 
 pub fn ensure_gitignore(path: &Path) -> Result<()> {
-    let entries = ["tickets/NEXT_ID"];
+    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/sessions.json", ".apm/credentials.json"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;
@@ -505,6 +505,9 @@ mod tests {
         ensure_gitignore(&path).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("tickets/NEXT_ID"));
+        assert!(contents.contains(".apm/local.toml"));
+        assert!(contents.contains(".apm/sessions.json"));
+        assert!(contents.contains(".apm/credentials.json"));
     }
 
     #[test]

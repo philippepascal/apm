@@ -275,6 +275,39 @@ fn new_ticket_has_correct_frontmatter() {
 }
 
 #[test]
+fn new_uses_local_toml_username_as_author() {
+    let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"carol\"\n").unwrap();
+    apm::cmd::new::run(dir.path(), "My Ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "my-ticket");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(content.contains("author = \"carol\""), "author should come from local.toml: {content}");
+}
+
+#[test]
+fn new_uses_unassigned_when_no_local_toml() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Unnamed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "unnamed");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(content.contains("author = \"unassigned\""), "author should be unassigned without local.toml: {content}");
+}
+
+#[test]
+fn new_ticket_does_not_write_agent_field() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "No Agent".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "no-agent");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(!content.contains("agent ="), "agent field must not appear in new tickets: {content}");
+}
+
+#[test]
 fn new_increments_ids() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
@@ -644,7 +677,7 @@ fn take_succeeds_on_ammend_state() {
     std::env::set_var("APM_AGENT_NAME", "new-agent");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-ammend-me", "tickets/0001-ammend-me.md");
-    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -655,7 +688,7 @@ fn take_succeeds_on_blocked_state() {
     std::env::set_var("APM_AGENT_NAME", "new-agent");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-blocked", "tickets/0001-blocked.md");
-    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -694,7 +727,8 @@ fn take_without_apm_agent_name_falls_back_to_apm() {
     std::env::remove_var("USERNAME");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
-    assert!(content.contains("agent = \"apm\""), "agent should fall back to 'apm': {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
 }
 
 #[test]
@@ -706,7 +740,8 @@ fn take_without_apm_agent_name_uses_user_env() {
     std::env::set_var("USER", "alice");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-user-env", "tickets/0001-user-env.md");
-    assert!(content.contains("agent = \"alice\""), "agent should be resolved from USER: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
 }
 
 // ── apm spec ────────────────────────────────────────────────────────────────
@@ -1272,7 +1307,7 @@ fn start_next_claims_highest_priority_ticket() {
     apm::cmd::start::run_next(p, true, false, false).unwrap();
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
-    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1423,7 +1458,7 @@ terminal = true
 
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
     assert!(content.contains("state = \"in_design\""), "ticket should be in_design: {content}");
-    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── apm start --spawn ────────────────────────────────────────────────────────
@@ -1460,14 +1495,8 @@ fn start_spawn_sets_agent_to_worker_pid() {
     std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    // agent must be a decimal PID, not the delegator name
-    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator: {content}");
-    let agent_val = content.lines()
-        .find(|l| l.starts_with("agent = "))
-        .and_then(|l| l.strip_prefix("agent = \""))
-        .and_then(|l| l.strip_suffix('"'))
-        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
-    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1480,7 +1509,8 @@ fn start_non_spawn_keeps_agent_name() {
     apm::cmd::start::run(p, "1", true, false, false, "delegator-agent").unwrap();
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(content.contains("agent = \"delegator-agent\""), "non-spawn should keep APM_AGENT_NAME: {content}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1498,13 +1528,8 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator after spawn: {content}");
-    let agent_val = content.lines()
-        .find(|l| l.starts_with("agent = "))
-        .and_then(|l| l.strip_prefix("agent = \""))
-        .and_then(|l| l.strip_suffix('"'))
-        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
-    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── system prompt dispatch ───────────────────────────────────────────────────
@@ -2815,7 +2840,7 @@ fn start_without_apm_agent_name_uses_fallback() {
     apm::cmd::start::run(p, "0001", true, false, false, "ci-agent").unwrap();
     let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
-    assert!(content.contains("agent = \"ci-agent\""), "agent should be ci-agent: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ---------------------------------------------------------------------------
