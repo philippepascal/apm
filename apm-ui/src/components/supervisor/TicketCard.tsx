@@ -4,19 +4,34 @@ import type { Ticket } from './types'
 
 interface TicketCardProps {
   ticket: Ticket
+  columnTicketIds: string[]
 }
 
-export default function TicketCard({ ticket }: TicketCardProps) {
-  const { selectedTicketId, setSelectedTicketId } = useLayoutStore()
+export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps) {
+  const { selectedTicketId, selectedTicketIds, lastClickedTicketId, setSelectedTicketId, selectTicketRange } = useLayoutStore()
   const isSelected = ticket.id === selectedTicketId
+  const isMultiSelected = selectedTicketIds.includes(ticket.id)
+
+  function handleClick(event: React.MouseEvent) {
+    if (event.shiftKey && lastClickedTicketId && columnTicketIds.includes(lastClickedTicketId)) {
+      const anchorIdx = columnTicketIds.indexOf(lastClickedTicketId)
+      const targetIdx = columnTicketIds.indexOf(ticket.id)
+      const start = Math.min(anchorIdx, targetIdx)
+      const end = Math.max(anchorIdx, targetIdx)
+      selectTicketRange(columnTicketIds.slice(start, end + 1))
+    } else {
+      setSelectedTicketId(ticket.id)
+    }
+  }
 
   return (
     <div
       data-ticket-id={ticket.id}
-      onClick={() => setSelectedTicketId(ticket.id)}
+      onClick={handleClick}
       className={
         'rounded-md border border-gray-600 bg-gray-800 p-2.5 cursor-pointer hover:bg-gray-700 shadow-sm ' +
-        (isSelected ? 'ring-2 ring-blue-500' : '')
+        (isMultiSelected ? 'ring-2 ring-blue-400 bg-gray-700/60 ' : '') +
+        (!isMultiSelected && isSelected ? 'ring-2 ring-blue-500' : '')
       }
     >
       <div className="flex items-start justify-between gap-1">
