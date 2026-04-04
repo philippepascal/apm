@@ -27,7 +27,7 @@ These fields are fully parsed and stored in the `Frontmatter` struct (see `apm-c
 - [x] `apm show <id>` omits the `epic:` line entirely when the field is absent
 - [x] `apm show <id>` omits the `target_branch:` line entirely when the field is absent
 - [x] `apm show <id>` omits the `depends_on:` line entirely when the field is absent or empty
-- [ ] The three new lines appear in the header block (before the blank line that separates frontmatter from the body), after the existing `branch:` line
+- [x] The three new lines appear in the header block (before the blank line that separates frontmatter from the body), after the existing `branch:` line
 
 ### Out of scope
 
