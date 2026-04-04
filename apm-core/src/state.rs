@@ -61,7 +61,11 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
                         allowed.join(", ")
                     );
                 }
-                tr.map(|t| t.completion.clone()).unwrap_or_default()
+                let found = tr.unwrap();
+                if let Some(ref w) = found.warning {
+                    eprintln!("⚠ {w}");
+                }
+                found.completion.clone()
             } else {
                 CompletionStrategy::None
             }

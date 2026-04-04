@@ -16,7 +16,7 @@ interface TicketDetail {
   priority: number
   body: string
   raw: string
-  valid_transitions: { to: string; label: string }[]
+  valid_transitions: { to: string; label: string; warning?: string }[]
   epic?: string
   depends_on?: string[]
   blocking_deps?: Array<{ id: string; state: string }>
@@ -91,7 +91,10 @@ function TransitionButtons({ ticket, onTransitioned }: {
           key={tr.to}
           className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-50"
           disabled={anyPending}
-          onClick={() => transitionMutation.mutate(tr.to)}
+          onClick={() => {
+            if (tr.warning && !window.confirm(tr.warning)) return
+            transitionMutation.mutate(tr.to)
+          }}
         >
           {transitionMutation.isPending && transitionMutation.variables === tr.to
             ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -133,7 +136,7 @@ function BatchDetailPanel({ ids }: { ids: string[] }) {
   const loading = results.some((r) => r.isLoading)
   const tickets = results.map((r) => r.data).filter(Boolean) as TicketDetail[]
 
-  const commonTransitions: { to: string; label: string }[] = tickets.length === 0
+  const commonTransitions: { to: string; label: string; warning?: string }[] = tickets.length === 0
     ? []
     : tickets[0].valid_transitions.filter((tr) =>
         tickets.every((t) => t.valid_transitions.some((vt) => vt.to === tr.to)),
@@ -207,7 +210,10 @@ function BatchDetailPanel({ ids }: { ids: string[] }) {
             key={tr.to}
             className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-50"
             disabled={batchPending}
-            onClick={() => batchTransitionMutation.mutate(tr.to)}
+            onClick={() => {
+              if (tr.warning && !window.confirm(tr.warning)) return
+              batchTransitionMutation.mutate(tr.to)
+            }}
           >
             {batchTransitionMutation.isPending && batchTransitionMutation.variables === tr.to
               ? <Loader2 className="w-3 h-3 animate-spin" />
