@@ -31,7 +31,7 @@ Init-flow changes (prompting for username, writing `local.toml` during init) are
 
 ### Acceptance criteria
 
-- [ ] `ProjectConfig` has a `collaborators: Vec<String>` field (default: empty) that parses from `[project] collaborators = ["alice", "bob"]` in `.apm/config.toml`
+- [x] `ProjectConfig` has a `collaborators: Vec<String>` field (default: empty) that parses from `[project] collaborators = ["alice", "bob"]` in `.apm/config.toml`
 - [ ] The existing `LocalConfig` struct (which already has `workers: LocalWorkersOverride`) gains a `username: Option<String>` field that deserializes from `.apm/local.toml`
 - [ ] `resolve_identity(repo_root)` returns the `username` from `.apm/local.toml` when present and non-empty, and returns `"unassigned"` otherwise
 - [ ] `apm new` sets `author` to the value returned by `resolve_identity` instead of `APM_AGENT_NAME`
