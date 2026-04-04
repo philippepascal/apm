@@ -29,18 +29,18 @@ apm-server itself is not changed — it continues to serve plain HTTP on localho
 
 ### Acceptance criteria
 
-- [ ] `docker build -t apm-proxy apm-proxy/` completes without error from repo root
-- [ ] Container started with `-e DOMAIN=<host> -e EMAIL=<addr> -p 80:80 -p 443:443` binds nginx on ports 80 and 443
-- [ ] Port 80 redirects all non-ACME HTTP traffic to `https://$DOMAIN/`
-- [ ] HTTPS traffic on port 443 is proxied to `http://host.docker.internal:3000` by default
-- [ ] Setting `-e UPSTREAM=<url>` overrides the proxy target (e.g. `http://192.168.1.10:3000` for Linux hosts where `host.docker.internal` is unavailable)
-- [ ] Setting `-e TLS_MODE=self-signed` generates a self-signed cert at startup; the container starts without requiring `EMAIL`
-- [ ] With default `TLS_MODE=letsencrypt`, certbot obtains a Let's Encrypt cert for `$DOMAIN` using `$EMAIL` before nginx begins serving HTTPS traffic
-- [ ] An ACME challenge directory (`/.well-known/acme-challenge/`) is served over HTTP, enabling webroot-based cert renewal without nginx downtime
-- [ ] A background renewal loop runs every 12 hours; nginx reloads automatically after a successful `certbot renew`
-- [ ] nginx forwards `Upgrade` and `Connection` headers, enabling WebSocket connections through the proxy
-- [ ] `proxy_buffering off` is set for the proxy location, enabling Server-Sent Events (SSE) streams used by apm-ui
-- [ ] Cert volume `/etc/letsencrypt` can be mounted to persist certificates across container restarts
+- [x] `docker build -t apm-proxy apm-proxy/` completes without error from repo root
+- [x] Container started with `-e DOMAIN=<host> -e EMAIL=<addr> -p 80:80 -p 443:443` binds nginx on ports 80 and 443
+- [x] Port 80 redirects all non-ACME HTTP traffic to `https://$DOMAIN/`
+- [x] HTTPS traffic on port 443 is proxied to `http://host.docker.internal:3000` by default
+- [x] Setting `-e UPSTREAM=<url>` overrides the proxy target (e.g. `http://192.168.1.10:3000` for Linux hosts where `host.docker.internal` is unavailable)
+- [x] Setting `-e TLS_MODE=self-signed` generates a self-signed cert at startup; the container starts without requiring `EMAIL`
+- [x] With default `TLS_MODE=letsencrypt`, certbot obtains a Let's Encrypt cert for `$DOMAIN` using `$EMAIL` before nginx begins serving HTTPS traffic
+- [x] An ACME challenge directory (`/.well-known/acme-challenge/`) is served over HTTP, enabling webroot-based cert renewal without nginx downtime
+- [x] A background renewal loop runs every 12 hours; nginx reloads automatically after a successful `certbot renew`
+- [x] nginx forwards `Upgrade` and `Connection` headers, enabling WebSocket connections through the proxy
+- [x] `proxy_buffering off` is set for the proxy location, enabling Server-Sent Events (SSE) streams used by apm-ui
+- [x] Cert volume `/etc/letsencrypt` can be mounted to persist certificates across container restarts
 
 ### Out of scope
 
