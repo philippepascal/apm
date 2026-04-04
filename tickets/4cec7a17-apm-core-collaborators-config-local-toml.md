@@ -36,7 +36,7 @@ Init-flow changes (prompting for username, writing `local.toml` during init) are
 - [x] `resolve_identity(repo_root)` returns the `username` from `.apm/local.toml` when present and non-empty, and returns `"unassigned"` otherwise
 - [x] `apm new` sets `author` to the value returned by `resolve_identity` instead of `APM_AGENT_NAME`
 - [x] Existing ticket files with `agent = "..."` in frontmatter parse without error; new tickets written by `apm` do not include an `agent` field
-- [ ] `ensure_gitignore` entries include `.apm/sessions.json` and `.apm/credentials.json`
+- [x] `ensure_gitignore` entries include `.apm/sessions.json` and `.apm/credentials.json`
 
 ### Out of scope
 
