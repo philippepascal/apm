@@ -1312,6 +1312,129 @@ async fn register_complete_handler(
         .into_response()
 }
 
+async fn login_page_handler() -> Response {
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        include_str!("login.html"),
+    )
+        .into_response()
+}
+
+#[derive(serde::Deserialize)]
+struct LoginChallengeRequest {
+    username: String,
+}
+
+#[derive(serde::Serialize)]
+struct LoginChallengeResponse {
+    login_id: String,
+    #[serde(rename = "publicKey")]
+    public_key: serde_json::Value,
+}
+
+async fn login_challenge_handler(
+    State(state): State<Arc<AppState>>,
+    body: axum::body::Bytes,
+) -> Response {
+    let req: LoginChallengeRequest = match serde_json::from_slice(&body) {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response(),
+    };
+    if req.username.is_empty() {
+        return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response();
+    }
+    let credentials = match state.credential_store.get(&req.username) {
+        Some(c) => c,
+        None => return (StatusCode::BAD_REQUEST, "no credentials for user").into_response(),
+    };
+    let (rcr, passkey_auth) = match state
+        .webauthn_state
+        .webauthn
+        .start_passkey_authentication(&credentials)
+    {
+        Ok(pair) => pair,
+        Err(e) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                format!("webauthn error: {e:?}"),
+            )
+                .into_response()
+        }
+    };
+    let login_id = auth::generate_token();
+    {
+        let mut pending = state.webauthn_state.pending_auth.lock().unwrap();
+        pending.insert(
+            login_id.clone(),
+            webauthn_state::AuthenticationSession {
+                username: req.username,
+                passkey_auth,
+                created_at: std::time::Instant::now(),
+            },
+        );
+    }
+    let public_key = match serde_json::to_value(&rcr.public_key) {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("serialization error: {e}"),
+            )
+                .into_response()
+        }
+    };
+    Json(LoginChallengeResponse { login_id, public_key }).into_response()
+}
+
+#[derive(serde::Deserialize)]
+struct LoginCompleteRequest {
+    login_id: String,
+    response: webauthn_rs::prelude::PublicKeyCredential,
+}
+
+async fn login_complete_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<LoginCompleteRequest>,
+) -> Response {
+    let session = {
+        let mut pending = state.webauthn_state.pending_auth.lock().unwrap();
+        pending.remove(&req.login_id)
+    };
+    let session = match session {
+        Some(s) => s,
+        None => return (StatusCode::BAD_REQUEST, "unknown login_id").into_response(),
+    };
+    if session.created_at.elapsed() >= std::time::Duration::from_secs(300) {
+        return (StatusCode::BAD_REQUEST, "login session expired").into_response();
+    }
+    let credentials = match state.credential_store.get(&session.username) {
+        Some(c) => c,
+        None => return (StatusCode::BAD_REQUEST, "no credentials for user").into_response(),
+    };
+    let _ = credentials;
+    let auth_result = match state
+        .webauthn_state
+        .webauthn
+        .finish_passkey_authentication(&req.response, &session.passkey_auth)
+    {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::BAD_REQUEST, "invalid WebAuthn response").into_response(),
+    };
+    state.credential_store.update_credential(&session.username, &auth_result);
+    let token = auth::generate_token();
+    state.session_store.insert(token.clone(), session.username);
+    let cookie = format!(
+        "__Host-apm-session={token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
+    );
+    (
+        StatusCode::OK,
+        [(axum::http::header::SET_COOKIE, cookie)],
+        Json(serde_json::json!({"status": "ok"})),
+    )
+        .into_response()
+}
+
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
@@ -1360,6 +1483,9 @@ fn build_app(root: PathBuf) -> Router {
         .route("/register", get(register_page_handler))
         .route("/api/auth/register/challenge", post(register_challenge_handler))
         .route("/api/auth/register/complete", post(register_complete_handler))
+        .route("/login", get(login_page_handler))
+        .route("/api/auth/login/challenge", post(login_challenge_handler))
+        .route("/api/auth/login/complete", post(login_complete_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -2945,6 +3071,127 @@ label = "In Progress"
                 Request::builder()
                     .method("POST")
                     .uri("/api/auth/register/complete")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    fn build_app_for_login_tests(
+        session_store: auth::SessionStore,
+        credential_store: credential_store::CredentialStore,
+    ) -> Router {
+        let state = Arc::new(AppState {
+            source: TicketSource::InMemory(vec![]),
+            work_engine: work::new_engine_state(),
+            log_file: None,
+            max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+            otp_store: auth::OtpStore::new(),
+            session_store,
+            webauthn_state: default_webauthn_state(),
+            credential_store,
+        });
+        Router::new()
+            .route("/login", get(login_page_handler))
+            .route("/api/auth/login/challenge", post(login_challenge_handler))
+            .route("/api/auth/login/complete", post(login_complete_handler))
+            .route("/api/me", get(me_handler))
+            .with_state(state)
+    }
+
+    #[tokio::test]
+    async fn login_page_returns_200_html() {
+        let app = build_app_for_login_tests(
+            auth::SessionStore::load(PathBuf::new()),
+            credential_store::CredentialStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/login")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let ct = response.headers().get("content-type").unwrap().to_str().unwrap();
+        assert!(ct.contains("text/html"), "unexpected content-type: {ct}");
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let html = std::str::from_utf8(&bytes).unwrap();
+        assert!(html.contains("username"), "expected username field in HTML");
+        assert!(html.contains("Sign in"), "expected sign-in button in HTML");
+    }
+
+    #[tokio::test]
+    async fn login_challenge_malformed_body_returns_400() {
+        let app = build_app_for_login_tests(
+            auth::SessionStore::load(PathBuf::new()),
+            credential_store::CredentialStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/login/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(b"not json".to_vec()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn login_challenge_unknown_user_returns_400() {
+        let app = build_app_for_login_tests(
+            auth::SessionStore::load(PathBuf::new()),
+            credential_store::CredentialStore::load(PathBuf::new()),
+        );
+        let body = serde_json::json!({"username": "nobody"});
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/login/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn login_complete_unknown_login_id_returns_400() {
+        let app = build_app_for_login_tests(
+            auth::SessionStore::load(PathBuf::new()),
+            credential_store::CredentialStore::load(PathBuf::new()),
+        );
+        let body = serde_json::json!({
+            "login_id": "nonexistent",
+            "response": {
+                "id": "dGVzdA",
+                "rawId": "dGVzdA",
+                "type": "public-key",
+                "response": {
+                    "clientDataJSON": "dGVzdA",
+                    "authenticatorData": "dGVzdA",
+                    "signature": "dGVzdA",
+                    "userHandle": null
+                }
+            }
+        });
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/login/complete")
                     .header("content-type", "application/json")
                     .body(Body::from(serde_json::to_vec(&body).unwrap()))
                     .unwrap(),
