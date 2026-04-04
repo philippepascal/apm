@@ -1,14 +1,14 @@
 +++
 id = "42f4b3ba"
 title = "Add owner field to ticket frontmatter"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
 author = "apm"
 branch = "ticket/42f4b3ba-add-owner-field-to-ticket-frontmatter"
 created_at = "2026-04-04T06:28:01.284791Z"
-updated_at = "2026-04-04T07:45:41.069123Z"
+updated_at = "2026-04-04T07:47:18.280068Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
@@ -83,3 +83,4 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 | 2026-04-04T06:45Z | in_design | specd | claude-0404-0642-spec1 |
 | 2026-04-04T07:14Z | specd | ammend | apm |
 | 2026-04-04T07:45Z | ammend | in_design | philippepascal |
+| 2026-04-04T07:47Z | in_design | specd | claude-0404-0800-spec2 |
