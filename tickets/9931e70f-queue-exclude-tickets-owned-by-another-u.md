@@ -1,14 +1,14 @@
 +++
 id = "9931e70f"
 title = "Queue: exclude tickets owned by another user"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/9931e70f-queue-exclude-tickets-owned-by-another-u"
 created_at = "2026-04-04T06:28:25.839773Z"
-updated_at = "2026-04-04T06:30:20.102833Z"
+updated_at = "2026-04-04T06:35:26.548582Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["ffaad988"]
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-04T06:28Z | — | new | apm |
+| 2026-04-04T06:35Z | new | groomed | apm |
