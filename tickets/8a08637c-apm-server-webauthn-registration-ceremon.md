@@ -35,7 +35,7 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 - [x] `POST /api/auth/register/complete` with a valid `reg_id` and a correctly-signed WebAuthn response returns HTTP 200 and sets a `__Host-apm-session` session cookie
 - [x] `POST /api/auth/register/complete` with an unknown `reg_id` returns HTTP 400
 - [x] `POST /api/auth/register/complete` with a tampered or structurally invalid WebAuthn response returns HTTP 400
-- [ ] After successful registration, `GET /api/me` with the issued session cookie returns `{"username": "alice"}`
+- [x] After successful registration, `GET /api/me` with the issued session cookie returns `{"username": "alice"}`
 - [ ] Using the same OTP a second time (after it was consumed during a prior challenge call) returns HTTP 400
 - [ ] Two separate devices can each register a passkey for the same username (two `Passkey` entries stored under that username in the credential store)
 - [ ] Registered credentials survive a server restart: credential data is persisted to `.apm/credentials.json` and reloaded at startup
