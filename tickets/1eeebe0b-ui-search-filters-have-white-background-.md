@@ -3,12 +3,12 @@ id = "1eeebe0b"
 title = "UI search filters have white background, change to dark consistent with rest of UI"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "apm-ui"
 branch = "ticket/1eeebe0b-ui-search-filters-have-white-background-"
 created_at = "2026-04-04T15:50:12.140675Z"
-updated_at = "2026-04-04T16:03:44.723739Z"
+updated_at = "2026-04-04T16:05:23.670502Z"
 +++
 
 ## Spec
