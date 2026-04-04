@@ -1,14 +1,14 @@
 +++
 id = "8f7dc4a3"
 title = "UI: wire owner filter on supervisor board and rename agent filter to owner"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 1
 risk = 1
 author = "apm"
 branch = "ticket/8f7dc4a3-ui-wire-owner-filter-on-supervisor-board"
 created_at = "2026-04-04T06:28:20.587222Z"
-updated_at = "2026-04-04T07:02:15.691946Z"
+updated_at = "2026-04-04T07:15:15.028444Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["2b7c4c97"]
@@ -91,3 +91,4 @@ Replace the `agentFilter !== null` reference with `ownerFilter !== null`.
 | 2026-04-04T06:35Z | new | groomed | apm |
 | 2026-04-04T06:59Z | groomed | in_design | philippepascal |
 | 2026-04-04T07:02Z | in_design | specd | claude-0403-0700-b2e4 |
+| 2026-04-04T07:15Z | specd | ammend | apm |
