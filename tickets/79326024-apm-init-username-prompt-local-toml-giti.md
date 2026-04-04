@@ -27,7 +27,7 @@ Ticket #4cec7a17 (dependency) adds the `LocalConfig` struct, the `collaborators`
 
 ### Acceptance criteria
 
-- [ ] After `apm init` in an interactive TTY, `.apm/local.toml` is created containing `username = "<entered-value>"`
+- [x] After `apm init` in an interactive TTY, `.apm/local.toml` is created containing `username = "<entered-value>"`
 - [ ] After `apm init` in a non-interactive environment (no TTY), `.apm/local.toml` is not created
 - [ ] After `apm init` in a TTY on a fresh project (config.toml not yet written), `.apm/config.toml` `[project]` section contains `collaborators = ["<username>"]`
 - [ ] After `apm init` in a non-TTY on a fresh project, `collaborators` in the written config defaults to an empty array `[]` (field is present but empty)
