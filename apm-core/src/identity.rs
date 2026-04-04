@@ -18,8 +18,10 @@ pub fn resolve_current_user(root: &Path) -> String {
     }
     // Fall back to GitHub identity if git_host is configured
     if let Ok(cfg) = crate::config::Config::load(root) {
-        if let Some(login) = crate::config::try_github_username(&cfg.git_host) {
-            return login;
+        if cfg.git_host.provider.as_deref() == Some("github") {
+            if let Some(login) = crate::github::gh_username() {
+                return login;
+            }
         }
     }
     "apm".to_string()

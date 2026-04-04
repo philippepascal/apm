@@ -351,21 +351,7 @@ fn effective_github_token(local: &LocalConfig, git_host: &GitHostConfig) -> Opti
             }
         }
     }
-    if let Ok(t) = std::env::var("GITHUB_TOKEN") {
-        if !t.is_empty() {
-            return Some(t);
-        }
-    }
-    // Fall back to gh CLI credential store
-    std::process::Command::new("gh")
-        .args(["auth", "token"])
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| {
-            let t = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            if t.is_empty() { None } else { Some(t) }
-        })
+    std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty())
 }
 
 pub fn resolve_identity(repo_root: &Path) -> String {
@@ -382,6 +368,9 @@ pub fn resolve_identity(repo_root: &Path) -> String {
 
     let git_host = config.as_ref().map(|c| &c.git_host).cloned().unwrap_or_default();
     if git_host.provider.as_deref() == Some("github") {
+        if let Some(login) = crate::github::gh_username() {
+            return login;
+        }
         if let Some(token) = effective_github_token(&local, &git_host) {
             match crate::github::fetch_authenticated_user(&token) {
                 Ok(login) => return login,
@@ -401,6 +390,9 @@ pub fn resolve_identity(repo_root: &Path) -> String {
 pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     if git_host.provider.as_deref() != Some("github") {
         return None;
+    }
+    if let Some(login) = crate::github::gh_username() {
+        return Some(login);
     }
     let local = LocalConfig::default();
     let token = effective_github_token(&local, git_host)?;
