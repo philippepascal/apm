@@ -1,14 +1,14 @@
 +++
 id = "717f9b6b"
 title = "UI filter error"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm-ui"
 branch = "ticket/717f9b6b-ui-filter-error"
 created_at = "2026-04-04T16:05:39.699619Z"
-updated_at = "2026-04-04T16:39:37.231572Z"
+updated_at = "2026-04-04T16:40:07.217530Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-04T16:05Z | — | new | apm-ui |
 | 2026-04-04T16:39Z | new | groomed | apm |
+| 2026-04-04T16:40Z | groomed | in_design | philippepascal |
