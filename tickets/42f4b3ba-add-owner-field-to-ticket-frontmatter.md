@@ -21,10 +21,10 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 
 ### Acceptance criteria
 
-- [ ] `Frontmatter` has an `owner` field that round-trips through TOML parse/serialize
-- [ ] `apm set <id> owner <name>` sets the `owner` field
-- [ ] `apm set <id> owner -` clears the `owner` field
-- [ ] Unit tests cover the above three behaviours
+- [x] `Frontmatter` has an `owner` field that round-trips through TOML parse/serialize
+- [x] `apm set <id> owner <name>` sets the `owner` field
+- [x] `apm set <id> owner -` clears the `owner` field
+- [x] Unit tests cover the above three behaviours
 
 ### Out of scope
 
