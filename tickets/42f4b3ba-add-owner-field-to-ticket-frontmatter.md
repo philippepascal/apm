@@ -41,47 +41,23 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 
 **apm-core/src/ticket.rs**
 
-1. Add field to Frontmatter (after supervisor):
-   Add `pub agent: Option<String>` with `skip_serializing_if = "Option::is_none"`.
-2. Update set_field: add arm for "agent" -- set to None when value is `-`, otherwise Some(value).
-3. Update handoff: read `ticket.frontmatter.agent.clone().unwrap_or_else(|| "unknown".to_string())` as the from value, then set `ticket.frontmatter.agent = Some(new_agent.to_string())`.
-4. Update list_filtered: add `agent_filter: Option<&str>` parameter and filter on `fm.agent`.
+1. Add field to `Frontmatter` (after `supervisor`):
+   `pub owner: Option<String>` with `#[serde(skip_serializing_if = "Option::is_none")]`.
+2. Update `set_field`: add arm for `"owner"` — set to `None` when value is `"-"`, otherwise `Some(value.to_string())`.
 
-**apm-core/src/start.rs**
+**Tests** (inline in apm-core/src/ticket.rs or apm-core/tests/)
 
-In `start::run`, after setting `t.frontmatter.state`, add:
-`t.frontmatter.agent = Some(agent_name.to_string());`
-
-**apm-core/src/state.rs**
-
-In `transition`, after resolving `actor`, when the target state is "in_design" set:
-`t.frontmatter.agent = Some(actor.clone());`
-
-**apm/src/cmd/list.rs + apm/src/main.rs**
-
-- Add `agent: Option<String>` parameter to `list::run`
-- Add `--agent` clap flag in `apm/src/main.rs` and pass through to `list_filtered`
-
-**apm-server/src/main.rs**
-
-- Add `agent: Option<String>` to `ListTicketsQuery`
-- After the existing `author` filter block, add an analogous block filtering by `params.agent`
-
-**Tests**
-
-- `list_filtered` with `agent_filter` in ticket.rs unit tests
-- `handoff` test verifying `fm.agent` is updated and history uses the old value (not "unknown")
-- `set_field` test for "agent" and "-"
-- Server tests `list_tickets_agent_filter` and `list_tickets_agent_field_in_response`
+- TOML round-trip: parse frontmatter containing `owner = "alice"`, verify `fm.owner == Some("alice")`, serialize, verify field present in output.
+- `set_field("owner", "alice")` → `fm.owner == Some("alice")`
+- `set_field("owner", "-")` → `fm.owner == None`
+- Frontmatter with no `owner` field deserializes without error (`fm.owner == None`).
 
 **Order**
 
-1. ticket.rs changes (Frontmatter + set_field + handoff + list_filtered)
-2. start.rs agent assignment on start
-3. state.rs agent assignment on in_design
-4. CLI list flag
-5. Server query param
-6. cargo test --workspace passes
+1. Add `owner` field to `Frontmatter`
+2. Add `set_field` arm
+3. Add tests
+4. `cargo test --workspace` passes
 
 ### Open questions
 
