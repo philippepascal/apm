@@ -125,6 +125,9 @@ Examples:
         /// Show only tickets authored by USERNAME
         #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
         author: Option<String>,
+        /// Show only tickets owned by USERNAME (owner field)
+        #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
+        owner: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -357,24 +360,22 @@ Examples:
         #[arg(long)]
         auto_close: bool,
     },
-    /// Take over a ticket from another agent
-    #[command(long_about = "Reassign a ticket to yourself (takeover scenario).
+    /// Assign a ticket to an owner
+    #[command(long_about = "Set the owner field on any ticket, regardless of its current state.
 
-Use this when a previous agent has crashed, gone away, or is otherwise
-unreachable and the ticket is stuck in in_progress or in_design.
+Use this to assign a ticket to a user or agent, or to clear the owner field.
 
-`apm take` sets the ticket's agent field to $APM_AGENT_NAME without
-changing the state. The ticket's branch and any existing worktree are left
-as-is — continue from wherever the previous agent left off.
-
-After taking over:
-  apm worktrees --add <id>   # provision/reuse the worktree
-  apm show <id>              # read history to understand prior work")]
-    Take {
+Examples:
+  apm assign 42 alice        # assign ticket 42 to alice
+  apm assign 42 -            # clear the owner field")]
+    Assign {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
         id: String,
-        /// Skip automatic git fetch before reading ticket data
+        /// Username to assign (use \"-\" to clear)
+        #[arg(value_name = "USERNAME")]
+        username: String,
+        /// Skip automatic git fetch/push
         #[arg(long)]
         no_aggressive: bool,
     },
@@ -727,7 +728,7 @@ fn main() -> Result<()> {
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
-        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author),
+        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author, owner } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author, owner),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
@@ -745,7 +746,7 @@ fn main() -> Result<()> {
             }
         }
         Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
-        Command::Take { id, no_aggressive } => cmd::take::run(&root, &id, no_aggressive),
+        Command::Assign { id, username, no_aggressive } => cmd::assign::run(&root, &id, &username, no_aggressive),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
         Command::Verify { fix, no_aggressive } => cmd::verify::run(&root, fix, no_aggressive),

@@ -99,9 +99,9 @@ export default function TicketCard({ ticket, columnTicketIds, showAuthor }: Tick
         <span className="text-[10px] text-gray-400 font-mono">
           {ticket.id.slice(0, 8)}
         </span>
-        {ticket.agent && (
+        {ticket.owner && (
           <span className="text-[10px] text-gray-400 truncate">
-            {ticket.agent}
+            {ticket.owner}
           </span>
         )}
       </div>

@@ -1,14 +1,14 @@
 +++
 id = "1eeebe0b"
 title = "UI search filters have white background, change to dark consistent with rest of UI"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
 author = "apm-ui"
 branch = "ticket/1eeebe0b-ui-search-filters-have-white-background-"
 created_at = "2026-04-04T15:50:12.140675Z"
-updated_at = "2026-04-04T17:35:40.177226Z"
+updated_at = "2026-04-04T17:40:36.185663Z"
 +++
 
 ## Spec
@@ -80,3 +80,4 @@ No logic changes. No new files. No dependency changes.
 | 2026-04-04T17:26Z | specd | ready | apm |
 | 2026-04-04T17:33Z | ready | in_progress | philippepascal |
 | 2026-04-04T17:35Z | in_progress | implemented | claude-0404-1740-b7f2 |
+| 2026-04-04T17:40Z | implemented | closed | apm-sync |
