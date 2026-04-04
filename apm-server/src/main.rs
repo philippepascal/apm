@@ -496,6 +496,7 @@ async fn sync_handler(
 struct ListTicketsQuery {
     include_closed: Option<bool>,
     author: Option<String>,
+    owner: Option<String>,
 }
 
 async fn list_tickets(
@@ -530,6 +531,13 @@ async fn list_tickets(
             let a = t.frontmatter.author.as_deref().unwrap_or("unassigned");
             a == author.as_str()
         });
+    }
+    if let Some(ref owner) = params.owner {
+        if owner == "unassigned" {
+            tickets.retain(|t| t.frontmatter.owner.is_none());
+        } else {
+            tickets.retain(|t| t.frontmatter.owner.as_deref() == Some(owner.as_str()));
+        }
     }
     let resolved: std::collections::HashSet<&str> =
         resolved_ids.iter().map(|s| s.as_str()).collect();
@@ -3328,5 +3336,93 @@ label = "In Progress"
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["revoked"], 2);
+    }
+
+    #[tokio::test]
+    async fn list_tickets_owner_field_present() {
+        let mut ticket = fake_ticket("aaaabbbb-owner-present", "Owner present");
+        ticket.frontmatter.owner = Some("alice".to_string());
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr[0]["owner"], "alice");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_owner_field_absent() {
+        let ticket = fake_ticket("bbbbcccc-owner-absent", "Owner absent");
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert!(arr[0].get("owner").is_none() || arr[0]["owner"].is_null());
+    }
+
+    #[tokio::test]
+    async fn list_tickets_owner_filter() {
+        let mut alice_ticket = fake_ticket("ccccdddd-owner-alice", "Alice ticket");
+        alice_ticket.frontmatter.owner = Some("alice".to_string());
+        let mut bob_ticket = fake_ticket("ddddeee0-owner-bob", "Bob ticket");
+        bob_ticket.frontmatter.owner = Some("bob".to_string());
+        let app = build_app_with_tickets(vec![alice_ticket, bob_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?owner=alice")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"], "ccccdddd-owner-alice");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_owner_unassigned_filter() {
+        let mut owned_ticket = fake_ticket("eeeeffff-owner-set", "Owned ticket");
+        owned_ticket.frontmatter.owner = Some("alice".to_string());
+        let unowned_ticket = fake_ticket("ffff0000-owner-none", "Unowned ticket");
+        let app = build_app_with_tickets(vec![owned_ticket, unowned_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?owner=unassigned")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"], "ffff0000-owner-none");
     }
 }
