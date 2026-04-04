@@ -192,6 +192,8 @@ pub struct TicketsConfig {
     pub dir: PathBuf,
     #[serde(default)]
     pub sections: Vec<String>,
+    #[serde(default)]
+    pub archive_dir: Option<PathBuf>,
 }
 
 impl Default for TicketsConfig {
@@ -199,6 +201,7 @@ impl Default for TicketsConfig {
         Self {
             dir: PathBuf::from("tickets"),
             sections: Vec::new(),
+            archive_dir: None,
         }
     }
 }
@@ -973,5 +976,35 @@ repo = "owner/name"
         // (if it is, the test would make a real API call — so we just check fallback works)
         // We can't guarantee env is clean, so we only test the no-token path
         let _ = resolve_collaborators(&config, &local);
+    }
+
+    #[test]
+    fn tickets_archive_dir_parses() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+archive_dir = "archive/tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(
+            config.tickets.archive_dir.as_deref(),
+            Some(std::path::Path::new("archive/tickets"))
+        );
+    }
+
+    #[test]
+    fn tickets_archive_dir_absent_defaults_none() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.tickets.archive_dir.is_none());
     }
 }

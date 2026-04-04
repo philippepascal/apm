@@ -1,4 +1,5 @@
 pub mod cmd {
+    pub mod archive;
     pub mod agents;
     pub mod close;
     pub mod epic;
