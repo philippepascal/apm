@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Once an `owner` field exists on tickets, it needs to be set and cleared at the right moments. Today `apm start` sets the `agent` name in the ticket's History section but nothing in frontmatter. When a ticket moves back to `ready` or `groomed` (e.g. after being blocked and unblocked by a supervisor), the previous owner's name lingers — there is no mechanism to release ownership so another user or worker can pick it up. The field must follow the ticket lifecycle: set on claim (`apm start`, `apm state in_design`), preserved through active states (`in_progress`, `in_design`), and cleared when the ticket returns to a pool state (`ready`, `groomed`, `ammend`).
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
