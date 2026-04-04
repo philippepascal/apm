@@ -74,7 +74,7 @@ The existing `ensure_gitignore_creates_file` test (line 620) already checks for 
 
 ### Amendment requests
 
-- [ ] Add `SatisfiesDeps` enum to the list of types that need `pub(crate)` visibility in `config.rs` — the `default_workflow_toml_is_valid` test asserts against `SatisfiesDeps::Bool(false)` which won't compile if the enum is private
+- [x] Add `SatisfiesDeps` enum to the list of types that need `pub(crate)` visibility in `config.rs` — the `default_workflow_toml_is_valid` test asserts against `SatisfiesDeps::Bool(false)` which won't compile if the enum is private
 
 ### Code review
 
