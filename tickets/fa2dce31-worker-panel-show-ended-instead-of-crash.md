@@ -32,7 +32,11 @@ The fix must be **config-based** — a new boolean field on state definitions in
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- UI presentation changes beyond the status string (colour coding, icons, etc.)
+- Adding or renaming workflow states
+- Changing the meaning of "running" status
+- Filtering or hiding dead workers from the panel
+- Any changes to how the pid file is written or read
 
 ### Approach
 
