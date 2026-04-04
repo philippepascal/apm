@@ -3,12 +3,12 @@ id = "6903a8d1"
 title = "worker status bug"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 branch = "ticket/6903a8d1-worker-status-bug"
 created_at = "2026-04-04T16:07:08.053019Z"
-updated_at = "2026-04-04T16:43:44.752180Z"
+updated_at = "2026-04-04T16:46:11.823928Z"
 +++
 
 ## Spec
