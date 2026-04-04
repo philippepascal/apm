@@ -27,7 +27,7 @@ External devices (phone, remote laptop) are the primary audience. Localhost requ
 
 ### Acceptance criteria
 
-- [ ] `GET /login` returns HTTP 200 with Content-Type `text/html` and an HTML page containing a username input field and a sign-in button
+- [x] `GET /login` returns HTTP 200 with Content-Type `text/html` and an HTML page containing a username input field and a sign-in button
 - [ ] `POST /api/auth/login/challenge` with `{"username": "alice"}` where alice has at least one registered credential returns HTTP 200 and a JSON body containing a `login_id` string and a `publicKey` object with `challenge` and `allowCredentials` fields
 - [ ] `POST /api/auth/login/challenge` with a username that has no registered credentials returns HTTP 400
 - [ ] `POST /api/auth/login/challenge` with a missing or malformed `username` field returns HTTP 400
