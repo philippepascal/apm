@@ -1,14 +1,14 @@
 +++
 id = "2b7c4c97"
 title = "apm-server: expose owner in ticket API and add owner query param"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "apm"
 branch = "ticket/2b7c4c97-apm-server-expose-owner-in-ticket-api-an"
 created_at = "2026-04-04T06:28:16.243562Z"
-updated_at = "2026-04-04T06:58:46.936590Z"
+updated_at = "2026-04-04T06:58:53.836947Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["42f4b3ba"]
@@ -82,3 +82,4 @@ No changes needed to `TicketResponse` — `Frontmatter` is already `#[serde(flat
 | 2026-04-04T06:28Z | — | new | apm |
 | 2026-04-04T06:35Z | new | groomed | apm |
 | 2026-04-04T06:55Z | groomed | in_design | philippepascal |
+| 2026-04-04T06:58Z | in_design | specd | claude-0403-0700-b2c7 |
