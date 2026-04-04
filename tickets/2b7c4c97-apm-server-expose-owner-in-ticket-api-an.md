@@ -44,24 +44,24 @@ All changes are in `apm-server/src/main.rs`.
 
 **1. Extend `ListTicketsQuery` (around line 496)**
 
-Add `agent: Option<String>` alongside the existing `author` field.
+Add `owner: Option<String>` alongside the existing `author` field.
 
-**2. Add agent filter in `list_tickets` (after the author filter block, around line 528)**
+**2. Add owner filter in `list_tickets` (after the author filter block, around line 528)**
 
-Mirror the existing `author` filter pattern. If `params.agent == "unassigned"`, retain only tickets where `fm.agent.is_none()`. Otherwise retain tickets where `fm.agent.as_deref() == Some(agent_name)`.
+Mirror the existing `author` filter pattern. If `params.owner == "unassigned"`, retain only tickets where `fm.owner.is_none()`. Otherwise retain tickets where `fm.owner.as_deref() == Some(owner_name)`.
 
-No changes needed to `TicketResponse` — `Frontmatter` is already `#[serde(flatten)]`-ed, so the `agent` field (added by #42f4b3ba with `skip_serializing_if = "Option::is_none"`) will appear in the response automatically when set.
+No changes needed to `TicketResponse` — `Frontmatter` is already `#[serde(flatten)]`-ed, so the `owner` field (added by #42f4b3ba with `skip_serializing_if = "Option::is_none"`) will appear in the response automatically when set.
 
 **3. Tests (add to the `#[cfg(test)]` block)**
 
-- `list_tickets_agent_field_present`: ticket with `agent = Some("alice")` — response JSON contains `"agent": "alice"`
-- `list_tickets_agent_field_absent`: ticket with `agent = None` — response JSON has no `agent` key
-- `list_tickets_agent_filter`: two tickets with different agents — `?agent=alice` returns only alice's ticket
-- `list_tickets_agent_unassigned_filter`: one ticket with agent, one without — `?agent=unassigned` returns only the unassigned one
+- `list_tickets_owner_field_present`: ticket with `owner = Some("alice")` — response JSON contains `"owner": "alice"`
+- `list_tickets_owner_field_absent`: ticket with `owner = None` — response JSON has no `owner` key
+- `list_tickets_owner_filter`: two tickets with different owners — `?owner=alice` returns only alice's ticket
+- `list_tickets_owner_unassigned_filter`: one ticket with owner, one without — `?owner=unassigned` returns only the unassigned one
 
 **Order**
 
-1. Add `agent` to `ListTicketsQuery`
+1. Add `owner` to `ListTicketsQuery`
 2. Add filter block in `list_tickets`
 3. Add four tests
 4. `cargo test --workspace` passes
