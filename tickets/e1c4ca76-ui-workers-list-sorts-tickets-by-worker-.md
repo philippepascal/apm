@@ -15,7 +15,9 @@ updated_at = "2026-04-04T06:40:49.124964Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The Workers list in the UI (WorkerActivityPanel.tsx) renders workers in the order returned by the API — currently unordered. When there are a mix of running, crashed, and ended workers, active workers can appear below idle ones, making it hard to quickly spot what is running.
+
+The desired behaviour is that running workers always appear at the top, and crashed/ended workers are pushed to the bottom. This improves at-a-glance status awareness for the supervisor.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
