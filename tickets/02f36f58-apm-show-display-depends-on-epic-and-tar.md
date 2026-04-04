@@ -15,7 +15,9 @@ updated_at = "2026-04-04T06:36:51.413654Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When running `apm show <id>`, the output header displays `state`, `priority`, `effort`, `risk`, and `branch` — but three optional frontmatter fields are silently omitted: `epic`, `target_branch`, and `depends_on`.
+
+These fields are fully parsed and stored in the `Frontmatter` struct (see `apm-core/src/ticket.rs`), and they carry meaningful context: which epic a ticket belongs to, which branch it targets, and which other tickets must complete before it can start. Without them in `apm show`, an agent or developer reading a ticket must look at the raw file to discover dependencies or epic membership — defeating the purpose of the command.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
