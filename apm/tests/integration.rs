@@ -4449,6 +4449,144 @@ fn revoke_with_device_hint() {
     assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 1 session(s)."));
 }
 
+// --- archive ---
+
+fn setup_with_archive_dir() -> TempDir {
+    let dir = setup();
+    let p = dir.path();
+    // Append archive_dir to the [tickets] section in apm.toml.
+    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    let updated = toml.replace(
+        "[tickets]\ndir = \"tickets\"",
+        "[tickets]\ndir = \"tickets\"\narchive_dir = \"archive/tickets\"",
+    );
+    std::fs::write(p.join("apm.toml"), updated).unwrap();
+    dir
+}
+
+#[test]
+fn archive_no_archive_dir_errors() {
+    let dir = setup();
+    let result = apm::cmd::archive::run(dir.path(), false, None);
+    assert!(result.is_err());
+    let msg = format!("{}", result.unwrap_err());
+    assert!(msg.contains("archive_dir is not set"), "unexpected error: {msg}");
+}
+
+#[test]
+fn archive_moves_closed_ticket_to_archive_dir() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create and close a ticket (close merges to main).
+    apm::cmd::new::run(p, "Archive me".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "archive-me");
+    let id = find_ticket_id(p, "archive-me");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Verify the ticket file is on main before archive.
+    let rel = ticket_rel_path(&branch);
+    let files_before = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files_before.iter().any(|f| f == &rel), "ticket not on main before archive");
+
+    // Run archive.
+    apm::cmd::archive::run(p, false, None).unwrap();
+
+    // Ticket file should be gone from tickets/ on main.
+    let files_after = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap_or_default();
+    assert!(!files_after.iter().any(|f| f == &rel), "ticket still in tickets/ after archive");
+
+    // Ticket file should exist in archive/tickets/ on main.
+    let filename = std::path::Path::new(&rel).file_name().unwrap().to_str().unwrap();
+    let archive_path = format!("archive/tickets/{filename}");
+    let archive_files = apm_core::git::list_files_on_branch(p, "main", "archive/tickets").unwrap();
+    assert!(archive_files.iter().any(|f| f == &archive_path), "ticket not in archive/tickets/ after archive");
+}
+
+#[test]
+fn archive_show_finds_ticket_in_archive_after_branch_deleted() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create and close a ticket.
+    apm::cmd::new::run(p, "Show archived".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "show-archived");
+    let id = find_ticket_id(p, "show-archived");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Archive it.
+    apm::cmd::archive::run(p, false, None).unwrap();
+
+    // Delete the ticket branch (simulate apm clean --branches).
+    git(p, &["branch", "-D", &branch]);
+
+    // apm show should still succeed via the archive fallback.
+    apm::cmd::show::run(p, &id, true, false).unwrap();
+}
+
+#[test]
+fn archive_dry_run_does_not_move_files() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "Dry run me".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "dry-run-me");
+    let id = find_ticket_id(p, "dry-run-me");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Dry run should not move anything.
+    apm::cmd::archive::run(p, true, None).unwrap();
+
+    // Ticket file should still be in tickets/ on main.
+    let rel = ticket_rel_path(&branch);
+    let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files.iter().any(|f| f == &rel), "dry-run should not move ticket file");
+
+    // archive/tickets/ should not exist.
+    let archive_files = apm_core::git::list_files_on_branch(p, "main", "archive/tickets").unwrap_or_default();
+    assert!(archive_files.is_empty(), "dry-run should not create archive dir");
+}
+
+#[test]
+fn archive_skips_non_terminal_tickets_with_warning() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create a ticket in "new" state (non-terminal).
+    apm::cmd::new::run(p, "Non terminal".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "non-terminal");
+
+    // Put the ticket file on main manually (without closing) so it appears in tickets/ on main.
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(p, &branch, &rel);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::write(p.join(&rel), &content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "put non-terminal ticket on main"]);
+
+    // archive should not move it.
+    apm::cmd::archive::run(p, false, None).unwrap();
+
+    let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files.iter().any(|f| f == &rel), "non-terminal ticket should remain in tickets/");
+}
+
+#[test]
+fn archive_older_than_skips_recent_ticket() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "Recent ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "recent-ticket");
+    let id = find_ticket_id(p, "recent-ticket");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Use a 30-day threshold — a ticket created now is newer than 30 days ago, so skip it.
+    apm::cmd::archive::run(p, false, Some("30d".into())).unwrap();
+
+    let rel = ticket_rel_path(&branch);
+    let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files.iter().any(|f| f == &rel), "recent ticket should not be archived with --older-than 0d");
 // --- merge completion strategy: push to origin after merge ---
 
 fn merge_strategy_config_toml() -> &'static str {

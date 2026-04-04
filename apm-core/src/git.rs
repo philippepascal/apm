@@ -824,6 +824,97 @@ pub fn delete_remote_branch(root: &Path, branch: &str) -> Result<()> {
     Ok(())
 }
 
+/// Move files on a branch in a single commit.
+/// Each element of `moves` is (old_rel_path, new_rel_path, content).
+/// Writes each new file, stages it, then removes each old file via `git rm`.
+/// Uses the same permanent-worktree / temp-worktree pattern as commit_files_to_branch.
+pub fn move_files_on_branch(
+    root: &Path,
+    branch: &str,
+    moves: &[(&str, &str, &str)],
+    message: &str,
+) -> Result<()> {
+    if !has_commits(root) {
+        for (old, new, content) in moves {
+            let new_path = root.join(new);
+            if let Some(parent) = new_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&new_path, content)?;
+            let old_path = root.join(old);
+            let _ = std::fs::remove_file(&old_path);
+        }
+        return Ok(());
+    }
+
+    let do_moves = |wt: &Path| -> Result<()> {
+        for (old, new, content) in moves {
+            let new_path = wt.join(new);
+            if let Some(parent) = new_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&new_path, content)?;
+            run(wt, &["add", new])?;
+            run(wt, &["rm", "--force", "--quiet", old])?;
+        }
+        run(wt, &["commit", "-m", message])?;
+        Ok(())
+    };
+
+    if let Some(wt_path) = find_worktree_for_branch(root, branch) {
+        let remote_ref = format!("origin/{branch}");
+        if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+            let _ = run(&wt_path, &["merge", "--ff-only", &remote_ref]);
+        }
+        let result = do_moves(&wt_path);
+        if result.is_ok() {
+            crate::logger::log("move_files_on_branch", &format!("{branch} {message}"));
+        }
+        return result;
+    }
+
+    if current_branch(root).ok().as_deref() == Some(branch) {
+        let result = do_moves(root);
+        if result.is_ok() {
+            crate::logger::log("move_files_on_branch", &format!("{branch} {message}"));
+        }
+        return result;
+    }
+
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(0);
+    let wt_path = std::env::temp_dir().join(format!(
+        "apm-{}-{}-{}",
+        std::process::id(),
+        unique,
+        branch.replace('/', "-"),
+    ));
+
+    let has_remote = run(root, &["rev-parse", "--verify", &format!("refs/remotes/origin/{branch}")]).is_ok();
+    let has_local = run(root, &["rev-parse", "--verify", &format!("refs/heads/{branch}")]).is_ok();
+
+    if has_remote {
+        run(root, &["worktree", "add", "--detach", &wt_path.to_string_lossy(), &format!("origin/{branch}")])?;
+        let _ = run(&wt_path, &["checkout", "-B", branch]);
+    } else if has_local {
+        let sha = run(root, &["rev-parse", &format!("refs/heads/{branch}")])?;
+        run(root, &["worktree", "add", "--detach", &wt_path.to_string_lossy(), &sha])?;
+        let _ = run(&wt_path, &["checkout", "-B", branch]);
+    } else {
+        run(root, &["worktree", "add", &wt_path.to_string_lossy(), branch])?;
+    }
+
+    let result = do_moves(&wt_path);
+    let _ = run(root, &["worktree", "remove", "--force", &wt_path.to_string_lossy()]);
+    let _ = std::fs::remove_dir_all(&wt_path);
+    if result.is_ok() {
+        crate::logger::log("move_files_on_branch", &format!("{branch} {message}"));
+    }
+    result
+}
+
 pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str) -> Result<()> {
     let _ = run(root, &["fetch", "origin", default_branch]);
 
