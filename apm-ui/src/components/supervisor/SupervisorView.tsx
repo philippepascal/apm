@@ -49,6 +49,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
   const [agentFilter, setAgentFilter] = useState<string | null>(null)
+  const [authorFilter, setAuthorFilter] = useState<string | null>(null)
   const epicFilter = useLayoutStore((s) => s.epicFilter)
   const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
   const [showClosed, setShowClosed] = useState(false)
@@ -74,6 +75,17 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   })
 
   useEffect(() => {
+    fetch('/api/me')
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: { username: string }) => {
+        if (data.username && data.username !== 'unassigned') {
+          setAuthorFilter(data.username)
+        }
+      })
+      .catch(() => { /* leave authorFilter null — show all */ })
+  }, [])
+
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (!e.shiftKey || e.key !== 'S') return
       const target = e.target as Element | null
@@ -90,6 +102,14 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
       if (t.agent) agents.add(t.agent)
     }
     return Array.from(agents).sort()
+  }, [tickets])
+
+  const availableAuthors = useMemo(() => {
+    const authors = new Set<string>()
+    for (const t of tickets) {
+      if (t.author) authors.add(t.author)
+    }
+    return Array.from(authors).sort()
   }, [tickets])
 
   const visibleStates = useMemo(() => {
@@ -110,6 +130,9 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         if (epicFilter !== null) {
           filtered = filtered.filter((t) => t.epic === epicFilter)
         }
+        if (authorFilter !== null) {
+          filtered = filtered.filter((t) => t.author === authorFilter)
+        }
         if (query) {
           filtered = filtered.filter(
             (t) =>
@@ -120,9 +143,9 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         return [state, filtered]
       })
       .filter(([, group]) => group.length > 0)
-  }, [tickets, visibleStates, agentFilter, epicFilter, searchText])
+  }, [tickets, visibleStates, agentFilter, epicFilter, authorFilter, searchText])
 
-  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || epicFilter !== null || showClosed
+  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || epicFilter !== null || authorFilter !== null || showClosed
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
@@ -207,6 +230,16 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           ))}
         </select>
         <select
+          value={authorFilter ?? ''}
+          onChange={(e) => setAuthorFilter(e.target.value || null)}
+          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+        >
+          <option value="">All authors</option>
+          {availableAuthors.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+        <select
           value={epicFilter ?? ''}
           onChange={(e) => setEpicFilter(e.target.value || null)}
           className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -228,7 +261,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
       </div>
       <div className="flex-1 flex flex-row gap-4 overflow-x-auto p-3">
         {columns.map(([state, colTickets]) => (
-          <Swimlane key={state} state={state} tickets={colTickets} />
+          <Swimlane key={state} state={state} tickets={colTickets} showAuthor={authorFilter === null} />
         ))}
         {columns.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
