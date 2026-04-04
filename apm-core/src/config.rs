@@ -231,6 +231,8 @@ pub struct StateConfig {
     #[serde(default)]
     pub terminal: bool,
     #[serde(default)]
+    pub worker_end: bool,
+    #[serde(default)]
     pub satisfies_deps: SatisfiesDeps,
     #[serde(default)]
     pub dep_requires: Option<String>,
@@ -538,6 +540,27 @@ type = "qa"
     #[test]
     fn completion_strategy_default() {
         assert_eq!(CompletionStrategy::default(), CompletionStrategy::None);
+    }
+
+    #[test]
+    fn state_config_worker_end_parses_true() {
+        let toml = r#"
+id         = "specd"
+label      = "Specd"
+worker_end = true
+"#;
+        let s: StateConfig = toml::from_str(toml).unwrap();
+        assert!(s.worker_end);
+    }
+
+    #[test]
+    fn state_config_worker_end_defaults_false() {
+        let toml = r#"
+id    = "new"
+label = "New"
+"#;
+        let s: StateConfig = toml::from_str(toml).unwrap();
+        assert!(!s.worker_end);
     }
 
     #[test]
