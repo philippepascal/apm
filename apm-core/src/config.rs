@@ -52,12 +52,36 @@ pub struct ProviderConfig {
     pub type_: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct WorkersConfig {
     pub container: Option<String>,
     #[serde(default)]
     pub keychain: std::collections::HashMap<String, String>,
+    #[serde(default = "default_command")]
+    pub command: String,
+    #[serde(default = "default_args")]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
 }
+
+impl Default for WorkersConfig {
+    fn default() -> Self {
+        Self {
+            container: None,
+            keychain: std::collections::HashMap::new(),
+            command: default_command(),
+            args: default_args(),
+            model: None,
+            env: std::collections::HashMap::new(),
+        }
+    }
+}
+
+fn default_command() -> String { "claude".to_string() }
+fn default_args() -> Vec<String> { vec!["--print".to_string()] }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct WorkConfig {
@@ -122,6 +146,8 @@ pub struct ProjectConfig {
     pub description: String,
     #[serde(default = "default_branch_main")]
     pub default_branch: String,
+    #[serde(default)]
+    pub collaborators: Vec<String>,
 }
 
 fn default_branch_main() -> String {
@@ -152,6 +178,17 @@ pub struct WorkflowConfig {
     pub prioritization: PrioritizationConfig,
 }
 
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum SatisfiesDeps {
+    Bool(bool),
+    Tag(String),
+}
+
+impl Default for SatisfiesDeps {
+    fn default() -> Self { SatisfiesDeps::Bool(false) }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct StateConfig {
     pub id: String,
@@ -161,7 +198,9 @@ pub struct StateConfig {
     #[serde(default)]
     pub terminal: bool,
     #[serde(default)]
-    pub satisfies_deps: bool,
+    pub satisfies_deps: SatisfiesDeps,
+    #[serde(default)]
+    pub dep_requires: Option<String>,
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
     /// Who can actively pick up / act on tickets in this state.
@@ -249,6 +288,54 @@ impl Default for AgentsConfig {
     }
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalConfig {
+    #[serde(default)]
+    pub workers: LocalWorkersOverride,
+    #[serde(default)]
+    pub username: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct LocalWorkersOverride {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+}
+
+pub fn resolve_identity(repo_root: &Path) -> String {
+    let local_path = repo_root.join(".apm").join("local.toml");
+    if let Ok(contents) = std::fs::read_to_string(&local_path) {
+        if let Ok(local) = toml::from_str::<LocalConfig>(&contents) {
+            if let Some(ref u) = local.username {
+                if !u.is_empty() {
+                    return u.clone();
+                }
+            }
+        }
+    }
+    "unassigned".to_string()
+}
+
+impl WorkersConfig {
+    pub fn merge_local(&mut self, local: &LocalWorkersOverride) {
+        if let Some(ref cmd) = local.command {
+            self.command = cmd.clone();
+        }
+        if let Some(ref args) = local.args {
+            self.args = args.clone();
+        }
+        if let Some(ref model) = local.model {
+            self.model = Some(model.clone());
+        }
+        for (k, v) in &local.env {
+            self.env.insert(k.clone(), v.clone());
+        }
+    }
+}
+
 impl Config {
     /// States where `actor` can actively pick up / act on tickets.
     /// Matches "any" as a wildcard in addition to the literal actor name.
@@ -298,6 +385,15 @@ impl Config {
                 );
             }
             config.ticket = tk.ticket;
+        }
+
+        let local_path = apm_dir.join("local.toml");
+        if local_path.exists() {
+            let local_contents = std::fs::read_to_string(&local_path)
+                .with_context(|| format!("cannot read {}", local_path.display()))?;
+            let local: LocalConfig = toml::from_str(&local_contents)
+                .with_context(|| format!("cannot parse {}", local_path.display()))?;
+            config.workers.merge_local(&local.workers);
         }
 
         Ok(config)
@@ -452,6 +548,71 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
+        assert_eq!(config.workers.command, "claude");
+        assert_eq!(config.workers.args, vec!["--print"]);
+        assert!(config.workers.model.is_none());
+        assert!(config.workers.env.is_empty());
+    }
+
+    #[test]
+    fn workers_config_all_fields() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+command = "codex"
+args = ["--full-auto"]
+model = "o3"
+
+[workers.env]
+CUSTOM_VAR = "value"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.workers.command, "codex");
+        assert_eq!(config.workers.args, vec!["--full-auto"]);
+        assert_eq!(config.workers.model.as_deref(), Some("o3"));
+        assert_eq!(config.workers.env.get("CUSTOM_VAR").map(|s| s.as_str()), Some("value"));
+    }
+
+    #[test]
+    fn local_config_parses() {
+        let toml = r#"
+[workers]
+command = "aider"
+model = "gpt-4"
+
+[workers.env]
+OPENAI_API_KEY = "sk-test"
+"#;
+        let local: LocalConfig = toml::from_str(toml).unwrap();
+        assert_eq!(local.workers.command.as_deref(), Some("aider"));
+        assert_eq!(local.workers.model.as_deref(), Some("gpt-4"));
+        assert_eq!(local.workers.env.get("OPENAI_API_KEY").map(|s| s.as_str()), Some("sk-test"));
+        assert!(local.workers.args.is_none());
+    }
+
+    #[test]
+    fn merge_local_overrides_and_extends() {
+        let mut wc = WorkersConfig::default();
+        assert_eq!(wc.command, "claude");
+        assert_eq!(wc.args, vec!["--print"]);
+
+        let local = LocalWorkersOverride {
+            command: Some("aider".to_string()),
+            args: None,
+            model: Some("gpt-4".to_string()),
+            env: [("KEY".to_string(), "val".to_string())].into(),
+        };
+        wc.merge_local(&local);
+
+        assert_eq!(wc.command, "aider");
+        assert_eq!(wc.args, vec!["--print"]); // unchanged
+        assert_eq!(wc.model.as_deref(), Some("gpt-4"));
+        assert_eq!(wc.env.get("KEY").map(|s| s.as_str()), Some("val"));
     }
 
     #[test]
@@ -559,5 +720,71 @@ dir = "tickets"
         let explicit_true = format!("{base}[sync]\naggressive = true\n");
         let config: Config = toml::from_str(&explicit_true).unwrap();
         assert!(config.sync.aggressive, "explicit aggressive = true should be true");
+    }
+
+    #[test]
+    fn collaborators_parses() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.project.collaborators, vec!["alice", "bob"]);
+    }
+
+    #[test]
+    fn collaborators_defaults_empty() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.project.collaborators.is_empty());
+    }
+
+    #[test]
+    fn resolve_identity_returns_username_when_present() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "alice");
+    }
+
+    #[test]
+    fn resolve_identity_returns_unassigned_when_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
+    fn resolve_identity_returns_unassigned_when_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
+    fn local_config_username_parses() {
+        let toml = r#"
+username = "bob"
+"#;
+        let local: LocalConfig = toml::from_str(toml).unwrap();
+        assert_eq!(local.username.as_deref(), Some("bob"));
+    }
+
+    #[test]
+    fn local_config_username_defaults_none() {
+        let local: LocalConfig = toml::from_str("").unwrap();
+        assert!(local.username.is_none());
     }
 }

@@ -45,7 +45,7 @@ pub struct Frontmatter {
     pub author: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub supervisor: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing)]
     pub agent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
@@ -177,13 +177,22 @@ pub fn sorted_actionable<'a>(
     candidates
 }
 
-/// Returns true if a ticket in `state` satisfies the dependency check —
-/// i.e. dependents are unblocked by it.  True when the state has
-/// `satisfies_deps = true` OR `terminal = true`; false for unknown states.
-pub fn dep_satisfied(state: &str, config: &crate::config::Config) -> bool {
+/// Returns true if a ticket in `dep_state` satisfies the dependency gate
+/// required by the dependent ticket.  `required_gate` is `Some("tag")` when
+/// the dependent's state has `dep_requires = "tag"`, or `None` for the
+/// default (requires `satisfies_deps = true` or `terminal = true`).
+pub fn dep_satisfied(dep_state: &str, required_gate: Option<&str>, config: &crate::config::Config) -> bool {
+    use crate::config::SatisfiesDeps;
     config.workflow.states.iter()
-        .find(|s| s.id == state)
-        .map(|s| s.satisfies_deps || s.terminal)
+        .find(|s| s.id == dep_state)
+        .map(|s| {
+            if s.terminal { return true; }
+            match &s.satisfies_deps {
+                SatisfiesDeps::Bool(true) => true,
+                SatisfiesDeps::Tag(tag) => required_gate == Some(tag.as_str()),
+                SatisfiesDeps::Bool(false) => false,
+            }
+        })
         .unwrap_or(false)
 }
 
@@ -206,10 +215,13 @@ pub fn pick_next<'a>(
             if !startable.is_empty() && !startable.contains(&state) {
                 return false;
             }
+            let required_gate = config.workflow.states.iter()
+                .find(|s| s.id == state)
+                .and_then(|s| s.dep_requires.as_deref());
             if let Some(deps) = &t.frontmatter.depends_on {
                 for dep_id in deps {
                     if let Some(dep) = tickets.iter().find(|d| d.frontmatter.id == *dep_id) {
-                        if !dep_satisfied(&dep.frontmatter.state, config) {
+                        if !dep_satisfied(&dep.frontmatter.state, required_gate, config) {
                             return false;
                         }
                     }
@@ -752,6 +764,18 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "agent"    => fm.agent    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
+        "depends_on" => {
+            if value == "-" {
+                fm.depends_on = None;
+            } else {
+                let ids: Vec<String> = value
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                fm.depends_on = if ids.is_empty() { None } else { Some(ids) };
+            }
+        }
         other => anyhow::bail!("unknown field: {other}"),
     }
     Ok(())
@@ -1383,25 +1407,118 @@ label = "Blocked"
     #[test]
     fn dep_satisfied_satisfies_deps_true() {
         let config = config_with_dep_states();
-        assert!(dep_satisfied("done", &config));
+        assert!(dep_satisfied("done", None, &config));
     }
 
     #[test]
     fn dep_satisfied_terminal_true() {
         let config = config_with_dep_states();
-        assert!(dep_satisfied("closed", &config));
+        assert!(dep_satisfied("closed", None, &config));
     }
 
     #[test]
     fn dep_satisfied_both_false() {
         let config = config_with_dep_states();
-        assert!(!dep_satisfied("blocked", &config));
+        assert!(!dep_satisfied("blocked", None, &config));
     }
 
     #[test]
     fn dep_satisfied_unknown_state() {
         let config = config_with_dep_states();
-        assert!(!dep_satisfied("nonexistent", &config));
+        assert!(!dep_satisfied("nonexistent", None, &config));
+    }
+
+    fn config_with_spec_gate() -> crate::config::Config {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "groomed"
+label = "Groomed"
+actionable = ["agent"]
+dep_requires = "spec"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "specd"
+label = "Specd"
+satisfies_deps = "spec"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+satisfies_deps = "spec"
+
+[[workflow.states]]
+id = "implemented"
+label = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id = "closed"
+label = "Closed"
+terminal = true
+"#;
+        toml::from_str(toml).unwrap()
+    }
+
+    #[test]
+    fn dep_satisfied_tag_matches_required_gate() {
+        let config = config_with_spec_gate();
+        assert!(dep_satisfied("specd", Some("spec"), &config));
+    }
+
+    #[test]
+    fn dep_satisfied_tag_no_required_gate_is_false() {
+        let config = config_with_spec_gate();
+        assert!(!dep_satisfied("specd", None, &config));
+    }
+
+    #[test]
+    fn dep_satisfied_bool_true_with_no_gate() {
+        let config = config_with_spec_gate();
+        assert!(dep_satisfied("implemented", None, &config));
+    }
+
+    #[test]
+    fn pick_next_groomed_unblocked_when_dep_specd() {
+        let config = config_with_spec_gate();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "groomed", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "specd", None),
+        ];
+        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
+    }
+
+    #[test]
+    fn pick_next_groomed_unblocked_when_dep_in_progress() {
+        let config = config_with_spec_gate();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "groomed", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "in_progress", None),
+        ];
+        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
+    }
+
+    #[test]
+    fn pick_next_ready_blocked_when_dep_only_specd() {
+        let config = config_with_spec_gate();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "ready", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "specd", None),
+        ];
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config);
+        assert!(result.is_none());
     }
 
     // ── pick_next dep filtering ────────────────────────────────────────────
