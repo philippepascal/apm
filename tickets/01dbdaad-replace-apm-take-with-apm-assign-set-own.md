@@ -1,14 +1,14 @@
 +++
 id = "01dbdaad"
 title = "Replace apm take with apm assign: set owner on any ticket"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
 branch = "ticket/01dbdaad-replace-apm-take-with-apm-assign-set-own"
 created_at = "2026-04-04T06:33:40.535848Z"
-updated_at = "2026-04-04T07:09:15.101239Z"
+updated_at = "2026-04-04T07:09:28.947380Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["ffaad988"]
@@ -105,3 +105,4 @@ Delete the four `take_*` test functions. Add:
 | 2026-04-04T06:33Z | — | new | apm |
 | 2026-04-04T06:35Z | new | groomed | apm |
 | 2026-04-04T07:06Z | groomed | in_design | philippepascal |
+| 2026-04-04T07:09Z | in_design | specd | claude-0404-0710-b7f2 |
