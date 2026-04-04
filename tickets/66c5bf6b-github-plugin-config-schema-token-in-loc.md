@@ -1,7 +1,7 @@
 +++
 id = "66c5bf6b"
 title = "GitHub plugin: config schema, token in local.toml, API identity and collaborators sync"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "19555"
 branch = "ticket/66c5bf6b-github-plugin-config-schema-token-in-loc"
 created_at = "2026-04-02T20:54:29.742423Z"
-updated_at = "2026-04-03T00:10:17.745871Z"
+updated_at = "2026-04-04T00:29:33.768553Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17"]
@@ -229,3 +229,4 @@ Unit tests in `apm-core/src/github.rs` (require live token, mark `#[ignore]`):
 | 2026-04-02T23:23Z | new | groomed | apm |
 | 2026-04-03T00:05Z | groomed | in_design | philippepascal |
 | 2026-04-03T00:10Z | in_design | specd | claude-0402-2310-b7f2 |
+| 2026-04-04T00:29Z | specd | ready | apm |
