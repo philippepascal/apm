@@ -14,19 +14,39 @@ pub fn setup(root: &Path) -> Result<()> {
     let apm_dir = root.join(".apm");
     std::fs::create_dir_all(&apm_dir)?;
 
+    let local_toml = apm_dir.join("local.toml");
+
     let config_path = apm_dir.join("config.toml");
     if !config_path.exists() {
         let default_name = root
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project");
-        let (name, description) = if std::io::stdin().is_terminal() {
+        let is_tty = std::io::stdin().is_terminal();
+        let (name, description) = if is_tty {
             prompt_project_info(default_name)?
         } else {
             (default_name.to_string(), String::new())
         };
+        let username = if is_tty && !local_toml.exists() {
+            let u = prompt_username()?;
+            if !u.is_empty() {
+                write_local_toml(&apm_dir, &u)?;
+                println!("Created .apm/local.toml");
+                u
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+        let collaborators: Vec<&str> = if username.is_empty() {
+            vec![]
+        } else {
+            vec![username.as_str()]
+        };
         let branch = detect_default_branch(root);
-        std::fs::write(&config_path, default_config(&name, &description, &branch))?;
+        std::fs::write(&config_path, default_config(&name, &description, &branch, &collaborators))?;
         println!("Created .apm/config.toml");
     }
     let workflow_path = apm_dir.join("workflow.toml");
@@ -205,17 +225,22 @@ fn toml_escape(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-fn default_config(name: &str, description: &str, default_branch: &str) -> String {
+fn default_config(name: &str, description: &str, default_branch: &str, collaborators: &[&str]) -> String {
     let log_file = default_log_file(name);
     let name = toml_escape(name);
     let description = toml_escape(description);
     let default_branch = toml_escape(default_branch);
     let log_file = toml_escape(&log_file);
+    let collaborators_line = {
+        let items: Vec<String> = collaborators.iter().map(|u| format!("\"{}\"", toml_escape(u))).collect();
+        format!("collaborators = [{}]", items.join(", "))
+    };
     format!(
         r##"[project]
 name = "{name}"
 description = "{description}"
 default_branch = "{default_branch}"
+{collaborators_line}
 
 [tickets]
 dir = "tickets"
@@ -232,6 +257,25 @@ enabled = false
 file = "{log_file}"
 "##
     )
+}
+
+fn prompt_username() -> Result<String> {
+    let mut stdout = std::io::stdout();
+    let stdin = std::io::stdin();
+    print!("Username []: ");
+    stdout.flush()?;
+    let mut input = String::new();
+    stdin.read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()> {
+    let path = apm_dir.join("local.toml");
+    if !path.exists() {
+        let username_escaped = toml_escape(username);
+        std::fs::write(&path, format!("username = \"{username_escaped}\"\n"))?;
+    }
+    Ok(())
 }
 
 fn default_workflow_toml() -> &'static str {
@@ -638,7 +682,51 @@ mod tests {
         let name = r#"my\"project"#;
         let description = r#"desc with "quotes" and \backslash"#;
         let branch = "main";
-        let config = default_config(name, description, branch);
+        let config = default_config(name, description, branch, &[]);
         toml::from_str::<toml::Value>(&config).expect("default_config output must be valid TOML");
+    }
+
+    #[test]
+    fn write_local_toml_creates_file() {
+        let tmp = TempDir::new().unwrap();
+        write_local_toml(tmp.path(), "alice").unwrap();
+        let contents = std::fs::read_to_string(tmp.path().join("local.toml")).unwrap();
+        assert!(contents.contains("username = \"alice\""));
+    }
+
+    #[test]
+    fn write_local_toml_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        write_local_toml(tmp.path(), "alice").unwrap();
+        let first = std::fs::read_to_string(tmp.path().join("local.toml")).unwrap();
+        write_local_toml(tmp.path(), "bob").unwrap();
+        let second = std::fs::read_to_string(tmp.path().join("local.toml")).unwrap();
+        assert_eq!(first, second);
+        assert!(second.contains("alice"));
+    }
+
+    #[test]
+    fn setup_non_tty_no_local_toml() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path()).unwrap();
+        assert!(!tmp.path().join(".apm/local.toml").exists());
+    }
+
+    #[test]
+    fn default_config_with_collaborators() {
+        let config = default_config("proj", "desc", "main", &["alice"]);
+        let parsed: toml::Value = toml::from_str(&config).unwrap();
+        let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
+        assert_eq!(collaborators.len(), 1);
+        assert_eq!(collaborators[0].as_str().unwrap(), "alice");
+    }
+
+    #[test]
+    fn default_config_empty_collaborators() {
+        let config = default_config("proj", "desc", "main", &[]);
+        let parsed: toml::Value = toml::from_str(&config).unwrap();
+        let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
+        assert!(collaborators.is_empty());
     }
 }
