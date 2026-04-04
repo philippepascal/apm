@@ -27,7 +27,7 @@ There is also no user-facing `--owner` flag to filter by who currently owns a ti
 - [x] `apm list --mine` returns tickets where `author` equals the current user
 - [x] `apm list --mine` also returns tickets where `owner` equals the current user (even if `author` is someone else)
 - [x] `apm list --mine` does not return tickets where neither `author` nor `owner` matches the current user
-- [ ] `apm list --owner alice` returns only tickets whose `owner` field equals `"alice"`
+- [x] `apm list --owner alice` returns only tickets whose `owner` field equals `"alice"`
 - [ ] `apm list --owner alice` does not return tickets authored by alice but not owned by alice
 - [ ] `apm list --owner alice` with no matching tickets returns empty output and exits 0
 - [ ] `--owner` and `--mine` are mutually exclusive (combining them produces an error)
