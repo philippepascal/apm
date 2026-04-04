@@ -36,11 +36,11 @@ With the `owner` field, `apm take` becomes redundant and underspecified. What's 
 ### Out of scope
 
 - Provisioning a worktree (`apm worktrees --add <id>` remains the right tool for that)
-- State transitions — `apm assign` only sets the `agent` field, never changes state
+- State transitions — `apm assign` only sets the `owner` field, never changes state
 - A server-side `assign` endpoint — the CLI is sufficient; no REST route is added
-- Clearing `agent` automatically on state transitions (covered by ticket ffaad988)
+- Clearing `owner` automatically on state transitions (covered by ticket ffaad988)
 - Enforcing single-ownership at the data-model level
-- Backfilling `agent` on existing tickets in git history
+- Backfilling `owner` on existing tickets in git history
 - Any changes to how `apm start` or `apm state in_design` handle ownership guards (ticket ffaad988)
 
 ### Approach
