@@ -71,6 +71,10 @@ No changes needed to `TicketResponse` — `Frontmatter` is already `#[serde(flat
 
 ### Amendment requests
 
+- [ ] Rename `agent` to `owner` throughout: query param is `?owner=` (not `?agent=`), `ListTicketsQuery` field is `owner: Option<String>`, filter logic uses `fm.owner`, JSON response field is `owner`
+- [ ] Update acceptance criteria: `?agent=alice` → `?owner=alice`, `?agent=unassigned` → `?owner=unassigned`
+- [ ] Update test names: `list_tickets_agent_*` → `list_tickets_owner_*`
+- [ ] Update out-of-scope: references to `agent` field → `owner` field
 
 ### Code review
 
