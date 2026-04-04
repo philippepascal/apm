@@ -324,6 +324,7 @@ mod tests {
             label: id.to_string(),
             description: String::new(),
             terminal,
+            worker_end: false,
             satisfies_deps: apm_core::config::SatisfiesDeps::Bool(satisfies_deps),
             dep_requires: None,
             transitions: vec![],

@@ -78,9 +78,34 @@ pub fn setup(root: &Path) -> Result<()> {
     let local_toml = apm_dir.join("local.toml");
     let is_tty = std::io::stdin().is_terminal();
 
-    // Prompt for username and write local.toml (any init, not just first)
-    let username = if is_tty && !local_toml.exists() {
-        let u = prompt_username()?;
+    // Try to resolve username from GitHub if config exists
+    let github_username = {
+        let config_path = apm_dir.join("config.toml");
+        if config_path.exists() {
+            if let Ok(cfg) = crate::config::Config::load(root) {
+                crate::config::try_github_username(&cfg.git_host)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+
+    // Resolve or prompt for username, then write local.toml
+    let username = if !local_toml.exists() {
+        let u = if let Some(ref gh) = github_username {
+            if is_tty {
+                let prompted = prompt_username(Some(gh))?;
+                if prompted.is_empty() { gh.clone() } else { prompted }
+            } else {
+                gh.clone()
+            }
+        } else if is_tty {
+            prompt_username(None)?
+        } else {
+            String::new()
+        };
         if !u.is_empty() {
             write_local_toml(&apm_dir, &u)?;
             println!("Created .apm/local.toml");
@@ -325,10 +350,11 @@ file = "{log_file}"
     )
 }
 
-fn prompt_username() -> Result<String> {
+fn prompt_username(default: Option<&str>) -> Result<String> {
     let mut stdout = std::io::stdout();
     let stdin = std::io::stdin();
-    print!("Username []: ");
+    let def = default.unwrap_or("");
+    print!("Username [{def}]: ");
     stdout.flush()?;
     let mut input = String::new();
     stdin.read_line(&mut input)?;

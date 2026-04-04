@@ -46,17 +46,12 @@ pub struct LoggingConfig {
     pub file: Option<std::path::PathBuf>,
 }
 
-#[derive(Debug, Deserialize, Default)]
-pub struct ProviderConfig {
-    #[serde(rename = "type", default)]
-    pub type_: String,
-}
-
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default)]
 pub struct GitHostConfig {
     pub provider: Option<String>,
     pub repo: Option<String>,
+    pub token_env: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -136,8 +131,6 @@ pub struct Config {
     #[serde(default)]
     pub logging: LoggingConfig,
     #[serde(default)]
-    pub provider: Option<ProviderConfig>,
-    #[serde(default)]
     pub workers: WorkersConfig,
     #[serde(default)]
     pub work: WorkConfig,
@@ -192,6 +185,8 @@ pub struct TicketsConfig {
     pub dir: PathBuf,
     #[serde(default)]
     pub sections: Vec<String>,
+    #[serde(default)]
+    pub archive_dir: Option<PathBuf>,
 }
 
 impl Default for TicketsConfig {
@@ -199,6 +194,7 @@ impl Default for TicketsConfig {
         Self {
             dir: PathBuf::from("tickets"),
             sections: Vec::new(),
+            archive_dir: None,
         }
     }
 }
@@ -230,6 +226,8 @@ pub struct StateConfig {
     pub description: String,
     #[serde(default)]
     pub terminal: bool,
+    #[serde(default)]
+    pub worker_end: bool,
     #[serde(default)]
     pub satisfies_deps: SatisfiesDeps,
     #[serde(default)]
@@ -340,10 +338,17 @@ pub struct LocalWorkersOverride {
     pub env: std::collections::HashMap<String, String>,
 }
 
-fn effective_github_token(local: &LocalConfig) -> Option<String> {
+fn effective_github_token(local: &LocalConfig, git_host: &GitHostConfig) -> Option<String> {
     if let Some(ref t) = local.github_token {
         if !t.is_empty() {
             return Some(t.clone());
+        }
+    }
+    if let Some(ref env_var) = git_host.token_env {
+        if let Ok(t) = std::env::var(env_var) {
+            if !t.is_empty() {
+                return Some(t);
+            }
         }
     }
     std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty())
@@ -361,13 +366,12 @@ pub fn resolve_identity(repo_root: &Path) -> String {
         .ok()
         .and_then(|s| toml::from_str(&s).ok());
 
-    if let Some(ref cfg) = config {
-        if cfg.git_host.provider.as_deref() == Some("github") {
-            if let Some(token) = effective_github_token(&local) {
-                match crate::github::fetch_authenticated_user(&token) {
-                    Ok(login) => return login,
-                    Err(e) => eprintln!("apm: GitHub identity fetch failed: {e}"),
-                }
+    let git_host = config.as_ref().map(|c| &c.git_host).cloned().unwrap_or_default();
+    if git_host.provider.as_deref() == Some("github") {
+        if let Some(token) = effective_github_token(&local, &git_host) {
+            match crate::github::fetch_authenticated_user(&token) {
+                Ok(login) => return login,
+                Err(e) => eprintln!("apm: GitHub identity fetch failed: {e}"),
             }
         }
     }
@@ -380,10 +384,19 @@ pub fn resolve_identity(repo_root: &Path) -> String {
     "unassigned".to_string()
 }
 
+pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
+    if git_host.provider.as_deref() != Some("github") {
+        return None;
+    }
+    let local = LocalConfig::default();
+    let token = effective_github_token(&local, git_host)?;
+    crate::github::fetch_authenticated_user(&token).ok()
+}
+
 pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> Vec<String> {
     if config.git_host.provider.as_deref() == Some("github") {
         if let Some(ref repo) = config.git_host.repo {
-            if let Some(token) = effective_github_token(local) {
+            if let Some(token) = effective_github_token(local, &config.git_host) {
                 match crate::github::fetch_repo_collaborators(&token, repo) {
                     Ok(logins) => return logins,
                     Err(e) => eprintln!("apm: GitHub collaborators fetch failed: {e}"),
@@ -538,6 +551,27 @@ type = "qa"
     #[test]
     fn completion_strategy_default() {
         assert_eq!(CompletionStrategy::default(), CompletionStrategy::None);
+    }
+
+    #[test]
+    fn state_config_worker_end_parses_true() {
+        let toml = r#"
+id         = "specd"
+label      = "Specd"
+worker_end = true
+"#;
+        let s: StateConfig = toml::from_str(toml).unwrap();
+        assert!(s.worker_end);
+    }
+
+    #[test]
+    fn state_config_worker_end_defaults_false() {
+        let toml = r#"
+id    = "new"
+label = "New"
+"#;
+        let s: StateConfig = toml::from_str(toml).unwrap();
+        assert!(!s.worker_end);
     }
 
     #[test]
@@ -973,5 +1007,35 @@ repo = "owner/name"
         // (if it is, the test would make a real API call — so we just check fallback works)
         // We can't guarantee env is clean, so we only test the no-token path
         let _ = resolve_collaborators(&config, &local);
+    }
+
+    #[test]
+    fn tickets_archive_dir_parses() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+archive_dir = "archive/tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(
+            config.tickets.archive_dir.as_deref(),
+            Some(std::path::Path::new("archive/tickets"))
+        );
+    }
+
+    #[test]
+    fn tickets_archive_dir_absent_defaults_none() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.tickets.archive_dir.is_none());
     }
 }

@@ -61,6 +61,7 @@ color          = "#3b82f6"
 layer          = 1
 actionable     = ["supervisor"]
 satisfies_deps = "spec"
+worker_end     = true
 
   [[workflow.states.transitions]]
   to           = "ready"
@@ -178,7 +179,8 @@ instructions   = ".apm/apm.worker.md"
   to         = "implemented"
   trigger    = "manual"
   actor      = "agent"
-  completion = "pr_or_epic_merge"
+#  completion = "pr_or_epic_merge"
+  completion = "merge"
 
   [[workflow.states.transitions]]
   to      = "blocked"
@@ -223,6 +225,7 @@ color          = "#06b6d4"
 layer          = 2
 actionable     = ["supervisor"]
 satisfies_deps = true
+worker_end     = true
 
   [[workflow.states.transitions]]
   to             = "ready"
