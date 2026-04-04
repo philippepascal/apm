@@ -3,12 +3,12 @@ id = "63140ca3"
 title = "apm state: push to origin after merge_into_default completes"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "apm"
 branch = "ticket/63140ca3-apm-state-push-to-origin-after-merge-int"
 created_at = "2026-04-04T02:20:43.522276Z"
-updated_at = "2026-04-04T06:38:48.457743Z"
+updated_at = "2026-04-04T06:40:07.676671Z"
 +++
 
 ## Spec
