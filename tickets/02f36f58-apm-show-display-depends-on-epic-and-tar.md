@@ -4,11 +4,11 @@ title = "apm show: display depends_on, epic, and target_branch frontmatter field
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "apm"
 branch = "ticket/02f36f58-apm-show-display-depends-on-epic-and-tar"
 created_at = "2026-04-04T00:27:04.270671Z"
-updated_at = "2026-04-04T06:38:19.330919Z"
+updated_at = "2026-04-04T06:38:23.769888Z"
 +++
 
 ## Spec
