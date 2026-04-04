@@ -75,17 +75,6 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   })
 
   useEffect(() => {
-    fetch('/api/me')
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data: { username: string }) => {
-        if (data.username && data.username !== 'unassigned') {
-          setAuthorFilter(data.username)
-        }
-      })
-      .catch(() => { /* leave authorFilter null — show all */ })
-  }, [])
-
-  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (!e.shiftKey || e.key !== 'S') return
       const target = e.target as Element | null
