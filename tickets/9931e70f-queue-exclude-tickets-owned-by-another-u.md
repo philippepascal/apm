@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The priority queue (`/api/queue` and `apm next`) shows all tickets that are actionable by an agent, regardless of whether another user already owns them. When multiple users or workers are active, the queue should not offer a ticket that someone else is already working on. A `ready` ticket with `owner` set to another user should be excluded from the queue — the owner either needs to finish it or release it first.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
