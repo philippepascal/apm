@@ -32,4 +32,4 @@ file = "/tmp/apm.log"
 [workers]
   command = "claude"
   args = ["--print"]
-  model = "opus"
+  model = "sonnet"
