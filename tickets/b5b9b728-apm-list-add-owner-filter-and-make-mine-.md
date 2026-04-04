@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm list --mine` currently matches only the `author` field. If I started working on a ticket someone else created, `--mine` won't show it. There is also no `--owner` flag to filter by who is currently working on a ticket. The mental model of "my tickets" should include both tickets I created and tickets I'm currently responsible for.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
