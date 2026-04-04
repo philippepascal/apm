@@ -21,7 +21,10 @@ Ticket fa2dce31 already fixed the server-side equivalent in `apm-server/src/work
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm workers` shows "crashed" for a dead worker whose ticket is in a state where neither `worker_end` nor `terminal` is true
+- [ ] `apm workers` shows the ticket's actual state name (not "crashed") for a dead worker whose ticket is in a state with `worker_end = true`
+- [ ] `apm workers` shows the ticket's actual state name (not "crashed") for a dead worker whose ticket is in a `terminal = true` state
+- [ ] `apm workers` shows the ticket's actual state for a live worker (existing behaviour unchanged)
 
 ### Out of scope
 
