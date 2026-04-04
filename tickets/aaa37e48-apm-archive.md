@@ -33,7 +33,12 @@ This ticket adds `apm archive`, a command that moves closed ticket files from th
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-archiving when a ticket transitions to a terminal state (i.e. no side effect on `apm state` or `apm close`) — that can be a follow-on ticket
+- Restoring an archived ticket back to `tickets/` (no `apm unarchive`)
+- Archiving epic branches or epic-related files
+- Deleting the per-ticket git branch or worktree — that is `apm clean`'s job
+- Remote branch pruning — handled by `apm clean --remote`
+- Support for multiple archive directories or per-epic archive paths
 
 ### Approach
 
