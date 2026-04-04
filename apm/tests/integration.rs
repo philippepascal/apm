@@ -394,6 +394,58 @@ fn show_missing_ticket_errors() {
     assert!(apm::cmd::show::run(dir.path(), "99", false, false).is_err());
 }
 
+#[test]
+fn show_displays_epic_target_branch_depends_on_when_set() {
+    let dir = setup();
+    let p = dir.path();
+
+    // Create a ticket with epic, target_branch, and depends_on set directly.
+    let ticket_content = "+++\nid = \"aabb1122\"\ntitle = \"Rich ticket\"\nstate = \"new\"\nbranch = \"ticket/aabb1122-rich-ticket\"\nepic = \"epic001\"\ntarget_branch = \"epic/epic001-user-auth\"\ndepends_on = [\"ccdd3344\", \"eeff5566\"]\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] One\n\n### Out of scope\n\nN/A.\n\n### Approach\n\nDirect.\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    let ticket_dir = p.join("tickets");
+    std::fs::create_dir_all(&ticket_dir).unwrap();
+    let ticket_path = ticket_dir.join("aabb1122-rich-ticket.md");
+    std::fs::write(&ticket_path, ticket_content).unwrap();
+    git(p, &["checkout", "-b", "ticket/aabb1122-rich-ticket"]);
+    git(p, &["-c", "commit.gpgsign=false", "add", "tickets/aabb1122-rich-ticket.md"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add rich ticket"]);
+    git(p, &["checkout", "-"]);
+    let _ = std::fs::remove_file(&ticket_path);
+
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["show", "aabb1122"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(out.status.success(), "apm show failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("epic:"), "expected epic: line in:\n{stdout}");
+    assert!(stdout.contains("epic001"), "expected epic id in:\n{stdout}");
+    assert!(stdout.contains("target_branch:"), "expected target_branch: line in:\n{stdout}");
+    assert!(stdout.contains("epic/epic001-user-auth"), "expected target_branch value in:\n{stdout}");
+    assert!(stdout.contains("depends_on:"), "expected depends_on: line in:\n{stdout}");
+    assert!(stdout.contains("ccdd3344"), "expected depends_on value in:\n{stdout}");
+}
+
+#[test]
+fn show_omits_epic_target_branch_depends_on_when_absent() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Plain ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let id = find_ticket_id(dir.path(), "plain-ticket");
+
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["show", &id])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(out.status.success(), "apm show failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(!stdout.contains("epic:"), "unexpected epic: line in:\n{stdout}");
+    assert!(!stdout.contains("target_branch:"), "unexpected target_branch: line in:\n{stdout}");
+    assert!(!stdout.contains("depends_on:"), "unexpected depends_on: line in:\n{stdout}");
+}
+
 // --- state ---
 
 #[test]
