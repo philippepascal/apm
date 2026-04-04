@@ -38,7 +38,7 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 - [x] After successful registration, `GET /api/me` with the issued session cookie returns `{"username": "alice"}`
 - [x] Using the same OTP a second time (after it was consumed during a prior challenge call) returns HTTP 400
 - [x] Two separate devices can each register a passkey for the same username (two `Passkey` entries stored under that username in the credential store)
-- [ ] Registered credentials survive a server restart: credential data is persisted to `.apm/credentials.json` and reloaded at startup
+- [x] Registered credentials survive a server restart: credential data is persisted to `.apm/credentials.json` and reloaded at startup
 
 ### Out of scope
 
