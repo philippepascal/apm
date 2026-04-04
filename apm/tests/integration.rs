@@ -4396,3 +4396,112 @@ fn revoke_with_device_hint() {
     assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
     assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 1 session(s)."));
 }
+
+// --- merge completion strategy: push to origin after merge ---
+
+fn merge_strategy_config_toml() -> &'static str {
+    r#"[project]
+name = "test"
+default_branch = "main"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  actor      = "agent"
+  completion = "merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#
+}
+
+fn setup_merge_strategy_remote() -> (TempDir, TempDir) {
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let local = tempfile::tempdir().unwrap();
+    let p = local.path();
+    git(p, &["clone", &bp.to_string_lossy(), "."]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), merge_strategy_config_toml()).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    git(p, &["push", "origin", "main"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    (bare, local)
+}
+
+fn remote_ref_sha(dir: &std::path::Path, refname: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["ls-remote", "origin", refname])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout)
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_string()
+}
+
+fn local_ref_sha(dir: &std::path::Path, refname: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", refname])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout).trim().to_string()
+}
+
+#[test]
+fn merge_strategy_pushes_default_branch_to_origin() {
+    let (_bare, local) = setup_merge_strategy_remote();
+    let p = local.path();
+
+    let branch = "ticket/cc000003-merge-push-test";
+    write_in_progress_ticket(p, "cc000003", branch, "cc000003-merge-push-test.md", None);
+    git(p, &["push", "origin", branch]);
+
+    let result = apm_core::state::transition(p, "cc000003", "implemented".into(), true, false);
+    assert!(result.is_ok(), "merge strategy should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+
+    let local_sha = local_ref_sha(p, "main");
+    let remote_sha = remote_ref_sha(p, "main");
+    assert!(!local_sha.is_empty(), "local main should exist");
+    assert_eq!(local_sha, remote_sha, "origin/main should match local main after push");
+}
+
+#[test]
+fn pr_or_epic_merge_with_target_branch_pushes_target_to_origin() {
+    let (_bare, local) = setup_pr_or_epic_merge_remote();
+    let p = local.path();
+
+    git(p, &["checkout", "-b", "epic/push-test"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic init", "--allow-empty"]);
+    git(p, &["push", "origin", "epic/push-test"]);
+    git(p, &["checkout", "main"]);
+
+    let branch = "ticket/dd000004-epic-push-test";
+    write_in_progress_ticket(p, "dd000004", branch, "dd000004-epic-push-test.md", Some("epic/push-test"));
+    git(p, &["push", "origin", branch]);
+
+    git(p, &["checkout", "epic/push-test"]);
+
+    let result = apm_core::state::transition(p, "dd000004", "implemented".into(), true, false);
+    assert!(result.is_ok(), "pr_or_epic_merge with target should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+
+    let local_sha = local_ref_sha(p, "epic/push-test");
+    let remote_sha = remote_ref_sha(p, "epic/push-test");
+    assert!(!local_sha.is_empty(), "local epic/push-test should exist");
+    assert_eq!(local_sha, remote_sha, "origin/epic/push-test should match local after push");
+}
