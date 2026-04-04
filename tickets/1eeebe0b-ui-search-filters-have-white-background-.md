@@ -1,14 +1,14 @@
 +++
 id = "1eeebe0b"
 title = "UI search filters have white background, change to dark consistent with rest of UI"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 1
 risk = 1
 author = "apm-ui"
 branch = "ticket/1eeebe0b-ui-search-filters-have-white-background-"
 created_at = "2026-04-04T15:50:12.140675Z"
-updated_at = "2026-04-04T16:05:39.751868Z"
+updated_at = "2026-04-04T17:26:25.452685Z"
 +++
 
 ## Spec
@@ -77,3 +77,4 @@ No logic changes. No new files. No dependency changes.
 | 2026-04-04T16:03Z | new | groomed | apm |
 | 2026-04-04T16:03Z | groomed | in_design | philippepascal |
 | 2026-04-04T16:05Z | in_design | specd | claude-0404-1603-9198 |
+| 2026-04-04T17:26Z | specd | ready | apm |
