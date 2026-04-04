@@ -1,15 +1,15 @@
 +++
 id = "1cadf37f"
 title = "UI: show dep-blocked status on tickets waiting in queue"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "apm"
-agent = "4980"
+agent = "philippepascal"
 branch = "ticket/1cadf37f-ui-show-dep-blocked-status-on-tickets-wa"
 created_at = "2026-04-02T23:21:21.478449Z"
-updated_at = "2026-04-04T00:30:02.772146Z"
+updated_at = "2026-04-04T01:55:20.827461Z"
 +++
 
 ## Spec
@@ -100,3 +100,4 @@ This pattern matches the dep display in `TicketDetail.tsx` (line 386) where dep 
 | 2026-04-03T22:52Z | ammend | in_design | philippepascal |
 | 2026-04-03T22:55Z | in_design | specd | claude-0403-2255-b7c1 |
 | 2026-04-04T00:30Z | specd | ready | apm |
+| 2026-04-04T01:55Z | ready | in_progress | philippepascal |
