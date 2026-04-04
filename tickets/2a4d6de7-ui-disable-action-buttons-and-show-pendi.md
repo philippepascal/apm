@@ -1,14 +1,14 @@
 +++
 id = "2a4d6de7"
 title = "UI: disable action buttons and show pending state during mutations"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
 branch = "ticket/2a4d6de7-ui-disable-action-buttons-and-show-pendi"
 created_at = "2026-04-02T23:24:43.919654Z"
-updated_at = "2026-04-04T07:09:47.460355Z"
+updated_at = "2026-04-04T07:13:51.367615Z"
 +++
 
 ## Spec
@@ -127,3 +127,4 @@ Refactor `doBatchTransition` and `doBatchPriority` to `useMutation`:
 | 2026-04-04T02:22Z | ready | specd | apm |
 | 2026-04-04T06:01Z | specd | ready | apm |
 | 2026-04-04T07:09Z | ready | in_progress | philippepascal |
+| 2026-04-04T07:13Z | in_progress | implemented | claude-0404-0710-w2a4 |
