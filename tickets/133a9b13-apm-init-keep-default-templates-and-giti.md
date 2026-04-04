@@ -23,7 +23,14 @@ The audit itself is already done: \`ensure_gitignore\` already lists \`.apm/sess
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] \`default_workflow_toml()\` parses without error when deserialized as \`WorkflowFile\` (the internal serde struct used by \`Config::load\`)
+- [ ] The parsed workflow contains exactly the eleven expected state ids: new, groomed, question, specd, ammend, in_design, ready, in_progress, blocked, implemented, closed
+- [ ] Every state that should carry \`dep_requires\` (groomed, ammend) has a non-None value after parsing
+- [ ] Every state that should carry \`satisfies_deps\` (specd, ammend, in_design, ready, in_progress, implemented) has a non-default value after parsing
+- [ ] \`default_ticket_toml()\` parses without error when deserialized as \`TicketFile\` (the internal serde struct used by \`Config::load\`)
+- [ ] The parsed ticket config contains the four required sections: Problem, Acceptance criteria, Out of scope, Approach, all with \`required = true\`
+- [ ] \`ensure_gitignore\` creates a file that contains all five expected entries: tickets/NEXT_ID, .apm/local.toml, .apm/*.init, .apm/sessions.json, .apm/credentials.json
+- [ ] \`cargo test --workspace\` passes with no regressions
 
 ### Out of scope
 
