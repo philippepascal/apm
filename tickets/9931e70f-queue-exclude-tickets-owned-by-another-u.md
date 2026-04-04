@@ -18,7 +18,7 @@ depends_on = ["ffaad988"]
 
 ### Problem
 
-The priority queue (`/api/queue` and `apm next`) shows all tickets that are actionable by an agent, regardless of whether another user already owns them. When multiple users or workers are active, the queue should not offer a ticket that someone else is already working on. A `ready` ticket with `owner` set to another user should be excluded from the queue — the owner either needs to finish it or release it first.
+The priority queue (`/api/queue` and `apm next`) shows all tickets actionable by an agent, regardless of who owns them. Since owner persists for the entire ticket lifecycle, a `ready` ticket owned by Alice shouldn't appear in Bob's queue — Alice owns it and will pick it back up. The queue should exclude tickets where `owner` is set to someone other than the requesting user. Unowned tickets remain visible to everyone.
 
 ### Acceptance criteria
 
