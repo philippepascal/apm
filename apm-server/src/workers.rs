@@ -16,7 +16,6 @@ pub struct WorkerInfo {
     ticket_title: String,
     branch: String,
     state: String,
-    agent: String,
     elapsed: String,
     status: String,
 }
@@ -77,14 +76,13 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
         let alive = apm_core::worker::is_alive(pid);
         let elapsed = apm_core::worker::elapsed_since(&pf.started_at);
         let ticket = tickets.iter().find(|t| t.frontmatter.id == pf.ticket_id);
-        let (ticket_title, branch, state, agent) = match ticket {
+        let (ticket_title, branch, state) = match ticket {
             Some(t) => (
                 t.frontmatter.title.clone(),
                 t.frontmatter.branch.clone().unwrap_or_default(),
                 t.frontmatter.state.clone(),
-                t.frontmatter.agent.clone().unwrap_or_default(),
             ),
-            None => (String::new(), String::new(), String::new(), String::new()),
+            None => (String::new(), String::new(), String::new()),
         };
         let status = determine_status(alive, &state, &terminal_states);
         results.push(WorkerInfo {
@@ -93,7 +91,6 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
             ticket_title,
             branch,
             state,
-            agent,
             elapsed,
             status: status.to_string(),
         });
@@ -129,7 +126,6 @@ fn stop_worker_by_pid(root: &FsPath, target_pid: u32) -> Result<(), StopError> {
             .args(["-TERM", &pid.to_string()])
             .status()
             .map_err(|e| StopError::Other(e.to_string()))?;
-        let _ = std::fs::remove_file(&pid_path);
         return Ok(());
     }
     Err(StopError::NotFound)
