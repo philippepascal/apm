@@ -1,14 +1,14 @@
 +++
 id = "9931e70f"
 title = "Queue: exclude tickets owned by another user"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
 branch = "ticket/9931e70f-queue-exclude-tickets-owned-by-another-u"
 created_at = "2026-04-04T06:28:25.839773Z"
-updated_at = "2026-04-04T07:43:44.323808Z"
+updated_at = "2026-04-04T15:34:20.452881Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["ffaad988"]
@@ -142,3 +142,4 @@ Note: `is_localhost` and `find_session_username` are private to `main.rs`; eithe
 | 2026-04-04T07:15Z | specd | ammend | apm |
 | 2026-04-04T07:42Z | ammend | in_design | philippepascal |
 | 2026-04-04T07:43Z | in_design | specd | claude-0404-0800-c7d1 |
+| 2026-04-04T15:34Z | specd | ready | apm |
