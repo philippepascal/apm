@@ -28,7 +28,7 @@ This ticket adds the identity-resolution function in `apm-core`, wires it into `
 ### Acceptance criteria
 
 - [x] `apm new` sets `author` to the `username` value from `.apm/local.toml` when that file exists and contains a non-empty `username` key
-- [ ] `apm new` sets `author` to `"apm"` when `.apm/local.toml` is absent or contains no `username` key
+- [x] `apm new` sets `author` to `"apm"` when `.apm/local.toml` is absent or contains no `username` key
 - [ ] Ticket files written by `apm new` do not contain an `agent` key in their TOML frontmatter
 - [ ] Existing ticket files that contain an `agent` field are parsed without error (backward-compatible read)
 - [ ] `apm list` output no longer includes an `agent=` column
