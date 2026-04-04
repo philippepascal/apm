@@ -25,7 +25,7 @@ This ticket wires the UI filter to the real owner field returned by the API. Con
 ### Acceptance criteria
 
 - [x] The filter dropdown in SupervisorView.tsx is labelled "All owners" (not "All agents")
-- [ ] Selecting an owner from the dropdown shows only tickets whose ticket.owner matches the selected value
+- [x] Selecting an owner from the dropdown shows only tickets whose ticket.owner matches the selected value
 - [ ] Selecting "All owners" (the blank option) shows all tickets regardless of owner value
 - [ ] The dropdown option list is built from the distinct owner values present in the loaded ticket list
 - [ ] The Ticket TypeScript interface in types.ts has owner?: string (not agent?: string)
