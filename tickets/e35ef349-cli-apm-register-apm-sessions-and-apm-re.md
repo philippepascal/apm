@@ -1,15 +1,15 @@
 +++
 id = "e35ef349"
 title = "CLI: apm register, apm sessions, and apm revoke commands"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 3
 author = "apm"
-agent = "36684"
+agent = "philippepascal"
 branch = "ticket/e35ef349-cli-apm-register-apm-sessions-and-apm-re"
 created_at = "2026-04-02T20:54:25.629052Z"
-updated_at = "2026-04-04T00:29:29.321288Z"
+updated_at = "2026-04-04T03:42:07.304889Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["8a08637c"]
@@ -249,3 +249,4 @@ pub struct SessionInfo {
 | 2026-04-02T23:59Z | groomed | in_design | philippepascal |
 | 2026-04-03T00:05Z | in_design | specd | claude-0402-0000-spec1 |
 | 2026-04-04T00:29Z | specd | ready | apm |
+| 2026-04-04T03:42Z | ready | in_progress | philippepascal |
