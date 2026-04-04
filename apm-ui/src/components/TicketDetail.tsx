@@ -2,7 +2,7 @@ import { useQuery, useQueries, useQueryClient, useMutation } from '@tanstack/rea
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Minimize2 } from 'lucide-react'
+import { Minimize2, Loader2 } from 'lucide-react'
 import { useLayoutStore } from '../store/useLayoutStore'
 import InlineNumberField from './InlineNumberField'
 import { getStateColors } from '../lib/stateColors'
@@ -16,7 +16,7 @@ interface TicketDetail {
   priority: number
   body: string
   raw: string
-  valid_transitions: { to: string; label: string }[]
+  valid_transitions: { to: string; label: string; warning?: string }[]
   epic?: string
   depends_on?: string[]
   blocking_deps?: Array<{ id: string; state: string }>
@@ -33,9 +33,7 @@ function TransitionButtons({ ticket, onTransitioned }: {
   onTransitioned: () => void
 }) {
   const queryClient = useQueryClient()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [reassigning, setReassigning] = useState(false)
+  const [transitionError, setTransitionError] = useState<string | null>(null)
   const [reassignError, setReassignError] = useState<string | null>(null)
   const keepRef = useRef<HTMLButtonElement>(null)
 
@@ -49,46 +47,42 @@ function TransitionButtons({ ticket, onTransitioned }: {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  async function doTransition(to: string) {
-    setPending(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/tickets/${ticket.id}/transition`, {
+  const transitionMutation = useMutation({
+    mutationFn: (to: string) =>
+      fetch(`/api/tickets/${ticket.id}/transition`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to }),
-      })
-      if (!res.ok) {
-        const body = await res.json()
-        setError(body.error ?? `Error ${res.status}`)
-      } else {
-        onTransitioned()
-      }
-    } catch (e) {
-      setError(String(e))
-    } finally {
-      setPending(false)
-    }
-  }
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json()
+          throw new Error(body.error ?? `Error ${res.status}`)
+        }
+      }),
+    onSuccess: () => {
+      setTransitionError(null)
+      onTransitioned()
+    },
+    onError: (e) => setTransitionError(String(e instanceof Error ? e.message : e)),
+  })
 
-  async function handleReassign() {
-    setReassigning(true)
-    setReassignError(null)
-    try {
-      const res = await fetch(`/api/tickets/${ticket.id}/take`, { method: 'POST' })
-      if (!res.ok) {
-        const body = await res.json()
-        setReassignError(body.error ?? `Error ${res.status}`)
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
-        queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      }
-    } catch (e) {
-      setReassignError(String(e))
-    } finally {
-      setReassigning(false)
-    }
-  }
+  const reassignMutation = useMutation({
+    mutationFn: () =>
+      fetch(`/api/tickets/${ticket.id}/take`, { method: 'POST' }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json()
+          throw new Error(body.error ?? `Error ${res.status}`)
+        }
+      }),
+    onSuccess: () => {
+      setReassignError(null)
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    },
+    onError: (e) => setReassignError(String(e instanceof Error ? e.message : e)),
+  })
+
+  const anyPending = transitionMutation.isPending || reassignMutation.isPending
 
   return (
     <div className="border-t border-gray-700 p-3 flex flex-wrap gap-2 items-center">
@@ -96,29 +90,34 @@ function TransitionButtons({ ticket, onTransitioned }: {
         <button
           key={tr.to}
           className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-50"
-          disabled={pending}
-          onClick={() => doTransition(tr.to)}
+          disabled={anyPending}
+          onClick={() => {
+            if (tr.warning && !window.confirm(tr.warning)) return
+            transitionMutation.mutate(tr.to)
+          }}
         >
-          {tr.label}
+          {transitionMutation.isPending && transitionMutation.variables === tr.to
+            ? <Loader2 className="w-3 h-3 animate-spin" />
+            : tr.label}
         </button>
       ))}
       <button
         ref={keepRef}
         className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400"
-        disabled={pending}
+        disabled={anyPending}
         title="Keep at current state (K)"
       >
         Keep at {ticket.state}
       </button>
       <button
         className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400"
-        disabled={reassigning}
-        onClick={handleReassign}
+        disabled={anyPending}
+        onClick={() => reassignMutation.mutate()}
       >
-        Reassign to me
+        {reassignMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Reassign to me'}
       </button>
       {reassignError && <p className="text-red-600 text-sm w-full">{reassignError}</p>}
-      {error && <p className="text-red-600 text-sm w-full">{error}</p>}
+      {transitionError && <p className="text-red-600 text-sm w-full">{transitionError}</p>}
     </div>
   )
 }
@@ -126,8 +125,6 @@ function TransitionButtons({ ticket, onTransitioned }: {
 function BatchDetailPanel({ ids }: { ids: string[] }) {
   const queryClient = useQueryClient()
   const clearMultiSelection = useLayoutStore((s) => s.clearMultiSelection)
-  const [transitionError, setTransitionError] = useState<string | null>(null)
-  const [priorityError, setPriorityError] = useState<string | null>(null)
 
   const results = useQueries({
     queries: ids.map((id) => ({
@@ -139,52 +136,50 @@ function BatchDetailPanel({ ids }: { ids: string[] }) {
   const loading = results.some((r) => r.isLoading)
   const tickets = results.map((r) => r.data).filter(Boolean) as TicketDetail[]
 
-  const commonTransitions: { to: string; label: string }[] = tickets.length === 0
+  const commonTransitions: { to: string; label: string; warning?: string }[] = tickets.length === 0
     ? []
     : tickets[0].valid_transitions.filter((tr) =>
         tickets.every((t) => t.valid_transitions.some((vt) => vt.to === tr.to)),
       )
 
-  async function doBatchTransition(to: string) {
-    setTransitionError(null)
-    try {
-      const res = await fetch('/api/tickets/batch/transition', {
+  const batchTransitionMutation = useMutation({
+    mutationFn: (to: string) =>
+      fetch('/api/tickets/batch/transition', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, to }),
-      })
-      if (!res.ok) {
-        const body = await res.json()
-        setTransitionError(body.error ?? `Error ${res.status}`)
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['tickets'] })
-        ids.forEach((id) => queryClient.invalidateQueries({ queryKey: ['ticket', id] }))
-        clearMultiSelection()
-      }
-    } catch (e) {
-      setTransitionError(String(e))
-    }
-  }
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json()
+          throw new Error(body.error ?? `Error ${res.status}`)
+        }
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      ids.forEach((id) => queryClient.invalidateQueries({ queryKey: ['ticket', id] }))
+      clearMultiSelection()
+    },
+  })
 
-  async function doBatchPriority(priority: number) {
-    setPriorityError(null)
-    try {
-      const res = await fetch('/api/tickets/batch/priority', {
+  const batchPriorityMutation = useMutation({
+    mutationFn: (priority: number) =>
+      fetch('/api/tickets/batch/priority', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, priority }),
-      })
-      if (!res.ok) {
-        const body = await res.json()
-        setPriorityError(body.error ?? `Error ${res.status}`)
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['tickets'] })
-        ids.forEach((id) => queryClient.invalidateQueries({ queryKey: ['ticket', id] }))
-      }
-    } catch (e) {
-      setPriorityError(String(e))
-    }
-  }
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json()
+          throw new Error(body.error ?? `Error ${res.status}`)
+        }
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      ids.forEach((id) => queryClient.invalidateQueries({ queryKey: ['ticket', id] }))
+    },
+  })
+
+  const batchPending = batchTransitionMutation.isPending || batchPriorityMutation.isPending
 
   return (
     <div className="h-full flex flex-col bg-gray-900 text-gray-100">
@@ -213,10 +208,16 @@ function BatchDetailPanel({ ids }: { ids: string[] }) {
         {commonTransitions.map((tr) => (
           <button
             key={tr.to}
-            className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200"
-            onClick={() => doBatchTransition(tr.to)}
+            className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-50"
+            disabled={batchPending}
+            onClick={() => {
+              if (tr.warning && !window.confirm(tr.warning)) return
+              batchTransitionMutation.mutate(tr.to)
+            }}
           >
-            {tr.label}
+            {batchTransitionMutation.isPending && batchTransitionMutation.variables === tr.to
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : tr.label}
           </button>
         ))}
         <InlineNumberField
@@ -224,10 +225,11 @@ function BatchDetailPanel({ ids }: { ids: string[] }) {
           value={0}
           min={0}
           max={255}
-          onCommit={doBatchPriority}
+          onCommit={(p) => batchPriorityMutation.mutate(p)}
+          disabled={batchPending}
         />
-        {transitionError && <p className="text-red-500 text-sm w-full">{transitionError}</p>}
-        {priorityError && <p className="text-red-500 text-sm w-full">{priorityError}</p>}
+        {batchTransitionMutation.isError && <p className="text-red-500 text-sm w-full">{String(batchTransitionMutation.error instanceof Error ? batchTransitionMutation.error.message : batchTransitionMutation.error)}</p>}
+        {batchPriorityMutation.isError && <p className="text-red-500 text-sm w-full">{String(batchPriorityMutation.error instanceof Error ? batchPriorityMutation.error.message : batchPriorityMutation.error)}</p>}
       </div>
     </div>
   )
@@ -335,6 +337,7 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
                 min={1}
                 max={10}
                 onCommit={(v) => patchMutation.mutate({ effort: v })}
+                disabled={patchMutation.isPending}
               />
               <InlineNumberField
                 label="R"
@@ -342,6 +345,7 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
                 min={1}
                 max={10}
                 onCommit={(v) => patchMutation.mutate({ risk: v })}
+                disabled={patchMutation.isPending}
               />
               <InlineNumberField
                 label="P"
@@ -349,6 +353,7 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
                 min={0}
                 max={255}
                 onCommit={(v) => patchMutation.mutate({ priority: v })}
+                disabled={patchMutation.isPending}
               />
               {patchError && <span className="text-xs text-red-500">{patchError}</span>}
             </div>

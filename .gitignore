@@ -3,3 +3,7 @@ tickets/NEXT_ID
 .claude/settings.local.json
 .apm-worker.log
 pr-body.txt
+.apm/local.toml
+.apm/*.init
+.apm/sessions.json
+.apm/credentials.json

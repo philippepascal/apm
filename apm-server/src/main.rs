@@ -56,6 +56,8 @@ impl AppState {
 struct TransitionOption {
     to: String,
     label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    warning: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -445,6 +447,7 @@ fn compute_valid_transitions(root: &PathBuf, state: &str) -> Vec<TransitionOptio
                     } else {
                         tr.label.clone()
                     },
+                    warning: tr.warning.clone(),
                 })
                 .collect()
         })

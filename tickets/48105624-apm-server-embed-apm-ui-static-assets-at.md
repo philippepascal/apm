@@ -1,15 +1,14 @@
 +++
 id = "48105624"
 title = "apm-server: embed apm-ui static assets at build time via include_dir"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
-agent = "87531"
 branch = "ticket/48105624-apm-server-embed-apm-ui-static-assets-at"
 created_at = "2026-04-02T20:54:40.869103Z"
-updated_at = "2026-04-04T02:55:58.446080Z"
+updated_at = "2026-04-04T06:20:16.519246Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 +++
@@ -82,3 +81,4 @@ Files changed:
 | 2026-04-04T00:29Z | specd | ready | apm |
 | 2026-04-04T02:52Z | ready | in_progress | philippepascal |
 | 2026-04-04T02:55Z | in_progress | implemented | claude-0403-0252-w48b |
+| 2026-04-04T06:20Z | implemented | closed | apm-sync |

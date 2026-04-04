@@ -560,6 +560,25 @@ Example:
         #[arg(long)]
         no_aggressive: bool,
     },
+    /// Move closed ticket files to the archive directory
+    #[command(long_about = "Move terminal-state ticket files from tickets/ to the configured archive_dir.
+
+Requires `archive_dir` to be set in [tickets] in .apm/config.toml:
+  archive_dir = \"archive/tickets\"
+
+Examples:
+  apm archive                        # archive all closed tickets
+  apm archive --dry-run              # preview which files would be moved
+  apm archive --older-than 30d       # archive only tickets updated >30 days ago
+  apm archive --older-than 2026-01-01  # ISO date threshold")]
+    Archive {
+        /// Print which files would be moved without modifying any branches
+        #[arg(long)]
+        dry_run: bool,
+        /// Only archive tickets whose updated_at is older than this threshold (e.g. \"30d\" or \"2026-01-01\")
+        #[arg(long, value_name = "THRESHOLD")]
+        older_than: Option<String>,
+    },
     /// Remove worktrees and local branches for closed tickets
     #[command(long_about = "Remove worktrees (and optionally branches) for terminal-state tickets.
 
@@ -736,6 +755,7 @@ fn main() -> Result<()> {
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
+        Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
         Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),

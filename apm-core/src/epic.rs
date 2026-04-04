@@ -37,6 +37,7 @@ mod tests {
             label: "x".to_string(),
             description: String::new(),
             terminal,
+            worker_end: false,
             satisfies_deps: crate::config::SatisfiesDeps::Bool(satisfies_deps),
             dep_requires: None,
             transitions: vec![],

@@ -1,15 +1,14 @@
 +++
 id = "610be42e"
 title = "apm-core: write author from identity on ticket creation, remove agent field"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
-agent = "51821"
 branch = "ticket/610be42e-apm-core-write-author-from-identity-on-t"
 created_at = "2026-04-02T20:53:55.085303Z"
-updated_at = "2026-04-04T02:16:30.620599Z"
+updated_at = "2026-04-04T06:01:12.212359Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17"]
@@ -110,3 +109,4 @@ Add `pub mod identity;` to `apm-core/src/lib.rs`.
 | 2026-04-04T00:28Z | specd | ready | apm |
 | 2026-04-04T02:08Z | ready | in_progress | philippepascal |
 | 2026-04-04T02:16Z | in_progress | implemented | claude-0404-0210-f3a1 |
+| 2026-04-04T06:01Z | implemented | closed | apm-sync |

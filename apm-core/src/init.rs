@@ -78,9 +78,21 @@ pub fn setup(root: &Path) -> Result<()> {
     let local_toml = apm_dir.join("local.toml");
     let is_tty = std::io::stdin().is_terminal();
 
-    // Prompt for username and write local.toml (any init, not just first)
-    let username = if is_tty && !local_toml.exists() {
-        let u = prompt_username()?;
+    // Check if git_host is configured — if so, identity comes from the provider
+    let has_git_host = {
+        let config_path = apm_dir.join("config.toml");
+        config_path.exists() && crate::config::Config::load(root)
+            .map(|cfg| cfg.git_host.provider.is_some())
+            .unwrap_or(false)
+    };
+
+    // Only prompt for local username when there is no git_host
+    let username = if !has_git_host && !local_toml.exists() {
+        let u = if is_tty {
+            prompt_username()?
+        } else {
+            String::new()
+        };
         if !u.is_empty() {
             write_local_toml(&apm_dir, &u)?;
             println!("Created .apm/local.toml");
@@ -422,6 +434,13 @@ instructions   = ".apm/apm.worker.md"
   to      = "blocked"
   trigger = "command:block"
   actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+  warning      = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
 
 [[workflow.states]]
 id         = "blocked"

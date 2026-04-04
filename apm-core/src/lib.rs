@@ -1,3 +1,4 @@
+pub mod archive;
 pub mod clean;
 pub mod config;
 pub mod github;

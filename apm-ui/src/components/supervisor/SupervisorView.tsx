@@ -198,12 +198,12 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
             placeholder="Search tickets…"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="h-7 pl-2 pr-6 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-40"
+            className="h-7 pl-2 pr-6 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-400 w-40"
           />
           {searchText && (
             <button
               onClick={() => setSearchText('')}
-              className="absolute right-1 text-gray-400 hover:text-gray-600"
+              className="absolute right-1 text-gray-400 hover:text-gray-200"
             >
               <X className="w-3 h-3" />
             </button>
@@ -212,7 +212,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         <select
           value={stateFilter ?? ''}
           onChange={(e) => setStateFilter(e.target.value || null)}
-          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           <option value="">All states</option>
           {ALL_WORKFLOW_STATES.map((s) => (
@@ -222,7 +222,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         <select
           value={ownerFilter ?? ''}
           onChange={(e) => setOwnerFilter(e.target.value || null)}
-          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           <option value="">All owners</option>
           {availableOwners.map((a) => (
@@ -232,7 +232,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         <select
           value={authorFilter ?? ''}
           onChange={(e) => setAuthorFilter(e.target.value || null)}
-          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           <option value="">All authors</option>
           {availableAuthors.map((a) => (
@@ -242,7 +242,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         <select
           value={epicFilter ?? ''}
           onChange={(e) => setEpicFilter(e.target.value || null)}
-          className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           <option value="">All epics</option>
           {epics.map((ep) => (

@@ -394,6 +394,58 @@ fn show_missing_ticket_errors() {
     assert!(apm::cmd::show::run(dir.path(), "99", false, false).is_err());
 }
 
+#[test]
+fn show_displays_epic_target_branch_depends_on_when_set() {
+    let dir = setup();
+    let p = dir.path();
+
+    // Create a ticket with epic, target_branch, and depends_on set directly.
+    let ticket_content = "+++\nid = \"aabb1122\"\ntitle = \"Rich ticket\"\nstate = \"new\"\nbranch = \"ticket/aabb1122-rich-ticket\"\nepic = \"epic001\"\ntarget_branch = \"epic/epic001-user-auth\"\ndepends_on = [\"ccdd3344\", \"eeff5566\"]\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] One\n\n### Out of scope\n\nN/A.\n\n### Approach\n\nDirect.\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    let ticket_dir = p.join("tickets");
+    std::fs::create_dir_all(&ticket_dir).unwrap();
+    let ticket_path = ticket_dir.join("aabb1122-rich-ticket.md");
+    std::fs::write(&ticket_path, ticket_content).unwrap();
+    git(p, &["checkout", "-b", "ticket/aabb1122-rich-ticket"]);
+    git(p, &["-c", "commit.gpgsign=false", "add", "tickets/aabb1122-rich-ticket.md"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add rich ticket"]);
+    git(p, &["checkout", "-"]);
+    let _ = std::fs::remove_file(&ticket_path);
+
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["show", "aabb1122"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(out.status.success(), "apm show failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(stdout.contains("epic:"), "expected epic: line in:\n{stdout}");
+    assert!(stdout.contains("epic001"), "expected epic id in:\n{stdout}");
+    assert!(stdout.contains("target_branch:"), "expected target_branch: line in:\n{stdout}");
+    assert!(stdout.contains("epic/epic001-user-auth"), "expected target_branch value in:\n{stdout}");
+    assert!(stdout.contains("depends_on:"), "expected depends_on: line in:\n{stdout}");
+    assert!(stdout.contains("ccdd3344"), "expected depends_on value in:\n{stdout}");
+}
+
+#[test]
+fn show_omits_epic_target_branch_depends_on_when_absent() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Plain ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let id = find_ticket_id(dir.path(), "plain-ticket");
+
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["show", &id])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(out.status.success(), "apm show failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(!stdout.contains("epic:"), "unexpected epic: line in:\n{stdout}");
+    assert!(!stdout.contains("target_branch:"), "unexpected target_branch: line in:\n{stdout}");
+    assert!(!stdout.contains("depends_on:"), "unexpected depends_on: line in:\n{stdout}");
+}
+
 // --- state ---
 
 #[test]
@@ -4447,4 +4499,253 @@ fn assign_unknown_id_errors() {
     let dir = setup();
     let result = apm::cmd::assign::run(dir.path(), "9999", "alice", true);
     assert!(result.is_err());
+}
+
+// --- archive ---
+
+fn setup_with_archive_dir() -> TempDir {
+    let dir = setup();
+    let p = dir.path();
+    // Append archive_dir to the [tickets] section in apm.toml.
+    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    let updated = toml.replace(
+        "[tickets]\ndir = \"tickets\"",
+        "[tickets]\ndir = \"tickets\"\narchive_dir = \"archive/tickets\"",
+    );
+    std::fs::write(p.join("apm.toml"), updated).unwrap();
+    dir
+}
+
+#[test]
+fn archive_no_archive_dir_errors() {
+    let dir = setup();
+    let result = apm::cmd::archive::run(dir.path(), false, None);
+    assert!(result.is_err());
+    let msg = format!("{}", result.unwrap_err());
+    assert!(msg.contains("archive_dir is not set"), "unexpected error: {msg}");
+}
+
+#[test]
+fn archive_moves_closed_ticket_to_archive_dir() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create and close a ticket (close merges to main).
+    apm::cmd::new::run(p, "Archive me".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "archive-me");
+    let id = find_ticket_id(p, "archive-me");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Verify the ticket file is on main before archive.
+    let rel = ticket_rel_path(&branch);
+    let files_before = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files_before.iter().any(|f| f == &rel), "ticket not on main before archive");
+
+    // Run archive.
+    apm::cmd::archive::run(p, false, None).unwrap();
+
+    // Ticket file should be gone from tickets/ on main.
+    let files_after = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap_or_default();
+    assert!(!files_after.iter().any(|f| f == &rel), "ticket still in tickets/ after archive");
+
+    // Ticket file should exist in archive/tickets/ on main.
+    let filename = std::path::Path::new(&rel).file_name().unwrap().to_str().unwrap();
+    let archive_path = format!("archive/tickets/{filename}");
+    let archive_files = apm_core::git::list_files_on_branch(p, "main", "archive/tickets").unwrap();
+    assert!(archive_files.iter().any(|f| f == &archive_path), "ticket not in archive/tickets/ after archive");
+}
+
+#[test]
+fn archive_show_finds_ticket_in_archive_after_branch_deleted() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create and close a ticket.
+    apm::cmd::new::run(p, "Show archived".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "show-archived");
+    let id = find_ticket_id(p, "show-archived");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Archive it.
+    apm::cmd::archive::run(p, false, None).unwrap();
+
+    // Delete the ticket branch (simulate apm clean --branches).
+    git(p, &["branch", "-D", &branch]);
+
+    // apm show should still succeed via the archive fallback.
+    apm::cmd::show::run(p, &id, true, false).unwrap();
+}
+
+#[test]
+fn archive_dry_run_does_not_move_files() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "Dry run me".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "dry-run-me");
+    let id = find_ticket_id(p, "dry-run-me");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Dry run should not move anything.
+    apm::cmd::archive::run(p, true, None).unwrap();
+
+    // Ticket file should still be in tickets/ on main.
+    let rel = ticket_rel_path(&branch);
+    let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files.iter().any(|f| f == &rel), "dry-run should not move ticket file");
+
+    // archive/tickets/ should not exist.
+    let archive_files = apm_core::git::list_files_on_branch(p, "main", "archive/tickets").unwrap_or_default();
+    assert!(archive_files.is_empty(), "dry-run should not create archive dir");
+}
+
+#[test]
+fn archive_skips_non_terminal_tickets_with_warning() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create a ticket in "new" state (non-terminal).
+    apm::cmd::new::run(p, "Non terminal".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "non-terminal");
+
+    // Put the ticket file on main manually (without closing) so it appears in tickets/ on main.
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(p, &branch, &rel);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::write(p.join(&rel), &content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "put non-terminal ticket on main"]);
+
+    // archive should not move it.
+    apm::cmd::archive::run(p, false, None).unwrap();
+
+    let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files.iter().any(|f| f == &rel), "non-terminal ticket should remain in tickets/");
+}
+
+#[test]
+fn archive_older_than_skips_recent_ticket() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    apm::cmd::new::run(p, "Recent ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "recent-ticket");
+    let id = find_ticket_id(p, "recent-ticket");
+    apm::cmd::close::run(p, &id, None, true).unwrap();
+
+    // Use a 30-day threshold — a ticket created now is newer than 30 days ago, so skip it.
+    apm::cmd::archive::run(p, false, Some("30d".into())).unwrap();
+
+    let rel = ticket_rel_path(&branch);
+    let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
+    assert!(files.iter().any(|f| f == &rel), "recent ticket should not be archived with --older-than 0d");
+}
+
+// --- merge completion strategy: push to origin after merge ---
+
+fn merge_strategy_config_toml() -> &'static str {
+    r#"[project]
+name = "test"
+default_branch = "main"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  actor      = "agent"
+  completion = "merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#
+}
+
+fn setup_merge_strategy_remote() -> (TempDir, TempDir) {
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let local = tempfile::tempdir().unwrap();
+    let p = local.path();
+    git(p, &["clone", &bp.to_string_lossy(), "."]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("apm.toml"), merge_strategy_config_toml()).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    git(p, &["push", "origin", "main"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    (bare, local)
+}
+
+fn remote_ref_sha(dir: &std::path::Path, refname: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["ls-remote", "origin", refname])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout)
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_string()
+}
+
+fn local_ref_sha(dir: &std::path::Path, refname: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", refname])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout).trim().to_string()
+}
+
+#[test]
+fn merge_strategy_pushes_default_branch_to_origin() {
+    let (_bare, local) = setup_merge_strategy_remote();
+    let p = local.path();
+
+    let branch = "ticket/cc000003-merge-push-test";
+    write_in_progress_ticket(p, "cc000003", branch, "cc000003-merge-push-test.md", None);
+    git(p, &["push", "origin", branch]);
+
+    let result = apm_core::state::transition(p, "cc000003", "implemented".into(), true, false);
+    assert!(result.is_ok(), "merge strategy should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+
+    let local_sha = local_ref_sha(p, "main");
+    let remote_sha = remote_ref_sha(p, "main");
+    assert!(!local_sha.is_empty(), "local main should exist");
+    assert_eq!(local_sha, remote_sha, "origin/main should match local main after push");
+}
+
+#[test]
+fn pr_or_epic_merge_with_target_branch_pushes_target_to_origin() {
+    let (_bare, local) = setup_pr_or_epic_merge_remote();
+    let p = local.path();
+
+    git(p, &["checkout", "-b", "epic/push-test"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic init", "--allow-empty"]);
+    git(p, &["push", "origin", "epic/push-test"]);
+    git(p, &["checkout", "main"]);
+
+    let branch = "ticket/dd000004-epic-push-test";
+    write_in_progress_ticket(p, "dd000004", branch, "dd000004-epic-push-test.md", Some("epic/push-test"));
+    git(p, &["push", "origin", branch]);
+
+    git(p, &["checkout", "epic/push-test"]);
+
+    let result = apm_core::state::transition(p, "dd000004", "implemented".into(), true, false);
+    assert!(result.is_ok(), "pr_or_epic_merge with target should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+
+    let local_sha = local_ref_sha(p, "epic/push-test");
+    let remote_sha = remote_ref_sha(p, "epic/push-test");
+    assert!(!local_sha.is_empty(), "local epic/push-test should exist");
+    assert_eq!(local_sha, remote_sha, "origin/epic/push-test should match local after push");
 }
