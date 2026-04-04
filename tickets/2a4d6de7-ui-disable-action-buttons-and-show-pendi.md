@@ -36,15 +36,15 @@ React Query's `useMutation` already exposes `isPending` (true from the moment `m
 
 ### Acceptance criteria
 
-- [ ] While a transition mutation is in flight in `TransitionButtons`, all transition buttons and the "Keep" button are `disabled`
-- [ ] While a transition mutation is in flight in `TransitionButtons`, the clicked transition button shows a spinner icon (`Loader2`) instead of its text label
-- [ ] While the reassign mutation is in flight, the "Reassign to me" button is `disabled` and shows a spinner icon
-- [ ] While `patchMutation` is pending in `TicketDetail`, the inline number fields (effort, risk, priority) do not allow new commits — `InlineNumberField` accepts a `disabled` prop that prevents activation
-- [ ] While a batch transition is in flight in `BatchDetailPanel`, all batch transition buttons are `disabled` and the clicked button shows a spinner
-- [ ] While the batch priority mutation is in flight in `BatchDetailPanel`, the priority `InlineNumberField` is disabled
-- [ ] While either batch mutation (transition or priority) is pending, both batch transition buttons and the batch priority field are disabled
-- [ ] The `Shift+W` keyboard handler in `WorkScreen` does not fire `startMutation.mutate()` or `stopMutation.mutate()` when the respective mutation is already pending
-- [ ] After any mutation settles (success or error), the disabled state and spinner are removed and buttons return to their normal interactive state
+- [x] While a transition mutation is in flight in `TransitionButtons`, all transition buttons and the "Keep" button are `disabled`
+- [x] While a transition mutation is in flight in `TransitionButtons`, the clicked transition button shows a spinner icon (`Loader2`) instead of its text label
+- [x] While the reassign mutation is in flight, the "Reassign to me" button is `disabled` and shows a spinner icon
+- [x] While `patchMutation` is pending in `TicketDetail`, the inline number fields (effort, risk, priority) do not allow new commits — `InlineNumberField` accepts a `disabled` prop that prevents activation
+- [x] While a batch transition is in flight in `BatchDetailPanel`, all batch transition buttons are `disabled` and the clicked button shows a spinner
+- [x] While the batch priority mutation is in flight in `BatchDetailPanel`, the priority `InlineNumberField` is disabled
+- [x] While either batch mutation (transition or priority) is pending, both batch transition buttons and the batch priority field are disabled
+- [x] The `Shift+W` keyboard handler in `WorkScreen` does not fire `startMutation.mutate()` or `stopMutation.mutate()` when the respective mutation is already pending
+- [x] After any mutation settles (success or error), the disabled state and spinner are removed and buttons return to their normal interactive state
 
 ### Out of scope
 
