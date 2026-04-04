@@ -8,9 +8,10 @@ risk = 0
 author = "apm"
 branch = "ticket/2b7c4c97-apm-server-expose-owner-in-ticket-api-an"
 created_at = "2026-04-04T06:28:16.243562Z"
-updated_at = "2026-04-04T06:28:16.243562Z"
+updated_at = "2026-04-04T06:30:02.539593Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["42f4b3ba"]
 +++
 
 ## Spec
