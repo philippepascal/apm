@@ -33,7 +33,7 @@ pub async fn queue_handler(
         let p = &config.workflow.prioritization;
         let active: Vec<&apm_core::ticket::Ticket> = tickets
             .iter()
-            .filter(|t| !apm_core::ticket::dep_satisfied(&t.frontmatter.state, &config))
+            .filter(|t| !apm_core::ticket::dep_satisfied(&t.frontmatter.state, None, &config))
             .collect();
         let rev_idx = apm_core::ticket::build_reverse_index(&active);
         let sorted = apm_core::ticket::sorted_actionable(
@@ -94,7 +94,6 @@ mod tests {
                 risk,
                 author: None,
                 supervisor: None,
-                agent: None,
                 branch: None,
                 created_at: None,
                 updated_at: None,

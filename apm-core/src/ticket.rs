@@ -46,8 +46,6 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub supervisor: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<DateTime<Utc>>,
@@ -177,13 +175,22 @@ pub fn sorted_actionable<'a>(
     candidates
 }
 
-/// Returns true if a ticket in `state` satisfies the dependency check —
-/// i.e. dependents are unblocked by it.  True when the state has
-/// `satisfies_deps = true` OR `terminal = true`; false for unknown states.
-pub fn dep_satisfied(state: &str, config: &crate::config::Config) -> bool {
+/// Returns true if a ticket in `dep_state` satisfies the dependency gate
+/// required by the dependent ticket.  `required_gate` is `Some("tag")` when
+/// the dependent's state has `dep_requires = "tag"`, or `None` for the
+/// default (requires `satisfies_deps = true` or `terminal = true`).
+pub fn dep_satisfied(dep_state: &str, required_gate: Option<&str>, config: &crate::config::Config) -> bool {
+    use crate::config::SatisfiesDeps;
     config.workflow.states.iter()
-        .find(|s| s.id == state)
-        .map(|s| s.satisfies_deps || s.terminal)
+        .find(|s| s.id == dep_state)
+        .map(|s| {
+            if s.terminal { return true; }
+            match &s.satisfies_deps {
+                SatisfiesDeps::Bool(true) => true,
+                SatisfiesDeps::Tag(tag) => required_gate == Some(tag.as_str()),
+                SatisfiesDeps::Bool(false) => false,
+            }
+        })
         .unwrap_or(false)
 }
 
@@ -206,10 +213,13 @@ pub fn pick_next<'a>(
             if !startable.is_empty() && !startable.contains(&state) {
                 return false;
             }
+            let required_gate = config.workflow.states.iter()
+                .find(|s| s.id == state)
+                .and_then(|s| s.dep_requires.as_deref());
             if let Some(deps) = &t.frontmatter.depends_on {
                 for dep_id in deps {
                     if let Some(dep) = tickets.iter().find(|d| d.frontmatter.id == *dep_id) {
-                        if !dep_satisfied(&dep.frontmatter.state, config) {
+                        if !dep_satisfied(&dep.frontmatter.state, required_gate, config) {
                             return false;
                         }
                     }
@@ -459,7 +469,6 @@ pub fn create(
         risk: 0,
         author: Some(author.clone()),
         supervisor: None,
-        agent: None,
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
@@ -730,7 +739,7 @@ pub fn list_filtered<'a>(
     tickets.iter().filter(|t| {
         let fm = &t.frontmatter;
         let state_ok = state_filter.map_or(true, |s| fm.state == s);
-        let agent_ok = !unassigned || fm.agent.is_none();
+        let agent_ok = !unassigned || fm.author.as_deref() == Some("unassigned");
         let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
         let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
         let supervisor_ok = supervisor_filter.map_or(true, |s| fm.supervisor.as_deref() == Some(s));
@@ -749,9 +758,20 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
         "author"   => anyhow::bail!("author is immutable"),
         "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.to_string()) },
-        "agent"    => fm.agent    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
+        "depends_on" => {
+            if value == "-" {
+                fm.depends_on = None;
+            } else {
+                let ids: Vec<String> = value
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                fm.depends_on = if ids.is_empty() { None } else { Some(ids) };
+            }
+        }
         other => anyhow::bail!("unknown field: {other}"),
     }
     Ok(())
@@ -773,18 +793,10 @@ fn append_history_row(body: &mut String, from: &str, to: &str, when: &str, by: &
 }
 
 pub fn handoff(ticket: &mut Ticket, new_agent: &str, now: DateTime<Utc>) -> Result<Option<String>> {
-    let old_agent = match &ticket.frontmatter.agent {
-        None => bail!("no agent assigned — use `apm start` instead"),
-        Some(a) => a.clone(),
-    };
-    if old_agent == new_agent {
-        return Ok(None);
-    }
-    ticket.frontmatter.agent = Some(new_agent.to_string());
     ticket.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    append_history_row(&mut ticket.body, &old_agent, new_agent, &when, "handoff");
-    Ok(Some(old_agent))
+    append_history_row(&mut ticket.body, "unknown", new_agent, &when, "handoff");
+    Ok(Some("unknown".to_string()))
 }
 
 pub fn list_worktrees_with_tickets(
@@ -851,7 +863,6 @@ mod tests {
         assert_eq!(t.frontmatter.priority, 0);
         assert_eq!(t.frontmatter.effort, 0);
         assert_eq!(t.frontmatter.risk, 0);
-        assert!(t.frontmatter.agent.is_none());
         assert!(t.frontmatter.branch.is_none());
     }
 
@@ -1279,14 +1290,22 @@ mod tests {
     #[test]
     fn list_filtered_unassigned() {
         let config = test_config_with_states(&[]);
+        let make_with_author = |id: &str, author: Option<&str>| {
+            let author_line = author.map(|a| format!("author = \"{a}\"\n")).unwrap_or_default();
+            let raw = format!(
+                "+++\nid = \"{id}\"\ntitle = \"T{id}\"\nstate = \"new\"\n{author_line}+++\n\n"
+            );
+            Ticket::parse(Path::new("test.md"), &raw).unwrap()
+        };
         let tickets = vec![
-            make_ticket("0001", "new", None),
-            make_ticket("0002", "new", Some("alice")),
-            make_ticket("0003", "ready", None),
+            make_with_author("0001", Some("unassigned")),
+            make_with_author("0002", Some("alice")),
+            make_with_author("0003", Some("unassigned")),
+            make_with_author("0004", None),
         ];
         let result = list_filtered(&tickets, &config, None, true, false, None, None);
         assert_eq!(result.len(), 2);
-        assert!(result.iter().all(|t| t.frontmatter.agent.is_none()));
+        assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("unassigned")));
     }
 
     // ── set_field ─────────────────────────────────────────────────────────
@@ -1301,7 +1320,6 @@ mod tests {
             risk: 0,
             author: None,
             supervisor: None,
-            agent: None,
             branch: None,
             created_at: None,
             updated_at: None,
@@ -1340,14 +1358,6 @@ mod tests {
         assert!(err.to_string().contains("unknown field: foo"));
     }
 
-    #[test]
-    fn set_field_agent_clear() {
-        let mut fm = make_frontmatter();
-        fm.agent = Some("alice".to_string());
-        set_field(&mut fm, "agent", "-").unwrap();
-        assert!(fm.agent.is_none());
-    }
-
     // ── dep_satisfied ─────────────────────────────────────────────────────
 
     fn config_with_dep_states() -> crate::config::Config {
@@ -1383,25 +1393,118 @@ label = "Blocked"
     #[test]
     fn dep_satisfied_satisfies_deps_true() {
         let config = config_with_dep_states();
-        assert!(dep_satisfied("done", &config));
+        assert!(dep_satisfied("done", None, &config));
     }
 
     #[test]
     fn dep_satisfied_terminal_true() {
         let config = config_with_dep_states();
-        assert!(dep_satisfied("closed", &config));
+        assert!(dep_satisfied("closed", None, &config));
     }
 
     #[test]
     fn dep_satisfied_both_false() {
         let config = config_with_dep_states();
-        assert!(!dep_satisfied("blocked", &config));
+        assert!(!dep_satisfied("blocked", None, &config));
     }
 
     #[test]
     fn dep_satisfied_unknown_state() {
         let config = config_with_dep_states();
-        assert!(!dep_satisfied("nonexistent", &config));
+        assert!(!dep_satisfied("nonexistent", None, &config));
+    }
+
+    fn config_with_spec_gate() -> crate::config::Config {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "groomed"
+label = "Groomed"
+actionable = ["agent"]
+dep_requires = "spec"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id = "specd"
+label = "Specd"
+satisfies_deps = "spec"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+satisfies_deps = "spec"
+
+[[workflow.states]]
+id = "implemented"
+label = "Implemented"
+satisfies_deps = true
+
+[[workflow.states]]
+id = "closed"
+label = "Closed"
+terminal = true
+"#;
+        toml::from_str(toml).unwrap()
+    }
+
+    #[test]
+    fn dep_satisfied_tag_matches_required_gate() {
+        let config = config_with_spec_gate();
+        assert!(dep_satisfied("specd", Some("spec"), &config));
+    }
+
+    #[test]
+    fn dep_satisfied_tag_no_required_gate_is_false() {
+        let config = config_with_spec_gate();
+        assert!(!dep_satisfied("specd", None, &config));
+    }
+
+    #[test]
+    fn dep_satisfied_bool_true_with_no_gate() {
+        let config = config_with_spec_gate();
+        assert!(dep_satisfied("implemented", None, &config));
+    }
+
+    #[test]
+    fn pick_next_groomed_unblocked_when_dep_specd() {
+        let config = config_with_spec_gate();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "groomed", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "specd", None),
+        ];
+        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
+    }
+
+    #[test]
+    fn pick_next_groomed_unblocked_when_dep_in_progress() {
+        let config = config_with_spec_gate();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "groomed", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "in_progress", None),
+        ];
+        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config);
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
+    }
+
+    #[test]
+    fn pick_next_ready_blocked_when_dep_only_specd() {
+        let config = config_with_spec_gate();
+        let tickets = vec![
+            make_ticket_with_deps("aaaa0001", "ready", Some(vec!["bbbb0001"])),
+            make_ticket_with_deps("bbbb0001", "specd", None),
+        ];
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config);
+        assert!(result.is_none());
     }
 
     // ── pick_next dep filtering ────────────────────────────────────────────
@@ -1474,19 +1577,13 @@ label = "Blocked"
     }
 
     #[test]
-    fn handoff_no_agent_errors() {
+    fn handoff_no_agent_uses_unknown_placeholder() {
         let mut t = make_ticket_with_agent(None);
         let now = chrono::Utc::now();
-        let err = handoff(&mut t, "bob", now).unwrap_err();
-        assert!(err.to_string().contains("no agent assigned"));
-    }
-
-    #[test]
-    fn handoff_idempotent() {
-        let mut t = make_ticket_with_agent(Some("alice"));
-        let now = chrono::Utc::now();
-        let result = handoff(&mut t, "alice", now).unwrap();
-        assert!(result.is_none());
+        let result = handoff(&mut t, "bob", now).unwrap();
+        assert_eq!(result, Some("unknown".to_string()));
+        assert!(t.body.contains("unknown"));
+        assert!(t.body.contains("handoff"));
     }
 
     #[test]
@@ -1494,8 +1591,7 @@ label = "Blocked"
         let mut t = make_ticket_with_agent(Some("alice"));
         let now = chrono::Utc::now();
         let result = handoff(&mut t, "bob", now).unwrap();
-        assert_eq!(result, Some("alice".to_string()));
-        assert_eq!(t.frontmatter.agent.as_deref(), Some("bob"));
+        assert_eq!(result, Some("unknown".to_string()));
         assert!(t.body.contains("## History"));
         assert!(t.body.contains("handoff"));
     }
