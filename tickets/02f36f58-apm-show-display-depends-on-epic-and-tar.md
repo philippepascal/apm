@@ -38,7 +38,26 @@ These fields are fully parsed and stored in the `Frontmatter` struct (see `apm-c
 
 ### Approach
 
-How the implementation will work.
+One file changes: `apm/src/cmd/show.rs`.
+
+In the non-edit branch of `run()` (lines 27–35), after the existing `if let Some(b) = &fm.branch` line, add three analogous conditional prints:
+
+```rust
+if let Some(e) = &fm.epic         { println!("epic:         {e}"); }
+if let Some(tb) = &fm.target_branch { println!("target_branch: {tb}"); }
+if let Some(deps) = &fm.depends_on {
+    if !deps.is_empty() {
+        println!("depends_on:   {}", deps.join(", "));
+    }
+}
+```
+
+No changes to `apm-core` are needed; the fields are already parsed.
+
+Add a unit/integration test in `apm/tests/integration.rs` that:
+1. Creates a ticket with `epic`, `target_branch`, and `depends_on` set in frontmatter
+2. Runs `apm show <id>` and asserts the three lines appear in stdout
+3. Creates a second ticket with none of these fields and asserts the lines are absent
 
 ### Open questions
 
