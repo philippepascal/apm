@@ -84,6 +84,7 @@ label          = "Ammend"
 color          = "#ef4444"
 layer          = 1
 actionable     = ["agent"]
+dep_requires   = "spec"
 satisfies_deps = "spec"
 instructions   = ".apm/apm.spec-writer.md"
 
@@ -177,7 +178,7 @@ instructions   = ".apm/apm.worker.md"
   to         = "implemented"
   trigger    = "manual"
   actor      = "agent"
-  completion = "merge"
+  completion = "pr_or_epic_merge"
 
   [[workflow.states.transitions]]
   to      = "blocked"

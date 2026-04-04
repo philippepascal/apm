@@ -275,6 +275,39 @@ fn new_ticket_has_correct_frontmatter() {
 }
 
 #[test]
+fn new_uses_local_toml_username_as_author() {
+    let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"carol\"\n").unwrap();
+    apm::cmd::new::run(dir.path(), "My Ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "my-ticket");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(content.contains("author = \"carol\""), "author should come from local.toml: {content}");
+}
+
+#[test]
+fn new_uses_apm_when_no_local_toml() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Unnamed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "unnamed");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(content.contains("author = \"apm\""), "author should be apm without local.toml: {content}");
+}
+
+#[test]
+fn new_ticket_does_not_write_agent_field() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "No Agent".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "no-agent");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(!content.contains("agent ="), "agent field must not appear in new tickets: {content}");
+}
+
+#[test]
 fn new_increments_ids() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
@@ -299,7 +332,7 @@ fn list_shows_all_tickets() {
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, false, None).unwrap();
 }
 
 #[test]
@@ -316,7 +349,33 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true, false, None).unwrap();
+}
+
+#[test]
+fn list_mine_filter() {
+    let dir = setup();
+    // Write a .apm/local.toml with a username.
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"testuser\"\n").unwrap();
+
+    // Create one ticket authored by "testuser" and one by the default ("apm").
+    apm::cmd::new::run(dir.path(), "Mine".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let b1 = find_ticket_branch(dir.path(), "mine");
+    sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
+
+    // Remove local.toml so the next ticket gets the fallback author.
+    std::fs::remove_file(apm_dir.join("local.toml")).unwrap();
+    apm::cmd::new::run(dir.path(), "Theirs".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let b2 = find_ticket_branch(dir.path(), "theirs");
+    sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
+
+    // Restore local.toml so --mine resolves to "testuser".
+    std::fs::write(apm_dir.join("local.toml"), "username = \"testuser\"\n").unwrap();
+
+    // --mine should show only the first ticket.
+    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, true, None).unwrap();
 }
 
 // --- show ---
@@ -695,7 +754,7 @@ fn take_succeeds_on_ammend_state() {
     std::env::set_var("APM_AGENT_NAME", "new-agent");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-ammend-me", "tickets/0001-ammend-me.md");
-    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -706,7 +765,7 @@ fn take_succeeds_on_blocked_state() {
     std::env::set_var("APM_AGENT_NAME", "new-agent");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-blocked", "tickets/0001-blocked.md");
-    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -718,21 +777,20 @@ fn take_appends_handoff_history() {
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-handoff", "tickets/0001-handoff.md");
     assert!(content.contains("handoff"), "handoff history entry should be appended: {content}");
-    assert!(content.contains("old-agent"), "old agent should appear in history: {content}");
     assert!(content.contains("new-agent"), "new agent should appear in history: {content}");
 }
 
 #[test]
-fn take_fails_when_no_agent_assigned() {
-    let dir = setup();
+fn take_succeeds_when_no_agent_assigned() {
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
-    // Ticket with no agent field
+    // Ticket with no agent field — take should succeed using "unknown" as placeholder
     write_ticket_to_branch(p, "ticket/0001-unassigned", "0001-unassigned.md", "new", 1, "unassigned");
     std::env::set_var("APM_AGENT_NAME", "some-agent");
-    let result = apm::cmd::take::run(p, "1", true);
-    assert!(result.is_err(), "take should fail when no agent is assigned");
-    let msg = format!("{}", result.unwrap_err());
-    assert!(msg.contains("apm start"), "error should mention apm start: {msg}");
+    apm::cmd::take::run(p, "1", true).unwrap();
+    let content = branch_content(p, "ticket/0001-unassigned", "tickets/0001-unassigned.md");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
+    assert!(content.contains("unknown"), "old agent placeholder should be 'unknown': {content}");
 }
 
 #[test]
@@ -745,7 +803,8 @@ fn take_without_apm_agent_name_falls_back_to_apm() {
     std::env::remove_var("USERNAME");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
-    assert!(content.contains("agent = \"apm\""), "agent should fall back to 'apm': {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
 }
 
 #[test]
@@ -757,7 +816,8 @@ fn take_without_apm_agent_name_uses_user_env() {
     std::env::set_var("USER", "alice");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-user-env", "tickets/0001-user-env.md");
-    assert!(content.contains("agent = \"alice\""), "agent should be resolved from USER: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
 }
 
 // ── apm spec ────────────────────────────────────────────────────────────────
@@ -1183,7 +1243,7 @@ fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
     apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
-    apm::cmd::list::run(p, None, false, false, None, None, false).unwrap();
+    apm::cmd::list::run(p, None, false, false, None, None, false, false, None).unwrap();
 }
 
 #[test]
@@ -1323,7 +1383,7 @@ fn start_next_claims_highest_priority_ticket() {
     apm::cmd::start::run_next(p, true, false, false).unwrap();
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
-    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1474,7 +1534,7 @@ terminal = true
 
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
     assert!(content.contains("state = \"in_design\""), "ticket should be in_design: {content}");
-    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── apm start --spawn ────────────────────────────────────────────────────────
@@ -1511,14 +1571,8 @@ fn start_spawn_sets_agent_to_worker_pid() {
     std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    // agent must be a decimal PID, not the delegator name
-    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator: {content}");
-    let agent_val = content.lines()
-        .find(|l| l.starts_with("agent = "))
-        .and_then(|l| l.strip_prefix("agent = \""))
-        .and_then(|l| l.strip_suffix('"'))
-        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
-    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1531,7 +1585,8 @@ fn start_non_spawn_keeps_agent_name() {
     apm::cmd::start::run(p, "1", true, false, false, "delegator-agent").unwrap();
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(content.contains("agent = \"delegator-agent\""), "non-spawn should keep APM_AGENT_NAME: {content}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1549,13 +1604,8 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator after spawn: {content}");
-    let agent_val = content.lines()
-        .find(|l| l.starts_with("agent = "))
-        .and_then(|l| l.strip_prefix("agent = \""))
-        .and_then(|l| l.strip_suffix('"'))
-        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
-    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── system prompt dispatch ───────────────────────────────────────────────────
@@ -2904,7 +2954,7 @@ fn start_without_apm_agent_name_uses_fallback() {
     apm::cmd::start::run(p, "0001", true, false, false, "ci-agent").unwrap();
     let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
-    assert!(content.contains("agent = \"ci-agent\""), "agent should be ci-agent: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ---------------------------------------------------------------------------
@@ -3852,7 +3902,6 @@ fn epic_show_displays_header_and_ticket_table() {
     // Ticket table rows
     assert!(stdout.contains("t2000001"), "should contain ticket1 id: {stdout}");
     assert!(stdout.contains("t2000002"), "should contain ticket2 id: {stdout}");
-    assert!(stdout.contains("alice"), "should contain agent name: {stdout}");
     assert!(stdout.contains("t2000001"), "ticket2 depends_on should show t2000001: {stdout}");
     // Unrelated ticket must NOT appear
     assert!(!stdout.contains("t2000003"), "unrelated ticket must not appear: {stdout}");
@@ -4192,4 +4241,158 @@ terminal = true
     assert!(out.status.success(), "expected exit 0, got: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(stdout, "hello from agents\n", "unexpected output: {stdout}");
+}
+
+fn setup_with_server_url(url: &str) -> TempDir {
+    let dir = setup();
+    let p = dir.path();
+    let server_block = format!("\n[server]\nurl = \"{url}\"\n");
+    let apm_toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    std::fs::write(p.join("apm.toml"), format!("{apm_toml}{server_block}")).unwrap();
+    dir
+}
+
+#[test]
+fn register_prints_otp_from_server() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("POST", "/api/auth/otp")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"otp":"ABCD1234"}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["register", "alice"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "ABCD1234");
+}
+
+#[test]
+fn sessions_empty_response_prints_no_active() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("GET", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body("[]")
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["sessions"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("No active sessions."));
+}
+
+#[test]
+fn sessions_with_data_prints_table() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("GET", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"[{"username":"alice","device_hint":"MacBook","last_seen":"2026-04-01T14:32:00Z","expires_at":"2026-04-08T14:32:00Z"}]"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["sessions"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("alice"), "missing username: {stdout}");
+    assert!(stdout.contains("MacBook"), "missing device: {stdout}");
+    assert!(stdout.contains("USERNAME"), "missing header: {stdout}");
+}
+
+#[test]
+fn revoke_user_prints_count() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":2}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "alice"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 2 session(s)."));
+}
+
+#[test]
+fn revoke_user_zero_prints_no_sessions() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":0}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "alice"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("No sessions found for alice."));
+}
+
+#[test]
+fn revoke_all_sends_all_flag() {
+    let mut server = mockito::Server::new();
+    let body_json = serde_json::json!({"username": null, "device": null, "all": true});
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .match_body(mockito::Matcher::Json(body_json))
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":5}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "--all"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 5 session(s)."));
+}
+
+#[test]
+fn revoke_with_device_hint() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":1}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "alice", "--device", "MacBook"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 1 session(s)."));
 }
