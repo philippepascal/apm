@@ -17,7 +17,7 @@ target_branch = "epic/8db73240-user-mgmt"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The `/api/tickets` endpoint returns `author` but not `owner` in its response. The `ListTicketsQuery` struct supports `?author=` but not `?owner=`. The UI cannot display or filter by ticket ownership until the server exposes the field and supports the query parameter.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
