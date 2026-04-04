@@ -22,13 +22,13 @@ Once an `owner` field exists on tickets, it needs to be set at the right moment.
 
 ### Acceptance criteria
 
-- [ ] `apm start <id>` sets `owner` in frontmatter when the ticket has no current owner
-- [ ] `apm start <id>` sets `owner` in frontmatter when the ticket's existing owner matches the running agent (same person resuming)
-- [ ] `apm start <id>` does NOT overwrite `owner` when the ticket's existing owner is a different value; the state transition still succeeds and a warning is printed to stderr
-- [ ] `apm state <id> in_design` sets `owner` in frontmatter when the ticket has no current owner
-- [ ] `apm state <id> in_design` sets `owner` in frontmatter when the ticket's existing owner matches the running agent
-- [ ] `apm state <id> in_design` does NOT overwrite `owner` when the ticket's existing owner is a different value; the transition still succeeds and a warning is printed to stderr
-- [ ] `apm start --spawn <id>`: the PID update commit (which sets owner to the spawned worker's PID) is skipped if the initial ownership guard blocked the owner set
+- [x] `apm start <id>` sets `owner` in frontmatter when the ticket has no current owner
+- [x] `apm start <id>` sets `owner` in frontmatter when the ticket's existing owner matches the running agent (same person resuming)
+- [x] `apm start <id>` does NOT overwrite `owner` when the ticket's existing owner is a different value; the state transition still succeeds and a warning is printed to stderr
+- [x] `apm state <id> in_design` sets `owner` in frontmatter when the ticket has no current owner
+- [x] `apm state <id> in_design` sets `owner` in frontmatter when the ticket's existing owner matches the running agent
+- [x] `apm state <id> in_design` does NOT overwrite `owner` when the ticket's existing owner is a different value; the transition still succeeds and a warning is printed to stderr
+- [x] `apm start --spawn <id>`: the PID update commit (which sets owner to the spawned worker's PID) is skipped if the initial ownership guard blocked the owner set
 
 ### Out of scope
 
