@@ -1,7 +1,7 @@
 +++
 id = "79326024"
 title = "apm init: username prompt, local.toml, gitignore, and collaborators bootstrap"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "8053"
 branch = "ticket/79326024-apm-init-username-prompt-local-toml-giti"
 created_at = "2026-04-02T20:53:51.576153Z"
-updated_at = "2026-04-04T01:33:57.211964Z"
+updated_at = "2026-04-04T01:36:38.891992Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["4cec7a17"]
@@ -105,3 +105,4 @@ The non-TTY path skips username entirely and passes `&[]` to `default_config`, p
 | 2026-04-03T23:45Z | in_design | specd | claude-0403-2345-d8e1 |
 | 2026-04-04T00:28Z | specd | ready | apm |
 | 2026-04-04T01:33Z | ready | in_progress | philippepascal |
+| 2026-04-04T01:36Z | in_progress | implemented | claude-0404-0134-8860 |
