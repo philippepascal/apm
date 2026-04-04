@@ -23,7 +23,7 @@ There is no way to filter `apm list` output by ticket author. A developer workin
 
 ### Acceptance criteria
 
-- [ ] `apm list --mine` shows only tickets where `author` matches the current user identity resolved via `identity::resolve_current_user`
+- [x] `apm list --mine` shows only tickets where `author` matches the current user identity resolved via `identity::resolve_current_user`
 - [ ] `apm list --mine` when `.apm/local.toml` is absent (identity resolves to `"apm"`) shows only tickets where `author == "apm"`
 - [ ] `apm list --author alice` shows only tickets where `author == "alice"`
 - [ ] `apm list --author alice` with no matching tickets prints no output and exits 0
