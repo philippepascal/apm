@@ -18,6 +18,8 @@ apm-core = { path = "../apm-core" }
 chrono = { workspace = true }
 tower-http = { workspace = true, features = ["fs"] }
 tokio-stream = "0.1"
+rand = "0.8"
+cookie = "0.18"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
