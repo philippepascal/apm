@@ -4708,21 +4708,23 @@ fn local_ref_sha(dir: &std::path::Path, refname: &str) -> String {
 }
 
 #[test]
-fn merge_strategy_pushes_default_branch_to_origin() {
+fn merge_strategy_merges_locally_without_push() {
     let (_bare, local) = setup_merge_strategy_remote();
     let p = local.path();
 
     let branch = "ticket/cc000003-merge-push-test";
     write_in_progress_ticket(p, "cc000003", branch, "cc000003-merge-push-test.md", None);
-    git(p, &["push", "origin", branch]);
+
+    let main_before = local_ref_sha(p, "main");
 
     let result = apm_core::state::transition(p, "cc000003", "implemented".into(), true, false);
     assert!(result.is_ok(), "merge strategy should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
 
-    let local_sha = local_ref_sha(p, "main");
+    let main_after = local_ref_sha(p, "main");
+    assert_ne!(main_before, main_after, "local main should advance after merge");
+
     let remote_sha = remote_ref_sha(p, "main");
-    assert!(!local_sha.is_empty(), "local main should exist");
-    assert_eq!(local_sha, remote_sha, "origin/main should match local main after push");
+    assert_eq!(main_before, remote_sha, "origin/main should NOT advance — merge to default branch is local only");
 }
 
 #[test]
