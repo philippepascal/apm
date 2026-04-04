@@ -3723,7 +3723,7 @@ fn next_skips_dep_blocked_returns_unblocked() {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p_cfg = &config.workflow.prioritization;
 
-    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None);
     assert!(next.is_some(), "should find an actionable ticket");
     assert_eq!(next.unwrap().frontmatter.id, "aaaa0001", "dep-blocked ticket B should be skipped, A returned");
 }
@@ -3749,7 +3749,7 @@ fn next_returns_dep_blocked_after_dep_satisfies() {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p_cfg = &config.workflow.prioritization;
 
-    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None);
     assert!(next.is_some(), "should find an actionable ticket");
     assert_eq!(next.unwrap().frontmatter.id, "bbbb0002", "ticket B should be returned once dep A satisfies_deps");
 }
@@ -3780,7 +3780,7 @@ fn next_picks_low_priority_blocker_before_higher_raw_independent() {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p_cfg = &config.workflow.prioritization;
 
-    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config);
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None);
     assert!(next.is_some(), "should find an actionable ticket");
     // C is dep-blocked (A not satisfied), so the contest is A (ep=9) vs B (ep=7)
     assert_eq!(next.unwrap().frontmatter.id, "aaaa0003", "A (ep=9) should beat B (ep=7)");

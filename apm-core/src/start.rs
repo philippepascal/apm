@@ -357,8 +357,9 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let agent_name = resolve_agent_name();
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
         println!("No actionable tickets.");
         return Ok(());
     };
@@ -371,8 +372,6 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .and_then(|sc| sc.instructions.as_ref())
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
-
-    let agent_name = resolve_agent_name();
     let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     if let Some(ref msg) = start_out.merge_message {
@@ -491,8 +490,9 @@ pub fn spawn_next_worker(
             .collect(),
         None => all_tickets,
     };
+    let agent_name = resolve_agent_name();
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
         return Ok(None);
     };
 
@@ -504,8 +504,6 @@ pub fn spawn_next_worker(
         .and_then(|sc| sc.instructions.as_ref())
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
-
-    let agent_name = resolve_agent_name();
     let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     if let Some(ref msg) = start_out.merge_message {
