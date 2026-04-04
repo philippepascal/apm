@@ -179,7 +179,8 @@ instructions   = ".apm/apm.worker.md"
   to         = "implemented"
   trigger    = "manual"
   actor      = "agent"
-  completion = "pr_or_epic_merge"
+#  completion = "pr_or_epic_merge"
+  completion = "merge"
 
   [[workflow.states.transitions]]
   to      = "blocked"
