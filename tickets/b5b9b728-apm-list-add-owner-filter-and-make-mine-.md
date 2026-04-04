@@ -46,7 +46,7 @@ There is also no user-facing `--owner` flag to filter by who currently owns a ti
 
 ### Approach
 
-**Depends on ticket 42f4b3ba landing first.** That ticket adds `Frontmatter.agent: Option<String>` and the basic `--agent` filter. This ticket builds on top.
+**Depends on ticket 42f4b3ba landing first.** That ticket adds `Frontmatter.owner: Option<String>` and the basic set/clear mechanism. This ticket builds on top.
 
 ---
 
@@ -64,17 +64,17 @@ pub fn list_filtered<'a>(
     supervisor_filter: Option<&str>,
     actionable_filter: Option<&str>,
     author_filter: Option<&str>,
-    owner_filter: Option<&str>,   // new: filters by fm.agent (AND semantics)
-    mine_user: Option<&str>,      // new: OR-matches fm.author or fm.agent
+    owner_filter: Option<&str>,   // new: filters by fm.owner (AND semantics)
+    mine_user: Option<&str>,      // new: OR-matches fm.author or fm.owner
 ) -> Vec<&'a Ticket>
 ```
 
 Inside the filter predicate, add:
 
 ```rust
-let owner_ok = owner_filter.map_or(true, |o| fm.agent.as_deref() == Some(o));
+let owner_ok = owner_filter.map_or(true, |o| fm.owner.as_deref() == Some(o));
 let mine_ok  = mine_user.map_or(true, |me| {
-    fm.author.as_deref() == Some(me) || fm.agent.as_deref() == Some(me)
+    fm.author.as_deref() == Some(me) || fm.owner.as_deref() == Some(me)
 });
 ```
 
@@ -111,7 +111,7 @@ Update the `list_filtered` call to pass `owner.as_deref()` and `mine_user.as_der
 Add the `--owner` flag, conflicting with `--mine`:
 
 ```rust
-/// Show only tickets owned by USERNAME (agent field)
+/// Show only tickets owned by USERNAME (owner field)
 #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
 owner: Option<String>,
 ```
@@ -123,12 +123,12 @@ Update the `Command::List` match arm in `main()` accordingly.
 **4. Tests in `apm-core/src/ticket.rs`**
 
 Add unit tests:
-- `list_filtered_by_owner`: tickets with matching `agent`, verify only those are returned
-- `list_filtered_mine_matches_author`: `mine_user` matches via `author`, `agent` differs
-- `list_filtered_mine_matches_agent`: `mine_user` matches via `agent`, `author` differs
+- `list_filtered_by_owner`: tickets with matching `owner`, verify only those are returned
+- `list_filtered_mine_matches_author`: `mine_user` matches via `author`, `owner` differs
+- `list_filtered_mine_matches_owner`: `mine_user` matches via `owner`, `author` differs
 - `list_filtered_mine_or_semantics`: single call returns tickets matching either field
 
-Use the existing `make_ticket` helper; extend it or create a `make_ticket_with_agent` variant (similar to the existing pattern at line ~1249) that sets `agent` in the raw TOML.
+Use the existing `make_ticket` helper; extend it or create a `make_ticket_with_owner` variant (similar to the existing pattern at line ~1249) that sets `owner` in the raw TOML.
 
 **Order**
 
