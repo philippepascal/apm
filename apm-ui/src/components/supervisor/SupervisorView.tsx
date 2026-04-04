@@ -44,6 +44,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const queryClient = useQueryClient()
   const [syncError, setSyncError] = useState<string | null>(null)
   const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
+  const setNewEpicOpen = useLayoutStore((s) => s.setNewEpicOpen)
 
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
@@ -65,6 +66,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
     onSuccess: () => {
       setSyncError(null)
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['ticket'] })
     },
     onError: (err: Error) => {
       setSyncError(err.message)
@@ -137,6 +139,14 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           >
             <Plus className="w-3 h-3" />
             New ticket
+          </button>
+          <button
+            onClick={() => setNewEpicOpen(true)}
+            title="New epic"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700"
+          >
+            <Plus className="w-3 h-3" />
+            New epic
           </button>
           <button
             onClick={() => syncMutation.mutate()}
