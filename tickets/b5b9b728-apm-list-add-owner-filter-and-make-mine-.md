@@ -37,7 +37,12 @@ There is also no user-facing `--owner` flag to filter by who currently owns a ti
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding the `agent` field to `Frontmatter` — handled by ticket 42f4b3ba (this ticket depends on it)
+- `apm set <id> agent <name>` setter — handled by ticket 42f4b3ba
+- Server API (`GET /api/tickets?owner=...`) filter — separate ticket
+- UI agent/owner filter dropdown — separate ticket
+- Clearing `agent` automatically on state transitions (e.g. when a ticket goes back to `specd`) — intentionally left to a future ticket
+- Back-filling `agent` on existing tickets — no migration pass needed
 
 ### Approach
 
