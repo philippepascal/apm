@@ -24,7 +24,12 @@ Ticket #42f4b3ba adds `agent: Option<String>` to `Frontmatter`. Because `TicketR
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `GET /api/tickets` includes `agent` in each ticket's JSON object when the agent field is set
+- [ ] `GET /api/tickets` omits `agent` from the JSON object for tickets with no agent set
+- [ ] `GET /api/tickets?agent=alice` returns only tickets whose `agent` field equals `"alice"`
+- [ ] `GET /api/tickets?agent=alice` excludes tickets with a different agent or no agent
+- [ ] `GET /api/tickets?agent=unassigned` returns only tickets that have no agent set
+- [ ] `GET /api/tickets` with no `agent` param returns all tickets regardless of agent value
 
 ### Out of scope
 
