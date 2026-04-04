@@ -29,7 +29,7 @@ This ticket adds `apm archive`, a command that moves closed ticket files from th
 - [x] `apm archive` skips ticket files that are in a non-terminal state and emits a per-ticket warning
 - [x] `apm archive` prints a summary line: `archived N ticket(s)` (or `nothing to archive` when N = 0)
 - [x] `apm show <id>` succeeds for a ticket whose per-ticket branch has been deleted, when the ticket file exists in `archive_dir` on the default branch
-- [ ] `[tickets] archive_dir = "archive/tickets"` in `config.toml` is accepted and loaded without error
+- [x] `[tickets] archive_dir = "archive/tickets"` in `config.toml` is accepted and loaded without error
 
 ### Out of scope
 
