@@ -33,7 +33,10 @@ Affected file: apm-ui/src/components/supervisor/SupervisorView.tsx, lines 201, 2
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Restyling any other UI component not in the SupervisorView filter toolbar
+- Dark-mode toggle or theming system
+- Changes to PriorityQueuePanel (its filter is already dark-themed)
+- Any filter logic or behaviour changes
 
 ### Approach
 
