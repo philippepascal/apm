@@ -142,6 +142,13 @@ fn build_spawn_command(
     Ok(cmd.spawn()?)
 }
 
+fn owner_can_claim(ticket: &ticket::Ticket, new_owner: &str) -> bool {
+    match ticket.frontmatter.owner.as_deref() {
+        None => true,
+        Some(existing) => existing == new_owner,
+    }
+}
+
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -182,6 +189,16 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
     crate::state::append_history(&mut t.body, &old_state, &new_state, &when, agent_name);
+
+    let claimed = owner_can_claim(t, agent_name);
+    if claimed {
+        t.frontmatter.owner = Some(agent_name.to_string());
+    } else {
+        eprintln!(
+            "warning: ticket {} is owned by {}; not overwriting (use `apm set {} owner <name>` to reassign)",
+            id, t.frontmatter.owner.as_deref().unwrap_or("unknown"), id
+        );
+    }
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -302,6 +319,15 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
+
+    if claimed {
+        t.frontmatter.owner = Some(worker_name.clone());
+        t.frontmatter.updated_at = Some(chrono::Utc::now());
+        let spawn_content = t.serialize()?;
+        git::commit_to_branch(root, &branch, &rel_path, &spawn_content,
+            &format!("ticket({id}): set owner to spawned worker"))?;
+    }
+
     std::thread::spawn(move || {
         let _ = child.wait();
     });
@@ -331,8 +357,9 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let agent_name = resolve_agent_name();
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
         println!("No actionable tickets.");
         return Ok(());
     };
@@ -345,8 +372,6 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .and_then(|sc| sc.instructions.as_ref())
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
-
-    let agent_name = resolve_agent_name();
     let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     if let Some(ref msg) = start_out.merge_message {
@@ -465,8 +490,9 @@ pub fn spawn_next_worker(
             .collect(),
         None => all_tickets,
     };
+    let agent_name = resolve_agent_name();
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
         return Ok(None);
     };
 
@@ -478,8 +504,6 @@ pub fn spawn_next_worker(
         .and_then(|sc| sc.instructions.as_ref())
         .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
             .or_else(|| { eprintln!("warning: instructions file not found"); None }));
-
-    let agent_name = resolve_agent_name();
     let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
 
     if let Some(ref msg) = start_out.merge_message {
@@ -607,8 +631,34 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_agent_name, resolve_system_prompt, agent_role_prefix};
+    use super::{owner_can_claim, resolve_agent_name, resolve_system_prompt, agent_role_prefix};
+    use crate::ticket::Ticket;
+    use std::path::Path;
     use std::sync::Mutex;
+
+    fn make_ticket(owner: Option<&str>) -> Ticket {
+        let owner_line = owner.map(|o| format!("owner = \"{o}\"\n")).unwrap_or_default();
+        let raw = format!("+++\nid = \"abc\"\ntitle = \"T\"\nstate = \"ready\"\n{owner_line}+++\n");
+        Ticket::parse(Path::new("tickets/abc.md"), &raw).unwrap()
+    }
+
+    #[test]
+    fn owner_can_claim_when_unowned() {
+        let t = make_ticket(None);
+        assert!(owner_can_claim(&t, "alice"));
+    }
+
+    #[test]
+    fn owner_can_claim_when_same_owner_resumes() {
+        let t = make_ticket(Some("alice"));
+        assert!(owner_can_claim(&t, "alice"));
+    }
+
+    #[test]
+    fn owner_can_claim_blocked_when_different_owner() {
+        let t = make_ticket(Some("alice"));
+        assert!(!owner_can_claim(&t, "bob"));
+    }
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 

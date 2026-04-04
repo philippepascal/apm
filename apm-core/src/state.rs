@@ -105,6 +105,20 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     let actor = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
+    if new_state == "in_design" {
+        let can_claim = match t.frontmatter.owner.as_deref() {
+            None => true,
+            Some(existing) => existing == actor.as_str(),
+        };
+        if can_claim {
+            t.frontmatter.owner = Some(actor.clone());
+        } else {
+            eprintln!(
+                "warning: ticket {} is owned by {}; not overwriting",
+                id, t.frontmatter.owner.as_deref().unwrap_or("unknown")
+            );
+        }
+    }
     if new_state == "ammend" {
         ensure_amendment_section(&mut t.body);
     }
