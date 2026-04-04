@@ -249,7 +249,8 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str) -> Result
         );
     }
 
-    println!("Merged {branch} into {default_branch} locally.");
+    git::push_branch(&merge_dir, default_branch)?;
+    println!("Merged {branch} into {default_branch} and pushed to origin.");
     Ok(())
 }
 
