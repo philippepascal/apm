@@ -1,14 +1,14 @@
 +++
 id = "2b7c4c97"
 title = "apm-server: expose owner in ticket API and add owner query param"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/2b7c4c97-apm-server-expose-owner-in-ticket-api-an"
 created_at = "2026-04-04T06:28:16.243562Z"
-updated_at = "2026-04-04T06:30:02.539593Z"
+updated_at = "2026-04-04T06:35:17.344467Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["42f4b3ba"]
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-04T06:28Z | — | new | apm |
+| 2026-04-04T06:35Z | new | groomed | apm |
