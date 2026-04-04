@@ -15,8 +15,9 @@ updated_at = "2026-04-04T16:43:44.752180Z"
 
 ### Problem
 
-based on the current config, only workers in "in_design" or "in_progress" can have a "crashed" status if their pid is not running.
-if we are missing a parameter on the state to figure that out, propose one. "instructions" could imply it.
+The `apm workers` CLI command (`apm/src/cmd/workers.rs`) always displays "crashed" for any dead worker PID, regardless of whether the ticket has already reached a normal worker-completion state. A worker that finishes cleanly and transitions the ticket to `specd` or `implemented` (states with `worker_end = true`) is indistinguishable from one that actually crashed mid-run.
+
+Ticket fa2dce31 already fixed the server-side equivalent in `apm-server/src/workers.rs` by building an `ended_states` set from `workflow.states` (union of `terminal` and `worker_end` states) and using it in `determine_status()`. The `StateConfig` struct already carries the `worker_end: bool` field and `.apm/workflow.toml` already marks `specd` and `implemented` with `worker_end = true`. Only the CLI command was not updated.
 
 ### Acceptance criteria
 
@@ -33,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
