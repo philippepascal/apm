@@ -22,7 +22,13 @@ Once an `owner` field exists on tickets, it needs to be set at the right moment.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm start <id>` sets `agent` in frontmatter when the ticket has no current agent
+- [ ] `apm start <id>` sets `agent` in frontmatter when the ticket's existing agent matches the running agent (same person resuming)
+- [ ] `apm start <id>` does NOT overwrite `agent` when the ticket's existing agent is a different value; the state transition still succeeds and a warning is printed to stderr
+- [ ] `apm state <id> in_design` sets `agent` in frontmatter when the ticket has no current agent
+- [ ] `apm state <id> in_design` sets `agent` in frontmatter when the ticket's existing agent matches the running agent
+- [ ] `apm state <id> in_design` does NOT overwrite `agent` when the ticket's existing agent is a different value; the transition still succeeds and a warning is printed to stderr
+- [ ] `apm start --spawn <id>`: the PID update commit (which sets agent to the spawned worker's PID) is skipped if the initial ownership guard blocked the agent set
 
 ### Out of scope
 
