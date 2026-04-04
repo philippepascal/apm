@@ -141,21 +141,8 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
         };
 
         // The branch state is authoritative — we already filtered to terminal
-        // states above. Only warn if main disagrees with a non-terminal state,
-        // which suggests corruption. Tickets not on main (cancelled before merge)
-        // or with a terminal state on main are fine to clean.
-        let suffix = branch.trim_start_matches("ticket/");
-        let rel_path = format!("{}/{suffix}.md", config.tickets.dir.to_string_lossy());
-        let main_state = ticket::state_from_branch(root, default_branch, &rel_path);
-        if let Some(ref ms) = main_state {
-            if ms != branch_state && !terminal_states.contains(ms.as_str()) {
-                eprintln!(
-                    "warning: {branch} state mismatch — branch={branch_state} \
-                     main={ms} — run `apm sync` to reconcile"
-                );
-                continue;
-            }
-        }
+        // states above. If the branch says the ticket is done, clean proceeds
+        // regardless of what main says (or whether the ticket exists on main).
 
         let wt_path = git::find_worktree_for_branch(root, &branch);
 
