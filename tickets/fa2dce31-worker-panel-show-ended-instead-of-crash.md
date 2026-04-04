@@ -1,14 +1,14 @@
 +++
 id = "fa2dce31"
 title = "Worker panel: show ended instead of crashed when ticket reached a worker-complete state"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/fa2dce31-worker-panel-show-ended-instead-of-crash"
 created_at = "2026-04-04T00:12:56.422580Z"
-updated_at = "2026-04-04T00:12:56.422580Z"
+updated_at = "2026-04-04T06:01:54.335489Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-04T00:12Z | — | new | apm |
+| 2026-04-04T06:01Z | new | groomed | apm |
