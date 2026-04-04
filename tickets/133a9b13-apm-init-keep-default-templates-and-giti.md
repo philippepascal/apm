@@ -34,7 +34,10 @@ The audit itself is already done: \`ensure_gitignore\` already lists \`.apm/sess
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the content of any default template — the audit is already done and the files are current
+- Adding tests for the Markdown templates (apm.agents.md, apm.spec-writer.md, apm.worker.md) — those are prose files with no machine-parseable schema to validate against
+- Automating future audits (e.g. CI checks that compare templates against a golden file) — that is a separate maintenance-process ticket
+- Any changes to \`Config::load\`, \`WorkflowFile\`, or \`TicketFile\` structs
 
 ### Approach
 
