@@ -37,7 +37,33 @@ The user's workaround is to manually change the author filter select, which clea
 
 ### Approach
 
-How the implementation will work.
+File: `apm-ui/src/components/supervisor/SupervisorView.tsx`
+
+1. **Remove the `/api/me` auto-init effect** (lines 77-86). This is the sole source of the bug; the auto-detected username often mismatches ticket `author` values and the supervisor view should default to showing all tickets.
+
+2. **Persist `authorFilter` in `localStorage`** so a manually-chosen filter survives refresh:
+   - Change the `useState` initialiser to read from `localStorage`:
+     ```ts
+     const [authorFilter, setAuthorFilter] = useState<string | null>(() => {
+       return localStorage.getItem('apm.authorFilter') ?? null
+     })
+     ```
+   - Wrap the setter (or add a `useEffect` on `authorFilter`) to write back:
+     ```ts
+     useEffect(() => {
+       if (authorFilter === null) localStorage.removeItem('apm.authorFilter')
+       else localStorage.setItem('apm.authorFilter', authorFilter)
+     }, [authorFilter])
+     ```
+
+No other files need to change. The `availableAuthors` memo and select rendering are already correct once the bad auto-init is removed.
+
+**Order of changes:**
+1. Delete the `useEffect` block that imports nothing (the `/api/me` call)
+2. Update `useState` initialiser to lazy-read `localStorage`
+3. Add the persistence `useEffect`
+
+**Constraint:** `localStorage` access in the `useState` initialiser runs only once on mount (lazy init), so there is no SSR concern and no extra re-render.
 
 ### Open questions
 
