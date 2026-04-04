@@ -1,15 +1,17 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{ConnectInfo, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, patch, post, put},
     Json, Router,
 };
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
 mod agents;
+mod auth;
 mod log;
 mod queue;
 mod work;
@@ -25,6 +27,14 @@ struct AppState {
     work_engine: work::WorkEngineState,
     log_file: Option<std::path::PathBuf>,
     max_concurrent_override: Arc<tokio::sync::Mutex<Option<usize>>>,
+    otp_store: auth::OtpStore,
+    session_store: auth::SessionStore,
+}
+
+fn is_localhost(connect_info: Option<ConnectInfo<SocketAddr>>) -> bool {
+    connect_info
+        .map(|ConnectInfo(addr)| addr.ip().is_loopback())
+        .unwrap_or(false)
 }
 
 impl AppState {
@@ -1120,12 +1130,55 @@ async fn take_ticket(
 
 async fn me_handler(
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+    headers: axum::http::HeaderMap,
 ) -> Json<serde_json::Value> {
-    let username = match state.git_root() {
-        Some(root) => apm_core::config::resolve_identity(root),
-        None => "unassigned".to_string(),
-    };
+    if is_localhost(connect_info) {
+        let username = match state.git_root() {
+            Some(root) => apm_core::config::resolve_identity(root),
+            None => "unassigned".to_string(),
+        };
+        return Json(serde_json::json!({"username": username}));
+    }
+    let username = find_session_username(&headers, &state.session_store)
+        .unwrap_or_else(|| "unassigned".to_string());
     Json(serde_json::json!({"username": username}))
+}
+
+fn find_session_username(
+    headers: &axum::http::HeaderMap,
+    session_store: &auth::SessionStore,
+) -> Option<String> {
+    let cookie_header = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
+    for part in cookie_header.split(';') {
+        if let Ok(c) = cookie::Cookie::parse(part.trim().to_owned()) {
+            if c.name() == "__Host-apm-session" {
+                return session_store.lookup(c.value());
+            }
+        }
+    }
+    None
+}
+
+async fn otp_handler(
+    State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+    body: axum::body::Bytes,
+) -> Response {
+    if !is_localhost(connect_info) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let parsed: serde_json::Value = match serde_json::from_slice(&body) {
+        Ok(v) => v,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let username = match parsed.get("username").and_then(|v| v.as_str()) {
+        Some(u) if !u.is_empty() => u.to_string(),
+        _ => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let otp = auth::generate_otp();
+    state.otp_store.insert(&username, otp.clone());
+    Json(serde_json::json!({"otp": otp})).into_response()
 }
 
 fn build_app(root: PathBuf) -> Router {
@@ -1134,11 +1187,14 @@ fn build_app(root: PathBuf) -> Router {
     let log_file = config.logging.file.map(|p| {
         if p.is_absolute() { p } else { root.join(&p) }
     });
+    let sessions_path = root.join(".apm/sessions.json");
     let state = Arc::new(AppState {
         source: TicketSource::Git(root, tickets_dir),
         work_engine: work::new_engine_state(),
         log_file,
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+        otp_store: auth::OtpStore::new(),
+        session_store: auth::SessionStore::load(sessions_path),
     });
     let serve_dir = ServeDir::new("apm-ui/dist")
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
@@ -1164,6 +1220,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
         .route("/api/me", get(me_handler))
+        .route("/api/auth/otp", post(otp_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -1175,6 +1232,8 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
         work_engine: work::new_engine_state(),
         log_file: None,
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+        otp_store: auth::OtpStore::new(),
+        session_store: auth::SessionStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/sync", post(sync_handler))
@@ -1195,6 +1254,8 @@ pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) 
         work_engine: work::new_engine_state(),
         log_file: None,
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+        otp_store: auth::OtpStore::new(),
+        session_store: auth::SessionStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/workers", get(workers::workers_handler))
@@ -1208,6 +1269,8 @@ pub fn build_app_in_memory_with_queue(tickets: Vec<apm_core::ticket::Ticket>) ->
         work_engine: work::new_engine_state(),
         log_file: None,
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+        otp_store: auth::OtpStore::new(),
+        session_store: auth::SessionStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/queue", get(queue::queue_handler))
@@ -1221,6 +1284,8 @@ pub fn build_app_in_memory_for_work() -> Router {
         work_engine: work::new_engine_state(),
         log_file: None,
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+        otp_store: auth::OtpStore::new(),
+        session_store: auth::SessionStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/work/status", get(work::get_work_status))
@@ -1231,13 +1296,35 @@ pub fn build_app_in_memory_for_work() -> Router {
         .with_state(state)
 }
 
+#[cfg(test)]
+fn build_app_for_auth_tests(
+    root: PathBuf,
+    otp_store: auth::OtpStore,
+    session_store: auth::SessionStore,
+) -> Router {
+    let state = Arc::new(AppState {
+        source: TicketSource::Git(root.clone(), root.join("tickets")),
+        work_engine: work::new_engine_state(),
+        log_file: None,
+        max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+        otp_store,
+        session_store,
+    });
+    Router::new()
+        .route("/api/me", get(me_handler))
+        .route("/api/auth/otp", post(otp_handler))
+        .with_state(state)
+}
+
 #[tokio::main]
 async fn main() {
     let root = std::env::current_dir().unwrap();
     let app = build_app(root);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Listening on 0.0.0.0:3000");
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+        .await
+        .unwrap();
 }
 
 #[cfg(test)]
@@ -2316,6 +2403,175 @@ label = "In Progress"
     #[tokio::test]
     async fn me_handler_returns_unassigned_when_no_local_toml() {
         let app = build_app_with_tickets(vec![]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/me")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn post_otp_from_localhost_returns_otp() {
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let mut req = Request::builder()
+            .uri("/api/auth/otp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"username":"alice"}"#))
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let otp = json["otp"].as_str().unwrap();
+        assert_eq!(otp.len(), 8);
+        assert!(otp.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
+    }
+
+    #[tokio::test]
+    async fn post_otp_from_remote_returns_403() {
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/auth/otp")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"username":"alice"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn post_otp_with_malformed_body_returns_400() {
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let dir = tempfile::tempdir().unwrap();
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let mut req = Request::builder()
+            .uri("/api/auth/otp")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from("not-json"))
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn get_me_localhost_with_local_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".apm")).unwrap();
+        std::fs::write(dir.path().join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let mut req = Request::builder()
+            .uri("/api/me")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "alice");
+    }
+
+    #[tokio::test]
+    async fn get_me_localhost_without_local_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let mut req = Request::builder()
+            .uri("/api/me")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn get_me_remote_with_valid_session() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        session_store.insert("testtoken".to_string(), "bob".to_string());
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/me")
+                    .header("cookie", "__Host-apm-session=testtoken")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "bob");
+    }
+
+    #[tokio::test]
+    async fn get_me_remote_with_expired_session() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let expired = chrono::Utc::now() - chrono::Duration::days(10);
+        session_store.insert_expiring_at("exptoken".to_string(), "eve".to_string(), expired);
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/me")
+                    .header("cookie", "__Host-apm-session=exptoken")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn get_me_remote_with_no_cookie() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
         let response = app
             .oneshot(
                 Request::builder()
