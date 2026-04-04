@@ -1,13 +1,15 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{header, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, patch, post, put},
     Json, Router,
 };
+use include_dir::{include_dir, Dir};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tower_http::services::{ServeDir, ServeFile};
+
+static UI_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/../apm-ui/dist");
 
 mod agents;
 mod log;
@@ -1128,6 +1130,25 @@ async fn me_handler(
     Json(serde_json::json!({"username": username}))
 }
 
+async fn serve_ui(uri: axum::http::Uri) -> Response {
+    let path = uri.path().trim_start_matches('/');
+    if let Some(file) = UI_DIR.get_file(path) {
+        let mime = mime_guess::from_path(path).first_or_octet_stream();
+        (
+            [(header::CONTENT_TYPE, mime.as_ref())],
+            file.contents(),
+        )
+            .into_response()
+    } else {
+        let index = UI_DIR.get_file("index.html").expect("index.html missing from embedded UI");
+        (
+            [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+            index.contents(),
+        )
+            .into_response()
+    }
+}
+
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
@@ -1140,8 +1161,6 @@ fn build_app(root: PathBuf) -> Router {
         log_file,
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
     });
-    let serve_dir = ServeDir::new("apm-ui/dist")
-        .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
     Router::new()
         .route("/health", get(health_handler))
         .route("/api/sync", post(sync_handler))
@@ -1164,7 +1183,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
         .route("/api/me", get(me_handler))
-        .nest_service("/", serve_dir)
+        .fallback(serve_ui)
         .with_state(state)
 }
 
