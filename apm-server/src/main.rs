@@ -86,6 +86,30 @@ struct TransitionRequest {
 }
 
 #[derive(serde::Deserialize)]
+struct BatchTransitionRequest {
+    ids: Vec<String>,
+    to: String,
+}
+
+#[derive(serde::Deserialize)]
+struct BatchPriorityRequest {
+    ids: Vec<String>,
+    priority: u8,
+}
+
+#[derive(serde::Serialize)]
+struct BatchFailure {
+    id: String,
+    error: String,
+}
+
+#[derive(serde::Serialize)]
+struct BatchResult {
+    succeeded: Vec<String>,
+    failed: Vec<BatchFailure>,
+}
+
+#[derive(serde::Deserialize)]
 struct PutBodyRequest {
     content: String,
 }
@@ -169,14 +193,14 @@ fn derive_epic_state(
     let all_satisfies_or_terminal = tickets.iter().all(|t| {
         state_map
             .get(t.frontmatter.state.as_str())
-            .map(|s| s.satisfies_deps || s.terminal)
+            .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
             .unwrap_or(false)
     });
     if all_satisfies_or_terminal {
         let any_satisfies = tickets.iter().any(|t| {
             state_map
                 .get(t.frontmatter.state.as_str())
-                .map(|s| s.satisfies_deps)
+                .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)))
                 .unwrap_or(false)
         });
         let all_terminal = tickets.iter().all(|t| {
@@ -376,7 +400,7 @@ fn compute_blocking_deps(
     deps.iter()
         .filter_map(|dep_id| {
             state_map.get(dep_id.as_str()).and_then(|&s| {
-                if apm_core::ticket::dep_satisfied(s, &config) {
+                if apm_core::ticket::dep_satisfied(s, None, &config) {
                     None
                 } else {
                     Some(BlockingDep { id: dep_id.clone(), state: s.to_string() })
@@ -455,6 +479,7 @@ async fn sync_handler(
 #[derive(serde::Deserialize, Default)]
 struct ListTicketsQuery {
     include_closed: Option<bool>,
+    author: Option<String>,
 }
 
 async fn list_tickets(
@@ -466,7 +491,7 @@ async fn list_tickets(
         Some(root) => match apm_core::config::Config::load(root) {
             Ok(cfg) => {
                 let resolved = cfg.workflow.states.iter()
-                    .filter(|s| s.satisfies_deps || s.terminal)
+                    .filter(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
                     .map(|s| s.id.clone())
                     .collect();
                 let terminal = cfg.workflow.states.into_iter()
@@ -483,6 +508,12 @@ async fn list_tickets(
         let terminal_set: std::collections::HashSet<&str> =
             terminal_ids.iter().map(|s| s.as_str()).collect();
         tickets.retain(|t| !terminal_set.contains(t.frontmatter.state.as_str()));
+    }
+    if let Some(ref author) = params.author {
+        tickets.retain(|t| {
+            let a = t.frontmatter.author.as_deref().unwrap_or("unassigned");
+            a == author.as_str()
+        });
     }
     let resolved: std::collections::HashSet<&str> =
         resolved_ids.iter().map(|s| s.as_str()).collect();
@@ -506,8 +537,12 @@ async fn list_tickets(
                     })
                 })
                 .collect();
+            let mut fm = t.frontmatter;
+            if fm.author.is_none() {
+                fm.author = Some("unassigned".to_string());
+            }
             TicketResponse {
-                frontmatter: t.frontmatter,
+                frontmatter: fm,
                 body: t.body,
                 has_open_questions,
                 has_pending_amendments,
@@ -546,8 +581,11 @@ async fn get_ticket(
                     (deps, transitions)
                 }
             };
-            let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+            let mut ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
             let raw = ticket.serialize().unwrap_or_default();
+            if ticket.frontmatter.author.is_none() {
+                ticket.frontmatter.author = Some("unassigned".to_string());
+            }
             Ok(Json(TicketDetailResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
@@ -827,6 +865,99 @@ async fn patch_ticket(
     .into_response())
 }
 
+async fn batch_transition(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<BatchTransitionRequest>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let mut succeeded = Vec::new();
+    let mut failed = Vec::new();
+    for id in req.ids {
+        let root_clone = root.clone();
+        let id_clone = id.clone();
+        let to_clone = req.to.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            apm_core::state::transition(&root_clone, &id_clone, to_clone, false, false)
+        })
+        .await?;
+        match result {
+            Ok(_) => succeeded.push(id),
+            Err(e) => failed.push(BatchFailure { id, error: e.to_string() }),
+        }
+    }
+    Ok(Json(BatchResult { succeeded, failed }).into_response())
+}
+
+async fn batch_priority(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<BatchPriorityRequest>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let tickets = load_tickets(&state).await?;
+    let mut succeeded = Vec::new();
+    let mut failed = Vec::new();
+    for id in req.ids {
+        let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+            Ok(fid) => fid,
+            Err(e) => {
+                failed.push(BatchFailure { id, error: e.to_string() });
+                continue;
+            }
+        };
+        let ticket = match tickets.iter().find(|t| t.frontmatter.id == full_id) {
+            Some(t) => t.clone(),
+            None => {
+                failed.push(BatchFailure { id, error: "not found".to_string() });
+                continue;
+            }
+        };
+        let branch = match ticket.frontmatter.branch.clone() {
+            Some(b) => b,
+            None => {
+                failed.push(BatchFailure { id, error: "ticket has no branch".to_string() });
+                continue;
+            }
+        };
+        let rel_path = match ticket.path.strip_prefix(&root) {
+            Ok(p) => p.to_string_lossy().to_string(),
+            Err(_) => {
+                failed.push(BatchFailure { id, error: "cannot compute relative path".to_string() });
+                continue;
+            }
+        };
+        let mut fm = ticket.frontmatter.clone();
+        let body = ticket.body.clone();
+        if let Err(e) = apm_core::ticket::set_field(&mut fm, "priority", &req.priority.to_string()) {
+            failed.push(BatchFailure { id, error: e.to_string() });
+            continue;
+        }
+        let updated = apm_core::ticket::Ticket { frontmatter: fm, body, path: ticket.path.clone() };
+        let content = match updated.serialize() {
+            Ok(c) => c,
+            Err(e) => {
+                failed.push(BatchFailure { id, error: e.to_string() });
+                continue;
+            }
+        };
+        let root_clone = root.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            apm_core::git::commit_to_branch(&root_clone, &branch, &rel_path, &content, "ui: batch update priority")
+        })
+        .await?;
+        match result {
+            Ok(_) => succeeded.push(full_id),
+            Err(e) => failed.push(BatchFailure { id: updated.frontmatter.id, error: e.to_string() }),
+        }
+    }
+    Ok(Json(BatchResult { succeeded, failed }).into_response())
+}
+
 async fn create_ticket(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTicketRequest>,
@@ -944,15 +1075,7 @@ async fn take_ticket(
     };
     let agent_name = apm_core::start::resolve_agent_name();
     let now = chrono::Utc::now();
-    // handoff errors if no agent is set; in that case just set directly
-    match apm_core::ticket::handoff(&mut ticket, &agent_name, now) {
-        Ok(_) => {}
-        Err(e) if e.to_string().contains("no agent assigned") => {
-            ticket.frontmatter.agent = Some(agent_name.clone());
-            ticket.frontmatter.updated_at = Some(now);
-        }
-        Err(e) => return Err(AppError(e)),
-    }
+    apm_core::ticket::handoff(&mut ticket, &agent_name, now).map_err(AppError)?;
     let content = ticket
         .serialize()
         .map_err(|e| AppError(anyhow::anyhow!("cannot serialize ticket: {e}")))?;
@@ -960,7 +1083,6 @@ async fn take_ticket(
     let branch_clone = branch.clone();
     let rel_path_clone = rel_path.clone();
     let content_clone = content.clone();
-    let agent_name_clone = agent_name.clone();
     let full_id_clone = full_id.clone();
     tokio::task::spawn_blocking(move || {
         apm_core::git::commit_to_branch(
@@ -968,7 +1090,7 @@ async fn take_ticket(
             &branch_clone,
             &rel_path_clone,
             &content_clone,
-            &format!("ticket({full_id_clone}): reassign agent to {agent_name_clone}"),
+            &format!("ticket({full_id_clone}): take ticket"),
         )
     })
     .await??;
@@ -996,6 +1118,16 @@ async fn take_ticket(
     }
 }
 
+async fn me_handler(
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let username = match state.git_root() {
+        Some(root) => apm_core::config::resolve_identity(root),
+        None => "unassigned".to_string(),
+    };
+    Json(serde_json::json!({"username": username}))
+}
+
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
@@ -1017,6 +1149,8 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
+        .route("/api/tickets/batch/transition", post(batch_transition))
+        .route("/api/tickets/batch/priority", post(batch_priority))
         .route("/api/queue", get(queue::queue_handler))
         .route("/api/workers", get(workers::workers_handler))
         .route("/api/workers/:pid", axum::routing::delete(workers::delete_worker))
@@ -1029,6 +1163,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/log/stream", get(log::stream_handler))
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
+        .route("/api/me", get(me_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -1049,6 +1184,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
+        .route("/api/me", get(me_handler))
         .with_state(state)
 }
 
@@ -1124,7 +1260,6 @@ mod tests {
                 risk: 0,
                 author: None,
                 supervisor: None,
-                agent: None,
                 branch: None,
                 created_at: None,
                 updated_at: None,
@@ -2084,5 +2219,115 @@ label = "In Progress"
         let detail: serde_json::Value = serde_json::from_slice(&bytes3).unwrap();
         assert_eq!(detail["id"], epic_id);
         assert!(detail["tickets"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_tickets_author_field_always_present() {
+        let ticket = fake_ticket("aaaabbbb-no-author", "No author ticket");
+        assert!(ticket.frontmatter.author.is_none());
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["author"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_author_filter() {
+        let mut alice_ticket = fake_ticket("aaaabbbb-alice-ticket", "Alice ticket");
+        alice_ticket.frontmatter.author = Some("alice".to_string());
+        let mut bob_ticket = fake_ticket("ccccdddd-bob-ticket", "Bob ticket");
+        bob_ticket.frontmatter.author = Some("bob".to_string());
+        let app = build_app_with_tickets(vec![alice_ticket, bob_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?author=alice")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"], "aaaabbbb-alice-ticket");
+        assert_eq!(arr[0]["author"], "alice");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_author_unassigned_filter() {
+        let unassigned_ticket = fake_ticket("aaaabbbb-unassigned", "Unassigned ticket");
+        assert!(unassigned_ticket.frontmatter.author.is_none());
+        let mut alice_ticket = fake_ticket("ccccdddd-alice", "Alice ticket");
+        alice_ticket.frontmatter.author = Some("alice".to_string());
+        let app = build_app_with_tickets(vec![unassigned_ticket, alice_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?author=unassigned")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"], "aaaabbbb-unassigned");
+        assert_eq!(arr[0]["author"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn get_ticket_author_field_always_present() {
+        let ticket = fake_ticket("aaaabbbb-no-author-detail", "No author ticket");
+        assert!(ticket.frontmatter.author.is_none());
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/aaaabbbb")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["author"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn me_handler_returns_unassigned_when_no_local_toml() {
+        let app = build_app_with_tickets(vec![]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/me")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "unassigned");
     }
 }
