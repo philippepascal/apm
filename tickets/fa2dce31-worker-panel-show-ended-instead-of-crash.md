@@ -4,11 +4,11 @@ title = "Worker panel: show ended instead of crashed when ticket reached a worke
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 branch = "ticket/fa2dce31-worker-panel-show-ended-instead-of-crash"
 created_at = "2026-04-04T00:12:56.422580Z"
-updated_at = "2026-04-04T06:36:20.610467Z"
+updated_at = "2026-04-04T06:36:25.659065Z"
 +++
 
 ## Spec
