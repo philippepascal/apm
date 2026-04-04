@@ -75,6 +75,10 @@ Replace the `agentFilter !== null` reference with `ownerFilter !== null`.
 
 ### Amendment requests
 
+- [ ] The API now returns `owner` (not `agent`) — update the `Ticket` TypeScript interface in `types.ts` from `agent?: string` to `owner?: string`
+- [ ] Update filter logic to read `ticket.owner` instead of `ticket.agent`
+- [ ] The variable renames (`agentFilter` → `ownerFilter`, `availableAgents` → `availableOwners`) and label change ("All agents" → "All owners") still apply
+- [ ] Remove the framing about "renaming from agent to owner" in Problem/Approach — the API field is already `owner`; this ticket is about wiring the UI filter to the real field
 
 ### Code review
 
