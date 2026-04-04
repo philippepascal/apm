@@ -31,7 +31,10 @@ These fields are fully parsed and stored in the `Frontmatter` struct (see `apm-c
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Displaying these fields in `apm list` output
+- Adding a `--json` flag or machine-readable output to `apm show`
+- Validating that `depends_on` IDs refer to existing tickets
+- Any changes to how these fields are parsed, serialised, or stored in `apm-core`
 
 ### Approach
 
