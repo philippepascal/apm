@@ -1,15 +1,14 @@
 +++
 id = "1cadf37f"
 title = "UI: show dep-blocked status on tickets waiting in queue"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
 author = "apm"
-agent = "54140"
 branch = "ticket/1cadf37f-ui-show-dep-blocked-status-on-tickets-wa"
 created_at = "2026-04-02T23:21:21.478449Z"
-updated_at = "2026-04-04T01:57:40.351587Z"
+updated_at = "2026-04-04T06:00:54.093461Z"
 +++
 
 ## Spec
@@ -102,3 +101,4 @@ This pattern matches the dep display in `TicketDetail.tsx` (line 386) where dep 
 | 2026-04-04T00:30Z | specd | ready | apm |
 | 2026-04-04T01:55Z | ready | in_progress | philippepascal |
 | 2026-04-04T01:57Z | in_progress | implemented | claude-0404-0155-9ce0 |
+| 2026-04-04T06:00Z | implemented | closed | apm-sync |
