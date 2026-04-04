@@ -28,13 +28,13 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
         .flat_map(|s| s.transitions.iter())
         .any(|t| matches!(t.completion, CompletionStrategy::Pr | CompletionStrategy::Merge));
 
-    let provider_ok = config.provider.as_ref()
-        .map(|p| !p.type_.is_empty())
+    let provider_ok = config.git_host.provider.as_ref()
+        .map(|p| !p.is_empty())
         .unwrap_or(false);
 
     if needs_provider && !provider_ok {
         errors.push(
-            "config: workflow — completion 'pr' or 'merge' requires [provider] with a type".into()
+            "config: workflow — completion 'pr' or 'merge' requires [git_host] with a provider".into()
         );
     }
 
@@ -454,8 +454,8 @@ name = "test"
 [tickets]
 dir = "tickets"
 
-[provider]
-type = "github"
+[git_host]
+provider = "github"
 
 [[workflow.states]]
 id    = "new"

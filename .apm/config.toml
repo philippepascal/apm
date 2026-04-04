@@ -12,11 +12,10 @@ dir = "../apm--worktrees"
 path = "philippepascal/apm"
 default_branch = "main"
 
-[provider]
-type = "github"
+[git_host]
+provider = "github"
+repo = "philippepascal/apm"
 token_env = "APM_GITHUB_TOKEN"
-poll_interval_secs = 60
-webhook_secret_env = "APM_WEBHOOK_SECRET"
 
 [agents]
 instructions   = ".apm/agents.md"
