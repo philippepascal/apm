@@ -1,15 +1,14 @@
 +++
 id = "558ae699"
 title = "Remove agent field from frontmatter, server API, and apm list/show output"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
-agent = "46342"
 branch = "ticket/558ae699-remove-agent-field-from-frontmatter-serv"
 created_at = "2026-04-02T20:53:58.923882Z"
-updated_at = "2026-04-04T02:40:50.099283Z"
+updated_at = "2026-04-04T06:01:06.062580Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["610be42e"]
@@ -94,3 +93,4 @@ This ticket depends on 610be42e landing first. By that point `agent` is no longe
 | 2026-04-04T00:29Z | specd | ready | apm |
 | 2026-04-04T02:32Z | ready | in_progress | philippepascal |
 | 2026-04-04T02:40Z | in_progress | implemented | claude-0403-1200-x7k2 |
+| 2026-04-04T06:01Z | implemented | closed | apm-sync |
