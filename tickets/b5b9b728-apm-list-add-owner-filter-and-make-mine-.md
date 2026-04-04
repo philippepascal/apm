@@ -33,7 +33,7 @@ There is also no user-facing `--owner` flag to filter by who currently owns a ti
 - [x] `--owner` and `--mine` are mutually exclusive (combining them produces an error)
 - [x] `--owner alice` and `--author bob` can be combined; both filters apply (AND logic)
 - [x] `--owner alice` and `--state ready` can be combined; both filters apply
-- [ ] `apm list --help` documents the `--owner` flag
+- [x] `apm list --help` documents the `--owner` flag
 
 ### Out of scope
 
