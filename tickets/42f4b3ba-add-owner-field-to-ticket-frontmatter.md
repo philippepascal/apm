@@ -21,15 +21,10 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 
 ### Acceptance criteria
 
-- [ ] `Frontmatter` has an `agent` field that round-trips through TOML parse/serialize
-- [ ] `apm start <id>` sets `agent` on the ticket frontmatter to the running agent's name
-- [ ] `apm state <id> in_design` sets `agent` on the ticket frontmatter to the running agent's name
-- [ ] `apm take <id>` sets `agent` to the new agent's name (replacing the previous value) and records the correct previous agent name in the history row instead of "unknown"
-- [ ] `apm set <id> agent <name>` sets the `agent` field; `apm set <id> agent -` clears it
-- [ ] `apm list --agent <name>` filters to tickets whose `agent` field matches (analogous to existing `--author` filter)
-- [ ] `GET /api/tickets?agent=<name>` returns only tickets whose `agent` matches
-- [ ] `GET /api/tickets` includes `agent` in each ticket object when set (null/absent when not set)
-- [ ] The UI agent filter dropdown is populated from the `agent` values in the ticket list and correctly filters the swimlane view
+- [ ] `Frontmatter` has an `owner` field that round-trips through TOML parse/serialize
+- [ ] `apm set <id> owner <name>` sets the `owner` field
+- [ ] `apm set <id> owner -` clears the `owner` field
+- [ ] Unit tests cover the above three behaviours
 
 ### Out of scope
 
