@@ -125,6 +125,16 @@ brew uninstall apm
 
 ### Open questions
 
+**Q:** The tap repo and formula are created (https://github.com/philippepascal/homebrew-tap). The formula structure is complete with on_arm/on_intel DSL, sha256 fields, bin.install for both binaries, and a test block.
+
+**Q:** Four installation-verification criteria remain unverified because no GitHub Release exists yet (ticket #73e484df release CI is implemented but no v0.1.0 tag has been pushed):
+
+**Q:** - `brew install philippepascal/tap/apm` installs both binaries
+**Q:** - After installation, `apm --help` runs
+**Q:** - After installation, `apm-server --help` runs
+**Q:** - `brew uninstall apm` cleanly removes both binaries
+
+**Q:** **To complete this ticket:** push a v0.1.0 tag to trigger the release CI, then update Formula/apm.rb in homebrew-tap with the real SHA-256 values from checksums.txt in the release, and verify the install/uninstall criteria manually.
 
 ### Amendment requests
 
