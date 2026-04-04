@@ -39,7 +39,7 @@ wired into `resolve_identity()` and a new `resolve_collaborators()` helper.
 - [x] `.apm/config.toml` containing `[git_host]` with `provider = "github"` and `repo = "owner/name"` parses into `Config` without error
 - [x] A config with no `[git_host]` section parses without error (plugin is optional)
 - [x] `LocalConfig` accepts an optional `github_token` field; a `local.toml` without it parses without error
-- [ ] `resolve_identity()` returns the GitHub login when `[git_host]` is configured and a token is available (via `local.toml` or `GITHUB_TOKEN` env var)
+- [x] `resolve_identity()` returns the GitHub login when `[git_host]` is configured and a token is available (via `local.toml` or `GITHUB_TOKEN` env var)
 - [ ] `resolve_identity()` falls back to the `local.toml` `username` field when the GitHub plugin is not configured
 - [ ] `resolve_identity()` returns `"unassigned"` when neither GitHub plugin nor `local.toml` username is set
 - [ ] `resolve_identity()` falls back gracefully (continues to `local.toml` / `"unassigned"`) when the GitHub API returns an error or is unreachable
