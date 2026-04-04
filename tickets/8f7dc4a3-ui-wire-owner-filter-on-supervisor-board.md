@@ -44,7 +44,31 @@ The `Ticket` TypeScript interface in `types.ts` already has `agent?: string` whi
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx`.
+
+**1. Rename state variable and computed value**
+
+- `agentFilter` → `ownerFilter` (useState declaration and all read/write sites)
+- `availableAgents` → `availableOwners` (useMemo declaration and all read sites)
+
+The filter logic itself (`t.agent === ownerFilter`) is already correct — it reads `ticket.agent` which is the field the API returns once #42f4b3ba lands. No logic change is needed, only identifier rename.
+
+**2. Update the dropdown label**
+
+Change the placeholder option text from `"All agents"` to `"All owners"`.
+
+**3. Update `hasActiveFilters`**
+
+Replace the `agentFilter !== null` reference with `ownerFilter !== null`.
+
+**No other files need to change.** The `Ticket` interface in `types.ts` already has `agent?: string` which maps to what the API returns. The Swimlane component does not reference the filter state. No tests exist for this component (it is pure UI).
+
+**Order of steps**
+
+1. Rename `agentFilter` to `ownerFilter` (replace_all)
+2. Rename `availableAgents` to `availableOwners` (replace_all)
+3. Change the option label string
+4. Verify the file compiles: `cd apm-ui && npx tsc --noEmit`
 
 ### Open questions
 
