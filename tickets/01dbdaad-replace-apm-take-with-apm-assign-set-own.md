@@ -28,7 +28,7 @@ With the `owner` field, `apm take` becomes redundant and underspecified. What is
 - [x] `apm assign <id> -` clears the `owner` field (sets it to absent in frontmatter)
 - [x] `apm assign <id> <username>` commits the change to the ticket's branch with message `ticket(<id>): assign owner = <username>`
 - [x] `apm assign <id> <username>` prints `<id>: owner = <username>` to stdout on success
-- [ ] `apm assign` with a nonexistent or ambiguous ticket ID exits non-zero and prints an error
+- [x] `apm assign` with a nonexistent or ambiguous ticket ID exits non-zero and prints an error
 - [ ] `apm take` is no longer a recognised CLI subcommand
 - [ ] `POST /api/tickets/:id/take` returns 404 or 405 (the route no longer exists)
 - [ ] `pub fn handoff` is removed from `apm-core` (it no longer compiles if referenced)
