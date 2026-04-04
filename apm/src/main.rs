@@ -97,7 +97,9 @@ Examples:
   apm list --state ready            # only tickets awaiting an agent
   apm list --unassigned             # no agent assigned yet
   apm list --actionable agent       # tickets an agent can act on now
-  apm list --all                    # everything including closed")]
+  apm list --all                    # everything including closed
+  apm list --mine                   # only your tickets
+  apm list --author alice           # only tickets by alice")]
     List {
         /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
@@ -117,6 +119,12 @@ Examples:
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
+        /// Show only tickets authored by the current user
+        #[arg(long)]
+        mine: bool,
+        /// Show only tickets authored by USERNAME
+        #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
+        author: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -681,7 +689,7 @@ fn main() -> Result<()> {
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
-        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
+        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
