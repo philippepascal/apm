@@ -31,10 +31,10 @@ pub async fn workers_handler(
     Ok(Json(results))
 }
 
-fn determine_status(alive: bool, state: &str, terminal_states: &std::collections::HashSet<&str>) -> &'static str {
+fn determine_status(alive: bool, state: &str, ended_states: &std::collections::HashSet<&str>) -> &'static str {
     if alive {
         "running"
-    } else if terminal_states.contains(state) {
+    } else if ended_states.contains(state) {
         "ended"
     } else {
         "crashed"
@@ -55,11 +55,11 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
 
     let tickets = apm_core::ticket::load_all_from_git(root, tickets_dir).unwrap_or_default();
     let config = apm_core::config::Config::load(root)?;
-    let terminal_states: std::collections::HashSet<&str> = config
+    let ended_states: std::collections::HashSet<&str> = config
         .workflow
         .states
         .iter()
-        .filter(|s| s.terminal)
+        .filter(|s| s.terminal || s.worker_end)
         .map(|s| s.id.as_str())
         .collect();
 
@@ -84,7 +84,7 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
             ),
             None => (String::new(), String::new(), String::new()),
         };
-        let status = determine_status(alive, &state, &terminal_states);
+        let status = determine_status(alive, &state, &ended_states);
         results.push(WorkerInfo {
             pid,
             ticket_id: pf.ticket_id,
@@ -188,15 +188,25 @@ mod tests {
 
     #[test]
     fn determine_status_dead_terminal_shows_ended() {
-        let mut terminal: std::collections::HashSet<&str> = std::collections::HashSet::new();
-        terminal.insert("implemented");
-        terminal.insert("closed");
+        let mut ended: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        ended.insert("closed");
 
-        assert_eq!(determine_status(false, "implemented", &terminal), "ended");
-        assert_eq!(determine_status(false, "closed", &terminal), "ended");
-        assert_eq!(determine_status(false, "in_progress", &terminal), "crashed");
-        assert_eq!(determine_status(true, "implemented", &terminal), "running");
-        assert_eq!(determine_status(true, "in_progress", &terminal), "running");
+        assert_eq!(determine_status(false, "closed", &ended), "ended");
+        assert_eq!(determine_status(false, "in_progress", &ended), "crashed");
+        assert_eq!(determine_status(true, "closed", &ended), "running");
+        assert_eq!(determine_status(true, "in_progress", &ended), "running");
+    }
+
+    #[test]
+    fn determine_status_dead_worker_end_shows_ended() {
+        let mut ended: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        ended.insert("specd");
+        ended.insert("implemented");
+
+        assert_eq!(determine_status(false, "specd", &ended), "ended");
+        assert_eq!(determine_status(false, "implemented", &ended), "ended");
+        assert_eq!(determine_status(false, "in_progress", &ended), "crashed");
+        assert_eq!(determine_status(true, "specd", &ended), "running");
     }
 
     #[tokio::test]
