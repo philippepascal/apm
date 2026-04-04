@@ -18,7 +18,7 @@ depends_on = ["42f4b3ba"]
 
 ### Problem
 
-Once an `owner` field exists on tickets, it needs to be set and cleared at the right moments. Today `apm start` sets the `agent` name in the ticket's History section but nothing in frontmatter. When a ticket moves back to `ready` or `groomed` (e.g. after being blocked and unblocked by a supervisor), the previous owner's name lingers — there is no mechanism to release ownership so another user or worker can pick it up. The field must follow the ticket lifecycle: set on claim (`apm start`, `apm state in_design`), preserved through active states (`in_progress`, `in_design`), and cleared when the ticket returns to a pool state (`ready`, `groomed`, `ammend`).
+Once an `owner` field exists on tickets, it needs to be set at the right moment. Today `apm start` writes the agent name to the History section but nothing in frontmatter. The owner should persist for the entire ticket lifecycle — once someone owns a ticket, they own it through design, implementation, review, and completion. Ownership is only transferred by explicit supervisor action (`apm assign`), never cleared automatically on state transitions. `apm start` and `apm state in_design` should set the owner when claiming an unowned ticket. If the ticket already has an owner, these commands should still work (the same person resuming work) but not silently overwrite a different owner — that requires `apm assign`.
 
 ### Acceptance criteria
 
