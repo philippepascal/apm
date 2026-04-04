@@ -20,6 +20,8 @@ tower-http = { workspace = true, features = ["fs"] }
 tokio-stream = "0.1"
 rand = "0.8"
 cookie = "0.18"
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+uuid = { version = "1", features = ["v4", "v5"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

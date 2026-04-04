@@ -12,8 +12,10 @@ use tower_http::services::{ServeDir, ServeFile};
 
 mod agents;
 mod auth;
+mod credential_store;
 mod log;
 mod queue;
+mod webauthn_state;
 mod work;
 mod workers;
 
@@ -29,6 +31,8 @@ struct AppState {
     max_concurrent_override: Arc<tokio::sync::Mutex<Option<usize>>>,
     otp_store: auth::OtpStore,
     session_store: auth::SessionStore,
+    webauthn_state: Arc<webauthn_state::WebauthnState>,
+    credential_store: credential_store::CredentialStore,
 }
 
 fn is_localhost(connect_info: Option<ConnectInfo<SocketAddr>>) -> bool {
@@ -1181,6 +1185,133 @@ async fn otp_handler(
     Json(serde_json::json!({"otp": otp})).into_response()
 }
 
+async fn register_page_handler() -> Response {
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        include_str!("register.html"),
+    )
+        .into_response()
+}
+
+#[derive(serde::Deserialize)]
+struct RegisterChallengeRequest {
+    username: String,
+    otp: String,
+}
+
+#[derive(serde::Serialize)]
+struct RegisterChallengeResponse {
+    reg_id: String,
+    #[serde(rename = "publicKey")]
+    public_key: serde_json::Value,
+}
+
+async fn register_challenge_handler(
+    State(state): State<Arc<AppState>>,
+    body: axum::body::Bytes,
+) -> Response {
+    let req: RegisterChallengeRequest = match serde_json::from_slice(&body) {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response(),
+    };
+    if req.username.is_empty() || req.otp.is_empty() {
+        return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response();
+    }
+    match state.otp_store.validate(&req.username, &req.otp) {
+        Ok(()) => {}
+        Err(auth::OtpError::NotFound) => {
+            return (StatusCode::BAD_REQUEST, "invalid OTP").into_response()
+        }
+        Err(auth::OtpError::Expired) => {
+            return (StatusCode::BAD_REQUEST, "OTP expired").into_response()
+        }
+        Err(auth::OtpError::Invalid) => {
+            return (StatusCode::BAD_REQUEST, "invalid OTP").into_response()
+        }
+    }
+    let user_id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID, req.username.as_bytes());
+    let (ccr, passkey_reg) = match state
+        .webauthn_state
+        .webauthn
+        .start_passkey_registration(user_id, &req.username, &req.username, None)
+    {
+        Ok(pair) => pair,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("webauthn error: {e:?}"),
+            )
+                .into_response()
+        }
+    };
+    let reg_id = {
+        let bytes: [u8; 16] = rand::Rng::gen(&mut rand::thread_rng());
+        bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()
+    };
+    {
+        let mut pending = state.webauthn_state.pending.lock().unwrap();
+        pending.insert(
+            reg_id.clone(),
+            webauthn_state::RegistrationSession {
+                username: req.username,
+                passkey_reg,
+            },
+        );
+    }
+    let public_key = match serde_json::to_value(&ccr.public_key) {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("serialization error: {e}"),
+            )
+                .into_response()
+        }
+    };
+    Json(RegisterChallengeResponse { reg_id, public_key }).into_response()
+}
+
+#[derive(serde::Deserialize)]
+struct RegisterCompleteRequest {
+    reg_id: String,
+    response: webauthn_rs::prelude::RegisterPublicKeyCredential,
+}
+
+async fn register_complete_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<RegisterCompleteRequest>,
+) -> Response {
+    let session = {
+        let mut pending = state.webauthn_state.pending.lock().unwrap();
+        pending.remove(&req.reg_id)
+    };
+    let session = match session {
+        Some(s) => s,
+        None => return (StatusCode::BAD_REQUEST, "unknown reg_id").into_response(),
+    };
+    let passkey = match state
+        .webauthn_state
+        .webauthn
+        .finish_passkey_registration(&req.response, &session.passkey_reg)
+    {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::BAD_REQUEST, "invalid WebAuthn response").into_response(),
+    };
+    state.credential_store.insert(&session.username, passkey);
+    let token = auth::generate_token();
+    state.session_store.insert(token.clone(), session.username);
+    let cookie = format!(
+        "__Host-apm-session={token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
+    );
+    (
+        StatusCode::OK,
+        [(axum::http::header::SET_COOKIE, cookie)],
+        Json(serde_json::json!({"status": "ok"})),
+    )
+        .into_response()
+}
+
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
@@ -1188,6 +1319,9 @@ fn build_app(root: PathBuf) -> Router {
         if p.is_absolute() { p } else { root.join(&p) }
     });
     let sessions_path = root.join(".apm/sessions.json");
+    let credentials_path = root.join(".apm/credentials.json");
+    let wa_state = webauthn_state::WebauthnState::new(&config.server.origin)
+        .expect("cannot initialise WebAuthn state");
     let state = Arc::new(AppState {
         source: TicketSource::Git(root, tickets_dir),
         work_engine: work::new_engine_state(),
@@ -1195,6 +1329,8 @@ fn build_app(root: PathBuf) -> Router {
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(sessions_path),
+        webauthn_state: Arc::new(wa_state),
+        credential_store: credential_store::CredentialStore::load(credentials_path),
     });
     let serve_dir = ServeDir::new("apm-ui/dist")
         .not_found_service(ServeFile::new("apm-ui/dist/index.html"));
@@ -1221,8 +1357,19 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/epics/:id", get(get_epic))
         .route("/api/me", get(me_handler))
         .route("/api/auth/otp", post(otp_handler))
+        .route("/register", get(register_page_handler))
+        .route("/api/auth/register/challenge", post(register_challenge_handler))
+        .route("/api/auth/register/complete", post(register_complete_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
+}
+
+#[cfg(test)]
+fn default_webauthn_state() -> Arc<webauthn_state::WebauthnState> {
+    Arc::new(
+        webauthn_state::WebauthnState::new("http://localhost:3000")
+            .expect("test webauthn state"),
+    )
 }
 
 #[cfg(test)]
@@ -1234,6 +1381,8 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
+        webauthn_state: default_webauthn_state(),
+        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/sync", post(sync_handler))
@@ -1256,6 +1405,8 @@ pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) 
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
+        webauthn_state: default_webauthn_state(),
+        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/workers", get(workers::workers_handler))
@@ -1271,6 +1422,8 @@ pub fn build_app_in_memory_with_queue(tickets: Vec<apm_core::ticket::Ticket>) ->
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
+        webauthn_state: default_webauthn_state(),
+        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/queue", get(queue::queue_handler))
@@ -1286,6 +1439,8 @@ pub fn build_app_in_memory_for_work() -> Router {
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
+        webauthn_state: default_webauthn_state(),
+        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/work/status", get(work::get_work_status))
@@ -1309,6 +1464,8 @@ fn build_app_for_auth_tests(
         max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
         otp_store,
         session_store,
+        webauthn_state: default_webauthn_state(),
+        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/me", get(me_handler))
@@ -2585,5 +2742,215 @@ label = "In Progress"
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["username"], "unassigned");
+    }
+
+    fn build_app_for_webauthn_tests(
+        otp_store: auth::OtpStore,
+        session_store: auth::SessionStore,
+    ) -> Router {
+        let dir = tempfile::TempDir::new().unwrap();
+        let state = Arc::new(AppState {
+            source: TicketSource::InMemory(vec![]),
+            work_engine: work::new_engine_state(),
+            log_file: None,
+            max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+            otp_store,
+            session_store,
+            webauthn_state: default_webauthn_state(),
+            credential_store: credential_store::CredentialStore::load(
+                dir.path().join("credentials.json"),
+            ),
+        });
+        // keep dir alive by leaking (tests are short-lived)
+        std::mem::forget(dir);
+        Router::new()
+            .route("/register", get(register_page_handler))
+            .route("/api/auth/register/challenge", post(register_challenge_handler))
+            .route("/api/auth/register/complete", post(register_complete_handler))
+            .route("/api/me", get(me_handler))
+            .with_state(state)
+    }
+
+    #[tokio::test]
+    async fn register_page_returns_200_html() {
+        let app = build_app_for_webauthn_tests(
+            auth::OtpStore::new(),
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/register")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let ct = response.headers().get("content-type").unwrap().to_str().unwrap();
+        assert!(ct.contains("text/html"), "unexpected content-type: {ct}");
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let html = std::str::from_utf8(&bytes).unwrap();
+        assert!(html.contains("username"), "expected username field in HTML");
+        assert!(html.contains("otp") || html.contains("one-time"), "expected OTP field in HTML");
+    }
+
+    #[tokio::test]
+    async fn challenge_missing_fields_returns_400() {
+        let app = build_app_for_webauthn_tests(
+            auth::OtpStore::new(),
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn challenge_invalid_otp_returns_400() {
+        let otp_store = auth::OtpStore::new();
+        otp_store.insert("alice", "VALIDOTP".to_string());
+        let app = build_app_for_webauthn_tests(
+            otp_store,
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"username":"alice","otp":"WRONGOTP"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn challenge_no_otp_for_user_returns_400() {
+        let app = build_app_for_webauthn_tests(
+            auth::OtpStore::new(),
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"username":"alice","otp":"ANYTHING"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn challenge_valid_otp_returns_200_with_reg_id_and_public_key() {
+        let otp_store = auth::OtpStore::new();
+        otp_store.insert("alice", "VALIDOTP".to_string());
+        let app = build_app_for_webauthn_tests(
+            otp_store,
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"username":"alice","otp":"VALIDOTP"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["reg_id"].is_string(), "reg_id missing");
+        assert!(json["publicKey"].is_object(), "publicKey missing");
+        assert!(json["publicKey"]["challenge"].is_string(), "challenge missing");
+        assert!(json["publicKey"]["rp"].is_object(), "rp missing");
+        assert!(json["publicKey"]["user"].is_object(), "user missing");
+    }
+
+    #[tokio::test]
+    async fn challenge_otp_consumed_second_use_returns_400() {
+        let otp_store = auth::OtpStore::new();
+        otp_store.insert("alice", "ONCEONLY".to_string());
+        let app = build_app_for_webauthn_tests(
+            otp_store,
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        // First call consumes the OTP
+        let _ = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"username":"alice","otp":"ONCEONLY"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        // Second call with same OTP should fail
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"username":"alice","otp":"ONCEONLY"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn complete_unknown_reg_id_returns_400() {
+        let app = build_app_for_webauthn_tests(
+            auth::OtpStore::new(),
+            auth::SessionStore::load(PathBuf::new()),
+        );
+        let body = serde_json::json!({
+            "reg_id": "nonexistent",
+            "response": {
+                "id": "dGVzdA",
+                "rawId": "dGVzdA",
+                "type": "public-key",
+                "response": {
+                    "clientDataJSON": "dGVzdA",
+                    "attestationObject": "dGVzdA"
+                }
+            }
+        });
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/complete")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }
