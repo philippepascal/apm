@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use webauthn_rs::prelude::Passkey;
+use webauthn_rs::prelude::{AuthenticationResult, Passkey};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct CredentialsFile {
@@ -41,6 +41,24 @@ impl CredentialStore {
         {
             let mut map = self.inner.lock().unwrap();
             map.entry(username.to_string()).or_default().push(passkey);
+        }
+        self.save();
+    }
+
+    pub fn get(&self, username: &str) -> Option<Vec<Passkey>> {
+        let map = self.inner.lock().unwrap();
+        let v = map.get(username)?;
+        if v.is_empty() { None } else { Some(v.clone()) }
+    }
+
+    pub fn update_credential(&self, username: &str, auth_result: &AuthenticationResult) {
+        {
+            let mut map = self.inner.lock().unwrap();
+            if let Some(passkeys) = map.get_mut(username) {
+                for passkey in passkeys.iter_mut() {
+                    passkey.update_credential(auth_result);
+                }
+            }
         }
         self.save();
     }

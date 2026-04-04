@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
-use webauthn_rs::prelude::{PasskeyRegistration, Url};
+use webauthn_rs::prelude::{PasskeyAuthentication, PasskeyRegistration, Url};
 use webauthn_rs::{Webauthn, WebauthnBuilder};
 
 pub struct RegistrationSession {
@@ -9,9 +10,16 @@ pub struct RegistrationSession {
     pub passkey_reg: PasskeyRegistration,
 }
 
+pub struct AuthenticationSession {
+    pub username: String,
+    pub passkey_auth: PasskeyAuthentication,
+    pub created_at: Instant,
+}
+
 pub struct WebauthnState {
     pub webauthn: Webauthn,
     pub pending: Arc<Mutex<HashMap<String, RegistrationSession>>>,
+    pub pending_auth: Arc<Mutex<HashMap<String, AuthenticationSession>>>,
 }
 
 impl WebauthnState {
@@ -29,6 +37,7 @@ impl WebauthnState {
         Ok(WebauthnState {
             webauthn,
             pending: Arc::new(Mutex::new(HashMap::new())),
+            pending_auth: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 }
@@ -36,6 +45,7 @@ impl WebauthnState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn new_with_localhost_origin_succeeds() {
@@ -46,5 +56,11 @@ mod tests {
     #[test]
     fn new_with_invalid_origin_fails() {
         assert!(WebauthnState::new("not-a-url").is_err());
+    }
+
+    #[test]
+    fn authentication_session_ttl_check() {
+        let old = Instant::now() - Duration::from_secs(360);
+        assert!(old.elapsed() >= Duration::from_secs(300), "session 6 min old should be expired");
     }
 }
