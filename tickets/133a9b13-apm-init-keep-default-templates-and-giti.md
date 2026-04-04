@@ -41,7 +41,73 @@ The audit itself is already done: \`ensure_gitignore\` already lists \`.apm/sess
 
 ### Approach
 
-How the implementation will work.
+All changes are in \`apm-core/src/init.rs\` inside the existing \`#[cfg(test)] mod tests\` block. No production code changes.
+
+**1. Expose \`WorkflowFile\` and \`TicketFile\` to tests**
+
+Both structs are already defined in \`apm-core/src/config.rs\` but are private. The test module in \`init.rs\` imports \`super::*\` but \`WorkflowFile\`/\`TicketFile\` live in \`crate::config\`. Two options:
+- Make \`WorkflowFile\` and \`TicketFile\` \`pub(crate)\` in \`config.rs\` — minimal change, no API surface added
+- Inline the serde structs in the test module — avoids touching \`config.rs\` but duplicates definitions
+
+Prefer option A (pub(crate) in config.rs) — it is the honest representation and avoids duplication.
+
+**2. Add test: \`default_workflow_toml_is_valid\`**
+
+```rust
+#[test]
+fn default_workflow_toml_is_valid() {
+    use crate::config::WorkflowFile;
+    let wf: WorkflowFile = toml::from_str(default_workflow_toml())
+        .expect("default_workflow_toml must parse as WorkflowFile");
+    let state_ids: Vec<&str> = wf.workflow.states.iter().map(|s| s.id.as_str()).collect();
+    let expected = ["new","groomed","question","specd","ammend","in_design",
+                    "ready","in_progress","blocked","implemented","closed"];
+    for id in &expected {
+        assert!(state_ids.contains(id), "missing state: {id}");
+    }
+    assert_eq!(wf.workflow.states.len(), expected.len());
+    // States that must carry dep_requires
+    for id in &["groomed","ammend"] {
+        let s = wf.workflow.states.iter().find(|s| s.id == *id).unwrap();
+        assert!(s.dep_requires.is_some(), "state {id} must have dep_requires");
+    }
+    // States that must satisfy deps (non-default satisfies_deps)
+    use crate::config::SatisfiesDeps;
+    for id in &["specd","ammend","in_design","ready","in_progress","implemented"] {
+        let s = wf.workflow.states.iter().find(|s| s.id == *id).unwrap();
+        assert_ne!(s.satisfies_deps, SatisfiesDeps::Bool(false),
+                   "state {id} must have satisfies_deps");
+    }
+}
+```
+
+**3. Add test: \`default_ticket_toml_is_valid\`**
+
+```rust
+#[test]
+fn default_ticket_toml_is_valid() {
+    use crate::config::TicketFile;
+    let tf: TicketFile = toml::from_str(default_ticket_toml())
+        .expect("default_ticket_toml must parse as TicketFile");
+    let required: Vec<&str> = tf.ticket.sections.iter()
+        .filter(|s| s.required)
+        .map(|s| s.name.as_str())
+        .collect();
+    for name in &["Problem","Acceptance criteria","Out of scope","Approach"] {
+        assert!(required.contains(name), "required section missing: {name}");
+    }
+}
+```
+
+**4. Strengthen the existing gitignore test**
+
+The existing \`ensure_gitignore_creates_file\` test (line 620) already checks for \`.apm/sessions.json\` and \`.apm/credentials.json\`. Verify it also checks for \`.apm/*.init\` — add an assertion if absent.
+
+**Order of changes:**
+1. Mark \`WorkflowFile\` and \`TicketFile\` as \`pub(crate)\` in \`config.rs\`
+2. Add the two new tests to \`init.rs\`
+3. Strengthen the gitignore test if the \`.apm/*.init\` assertion is missing
+4. Run \`cargo test --workspace\`
 
 ### Open questions
 
