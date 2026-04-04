@@ -18,7 +18,9 @@ depends_on = ["42f4b3ba"]
 
 ### Problem
 
-`apm list --mine` currently matches only the `author` field. If I started working on a ticket someone else created, `--mine` won't show it. There is also no `--owner` flag to filter by who is currently working on a ticket. The mental model of "my tickets" should include both tickets I created and tickets I'm currently responsible for.
+`apm list --mine` currently matches only the `author` field: it filters to tickets created by the current user. Once ticket 42f4b3ba lands and adds the `agent` ownership field to `Frontmatter`, a user who picks up a ticket created by someone else will not see it in `--mine` even though they are the active owner. The mental model of "my tickets" should include both tickets you created and tickets you are currently responsible for.
+
+There is also no user-facing `--owner` flag to filter by who currently owns a ticket (i.e. by the `agent` field). The existing `--author` flag covers the creator dimension; the owner dimension has no equivalent.
 
 ### Acceptance criteria
 
