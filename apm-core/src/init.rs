@@ -76,6 +76,21 @@ pub fn setup(root: &Path) -> Result<()> {
     std::fs::create_dir_all(&apm_dir)?;
 
     let local_toml = apm_dir.join("local.toml");
+    let is_tty = std::io::stdin().is_terminal();
+
+    // Prompt for username and write local.toml (any init, not just first)
+    let username = if is_tty && !local_toml.exists() {
+        let u = prompt_username()?;
+        if !u.is_empty() {
+            write_local_toml(&apm_dir, &u)?;
+            println!("Created .apm/local.toml");
+            u
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
 
     let config_path = apm_dir.join("config.toml");
     if !config_path.exists() {
@@ -83,23 +98,10 @@ pub fn setup(root: &Path) -> Result<()> {
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project");
-        let is_tty = std::io::stdin().is_terminal();
         let (name, description) = if is_tty {
             prompt_project_info(default_name)?
         } else {
             (default_name.to_string(), String::new())
-        };
-        let username = if is_tty && !local_toml.exists() {
-            let u = prompt_username()?;
-            if !u.is_empty() {
-                write_local_toml(&apm_dir, &u)?;
-                println!("Created .apm/local.toml");
-                u
-            } else {
-                String::new()
-            }
-        } else {
-            String::new()
         };
         let collaborators: Vec<&str> = if username.is_empty() {
             vec![]
