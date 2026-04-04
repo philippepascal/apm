@@ -15,7 +15,11 @@ updated_at = "2026-04-04T00:12:56.422580Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`determine_status()` in `apm-server/src/workers.rs` classifies a dead worker as "ended" only if the ticket's current state is in the workflow's `terminal` set (e.g., `closed`). Workers that complete successfully but leave the ticket in a non-terminal state — such as a spec-writer finishing in `specd`, or an implementer finishing in `implemented` — are reported as **"crashed"** in the worker panel.
+
+This is misleading: the worker did its job; it is not crashed. The root cause is that `determine_status()` has no concept of "the worker's task is done" distinct from "the ticket's lifecycle is done."
+
+The fix must be **config-based** — a new boolean field on state definitions in `workflow.toml` (e.g., `worker_end = true`) that marks states where a worker is expected to have exited. `determine_status()` should check this field alongside `terminal` to decide between "ended" and "crashed". No state names should be hardcoded.
 
 ### Acceptance criteria
 
@@ -32,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
