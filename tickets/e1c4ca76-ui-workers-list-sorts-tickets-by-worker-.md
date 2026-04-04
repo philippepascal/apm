@@ -36,7 +36,29 @@ The desired behaviour is that running workers always appear at the top, and cras
 
 ### Approach
 
-How the implementation will work.
+**File:** apm-ui/src/components/WorkerActivityPanel.tsx
+
+**Change:** Sort the workers array before rendering, using a status priority map.
+
+Define a priority order:
+```ts
+const STATUS_ORDER: Record<WorkerInfo['status'], number> = {
+  running: 0,
+  crashed: 1,
+  ended:   2,
+}
+```
+
+In the render path, replace the bare `data.map()` call with a sorted copy:
+```ts
+const sorted = [...data].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+```
+
+Then render `sorted.map()` instead of `data.map()`.
+
+The sort is stable in all modern JS runtimes (ES2019+, and Vite's target), so workers within the same status group keep their original API order.
+
+No other files change. No new state, hooks, or deps needed.
 
 ### Open questions
 
