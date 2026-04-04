@@ -141,7 +141,9 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         }
         CompletionStrategy::Merge => {
             git::push_branch(root, &branch)?;
-            merge_into_default(root, &branch, &config.project.default_branch)?;
+            let merge_target = t.frontmatter.target_branch.as_deref()
+                .unwrap_or(&config.project.default_branch);
+            merge_into_default(root, &branch, merge_target)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch(root, &branch)?;

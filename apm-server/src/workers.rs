@@ -129,7 +129,6 @@ fn stop_worker_by_pid(root: &FsPath, target_pid: u32) -> Result<(), StopError> {
             .args(["-TERM", &pid.to_string()])
             .status()
             .map_err(|e| StopError::Other(e.to_string()))?;
-        let _ = std::fs::remove_file(&pid_path);
         return Ok(());
     }
     Err(StopError::NotFound)
