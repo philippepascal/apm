@@ -21,6 +21,9 @@ pub mod cmd {
     pub mod work;
     pub mod clean;
     pub mod workers;
+    pub mod register;
+    pub mod sessions;
+    pub mod revoke;
 }
 
 pub use crate::cmd::*;

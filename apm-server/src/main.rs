@@ -1300,7 +1300,7 @@ async fn register_complete_handler(
     };
     state.credential_store.insert(&session.username, passkey);
     let token = auth::generate_token();
-    state.session_store.insert(token.clone(), session.username);
+    state.session_store.insert(token.clone(), session.username, None);
     let cookie = format!(
         "__Host-apm-session={token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
     );
@@ -1423,7 +1423,7 @@ async fn login_complete_handler(
     };
     state.credential_store.update_credential(&session.username, &auth_result);
     let token = auth::generate_token();
-    state.session_store.insert(token.clone(), session.username);
+    state.session_store.insert(token.clone(), session.username, None);
     let cookie = format!(
         "__Host-apm-session={token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
     );
@@ -1433,6 +1433,28 @@ async fn login_complete_handler(
         Json(serde_json::json!({"status": "ok"})),
     )
         .into_response()
+}
+
+async fn list_sessions_handler(
+    State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+) -> Response {
+    if !is_localhost(connect_info) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    Json(state.session_store.list_active()).into_response()
+}
+
+async fn revoke_sessions_handler(
+    State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+    Json(req): Json<auth::RevokeRequest>,
+) -> Response {
+    if !is_localhost(connect_info) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let revoked = state.session_store.revoke(&req);
+    Json(auth::RevokeResponse { revoked }).into_response()
 }
 
 fn build_app(root: PathBuf) -> Router {
@@ -1480,6 +1502,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/epics/:id", get(get_epic))
         .route("/api/me", get(me_handler))
         .route("/api/auth/otp", post(otp_handler))
+        .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
         .route("/register", get(register_page_handler))
         .route("/api/auth/register/challenge", post(register_challenge_handler))
         .route("/api/auth/register/complete", post(register_complete_handler))
@@ -1596,6 +1619,7 @@ fn build_app_for_auth_tests(
     Router::new()
         .route("/api/me", get(me_handler))
         .route("/api/auth/otp", post(otp_handler))
+        .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
         .with_state(state)
 }
 
@@ -2807,7 +2831,7 @@ label = "In Progress"
         let dir = tempfile::tempdir().unwrap();
         let otp_store = auth::OtpStore::new();
         let session_store = auth::SessionStore::load(PathBuf::new());
-        session_store.insert("testtoken".to_string(), "bob".to_string());
+        session_store.insert("testtoken".to_string(), "bob".to_string(), None);
         let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
         let response = app
             .oneshot(
@@ -3199,5 +3223,90 @@ label = "In Progress"
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn get_sessions_from_remote_returns_403() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/auth/sessions")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn get_sessions_from_localhost_returns_active_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let expired = chrono::Utc::now() - chrono::Duration::days(10);
+        session_store.insert_expiring_at("exp".to_string(), "eve".to_string(), expired);
+        session_store.insert("active".to_string(), "alice".to_string(), None);
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let mut req = Request::builder()
+            .uri("/api/auth/sessions")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["username"], "alice");
+    }
+
+    #[tokio::test]
+    async fn delete_sessions_from_remote_returns_403() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/api/auth/sessions")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"all":true}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn delete_sessions_all_from_localhost() {
+        let dir = tempfile::tempdir().unwrap();
+        let otp_store = auth::OtpStore::new();
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        session_store.insert("t1".to_string(), "alice".to_string(), None);
+        session_store.insert("t2".to_string(), "bob".to_string(), None);
+        let app = build_app_for_auth_tests(dir.path().to_path_buf(), otp_store, session_store);
+        let mut req = Request::builder()
+            .method("DELETE")
+            .uri("/api/auth/sessions")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"all":true}"#))
+            .unwrap();
+        req.extensions_mut()
+            .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 1234))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["revoked"], 2);
     }
 }

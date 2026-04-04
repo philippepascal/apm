@@ -4216,3 +4216,157 @@ terminal = true
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(stdout, "hello from agents\n", "unexpected output: {stdout}");
 }
+
+fn setup_with_server_url(url: &str) -> TempDir {
+    let dir = setup();
+    let p = dir.path();
+    let server_block = format!("\n[server]\nurl = \"{url}\"\n");
+    let apm_toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
+    std::fs::write(p.join("apm.toml"), format!("{apm_toml}{server_block}")).unwrap();
+    dir
+}
+
+#[test]
+fn register_prints_otp_from_server() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("POST", "/api/auth/otp")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"otp":"ABCD1234"}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["register", "alice"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "ABCD1234");
+}
+
+#[test]
+fn sessions_empty_response_prints_no_active() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("GET", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body("[]")
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["sessions"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("No active sessions."));
+}
+
+#[test]
+fn sessions_with_data_prints_table() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("GET", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"[{"username":"alice","device_hint":"MacBook","last_seen":"2026-04-01T14:32:00Z","expires_at":"2026-04-08T14:32:00Z"}]"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["sessions"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("alice"), "missing username: {stdout}");
+    assert!(stdout.contains("MacBook"), "missing device: {stdout}");
+    assert!(stdout.contains("USERNAME"), "missing header: {stdout}");
+}
+
+#[test]
+fn revoke_user_prints_count() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":2}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "alice"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 2 session(s)."));
+}
+
+#[test]
+fn revoke_user_zero_prints_no_sessions() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":0}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "alice"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("No sessions found for alice."));
+}
+
+#[test]
+fn revoke_all_sends_all_flag() {
+    let mut server = mockito::Server::new();
+    let body_json = serde_json::json!({"username": null, "device": null, "all": true});
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .match_body(mockito::Matcher::Json(body_json))
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":5}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "--all"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 5 session(s)."));
+}
+
+#[test]
+fn revoke_with_device_hint() {
+    let mut server = mockito::Server::new();
+    let mock = server
+        .mock("DELETE", "/api/auth/sessions")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"revoked":1}"#)
+        .create();
+    let dir = setup_with_server_url(&server.url());
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["revoke", "alice", "--device", "MacBook"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    mock.assert();
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Revoked 1 session(s)."));
+}

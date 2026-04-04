@@ -68,6 +68,10 @@ impl OtpStore {
 struct SessionEntry {
     token: String,
     username: String,
+    #[serde(default)]
+    device_hint: Option<String>,
+    #[serde(default = "Utc::now")]
+    last_seen: DateTime<Utc>,
     expires_at: DateTime<Utc>,
 }
 
@@ -104,11 +108,14 @@ impl SessionStore {
         }
     }
 
-    pub fn insert(&self, token: String, username: String) {
-        let expires_at = Utc::now() + Duration::days(7);
+    pub fn insert(&self, token: String, username: String, device_hint: Option<String>) {
+        let now = Utc::now();
+        let expires_at = now + Duration::days(7);
         let entry = SessionEntry {
             token: token.clone(),
             username,
+            device_hint,
+            last_seen: now,
             expires_at,
         };
         self.inner.lock().unwrap().insert(token, entry);
@@ -145,6 +152,67 @@ impl SessionStore {
     }
 }
 
+#[derive(serde::Serialize, Clone)]
+pub struct SessionInfo {
+    pub username: String,
+    pub device_hint: Option<String>,
+    pub last_seen: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct RevokeRequest {
+    pub username: Option<String>,
+    pub device: Option<String>,
+    #[serde(default)]
+    pub all: bool,
+}
+
+#[derive(serde::Serialize)]
+pub struct RevokeResponse {
+    pub revoked: usize,
+}
+
+impl SessionStore {
+    pub fn list_active(&self) -> Vec<SessionInfo> {
+        let map = self.inner.lock().unwrap();
+        let now = Utc::now();
+        map.values()
+            .filter(|e| e.expires_at > now)
+            .map(|e| SessionInfo {
+                username: e.username.clone(),
+                device_hint: e.device_hint.clone(),
+                last_seen: e.last_seen,
+                expires_at: e.expires_at,
+            })
+            .collect()
+    }
+
+    pub fn revoke(&self, req: &RevokeRequest) -> usize {
+        let mut map = self.inner.lock().unwrap();
+        let before = map.len();
+        if req.all {
+            map.clear();
+        } else {
+            map.retain(|_, e| {
+                let username_match = req.username.as_deref().map(|u| e.username != u).unwrap_or(false);
+                let device_match = req.device.as_deref().map(|d| e.device_hint.as_deref() != Some(d)).unwrap_or(false);
+                if req.device.is_some() {
+                    username_match || device_match
+                } else {
+                    username_match
+                }
+            });
+        }
+        let revoked = before - map.len();
+        if revoked > 0 {
+            drop(map);
+            self.save();
+        }
+        revoked
+    }
+}
+
 #[cfg(test)]
 impl OtpStore {
     pub fn insert_at(&self, username: &str, otp: String, created_at: DateTime<Utc>) {
@@ -161,6 +229,8 @@ impl SessionStore {
         let entry = SessionEntry {
             token: token.clone(),
             username,
+            device_hint: None,
+            last_seen: Utc::now(),
             expires_at,
         };
         self.inner.lock().unwrap().insert(token, entry);
@@ -204,7 +274,7 @@ mod tests {
     #[test]
     fn session_insert_and_lookup() {
         let store = SessionStore::load(PathBuf::new());
-        store.insert("tok1".to_string(), "alice".to_string());
+        store.insert("tok1".to_string(), "alice".to_string(), None);
         assert_eq!(store.lookup("tok1"), Some("alice".to_string()));
     }
 
@@ -221,7 +291,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("sessions.json");
         let store = SessionStore::load(path.clone());
-        store.insert("tok3".to_string(), "bob".to_string());
+        store.insert("tok3".to_string(), "bob".to_string(), None);
         drop(store);
         let store2 = SessionStore::load(path);
         assert_eq!(store2.lookup("tok3"), Some("bob".to_string()));
@@ -234,5 +304,58 @@ mod tests {
         store.insert("alice", "SECOND45".to_string());
         assert!(matches!(store.validate("alice", "FIRST123"), Err(OtpError::Invalid)));
         assert!(store.validate("alice", "SECOND45").is_ok());
+    }
+
+    #[test]
+    fn list_active_excludes_expired() {
+        let store = SessionStore::load(PathBuf::new());
+        let expired = Utc::now() - Duration::days(8);
+        store.insert_expiring_at("tok-exp".to_string(), "eve".to_string(), expired);
+        store.insert("tok-ok".to_string(), "alice".to_string(), None);
+        let active = store.list_active();
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0].username, "alice");
+    }
+
+    #[test]
+    fn revoke_all_clears_store() {
+        let store = SessionStore::load(PathBuf::new());
+        store.insert("t1".to_string(), "alice".to_string(), None);
+        store.insert("t2".to_string(), "bob".to_string(), None);
+        let req = RevokeRequest { username: None, device: None, all: true };
+        let count = store.revoke(&req);
+        assert_eq!(count, 2);
+        assert!(store.list_active().is_empty());
+    }
+
+    #[test]
+    fn revoke_by_username_filters_correctly() {
+        let store = SessionStore::load(PathBuf::new());
+        store.insert("t1".to_string(), "alice".to_string(), None);
+        store.insert("t2".to_string(), "alice".to_string(), None);
+        store.insert("t3".to_string(), "bob".to_string(), None);
+        let req = RevokeRequest { username: Some("alice".to_string()), device: None, all: false };
+        let count = store.revoke(&req);
+        assert_eq!(count, 2);
+        let remaining = store.list_active();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].username, "bob");
+    }
+
+    #[test]
+    fn revoke_by_username_and_device() {
+        let store = SessionStore::load(PathBuf::new());
+        store.insert("t1".to_string(), "alice".to_string(), Some("MacBook".to_string()));
+        store.insert("t2".to_string(), "alice".to_string(), Some("iPhone".to_string()));
+        let req = RevokeRequest {
+            username: Some("alice".to_string()),
+            device: Some("MacBook".to_string()),
+            all: false,
+        };
+        let count = store.revoke(&req);
+        assert_eq!(count, 1);
+        let remaining = store.list_active();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].device_hint.as_deref(), Some("iPhone"));
     }
 }
