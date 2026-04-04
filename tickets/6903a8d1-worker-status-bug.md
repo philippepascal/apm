@@ -28,7 +28,12 @@ Ticket fa2dce31 already fixed the server-side equivalent in `apm-server/src/work
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Server-side workers API (`apm-server/src/workers.rs`) — already fixed in ticket fa2dce31
+- Adding a `worker_end` field to `StateConfig` — already done in fa2dce31
+- Updating `.apm/workflow.toml` with `worker_end = true` — already done in fa2dce31
+- Removing or cleaning up stale PID files after a worker completes
+- Changes to the elapsed or PID columns for completed workers
+- UI or server worker panel presentation
 
 ### Approach
 
