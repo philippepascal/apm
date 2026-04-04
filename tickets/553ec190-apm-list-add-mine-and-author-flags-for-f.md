@@ -28,7 +28,7 @@ There is no way to filter `apm list` output by ticket author. A developer workin
 - [x] `apm list --author alice` shows only tickets where `author == "alice"`
 - [x] `apm list --author alice` with no matching tickets prints no output and exits 0
 - [x] `--mine` and `--author` are mutually exclusive: passing both produces an error and non-zero exit code
-- [ ] `apm list --mine --state ready` shows only tickets matching both the author and state filters (AND logic)
+- [x] `apm list --mine --state ready` shows only tickets matching both the author and state filters (AND logic)
 - [ ] `apm list --author <username> --state <state>` combines with all other existing filters (AND logic)
 - [ ] All existing `apm list` filters continue to work unchanged after this addition
 
