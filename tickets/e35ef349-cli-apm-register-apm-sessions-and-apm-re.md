@@ -34,7 +34,7 @@ The desired behaviour is three new subcommands — `apm register`, `apm sessions
 - [x] `apm sessions` prints a table of active (non-expired) sessions with columns: Username, Device, Last Seen, Expires
 - [x] `apm sessions` prints "No active sessions." when the session store is empty or all sessions are expired
 - [x] `apm sessions` exits non-zero and prints a human-readable error when the server is not reachable
-- [ ] `apm revoke <username>` removes all sessions for that user and prints how many were revoked
+- [x] `apm revoke <username>` removes all sessions for that user and prints how many were revoked
 - [ ] `apm revoke <username>` exits 0 and prints "No sessions found for <username>." when no sessions exist for that user
 - [ ] `apm revoke <username> --device <hint>` removes only sessions whose device hint matches and exits 0
 - [ ] `apm revoke --all` removes every session for every user and prints the total count revoked
