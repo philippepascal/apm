@@ -40,12 +40,12 @@ wired into `resolve_identity()` and a new `resolve_collaborators()` helper.
 - [x] A config with no `[git_host]` section parses without error (plugin is optional)
 - [x] `LocalConfig` accepts an optional `github_token` field; a `local.toml` without it parses without error
 - [x] `resolve_identity()` returns the GitHub login when `[git_host]` is configured and a token is available (via `local.toml` or `GITHUB_TOKEN` env var)
-- [ ] `resolve_identity()` falls back to the `local.toml` `username` field when the GitHub plugin is not configured
-- [ ] `resolve_identity()` returns `"unassigned"` when neither GitHub plugin nor `local.toml` username is set
-- [ ] `resolve_identity()` falls back gracefully (continues to `local.toml` / `"unassigned"`) when the GitHub API returns an error or is unreachable
-- [ ] `resolve_collaborators()` returns the list of GitHub logins from the collaborators API when `[git_host]` is configured and a token is available
-- [ ] `resolve_collaborators()` falls back to the static `collaborators` list from `config.toml` when the GitHub plugin is not configured
-- [ ] `resolve_collaborators()` falls back gracefully to the static list when the GitHub API returns an error or is unreachable
+- [x] `resolve_identity()` falls back to the `local.toml` `username` field when the GitHub plugin is not configured
+- [x] `resolve_identity()` returns `"unassigned"` when neither GitHub plugin nor `local.toml` username is set
+- [x] `resolve_identity()` falls back gracefully (continues to `local.toml` / `"unassigned"`) when the GitHub API returns an error or is unreachable
+- [x] `resolve_collaborators()` returns the list of GitHub logins from the collaborators API when `[git_host]` is configured and a token is available
+- [x] `resolve_collaborators()` falls back to the static `collaborators` list from `config.toml` when the GitHub plugin is not configured
+- [x] `resolve_collaborators()` falls back gracefully to the static list when the GitHub API returns an error or is unreachable
 
 ### Out of scope
 
