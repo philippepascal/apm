@@ -36,7 +36,11 @@ The `Ticket` TypeScript interface in `types.ts` already has `agent?: string` whi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding the `agent` field to Frontmatter — covered by #42f4b3ba
+- Exposing `agent` in the API response and adding the `?agent=` query param — covered by #2b7c4c97
+- Renaming the API field from `agent` to `owner` — the dependency tickets have already spec'd the field as `agent`; the UI label rename in this ticket is sufficient alignment
+- Displaying the owner on TicketCard or TicketDetail — out of scope for this ticket
+- Persisting the filter selection across page reloads
 
 ### Approach
 
