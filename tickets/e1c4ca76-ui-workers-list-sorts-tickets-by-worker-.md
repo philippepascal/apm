@@ -1,14 +1,14 @@
 +++
 id = "e1c4ca76"
 title = "UI Workers list sorts tickets by worker status, with crashed and ended last"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
 author = "apm-ui"
 branch = "ticket/e1c4ca76-ui-workers-list-sorts-tickets-by-worker-"
 created_at = "2026-04-04T03:16:37.369960Z"
-updated_at = "2026-04-04T07:15:57.145980Z"
+updated_at = "2026-04-04T07:23:27.694344Z"
 +++
 
 ## Spec
@@ -78,3 +78,4 @@ No other files change. No new state, hooks, or deps needed.
 | 2026-04-04T06:40Z | groomed | in_design | philippepascal |
 | 2026-04-04T06:42Z | in_design | specd | claude-0403-spec-e1c4 |
 | 2026-04-04T07:15Z | specd | ready | apm |
+| 2026-04-04T07:23Z | ready | in_progress | philippepascal |
