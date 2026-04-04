@@ -275,6 +275,39 @@ fn new_ticket_has_correct_frontmatter() {
 }
 
 #[test]
+fn new_uses_local_toml_username_as_author() {
+    let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"carol\"\n").unwrap();
+    apm::cmd::new::run(dir.path(), "My Ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "my-ticket");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(content.contains("author = \"carol\""), "author should come from local.toml: {content}");
+}
+
+#[test]
+fn new_uses_apm_when_no_local_toml() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Unnamed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "unnamed");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(content.contains("author = \"apm\""), "author should be apm without local.toml: {content}");
+}
+
+#[test]
+fn new_ticket_does_not_write_agent_field() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "No Agent".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "no-agent");
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(dir.path(), &branch, &rel_path);
+    assert!(!content.contains("agent ="), "agent field must not appear in new tickets: {content}");
+}
+
+#[test]
 fn new_increments_ids() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "First".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
@@ -388,6 +421,57 @@ fn set_priority_updates_frontmatter() {
     apm::cmd::set::run(dir.path(), &id, "priority".into(), "7".into(), true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("priority = 7"));
+}
+
+#[test]
+fn set_depends_on_single_id() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test single".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-single");
+    let id = find_ticket_id(dir.path(), "dep-test-single");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("depends_on = [\"abc12345\"]"));
+}
+
+#[test]
+fn set_depends_on_comma_separated() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test multi".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-multi");
+    let id = find_ticket_id(dir.path(), "dep-test-multi");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345,def67890".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("abc12345"));
+    assert!(content.contains("def67890"));
+}
+
+#[test]
+fn set_depends_on_clear() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test clear".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-clear");
+    let id = find_ticket_id(dir.path(), "dep-test-clear");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345".into(), true).unwrap();
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "-".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(!content.contains("depends_on"));
+}
+
+#[test]
+fn set_depends_on_trims_whitespace() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Dep test trim".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "dep-test-trim");
+    let id = find_ticket_id(dir.path(), "dep-test-trim");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), " id1 , id2 ".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("\"id1\""));
+    assert!(content.contains("\"id2\""));
 }
 
 // --- next ---
@@ -644,7 +728,7 @@ fn take_succeeds_on_ammend_state() {
     std::env::set_var("APM_AGENT_NAME", "new-agent");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-ammend-me", "tickets/0001-ammend-me.md");
-    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -655,7 +739,7 @@ fn take_succeeds_on_blocked_state() {
     std::env::set_var("APM_AGENT_NAME", "new-agent");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-blocked", "tickets/0001-blocked.md");
-    assert!(content.contains("agent = \"new-agent\""), "agent should be updated: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -667,21 +751,20 @@ fn take_appends_handoff_history() {
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-handoff", "tickets/0001-handoff.md");
     assert!(content.contains("handoff"), "handoff history entry should be appended: {content}");
-    assert!(content.contains("old-agent"), "old agent should appear in history: {content}");
     assert!(content.contains("new-agent"), "new agent should appear in history: {content}");
 }
 
 #[test]
-fn take_fails_when_no_agent_assigned() {
-    let dir = setup();
+fn take_succeeds_when_no_agent_assigned() {
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
-    // Ticket with no agent field
+    // Ticket with no agent field — take should succeed using "unknown" as placeholder
     write_ticket_to_branch(p, "ticket/0001-unassigned", "0001-unassigned.md", "new", 1, "unassigned");
     std::env::set_var("APM_AGENT_NAME", "some-agent");
-    let result = apm::cmd::take::run(p, "1", true);
-    assert!(result.is_err(), "take should fail when no agent is assigned");
-    let msg = format!("{}", result.unwrap_err());
-    assert!(msg.contains("apm start"), "error should mention apm start: {msg}");
+    apm::cmd::take::run(p, "1", true).unwrap();
+    let content = branch_content(p, "ticket/0001-unassigned", "tickets/0001-unassigned.md");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
+    assert!(content.contains("unknown"), "old agent placeholder should be 'unknown': {content}");
 }
 
 #[test]
@@ -694,7 +777,8 @@ fn take_without_apm_agent_name_falls_back_to_apm() {
     std::env::remove_var("USERNAME");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
-    assert!(content.contains("agent = \"apm\""), "agent should fall back to 'apm': {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
 }
 
 #[test]
@@ -706,7 +790,8 @@ fn take_without_apm_agent_name_uses_user_env() {
     std::env::set_var("USER", "alice");
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-user-env", "tickets/0001-user-env.md");
-    assert!(content.contains("agent = \"alice\""), "agent should be resolved from USER: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
 }
 
 // ── apm spec ────────────────────────────────────────────────────────────────
@@ -1272,7 +1357,7 @@ fn start_next_claims_highest_priority_ticket() {
     apm::cmd::start::run_next(p, true, false, false).unwrap();
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
-    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1423,7 +1508,7 @@ terminal = true
 
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
     assert!(content.contains("state = \"in_design\""), "ticket should be in_design: {content}");
-    assert!(content.contains("agent = \"test-agent\""), "agent should be set: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── apm start --spawn ────────────────────────────────────────────────────────
@@ -1460,14 +1545,8 @@ fn start_spawn_sets_agent_to_worker_pid() {
     std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    // agent must be a decimal PID, not the delegator name
-    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator: {content}");
-    let agent_val = content.lines()
-        .find(|l| l.starts_with("agent = "))
-        .and_then(|l| l.strip_prefix("agent = \""))
-        .and_then(|l| l.strip_suffix('"'))
-        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
-    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1480,7 +1559,8 @@ fn start_non_spawn_keeps_agent_name() {
     apm::cmd::start::run(p, "1", true, false, false, "delegator-agent").unwrap();
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(content.contains("agent = \"delegator-agent\""), "non-spawn should keep APM_AGENT_NAME: {content}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 #[test]
@@ -1498,13 +1578,8 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(!content.contains("agent = \"delegator-agent\""), "agent should not be delegator after spawn: {content}");
-    let agent_val = content.lines()
-        .find(|l| l.starts_with("agent = "))
-        .and_then(|l| l.strip_prefix("agent = \""))
-        .and_then(|l| l.strip_suffix('"'))
-        .unwrap_or_else(|| panic!("agent field not found in: {content}"));
-    assert!(agent_val.parse::<u32>().is_ok(), "agent should be a PID number, got: {agent_val}");
+    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── system prompt dispatch ───────────────────────────────────────────────────
@@ -2345,15 +2420,29 @@ fn branch_exists(dir: &std::path::Path, branch: &str) -> bool {
 }
 
 #[test]
-fn clean_happy_path_removes_closed_branch() {
+fn clean_default_does_not_remove_local_branch() {
+    // apm clean (without --branches) must leave the local branch intact.
     let dir = setup();
     let p = dir.path();
     let (branch, _) = write_closed_ticket(p, 1, "done");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false, false, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
 
-    assert!(!branch_exists(p, &branch), "branch should have been removed");
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed without --branches");
+}
+
+#[test]
+fn clean_branches_flag_removes_local_branch() {
+    // apm clean --branches removes the local branch.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "branches-flag");
+    merge_into_main(p, &branch);
+
+    apm::cmd::clean::run(p, false, false, false, true, false, None, false).unwrap();
+
+    assert!(!branch_exists(p, &branch), "branch should have been removed with --branches");
 }
 
 #[test]
@@ -2364,7 +2453,7 @@ fn clean_dry_run_includes_state_in_output() {
     merge_into_main(p, &branch);
 
     // dry_run=true should not actually delete anything
-    apm::cmd::clean::run(p, true, false, false).unwrap();
+    apm::cmd::clean::run(p, true, false, false, false, false, None, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
 }
@@ -2380,7 +2469,7 @@ fn clean_skips_ticket_not_on_main() {
     // -s ours: makes branch tip reachable from main without bringing content
     git(p, &["-c", "commit.gpgsign=false", "merge", "-s", "ours", &branch, "-m", "ours merge"]);
 
-    apm::cmd::clean::run(p, false, false, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — ticket not on main");
 }
@@ -2460,7 +2549,7 @@ label = "New"
     let (branch, _) = write_closed_ticket(p, 1, "no-terminal-config");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false, false, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, true, false, None, false).unwrap();
 
     assert!(!branch_exists(p, &branch), "closed should be treated as terminal even without config entry");
 }
@@ -2520,13 +2609,15 @@ terminal = true
     git(p, &["checkout", "main"]);
 
     // Local tip ≠ remote tip → should skip
-    apm::cmd::clean::run(p, false, false, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
 }
 
 #[test]
-fn clean_yes_removes_known_temp_files_and_cleans() {
+fn clean_auto_removes_known_temp_files() {
+    // Known temp files are removed automatically (no --untracked needed);
+    // branch is NOT removed without --branches.
     let dir = setup();
     let p = dir.path();
     let (branch, _) = write_closed_ticket(p, 1, "tempfiles");
@@ -2540,9 +2631,9 @@ fn clean_yes_removes_known_temp_files_and_cleans() {
     // Drop a known temp file into the worktree
     std::fs::write(wt_path.join("pr-body.md"), "pr body content").unwrap();
 
-    apm::cmd::clean::run(p, false, true, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
 
-    assert!(!branch_exists(p, &branch), "branch should have been removed");
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed without --branches");
     assert!(!wt_path.exists(), "worktree should have been removed");
 }
 
@@ -2561,7 +2652,7 @@ fn clean_skips_modified_tracked_files() {
     // Modify a tracked file without committing
     std::fs::write(wt_path.join(&rel_path), "modified content").unwrap();
 
-    apm::cmd::clean::run(p, false, true, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — modified tracked file");
     assert!(wt_path.exists(), "worktree should NOT have been removed");
@@ -2583,7 +2674,7 @@ fn clean_dry_run_diagnoses_dirty_worktree() {
     let temp_file = wt_path.join("pr-body.md");
     std::fs::write(&temp_file, "pr body").unwrap();
 
-    apm::cmd::clean::run(p, true, false, false).unwrap();
+    apm::cmd::clean::run(p, true, false, false, false, false, None, false).unwrap();
 
     // dry-run: nothing removed
     assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
@@ -2592,7 +2683,9 @@ fn clean_dry_run_diagnoses_dirty_worktree() {
 }
 
 #[test]
-fn clean_yes_removes_other_untracked_files() {
+fn clean_untracked_flag_removes_other_untracked_files() {
+    // --untracked removes untracked non-temp files before worktree removal.
+    // Branch is NOT removed without --branches.
     let dir = setup();
     let p = dir.path();
     let (branch, _) = write_closed_ticket(p, 1, "otheruntracked");
@@ -2606,10 +2699,30 @@ fn clean_yes_removes_other_untracked_files() {
     // Drop an unrecognised untracked file into the worktree
     std::fs::write(wt_path.join("notes.txt"), "my notes").unwrap();
 
-    apm::cmd::clean::run(p, false, true, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, true).unwrap();
 
-    assert!(!branch_exists(p, &branch), "branch should have been removed");
-    assert!(!wt_path.exists(), "worktree should have been removed");
+    assert!(branch_exists(p, &branch), "branch should NOT have been removed without --branches");
+    assert!(!wt_path.exists(), "worktree should have been removed with --untracked");
+}
+
+#[test]
+fn clean_warns_about_untracked_without_flag() {
+    // Without --untracked, a worktree with untracked non-temp files is skipped with a warning.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "warn-untracked");
+    merge_into_main(p, &branch);
+
+    let wt_path = p.join("worktrees").join("ticket-0001-warn-untracked");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+    std::fs::write(wt_path.join("notes.txt"), "my notes").unwrap();
+
+    // Without --untracked: worktree should stay in place.
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+
+    assert!(wt_path.exists(), "worktree should NOT be removed without --untracked");
+    assert!(branch_exists(p, &branch), "branch should NOT be removed without --branches");
 }
 
 // ── apm clean --force ─────────────────────────────────────────────────────────
@@ -2633,23 +2746,23 @@ fn clean_force_removes_unmerged_branch() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add closed ticket to main"]);
 
     // Normal clean should skip (not merged via git merge).
-    apm::cmd::clean::run(p, false, false, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
     assert!(branch_exists(p, &branch), "normal clean should skip unmerged branch");
 
-    // Force clean with confirmation.
+    // Force clean with --branches and confirmation removes the local branch.
     use std::io::Write as _;
     let mut input = tempfile::NamedTempFile::new().unwrap();
     writeln!(input, "y").unwrap();
     input.flush().unwrap();
     let input_file = std::fs::File::open(input.path()).unwrap();
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["clean", "--force"])
+        .args(["clean", "--force", "--branches"])
         .current_dir(p)
         .stdin(std::process::Stdio::from(input_file))
         .output()
         .unwrap();
     assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
-    assert!(!branch_exists(p, &branch), "branch should have been removed by --force clean");
+    assert!(!branch_exists(p, &branch), "branch should have been removed by --force --branches clean");
 }
 
 #[test]
@@ -2714,24 +2827,24 @@ terminal = true
     std::fs::write(wt_path.join("notes.txt"), "scratch notes").unwrap();
 
     // Normal clean should skip (diverged + dirty worktree, and not an ancestor of main).
-    apm::cmd::clean::run(p, false, false, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
     assert!(branch_exists(p, &branch), "normal clean should skip diverged+dirty ticket");
     assert!(wt_path.exists(), "worktree should NOT be removed by normal clean");
 
-    // Force clean with confirmation.
+    // Force clean removes the worktree; --branches also removes the local branch.
     use std::io::Write as _;
     let mut input = tempfile::NamedTempFile::new().unwrap();
     writeln!(input, "y").unwrap();
     input.flush().unwrap();
     let input_file = std::fs::File::open(input.path()).unwrap();
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["clean", "--force"])
+        .args(["clean", "--force", "--branches"])
         .current_dir(p)
         .stdin(std::process::Stdio::from(input_file))
         .output()
         .unwrap();
     assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
-    assert!(!branch_exists(p, &branch), "branch should have been removed by --force clean");
+    assert!(!branch_exists(p, &branch), "branch should have been removed by --force --branches clean");
     assert!(!wt_path.exists(), "worktree should have been removed by --force clean");
 }
 
@@ -2743,7 +2856,7 @@ fn clean_force_still_skips_non_terminal() {
     write_ticket_to_branch(p, "ticket/0001-in-prog", "0001-in-prog.md", "in_progress", 1, "in progress");
 
     // No candidates (non-terminal) → no prompts needed; call library directly.
-    apm::cmd::clean::run(p, false, false, true).unwrap();
+    apm::cmd::clean::run(p, false, false, true, false, false, None, false).unwrap();
 
     assert!(
         branch_exists(p, "ticket/0001-in-prog"),
@@ -2768,7 +2881,7 @@ fn clean_force_dry_run_shows_unmerged() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add closed ticket to main"]);
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["clean", "--force", "--dry-run"])
+        .args(["clean", "--force", "--branches", "--dry-run"])
         .current_dir(p)
         .output()
         .unwrap();
@@ -2797,7 +2910,7 @@ fn clean_force_skips_modified_tracked() {
     std::fs::write(wt_path.join(&rel_path), "modified content").unwrap();
 
     // Force clean: modified tracked files must never be auto-removed.
-    apm::cmd::clean::run(p, false, false, true).unwrap();
+    apm::cmd::clean::run(p, false, false, true, false, false, None, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT be removed — modified tracked file");
     assert!(wt_path.exists(), "worktree should NOT be removed — modified tracked file");
@@ -2815,7 +2928,7 @@ fn start_without_apm_agent_name_uses_fallback() {
     apm::cmd::start::run(p, "0001", true, false, false, "ci-agent").unwrap();
     let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
-    assert!(content.contains("agent = \"ci-agent\""), "agent should be ci-agent: {content}");
+    assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ---------------------------------------------------------------------------
@@ -3763,7 +3876,6 @@ fn epic_show_displays_header_and_ticket_table() {
     // Ticket table rows
     assert!(stdout.contains("t2000001"), "should contain ticket1 id: {stdout}");
     assert!(stdout.contains("t2000002"), "should contain ticket2 id: {stdout}");
-    assert!(stdout.contains("alice"), "should contain agent name: {stdout}");
     assert!(stdout.contains("t2000001"), "ticket2 depends_on should show t2000001: {stdout}");
     // Unrelated ticket must NOT appear
     assert!(!stdout.contains("t2000003"), "unrelated ticket must not appear: {stdout}");
