@@ -8,9 +8,10 @@ risk = 0
 author = "apm"
 branch = "ticket/ffaad988-apm-start-and-apm-state-set-and-clear-ow"
 created_at = "2026-04-04T06:28:06.049762Z"
-updated_at = "2026-04-04T06:28:06.049762Z"
+updated_at = "2026-04-04T06:29:45.809338Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["42f4b3ba"]
 +++
 
 ## Spec
