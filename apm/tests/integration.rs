@@ -4587,6 +4587,8 @@ fn archive_older_than_skips_recent_ticket() {
     let rel = ticket_rel_path(&branch);
     let files = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap();
     assert!(files.iter().any(|f| f == &rel), "recent ticket should not be archived with --older-than 0d");
+}
+
 // --- merge completion strategy: push to origin after merge ---
 
 fn merge_strategy_config_toml() -> &'static str {
