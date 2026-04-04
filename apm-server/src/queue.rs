@@ -1,5 +1,8 @@
-use axum::{extract::State, Json};
-use std::sync::Arc;
+use axum::{
+    extract::{ConnectInfo, State},
+    Json,
+};
+use std::{net::SocketAddr, sync::Arc};
 
 use crate::{AppError, AppState, TicketSource};
 
@@ -20,7 +23,33 @@ pub struct QueueEntry {
 
 pub async fn queue_handler(
     State(state): State<Arc<AppState>>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<Vec<QueueEntry>>, AppError> {
+    let is_local = connect_info
+        .map(|ConnectInfo(addr)| addr.ip().is_loopback())
+        .unwrap_or(false);
+
+    let caller: Option<String> = if is_local {
+        state.git_root().map(|root| apm_core::config::resolve_identity(root))
+    } else {
+        let cookie_header = headers
+            .get(axum::http::header::COOKIE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        let mut found = None;
+        for part in cookie_header.split(';') {
+            if let Ok(c) = cookie::Cookie::parse(part.trim().to_owned()) {
+                if c.name() == "__Host-apm-session" {
+                    found = state.session_store.lookup(c.value());
+                    break;
+                }
+            }
+        }
+        found
+    };
+
     let (root, tickets_dir) = match &state.source {
         TicketSource::Git(root, tickets_dir) => (root.clone(), tickets_dir.clone()),
         TicketSource::InMemory(_) => return Ok(Json(vec![])),
@@ -42,6 +71,7 @@ pub async fn queue_handler(
             p.priority_weight,
             p.effort_weight,
             p.risk_weight,
+            caller.as_deref(),
         );
         let result: Vec<QueueEntry> = sorted
             .into_iter()
