@@ -643,6 +643,7 @@ mod tests {
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("tickets/NEXT_ID"));
         assert!(contents.contains(".apm/local.toml"));
+        assert!(contents.contains(".apm/*.init"));
         assert!(contents.contains(".apm/sessions.json"));
         assert!(contents.contains(".apm/credentials.json"));
     }
@@ -909,5 +910,42 @@ mod tests {
         assert!(!init_content.contains("[custom]"));
         assert!(init_content.contains("[project]"));
         assert!(init_content.contains("[workers]"));
+    }
+
+    #[test]
+    fn default_workflow_toml_is_valid() {
+        use crate::config::{SatisfiesDeps, WorkflowFile};
+
+        let parsed: WorkflowFile = toml::from_str(default_workflow_toml()).unwrap();
+        let states = &parsed.workflow.states;
+
+        let ids: Vec<&str> = states.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            ["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "blocked", "implemented", "closed"]
+        );
+
+        for id in ["groomed", "ammend"] {
+            let s = states.iter().find(|s| s.id == id).unwrap();
+            assert!(s.dep_requires.is_some(), "state {id} should have dep_requires");
+        }
+
+        for id in ["specd", "ammend", "in_design", "ready", "in_progress", "implemented"] {
+            let s = states.iter().find(|s| s.id == id).unwrap();
+            assert_ne!(s.satisfies_deps, SatisfiesDeps::Bool(false), "state {id} should have satisfies_deps");
+        }
+    }
+
+    #[test]
+    fn default_ticket_toml_is_valid() {
+        use crate::config::TicketFile;
+
+        let parsed: TicketFile = toml::from_str(default_ticket_toml()).unwrap();
+        let sections = &parsed.ticket.sections;
+
+        for name in ["Problem", "Acceptance criteria", "Out of scope", "Approach"] {
+            let s = sections.iter().find(|s| s.name == name).unwrap();
+            assert!(s.required, "section '{name}' should be required");
+        }
     }
 }

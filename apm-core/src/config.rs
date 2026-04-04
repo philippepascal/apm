@@ -144,13 +144,13 @@ pub struct Config {
 }
 
 #[derive(Deserialize)]
-struct WorkflowFile {
-    workflow: WorkflowConfig,
+pub(crate) struct WorkflowFile {
+    pub(crate) workflow: WorkflowConfig,
 }
 
 #[derive(Deserialize)]
-struct TicketFile {
-    ticket: TicketConfig,
+pub(crate) struct TicketFile {
+    pub(crate) ticket: TicketConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
