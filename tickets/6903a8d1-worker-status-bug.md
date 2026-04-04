@@ -1,14 +1,14 @@
 +++
 id = "6903a8d1"
 title = "worker status bug"
-state = "in_progress"
+state = "ready"
 priority = 0
 effort = 1
 risk = 1
 author = "philippepascal"
 branch = "ticket/6903a8d1-worker-status-bug"
 created_at = "2026-04-04T16:07:08.053019Z"
-updated_at = "2026-04-04T17:35:58.377554Z"
+updated_at = "2026-04-04T18:17:04.031480Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ No changes needed to `apm-core/src/config.rs`, `.apm/workflow.toml`, or any othe
 | 2026-04-04T16:46Z | in_design | specd | claude-0404-1643-b7f2 |
 | 2026-04-04T17:26Z | specd | ready | apm |
 | 2026-04-04T17:35Z | ready | in_progress | philippepascal |
+| 2026-04-04T18:17Z | in_progress | ready | apm |
