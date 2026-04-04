@@ -31,7 +31,7 @@ The fix removes `agent` from the `Frontmatter` struct, the server worker respons
 
 - [x] `GET /api/workers` JSON response objects do not contain an `agent` key
 - [x] `GET /api/tickets/:id` JSON response objects do not contain an `agent` key
-- [ ] Existing ticket files containing `agent = "..."` in their TOML frontmatter are parsed without error
+- [x] Existing ticket files containing `agent = "..."` in their TOML frontmatter are parsed without error
 - [ ] `POST /api/tickets/:id/take` completes without error on tickets that have no `agent` field in frontmatter
 - [ ] `cargo test --workspace` passes after the `agent` field is removed from the `Frontmatter` struct
 
