@@ -351,7 +351,21 @@ fn effective_github_token(local: &LocalConfig, git_host: &GitHostConfig) -> Opti
             }
         }
     }
-    std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty())
+    if let Ok(t) = std::env::var("GITHUB_TOKEN") {
+        if !t.is_empty() {
+            return Some(t);
+        }
+    }
+    // Fall back to gh CLI credential store
+    std::process::Command::new("gh")
+        .args(["auth", "token"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| {
+            let t = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if t.is_empty() { None } else { Some(t) }
+        })
 }
 
 pub fn resolve_identity(repo_root: &Path) -> String {
