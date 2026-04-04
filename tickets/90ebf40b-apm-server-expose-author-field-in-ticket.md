@@ -1,15 +1,15 @@
 +++
 id = "90ebf40b"
 title = "apm-server: expose author field in ticket API responses"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
 author = "apm"
-agent = "50576"
+agent = "philippepascal"
 branch = "ticket/90ebf40b-apm-server-expose-author-field-in-ticket"
 created_at = "2026-04-02T20:54:08.576527Z"
-updated_at = "2026-04-04T00:29:11.903752Z"
+updated_at = "2026-04-04T02:41:11.432505Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["610be42e"]
@@ -131,3 +131,4 @@ Together these gaps block the supervisor-board author filter and the per-author 
 | 2026-04-03T23:52Z | ammend | in_design | philippepascal |
 | 2026-04-03T23:55Z | in_design | specd | claude-0403-2355-d8a1 |
 | 2026-04-04T00:29Z | specd | ready | apm |
+| 2026-04-04T02:41Z | ready | in_progress | philippepascal |
