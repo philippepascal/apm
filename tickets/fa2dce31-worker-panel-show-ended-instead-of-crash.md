@@ -23,12 +23,12 @@ The fix must be **config-based** — a new boolean field on state definitions in
 
 ### Acceptance criteria
 
-- [ ] A dead worker whose ticket is in a state with `worker_end = true` reports status "ended"
-- [ ] A dead worker whose ticket is in a state that is neither `terminal` nor `worker_end` reports status "crashed"
-- [ ] A dead worker whose ticket is in a `terminal` state reports status "ended" (existing behaviour preserved)
-- [ ] A live worker always reports status "running" regardless of ticket state (existing behaviour preserved)
-- [ ] `StateConfig` parses a `worker_end` boolean from TOML, defaulting to `false` when absent
-- [ ] The project's `.apm/workflow.toml` has `worker_end = true` on the `specd` and `implemented` states
+- [x] A dead worker whose ticket is in a state with `worker_end = true` reports status "ended"
+- [x] A dead worker whose ticket is in a state that is neither `terminal` nor `worker_end` reports status "crashed"
+- [x] A dead worker whose ticket is in a `terminal` state reports status "ended" (existing behaviour preserved)
+- [x] A live worker always reports status "running" regardless of ticket state (existing behaviour preserved)
+- [x] `StateConfig` parses a `worker_end` boolean from TOML, defaulting to `false` when absent
+- [x] The project's `.apm/workflow.toml` has `worker_end = true` on the `specd` and `implemented` states
 
 ### Out of scope
 
