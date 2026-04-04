@@ -1,7 +1,7 @@
 +++
 id = "bb7d2a61"
 title = "apm-proxy: Docker image with nginx and certbot for TLS termination"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "2005"
 branch = "ticket/bb7d2a61-apm-proxy-docker-image-with-nginx-and-ce"
 created_at = "2026-04-02T20:54:51.005928Z"
-updated_at = "2026-04-04T03:04:13.545969Z"
+updated_at = "2026-04-04T03:06:13.481531Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["48105624", "73e484df"]
@@ -121,3 +121,4 @@ Steps in order:
 | 2026-04-03T00:26Z | in_design | specd | claude-0402-2022-b7d2 |
 | 2026-04-04T00:29Z | specd | ready | apm |
 | 2026-04-04T03:04Z | ready | in_progress | philippepascal |
+| 2026-04-04T03:06Z | in_progress | implemented | claude-0403-0300-f4e1 |
