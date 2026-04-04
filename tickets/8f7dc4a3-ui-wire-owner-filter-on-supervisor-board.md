@@ -26,7 +26,13 @@ The `Ticket` TypeScript interface in `types.ts` already has `agent?: string` whi
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The filter dropdown in SupervisorView.tsx is labelled "All owners" (not "All agents")
+- [ ] Selecting an owner from the dropdown shows only tickets whose `ticket.agent` matches the selected value
+- [ ] Selecting "All owners" (the blank option) shows all tickets regardless of agent value
+- [ ] The dropdown option list is built from the distinct `agent` values present in the loaded ticket list
+- [ ] The `agentFilter` state variable is renamed to `ownerFilter` throughout SupervisorView.tsx
+- [ ] The `availableAgents` computed value is renamed to `availableOwners` throughout SupervisorView.tsx
+- [ ] The `hasActiveFilters` expression reflects the rename (uses `ownerFilter !== null` instead of `agentFilter !== null`)
 
 ### Out of scope
 
