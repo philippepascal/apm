@@ -4,11 +4,11 @@ title = "apm archive"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "apm"
 branch = "ticket/aaa37e48-apm-archive"
 created_at = "2026-04-03T00:33:18.924269Z"
-updated_at = "2026-04-04T06:30:58.335342Z"
+updated_at = "2026-04-04T06:31:03.950795Z"
 +++
 
 ## Spec
