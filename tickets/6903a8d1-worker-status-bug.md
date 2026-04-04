@@ -37,7 +37,38 @@ Ticket fa2dce31 already fixed the server-side equivalent in `apm-server/src/work
 
 ### Approach
 
-How the implementation will work.
+**Single file change: `apm/src/cmd/workers.rs`**
+
+1. After loading `config` (already done at the top of `list()`), build an `ended_states` set — same pattern as `collect_workers()` in `apm-server/src/workers.rs`:
+
+```rust
+let ended_states: std::collections::HashSet<&str> = config
+    .workflow
+    .states
+    .iter()
+    .filter(|s| s.terminal || s.worker_end)
+    .map(|s| s.id.as_str())
+    .collect();
+```
+
+2. Replace the dead-worker branch of the state column (currently always `"crashed"`) with an ended-states check:
+
+```rust
+let state = if alive {
+    t.map(|t| t.frontmatter.state.as_str()).unwrap_or("—").to_string()
+} else {
+    let ticket_state = t.map(|t| t.frontmatter.state.as_str()).unwrap_or("");
+    if ended_states.contains(ticket_state) {
+        ticket_state.to_string()
+    } else {
+        "crashed".to_string()
+    }
+};
+```
+
+3. Add unit tests in `apm/src/cmd/workers.rs` (or inline in the same file) covering the three dead-worker cases: ended via `worker_end`, ended via `terminal`, and genuinely crashed. Mirror the test structure from `apm-server/src/workers.rs::determine_status_*` tests.
+
+No changes needed to `apm-core/src/config.rs`, `.apm/workflow.toml`, or any other file.
 
 ### Open questions
 
