@@ -46,7 +46,96 @@ There is also no user-facing `--owner` flag to filter by who currently owns a ti
 
 ### Approach
 
-How the implementation will work.
+**Depends on ticket 42f4b3ba landing first.** That ticket adds `Frontmatter.agent: Option<String>` and the basic `--agent` filter. This ticket builds on top.
+
+---
+
+**1. `apm-core/src/ticket.rs` — `list_filtered` signature**
+
+Add two new parameters after `author_filter`:
+
+```rust
+pub fn list_filtered<'a>(
+    tickets: &'a [Ticket],
+    config: &crate::config::Config,
+    state_filter: Option<&str>,
+    unassigned: bool,
+    all: bool,
+    supervisor_filter: Option<&str>,
+    actionable_filter: Option<&str>,
+    author_filter: Option<&str>,
+    owner_filter: Option<&str>,   // new: filters by fm.agent (AND semantics)
+    mine_user: Option<&str>,      // new: OR-matches fm.author or fm.agent
+) -> Vec<&'a Ticket>
+```
+
+Inside the filter predicate, add:
+
+```rust
+let owner_ok = owner_filter.map_or(true, |o| fm.agent.as_deref() == Some(o));
+let mine_ok  = mine_user.map_or(true, |me| {
+    fm.author.as_deref() == Some(me) || fm.agent.as_deref() == Some(me)
+});
+```
+
+Include `owner_ok && mine_ok` in the final `&&` chain. Keep `author_ok` (from `author_filter`) unchanged.
+
+Update every existing call site that previously passed `author_filter` to also pass `None, None` for the two new parameters.
+
+**2. `apm/src/cmd/list.rs` — handle `--mine` and `--owner`**
+
+Change the current logic that sets `author_filter` for `--mine`:
+
+```rust
+// Before:
+let author_filter: Option<String> = if mine {
+    Some(identity::resolve_current_user(root))
+} else {
+    author
+};
+
+// After:
+let mine_user: Option<String> = if mine {
+    Some(identity::resolve_current_user(root))
+} else {
+    None
+};
+let author_filter = if mine { None } else { author };
+// owner is passed through directly from the --owner flag
+```
+
+Update the `list_filtered` call to pass `owner.as_deref()` and `mine_user.as_deref()`.
+
+**3. `apm/src/main.rs` — `List` subcommand**
+
+Add the `--owner` flag, conflicting with `--mine`:
+
+```rust
+/// Show only tickets owned by USERNAME (agent field)
+#[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
+owner: Option<String>,
+```
+
+Pass `owner` through to `cmd::list::run`, updating its signature to accept `owner: Option<String>`.
+
+Update the `Command::List` match arm in `main()` accordingly.
+
+**4. Tests in `apm-core/src/ticket.rs`**
+
+Add unit tests:
+- `list_filtered_by_owner`: tickets with matching `agent`, verify only those are returned
+- `list_filtered_mine_matches_author`: `mine_user` matches via `author`, `agent` differs
+- `list_filtered_mine_matches_agent`: `mine_user` matches via `agent`, `author` differs
+- `list_filtered_mine_or_semantics`: single call returns tickets matching either field
+
+Use the existing `make_ticket` helper; extend it or create a `make_ticket_with_agent` variant (similar to the existing pattern at line ~1249) that sets `agent` in the raw TOML.
+
+**Order**
+
+1. `ticket.rs`: extend `list_filtered` + tests
+2. `cmd/list.rs`: update logic
+3. `main.rs`: add `--owner` flag
+4. `cargo test --workspace` passes
 
 ### Open questions
 
