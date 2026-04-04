@@ -8,9 +8,10 @@ risk = 0
 author = "apm"
 branch = "ticket/01dbdaad-replace-apm-take-with-apm-assign-set-own"
 created_at = "2026-04-04T06:33:40.535848Z"
-updated_at = "2026-04-04T06:33:40.535848Z"
+updated_at = "2026-04-04T06:34:06.809786Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
+depends_on = ["ffaad988"]
 +++
 
 ## Spec
