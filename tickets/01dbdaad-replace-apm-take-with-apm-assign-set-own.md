@@ -30,7 +30,7 @@ With the `owner` field, `apm take` becomes redundant and underspecified. What is
 - [x] `apm assign <id> <username>` prints `<id>: owner = <username>` to stdout on success
 - [x] `apm assign` with a nonexistent or ambiguous ticket ID exits non-zero and prints an error
 - [x] `apm take` is no longer a recognised CLI subcommand
-- [ ] `POST /api/tickets/:id/take` returns 404 or 405 (the route no longer exists)
+- [x] `POST /api/tickets/:id/take` returns 404 or 405 (the route no longer exists)
 - [ ] `pub fn handoff` is removed from `apm-core` (it no longer compiles if referenced)
 
 ### Out of scope
