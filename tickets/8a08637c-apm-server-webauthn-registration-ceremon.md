@@ -30,7 +30,7 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 - [x] `GET /register` returns HTTP 200 with Content-Type `text/html` and an HTML page containing a form with username and OTP input fields
 - [x] `POST /api/auth/register/challenge` with `{"username": "alice", "otp": "<valid OTP>"}` returns HTTP 200 and a JSON body containing a `reg_id` string and a `publicKey` object with `challenge`, `rp`, and `user` fields
 - [x] `POST /api/auth/register/challenge` with a valid username but an invalid OTP returns HTTP 400
-- [ ] `POST /api/auth/register/challenge` with an expired OTP returns HTTP 400
+- [x] `POST /api/auth/register/challenge` with an expired OTP returns HTTP 400
 - [ ] `POST /api/auth/register/challenge` with a missing `username` or `otp` field returns HTTP 400
 - [ ] `POST /api/auth/register/complete` with a valid `reg_id` and a correctly-signed WebAuthn response returns HTTP 200 and sets a `__Host-apm-session` session cookie
 - [ ] `POST /api/auth/register/complete` with an unknown `reg_id` returns HTTP 400
