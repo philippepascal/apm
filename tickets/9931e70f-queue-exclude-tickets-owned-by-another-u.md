@@ -41,7 +41,7 @@ The priority queue (`/api/queue` and `apm next`) shows all tickets actionable by
 
 ### Approach
 
-This ticket depends on ticket 42f4b3ba (which adds `agent: Option<String>` to `Frontmatter`) and ticket ffaad988 (which guards ownership assignment). Those must be merged before this ticket.
+This ticket depends on ticket 42f4b3ba (which adds `owner: Option<String>` to `Frontmatter`) and ticket ffaad988 (which guards ownership assignment). Those must be merged before this ticket.
 
 **1. `apm-core/src/ticket.rs` — add caller filter to `sorted_actionable` and `pick_next`**
 
@@ -50,7 +50,7 @@ Add `caller: Option<&str>` parameter to both functions.
 In `sorted_actionable`, after the state filter, add:
 ```rust
 .filter(|t| {
-    match t.frontmatter.agent.as_deref() {
+    match t.frontmatter.owner.as_deref() {
         None => true,
         Some(owner) => caller.map_or(true, |c| c == owner),
     }
@@ -108,10 +108,10 @@ Note: `is_localhost` and `find_session_username` are private to `main.rs`; eithe
 
 **5. Tests** (in `apm-core/src/ticket.rs` and/or `apm/tests/integration.rs`)
 
-- `sorted_actionable_excludes_ticket_owned_by_other`: ticket with `agent = "alice"`, caller = `Some("bob")` → excluded
-- `sorted_actionable_includes_ticket_owned_by_caller`: ticket with `agent = "alice"`, caller = `Some("alice")` → included
-- `sorted_actionable_includes_unowned_ticket`: ticket with `agent = None`, caller = `Some("bob")` → included
-- `sorted_actionable_no_caller_shows_all`: tickets with agents set, caller = `None` → all included
+- `sorted_actionable_excludes_ticket_owned_by_other`: ticket with `owner = "alice"`, caller = `Some("bob")` → excluded
+- `sorted_actionable_includes_ticket_owned_by_caller`: ticket with `owner = "alice"`, caller = `Some("alice")` → included
+- `sorted_actionable_includes_unowned_ticket`: ticket with `owner = None`, caller = `Some("bob")` → included
+- `sorted_actionable_no_caller_shows_all`: tickets with owners set, caller = `None` → all included
 
 **Order of changes**
 1. `ticket.rs`: add caller param + filter + update existing tests
