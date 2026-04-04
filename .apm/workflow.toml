@@ -61,6 +61,7 @@ color          = "#3b82f6"
 layer          = 1
 actionable     = ["supervisor"]
 satisfies_deps = "spec"
+worker_end     = true
 
   [[workflow.states.transitions]]
   to           = "ready"
@@ -223,6 +224,7 @@ color          = "#06b6d4"
 layer          = 2
 actionable     = ["supervisor"]
 satisfies_deps = true
+worker_end     = true
 
   [[workflow.states.transitions]]
   to             = "ready"

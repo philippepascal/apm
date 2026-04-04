@@ -142,8 +142,13 @@ fn print_ticket(t: &ticket::Ticket) {
     println!("{} — {}", fm.id, fm.title);
     println!("state:    {}", fm.state);
     println!("priority: {}  effort: {}  risk: {}", fm.priority, fm.effort, fm.risk);
-    if let Some(b) = &fm.branch {
-        println!("branch:   {b}");
+    if let Some(b) = &fm.branch { println!("branch:   {b}"); }
+    if let Some(e) = &fm.epic { println!("epic:         {e}"); }
+    if let Some(tb) = &fm.target_branch { println!("target_branch: {tb}"); }
+    if let Some(deps) = &fm.depends_on {
+        if !deps.is_empty() {
+            println!("depends_on:   {}", deps.join(", "));
+        }
     }
     println!();
     print!("{}", t.body);
