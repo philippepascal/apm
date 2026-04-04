@@ -1,14 +1,14 @@
 +++
 id = "aaa37e48"
 title = "apm archive"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/aaa37e48-apm-archive"
 created_at = "2026-04-03T00:33:18.924269Z"
-updated_at = "2026-04-04T06:01:43.081789Z"
+updated_at = "2026-04-04T06:25:35.886928Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-03T00:33Z | — | new | apm |
 | 2026-04-04T06:01Z | new | groomed | apm |
+| 2026-04-04T06:25Z | groomed | in_design | philippepascal |
