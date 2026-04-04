@@ -1,14 +1,14 @@
 +++
 id = "133a9b13"
 title = "apm init: keep default templates and gitignore entries in sync with new features"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "apm"
 branch = "ticket/133a9b13-apm-init-keep-default-templates-and-giti"
 created_at = "2026-04-03T23:40:56.352188Z"
-updated_at = "2026-04-04T07:28:25.723869Z"
+updated_at = "2026-04-04T07:29:58.850477Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ The existing `ensure_gitignore_creates_file` test (line 620) already checks for 
 | 2026-04-04T06:34Z | in_design | specd | claude-0403-spec-133a |
 | 2026-04-04T07:15Z | specd | ammend | apm |
 | 2026-04-04T07:28Z | ammend | in_design | philippepascal |
+| 2026-04-04T07:29Z | in_design | specd | claude-0404-0900-spec1 |
