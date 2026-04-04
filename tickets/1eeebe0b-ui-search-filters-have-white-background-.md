@@ -15,7 +15,11 @@ updated_at = "2026-04-04T16:03:44.723739Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The search filter toolbar in the Supervisor view contains five controls — a text search input and four select dropdowns (state, agent, author, epic) — styled with bg-white. The rest of the Supervisor UI uses a dark theme (bg-gray-900 background, bg-gray-700/bg-gray-800 for interactive elements). This makes the filter bar visually jarring: five bright-white boxes float against a dark surface, breaking the consistency of the interface.
+
+The PriorityQueuePanel epic filter already uses bg-gray-800 text-gray-300 border-gray-700, which is the correct dark-theme pattern. The fix is to bring the SupervisorView filter controls in line with that established pattern.
+
+Affected file: apm-ui/src/components/supervisor/SupervisorView.tsx, lines 201, 215, 225, 235, 245.
 
 ### Acceptance criteria
 
@@ -32,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
