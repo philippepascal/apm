@@ -332,7 +332,7 @@ fn list_shows_all_tickets() {
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, false, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, false, None, None).unwrap();
 }
 
 #[test]
@@ -349,7 +349,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true, false, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true, false, None, None).unwrap();
 }
 
 #[test]
@@ -375,7 +375,7 @@ fn list_mine_filter() {
     std::fs::write(apm_dir.join("local.toml"), "username = \"testuser\"\n").unwrap();
 
     // --mine should show only the first ticket.
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, true, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, true, None, None).unwrap();
 }
 
 // --- show ---
@@ -1243,7 +1243,7 @@ fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
     apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
-    apm::cmd::list::run(p, None, false, false, None, None, false, false, None).unwrap();
+    apm::cmd::list::run(p, None, false, false, None, None, false, false, None, None).unwrap();
 }
 
 #[test]

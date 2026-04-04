@@ -125,6 +125,9 @@ Examples:
         /// Show only tickets authored by USERNAME
         #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
         author: Option<String>,
+        /// Show only tickets owned by USERNAME (owner field)
+        #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
+        owner: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -708,7 +711,7 @@ fn main() -> Result<()> {
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
-        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author),
+        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author, owner } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author, owner),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
