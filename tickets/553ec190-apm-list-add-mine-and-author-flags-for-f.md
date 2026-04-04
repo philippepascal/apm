@@ -1,7 +1,7 @@
 +++
 id = "553ec190"
 title = "apm list: add --mine and --author flags for filtering by collaborator"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "apm"
 agent = "1837"
 branch = "ticket/553ec190-apm-list-add-mine-and-author-flags-for-f"
 created_at = "2026-04-02T20:54:04.874772Z"
-updated_at = "2026-04-04T02:22:47.115504Z"
+updated_at = "2026-04-04T02:30:05.638124Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["610be42e"]
@@ -106,3 +106,4 @@ If an integration test for `apm list` exists in `apm/tests/integration.rs`, exte
 | 2026-04-02T23:42Z | in_design | specd | claude-0402-2340-s7w2 |
 | 2026-04-04T00:29Z | specd | ready | apm |
 | 2026-04-04T02:22Z | ready | in_progress | philippepascal |
+| 2026-04-04T02:30Z | in_progress | implemented | claude-0403-1422-w7k9 |
