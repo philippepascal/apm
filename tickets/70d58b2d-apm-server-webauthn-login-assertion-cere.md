@@ -37,7 +37,7 @@ External devices (phone, remote laptop) are the primary audience. Localhost requ
 - [x] `POST /api/auth/login/complete` with a `login_id` whose pending session is older than 5 minutes returns HTTP 400
 - [x] After successful login, `GET /api/me` with the issued session cookie returns `{"username": "alice"}`
 - [x] After successful login, the credential counter update from `AuthenticationResult` is persisted to `.apm/credentials.json`
-- [ ] A second `POST /api/auth/login/complete` call with the same `login_id` (after it was consumed on the first call) returns HTTP 400
+- [x] A second `POST /api/auth/login/complete` call with the same `login_id` (after it was consumed on the first call) returns HTTP 400
 
 ### Out of scope
 
