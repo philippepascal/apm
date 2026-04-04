@@ -30,7 +30,10 @@ The user's workaround is to manually change the author filter select, which clea
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Persisting any other filter (state filter, agent filter, search text) — only author filter is the source of the reported bug
+- Server-side user preferences or cross-device filter sync
+- Changes to the `/api/me` endpoint or its response shape
+- Changing the default behaviour of the epic filter (already in `useLayoutStore`, not affected)
 
 ### Approach
 
