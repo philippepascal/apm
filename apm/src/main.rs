@@ -97,7 +97,9 @@ Examples:
   apm list --state ready            # only tickets awaiting an agent
   apm list --unassigned             # no agent assigned yet
   apm list --actionable agent       # tickets an agent can act on now
-  apm list --all                    # everything including closed")]
+  apm list --all                    # everything including closed
+  apm list --mine                   # only your tickets
+  apm list --author alice           # only tickets by alice")]
     List {
         /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
@@ -117,6 +119,12 @@ Examples:
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
+        /// Show only tickets authored by the current user
+        #[arg(long)]
+        mine: bool,
+        /// Show only tickets authored by USERNAME
+        #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
+        author: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -648,6 +656,25 @@ the given substring:
         #[arg(long)]
         no_aggressive: bool,
     },
+    /// Generate a one-time password for device registration (requires apm-server)
+    Register {
+        /// Username to register
+        username: String,
+    },
+    /// List active sessions (requires apm-server)
+    Sessions,
+    /// Revoke sessions (requires apm-server)
+    Revoke {
+        /// Username whose sessions to revoke (required unless --all)
+        #[arg(value_name = "USERNAME")]
+        username: Option<String>,
+        /// Only revoke sessions matching this device hint
+        #[arg(long, value_name = "HINT")]
+        device: Option<String>,
+        /// Revoke all sessions for all users
+        #[arg(long, conflicts_with = "device")]
+        all: bool,
+    },
 }
 
 pub fn repo_root() -> Result<PathBuf> {
@@ -681,7 +708,7 @@ fn main() -> Result<()> {
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
-        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive),
+        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
@@ -715,6 +742,15 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
         Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
+        Command::Register { username } => cmd::register::run(&root, &username),
+        Command::Sessions => cmd::sessions::run(&root),
+        Command::Revoke { username, device, all } => {
+            if !all && username.is_none() {
+                eprintln!("error: provide a username or use --all");
+                std::process::exit(1);
+            }
+            cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
+        }
     }
 }
 

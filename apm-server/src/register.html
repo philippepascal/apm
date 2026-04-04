@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — apm</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 400px; margin: 80px auto; padding: 0 16px; }
+  h1 { font-size: 1.5rem; }
+  label { display: block; margin-top: 16px; font-weight: 500; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 4px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+  button { margin-top: 24px; width: 100%; padding: 10px; font-size: 1rem; background: #1a1a1a; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status { margin-top: 16px; padding: 10px; border-radius: 4px; display: none; }
+  .success { background: #d4edda; color: #155724; }
+  .error   { background: #f8d7da; color: #721c24; }
+</style>
+</head>
+<body>
+<h1>Register a passkey</h1>
+<form id="form">
+  <label for="username">Username</label>
+  <input id="username" type="text" autocomplete="username" required>
+  <label for="otp">One-time code</label>
+  <input id="otp" type="text" autocomplete="one-time-code" required>
+  <button id="btn" type="submit">Register</button>
+</form>
+<div id="status"></div>
+
+<script>
+function b64uToArr(b64u) {
+  const b64 = b64u.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+function arrToB64u(arr) {
+  let bin = '';
+  new Uint8Array(arr).forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function setStatus(msg, ok) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = ok ? 'success' : 'error';
+  el.style.display = 'block';
+}
+
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  const username = document.getElementById('username').value.trim();
+  const otp = document.getElementById('otp').value.trim();
+
+  try {
+    const challengeRes = await fetch('/api/auth/register/challenge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, otp }),
+    });
+    if (!challengeRes.ok) {
+      const msg = await challengeRes.text();
+      setStatus('Error: ' + msg, false);
+      btn.disabled = false;
+      return;
+    }
+    const { reg_id, publicKey } = await challengeRes.json();
+
+    publicKey.challenge = b64uToArr(publicKey.challenge);
+    publicKey.user.id = b64uToArr(publicKey.user.id);
+    if (publicKey.excludeCredentials) {
+      publicKey.excludeCredentials = publicKey.excludeCredentials.map(c => ({
+        ...c, id: b64uToArr(c.id),
+      }));
+    }
+
+    const cred = await navigator.credentials.create({ publicKey });
+
+    const response = {
+      id: cred.id,
+      rawId: arrToB64u(cred.rawId),
+      type: cred.type,
+      response: {
+        clientDataJSON: arrToB64u(cred.response.clientDataJSON),
+        attestationObject: arrToB64u(cred.response.attestationObject),
+      },
+    };
+
+    const completeRes = await fetch('/api/auth/register/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reg_id, response }),
+    });
+    if (!completeRes.ok) {
+      const msg = await completeRes.text();
+      setStatus('Error: ' + msg, false);
+      btn.disabled = false;
+      return;
+    }
+
+    setStatus('Registration successful! Redirecting…', true);
+    setTimeout(() => { window.location.href = '/'; }, 2000);
+  } catch (err) {
+    setStatus('Error: ' + err.message, false);
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

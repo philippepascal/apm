@@ -27,10 +27,9 @@ fn list(root: &Path, config: &Config) -> Result<()> {
 
         match t {
             Some(t) => println!(
-                "{}  {}  agent={}",
+                "{}  {}",
                 wt_name,
                 t.frontmatter.state,
-                t.frontmatter.agent.as_deref().unwrap_or("—")
             ),
             None => println!("{}  (ticket not found)", wt_name),
         }

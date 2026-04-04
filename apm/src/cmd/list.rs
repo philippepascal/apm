@@ -1,8 +1,8 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, identity, ticket};
 use std::path::Path;
 
-pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>, actionable_filter: Option<String>, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>) -> Result<()> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
@@ -11,6 +11,12 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
             eprintln!("warning: fetch failed: {e:#}");
         }
     }
+
+    let author_filter: Option<String> = if mine {
+        Some(identity::resolve_current_user(root))
+    } else {
+        author
+    };
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 
@@ -22,12 +28,12 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         all,
         supervisor_filter.as_deref(),
         actionable_filter.as_deref(),
+        author_filter.as_deref(),
     );
 
     for t in filtered {
         let fm = &t.frontmatter;
-        let agent = fm.agent.as_deref().unwrap_or("-");
-        println!("{:<8} [{:<12}] {:<40} agent={}", fm.id, fm.state, fm.title, agent);
+        println!("{:<8} [{:<12}] {}", fm.id, fm.state, fm.title);
     }
     Ok(())
 }

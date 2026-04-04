@@ -302,6 +302,8 @@ fn full_ticket_lifecycle() {
     // ── Step 2: create a ticket ─────────────────────────────────────────────
     // Agent creates a ticket for the parse_count bug.
 
+    // Write local identity so resolve_identity returns "test-agent".
+    env.write(".apm/local.toml", "username = \"test-agent\"\n");
     let out = env.apm_as("test-agent", &["new", "Fix parse_count off-by-one"]);
     assert!(out.status.success(), "apm new failed:\n{}", stderr(&out));
     let out_text = stdout(&out);
@@ -426,7 +428,7 @@ immediately. Update the existing tests to cover the single-item case.
 
     let ticket = env.branch_content(&branch, &ticket_path);
     assert!(ticket.contains("state = \"in_progress\""), "state not in_progress");
-    assert!(ticket.contains("agent = \"test-agent\""), "agent not set");
+    assert!(!ticket.contains("agent ="), "agent field must not be written");
     assert!(ticket.contains("| ready | in_progress |"), "history row missing");
 
     // Parse the worktree path from the output line "Worktree: /path/to/wt"
