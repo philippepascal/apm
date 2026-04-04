@@ -28,3 +28,8 @@ aggressive = true
 [logging]
 enabled = true
 file = "/tmp/apm.log"
+
+[workers]
+  command = "claude"
+  args = ["--print"]
+  model = "sonnet"

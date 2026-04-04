@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { useQuery, useQueries, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -123,8 +123,119 @@ function TransitionButtons({ ticket, onTransitioned }: {
   )
 }
 
+function BatchDetailPanel({ ids }: { ids: string[] }) {
+  const queryClient = useQueryClient()
+  const clearMultiSelection = useLayoutStore((s) => s.clearMultiSelection)
+  const [transitionError, setTransitionError] = useState<string | null>(null)
+  const [priorityError, setPriorityError] = useState<string | null>(null)
+
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['ticket', id],
+      queryFn: () => fetchTicket(id),
+    })),
+  })
+
+  const loading = results.some((r) => r.isLoading)
+  const tickets = results.map((r) => r.data).filter(Boolean) as TicketDetail[]
+
+  const commonTransitions: { to: string; label: string }[] = tickets.length === 0
+    ? []
+    : tickets[0].valid_transitions.filter((tr) =>
+        tickets.every((t) => t.valid_transitions.some((vt) => vt.to === tr.to)),
+      )
+
+  async function doBatchTransition(to: string) {
+    setTransitionError(null)
+    try {
+      const res = await fetch('/api/tickets/batch/transition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, to }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        setTransitionError(body.error ?? `Error ${res.status}`)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
+        ids.forEach((id) => queryClient.invalidateQueries({ queryKey: ['ticket', id] }))
+        clearMultiSelection()
+      }
+    } catch (e) {
+      setTransitionError(String(e))
+    }
+  }
+
+  async function doBatchPriority(priority: number) {
+    setPriorityError(null)
+    try {
+      const res = await fetch('/api/tickets/batch/priority', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, priority }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        setPriorityError(body.error ?? `Error ${res.status}`)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
+        ids.forEach((id) => queryClient.invalidateQueries({ queryKey: ['ticket', id] }))
+      }
+    } catch (e) {
+      setPriorityError(String(e))
+    }
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-gray-900 text-gray-100">
+      <div className="px-4 py-3 border-b border-gray-700 shrink-0 bg-gray-800">
+        <h2 className="text-base font-semibold text-gray-100">{ids.length} tickets selected</h2>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="p-4 text-sm text-gray-400">Loading {ids.length} tickets…</div>
+        ) : (
+          <div className="flex flex-col divide-y divide-gray-700">
+            {tickets.map((t) => {
+              const colors = getStateColors(t.state)
+              return (
+                <div key={t.id} className="px-4 py-2 flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-gray-400 shrink-0">{t.id.slice(0, 8)}</span>
+                  <span className="text-sm flex-1 min-w-0 truncate">{t.title}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${colors.badge}`}>{t.state}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+      <div className="border-t border-gray-700 p-3 flex flex-wrap gap-2 items-center">
+        {commonTransitions.map((tr) => (
+          <button
+            key={tr.to}
+            className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-200"
+            onClick={() => doBatchTransition(tr.to)}
+          >
+            {tr.label}
+          </button>
+        ))}
+        <InlineNumberField
+          label="P"
+          value={0}
+          min={0}
+          max={255}
+          onCommit={doBatchPriority}
+        />
+        {transitionError && <p className="text-red-500 text-sm w-full">{transitionError}</p>}
+        {priorityError && <p className="text-red-500 text-sm w-full">{priorityError}</p>}
+      </div>
+    </div>
+  )
+}
+
 export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }) {
   const selectedTicketId = useLayoutStore((s) => s.selectedTicketId)
+  const selectedTicketIds = useLayoutStore((s) => s.selectedTicketIds)
   const setReviewMode = useLayoutStore((s) => s.setReviewMode)
   const setSelectedTicketId = useLayoutStore((s) => s.setSelectedTicketId)
   const epicFilter = useLayoutStore((s) => s.epicFilter)
@@ -136,6 +247,7 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
     queryKey: ['ticket', selectedTicketId],
     queryFn: () => fetchTicket(selectedTicketId!),
     enabled: !!selectedTicketId,
+    refetchInterval: 10_000,
   })
 
   const patchMutation = useMutation({
@@ -176,6 +288,10 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
   }
 
   const stateColors = data ? getStateColors(data.state) : null
+
+  if (selectedTicketIds.length > 1) {
+    return <BatchDetailPanel ids={selectedTicketIds} />
+  }
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">

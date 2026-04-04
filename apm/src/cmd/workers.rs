@@ -141,7 +141,6 @@ fn kill(root: &Path, id_arg: &str) -> Result<()> {
     if !status.success() {
         bail!("failed to send SIGTERM to PID {}", pid);
     }
-    let _ = std::fs::remove_file(&pid_path);
     println!("killed worker for ticket #{id} (PID {})", pid);
     Ok(())
 }
