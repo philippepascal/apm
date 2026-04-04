@@ -31,7 +31,7 @@ This ticket adds the identity-resolution function in `apm-core`, wires it into `
 - [x] `apm new` sets `author` to `"apm"` when `.apm/local.toml` is absent or contains no `username` key
 - [x] Ticket files written by `apm new` do not contain an `agent` key in their TOML frontmatter
 - [x] Existing ticket files that contain an `agent` field are parsed without error (backward-compatible read)
-- [ ] `apm list` output no longer includes an `agent=` column
+- [x] `apm list` output no longer includes an `agent=` column
 - [ ] `apm show` output no longer prints an `agent:` line
 - [ ] `apm list --unassigned` returns tickets where `author == "unassigned"` (was: `agent == null`)
 - [ ] `apm take` completes without error on tickets that have no `agent` field
