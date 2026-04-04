@@ -23,7 +23,10 @@ The user's workaround is to manually change the author filter select, which clea
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After a browser refresh, the supervisor panel shows all tickets (no author filter applied) when no filter preference has been stored
+- [ ] If the user manually sets the author filter, that choice is preserved across a browser refresh
+- [ ] If the user explicitly clears the author filter (selects 'All authors'), that cleared state is preserved across a browser refresh
+- [ ] The panel never shows the 'No tickets match' empty state immediately after refresh when tickets do exist in the backend
 
 ### Out of scope
 
