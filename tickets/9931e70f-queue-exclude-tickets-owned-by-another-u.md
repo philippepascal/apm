@@ -125,6 +125,8 @@ Note: `is_localhost` and `find_session_username` are private to `main.rs`; eithe
 
 ### Amendment requests
 
+- [ ] Rename `agent` to `owner` throughout: `fm.agent` → `fm.owner`, `t.frontmatter.agent` → `t.frontmatter.owner` in filter predicates, approach code snippets, and test names
+- [ ] Acceptance criteria: "ticket whose `agent` field" → "ticket whose `owner` field"
 
 ### Code review
 
