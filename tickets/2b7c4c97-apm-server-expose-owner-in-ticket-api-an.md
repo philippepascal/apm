@@ -24,12 +24,12 @@ Ticket #42f4b3ba adds `owner: Option<String>` to `Frontmatter`. Because `TicketR
 
 ### Acceptance criteria
 
-- [ ] `GET /api/tickets` includes `owner` in each ticket's JSON object when the owner field is set
-- [ ] `GET /api/tickets` omits `owner` from the JSON object for tickets with no owner set
-- [ ] `GET /api/tickets?owner=alice` returns only tickets whose `owner` field equals `"alice"`
-- [ ] `GET /api/tickets?owner=alice` excludes tickets with a different owner or no owner
-- [ ] `GET /api/tickets?owner=unassigned` returns only tickets that have no owner set
-- [ ] `GET /api/tickets` with no `owner` param returns all tickets regardless of owner value
+- [x] `GET /api/tickets` includes `owner` in each ticket's JSON object when the owner field is set
+- [x] `GET /api/tickets` omits `owner` from the JSON object for tickets with no owner set
+- [x] `GET /api/tickets?owner=alice` returns only tickets whose `owner` field equals `"alice"`
+- [x] `GET /api/tickets?owner=alice` excludes tickets with a different owner or no owner
+- [x] `GET /api/tickets?owner=unassigned` returns only tickets that have no owner set
+- [x] `GET /api/tickets` with no `owner` param returns all tickets regardless of owner value
 
 ### Out of scope
 
