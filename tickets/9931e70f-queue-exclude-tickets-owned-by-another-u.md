@@ -22,7 +22,14 @@ The priority queue (`/api/queue` and `apm next`) shows all tickets actionable by
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm next` does not return a ticket whose `agent` field is set to a user other than the running agent
+- [ ] `apm next` returns a ticket whose `agent` field matches the running agent (owner resuming their own work)
+- [ ] `apm next` returns a ticket with no `agent` field set
+- [ ] `apm start --next` does not pick a ticket owned by a different user
+- [ ] `GET /api/queue` excludes tickets whose `agent` differs from the authenticated caller
+- [ ] `GET /api/queue` includes tickets with no `agent` set
+- [ ] `GET /api/queue` includes tickets whose `agent` matches the authenticated caller
+- [ ] When the caller cannot be determined (no session, no localhost identity), `/api/queue` returns all tickets unchanged (no ownership filter applied)
 
 ### Out of scope
 
