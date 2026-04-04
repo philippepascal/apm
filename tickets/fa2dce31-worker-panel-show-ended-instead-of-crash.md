@@ -1,14 +1,14 @@
 +++
 id = "fa2dce31"
 title = "Worker panel: show ended instead of crashed when ticket reached a worker-complete state"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
 author = "apm"
 branch = "ticket/fa2dce31-worker-panel-show-ended-instead-of-crash"
 created_at = "2026-04-04T00:12:56.422580Z"
-updated_at = "2026-04-04T06:36:32.992149Z"
+updated_at = "2026-04-04T07:15:43.138292Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ In `apm-core/src/config.rs`: add unit tests asserting `worker_end` parses as `tr
 | 2026-04-04T06:01Z | new | groomed | apm |
 | 2026-04-04T06:34Z | groomed | in_design | philippepascal |
 | 2026-04-04T06:36Z | in_design | specd | claude-0403-spec-fa2d |
+| 2026-04-04T07:15Z | specd | ready | apm |
