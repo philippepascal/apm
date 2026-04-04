@@ -1,14 +1,14 @@
 +++
 id = "63140ca3"
 title = "apm state: push to origin after merge_into_default completes"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
 author = "apm"
 branch = "ticket/63140ca3-apm-state-push-to-origin-after-merge-int"
 created_at = "2026-04-04T02:20:43.522276Z"
-updated_at = "2026-04-04T07:15:52.676845Z"
+updated_at = "2026-04-04T07:34:53.595573Z"
 +++
 
 ## Spec
@@ -74,3 +74,4 @@ No other callers of `merge_into_default` exist; the blast radius is the two `Com
 | 2026-04-04T06:38Z | groomed | in_design | philippepascal |
 | 2026-04-04T06:40Z | in_design | specd | claude-0403-spec-a7f2 |
 | 2026-04-04T07:15Z | specd | ready | apm |
+| 2026-04-04T07:34Z | ready | in_progress | philippepascal |
