@@ -31,7 +31,7 @@ This ticket wires the UI filter to the real owner field returned by the API. Con
 - [x] The Ticket TypeScript interface in types.ts has owner?: string (not agent?: string)
 - [x] The agentFilter state variable is renamed to ownerFilter throughout SupervisorView.tsx
 - [x] The availableAgents computed value is renamed to availableOwners throughout SupervisorView.tsx
-- [ ] The hasActiveFilters expression uses ownerFilter !== null (not agentFilter !== null)
+- [x] The hasActiveFilters expression uses ownerFilter !== null (not agentFilter !== null)
 
 ### Out of scope
 
