@@ -48,7 +48,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
 
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
-  const [agentFilter, setAgentFilter] = useState<string | null>(null)
+  const [ownerFilter, setOwnerFilter] = useState<string | null>(null)
   const [authorFilter, setAuthorFilter] = useState<string | null>(null)
   const epicFilter = useLayoutStore((s) => s.epicFilter)
   const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
@@ -96,12 +96,12 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [syncMutation])
 
-  const availableAgents = useMemo(() => {
-    const agents = new Set<string>()
+  const availableOwners = useMemo(() => {
+    const owners = new Set<string>()
     for (const t of tickets) {
-      if (t.agent) agents.add(t.agent)
+      if (t.owner) owners.add(t.owner)
     }
-    return Array.from(agents).sort()
+    return Array.from(owners).sort()
   }, [tickets])
 
   const availableAuthors = useMemo(() => {
@@ -124,8 +124,8 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
     return visibleStates
       .map((state): [string, Ticket[]] => {
         let filtered = tickets.filter((t) => t.state === state)
-        if (agentFilter !== null) {
-          filtered = filtered.filter((t) => t.agent === agentFilter)
+        if (ownerFilter !== null) {
+          filtered = filtered.filter((t) => t.owner === ownerFilter)
         }
         if (epicFilter !== null) {
           filtered = filtered.filter((t) => t.epic === epicFilter)
@@ -143,9 +143,9 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         return [state, filtered]
       })
       .filter(([, group]) => group.length > 0)
-  }, [tickets, visibleStates, agentFilter, epicFilter, authorFilter, searchText])
+  }, [tickets, visibleStates, ownerFilter, epicFilter, authorFilter, searchText])
 
-  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || agentFilter !== null || epicFilter !== null || authorFilter !== null || showClosed
+  const hasActiveFilters = searchText.trim() !== '' || stateFilter !== null || ownerFilter !== null || epicFilter !== null || authorFilter !== null || showClosed
 
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
@@ -220,12 +220,12 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           ))}
         </select>
         <select
-          value={agentFilter ?? ''}
-          onChange={(e) => setAgentFilter(e.target.value || null)}
+          value={ownerFilter ?? ''}
+          onChange={(e) => setOwnerFilter(e.target.value || null)}
           className="h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
-          <option value="">All agents</option>
-          {availableAgents.map((a) => (
+          <option value="">All owners</option>
+          {availableOwners.map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
         </select>
