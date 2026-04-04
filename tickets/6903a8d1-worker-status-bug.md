@@ -1,14 +1,14 @@
 +++
 id = "6903a8d1"
 title = "worker status bug"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/6903a8d1-worker-status-bug"
 created_at = "2026-04-04T16:07:08.053019Z"
-updated_at = "2026-04-04T16:39:42.876351Z"
+updated_at = "2026-04-04T16:43:44.752180Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-04T16:07Z | — | new | philippepascal |
 | 2026-04-04T16:39Z | new | groomed | apm |
+| 2026-04-04T16:43Z | groomed | in_design | philippepascal |
