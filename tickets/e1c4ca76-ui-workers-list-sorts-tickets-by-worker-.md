@@ -21,11 +21,11 @@ The desired behaviour is that running workers always appear at the top, and cras
 
 ### Acceptance criteria
 
-- [ ] Workers with status "running" appear before workers with status "crashed" in the list
-- [ ] Workers with status "running" appear before workers with status "ended" in the list
-- [ ] Workers with status "crashed" appear before workers with status "ended" in the list
-- [ ] Within the same status group, relative order is stable (workers in the same status group maintain their original API order)
-- [ ] When all workers share the same status, the list order is unchanged from the API response
+- [x] Workers with status "running" appear before workers with status "crashed" in the list
+- [x] Workers with status "running" appear before workers with status "ended" in the list
+- [x] Workers with status "crashed" appear before workers with status "ended" in the list
+- [x] Within the same status group, relative order is stable (workers in the same status group maintain their original API order)
+- [x] When all workers share the same status, the list order is unchanged from the API response
 
 ### Out of scope
 
