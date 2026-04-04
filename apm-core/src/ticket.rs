@@ -46,6 +46,8 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub supervisor: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<DateTime<Utc>>,
@@ -469,6 +471,7 @@ pub fn create(
         risk: 0,
         author: Some(author.clone()),
         supervisor: None,
+        owner: None,
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
@@ -760,6 +763,7 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
         "author"   => anyhow::bail!("author is immutable"),
         "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.to_string()) },
+        "owner"    => fm.owner    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
         "depends_on" => {
@@ -1354,6 +1358,7 @@ mod tests {
             risk: 0,
             author: None,
             supervisor: None,
+            owner: None,
             branch: None,
             created_at: None,
             updated_at: None,
@@ -1390,6 +1395,44 @@ mod tests {
         let mut fm = make_frontmatter();
         let err = set_field(&mut fm, "foo", "bar").unwrap_err();
         assert!(err.to_string().contains("unknown field: foo"));
+    }
+
+    #[test]
+    fn owner_round_trips_through_toml() {
+        let toml_src = r#"id = "0001"
+title = "T"
+state = "new"
+owner = "alice"
+"#;
+        let fm: Frontmatter = toml::from_str(toml_src).unwrap();
+        assert_eq!(fm.owner, Some("alice".to_string()));
+        let serialized = toml::to_string(&fm).unwrap();
+        assert!(serialized.contains("owner = \"alice\""));
+    }
+
+    #[test]
+    fn owner_absent_deserializes_as_none() {
+        let toml_src = r#"id = "0001"
+title = "T"
+state = "new"
+"#;
+        let fm: Frontmatter = toml::from_str(toml_src).unwrap();
+        assert_eq!(fm.owner, None);
+    }
+
+    #[test]
+    fn set_field_owner_set() {
+        let mut fm = make_frontmatter();
+        set_field(&mut fm, "owner", "alice").unwrap();
+        assert_eq!(fm.owner, Some("alice".to_string()));
+    }
+
+    #[test]
+    fn set_field_owner_clear() {
+        let mut fm = make_frontmatter();
+        fm.owner = Some("alice".to_string());
+        set_field(&mut fm, "owner", "-").unwrap();
+        assert_eq!(fm.owner, None);
     }
 
     // ── dep_satisfied ─────────────────────────────────────────────────────
