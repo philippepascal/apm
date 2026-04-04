@@ -1,7 +1,7 @@
 +++
 id = "73e484df"
 title = "GitHub Actions: release CI for pre-built binaries on 4 platforms"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "apm"
 agent = "6286"
 branch = "ticket/73e484df-github-actions-release-ci-for-pre-built-"
 created_at = "2026-04-02T20:54:44.627516Z"
-updated_at = "2026-04-03T00:22:30.201158Z"
+updated_at = "2026-04-04T00:29:46.656719Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["48105624"]
@@ -131,3 +131,4 @@ Add `actions/cache@v4` for `~/.cargo/registry` and `~/.cargo/git` keyed on `Carg
 | 2026-04-02T23:23Z | new | groomed | apm |
 | 2026-04-03T00:18Z | groomed | in_design | philippepascal |
 | 2026-04-03T00:22Z | in_design | specd | claude-0402-2018-spec1 |
+| 2026-04-04T00:29Z | specd | ready | apm |
