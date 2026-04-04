@@ -65,7 +65,7 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 ### Amendment requests
 
 - [x] Rename the field from `agent` to `owner` everywhere (Frontmatter, serde attribute, set_field arm, tests)
-- [ ] Strip acceptance criteria to ONLY: (1) `Frontmatter` has an `owner` field that round-trips through TOML parse/serialize, (2) `apm set <id> owner <name>` sets the field, (3) `apm set <id> owner -` clears it, (4) unit tests for the above
+- [x] Strip acceptance criteria to ONLY: (1) `Frontmatter` has an `owner` field that round-trips through TOML parse/serialize, (2) `apm set <id> owner <name>` sets the field, (3) `apm set <id> owner -` clears it, (4) unit tests for the above
 - [ ] Remove from acceptance criteria: `apm start` setting owner (covered by ffaad988), `apm state in_design` setting owner (covered by ffaad988), `apm take` (being removed in 01dbdaad), `apm list --agent` (covered by b5b9b728), `GET /api/tickets?agent=` (covered by 2b7c4c97), UI filter wiring (covered by 8f7dc4a3)
 - [ ] Remove from approach: start.rs changes, state.rs changes, list.rs/main.rs CLI flag, server query param — all belong to dependent tickets
 - [ ] Update out-of-scope to mention that setting owner on transitions, CLI filtering, API filtering, and UI wiring are handled by dependent tickets
