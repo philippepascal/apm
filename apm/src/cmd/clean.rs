@@ -57,10 +57,15 @@ pub fn run(
                     candidate.reason
                 );
             }
-            if branches && candidate.local_branch_exists {
+            if branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
                 println!(
                     "would remove branch {} (state: {})",
                     candidate.branch, candidate.reason
+                );
+            } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
+                println!(
+                    "would keep branch {} (not merged into main)",
+                    candidate.branch
                 );
             }
         } else if force {
@@ -86,8 +91,10 @@ pub fn run(
             if let Some(ref path) = candidate.worktree {
                 println!("removed worktree {}", path.display());
             }
-            if branches && candidate.local_branch_exists {
+            if branches && candidate.local_branch_exists && candidate.branch_merged {
                 println!("removed branch {}", candidate.branch);
+            } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
+                println!("kept branch {} (not merged into main)", candidate.branch);
             }
             clean::remove(root, candidate, false, branches)?;
         }
