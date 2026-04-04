@@ -479,6 +479,7 @@ async fn sync_handler(
 #[derive(serde::Deserialize, Default)]
 struct ListTicketsQuery {
     include_closed: Option<bool>,
+    author: Option<String>,
 }
 
 async fn list_tickets(
@@ -508,6 +509,12 @@ async fn list_tickets(
             terminal_ids.iter().map(|s| s.as_str()).collect();
         tickets.retain(|t| !terminal_set.contains(t.frontmatter.state.as_str()));
     }
+    if let Some(ref author) = params.author {
+        tickets.retain(|t| {
+            let a = t.frontmatter.author.as_deref().unwrap_or("unassigned");
+            a == author.as_str()
+        });
+    }
     let resolved: std::collections::HashSet<&str> =
         resolved_ids.iter().map(|s| s.as_str()).collect();
     let state_map: std::collections::HashMap<String, String> = tickets
@@ -530,8 +537,12 @@ async fn list_tickets(
                     })
                 })
                 .collect();
+            let mut fm = t.frontmatter;
+            if fm.author.is_none() {
+                fm.author = Some("unassigned".to_string());
+            }
             TicketResponse {
-                frontmatter: t.frontmatter,
+                frontmatter: fm,
                 body: t.body,
                 has_open_questions,
                 has_pending_amendments,
@@ -570,8 +581,11 @@ async fn get_ticket(
                     (deps, transitions)
                 }
             };
-            let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+            let mut ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
             let raw = ticket.serialize().unwrap_or_default();
+            if ticket.frontmatter.author.is_none() {
+                ticket.frontmatter.author = Some("unassigned".to_string());
+            }
             Ok(Json(TicketDetailResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
@@ -1104,6 +1118,16 @@ async fn take_ticket(
     }
 }
 
+async fn me_handler(
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let username = match state.git_root() {
+        Some(root) => apm_core::config::resolve_identity(root),
+        None => "unassigned".to_string(),
+    };
+    Json(serde_json::json!({"username": username}))
+}
+
 fn build_app(root: PathBuf) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
@@ -1139,6 +1163,7 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/log/stream", get(log::stream_handler))
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
+        .route("/api/me", get(me_handler))
         .nest_service("/", serve_dir)
         .with_state(state)
 }
@@ -1159,6 +1184,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
+        .route("/api/me", get(me_handler))
         .with_state(state)
 }
 
@@ -2193,5 +2219,115 @@ label = "In Progress"
         let detail: serde_json::Value = serde_json::from_slice(&bytes3).unwrap();
         assert_eq!(detail["id"], epic_id);
         assert!(detail["tickets"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_tickets_author_field_always_present() {
+        let ticket = fake_ticket("aaaabbbb-no-author", "No author ticket");
+        assert!(ticket.frontmatter.author.is_none());
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["author"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_author_filter() {
+        let mut alice_ticket = fake_ticket("aaaabbbb-alice-ticket", "Alice ticket");
+        alice_ticket.frontmatter.author = Some("alice".to_string());
+        let mut bob_ticket = fake_ticket("ccccdddd-bob-ticket", "Bob ticket");
+        bob_ticket.frontmatter.author = Some("bob".to_string());
+        let app = build_app_with_tickets(vec![alice_ticket, bob_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?author=alice")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"], "aaaabbbb-alice-ticket");
+        assert_eq!(arr[0]["author"], "alice");
+    }
+
+    #[tokio::test]
+    async fn list_tickets_author_unassigned_filter() {
+        let unassigned_ticket = fake_ticket("aaaabbbb-unassigned", "Unassigned ticket");
+        assert!(unassigned_ticket.frontmatter.author.is_none());
+        let mut alice_ticket = fake_ticket("ccccdddd-alice", "Alice ticket");
+        alice_ticket.frontmatter.author = Some("alice".to_string());
+        let app = build_app_with_tickets(vec![unassigned_ticket, alice_ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets?author=unassigned")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"], "aaaabbbb-unassigned");
+        assert_eq!(arr[0]["author"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn get_ticket_author_field_always_present() {
+        let ticket = fake_ticket("aaaabbbb-no-author-detail", "No author ticket");
+        assert!(ticket.frontmatter.author.is_none());
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/aaaabbbb")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["author"], "unassigned");
+    }
+
+    #[tokio::test]
+    async fn me_handler_returns_unassigned_when_no_local_toml() {
+        let app = build_app_with_tickets(vec![]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/me")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["username"], "unassigned");
     }
 }
