@@ -288,13 +288,13 @@ fn new_uses_local_toml_username_as_author() {
 }
 
 #[test]
-fn new_uses_unassigned_when_no_local_toml() {
+fn new_uses_apm_when_no_local_toml() {
     let dir = setup();
     apm::cmd::new::run(dir.path(), "Unnamed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "unnamed");
     let rel_path = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel_path);
-    assert!(content.contains("author = \"unassigned\""), "author should be unassigned without local.toml: {content}");
+    assert!(content.contains("author = \"apm\""), "author should be apm without local.toml: {content}");
 }
 
 #[test]
@@ -756,16 +756,16 @@ fn take_appends_handoff_history() {
 }
 
 #[test]
-fn take_fails_when_no_agent_assigned() {
-    let dir = setup();
+fn take_succeeds_when_no_agent_assigned() {
+    let dir = setup_with_local_worktrees();
     let p = dir.path();
-    // Ticket with no agent field
+    // Ticket with no agent field — take should succeed using "unknown" as placeholder
     write_ticket_to_branch(p, "ticket/0001-unassigned", "0001-unassigned.md", "new", 1, "unassigned");
     std::env::set_var("APM_AGENT_NAME", "some-agent");
-    let result = apm::cmd::take::run(p, "1", true);
-    assert!(result.is_err(), "take should fail when no agent is assigned");
-    let msg = format!("{}", result.unwrap_err());
-    assert!(msg.contains("apm start"), "error should mention apm start: {msg}");
+    apm::cmd::take::run(p, "1", true).unwrap();
+    let content = branch_content(p, "ticket/0001-unassigned", "tickets/0001-unassigned.md");
+    assert!(content.contains("handoff"), "handoff history should be appended: {content}");
+    assert!(content.contains("unknown"), "old agent placeholder should be 'unknown': {content}");
 }
 
 #[test]
