@@ -1,7 +1,7 @@
 +++
 id = "a7cff3aa"
 title = "Homebrew tap formula for apm CLI + apm-server"
-state = "in_progress"
+state = "blocked"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "apm"
 agent = "42215"
 branch = "ticket/a7cff3aa-homebrew-tap-formula-for-apm-cli-apm-ser"
 created_at = "2026-04-02T20:54:55.761604Z"
-updated_at = "2026-04-04T02:59:28.077933Z"
+updated_at = "2026-04-04T03:03:58.774416Z"
 epic = "8db73240"
 target_branch = "epic/8db73240-user-mgmt"
 depends_on = ["73e484df"]
@@ -155,3 +155,4 @@ brew uninstall apm
 | 2026-04-03T23:22Z | in_design | specd | claude-0403-2321-b7e2 |
 | 2026-04-04T00:29Z | specd | ready | apm |
 | 2026-04-04T02:59Z | ready | in_progress | philippepascal |
+| 2026-04-04T03:03Z | in_progress | blocked | claude-0403-1430-w9k2 |
