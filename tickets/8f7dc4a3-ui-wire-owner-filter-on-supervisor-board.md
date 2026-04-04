@@ -35,10 +35,9 @@ This ticket wires the UI filter to the real owner field returned by the API. Con
 
 ### Out of scope
 
-- Adding the `agent` field to Frontmatter — covered by #42f4b3ba
-- Exposing `agent` in the API response and adding the `?agent=` query param — covered by #2b7c4c97
-- Renaming the API field from `agent` to `owner` — the dependency tickets have already spec'd the field as `agent`; the UI label rename in this ticket is sufficient alignment
-- Displaying the owner on TicketCard or TicketDetail — out of scope for this ticket
+- Adding the owner field to Frontmatter — covered by #42f4b3ba
+- Exposing owner in the API response and adding the ?owner= query param — covered by #2b7c4c97
+- Displaying the owner on TicketCard or TicketDetail
 - Persisting the filter selection across page reloads
 
 ### Approach
