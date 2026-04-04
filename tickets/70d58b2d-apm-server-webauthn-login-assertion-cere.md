@@ -33,7 +33,7 @@ External devices (phone, remote laptop) are the primary audience. Localhost requ
 - [x] `POST /api/auth/login/challenge` with a missing or malformed `username` field returns HTTP 400
 - [x] `POST /api/auth/login/complete` with a valid `login_id` and a correctly-signed WebAuthn assertion returns HTTP 200 and sets a `__Host-apm-session` session cookie
 - [x] `POST /api/auth/login/complete` with an unknown `login_id` returns HTTP 400
-- [ ] `POST /api/auth/login/complete` with a tampered or structurally invalid assertion response returns HTTP 400
+- [x] `POST /api/auth/login/complete` with a tampered or structurally invalid assertion response returns HTTP 400
 - [ ] `POST /api/auth/login/complete` with a `login_id` whose pending session is older than 5 minutes returns HTTP 400
 - [ ] After successful login, `GET /api/me` with the issued session cookie returns `{"username": "alice"}`
 - [ ] After successful login, the credential counter update from `AuthenticationResult` is persisted to `.apm/credentials.json`
