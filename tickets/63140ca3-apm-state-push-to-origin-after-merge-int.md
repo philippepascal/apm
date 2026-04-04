@@ -29,7 +29,10 @@ After the merge the local default branch is ahead of `origin/<default_branch>`. 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Pushing the ticket branch itself — that already happens before `merge_into_default` is called
+- Handling merge conflicts — the existing abort-and-bail behaviour is correct
+- Strategy `pr` or `pull` — no merge happens, no push to default branch needed
+- Force-push or non-fast-forward recovery on origin
 
 ### Approach
 
