@@ -21,7 +21,11 @@ After the merge the local default branch is ahead of `origin/<default_branch>`. 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm state <id> implemented` with strategy `merge`, the default branch is pushed to origin (i.e. `origin/<default_branch>` points to the same commit as the local default branch)
+- [ ] After `apm state <id> implemented` with strategy `pr_or_epic_merge` when a target branch is set, the target branch is pushed to origin
+- [ ] If the push to origin fails after a successful local merge, `apm state` exits with a non-zero status and prints an error message
+- [ ] Strategy `pr` (no local merge) is unaffected — behaviour is unchanged
+- [ ] Strategy `pull` (no local merge) is unaffected — behaviour is unchanged
 
 ### Out of scope
 
