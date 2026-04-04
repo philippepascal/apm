@@ -15,13 +15,11 @@ updated_at = "2026-04-04T06:31:32.857559Z"
 
 ### Problem
 
-`apm init` installs default templates (workflow.toml, ticket.toml, config.toml, agents.md, apm.worker.md, apm.spec-writer.md) and maintains `.gitignore` entries. These defaults drift out of sync as new features land:
+\`apm init\` installs default templates (workflow.toml, ticket.toml, config.toml, agents.md, apm.spec-writer.md, apm.worker.md) and maintains \`.gitignore\` entries. These defaults drift out of sync as new features land — the \`dep_requires\`/\`satisfies_deps\` fields were absent from \`default_workflow_toml()\` until a post-hoc fix, and the gitignore entries for \`.apm/sessions.json\` and \`.apm/credentials.json\` required a separate audit pass.
 
-- The `default_workflow_toml()` in `init.rs` was missing `dep_requires` and `satisfies_deps` tags after the phase-aware dependency gating feature (b8e9bfee) landed — fixed ad-hoc but should have been part of that ticket.
-- The gitignore entries list needs `.apm/sessions.json` and `.apm/credentials.json` once the auth infrastructure (e2e3d958, 8a08637c) lands.
-- The `write_default` comparison mechanism (skip/replace/compare) was added to help users detect drift, but the default templates themselves must stay current for the comparison to be useful.
+The root cause is that there are no typed-struct parse tests for the default templates. The existing test (\`default_config_escapes_special_chars\`) validates \`default_config()\` against \`toml::Value\` only, and no test parses \`default_workflow_toml()\` as a \`WorkflowFile\` struct or \`default_ticket_toml()\` as a \`TicketFile\` struct. A structural regression (missing field, wrong TOML shape) in either template would pass all tests today.
 
-This ticket is a reminder to audit `default_workflow_toml()`, `default_config()`, `default_ticket_toml()`, `ensure_gitignore()`, and the `include_str!` templates in `init.rs` after each epic milestone, and to add a test that parses each default template with `Config::load` to catch structural regressions.
+The audit itself is already done: \`ensure_gitignore\` already lists \`.apm/sessions.json\` and \`.apm/credentials.json\`; \`default_workflow_toml()\` already carries \`dep_requires\` and \`satisfies_deps\`. This ticket's implementation work is purely the regression-test layer that would have caught those drifts automatically.
 
 ### Acceptance criteria
 
