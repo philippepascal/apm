@@ -33,7 +33,7 @@ This ticket adds the identity-resolution function in `apm-core`, wires it into `
 - [x] Existing ticket files that contain an `agent` field are parsed without error (backward-compatible read)
 - [x] `apm list` output no longer includes an `agent=` column
 - [x] `apm show` output no longer prints an `agent:` line
-- [ ] `apm list --unassigned` returns tickets where `author == "unassigned"` (was: `agent == null`)
+- [x] `apm list --unassigned` returns tickets where `author == "unassigned"` (was: `agent == null`)
 - [ ] `apm take` completes without error on tickets that have no `agent` field
 
 ### Out of scope
