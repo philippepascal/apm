@@ -36,7 +36,7 @@ wired into `resolve_identity()` and a new `resolve_collaborators()` helper.
 
 ### Acceptance criteria
 
-- [ ] `.apm/config.toml` containing `[git_host]` with `provider = "github"` and `repo = "owner/name"` parses into `Config` without error
+- [x] `.apm/config.toml` containing `[git_host]` with `provider = "github"` and `repo = "owner/name"` parses into `Config` without error
 - [ ] A config with no `[git_host]` section parses without error (plugin is optional)
 - [ ] `LocalConfig` accepts an optional `github_token` field; a `local.toml` without it parses without error
 - [ ] `resolve_identity()` returns the GitHub login when `[git_host]` is configured and a token is available (via `local.toml` or `GITHUB_TOKEN` env var)
