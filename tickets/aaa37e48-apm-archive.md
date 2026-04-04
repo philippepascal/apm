@@ -1,14 +1,14 @@
 +++
 id = "aaa37e48"
 title = "apm archive"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 3
 author = "apm"
 branch = "ticket/aaa37e48-apm-archive"
 created_at = "2026-04-03T00:33:18.924269Z"
-updated_at = "2026-04-04T06:31:03.950795Z"
+updated_at = "2026-04-04T06:31:15.064085Z"
 +++
 
 ## Spec
@@ -122,3 +122,4 @@ When a ticket is not found via `load_all_from_git` (no matching ticket branch), 
 | 2026-04-03T00:33Z | — | new | apm |
 | 2026-04-04T06:01Z | new | groomed | apm |
 | 2026-04-04T06:25Z | groomed | in_design | philippepascal |
+| 2026-04-04T06:31Z | in_design | specd | claude-0403-spec-a7f2 |
