@@ -15,7 +15,11 @@ updated_at = "2026-04-04T16:40:07.217530Z"
 
 ### Problem
 
-after browser refresh, supervisor panel is empty. changing author filter fixes it.
+On every mount (including browser refresh), `SupervisorView` fires a `useEffect` that calls `/api/me` and auto-sets `authorFilter` to the current user's username. Because `authorFilter` is local React state it always initialises to `null` on refresh, then the effect overwrites it with the username.
+
+When the detected username does not appear as the `author` field on any ticket — common when the supervisor oversees work authored by agents (`apm`, `apm-ui`, etc.) — the `columns` memo produces zero results and the panel renders the empty state ('No tickets match the current filters') even though tickets exist.
+
+The user's workaround is to manually change the author filter select, which clears the auto-applied value and restores visibility. Desired behaviour: the supervisor panel should default to showing all tickets on load; any author filter the user sets manually should survive a page refresh.
 
 ### Acceptance criteria
 
