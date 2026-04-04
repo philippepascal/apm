@@ -795,28 +795,6 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
     Ok(())
 }
 
-fn append_history_row(body: &mut String, from: &str, to: &str, when: &str, by: &str) {
-    let row = format!("| {when} | {from} | {to} | {by} |");
-    if body.contains("## History") {
-        if !body.ends_with('\n') {
-            body.push('\n');
-        }
-        body.push_str(&row);
-        body.push('\n');
-    } else {
-        body.push_str(&format!(
-            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
-        ));
-    }
-}
-
-pub fn handoff(ticket: &mut Ticket, new_agent: &str, now: DateTime<Utc>) -> Result<Option<String>> {
-    ticket.frontmatter.updated_at = Some(now);
-    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    append_history_row(&mut ticket.body, "unknown", new_agent, &when, "handoff");
-    Ok(Some("unknown".to_string()))
-}
-
 pub fn list_worktrees_with_tickets(
     root: &Path,
     tickets_dir: &Path,
@@ -1718,32 +1696,6 @@ terminal = true
         let tickets = vec![t];
         let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None);
         assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
-    }
-
-    // ── handoff ───────────────────────────────────────────────────────────
-
-    fn make_ticket_with_agent(agent: Option<&str>) -> Ticket {
-        make_ticket("0001", "in_progress", agent)
-    }
-
-    #[test]
-    fn handoff_no_agent_uses_unknown_placeholder() {
-        let mut t = make_ticket_with_agent(None);
-        let now = chrono::Utc::now();
-        let result = handoff(&mut t, "bob", now).unwrap();
-        assert_eq!(result, Some("unknown".to_string()));
-        assert!(t.body.contains("unknown"));
-        assert!(t.body.contains("handoff"));
-    }
-
-    #[test]
-    fn handoff_successful() {
-        let mut t = make_ticket_with_agent(Some("alice"));
-        let now = chrono::Utc::now();
-        let result = handoff(&mut t, "bob", now).unwrap();
-        assert_eq!(result, Some("unknown".to_string()));
-        assert!(t.body.contains("## History"));
-        assert!(t.body.contains("handoff"));
     }
 
     // --- build_reverse_index / effective_priority / sorted_actionable ---
