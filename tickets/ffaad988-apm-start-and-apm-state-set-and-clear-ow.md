@@ -41,31 +41,31 @@ Once an `owner` field exists on tickets, it needs to be set at the right moment.
 
 ### Approach
 
-This ticket builds on top of `42f4b3ba` (which adds the `agent` field to `Frontmatter` and makes `apm start` / `apm state in_design` unconditionally set it). The change here is to replace those unconditional assignments with a guarded assignment.
+This ticket builds on top of `42f4b3ba` (which adds the `owner` field to `Frontmatter` and makes `apm start` / `apm state in_design` unconditionally set it). The change here is to replace those unconditional assignments with a guarded assignment.
 
 **Helper in `apm-core/src/start.rs`** (or inline at each call site):
 
 ```rust
-fn agent_can_claim(ticket: &ticket::Ticket, new_agent: &str) -> bool {
-    match ticket.frontmatter.agent.as_deref() {
+fn owner_can_claim(ticket: &ticket::Ticket, new_owner: &str) -> bool {
+    match ticket.frontmatter.owner.as_deref() {
         None => true,
-        Some(existing) => existing == new_agent,
+        Some(existing) => existing == new_owner,
     }
 }
 ```
 
 **`apm-core/src/start.rs` — `run()`**
 
-Replace the unconditional `t.frontmatter.agent = Some(agent_name.to_string());` with:
+Replace the unconditional `t.frontmatter.owner = Some(agent_name.to_string());` with:
 
 ```rust
-let claimed = agent_can_claim(t, agent_name);
+let claimed = owner_can_claim(t, agent_name);
 if claimed {
-    t.frontmatter.agent = Some(agent_name.to_string());
+    t.frontmatter.owner = Some(agent_name.to_string());
 } else {
     eprintln!(
-        "warning: ticket {} is owned by {}; not overwriting (use `apm set {} agent <name>` to reassign)",
-        id, t.frontmatter.agent.as_deref().unwrap_or("unknown"), id
+        "warning: ticket {} is owned by {}; not overwriting (use `apm set {} owner <name>` to reassign)",
+        id, t.frontmatter.owner.as_deref().unwrap_or("unknown"), id
     );
 }
 ```
@@ -74,20 +74,20 @@ For the `--spawn` path, pass `claimed` through to the post-spawn PID update bloc
 
 **`apm-core/src/state.rs` — `transition()`**
 
-The `in_design` branch that sets agent (added by `42f4b3ba`) becomes:
+The `in_design` branch that sets owner (added by `42f4b3ba`) becomes:
 
 ```rust
 if new_state == "in_design" {
-    let can_claim = match t.frontmatter.agent.as_deref() {
+    let can_claim = match t.frontmatter.owner.as_deref() {
         None => true,
         Some(existing) => existing == actor.as_str(),
     };
     if can_claim {
-        t.frontmatter.agent = Some(actor.clone());
+        t.frontmatter.owner = Some(actor.clone());
     } else {
         eprintln!(
             "warning: ticket {} is owned by {}; not overwriting",
-            id, t.frontmatter.agent.as_deref().unwrap_or("unknown")
+            id, t.frontmatter.owner.as_deref().unwrap_or("unknown")
         );
     }
 }
@@ -96,23 +96,23 @@ if new_state == "in_design" {
 **Tests (inline in each file)**
 
 `start.rs`:
-- `start_sets_agent_when_unowned` — agent is None before start, set after
-- `start_sets_agent_when_same_agent_resumes` — agent = "alice" before, alice starts again, agent stays "alice"
-- `start_does_not_overwrite_different_owner` — agent = "alice", bob starts, agent stays "alice"
+- `start_sets_owner_when_unowned` — owner is None before start, set after
+- `start_sets_owner_when_same_owner_resumes` — owner = "alice" before, alice starts again, owner stays "alice"
+- `start_does_not_overwrite_different_owner` — owner = "alice", bob starts, owner stays "alice"
 
 `state.rs`:
-- `in_design_sets_agent_when_unowned`
-- `in_design_does_not_overwrite_different_owner` — agent = "alice", bob transitions to in_design, agent stays "alice"
+- `in_design_sets_owner_when_unowned`
+- `in_design_does_not_overwrite_different_owner` — owner = "alice", bob transitions to in_design, owner stays "alice"
 
 **Order**
 
-1. Implement `agent_can_claim` helper
+1. Implement `owner_can_claim` helper
 2. Patch `start::run` (non-spawn and spawn paths)
 3. Patch `state::transition` for `in_design`
 4. Add tests
 5. `cargo test --workspace` — all pass
 
-**Gotcha**: ticket `42f4b3ba` must be merged first (it adds the `agent` field). On the `epic/8db73240-user-mgmt` branch, both land in order; the implementation of `ffaad988` should branch from there.
+**Gotcha**: ticket `42f4b3ba` must be merged first (it adds the `owner` field). On the `epic/8db73240-user-mgmt` branch, both land in order; the implementation of `ffaad988` should branch from there.
 
 ### Open questions
 
