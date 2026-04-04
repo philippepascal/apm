@@ -16,8 +16,14 @@ anyhow = { workspace = true }
 toml = { workspace = true }
 apm-core = { path = "../apm-core" }
 chrono = { workspace = true }
-tower-http = { workspace = true, features = ["fs"] }
+tower-http = { workspace = true }
+include_dir = { workspace = true }
+mime_guess = { workspace = true }
 tokio-stream = "0.1"
+rand = "0.8"
+cookie = "0.18"
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+uuid = { version = "1", features = ["v4", "v5"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

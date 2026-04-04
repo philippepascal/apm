@@ -5,12 +5,14 @@ import type { Ticket } from './types'
 interface TicketCardProps {
   ticket: Ticket
   columnTicketIds: string[]
+  showAuthor?: boolean
 }
 
-export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps) {
+export default function TicketCard({ ticket, columnTicketIds, showAuthor }: TicketCardProps) {
   const { selectedTicketId, selectedTicketIds, lastClickedTicketId, setSelectedTicketId, selectTicketRange } = useLayoutStore()
   const isSelected = ticket.id === selectedTicketId
   const isMultiSelected = selectedTicketIds.includes(ticket.id)
+  const isDepBlocked = !!ticket.blocking_deps?.length
 
   function handleClick(event: React.MouseEvent) {
     if (event.shiftKey && lastClickedTicketId && columnTicketIds.includes(lastClickedTicketId)) {
@@ -29,7 +31,10 @@ export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps)
       data-ticket-id={ticket.id}
       onClick={handleClick}
       className={
-        'rounded-md border border-gray-600 bg-gray-800 p-2.5 cursor-pointer hover:bg-gray-700 shadow-sm ' +
+        'rounded-md border p-2.5 cursor-pointer shadow-sm ' +
+        (isDepBlocked
+          ? 'border-amber-700/60 bg-amber-950/20 hover:bg-amber-950/30 '
+          : 'border-gray-600 bg-gray-800 hover:bg-gray-700 ') +
         (isMultiSelected ? 'ring-2 ring-blue-400 bg-gray-700/60 ' : '') +
         (!isMultiSelected && isSelected ? 'ring-2 ring-blue-500' : '')
       }
@@ -69,16 +74,27 @@ export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps)
               A
             </span>
           )}
-          {!!ticket.blocking_deps?.length && (
-            <span title={ticket.blocking_deps.map(d => `${d.id}: ${d.state}`).join('\n')}>
-              <Ban size={12} className="text-gray-400 shrink-0" />
-            </span>
+          {isDepBlocked && (
+            <Ban size={12} className="text-amber-400 shrink-0" />
           )}
         </div>
       </div>
       <p className="text-sm font-medium mt-1 leading-tight line-clamp-2">
         {ticket.title}
       </p>
+      {isDepBlocked && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {ticket.blocking_deps!.map(dep => (
+            <button
+              key={dep.id}
+              onClick={e => { e.stopPropagation(); setSelectedTicketId(dep.id) }}
+              className="text-[10px] font-mono px-1 rounded bg-amber-900/40 text-amber-300 hover:bg-amber-800/50"
+            >
+              {dep.id.slice(0, 8)}: {dep.state}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2 mt-1.5">
         <span className="text-[10px] text-gray-400 font-mono">
           {ticket.id.slice(0, 8)}
@@ -89,6 +105,9 @@ export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps)
           </span>
         )}
       </div>
+      {showAuthor && ticket.author && (
+        <div className="text-xs text-gray-400 mt-0.5 truncate">{ticket.author}</div>
+      )}
     </div>
   )
 }
