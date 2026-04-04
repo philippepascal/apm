@@ -24,7 +24,16 @@ There is also no user-facing `--owner` flag to filter by who currently owns a ti
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm list --mine` returns tickets where `author` equals the current user
+- [ ] `apm list --mine` also returns tickets where `agent` equals the current user (even if `author` is someone else)
+- [ ] `apm list --mine` does not return tickets where neither `author` nor `agent` matches the current user
+- [ ] `apm list --owner alice` returns only tickets whose `agent` field equals `"alice"`
+- [ ] `apm list --owner alice` does not return tickets authored by alice but not owned by alice
+- [ ] `apm list --owner alice` with no matching tickets returns empty output and exits 0
+- [ ] `--owner` and `--mine` are mutually exclusive (combining them produces an error)
+- [ ] `--owner alice` and `--author bob` can be combined; both filters apply (AND logic)
+- [ ] `--owner alice` and `--state ready` can be combined; both filters apply
+- [ ] `apm list --help` documents the `--owner` flag
 
 ### Out of scope
 
