@@ -4,11 +4,11 @@ title = "apm init: keep default templates and gitignore entries in sync with new
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "apm"
 branch = "ticket/133a9b13-apm-init-keep-default-templates-and-giti"
 created_at = "2026-04-03T23:40:56.352188Z"
-updated_at = "2026-04-04T06:33:40.261001Z"
+updated_at = "2026-04-04T06:33:52.070943Z"
 +++
 
 ## Spec
