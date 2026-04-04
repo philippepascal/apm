@@ -33,10 +33,10 @@ Ticket #42f4b3ba adds `owner: Option<String>` to `Frontmatter`. Because `TicketR
 
 ### Out of scope
 
-- Adding `agent: Option<String>` to `Frontmatter` — covered by #42f4b3ba
-- CLI `--agent` filter for `apm list` — covered by #42f4b3ba
-- Setting `agent` on ticket state transitions (`apm start`, `apm state in_design`, `apm take`) — covered by #42f4b3ba
-- UI changes — the SupervisorView already reads `ticket.agent` and the agent filter dropdown already sends `?agent=`; no UI work needed once the API responds correctly
+- Adding `owner: Option<String>` to `Frontmatter` — covered by #42f4b3ba
+- CLI `--owner` filter for `apm list` — covered by #42f4b3ba
+- Setting `owner` on ticket state transitions (`apm start`, `apm state in_design`, `apm take`) — covered by #42f4b3ba
+- UI changes — the SupervisorView already reads `ticket.owner` and the owner filter dropdown already sends `?owner=`; no UI work needed once the API responds correctly
 
 ### Approach
 
