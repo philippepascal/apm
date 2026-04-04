@@ -1,14 +1,14 @@
 +++
 id = "717f9b6b"
 title = "UI filter error"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "apm-ui"
 branch = "ticket/717f9b6b-ui-filter-error"
 created_at = "2026-04-04T16:05:39.699619Z"
-updated_at = "2026-04-04T16:43:23.013737Z"
+updated_at = "2026-04-04T16:43:30.012724Z"
 +++
 
 ## Spec
@@ -81,3 +81,4 @@ No other files need to change. The `availableAuthors` memo and select rendering 
 | 2026-04-04T16:05Z | — | new | apm-ui |
 | 2026-04-04T16:39Z | new | groomed | apm |
 | 2026-04-04T16:40Z | groomed | in_design | philippepascal |
+| 2026-04-04T16:43Z | in_design | specd | claude-0404-1640-s7w2 |
