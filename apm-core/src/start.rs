@@ -178,7 +178,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .map(|tr| tr.to.clone())
         .unwrap_or_else(|| "in_progress".into());
 
-    t.frontmatter.agent = Some(agent_name.to_string());
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
@@ -306,10 +305,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     std::thread::spawn(move || {
         let _ = child.wait();
     });
-
-    t.frontmatter.agent = Some(pid.to_string());
-    let pid_content = t.serialize()?;
-    git::commit_to_branch(root, &branch, &rel_path, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
 
     Ok(StartOutput {
         id,
@@ -442,16 +437,6 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         let _ = child.wait();
     });
 
-    let mut t_pid = t.clone();
-    t_pid.frontmatter.agent = Some(pid.to_string());
-    let pid_content = t_pid.serialize()?;
-    let rel_path_pid = format!(
-        "{}/{}",
-        config.tickets.dir.to_string_lossy(),
-        t.path.file_name().unwrap().to_string_lossy()
-    );
-    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
-
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
@@ -572,15 +557,6 @@ pub fn spawn_next_worker(
     };
     let pid = child.id();
 
-    let mut t_pid = t.clone();
-    t_pid.frontmatter.agent = Some(pid.to_string());
-    let pid_content = t_pid.serialize()?;
-    let rel_path_pid = format!(
-        "{}/{}",
-        config.tickets.dir.to_string_lossy(),
-        t.path.file_name().unwrap().to_string_lossy()
-    );
-    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
 
