@@ -32,7 +32,12 @@ Once an `owner` field exists on tickets, it needs to be set at the right moment.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding an `apm assign` command (ownership transfer by supervisor is not implemented here; use `apm set <id> agent <name>` in the meantime)
+- Clearing `agent` automatically on any state transition (ownership is intentionally sticky through the full lifecycle)
+- Clearing `agent` when a ticket reaches a terminal state (closed, cancelled)
+- Enforcing that only one agent can hold a ticket at a time at the data-model level
+- Backfilling `agent` on existing tickets in git history
+- Any changes to `apm take` (it already unconditionally overwrites agent — takeover semantics are intentional)
 
 ### Approach
 
