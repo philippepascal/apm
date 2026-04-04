@@ -89,6 +89,22 @@ pub struct WorkConfig {
     pub epic: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ServerConfig {
+    #[serde(default = "default_server_origin")]
+    pub origin: String,
+}
+
+fn default_server_origin() -> String {
+    "http://localhost:3000".to_string()
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self { origin: default_server_origin() }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
@@ -112,6 +128,8 @@ pub struct Config {
     pub workers: WorkersConfig,
     #[serde(default)]
     pub work: WorkConfig,
+    #[serde(default)]
+    pub server: ServerConfig,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,
@@ -786,5 +804,34 @@ username = "bob"
     fn local_config_username_defaults_none() {
         let local: LocalConfig = toml::from_str("").unwrap();
         assert!(local.username.is_none());
+    }
+
+    #[test]
+    fn server_config_defaults() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.server.origin, "http://localhost:3000");
+    }
+
+    #[test]
+    fn server_config_custom_origin() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[server]
+origin = "https://apm.example.com"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.server.origin, "https://apm.example.com");
     }
 }
