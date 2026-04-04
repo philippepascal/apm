@@ -55,11 +55,6 @@ pub fn verify_tickets(
             }
         }
 
-        // Agent set but state is not in_progress/implemented.
-        if fm.agent.is_some() && !in_progress_states.contains(fm.state.as_str()) {
-            issues.push(format!("{prefix}: agent is set but state is not in_progress/implemented"));
-        }
-
         // Missing ## Spec section.
         if !t.body.contains("## Spec") {
             issues.push(format!("{prefix}: missing ## Spec section"));

@@ -208,30 +208,28 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
     // Column widths
     let id_w = 8usize;
     let state_w = 13usize;
-    let agent_w = 17usize;
     let title_w = 32usize;
 
     println!();
     println!(
-        "{:<id_w$}  {:<state_w$}  {:<agent_w$}  {:<title_w$}  {}",
-        "ID", "State", "Agent", "Title", "Depends on"
+        "{:<id_w$}  {:<state_w$}  {:<title_w$}  {}",
+        "ID", "State", "Title", "Depends on"
     );
     println!(
-        "{:-<id_w$}  {:-<state_w$}  {:-<agent_w$}  {:-<title_w$}  {}",
-        "", "", "", "", "----------"
+        "{:-<id_w$}  {:-<state_w$}  {:-<title_w$}  {}",
+        "", "", "", "----------"
     );
 
     for t in &epic_tickets {
         let fm = &t.frontmatter;
-        let agent = fm.agent.as_deref().unwrap_or("-");
         let deps = fm
             .depends_on
             .as_deref()
             .map(|d| d.join(", "))
             .unwrap_or_else(|| "-".to_string());
         println!(
-            "{:<id_w$}  {:<state_w$}  {:<agent_w$}  {:<title_w$}  {}",
-            fm.id, fm.state, agent, fm.title, deps
+            "{:<id_w$}  {:<state_w$}  {:<title_w$}  {}",
+            fm.id, fm.state, fm.title, deps
         );
     }
 

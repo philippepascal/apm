@@ -94,7 +94,6 @@ mod tests {
                 risk,
                 author: None,
                 supervisor: None,
-                agent: None,
                 branch: None,
                 created_at: None,
                 updated_at: None,

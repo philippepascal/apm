@@ -751,7 +751,6 @@ fn take_appends_handoff_history() {
     apm::cmd::take::run(p, "1", true).unwrap();
     let content = branch_content(p, "ticket/0001-handoff", "tickets/0001-handoff.md");
     assert!(content.contains("handoff"), "handoff history entry should be appended: {content}");
-    assert!(content.contains("old-agent"), "old agent should appear in history: {content}");
     assert!(content.contains("new-agent"), "new agent should appear in history: {content}");
 }
 
@@ -3877,7 +3876,6 @@ fn epic_show_displays_header_and_ticket_table() {
     // Ticket table rows
     assert!(stdout.contains("t2000001"), "should contain ticket1 id: {stdout}");
     assert!(stdout.contains("t2000002"), "should contain ticket2 id: {stdout}");
-    assert!(stdout.contains("alice"), "should contain agent name: {stdout}");
     assert!(stdout.contains("t2000001"), "ticket2 depends_on should show t2000001: {stdout}");
     // Unrelated ticket must NOT appear
     assert!(!stdout.contains("t2000003"), "unrelated ticket must not appear: {stdout}");

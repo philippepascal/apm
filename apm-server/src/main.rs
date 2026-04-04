@@ -1061,15 +1061,7 @@ async fn take_ticket(
     };
     let agent_name = apm_core::start::resolve_agent_name();
     let now = chrono::Utc::now();
-    // handoff errors if no agent is set; in that case just set directly
-    match apm_core::ticket::handoff(&mut ticket, &agent_name, now) {
-        Ok(_) => {}
-        Err(e) if e.to_string().contains("no agent assigned") => {
-            ticket.frontmatter.agent = Some(agent_name.clone());
-            ticket.frontmatter.updated_at = Some(now);
-        }
-        Err(e) => return Err(AppError(e)),
-    }
+    apm_core::ticket::handoff(&mut ticket, &agent_name, now).map_err(AppError)?;
     let content = ticket
         .serialize()
         .map_err(|e| AppError(anyhow::anyhow!("cannot serialize ticket: {e}")))?;
@@ -1077,7 +1069,6 @@ async fn take_ticket(
     let branch_clone = branch.clone();
     let rel_path_clone = rel_path.clone();
     let content_clone = content.clone();
-    let agent_name_clone = agent_name.clone();
     let full_id_clone = full_id.clone();
     tokio::task::spawn_blocking(move || {
         apm_core::git::commit_to_branch(
@@ -1085,7 +1076,7 @@ async fn take_ticket(
             &branch_clone,
             &rel_path_clone,
             &content_clone,
-            &format!("ticket({full_id_clone}): reassign agent to {agent_name_clone}"),
+            &format!("ticket({full_id_clone}): take ticket"),
         )
     })
     .await??;
@@ -1243,7 +1234,6 @@ mod tests {
                 risk: 0,
                 author: None,
                 supervisor: None,
-                agent: None,
                 branch: None,
                 created_at: None,
                 updated_at: None,
