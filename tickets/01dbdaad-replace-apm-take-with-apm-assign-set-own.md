@@ -25,7 +25,7 @@ With the `owner` field, `apm take` becomes redundant and underspecified. What is
 ### Acceptance criteria
 
 - [x] `apm assign <id> <username>` sets the `owner` field in frontmatter to `<username>` for any ticket, regardless of its current state
-- [ ] `apm assign <id> -` clears the `owner` field (sets it to absent in frontmatter)
+- [x] `apm assign <id> -` clears the `owner` field (sets it to absent in frontmatter)
 - [ ] `apm assign <id> <username>` commits the change to the ticket's branch with message `ticket(<id>): assign owner = <username>`
 - [ ] `apm assign <id> <username>` prints `<id>: owner = <username>` to stdout on success
 - [ ] `apm assign` with a nonexistent or ambiguous ticket ID exits non-zero and prints an error
