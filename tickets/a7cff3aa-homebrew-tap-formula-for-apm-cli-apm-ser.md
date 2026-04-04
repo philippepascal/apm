@@ -28,7 +28,7 @@ This ticket creates the tap repository and the formula. It does not automate for
 ### Acceptance criteria
 
 - [x] A public GitHub repository `philippepascal/homebrew-tap` exists
-- [ ] The repository contains a formula file `Formula/apm.rb`
+- [x] The repository contains a formula file `Formula/apm.rb`
 - [ ] `brew tap philippepascal/tap` succeeds without errors
 - [ ] `brew install philippepascal/tap/apm` installs both `apm` and `apm-server` binaries to the Homebrew prefix
 - [ ] After installation, `apm --help` runs successfully
