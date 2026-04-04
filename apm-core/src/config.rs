@@ -100,15 +100,21 @@ pub struct WorkConfig {
 pub struct ServerConfig {
     #[serde(default = "default_server_origin")]
     pub origin: String,
+    #[serde(default = "default_server_url")]
+    pub url: String,
 }
 
 fn default_server_origin() -> String {
     "http://localhost:3000".to_string()
 }
 
+fn default_server_url() -> String {
+    "http://127.0.0.1:3000".to_string()
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { origin: default_server_origin() }
+        Self { origin: default_server_origin(), url: default_server_url() }
     }
 }
 

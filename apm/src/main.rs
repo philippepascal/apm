@@ -648,6 +648,25 @@ the given substring:
         #[arg(long)]
         no_aggressive: bool,
     },
+    /// Generate a one-time password for device registration (requires apm-server)
+    Register {
+        /// Username to register
+        username: String,
+    },
+    /// List active sessions (requires apm-server)
+    Sessions,
+    /// Revoke sessions (requires apm-server)
+    Revoke {
+        /// Username whose sessions to revoke (required unless --all)
+        #[arg(value_name = "USERNAME")]
+        username: Option<String>,
+        /// Only revoke sessions matching this device hint
+        #[arg(long, value_name = "HINT")]
+        device: Option<String>,
+        /// Revoke all sessions for all users
+        #[arg(long, conflicts_with = "device")]
+        all: bool,
+    },
 }
 
 pub fn repo_root() -> Result<PathBuf> {
@@ -715,6 +734,15 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
         Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
+        Command::Register { username } => cmd::register::run(&root, &username),
+        Command::Sessions => cmd::sessions::run(&root),
+        Command::Revoke { username, device, all } => {
+            if !all && username.is_none() {
+                eprintln!("error: provide a username or use --all");
+                std::process::exit(1);
+            }
+            cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
+        }
     }
 }
 
