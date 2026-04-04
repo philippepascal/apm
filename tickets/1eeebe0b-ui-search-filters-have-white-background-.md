@@ -40,7 +40,25 @@ Affected file: apm-ui/src/components/supervisor/SupervisorView.tsx, lines 201, 2
 
 ### Approach
 
-How the implementation will work.
+Single file change: apm-ui/src/components/supervisor/SupervisorView.tsx
+
+For each of the five filter controls, replace bg-white with bg-gray-800 text-gray-100 border-gray-600. The focus ring (focus:ring-blue-400) can stay.
+
+Specific className changes:
+
+1. Search text input (line 201):
+   From: h-7 pl-2 pr-6 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-40
+   To:   h-7 pl-2 pr-6 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-400 w-40
+
+   Also update the clear-button hover from hover:text-gray-600 to hover:text-gray-200 (line 206) so it is visible on the dark input.
+
+2. State filter select (line 215):
+   From: h-7 px-1.5 text-xs border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400
+   To:   h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400
+
+3–5. Agent, author, epic filter selects (lines 225, 235, 245): identical change as state filter.
+
+No logic changes. No new files. No dependency changes.
 
 ### Open questions
 
