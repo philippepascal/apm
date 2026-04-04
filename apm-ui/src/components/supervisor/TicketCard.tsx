@@ -5,9 +5,10 @@ import type { Ticket } from './types'
 interface TicketCardProps {
   ticket: Ticket
   columnTicketIds: string[]
+  showAuthor?: boolean
 }
 
-export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps) {
+export default function TicketCard({ ticket, columnTicketIds, showAuthor }: TicketCardProps) {
   const { selectedTicketId, selectedTicketIds, lastClickedTicketId, setSelectedTicketId, selectTicketRange } = useLayoutStore()
   const isSelected = ticket.id === selectedTicketId
   const isMultiSelected = selectedTicketIds.includes(ticket.id)
@@ -104,6 +105,9 @@ export default function TicketCard({ ticket, columnTicketIds }: TicketCardProps)
           </span>
         )}
       </div>
+      {showAuthor && ticket.author && (
+        <div className="text-xs text-gray-400 mt-0.5 truncate">{ticket.author}</div>
+      )}
     </div>
   )
 }

@@ -46,8 +46,6 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub supervisor: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<DateTime<Utc>>,
@@ -471,7 +469,6 @@ pub fn create(
         risk: 0,
         author: Some(author.clone()),
         supervisor: None,
-        agent: None,
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
@@ -742,7 +739,7 @@ pub fn list_filtered<'a>(
     tickets.iter().filter(|t| {
         let fm = &t.frontmatter;
         let state_ok = state_filter.map_or(true, |s| fm.state == s);
-        let agent_ok = !unassigned || fm.agent.is_none();
+        let agent_ok = !unassigned || fm.author.as_deref() == Some("unassigned");
         let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
         let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
         let supervisor_ok = supervisor_filter.map_or(true, |s| fm.supervisor.as_deref() == Some(s));
@@ -761,7 +758,6 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
         "author"   => anyhow::bail!("author is immutable"),
         "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.to_string()) },
-        "agent"    => fm.agent    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
         "depends_on" => {
@@ -797,18 +793,10 @@ fn append_history_row(body: &mut String, from: &str, to: &str, when: &str, by: &
 }
 
 pub fn handoff(ticket: &mut Ticket, new_agent: &str, now: DateTime<Utc>) -> Result<Option<String>> {
-    let old_agent = match &ticket.frontmatter.agent {
-        None => bail!("no agent assigned — use `apm start` instead"),
-        Some(a) => a.clone(),
-    };
-    if old_agent == new_agent {
-        return Ok(None);
-    }
-    ticket.frontmatter.agent = Some(new_agent.to_string());
     ticket.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    append_history_row(&mut ticket.body, &old_agent, new_agent, &when, "handoff");
-    Ok(Some(old_agent))
+    append_history_row(&mut ticket.body, "unknown", new_agent, &when, "handoff");
+    Ok(Some("unknown".to_string()))
 }
 
 pub fn list_worktrees_with_tickets(
@@ -875,7 +863,6 @@ mod tests {
         assert_eq!(t.frontmatter.priority, 0);
         assert_eq!(t.frontmatter.effort, 0);
         assert_eq!(t.frontmatter.risk, 0);
-        assert!(t.frontmatter.agent.is_none());
         assert!(t.frontmatter.branch.is_none());
     }
 
@@ -1303,14 +1290,22 @@ mod tests {
     #[test]
     fn list_filtered_unassigned() {
         let config = test_config_with_states(&[]);
+        let make_with_author = |id: &str, author: Option<&str>| {
+            let author_line = author.map(|a| format!("author = \"{a}\"\n")).unwrap_or_default();
+            let raw = format!(
+                "+++\nid = \"{id}\"\ntitle = \"T{id}\"\nstate = \"new\"\n{author_line}+++\n\n"
+            );
+            Ticket::parse(Path::new("test.md"), &raw).unwrap()
+        };
         let tickets = vec![
-            make_ticket("0001", "new", None),
-            make_ticket("0002", "new", Some("alice")),
-            make_ticket("0003", "ready", None),
+            make_with_author("0001", Some("unassigned")),
+            make_with_author("0002", Some("alice")),
+            make_with_author("0003", Some("unassigned")),
+            make_with_author("0004", None),
         ];
         let result = list_filtered(&tickets, &config, None, true, false, None, None);
         assert_eq!(result.len(), 2);
-        assert!(result.iter().all(|t| t.frontmatter.agent.is_none()));
+        assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("unassigned")));
     }
 
     // ── set_field ─────────────────────────────────────────────────────────
@@ -1325,7 +1320,6 @@ mod tests {
             risk: 0,
             author: None,
             supervisor: None,
-            agent: None,
             branch: None,
             created_at: None,
             updated_at: None,
@@ -1362,14 +1356,6 @@ mod tests {
         let mut fm = make_frontmatter();
         let err = set_field(&mut fm, "foo", "bar").unwrap_err();
         assert!(err.to_string().contains("unknown field: foo"));
-    }
-
-    #[test]
-    fn set_field_agent_clear() {
-        let mut fm = make_frontmatter();
-        fm.agent = Some("alice".to_string());
-        set_field(&mut fm, "agent", "-").unwrap();
-        assert!(fm.agent.is_none());
     }
 
     // ── dep_satisfied ─────────────────────────────────────────────────────
@@ -1591,19 +1577,13 @@ terminal = true
     }
 
     #[test]
-    fn handoff_no_agent_errors() {
+    fn handoff_no_agent_uses_unknown_placeholder() {
         let mut t = make_ticket_with_agent(None);
         let now = chrono::Utc::now();
-        let err = handoff(&mut t, "bob", now).unwrap_err();
-        assert!(err.to_string().contains("no agent assigned"));
-    }
-
-    #[test]
-    fn handoff_idempotent() {
-        let mut t = make_ticket_with_agent(Some("alice"));
-        let now = chrono::Utc::now();
-        let result = handoff(&mut t, "alice", now).unwrap();
-        assert!(result.is_none());
+        let result = handoff(&mut t, "bob", now).unwrap();
+        assert_eq!(result, Some("unknown".to_string()));
+        assert!(t.body.contains("unknown"));
+        assert!(t.body.contains("handoff"));
     }
 
     #[test]
@@ -1611,8 +1591,7 @@ terminal = true
         let mut t = make_ticket_with_agent(Some("alice"));
         let now = chrono::Utc::now();
         let result = handoff(&mut t, "bob", now).unwrap();
-        assert_eq!(result, Some("alice".to_string()));
-        assert_eq!(t.frontmatter.agent.as_deref(), Some("bob"));
+        assert_eq!(result, Some("unknown".to_string()));
         assert!(t.body.contains("## History"));
         assert!(t.body.contains("handoff"));
     }
