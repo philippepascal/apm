@@ -105,6 +105,43 @@ fn spawn_container_worker(
     Ok(child)
 }
 
+fn build_spawn_command(
+    config: &Config,
+    wt: &Path,
+    worker_name: &str,
+    worker_system: &str,
+    ticket_content: &str,
+    skip_permissions: bool,
+    log_path: &Path,
+) -> Result<std::process::Child> {
+    let wc = &config.workers;
+    let mut cmd = std::process::Command::new(&wc.command);
+    for arg in &wc.args {
+        cmd.arg(arg);
+    }
+    if let Some(ref model) = wc.model {
+        cmd.args(["--model", model]);
+    }
+    cmd.args(["--system-prompt", worker_system]);
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
+    }
+    cmd.arg(ticket_content);
+    cmd.env("APM_AGENT_NAME", worker_name);
+    for (k, v) in &wc.env {
+        cmd.env(k, v);
+    }
+    cmd.current_dir(wt);
+
+    let log_file = std::fs::File::create(log_path)?;
+    let log_clone = log_file.try_clone()?;
+    cmd.stdout(log_file);
+    cmd.stderr(log_clone);
+    cmd.process_group(0);
+
+    Ok(cmd.spawn()?)
+}
+
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -141,7 +178,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .map(|tr| tr.to.clone())
         .unwrap_or_else(|| "in_progress".into());
 
-    t.frontmatter.agent = Some(agent_name.to_string());
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
@@ -260,37 +296,15 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             &log_path,
         )?
     } else {
-        let mut cmd = std::process::Command::new("claude");
-        cmd.arg("--print");
-        cmd.args(["--system-prompt", &worker_system]);
-        if skip_permissions {
-            cmd.arg("--dangerously-skip-permissions");
-        }
-        cmd.arg(&ticket_content);
-        cmd.env("APM_AGENT_NAME", &worker_name);
-        cmd.current_dir(&wt_display);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
-        cmd.process_group(0);
-
-        cmd.spawn()?
+        build_spawn_command(&config, &wt_display, &worker_name, &worker_system, &ticket_content, skip_permissions, &log_path)?
     };
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
-    let pid_path_cleanup = pid_path.clone();
     std::thread::spawn(move || {
         let _ = child.wait();
-        let _ = std::fs::remove_file(&pid_path_cleanup);
     });
-
-    t.frontmatter.agent = Some(pid.to_string());
-    let pid_content = t.serialize()?;
-    git::commit_to_branch(root, &branch, &rel_path, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
 
     Ok(StartOutput {
         id,
@@ -413,43 +427,15 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             &log_path,
         )?
     } else {
-        let mut cmd = std::process::Command::new("claude");
-        cmd.arg("--print");
-        cmd.args(["--system-prompt", &worker_system]);
-        if skip_permissions {
-            cmd.arg("--dangerously-skip-permissions");
-        }
-        cmd.arg(&ticket_content);
-        cmd.env("APM_AGENT_NAME", &worker_name);
-        cmd.current_dir(&wt_display);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
-        cmd.process_group(0);
-
-        cmd.spawn()?
+        build_spawn_command(&config, &wt_display, &worker_name, &worker_system, &ticket_content, skip_permissions, &log_path)?
     };
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
-    let pid_path_cleanup = pid_path.clone();
     std::thread::spawn(move || {
         let _ = child.wait();
-        let _ = std::fs::remove_file(&pid_path_cleanup);
     });
-
-    let mut t_pid = t.clone();
-    t_pid.frontmatter.agent = Some(pid.to_string());
-    let pid_content = t_pid.serialize()?;
-    let rel_path_pid = format!(
-        "{}/{}",
-        config.tickets.dir.to_string_lossy(),
-        t.path.file_name().unwrap().to_string_lossy()
-    );
-    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
 
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
@@ -567,35 +553,10 @@ pub fn spawn_next_worker(
             &log_path,
         )?
     } else {
-        let mut cmd = std::process::Command::new("claude");
-        cmd.arg("--print");
-        cmd.args(["--system-prompt", &worker_system]);
-        if skip_permissions {
-            cmd.arg("--dangerously-skip-permissions");
-        }
-        cmd.arg(&ticket_content);
-        cmd.env("APM_AGENT_NAME", &worker_name);
-        cmd.current_dir(&wt_display);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
-        cmd.process_group(0);
-
-        cmd.spawn()?
+        build_spawn_command(&config, &wt_display, &worker_name, &worker_system, &ticket_content, skip_permissions, &log_path)?
     };
     let pid = child.id();
 
-    let mut t_pid = t.clone();
-    t_pid.frontmatter.agent = Some(pid.to_string());
-    let pid_content = t_pid.serialize()?;
-    let rel_path_pid = format!(
-        "{}/{}",
-        config.tickets.dir.to_string_lossy(),
-        t.path.file_name().unwrap().to_string_lossy()
-    );
-    git::commit_to_branch(root, &branch, &rel_path_pid, &pid_content, &format!("ticket({id}): set agent to worker PID {pid}"))?;
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
 

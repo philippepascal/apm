@@ -57,11 +57,10 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
                     drain_announced = true;
                 }
                 // Reap finished workers during drain.
-                workers.retain_mut(|(id, child, pid_path)| {
+                workers.retain_mut(|(id, child, _pid_path)| {
                     let done = matches!(child.try_wait(), Ok(Some(_)));
                     if done {
                         log(&format!("Worker for ticket #{id} finished"));
-                        let _ = std::fs::remove_file(pid_path);
                     }
                     !done
                 });
@@ -78,11 +77,10 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
 
         // Reap finished workers.
         let mut reaped = false;
-        workers.retain_mut(|(id, child, pid_path)| {
+        workers.retain_mut(|(id, child, _pid_path)| {
             let done = matches!(child.try_wait(), Ok(Some(_)));
             if done {
                 log(&format!("Worker for ticket #{id} finished"));
-                let _ = std::fs::remove_file(pid_path);
                 reaped = true;
             }
             !done

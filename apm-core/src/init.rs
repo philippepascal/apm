@@ -4,6 +4,67 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
+/// What happened when we tried to write a default file.
+enum WriteAction {
+    Created,
+    Unchanged,
+    Replaced,
+    InitWritten,
+    Skipped,
+}
+
+/// Write `content` to `path`. If the file already exists and differs from the
+/// default, prompt the user: [s]kip, [r]eplace, or write a .init copy for
+/// comparison. In non-interactive mode, silently writes the .init copy.
+fn write_default(path: &Path, content: &str, label: &str) -> Result<WriteAction> {
+    if !path.exists() {
+        std::fs::write(path, content)?;
+        println!("Created {label}");
+        return Ok(WriteAction::Created);
+    }
+
+    let existing = std::fs::read_to_string(path)?;
+    if existing == content {
+        return Ok(WriteAction::Unchanged);
+    }
+
+    if !std::io::stdin().is_terminal() {
+        let init_path = init_path_for(path);
+        std::fs::write(&init_path, content)?;
+        println!("{label} differs from default — wrote {}.init for comparison", label);
+        return Ok(WriteAction::InitWritten);
+    }
+
+    print!("{label} exists and differs from default. [s]kip / [r]eplace / [c]ompare (.init)? ");
+    std::io::stdout().flush()?;
+    let mut line = String::new();
+    std::io::stdin().read_line(&mut line)?;
+    match line.trim().to_ascii_lowercase().as_str() {
+        "r" | "replace" => {
+            std::fs::write(path, content)?;
+            println!("Replaced {label}");
+            Ok(WriteAction::Replaced)
+        }
+        "c" | "compare" => {
+            let init_path = init_path_for(path);
+            std::fs::write(&init_path, content)?;
+            println!("Wrote {label}.init — compare with your version and delete when done");
+            Ok(WriteAction::InitWritten)
+        }
+        _ => {
+            println!("Skipped {label}");
+            Ok(WriteAction::Skipped)
+        }
+    }
+}
+
+/// foo.toml → foo.toml.init, agents.md → agents.md.init
+fn init_path_for(path: &Path) -> std::path::PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".init");
+    path.with_file_name(name)
+}
+
 pub fn setup(root: &Path) -> Result<()> {
     let tickets_dir = root.join("tickets");
     if !tickets_dir.exists() {
@@ -14,46 +75,67 @@ pub fn setup(root: &Path) -> Result<()> {
     let apm_dir = root.join(".apm");
     std::fs::create_dir_all(&apm_dir)?;
 
+    let local_toml = apm_dir.join("local.toml");
+    let is_tty = std::io::stdin().is_terminal();
+
+    // Prompt for username and write local.toml (any init, not just first)
+    let username = if is_tty && !local_toml.exists() {
+        let u = prompt_username()?;
+        if !u.is_empty() {
+            write_local_toml(&apm_dir, &u)?;
+            println!("Created .apm/local.toml");
+            u
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
     let config_path = apm_dir.join("config.toml");
     if !config_path.exists() {
         let default_name = root
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("project");
-        let (name, description) = if std::io::stdin().is_terminal() {
+        let (name, description) = if is_tty {
             prompt_project_info(default_name)?
         } else {
             (default_name.to_string(), String::new())
         };
+        let collaborators: Vec<&str> = if username.is_empty() {
+            vec![]
+        } else {
+            vec![username.as_str()]
+        };
         let branch = detect_default_branch(root);
-        std::fs::write(&config_path, default_config(&name, &description, &branch))?;
+        std::fs::write(&config_path, default_config(&name, &description, &branch, &collaborators))?;
         println!("Created .apm/config.toml");
+    } else {
+        // Extract project values from existing config to generate a
+        // comparable default (so the .init file has the right name/branch).
+        let existing = std::fs::read_to_string(&config_path)?;
+        if let Ok(val) = existing.parse::<toml::Value>() {
+            let name = val.get("project")
+                .and_then(|p| p.get("name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("project");
+            let description = val.get("project")
+                .and_then(|p| p.get("description"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let branch = val.get("project")
+                .and_then(|p| p.get("default_branch"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("main");
+            write_default(&config_path, &default_config(name, description, branch, &[]), ".apm/config.toml")?;
+        }
     }
-    let workflow_path = apm_dir.join("workflow.toml");
-    if !workflow_path.exists() {
-        std::fs::write(&workflow_path, default_workflow_toml())?;
-        println!("Created .apm/workflow.toml");
-    }
-    let ticket_path = apm_dir.join("ticket.toml");
-    if !ticket_path.exists() {
-        std::fs::write(&ticket_path, default_ticket_toml())?;
-        println!("Created .apm/ticket.toml");
-    }
-    let agents_path = apm_dir.join("agents.md");
-    if !agents_path.exists() {
-        std::fs::write(&agents_path, default_agents_md())?;
-        println!("Created .apm/agents.md");
-    }
-    let spec_writer_path = apm_dir.join("apm.spec-writer.md");
-    if !spec_writer_path.exists() {
-        std::fs::write(&spec_writer_path, include_str!("apm.spec-writer.md"))?;
-        println!("Created .apm/apm.spec-writer.md");
-    }
-    let worker_md_path = apm_dir.join("apm.worker.md");
-    if !worker_md_path.exists() {
-        std::fs::write(&worker_md_path, include_str!("apm.worker.md"))?;
-        println!("Created .apm/apm.worker.md");
-    }
+    write_default(&apm_dir.join("workflow.toml"), default_workflow_toml(), ".apm/workflow.toml")?;
+    write_default(&apm_dir.join("ticket.toml"), default_ticket_toml(), ".apm/ticket.toml")?;
+    write_default(&apm_dir.join("agents.md"), default_agents_md(), ".apm/agents.md")?;
+    write_default(&apm_dir.join("apm.spec-writer.md"), include_str!("apm.spec-writer.md"), ".apm/apm.spec-writer.md")?;
+    write_default(&apm_dir.join("apm.worker.md"), include_str!("apm.worker.md"), ".apm/apm.worker.md")?;
     ensure_claude_md(root, ".apm/agents.md")?;
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore)?;
@@ -119,7 +201,7 @@ pub fn detect_default_branch(root: &Path) -> String {
 }
 
 pub fn ensure_gitignore(path: &Path) -> Result<()> {
-    let entries = ["tickets/NEXT_ID"];
+    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;
@@ -205,17 +287,22 @@ fn toml_escape(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-fn default_config(name: &str, description: &str, default_branch: &str) -> String {
+fn default_config(name: &str, description: &str, default_branch: &str, collaborators: &[&str]) -> String {
     let log_file = default_log_file(name);
     let name = toml_escape(name);
     let description = toml_escape(description);
     let default_branch = toml_escape(default_branch);
     let log_file = toml_escape(&log_file);
+    let collaborators_line = {
+        let items: Vec<String> = collaborators.iter().map(|u| format!("\"{}\"", toml_escape(u))).collect();
+        format!("collaborators = [{}]", items.join(", "))
+    };
     format!(
         r##"[project]
 name = "{name}"
 description = "{description}"
 default_branch = "{default_branch}"
+{collaborators_line}
 
 [tickets]
 dir = "tickets"
@@ -227,11 +314,34 @@ dir = "../{name}--worktrees"
 max_concurrent = 3
 instructions = ".apm/agents.md"
 
+[workers]
+command = "claude"
+args = ["--print"]
+
 [logging]
 enabled = false
 file = "{log_file}"
 "##
     )
+}
+
+fn prompt_username() -> Result<String> {
+    let mut stdout = std::io::stdout();
+    let stdin = std::io::stdin();
+    print!("Username []: ");
+    stdout.flush()?;
+    let mut input = String::new();
+    stdin.read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()> {
+    let path = apm_dir.join("local.toml");
+    if !path.exists() {
+        let username_escaped = toml_escape(username);
+        std::fs::write(&path, format!("username = \"{username_escaped}\"\n"))?;
+    }
+    Ok(())
 }
 
 fn default_workflow_toml() -> &'static str {
@@ -250,6 +360,7 @@ id           = "groomed"
 label        = "Groomed"
 color        = "#6366f1"
 actionable   = ["agent"]
+dep_requires = "spec"
 instructions = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
@@ -259,31 +370,36 @@ color      = "#f59e0b"
 actionable = ["supervisor"]
 
 [[workflow.states]]
-id         = "specd"
-label      = "Specd"
-color      = "#3b82f6"
-actionable = ["supervisor"]
+id             = "specd"
+label          = "Specd"
+color          = "#3b82f6"
+actionable     = ["supervisor"]
+satisfies_deps = "spec"
 
 [[workflow.states]]
-id           = "ammend"
-label        = "Ammend"
-color        = "#ef4444"
-actionable   = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
+id             = "ammend"
+label          = "Ammend"
+color          = "#ef4444"
+actionable     = ["agent"]
+dep_requires   = "spec"
+satisfies_deps = "spec"
+instructions   = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
-id           = "in_design"
-label        = "In Design"
-color        = "#f97316"
-actionable   = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
+id             = "in_design"
+label          = "In Design"
+color          = "#f97316"
+actionable     = ["agent"]
+satisfies_deps = "spec"
+instructions   = ".apm/apm.spec-writer.md"
 
 [[workflow.states]]
-id           = "ready"
-label        = "Ready"
-color        = "#10b981"
-actionable   = ["agent"]
-instructions = ".apm/apm.worker.md"
+id             = "ready"
+label          = "Ready"
+color          = "#10b981"
+actionable     = ["agent"]
+satisfies_deps = "spec"
+instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -291,10 +407,11 @@ instructions = ".apm/apm.worker.md"
   actor   = "agent"
 
 [[workflow.states]]
-id           = "in_progress"
-label        = "In Progress"
-color        = "#8b5cf6"
-instructions = ".apm/apm.worker.md"
+id             = "in_progress"
+label          = "In Progress"
+color          = "#8b5cf6"
+satisfies_deps = "spec"
+instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "implemented"
@@ -318,10 +435,11 @@ actionable = ["supervisor"]
   actor   = "supervisor"
 
 [[workflow.states]]
-id         = "implemented"
-label      = "Implemented"
-color      = "#06b6d4"
-actionable = ["supervisor"]
+id             = "implemented"
+label          = "Implemented"
+color          = "#06b6d4"
+actionable     = ["supervisor"]
+satisfies_deps = true
 
 [[workflow.states]]
 id       = "closed"
@@ -505,6 +623,9 @@ mod tests {
         ensure_gitignore(&path).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("tickets/NEXT_ID"));
+        assert!(contents.contains(".apm/local.toml"));
+        assert!(contents.contains(".apm/sessions.json"));
+        assert!(contents.contains(".apm/credentials.json"));
     }
 
     #[test]
@@ -635,7 +756,139 @@ mod tests {
         let name = r#"my\"project"#;
         let description = r#"desc with "quotes" and \backslash"#;
         let branch = "main";
-        let config = default_config(name, description, branch);
+        let config = default_config(name, description, branch, &[]);
         toml::from_str::<toml::Value>(&config).expect("default_config output must be valid TOML");
+    }
+
+    #[test]
+    fn write_local_toml_creates_file() {
+        let tmp = TempDir::new().unwrap();
+        write_local_toml(tmp.path(), "alice").unwrap();
+        let contents = std::fs::read_to_string(tmp.path().join("local.toml")).unwrap();
+        assert!(contents.contains("username = \"alice\""));
+    }
+
+    #[test]
+    fn write_local_toml_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        write_local_toml(tmp.path(), "alice").unwrap();
+        let first = std::fs::read_to_string(tmp.path().join("local.toml")).unwrap();
+        write_local_toml(tmp.path(), "bob").unwrap();
+        let second = std::fs::read_to_string(tmp.path().join("local.toml")).unwrap();
+        assert_eq!(first, second);
+        assert!(second.contains("alice"));
+    }
+
+    #[test]
+    fn setup_non_tty_no_local_toml() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path()).unwrap();
+        assert!(!tmp.path().join(".apm/local.toml").exists());
+    }
+
+    #[test]
+    fn default_config_with_collaborators() {
+        let config = default_config("proj", "desc", "main", &["alice"]);
+        let parsed: toml::Value = toml::from_str(&config).unwrap();
+        let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
+        assert_eq!(collaborators.len(), 1);
+        assert_eq!(collaborators[0].as_str().unwrap(), "alice");
+    }
+
+    #[test]
+    fn default_config_empty_collaborators() {
+        let config = default_config("proj", "desc", "main", &[]);
+        let parsed: toml::Value = toml::from_str(&config).unwrap();
+        let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
+        assert!(collaborators.is_empty());
+    }
+
+    #[test]
+    fn write_default_creates_new_file() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("test.toml");
+        let action = write_default(&path, "content", "test.toml").unwrap();
+        assert!(matches!(action, WriteAction::Created));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "content");
+    }
+
+    #[test]
+    fn write_default_unchanged_when_identical() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("test.toml");
+        std::fs::write(&path, "content").unwrap();
+        let action = write_default(&path, "content", "test.toml").unwrap();
+        assert!(matches!(action, WriteAction::Unchanged));
+    }
+
+    #[test]
+    fn write_default_non_tty_writes_init_when_differs() {
+        // In test context stdin is not a terminal, so this exercises
+        // the non-interactive path: write .init copy.
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("test.toml");
+        std::fs::write(&path, "modified").unwrap();
+        let action = write_default(&path, "default", "test.toml").unwrap();
+        assert!(matches!(action, WriteAction::InitWritten));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "modified");
+        assert_eq!(
+            std::fs::read_to_string(tmp.path().join("test.toml.init")).unwrap(),
+            "default"
+        );
+    }
+
+    #[test]
+    fn init_path_for_preserves_extension() {
+        let p = std::path::Path::new("/a/b/workflow.toml");
+        assert_eq!(init_path_for(p), std::path::PathBuf::from("/a/b/workflow.toml.init"));
+
+        let p = std::path::Path::new("/a/b/agents.md");
+        assert_eq!(init_path_for(p), std::path::PathBuf::from("/a/b/agents.md.init"));
+    }
+
+    #[test]
+    fn setup_writes_init_files_when_content_differs() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        // First setup: creates all files
+        setup(tmp.path()).unwrap();
+
+        // Modify a file
+        let workflow = tmp.path().join(".apm/workflow.toml");
+        std::fs::write(&workflow, "# custom workflow\n").unwrap();
+
+        // Second setup (non-tty): should write .init copy
+        setup(tmp.path()).unwrap();
+        assert!(tmp.path().join(".apm/workflow.toml.init").exists());
+        // Original should be untouched
+        assert_eq!(std::fs::read_to_string(&workflow).unwrap(), "# custom workflow\n");
+        // .init should have the default content
+        let init_content = std::fs::read_to_string(tmp.path().join(".apm/workflow.toml.init")).unwrap();
+        assert_eq!(init_content, default_workflow_toml());
+    }
+
+    #[test]
+    fn setup_writes_config_init_when_modified() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path()).unwrap();
+
+        // Modify config.toml (add a custom section)
+        let config_path = tmp.path().join(".apm/config.toml");
+        let mut content = std::fs::read_to_string(&config_path).unwrap();
+        content.push_str("\n[custom]\nfoo = \"bar\"\n");
+        std::fs::write(&config_path, &content).unwrap();
+
+        // Second setup (non-tty): should write config.toml.init
+        setup(tmp.path()).unwrap();
+        assert!(tmp.path().join(".apm/config.toml.init").exists());
+        // Original should be untouched
+        assert!(std::fs::read_to_string(&config_path).unwrap().contains("[custom]"));
+        // .init should be the default for this project's name/branch
+        let init_content = std::fs::read_to_string(tmp.path().join(".apm/config.toml.init")).unwrap();
+        assert!(!init_content.contains("[custom]"));
+        assert!(init_content.contains("[project]"));
+        assert!(init_content.contains("[workers]"));
     }
 }

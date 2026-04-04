@@ -22,10 +22,9 @@ pub fn run_engine_loop(
         }
 
         let mut reaped = false;
-        workers.retain_mut(|(_, child, pid_path)| {
+        workers.retain_mut(|(_, child, _pid_path)| {
             let done = matches!(child.try_wait(), Ok(Some(_)));
             if done {
-                let _ = std::fs::remove_file(pid_path);
                 reaped = true;
             }
             !done
