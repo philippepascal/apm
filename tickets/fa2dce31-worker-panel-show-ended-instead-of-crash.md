@@ -40,7 +40,37 @@ The fix must be **config-based** — a new boolean field on state definitions in
 
 ### Approach
 
-How the implementation will work.
+**1. Add `worker_end` to `StateConfig` — `apm-core/src/config.rs`**
+
+Add a `worker_end: bool` field (with `#[serde(default)]`) to `StateConfig`, parallel to the existing `terminal: bool` field. No other changes to config loading are needed.
+
+**2. Update `collect_workers()` — `apm-server/src/workers.rs`**
+
+Build a single `ended_states` set that is the union of `terminal` and `worker_end` states:
+
+```rust
+let ended_states: std::collections::HashSet<&str> = config
+    .workflow.states.iter()
+    .filter(|s| s.terminal || s.worker_end)
+    .map(|s| s.id.as_str())
+    .collect();
+```
+
+Pass `&ended_states` to `determine_status()` in place of the current `&terminal_states`.
+
+**3. Rename parameter in `determine_status()`**
+
+Rename the third parameter from `terminal_states` to `ended_states`. Logic is unchanged — the function remains a three-branch match on alive / ended / crashed.
+
+**4. Update `.apm/workflow.toml`**
+
+Add `worker_end = true` to the `specd` and `implemented` state blocks. These are the two states where a worker exits cleanly (spec-writer finishes at `specd`, implementer at `implemented`).
+
+**5. Update tests**
+
+In `apm-server/src/workers.rs`: update `determine_status_dead_terminal_shows_ended` to cover a `worker_end`-only state (e.g. `specd`) returning `"ended"`, and confirm a state in neither set still returns `"crashed"`.
+
+In `apm-core/src/config.rs`: add unit tests asserting `worker_end` parses as `true` when set and defaults to `false` when absent.
 
 ### Open questions
 
