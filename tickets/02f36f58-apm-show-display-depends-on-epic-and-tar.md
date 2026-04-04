@@ -24,7 +24,7 @@ These fields are fully parsed and stored in the `Frontmatter` struct (see `apm-c
 - [x] `apm show <id>` prints an `epic:` line when the ticket's `epic` frontmatter field is set
 - [x] `apm show <id>` prints a `target_branch:` line when the ticket's `target_branch` frontmatter field is set
 - [x] `apm show <id>` prints a `depends_on:` line when the ticket's `depends_on` frontmatter field is set and non-empty
-- [ ] `apm show <id>` omits the `epic:` line entirely when the field is absent
+- [x] `apm show <id>` omits the `epic:` line entirely when the field is absent
 - [ ] `apm show <id>` omits the `target_branch:` line entirely when the field is absent
 - [ ] `apm show <id>` omits the `depends_on:` line entirely when the field is absent or empty
 - [ ] The three new lines appear in the header block (before the blank line that separates frontmatter from the body), after the existing `branch:` line
