@@ -1026,11 +1026,12 @@ async fn create_ticket(
     };
     let result = tokio::task::spawn_blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
+        let author = apm_core::config::resolve_identity(&root);
         apm_core::ticket::create(
             &root,
             &config,
             title,
-            "apm-ui".to_string(),
+            author,
             None,
             None,
             false,
