@@ -142,7 +142,7 @@ Use the existing `make_ticket` helper; extend it or create a `make_ticket_with_o
 
 ### Amendment requests
 
-- [ ] Rename `agent` to `owner` throughout: the `list_filtered` parameter is `owner_filter` (not `agent_filter`), the field reference is `fm.owner` (not `fm.agent`), and the CLI flag is `--owner` (already correct in title)
+- [x] Rename `agent` to `owner` throughout: the `list_filtered` parameter is `owner_filter` (not `agent_filter`), the field reference is `fm.owner` (not `fm.agent`), and the CLI flag is `--owner` (already correct in title)
 - [ ] Update approach code snippets: `fm.agent.as_deref()` → `fm.owner.as_deref()`, parameter names in `list_filtered` signature
 
 ### Code review
