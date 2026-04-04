@@ -18,7 +18,9 @@ depends_on = ["42f4b3ba"]
 
 ### Problem
 
-The `/api/tickets` endpoint returns `author` but not `owner` in its response. The `ListTicketsQuery` struct supports `?author=` but not `?owner=`. The UI cannot display or filter by ticket ownership until the server exposes the field and supports the query parameter.
+The `/api/tickets` list endpoint does not expose the `agent` field (the person or AI agent currently assigned to work on a ticket). The `ListTicketsQuery` struct supports `?author=` filtering but has no `?agent=` query parameter.
+
+Ticket #42f4b3ba adds `agent: Option<String>` to `Frontmatter`. Because `TicketResponse` flattens `Frontmatter` via `#[serde(flatten)]`, the field will appear in responses automatically once the dependency lands — but only when non-null (`skip_serializing_if = "Option::is_none"`). The missing piece is the server-side `?agent=` query param, which the UI's agent filter dropdown needs to perform filtered fetches rather than client-side filtering over the full ticket list.
 
 ### Acceptance criteria
 
