@@ -28,7 +28,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result
         println!("{} — {}", fm.id, fm.title);
         println!("state:    {}", fm.state);
         println!("priority: {}  effort: {}  risk: {}", fm.priority, fm.effort, fm.risk);
-        if let Some(a) = &fm.agent { println!("agent:    {a}"); }
         if let Some(b) = &fm.branch { println!("branch:   {b}"); }
         println!();
         print!("{}", t.body);

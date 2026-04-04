@@ -7,9 +7,10 @@ import { useLayoutStore } from '../../store/useLayoutStore'
 interface SwimlaneProps {
   state: string
   tickets: Ticket[]
+  showAuthor?: boolean
 }
 
-export default function Swimlane({ state, tickets }: SwimlaneProps) {
+export default function Swimlane({ state, tickets, showAuthor }: SwimlaneProps) {
   const colors = getStateColors(state)
   const { selectedTicketIds, selectColumn, deselectColumn } = useLayoutStore()
   const columnIds = tickets.map((t) => t.id)
@@ -51,7 +52,7 @@ export default function Swimlane({ state, tickets }: SwimlaneProps) {
       </div>
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 p-2">
         {tickets.map((ticket) => (
-          <TicketCard key={ticket.id} ticket={ticket} columnTicketIds={columnIds} />
+          <TicketCard key={ticket.id} ticket={ticket} columnTicketIds={columnIds} showAuthor={showAuthor} />
         ))}
       </div>
     </div>
