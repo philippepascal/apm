@@ -29,7 +29,10 @@ The desired behaviour is that running workers always appear at the top, and cras
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Sorting by any field other than status (e.g. elapsed time, agent name, ticket title)
+- User-configurable sort order
+- Sorting the priority queue panel (PriorityQueuePanel.tsx)
+- Any changes to the server-side /api/workers response
 
 ### Approach
 
