@@ -1,14 +1,14 @@
 +++
 id = "133a9b13"
 title = "apm init: keep default templates and gitignore entries in sync with new features"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm"
 branch = "ticket/133a9b13-apm-init-keep-default-templates-and-giti"
 created_at = "2026-04-03T23:40:56.352188Z"
-updated_at = "2026-04-03T23:40:56.352188Z"
+updated_at = "2026-04-04T06:01:49.073590Z"
 +++
 
 ## Spec
@@ -49,3 +49,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-03T23:40Z | — | new | apm |
+| 2026-04-04T06:01Z | new | groomed | apm |
