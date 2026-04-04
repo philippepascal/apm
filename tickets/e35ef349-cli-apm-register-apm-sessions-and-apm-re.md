@@ -36,7 +36,7 @@ The desired behaviour is three new subcommands — `apm register`, `apm sessions
 - [x] `apm sessions` exits non-zero and prints a human-readable error when the server is not reachable
 - [x] `apm revoke <username>` removes all sessions for that user and prints how many were revoked
 - [x] `apm revoke <username>` exits 0 and prints "No sessions found for <username>." when no sessions exist for that user
-- [ ] `apm revoke <username> --device <hint>` removes only sessions whose device hint matches and exits 0
+- [x] `apm revoke <username> --device <hint>` removes only sessions whose device hint matches and exits 0
 - [ ] `apm revoke --all` removes every session for every user and prints the total count revoked
 - [ ] `apm revoke` exits non-zero and prints a human-readable error when the server is not reachable
 - [ ] `GET /api/auth/sessions` returns HTTP 403 when the request originates from a non-localhost address
