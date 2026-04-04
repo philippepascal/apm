@@ -25,19 +25,19 @@ Ticket #90ebf40b already implements the localhost case of `/api/me` (reading `.a
 
 ### Acceptance criteria
 
-- [ ] `POST /api/auth/otp` from 127.0.0.1 with body `{"username": "alice"}` returns HTTP 200 and `{"otp": "<8-char alphanumeric>"}`
-- [ ] `POST /api/auth/otp` from a non-loopback IP returns HTTP 403
-- [ ] `POST /api/auth/otp` with a missing or malformed body returns HTTP 400
-- [ ] Two consecutive `POST /api/auth/otp` calls for the same username replace the first OTP (only one active OTP per user at a time)
-- [ ] A stored OTP has a creation timestamp and a 5-minute TTL; the OTP store's `validate_otp` function returns an error for an expired OTP
-- [ ] `validate_otp(username, otp)` returns `Ok(())` on the first correct call and an error on a second call with the same OTP (single-use)
-- [ ] `GET /api/me` from 127.0.0.1 returns `{"username": "<value>"}` matching the `username` field in `.apm/local.toml`
-- [ ] `GET /api/me` from 127.0.0.1 when `.apm/local.toml` is absent or has no `username` field returns `{"username": "unassigned"}`
-- [ ] `GET /api/me` from a remote IP with a valid, non-expired `__Host-apm-session` cookie returns `{"username": "<session username>"}`
-- [ ] `GET /api/me` from a remote IP with an expired `__Host-apm-session` cookie returns `{"username": "unassigned"}`
-- [ ] `GET /api/me` from a remote IP with no session cookie returns `{"username": "unassigned"}`
-- [ ] Sessions survive a server restart: the session store is loaded from `.apm/sessions.json` at startup and written to it when entries are added
-- [ ] Session entries older than 7 days are not returned as valid by the session store lookup
+- [x] `POST /api/auth/otp` from 127.0.0.1 with body `{"username": "alice"}` returns HTTP 200 and `{"otp": "<8-char alphanumeric>"}`
+- [x] `POST /api/auth/otp` from a non-loopback IP returns HTTP 403
+- [x] `POST /api/auth/otp` with a missing or malformed body returns HTTP 400
+- [x] Two consecutive `POST /api/auth/otp` calls for the same username replace the first OTP (only one active OTP per user at a time)
+- [x] A stored OTP has a creation timestamp and a 5-minute TTL; the OTP store's `validate_otp` function returns an error for an expired OTP
+- [x] `validate_otp(username, otp)` returns `Ok(())` on the first correct call and an error on a second call with the same OTP (single-use)
+- [x] `GET /api/me` from 127.0.0.1 returns `{"username": "<value>"}` matching the `username` field in `.apm/local.toml`
+- [x] `GET /api/me` from 127.0.0.1 when `.apm/local.toml` is absent or has no `username` field returns `{"username": "unassigned"}`
+- [x] `GET /api/me` from a remote IP with a valid, non-expired `__Host-apm-session` cookie returns `{"username": "<session username>"}`
+- [x] `GET /api/me` from a remote IP with an expired `__Host-apm-session` cookie returns `{"username": "unassigned"}`
+- [x] `GET /api/me` from a remote IP with no session cookie returns `{"username": "unassigned"}`
+- [x] Sessions survive a server restart: the session store is loaded from `.apm/sessions.json` at startup and written to it when entries are added
+- [x] Session entries older than 7 days are not returned as valid by the session store lookup
 
 ### Out of scope
 
