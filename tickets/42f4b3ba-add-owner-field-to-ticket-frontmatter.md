@@ -28,10 +28,14 @@ The ticket frontmatter has `author` (who created it) and `supervisor` (who revie
 
 ### Out of scope
 
-- Clearing `agent` automatically when a ticket leaves an active state (e.g. transitions to `specd`, `blocked`, or `closed`) — ownership tracking is intentionally sticky
-- UI changes to the TicketCard or TicketDetail components (the UI already reads `ticket.agent` and renders it; once the API returns the field the UI will work)
-- Back-filling `agent` on existing tickets in git history
+- Clearing `owner` automatically when a ticket leaves an active state — ownership tracking is intentionally sticky
+- Back-filling `owner` on existing tickets in git history
 - Enforcing that only one agent can own a ticket at a time
+- Setting `owner` on `apm start` or `apm state in_design` transitions — covered by ticket ffaad988
+- CLI filtering (`apm list --owner`) — covered by ticket b5b9b728
+- API filtering (`GET /api/tickets?owner=`) and returning `owner` in API responses — covered by ticket 2b7c4c97
+- UI filter wiring — covered by ticket 8f7dc4a3
+- `apm take` / `apm assign` ownership handoff — covered by ticket 01dbdaad
 
 ### Approach
 
