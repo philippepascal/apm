@@ -119,7 +119,7 @@ if new_state == "in_design" {
 
 ### Amendment requests
 
-- [ ] Rename `agent` to `owner` throughout: acceptance criteria, approach code snippets, test names, warning messages, and commit messages
+- [x] Rename `agent` to `owner` throughout: acceptance criteria, approach code snippets, test names, warning messages, and commit messages
 - [ ] `fm.agent` → `fm.owner`, `agent_can_claim` → `owner_can_claim`, `apm set <id> agent` → `apm set <id> owner` in the warning message
 
 ### Code review
