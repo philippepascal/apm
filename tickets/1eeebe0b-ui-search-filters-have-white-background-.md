@@ -23,7 +23,13 @@ Affected file: apm-ui/src/components/supervisor/SupervisorView.tsx, lines 201, 2
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The search text input in the Supervisor filter toolbar has a dark background (not white) consistent with the dark UI theme
+- [ ] The state filter select has a dark background consistent with the dark UI theme
+- [ ] The agent filter select has a dark background consistent with the dark UI theme
+- [ ] The author filter select has a dark background consistent with the dark UI theme
+- [ ] The epic filter select has a dark background consistent with the dark UI theme
+- [ ] Text inside all five filter controls is legible against the dark background
+- [ ] The filter controls retain their functional behaviour (filtering still works correctly)
 
 ### Out of scope
 
