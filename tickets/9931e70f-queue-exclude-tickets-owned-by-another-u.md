@@ -33,7 +33,11 @@ The priority queue (`/api/queue` and `apm next`) shows all tickets actionable by
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Filtering `apm list` by ownership (that filter is `--agent` and is covered by ticket 42f4b3ba)
+- Enforcing ownership at write time (tickets can still be started by anyone; the queue filter is advisory, not a lock)
+- Adding auth to the `/api/queue` endpoint (authentication is handled by the broader user-mgmt epic)
+- Clearing `agent` on any state transition (ownership is sticky by design, per ticket ffaad988)
+- Back-filling ownership on existing tickets
 
 ### Approach
 
