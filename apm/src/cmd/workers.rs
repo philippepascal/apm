@@ -14,6 +14,13 @@ pub fn run(root: &Path, log_id: Option<&str>, kill_id: Option<&str>) -> Result<(
 
 fn list(root: &Path) -> Result<()> {
     let config = Config::load(root)?;
+    let ended_states: std::collections::HashSet<&str> = config
+        .workflow
+        .states
+        .iter()
+        .filter(|s| s.terminal || s.worker_end)
+        .map(|s| s.id.as_str())
+        .collect();
     let worktrees = git::list_ticket_worktrees(root)?;
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir).unwrap_or_default();
 
@@ -49,7 +56,12 @@ fn list(root: &Path) -> Result<()> {
         let state = if alive {
             t.map(|t| t.frontmatter.state.as_str()).unwrap_or("—").to_string()
         } else {
-            "crashed".to_string()
+            let ticket_state = t.map(|t| t.frontmatter.state.as_str()).unwrap_or("");
+            if ended_states.contains(ticket_state) {
+                ticket_state.to_string()
+            } else {
+                "crashed".to_string()
+            }
         };
 
         let pid_col = if alive {
@@ -143,6 +155,42 @@ fn kill(root: &Path, id_arg: &str) -> Result<()> {
     }
     println!("killed worker for ticket #{id} (PID {})", pid);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    fn make_ended_states(ids: &[&'static str]) -> std::collections::HashSet<&'static str> {
+        ids.iter().cloned().collect()
+    }
+
+    fn dead_worker_state(ticket_state: &str, ended_states: &std::collections::HashSet<&str>) -> String {
+        if ended_states.contains(ticket_state) {
+            ticket_state.to_string()
+        } else {
+            "crashed".to_string()
+        }
+    }
+
+    #[test]
+    fn dead_worker_end_state_shows_state() {
+        let ended = make_ended_states(&["specd", "implemented"]);
+        assert_eq!(dead_worker_state("specd", &ended), "specd");
+        assert_eq!(dead_worker_state("implemented", &ended), "implemented");
+    }
+
+    #[test]
+    fn dead_terminal_state_shows_state() {
+        let ended = make_ended_states(&["closed", "specd", "implemented"]);
+        assert_eq!(dead_worker_state("closed", &ended), "closed");
+    }
+
+    #[test]
+    fn dead_non_ended_state_shows_crashed() {
+        let ended = make_ended_states(&["specd", "implemented", "closed"]);
+        assert_eq!(dead_worker_state("in_progress", &ended), "crashed");
+        assert_eq!(dead_worker_state("ready", &ended), "crashed");
+        assert_eq!(dead_worker_state("", &ended), "crashed");
+    }
 }
 
 fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String)> {
