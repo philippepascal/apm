@@ -2,7 +2,7 @@ export interface Ticket {
   id: string
   title: string
   state: string
-  agent?: string
+  owner?: string
   author?: string
   effort?: number
   risk?: number

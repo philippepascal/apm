@@ -1608,6 +1608,100 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
+// ── apm start: owner guard ───────────────────────────────────────────────────
+
+fn write_ticket_with_owner(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, owner: &str) {
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\nowner = \"{owner}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn start_sets_owner_when_unowned() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+
+    std::env::set_var("APM_AGENT_NAME", "alice");
+    apm::cmd::start::run(p, "1", true, false, false, "alice").unwrap();
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(content.contains("owner = \"alice\""), "owner should be set when unowned: {content}");
+}
+
+#[test]
+fn start_sets_owner_when_same_owner_resumes() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "alice");
+
+    std::env::set_var("APM_AGENT_NAME", "alice");
+    apm::cmd::start::run(p, "1", true, false, false, "alice").unwrap();
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(content.contains("owner = \"alice\""), "owner should stay alice when same owner resumes: {content}");
+}
+
+#[test]
+fn start_does_not_overwrite_different_owner() {
+    let dir = setup_with_local_worktrees();
+    let p = dir.path();
+    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "alice");
+
+    std::env::set_var("APM_AGENT_NAME", "bob");
+    apm::cmd::start::run(p, "1", true, false, false, "bob").unwrap();
+
+    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    assert!(content.contains("owner = \"alice\""), "owner should stay alice, not be overwritten by bob: {content}");
+    assert!(!content.contains("owner = \"bob\""), "bob must not become owner: {content}");
+}
+
+// ── apm state in_design: owner guard ─────────────────────────────────────────
+
+#[test]
+fn in_design_sets_owner_when_unowned() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+
+    std::env::set_var("APM_AGENT_NAME", "alice");
+    apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
+
+    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    assert!(content.contains("owner = \"alice\""), "owner should be set when transitioning to in_design unowned: {content}");
+}
+
+#[test]
+fn in_design_does_not_overwrite_different_owner() {
+    let dir = setup_for_prompt_dispatch();
+    let p = dir.path();
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "alice");
+
+    std::env::set_var("APM_AGENT_NAME", "bob");
+    apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
+
+    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    assert!(content.contains("owner = \"alice\""), "owner should stay alice when bob transitions to in_design: {content}");
+    assert!(!content.contains("owner = \"bob\""), "bob must not become owner: {content}");
+}
+
 // ── system prompt dispatch ───────────────────────────────────────────────────
 
 /// A config with new/ammend/ready all startable, plus in_design/in_progress destinations.
