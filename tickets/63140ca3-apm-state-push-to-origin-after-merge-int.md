@@ -36,7 +36,25 @@ After the merge the local default branch is ahead of `origin/<default_branch>`. 
 
 ### Approach
 
-How the implementation will work.
+Single change in `apm-core/src/state.rs`, inside `merge_into_default`:
+
+1. After the `git merge --no-ff` succeeds (i.e. `out.status.success()` is true), add a push step:
+   ```rust
+   git::push_branch(&merge_dir, default_branch)?;
+   ```
+   This reuses the existing `push_branch` helper, which runs `git push origin <branch>:<branch>` and bails on failure.
+
+2. Update the success println to reflect the push:
+   ```
+   println!("Merged {branch} into {default_branch} and pushed to origin.");
+   ```
+
+3. Add an integration test in `apm-core/tests/` (or inline) that:
+   - Sets up a bare remote and a local clone with a ticket branch
+   - Runs `merge_into_default`
+   - Asserts that `origin/<default_branch>` contains the merge commit
+
+No other callers of `merge_into_default` exist; the blast radius is the two `CompletionStrategy` arms (`Merge` and `PrOrEpicMerge`) in `transition`.
 
 ### Open questions
 
