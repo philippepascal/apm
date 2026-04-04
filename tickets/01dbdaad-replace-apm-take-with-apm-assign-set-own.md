@@ -95,7 +95,7 @@ Delete the four `take_*` test functions. Add:
 ### Amendment requests
 
 - [x] Rename `agent` to `owner` throughout: `apm assign` sets the `owner` field (not `agent`), commit message says `assign owner = <username>`, stdout says `<id>: owner = <username>`, `set_field` arm is `"owner"`, acceptance criteria reference `owner` field
-- [ ] The `handoff()` removal and `apm take` deletion are unchanged
+- [x] The `handoff()` removal and `apm take` deletion are unchanged
 
 ### Code review
 
