@@ -33,7 +33,7 @@ External devices (phone, remote laptop) are the affected audience. The OTP from 
 - [x] `POST /api/auth/register/challenge` with an expired OTP returns HTTP 400
 - [x] `POST /api/auth/register/challenge` with a missing `username` or `otp` field returns HTTP 400
 - [x] `POST /api/auth/register/complete` with a valid `reg_id` and a correctly-signed WebAuthn response returns HTTP 200 and sets a `__Host-apm-session` session cookie
-- [ ] `POST /api/auth/register/complete` with an unknown `reg_id` returns HTTP 400
+- [x] `POST /api/auth/register/complete` with an unknown `reg_id` returns HTTP 400
 - [ ] `POST /api/auth/register/complete` with a tampered or structurally invalid WebAuthn response returns HTTP 400
 - [ ] After successful registration, `GET /api/me` with the issued session cookie returns `{"username": "alice"}`
 - [ ] Using the same OTP a second time (after it was consumed during a prior challenge call) returns HTTP 400
