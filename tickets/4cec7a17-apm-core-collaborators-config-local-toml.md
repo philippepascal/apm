@@ -34,7 +34,7 @@ Init-flow changes (prompting for username, writing `local.toml` during init) are
 - [x] `ProjectConfig` has a `collaborators: Vec<String>` field (default: empty) that parses from `[project] collaborators = ["alice", "bob"]` in `.apm/config.toml`
 - [x] The existing `LocalConfig` struct (which already has `workers: LocalWorkersOverride`) gains a `username: Option<String>` field that deserializes from `.apm/local.toml`
 - [x] `resolve_identity(repo_root)` returns the `username` from `.apm/local.toml` when present and non-empty, and returns `"unassigned"` otherwise
-- [ ] `apm new` sets `author` to the value returned by `resolve_identity` instead of `APM_AGENT_NAME`
+- [x] `apm new` sets `author` to the value returned by `resolve_identity` instead of `APM_AGENT_NAME`
 - [ ] Existing ticket files with `agent = "..."` in frontmatter parse without error; new tickets written by `apm` do not include an `agent` field
 - [ ] `ensure_gitignore` entries include `.apm/sessions.json` and `.apm/credentials.json`
 
