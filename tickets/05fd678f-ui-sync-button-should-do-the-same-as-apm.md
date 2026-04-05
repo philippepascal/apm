@@ -1,14 +1,14 @@
 +++
 id = "05fd678f"
 title = "UI sync button should do the same as apm sync"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "apm-ui"
 branch = "ticket/05fd678f-ui-sync-button-should-do-the-same-as-apm"
 created_at = "2026-04-04T18:33:04.575258Z"
-updated_at = "2026-04-04T18:33:04.575258Z"
+updated_at = "2026-04-05T21:41:03.427487Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-04T18:33Z | — | new | apm-ui |
+| 2026-04-05T21:41Z | new | groomed | apm |
