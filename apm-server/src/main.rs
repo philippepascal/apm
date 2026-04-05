@@ -479,16 +479,32 @@ async fn sync_handler(
         Some(r) => r.clone(),
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
-    let (fetch_error, branches) = tokio::task::spawn_blocking(move || {
+    let (fetch_error, branches, closed) = tokio::task::spawn_blocking(move || {
         let fetch_error = apm_core::git::fetch_all(&root).err().map(|e| e.to_string());
         apm_core::git::sync_local_ticket_refs(&root);
         let branches = apm_core::git::ticket_branches(&root)
             .map(|b| b.len())
             .unwrap_or(0);
-        (fetch_error, branches)
+        let closed = match apm_core::config::Config::load(&root) {
+            Ok(config) => {
+                match apm_core::sync::detect(&root, &config) {
+                    Ok(candidates) => {
+                        let n = candidates.close.len();
+                        if n > 0 {
+                            let aggressive = config.sync.aggressive;
+                            let _ = apm_core::sync::apply(&root, &config, &candidates, "apm-ui", aggressive);
+                        }
+                        n
+                    }
+                    Err(_) => 0,
+                }
+            }
+            Err(_) => 0,
+        };
+        (fetch_error, branches, closed)
     })
     .await?;
-    let mut resp = serde_json::json!({ "branches": branches });
+    let mut resp = serde_json::json!({ "branches": branches, "closed": closed });
     if let Some(err) = fetch_error {
         resp["fetch_error"] = serde_json::Value::String(err);
     }
