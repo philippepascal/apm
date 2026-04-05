@@ -4,12 +4,12 @@ title = "UI: add button clean"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3966a671-ui-add-button-clean"
 created_at = "2026-04-04T18:42:57.517863Z"
-updated_at = "2026-04-05T21:46:12.856202Z"
+updated_at = "2026-04-05T21:46:17.245427Z"
 +++
 
 ## Spec
