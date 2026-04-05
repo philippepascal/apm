@@ -33,7 +33,12 @@ The desired behaviour is a "Clean" button in the supervisor toolbar that calls a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `--force` clean (removing unmerged branches or dirty worktrees) — not exposed via the UI
+- `--remote` / `--older-than` remote branch deletion
+- `--branches` local branch deletion alongside worktrees
+- Dry-run preview before cleaning
+- Keyboard shortcut for the clean action
+- Confirmation dialog before cleaning
 
 ### Approach
 
