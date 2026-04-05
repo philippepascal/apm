@@ -42,7 +42,32 @@ The desired behaviour is a "Clean" button in the supervisor toolbar that calls a
 
 ### Approach
 
-How the implementation will work.
+Server changes in apm-server/src/main.rs:
+
+1. Add async fn clean_handler modelled on sync_handler:
+   - Guard: return 501 Not Implemented if state.git_root() is None
+   - In spawn_blocking: load Config, call apm_core::clean::candidates (force=false, untracked=false, dry_run=false), then call apm_core::clean::remove for each non-dirty candidate (force=false, branches=false), count removals
+   - Return JSON with "removed" count
+
+2. Register route("/api/clean", post(clean_handler)) in both router blocks (authenticated and unauthenticated), same pattern as /api/sync
+
+UI changes in apm-ui/src/components/supervisor/SupervisorView.tsx:
+
+3. Add postClean async function calling POST /api/clean, returning removed count
+
+4. Add cleanMutation via useMutation mirroring syncMutation:
+   onSuccess: invalidate tickets and ticket query keys, clear cleanError
+   onError: set cleanError state
+
+5. Add cleanError string state (same pattern as syncError)
+
+6. Add Clean button in toolbar next to Sync button:
+   - Icon: Trash2 from lucide-react (add to import)
+   - Label: Clean, title: Remove stale worktrees
+   - Disabled with spinner while cleanMutation.isPending
+   - cleanError shown as red text inline
+
+Order: server handler + route first, then UI fetch + mutation + button, then cargo test --workspace (no new tests needed; clean logic lives in apm-core which already has its own tests)
 
 ### Open questions
 
