@@ -24,6 +24,7 @@ pub struct CleanCandidate {
     pub worktree: Option<PathBuf>,
     pub reason: String,
     pub local_branch_exists: bool,
+    pub branch_merged: bool,
 }
 
 pub struct DirtyWorktree {
@@ -130,43 +131,18 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
         let id = t.frontmatter.id.clone();
         let branch_state = &t.frontmatter.state;
 
-        if !force && !merged_set.contains(branch.as_str()) {
-            eprintln!("warning: {branch} not merged — skipping");
-            continue;
-        }
+        let is_merged = merged_set.contains(branch.as_str());
 
         let local_tip = git::branch_tip(root, &branch);
-        if !force {
-            if let Some(ref tip) = local_tip {
-                if !git::is_ancestor(root, tip, default_branch) {
-                    eprintln!(
-                        "warning: {branch} tip is not a git ancestor of {default_branch} — skipping"
-                    );
-                    continue;
-                }
-            }
-        }
+        let is_ancestor = if let Some(ref tip) = local_tip {
+            git::is_ancestor(root, tip, default_branch)
+        } else {
+            true
+        };
 
-        let suffix = branch.trim_start_matches("ticket/");
-        let rel_path = format!("{}/{suffix}.md", config.tickets.dir.to_string_lossy());
-        let main_state = ticket::state_from_branch(root, default_branch, &rel_path);
-        match &main_state {
-            Some(ms) if ms != branch_state => {
-                eprintln!(
-                    "warning: {branch} state mismatch — branch={branch_state} \
-                     main={ms} — run `apm sync` to reconcile"
-                );
-                continue;
-            }
-            None => {
-                eprintln!(
-                    "warning: {branch} not found on {default_branch} — \
-                     run `apm close {id}` to reconcile"
-                );
-                continue;
-            }
-            _ => {}
-        }
+        // The branch state is authoritative — we already filtered to terminal
+        // states above. If the branch says the ticket is done, clean proceeds
+        // regardless of what main says (or whether the ticket exists on main).
 
         let wt_path = git::find_worktree_for_branch(root, &branch);
 
@@ -221,6 +197,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                             worktree: wt_path,
                             reason: branch_state.clone(),
                             local_branch_exists: lbe,
+                            branch_merged: is_merged && is_ancestor,
                         });
                     } else if untracked || diagnosis.other_untracked.is_empty() {
                         // Auto-remove: known_temp always; other_untracked if --untracked.
@@ -238,6 +215,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                             worktree: wt_path,
                             reason: branch_state.clone(),
                             local_branch_exists: lbe,
+                            branch_merged: is_merged && is_ancestor,
                         });
                     } else {
                         dirty_result.push(diagnosis);
@@ -272,6 +250,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
             worktree: wt_path,
             reason: branch_state.clone(),
             local_branch_exists,
+            branch_merged: is_merged && is_ancestor,
         });
     }
 
@@ -283,7 +262,7 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
         git::remove_worktree(root, path, force)?;
     }
 
-    if remove_branches && candidate.local_branch_exists {
+    if remove_branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
         let result = Command::new("git")
             .args([
                 "-C",
