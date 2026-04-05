@@ -1,7 +1,7 @@
 +++
 id = "3966a671"
 title = "UI: add button clean"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3966a671-ui-add-button-clean"
 created_at = "2026-04-04T18:42:57.517863Z"
-updated_at = "2026-04-05T22:12:35.241528Z"
+updated_at = "2026-04-05T22:18:11.315013Z"
 +++
 
 ## Spec
@@ -87,3 +87,4 @@ Order: server handler + route first, then UI fetch + mutation + button, then car
 | 2026-04-05T21:43Z | groomed | in_design | philippepascal |
 | 2026-04-05T21:46Z | in_design | specd | claude-0405-2143-s7w2 |
 | 2026-04-05T22:12Z | specd | ready | apm |
+| 2026-04-05T22:18Z | ready | in_progress | philippepascal |
