@@ -33,13 +33,13 @@ tickets, or take any action not driven by `apm start --next`.
 **When the queue is empty or all ready tickets are blocked:**
 4. Report back to the supervisor with a clear status summary:
    - How many workers were spawned
-   - Which tickets are blocking (specd/new/blocked) and why they can't be dispatched
+   - Which tickets are blocking (specd/groomed/blocked) and why they can't be dispatched
    Do not improvise. Do not switch to worker behaviour.
 
 ### Worker
 
-You have been assigned a single ticket. Implement it, run tests, open a PR,
-and mark it implemented. Do not spawn further workers or act as delegator.
+You have been assigned a single ticket. Implement it, run tests, and mark it
+implemented. Do not spawn further workers or act as delegator.
 
 ## Ticket format
 
@@ -66,8 +66,7 @@ Body sections (`## Spec` required):
 1. Read the relevant spec files before implementing anything
 2. Make the minimal change that satisfies the acceptance criteria
 3. Add or update tests — all acceptance criteria should be covered
-4. Run `cargo test --workspace` before opening a PR
-5. All tests must pass before opening a PR
+4. Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
 
 ## Identity
 
@@ -109,7 +108,7 @@ to do. Report back to the supervisor.
 
 The ticket's state determines what to do next:
 
-**state = `new`** — write the spec:
+**state = `groomed`** — write the spec:
 1. `apm show <id>` — read the full ticket
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
@@ -164,7 +163,7 @@ taking it over with `apm take <id>`.
    apm start --spawn <id>          # worker runs under project allow list
    apm start --spawn -P <id>       # worker runs with --dangerously-skip-permissions
    ```
-   The worker provisions the worktree, implements, pushes, and opens a PR autonomously.
+   The worker provisions the worktree, implements, and transitions to implemented autonomously.
    The supervisor gets control back immediately.
 3. Commit all code changes to the ticket branch inside the worktree:
    ```bash
@@ -174,7 +173,7 @@ taking it over with `apm take <id>`.
    git -C "$wt" commit -m "<message>"
    ```
 4. Update `## Spec` if the approach evolves during implementation
-5. Open a PR targeting `main`; then `apm state <id> implemented`
+5. `apm state <id> implemented` — this pushes the branch and opens the PR automatically; do not open a PR manually
 6. If blocked mid-implementation (missing information, upstream decision needed):
    write the question in `### Open questions`, commit it, then
    `apm state <id> blocked` — **do not use `apm state <id> ready`**, that
@@ -249,20 +248,20 @@ apm list --state ready
 **Do not use `$()` subshells:**
 ```bash
 # Wrong — triggers "command substitution" security check
-gh pr create --body "$(cat /tmp/body.md)"
+apm spec 1234 --section Problem --set "$(cat /tmp/problem.md)"
 
-# Right — write body with the Write tool, then reference by file
-gh pr create --body-file /tmp/body.md
+# Right — write content with the Write tool, then reference by file
+apm spec 1234 --section Problem --set-file /tmp/problem.md
 ```
 
 **Do not use background jobs (`&`):**
 ```bash
 # Wrong — & defeats pattern matching
-gh pr merge 1 & gh pr merge 2 & wait
+apm state 1234 implemented & apm state 5678 implemented & wait
 
 # Right — sequential calls
-gh pr merge 1
-gh pr merge 2
+apm state 1234 implemented
+apm state 5678 implemented
 ```
 
 **Use `git -C` for all git operations in worktrees:**

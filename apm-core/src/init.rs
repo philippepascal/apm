@@ -357,15 +357,22 @@ fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()> {
 }
 
 fn default_workflow_toml() -> &'static str {
-    r##"[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
+    r##"[workflow]
 
 [[workflow.states]]
 id    = "new"
 label = "New"
 color = "#6b7280"
+
+  [[workflow.states.transitions]]
+  to      = "groomed"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id           = "groomed"
@@ -375,11 +382,32 @@ actionable   = ["agent"]
 dep_requires = "spec"
 instructions = ".apm/apm.spec-writer.md"
 
+  [[workflow.states.transitions]]
+  to              = "in_design"
+  trigger         = "command:start"
+  actor           = "agent"
+  context_section = "Problem"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id         = "question"
 label      = "Question"
 color      = "#f59e0b"
 actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "groomed"
+  trigger = "manual"
+  actor   = "any"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id             = "specd"
@@ -387,6 +415,23 @@ label          = "Specd"
 color          = "#3b82f6"
 actionable     = ["supervisor"]
 satisfies_deps = "spec"
+worker_end     = true
+
+  [[workflow.states.transitions]]
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id             = "ammend"
@@ -397,13 +442,53 @@ dep_requires   = "spec"
 satisfies_deps = "spec"
 instructions   = ".apm/apm.spec-writer.md"
 
+  [[workflow.states.transitions]]
+  to            = "specd"
+  trigger       = "manual"
+  actor         = "agent"
+  preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
+
+  [[workflow.states.transitions]]
+  to      = "question"
+  trigger = "manual"
+  actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to      = "in_design"
+  trigger = "command:start"
+  actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
-id             = "in_design"
-label          = "In Design"
-color          = "#f97316"
-actionable     = ["agent"]
-satisfies_deps = "spec"
-instructions   = ".apm/apm.spec-writer.md"
+id           = "in_design"
+label        = "In Design"
+color        = "#f97316"
+instructions = ".apm/apm.spec-writer.md"
+
+  [[workflow.states.transitions]]
+  to            = "specd"
+  trigger       = "manual"
+  actor         = "agent"
+  preconditions = ["spec_not_empty", "spec_has_acceptance_criteria"]
+
+  [[workflow.states.transitions]]
+  to      = "question"
+  trigger = "manual"
+  actor   = "agent"
+
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
 id             = "ready"
@@ -418,6 +503,21 @@ instructions   = ".apm/apm.worker.md"
   trigger = "command:start"
   actor   = "agent"
 
+  [[workflow.states.transitions]]
+  to      = "ammend"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "specd"
+  trigger = "manual"
+  actor   = "supervisor"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id             = "in_progress"
 label          = "In Progress"
@@ -426,14 +526,16 @@ satisfies_deps = "spec"
 instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
-  to      = "implemented"
-  trigger = "manual"
-  actor   = "agent"
+  to         = "implemented"
+  trigger    = "manual"
+  actor      = "agent"
+  completion = "merge"
 
   [[workflow.states.transitions]]
   to      = "blocked"
-  trigger = "command:block"
+  trigger = "manual"
   actor   = "agent"
+  label   = "Agent is blocked — wrote questions in ### Open questions"
 
   [[workflow.states.transitions]]
   to           = "ready"
@@ -442,6 +544,17 @@ instructions   = ".apm/apm.worker.md"
   side_effects = ["set_agent_null"]
   warning      = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
 
+  [[workflow.states.transitions]]
+  to           = "ammend"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
+
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"
@@ -449,8 +562,15 @@ color      = "#dc2626"
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "ready"
-  trigger = "command:unblock"
+  to           = "ready"
+  trigger      = "manual"
+  actor        = "supervisor"
+  label        = "Supervisor answered questions — agent can resume"
+  side_effects = ["set_agent_null"]
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
   actor   = "supervisor"
 
 [[workflow.states]]
@@ -459,55 +579,47 @@ label          = "Implemented"
 color          = "#06b6d4"
 actionable     = ["supervisor"]
 satisfies_deps = true
+worker_end     = true
+
+  [[workflow.states.transitions]]
+  to            = "ready"
+  trigger       = "manual"
+  actor         = "supervisor"
+  side_effects  = ["set_agent_null"]
+  focus_section = "Code review"
+
+  [[workflow.states.transitions]]
+  to           = "ammend"
+  trigger      = "manual"
+  actor        = "supervisor"
+  side_effects = ["set_agent_null"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+  actor   = "any"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+  actor   = "supervisor"
 
 [[workflow.states]]
-id       = "closed"
-label    = "Closed"
-color    = "#374151"
-terminal = true
+id             = "closed"
+label          = "Closed"
+color          = "#374151"
+terminal       = true
+satisfies_deps = true
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight   = -2.0
+risk_weight     = -1.0
 "##
 }
 
 fn default_ticket_toml() -> &'static str {
-    r#"[[ticket.sections]]
-name        = "Problem"
-type        = "free"
-required    = true
-placeholder = "What is broken or missing, and why it matters."
-
-[[ticket.sections]]
-name        = "Acceptance criteria"
-type        = "tasks"
-required    = true
-placeholder = "Checkboxes; each one independently testable."
-
-[[ticket.sections]]
-name        = "Out of scope"
-type        = "free"
-required    = true
-placeholder = "Explicit list of what this ticket does not cover."
-
-[[ticket.sections]]
-name        = "Approach"
-type        = "free"
-required    = true
-placeholder = "How the implementation will work."
-
-[[ticket.sections]]
-name     = "Open questions"
-type     = "qa"
-required = false
-
-[[ticket.sections]]
-name     = "Amendment requests"
-type     = "tasks"
-required = false
-
-[[ticket.sections]]
-name     = "Code review"
-type     = "tasks"
-required = false
-"#
+    include_str!("ticket.toml")
 }
 
 fn maybe_initial_commit(root: &Path) -> Result<()> {
@@ -930,7 +1042,7 @@ mod tests {
             assert!(s.dep_requires.is_some(), "state {id} should have dep_requires");
         }
 
-        for id in ["specd", "ammend", "in_design", "ready", "in_progress", "implemented"] {
+        for id in ["specd", "ammend", "ready", "in_progress", "implemented"] {
             let s = states.iter().find(|s| s.id == id).unwrap();
             assert_ne!(s.satisfies_deps, SatisfiesDeps::Bool(false), "state {id} should have satisfies_deps");
         }

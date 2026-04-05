@@ -393,16 +393,21 @@ immediately. Update the existing tests to cover the single-item case.
         "spec commit not found on ticket branch"
     );
 
-    // ── Step 4: apm state new → specd ───────────────────────────────────────
-    // apm state reads from git blobs — no working-tree prep needed.
+    // ── Step 4: walk new → groomed → in_design → specd ────────────────────
+    // The workflow requires this path; direct new→specd is not a valid transition.
+
+    let out = env.apm_as("philippe", &["state", &ticket_id, "groomed"]);
+    assert!(out.status.success(), "apm state groomed failed:\n{}", stderr(&out));
+
+    let out = env.apm_as("test-agent", &["state", &ticket_id, "in_design"]);
+    assert!(out.status.success(), "apm state in_design failed:\n{}", stderr(&out));
 
     let out = env.apm_as("test-agent", &["state", &ticket_id, "specd"]);
     assert!(out.status.success(), "apm state specd failed:\n{}", stderr(&out));
-    assert!(stdout(&out).contains("new → specd"), "unexpected output: {}", stdout(&out));
 
     let ticket = env.branch_content(&branch, &ticket_path);
     assert!(ticket.contains("state = \"specd\""), "state not updated to specd");
-    assert!(ticket.contains("| new | specd |"), "history row missing");
+    assert!(ticket.contains("| in_design | specd |"), "history row missing");
     assert!(ticket.contains("updated_at"), "updated_at not refreshed");
 
     // ── Step 5: supervisor approves — apm state specd → ready ───────────────
@@ -692,6 +697,7 @@ fn next_respects_priority_and_actionable_states() {
 
     // Move id2 to specd (not actionable) — next should now return id3.
     write_valid_spec_for_test(env.root(), &branch2, &path2);
+    env.apm(&["state", &id2, "in_design"]);
     env.apm(&["state", &id2, "specd"]);
 
     let out = env.apm(&["next", "--json"]);
