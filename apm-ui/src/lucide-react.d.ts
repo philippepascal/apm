@@ -13,4 +13,5 @@ declare module 'lucide-react' {
   export const ChevronUp: FC<IconProps>
   export const Ban: FC<IconProps>
   export const Minimize2: FC<IconProps>
+  export const Trash2: FC<IconProps>
 }

@@ -495,6 +495,29 @@ async fn sync_handler(
     Ok(Json(resp).into_response())
 }
 
+async fn clean_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let removed = tokio::task::spawn_blocking(move || -> anyhow::Result<usize> {
+        let config = apm_core::config::Config::load(&root)?;
+        let (candidates, _dirty) = apm_core::clean::candidates(&root, &config, false, false, false)?;
+        let mut count = 0;
+        for candidate in &candidates {
+            if candidate.worktree.is_some() {
+                apm_core::clean::remove(&root, candidate, false, false)?;
+                count += 1;
+            }
+        }
+        Ok(count)
+    })
+    .await??;
+    Ok(Json(serde_json::json!({ "removed": removed })).into_response())
+}
+
 #[derive(serde::Deserialize, Default)]
 struct ListTicketsQuery {
     include_closed: Option<bool>,
@@ -1431,6 +1454,7 @@ fn build_app(root: PathBuf) -> Router {
     Router::new()
         .route("/health", get(health_handler))
         .route("/api/sync", post(sync_handler))
+        .route("/api/clean", post(clean_handler))
         .route("/api/tickets", get(list_tickets).post(create_ticket))
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
@@ -1483,6 +1507,7 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
     });
     Router::new()
         .route("/api/sync", post(sync_handler))
+        .route("/api/clean", post(clean_handler))
         .route("/api/tickets", get(list_tickets).post(create_ticket))
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
