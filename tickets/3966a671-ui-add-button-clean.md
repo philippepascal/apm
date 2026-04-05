@@ -25,7 +25,7 @@ The desired behaviour is a "Clean" button in the supervisor toolbar that calls a
 - [x] A "Clean" button appears in the SupervisorView toolbar, positioned next to the "Sync" button
 - [x] Clicking "Clean" sends a `POST /api/clean` request to the server
 - [x] While the request is in progress, the "Clean" button displays a spinning loader icon (disabled, same pattern as Sync)
-- [ ] On success, the ticket list is refreshed (TanStack Query invalidates `['tickets']` and `['ticket']` keys)
+- [x] On success, the ticket list is refreshed (TanStack Query invalidates `['tickets']` and `['ticket']` keys)
 - [ ] On error, an inline error message appears in the toolbar (same pattern as `syncError` state)
 - [ ] `POST /api/clean` returns `{ "removed": N }` where N is the number of worktrees removed
 - [ ] `POST /api/clean` skips worktrees that have modified tracked files (dirty worktrees are not removed)
