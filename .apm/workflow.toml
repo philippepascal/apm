@@ -1,11 +1,10 @@
 [workflow]
-terminal_states = ["closed"]
 
 [[workflow.states]]
 id    = "new"
 label = "New"
 color = "#6b7280"
-layer = 1
+
 
   [[workflow.states.transitions]]
   to      = "groomed"
@@ -21,7 +20,7 @@ layer = 1
 id           = "groomed"
 label        = "Groomed"
 color        = "#6366f1"
-layer        = 1
+
 actionable   = ["agent"]
 dep_requires = "spec"
 instructions = ".apm/apm.spec-writer.md"
@@ -41,7 +40,7 @@ instructions = ".apm/apm.spec-writer.md"
 id         = "question"
 label      = "Question"
 color      = "#f59e0b"
-layer      = 1
+
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
@@ -58,7 +57,7 @@ actionable = ["supervisor"]
 id             = "specd"
 label          = "Specd"
 color          = "#3b82f6"
-layer          = 1
+
 actionable     = ["supervisor"]
 satisfies_deps = "spec"
 worker_end     = true
@@ -83,7 +82,7 @@ worker_end     = true
 id             = "ammend"
 label          = "Ammend"
 color          = "#ef4444"
-layer          = 1
+
 actionable     = ["agent"]
 dep_requires   = "spec"
 satisfies_deps = "spec"
@@ -114,7 +113,7 @@ instructions   = ".apm/apm.spec-writer.md"
 id           = "in_design"
 label        = "In Design"
 color        = "#f97316"
-layer        = 1
+
 instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
@@ -142,7 +141,7 @@ instructions = ".apm/apm.spec-writer.md"
 id             = "ready"
 label          = "Ready"
 color          = "#10b981"
-layer          = 1
+
 actionable     = ["agent"]
 satisfies_deps = "spec"
 instructions   = ".apm/apm.worker.md"
@@ -171,7 +170,7 @@ instructions   = ".apm/apm.worker.md"
 id             = "in_progress"
 label          = "In Progress"
 color          = "#8b5cf6"
-layer          = 2
+
 satisfies_deps = "spec"
 instructions   = ".apm/apm.worker.md"
 
@@ -210,7 +209,7 @@ instructions   = ".apm/apm.worker.md"
 id         = "blocked"
 label      = "Blocked"
 color      = "#dc2626"
-layer      = 2
+
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
@@ -229,7 +228,7 @@ actionable = ["supervisor"]
 id             = "implemented"
 label          = "Implemented"
 color          = "#06b6d4"
-layer          = 2
+
 actionable     = ["supervisor"]
 satisfies_deps = true
 worker_end     = true
@@ -261,7 +260,7 @@ worker_end     = true
 id             = "closed"
 label          = "Closed"
 color          = "#374151"
-layer          = 1
+
 terminal       = true
 satisfies_deps = true
 
