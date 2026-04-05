@@ -29,7 +29,7 @@ The desired behaviour is a "Clean" button in the supervisor toolbar that calls a
 - [x] On error, an inline error message appears in the toolbar (same pattern as `syncError` state)
 - [x] `POST /api/clean` returns `{ "removed": N }` where N is the number of worktrees removed
 - [x] `POST /api/clean` skips worktrees that have modified tracked files (dirty worktrees are not removed)
-- [ ] `POST /api/clean` returns `501 Not Implemented` when the server has no git root (in-memory mode)
+- [x] `POST /api/clean` returns `501 Not Implemented` when the server has no git root (in-memory mode)
 
 ### Out of scope
 
