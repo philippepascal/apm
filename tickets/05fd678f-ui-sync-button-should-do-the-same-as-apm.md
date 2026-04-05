@@ -32,7 +32,10 @@ The result: after a PR is merged, `apm sync` in the terminal will close the tick
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Interactive confirmation prompts (the server always auto-closes, mirroring `apm sync --auto-close`)
+- Exposing the list of closed ticket IDs in the API response (count is enough)
+- The `--no-aggressive` / aggressive sync config option — the server honours `config.sync.aggressive` automatically since it calls the same `sync::apply` path
+- Any changes to the UI beyond consuming the refreshed ticket list (no toast notifications, no closed-ticket list)
 
 ### Approach
 
