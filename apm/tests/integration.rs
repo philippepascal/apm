@@ -2573,10 +2573,10 @@ fn clean_skips_ticket_not_on_main() {
 }
 
 #[test]
-fn clean_skips_state_mismatch_between_branch_and_main() {
+fn clean_proceeds_despite_state_mismatch_between_branch_and_main() {
     // Ticket is closed on branch and merged into main. Then main's copy
     // gets updated to a different state (simulating a buggy sync). Clean should
-    // detect the mismatch and skip.
+    // trust the branch state and proceed — branch is authoritative.
     let dir = setup();
     let p = dir.path();
     let (branch, rel_path) = write_closed_ticket(p, 1, "mismatch");
@@ -2589,25 +2589,12 @@ fn clean_skips_state_mismatch_between_branch_and_main() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "update ticket state on main"]);
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["clean"])
+        .args(["clean", "--branches"])
         .current_dir(p)
         .output()
         .unwrap();
-    let stderr = String::from_utf8_lossy(&out.stderr);
-
-    assert!(branch_exists(p, &branch), "branch should NOT have been removed — state mismatch");
-    assert!(
-        stderr.contains("state mismatch") && stderr.contains("branch=closed") && stderr.contains("main=new"),
-        "expected state-mismatch warning with branch/main states in stderr: {stderr}"
-    );
-    assert!(
-        stderr.contains("apm sync"),
-        "expected `apm sync` reconciliation advice in stderr: {stderr}"
-    );
-    assert!(
-        !stderr.contains("apm close"),
-        "should not suggest `apm close` in stderr: {stderr}"
-    );
+    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(!branch_exists(p, &branch), "branch should have been removed — branch state is authoritative");
 }
 
 #[test]
