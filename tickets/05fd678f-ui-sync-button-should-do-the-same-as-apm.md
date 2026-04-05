@@ -1,7 +1,7 @@
 +++
 id = "05fd678f"
 title = "UI sync button should do the same as apm sync"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "apm-ui"
 owner = "philippepascal"
 branch = "ticket/05fd678f-ui-sync-button-should-do-the-same-as-apm"
 created_at = "2026-04-04T18:33:04.575258Z"
-updated_at = "2026-04-05T22:13:04.623759Z"
+updated_at = "2026-04-05T22:17:54.460306Z"
 +++
 
 ## Spec
@@ -86,3 +86,4 @@ The UI side (`SupervisorView.tsx`) already invalidates the `tickets` query on sy
 | 2026-04-05T21:43Z | in_design | specd | claude-0405-2141-spec7 |
 | 2026-04-05T22:12Z | specd | ready | apm |
 | 2026-04-05T22:13Z | ready | in_progress | philippepascal |
+| 2026-04-05T22:17Z | in_progress | implemented | claude-0405-2213-4658 |
