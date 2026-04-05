@@ -4,12 +4,12 @@ title = "UI sync button should do the same as apm sync"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "apm-ui"
 owner = "philippepascal"
 branch = "ticket/05fd678f-ui-sync-button-should-do-the-same-as-apm"
 created_at = "2026-04-04T18:33:04.575258Z"
-updated_at = "2026-04-05T21:43:06.956910Z"
+updated_at = "2026-04-05T21:43:13.584391Z"
 +++
 
 ## Spec
