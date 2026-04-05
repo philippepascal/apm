@@ -773,6 +773,39 @@ fn sync_closes_multiple_tickets_on_merged_branches() {
     assert!(beta.contains("state = \"closed\""), "beta should be closed on main: {beta}");
 }
 
+// --- sync handler (server path) ---
+
+#[test]
+fn sync_handler_closes_merged_ticket() {
+    // Regression test for the server sync_handler calling detect+apply.
+    // Mirrors the logic added to apm-server's sync_handler.
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    write_ticket_to_branch(p, "ticket/0001-server-sync", "0001-server-sync.md", "implemented", 1, "server sync");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-server-sync", "--no-edit"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert_eq!(candidates.close.len(), 1, "should detect one close candidate");
+    let aggressive = config.sync.aggressive;
+    apm_core::sync::apply(p, &config, &candidates, "apm-ui", aggressive).unwrap();
+
+    let content = branch_content(p, "main", "tickets/0001-server-sync.md");
+    assert!(content.contains("state = \"closed\""), "ticket should be closed: {content}");
+}
+
+#[test]
+fn sync_handler_no_close_returns_zero() {
+    // A sync that closes no tickets: detect returns empty candidates.
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert_eq!(candidates.close.len(), 0, "no candidates when no merged tickets");
+}
+
 // --- take ---
 
 fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, agent: &str) {
