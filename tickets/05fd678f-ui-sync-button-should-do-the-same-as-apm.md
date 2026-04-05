@@ -39,7 +39,33 @@ The result: after a PR is merged, `apm sync` in the terminal will close the tick
 
 ### Approach
 
-How the implementation will work.
+**File: `apm-server/src/main.rs`**
+
+In `sync_handler`, after the existing `fetch_all` + `sync_local_ticket_refs` block, add:
+
+```rust
+let config = apm_core::config::Config::load(&root)?;
+let candidates = apm_core::sync::detect(&root, &config)?;
+let n_closed = candidates.close.len();
+let aggressive = config.sync.aggressive;
+if n_closed > 0 {
+    apm_core::sync::apply(&root, &config, &candidates, "apm-ui", aggressive)?;
+}
+```
+
+Include `closed` in the JSON response alongside the existing `branches` field:
+```json
+{ "branches": 12, "closed": 2 }
+```
+
+All of this runs inside the existing `spawn_blocking` closure since `detect` and `apply` are synchronous.
+
+The UI side (`SupervisorView.tsx`) already invalidates the `tickets` query on sync success, so no UI changes are needed — the board will refresh automatically and show the newly-closed tickets correctly.
+
+**Order of steps:**
+1. Extend the `spawn_blocking` closure in `sync_handler` to call `sync::detect` then `sync::apply`
+2. Return `closed` count in the response JSON
+3. Add a regression test: create a git repo, merge a ticket branch into main, call the sync handler, assert the ticket is now `closed`
 
 ### Open questions
 
