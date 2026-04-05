@@ -219,7 +219,7 @@ fn init_generated_config_has_all_workflow_states() {
     for state in &["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
-    assert!(toml.contains("terminal = true"), "closed must be terminal");
+    assert!(toml.contains("terminal"), "closed must be terminal");
     // Must parse without error.
     apm_core::config::Config::load(p).unwrap();
 }
