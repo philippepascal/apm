@@ -24,7 +24,7 @@ The result: after a PR is merged, `apm sync` in the terminal will close the tick
 
 ### Acceptance criteria
 
-- [ ] Clicking Sync in the UI (or pressing Shift+S) closes tickets whose branches have been merged into main
+- [x] Clicking Sync in the UI (or pressing Shift+S) closes tickets whose branches have been merged into main
 - [ ] Clicking Sync in the UI closes `implemented` tickets whose branch no longer exists
 - [ ] After a successful sync that closes tickets, those tickets no longer appear in the supervisor board (or appear in `closed` state if "Show closed" is checked)
 - [ ] A sync that closes no tickets still succeeds and refreshes the ticket list
