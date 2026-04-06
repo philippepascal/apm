@@ -1,14 +1,15 @@
 +++
 id = "2c6dcdda"
 title = "Built-in TLS support in apm-server"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+owner = "philippepascal"
 branch = "ticket/2c6dcdda-built-in-tls-support-in-apm-server"
 created_at = "2026-04-06T06:09:24.235043Z"
-updated_at = "2026-04-06T06:12:30.000689Z"
+updated_at = "2026-04-06T06:12:49.250564Z"
 +++
 
 ## Spec
@@ -55,3 +56,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-06T06:09Z | — | new | philippepascal |
 | 2026-04-06T06:12Z | new | groomed | apm |
+| 2026-04-06T06:12Z | groomed | in_design | philippepascal |
