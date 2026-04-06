@@ -17,7 +17,11 @@ depends_on = ["f38a9b24", "87fb645e"]
 
 ### Problem
 
-The CLI supports assigning ticket owners via 'apm assign <id> <username>' and filtering by owner with 'apm list --owner', but the web UI has no equivalent. There is no way to view, set, or clear ticket owners from the dashboard. Additionally, PATCH /api/tickets/:id only accepts effort, risk, and priority — there is no API endpoint to change the owner field, so even if the UI wanted to support it, there is no backend route to call. The web UI needs: (1) an owner field visible on every ticket (showing the current owner or empty), (2) a way to assign or reassign a ticket to a collaborator, (3) a way to clear the owner, and (4) a PATCH or dedicated endpoint to update the owner field server-side.
+The CLI supports assigning ticket owners via `apm assign <id> <username>` (and clearing with `apm assign <id> -`), and `apm list --owner` supports filtering by owner. The web UI partially surfaces the owner concept — `SupervisorView` has an owner filter dropdown and `TicketCard` shows the owner name on the card — but there is no way to view, set, or clear the owner field from the ticket detail panel.
+
+The backend gap compounds the problem: `PATCH /api/tickets/:id` accepts only `effort`, `risk`, and `priority` in its request body. Even if the UI wanted to update ownership, there is no endpoint to call. The underlying `set_field("owner", ...)` function in `apm-core` already handles both assignment and clearing (via the sentinel value `"-"`), so the backend wire-up is straightforward.
+
+The result is that owner assignment is effectively CLI-only — any team member using the web dashboard cannot manage ticket ownership without dropping to a terminal. This ticket adds: (1) a visible owner field in the ticket detail panel, (2) inline editing to assign or reassign an owner (with suggestions drawn from existing owners in the system), (3) a way to clear the owner, and (4) the backend PATCH support required to persist the change.
 
 ### Acceptance criteria
 
