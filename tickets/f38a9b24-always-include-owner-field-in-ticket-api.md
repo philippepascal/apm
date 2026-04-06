@@ -31,7 +31,9 @@ The GET /api/tickets and GET /api/tickets/:id endpoints omit the owner field ent
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Other optional fields (supervisor, branch, epic, etc.) — only owner
+- Changing author's "unassigned" normalization
+- Any client-side changes
 
 ### Approach
 
