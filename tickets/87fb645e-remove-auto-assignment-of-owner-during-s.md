@@ -1,14 +1,15 @@
 +++
 id = "87fb645e"
 title = "Remove auto-assignment of owner during state transitions"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+owner = "philippepascal"
 branch = "ticket/87fb645e-remove-auto-assignment-of-owner-during-s"
 created_at = "2026-04-06T20:57:32.658671Z"
-updated_at = "2026-04-06T21:22:40.554222Z"
+updated_at = "2026-04-06T21:47:19.831054Z"
 +++
 
 ## Spec
@@ -44,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-06T20:57Z | — | new | philippepascal |
 | 2026-04-06T21:22Z | new | groomed | apm |
+| 2026-04-06T21:47Z | groomed | in_design | philippepascal |
