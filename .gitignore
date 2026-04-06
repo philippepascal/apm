@@ -1,6 +1,16 @@
 /target
-tickets/NEXT_ID
-.claude/settings.local.json
+
+# AI agent config
+.claude/
+.codex/
+.cursor/
+.windsurf/
+.aider*
+.copilot/
+.continue/
+CLAUDE.md
+
+# apm
 .apm-worker.log
 pr-body.txt
 .apm/local.toml
