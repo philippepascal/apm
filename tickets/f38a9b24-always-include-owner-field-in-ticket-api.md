@@ -4,12 +4,12 @@ title = "Always include owner field in ticket API responses"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f38a9b24-always-include-owner-field-in-ticket-api"
 created_at = "2026-04-06T20:57:23.971981Z"
-updated_at = "2026-04-06T23:13:19.380469Z"
+updated_at = "2026-04-06T23:13:27.144327Z"
 +++
 
 ## Spec
