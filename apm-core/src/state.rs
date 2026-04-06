@@ -161,8 +161,8 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             let merge_target = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
             let is_main = merge_target == config.project.default_branch;
-            if !is_main {
-                git::push_branch(root, &branch)?;
+            if let Err(e) = git::push_branch(root, &branch) {
+                eprintln!("warning: could not push {branch}: {e}");
             }
             merge_into_default(root, &branch, merge_target, is_main)?;
         }
