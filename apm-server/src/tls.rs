@@ -133,8 +133,6 @@ pub async fn serve_acme(
     email: String,
     cache_dir: std::path::PathBuf,
 ) {
-    use tokio_stream::StreamExt as _;
-    use tokio_stream::wrappers::TcpListenerStream;
     use rustls_acme::AcmeConfig;
     use rustls_acme::caches::DirCache;
 
@@ -144,23 +142,25 @@ pub async fn serve_acme(
         .directory_lets_encrypt(true)
         .state();
 
+    let acceptor = TlsAcceptor::from(state.default_rustls_config());
     let listener = TcpListener::bind(addr).await.expect("bind ACME listener");
     println!("Listening on https://{addr} (Let's Encrypt ACME)");
-    let tcp_incoming = TcpListenerStream::new(listener);
-    let mut tls_incoming = state.tokio_incoming(tcp_incoming, vec![b"h2".to_vec(), b"http/1.1".to_vec()]);
 
-    while let Some(result) = tls_incoming.next().await {
-        let tls_stream = match result {
-            Ok(s) => s,
+    loop {
+        let (tcp, remote_addr) = match listener.accept().await {
+            Ok(pair) => pair,
             Err(e) => {
-                eprintln!("TLS accept error: {e:?}");
+                eprintln!("accept error: {e}");
                 continue;
             }
         };
+        let acceptor = acceptor.clone();
         let app = app.clone();
         tokio::spawn(async move {
-            let io = TokioIo::new(tls_stream);
-            let svc = hyper::service::service_fn(move |req: Request<Incoming>| {
+            let Ok(tls) = acceptor.accept(tcp).await else { return };
+            let io = TokioIo::new(tls);
+            let svc = hyper::service::service_fn(move |mut req: Request<Incoming>| {
+                req.extensions_mut().insert(ConnectInfo(remote_addr));
                 let req = req.map(Body::new);
                 let mut app = app.clone();
                 async move { app.call(req).await }
