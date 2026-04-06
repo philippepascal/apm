@@ -1,7 +1,7 @@
 +++
 id = "25338b05"
 title = "Add owner assignment to web UI"
-state = "in_design"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25338b05-add-owner-assignment-to-web-ui"
 created_at = "2026-04-06T20:57:16.722499Z"
-updated_at = "2026-04-06T23:13:59.217874Z"
+updated_at = "2026-04-06T23:21:59.243114Z"
 depends_on = ["f38a9b24", "87fb645e"]
 +++
 
@@ -47,3 +47,4 @@ How the implementation will work.
 | 2026-04-06T20:57Z | — | new | philippepascal |
 | 2026-04-06T21:22Z | new | groomed | apm |
 | 2026-04-06T23:13Z | groomed | in_design | philippepascal |
+| 2026-04-06T23:21Z | in_design | groomed | apm |
