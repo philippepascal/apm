@@ -84,7 +84,7 @@ class Apm < Formula
   desc "Agentic project manager — CLI and server"
   homepage "https://github.com/$APM_REPO"
   version "$VERSION"
-  license "MIT"
+  license "BSL-1.1"
 
   on_macos do
     on_arm do
