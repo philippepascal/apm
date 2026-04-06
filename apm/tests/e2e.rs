@@ -61,12 +61,20 @@ risk_weight = -1.0
 [[workflow.states]]
 id         = "new"
 label      = "New"
+
+[[workflow.states]]
+id         = "groomed"
+label      = "Groomed"
 actionable = ["agent"]
 
 [[workflow.states]]
 id         = "question"
 label      = "Question"
 actionable = ["supervisor"]
+
+[[workflow.states]]
+id         = "in_design"
+label      = "In Design"
 
 [[workflow.states]]
 id         = "specd"
