@@ -138,7 +138,7 @@ Use tower_http::set_header::SetResponseHeaderLayer to inject Strict-Transport-Se
 
 ### Amendment requests
 
-- [ ] Add `--port <port>` flag to configure the listening port (defaults to 3000 for HTTP, 443 for HTTPS)
+- [x] Add `--port <port>` flag to configure the listening port (defaults to 3000 for HTTP, 443 for HTTPS)
 
 ### Code review
 
