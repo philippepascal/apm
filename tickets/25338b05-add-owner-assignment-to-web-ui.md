@@ -8,7 +8,8 @@ risk = 0
 author = "philippepascal"
 branch = "ticket/25338b05-add-owner-assignment-to-web-ui"
 created_at = "2026-04-06T20:57:16.722499Z"
-updated_at = "2026-04-06T20:57:16.722499Z"
+updated_at = "2026-04-06T21:06:55.558363Z"
+depends_on = ["f38a9b24", "87fb645e"]
 +++
 
 ## Spec
