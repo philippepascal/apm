@@ -152,7 +152,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
 
     match completion {
         CompletionStrategy::Pr => {
-            git::push_branch(root, &branch)?;
+            git::push_branch_tracking(root, &branch)?;
             let pr_base = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
             gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title)?;
@@ -161,13 +161,13 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             let merge_target = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
             let is_main = merge_target == config.project.default_branch;
-            if let Err(e) = git::push_branch(root, &branch) {
+            if let Err(e) = git::push_branch_tracking(root, &branch) {
                 eprintln!("warning: could not push {branch}: {e}");
             }
             merge_into_default(root, &branch, merge_target, is_main)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
-            git::push_branch(root, &branch)?;
+            git::push_branch_tracking(root, &branch)?;
             if let Some(ref target) = t.frontmatter.target_branch {
                 merge_into_default(root, &branch, target, false)?;
             } else {
@@ -179,7 +179,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         }
         CompletionStrategy::None => {
             if aggressive {
-                if let Err(e) = git::push_branch(root, &branch) {
+                if let Err(e) = git::push_branch_tracking(root, &branch) {
                     eprintln!("warning: push failed: {e:#}");
                 }
             }
