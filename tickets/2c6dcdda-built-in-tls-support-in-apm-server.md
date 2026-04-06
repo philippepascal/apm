@@ -24,7 +24,7 @@ The goal is to make production HTTPS as easy as `apm-server --tls --domain=apm.e
 
 - [x] `--tls` flag enables HTTPS on port 443 with automatic Let's Encrypt via rustls-acme (TLS-ALPN-01 challenge)
 - [x] `--tls-domain <domain>` and `--tls-email <email>` configure the ACME certificate request
-- [ ] Certificates are cached to `~/.apm/certs/` (or configurable path via `--tls-cert-dir`) and survive restarts without re-issuing
+- [x] Certificates are cached to `~/.apm/certs/` (or configurable path via `--tls-cert-dir`) and survive restarts without re-issuing
 - [ ] Automatic renewal before expiry (background task)
 - [ ] `--tls-cert <path> --tls-key <path>` allows using a custom certificate instead of Let's Encrypt (e.g. corporate CA, wildcard cert)
 - [ ] `--tls=self-signed` generates a self-signed certificate for local development/testing (no internet required)
