@@ -21,7 +21,16 @@ The goal is to make production HTTPS as easy as `apm-server --tls --domain=apm.e
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `--tls` flag enables HTTPS on port 443 with automatic Let's Encrypt via rustls-acme (TLS-ALPN-01 challenge)
+- [ ] `--tls-domain <domain>` and `--tls-email <email>` configure the ACME certificate request
+- [ ] Certificates are cached to `~/.apm/certs/` (or configurable path via `--tls-cert-dir`) and survive restarts without re-issuing
+- [ ] Automatic renewal before expiry (background task)
+- [ ] `--tls-cert <path> --tls-key <path>` allows using a custom certificate instead of Let's Encrypt (e.g. corporate CA, wildcard cert)
+- [ ] `--tls=self-signed` generates a self-signed certificate for local development/testing (no internet required)
+- [ ] When TLS is enabled, port 80 listens and redirects all requests to HTTPS (301)
+- [ ] HSTS header (Strict-Transport-Security) is set on all HTTPS responses
+- [ ] Without `--tls`, apm-server runs plain HTTP on port 3000 as today — no behavior change
+- [ ] apm-proxy Docker setup remains functional but is documented as optional/legacy
 
 ### Out of scope
 
