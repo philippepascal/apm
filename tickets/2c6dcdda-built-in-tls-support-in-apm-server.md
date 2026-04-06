@@ -28,7 +28,7 @@ The goal is to make production HTTPS as easy as `apm-server --tls --domain=apm.e
 - [x] Automatic renewal before expiry (background task)
 - [x] `--tls-cert <path> --tls-key <path>` allows using a custom certificate instead of Let's Encrypt (e.g. corporate CA, wildcard cert)
 - [x] `--tls=self-signed` generates a self-signed certificate for local development/testing (no internet required)
-- [ ] HSTS header (Strict-Transport-Security) is set on all HTTPS responses
+- [x] HSTS header (Strict-Transport-Security) is set on all HTTPS responses
 - [ ] Without `--tls`, apm-server runs plain HTTP on port 3000 as today — no behavior change
 - [ ] `--port <port>` overrides the default listening port (3000 for HTTP, 443 for HTTPS)
 - [ ] `--bind <addr>` configures the bind address (defaults to `0.0.0.0`)
