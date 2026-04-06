@@ -288,13 +288,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let worker_system = config.workflow.states.iter()
-        .find(|s| s.id == old_state)
-        .and_then(|sc| sc.instructions.as_ref())
-        .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
-            .or_else(|| { eprintln!("warning: instructions file not found"); None }))
-        .or_else(|| std::fs::read_to_string(root.join(".apm/apm.worker.md")).ok())
-        .unwrap_or_else(|| "You are an APM worker agent.".to_string());
+    let worker_system = resolve_system_prompt(root, &old_state);
 
     let ticket_content = format!("{}\n\n{content}", agent_role_prefix(&old_state, &id));
 
