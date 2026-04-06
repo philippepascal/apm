@@ -1149,11 +1149,15 @@ async fn require_auth(
     if find_session_username(req.headers(), &state.session_store).is_some() {
         return next.run(req).await;
     }
-    (
-        StatusCode::UNAUTHORIZED,
-        Json(serde_json::json!({"error": "unauthorized"})),
-    )
-        .into_response()
+    if req.uri().path().starts_with("/api/") {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({"error": "unauthorized"})),
+        )
+            .into_response()
+    } else {
+        axum::response::Redirect::temporary("/login").into_response()
+    }
 }
 
 async fn otp_handler(
@@ -1468,7 +1472,7 @@ async fn serve_ui(uri: axum::http::Uri) -> Response {
     }
 }
 
-fn build_app(root: PathBuf) -> Router {
+fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
     let config = apm_core::config::Config::load(&root).expect("cannot load apm config");
     let tickets_dir = config.tickets.dir;
     let log_file = config.logging.file.map(|p| {
@@ -1476,7 +1480,10 @@ fn build_app(root: PathBuf) -> Router {
     });
     let sessions_path = root.join(".apm/sessions.json");
     let credentials_path = root.join(".apm/credentials.json");
-    let wa_state = webauthn_state::WebauthnState::new(&config.server.origin)
+    let origin = origin_override
+        .map(String::from)
+        .unwrap_or(config.server.origin);
+    let wa_state = webauthn_state::WebauthnState::new(&origin)
         .expect("cannot initialise WebAuthn state");
     let state = Arc::new(AppState {
         source: TicketSource::Git(root, tickets_dir),
@@ -1519,11 +1526,25 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/auth/register/complete", post(register_complete_handler))
         .route("/login", get(login_page_handler))
         .route("/api/auth/login/challenge", post(login_challenge_handler))
-        .route("/api/auth/login/complete", post(login_complete_handler))
-        .fallback(serve_ui);
+        .route("/api/auth/login/complete", post(login_complete_handler));
+    let fallback_state = state.clone();
     Router::new()
         .merge(protected)
         .merge(open)
+        .fallback(move |req: axum::extract::Request| {
+            let state = fallback_state.clone();
+            async move {
+                let connect_info = req.extensions().get::<ConnectInfo<SocketAddr>>().copied();
+                if connect_info.is_none()
+                    || is_localhost(connect_info)
+                    || find_session_username(req.headers(), &state.session_store).is_some()
+                {
+                    serve_ui(req.uri().clone()).await
+                } else {
+                    axum::response::Redirect::temporary("/login").into_response()
+                }
+            }
+        })
         .with_state(state)
 }
 
@@ -1675,13 +1696,27 @@ fn add_hsts(app: Router) -> Router {
     ))
 }
 
+/// Spawn a plain HTTP listener on 127.0.0.1:3000 for localhost CLI access
+/// (e.g. `apm register`) when the main server is running TLS.
+fn spawn_localhost_http(app: Router, _tls_port: u16) {
+    tokio::spawn(async move {
+        let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
+        let listener = tokio::net::TcpListener::bind(addr).await.expect("bind localhost HTTP listener");
+        println!("Listening on http://{addr} (localhost CLI access)");
+        axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+            .await
+            .unwrap();
+    });
+}
+
 #[tokio::main]
 async fn main() {
     use clap::Parser;
     let cli = Cli::parse();
 
     let root = std::env::current_dir().unwrap();
-    let app = build_app(root);
+    let origin_override = cli.tls_domain.as_deref().map(|d| format!("https://{d}"));
+    let app = build_app(root, origin_override.as_deref());
 
     let is_tls = cli.tls.is_some() || cli.tls_cert.is_some();
     let default_port: u16 = if is_tls { 443 } else { 3000 };
@@ -1701,6 +1736,7 @@ async fn main() {
             let key = cli.tls_key.as_ref().expect("--tls-key is required when using --tls-cert");
             let config = tls::custom_cert_config(cert, key)
                 .expect("failed to load TLS certificate");
+            spawn_localhost_http(app.clone(), port);
             tls::serve_tls(addr, add_hsts(app), config).await;
         }
         (Some(TlsMode::SelfSigned), _) => {
@@ -1708,6 +1744,7 @@ async fn main() {
             eprintln!("Warning: self-signed certificate for '{domain}' — not trusted by browsers");
             let config = tls::self_signed_config(domain)
                 .expect("failed to generate self-signed certificate");
+            spawn_localhost_http(app.clone(), port);
             tls::serve_tls(addr, add_hsts(app), config).await;
         }
         (Some(TlsMode::Acme), _) => {
@@ -1719,6 +1756,7 @@ async fn main() {
                 let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
                 PathBuf::from(home).join(".apm/certs")
             });
+            spawn_localhost_http(app.clone(), port);
             tls::serve_acme(addr, add_hsts(app), domain, email, cache_dir).await;
         }
     }
@@ -2024,7 +2062,7 @@ satisfies_deps = true
             "+++\nid = \"cccccccc-dep-on-blocking\"\ntitle = \"Dep On Blocking\"\nstate = \"ready\"\ndepends_on = [\"11223344-dep-blocking\"]\n+++\n\n",
         );
 
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2365,7 +2403,7 @@ label = "In Progress"
         .unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
 
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2464,7 +2502,7 @@ label = "In Progress"
         let p = dir.path().to_path_buf();
         git_setup(&p);
 
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2495,7 +2533,7 @@ label = "In Progress"
         let p = dir.path().to_path_buf();
         git_setup(&p);
 
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2523,7 +2561,7 @@ label = "In Progress"
             .status()
             .unwrap();
 
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2562,7 +2600,7 @@ label = "In Progress"
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().to_path_buf();
         git_setup(&p);
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2582,7 +2620,7 @@ label = "In Progress"
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().to_path_buf();
         git_setup(&p);
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2634,7 +2672,7 @@ label = "In Progress"
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().to_path_buf();
         git_setup(&p);
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2652,7 +2690,7 @@ label = "In Progress"
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().to_path_buf();
         git_setup(&p);
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2674,7 +2712,7 @@ label = "In Progress"
         let p = dir.path().to_path_buf();
         git_setup(&p);
 
-        let app = build_app(p.clone());
+        let app = build_app(p.clone(), None);
         let response = app
             .oneshot(
                 Request::builder()
@@ -2695,7 +2733,7 @@ label = "In Progress"
         let epic_id = json["id"].as_str().unwrap().to_string();
 
         // list should include the new epic
-        let app2 = build_app(p.clone());
+        let app2 = build_app(p.clone(), None);
         let response2 = app2
             .oneshot(
                 Request::builder()
@@ -2712,7 +2750,7 @@ label = "In Progress"
         assert_eq!(list[0]["id"], epic_id);
 
         // get by id
-        let app3 = build_app(p.clone());
+        let app3 = build_app(p.clone(), None);
         let response3 = app3
             .oneshot(
                 Request::builder()

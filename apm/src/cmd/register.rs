@@ -1,7 +1,10 @@
 use anyhow::Result;
 use std::path::Path;
 
-pub fn run(root: &Path, username: &str) -> Result<()> {
+pub fn run(root: &Path, username: &str, inferred: bool) -> Result<()> {
+    if inferred {
+        eprintln!("Registering as: {username}");
+    }
     let config = apm_core::config::Config::load(root)?;
     let url = format!("{}/api/auth/otp", config.server.url);
     let body = serde_json::json!({"username": username});

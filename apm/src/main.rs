@@ -680,8 +680,8 @@ the given substring:
     },
     /// Generate a one-time password for device registration (requires apm-server)
     Register {
-        /// Username to register
-        username: String,
+        /// Username to register (defaults to GitHub username)
+        username: Option<String>,
     },
     /// List active sessions (requires apm-server)
     Sessions,
@@ -765,7 +765,15 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
         Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
-        Command::Register { username } => cmd::register::run(&root, &username),
+        Command::Register { username } => {
+            let inferred = username.is_none();
+            let config = apm_core::config::Config::load(&root)?;
+            let username = username.unwrap_or_else(|| {
+                apm_core::config::try_github_username(&config.git_host)
+                    .expect("could not detect GitHub username; pass one explicitly")
+            });
+            cmd::register::run(&root, &username, inferred)
+        }
         Command::Sessions => cmd::sessions::run(&root),
         Command::Revoke { username, device, all } => {
             if !all && username.is_none() {
