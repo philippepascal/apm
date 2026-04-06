@@ -13,6 +13,7 @@ use std::sync::Arc;
 static UI_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/../apm-ui/dist");
 
 mod agents;
+mod tls;
 mod auth;
 mod credential_store;
 mod log;
@@ -1613,15 +1614,90 @@ fn build_app_for_auth_tests(
         .with_state(state)
 }
 
+#[derive(clap::Parser)]
+struct Cli {
+    #[arg(long, value_name = "MODE", num_args = 0..=1, default_missing_value = "acme")]
+    tls: Option<TlsMode>,
+    #[arg(long, value_name = "DOMAIN")]
+    tls_domain: Option<String>,
+    #[arg(long, value_name = "EMAIL")]
+    tls_email: Option<String>,
+    #[arg(long, value_name = "DIR")]
+    tls_cert_dir: Option<PathBuf>,
+    #[arg(long, value_name = "PATH")]
+    tls_cert: Option<PathBuf>,
+    #[arg(long, value_name = "PATH")]
+    tls_key: Option<PathBuf>,
+    #[arg(long, value_name = "PORT")]
+    port: Option<u16>,
+    #[arg(long, value_name = "ADDR")]
+    bind: Option<String>,
+}
+
+#[derive(clap::ValueEnum, Clone)]
+enum TlsMode {
+    Acme,
+    #[value(name = "self-signed")]
+    SelfSigned,
+}
+
+fn add_hsts(app: Router) -> Router {
+    use axum::http::HeaderValue;
+    use axum::http::header::STRICT_TRANSPORT_SECURITY;
+    use tower_http::set_header::SetResponseHeaderLayer;
+    app.layer(SetResponseHeaderLayer::if_not_present(
+        STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static("max-age=63072000; includeSubDomains"),
+    ))
+}
+
 #[tokio::main]
 async fn main() {
+    use clap::Parser;
+    let cli = Cli::parse();
+
     let root = std::env::current_dir().unwrap();
     let app = build_app(root);
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Listening on 0.0.0.0:3000");
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .unwrap();
+
+    let is_tls = cli.tls.is_some() || cli.tls_cert.is_some();
+    let default_port: u16 = if is_tls { 443 } else { 3000 };
+    let port = cli.port.unwrap_or(default_port);
+    let bind = cli.bind.as_deref().unwrap_or("0.0.0.0");
+    let addr: SocketAddr = format!("{bind}:{port}").parse().expect("invalid bind address");
+
+    match (cli.tls, &cli.tls_cert) {
+        (None, None) => {
+            let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+            println!("Listening on http://{addr}");
+            axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+                .await
+                .unwrap();
+        }
+        (None, Some(cert)) => {
+            let key = cli.tls_key.as_ref().expect("--tls-key is required when using --tls-cert");
+            let config = tls::custom_cert_config(cert, key)
+                .expect("failed to load TLS certificate");
+            tls::serve_tls(addr, add_hsts(app), config).await;
+        }
+        (Some(TlsMode::SelfSigned), _) => {
+            let domain = cli.tls_domain.as_deref().unwrap_or("localhost");
+            eprintln!("Warning: self-signed certificate for '{domain}' — not trusted by browsers");
+            let config = tls::self_signed_config(domain)
+                .expect("failed to generate self-signed certificate");
+            tls::serve_tls(addr, add_hsts(app), config).await;
+        }
+        (Some(TlsMode::Acme), _) => {
+            let domain = cli.tls_domain.clone()
+                .expect("--tls-domain is required with --tls (ACME mode)");
+            let email = cli.tls_email.clone()
+                .expect("--tls-email is required with --tls (ACME mode)");
+            let cache_dir = cli.tls_cert_dir.clone().unwrap_or_else(|| {
+                let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+                PathBuf::from(home).join(".apm/certs")
+            });
+            tls::serve_acme(addr, add_hsts(app), domain, email, cache_dir).await;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1632,6 +1708,29 @@ mod tests {
     use axum::http::{Request, StatusCode};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn hsts_header_present_when_tls_enabled() {
+        let app = add_hsts(build_app_with_tickets(vec![]));
+        let response = app
+            .oneshot(Request::builder().uri("/api/tickets").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            response.headers().get("strict-transport-security").map(|v| v.to_str().unwrap()),
+            Some("max-age=63072000; includeSubDomains"),
+        );
+    }
+
+    #[tokio::test]
+    async fn no_hsts_header_without_tls_wrapper() {
+        let app = build_app_with_tickets(vec![]);
+        let response = app
+            .oneshot(Request::builder().uri("/api/tickets").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert!(response.headers().get("strict-transport-security").is_none());
+    }
 
     fn fake_ticket(id: &str, title: &str) -> Ticket {
         Ticket {
