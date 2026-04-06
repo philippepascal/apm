@@ -1137,6 +1137,25 @@ fn find_session_username(
     None
 }
 
+async fn require_auth(
+    State(state): State<Arc<AppState>>,
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let connect_info = req.extensions().get::<ConnectInfo<SocketAddr>>().copied();
+    if connect_info.is_none() || is_localhost(connect_info) {
+        return next.run(req).await;
+    }
+    if find_session_username(req.headers(), &state.session_store).is_some() {
+        return next.run(req).await;
+    }
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(serde_json::json!({"error": "unauthorized"})),
+    )
+        .into_response()
+}
+
 async fn otp_handler(
     State(state): State<Arc<AppState>>,
     connect_info: Option<ConnectInfo<SocketAddr>>,
@@ -1469,8 +1488,7 @@ fn build_app(root: PathBuf) -> Router {
         webauthn_state: Arc::new(wa_state),
         credential_store: credential_store::CredentialStore::load(credentials_path),
     });
-    Router::new()
-        .route("/health", get(health_handler))
+    let protected = Router::new()
         .route("/api/sync", post(sync_handler))
         .route("/api/clean", post(clean_handler))
         .route("/api/tickets", get(list_tickets).post(create_ticket))
@@ -1493,13 +1511,19 @@ fn build_app(root: PathBuf) -> Router {
         .route("/api/me", get(me_handler))
         .route("/api/auth/otp", post(otp_handler))
         .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
+        .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth));
+    let open = Router::new()
+        .route("/health", get(health_handler))
         .route("/register", get(register_page_handler))
         .route("/api/auth/register/challenge", post(register_challenge_handler))
         .route("/api/auth/register/complete", post(register_complete_handler))
         .route("/login", get(login_page_handler))
         .route("/api/auth/login/challenge", post(login_challenge_handler))
         .route("/api/auth/login/complete", post(login_complete_handler))
-        .fallback(serve_ui)
+        .fallback(serve_ui);
+    Router::new()
+        .merge(protected)
+        .merge(open)
         .with_state(state)
 }
 
@@ -3486,5 +3510,175 @@ label = "In Progress"
         let arr = json.as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["id"], "ffff0000-owner-none");
+    }
+
+    fn build_app_for_middleware_tests(session_store: auth::SessionStore) -> Router {
+        let state = Arc::new(AppState {
+            source: TicketSource::InMemory(vec![]),
+            work_engine: work::new_engine_state(),
+            log_file: None,
+            max_concurrent_override: Arc::new(tokio::sync::Mutex::new(None)),
+            otp_store: auth::OtpStore::new(),
+            session_store,
+            webauthn_state: default_webauthn_state(),
+            credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+        });
+        let protected = Router::new()
+            .route("/api/tickets", get(list_tickets).post(create_ticket))
+            .route("/api/auth/otp", post(otp_handler))
+            .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
+            .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth));
+        let open = Router::new()
+            .route("/health", get(health_handler))
+            .route("/api/auth/register/challenge", post(register_challenge_handler))
+            .route("/api/auth/login/challenge", post(login_challenge_handler));
+        Router::new()
+            .merge(protected)
+            .merge(open)
+            .with_state(state)
+    }
+
+    #[tokio::test]
+    async fn require_auth_external_no_session_returns_401() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let mut req = Request::builder().uri("/api/tickets").body(Body::empty()).unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
+        let response = app
+            .oneshot(req)
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["error"], "unauthorized");
+    }
+
+    #[tokio::test]
+    async fn require_auth_external_valid_session_returns_200() {
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        session_store.insert("validtoken".to_string(), "alice".to_string(), None);
+        let app = build_app_for_middleware_tests(session_store);
+        let mut req = Request::builder()
+            .uri("/api/tickets")
+            .header("cookie", "__Host-apm-session=validtoken")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
+        let response = app
+            .oneshot(req)
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn require_auth_external_invalid_session_returns_401() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let mut req = Request::builder()
+            .uri("/api/tickets")
+            .header("cookie", "__Host-apm-session=bogustoken")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
+        let response = app
+            .oneshot(req)
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn require_auth_external_expired_session_returns_401() {
+        let session_store = auth::SessionStore::load(PathBuf::new());
+        let expired = chrono::Utc::now() - chrono::Duration::days(10);
+        session_store.insert_expiring_at("exptoken".to_string(), "eve".to_string(), expired);
+        let app = build_app_for_middleware_tests(session_store);
+        let mut req = Request::builder()
+            .uri("/api/tickets")
+            .header("cookie", "__Host-apm-session=exptoken")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
+        let response = app
+            .oneshot(req)
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn require_auth_loopback_no_session_returns_200() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let mut req = Request::builder().uri("/api/tickets").body(Body::empty()).unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 9999))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn require_auth_health_no_session_returns_200() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let response = app
+            .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn require_auth_login_challenge_no_session_not_401() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/login/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(br#"{"username":"alice"}"#.to_vec()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_ne!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn require_auth_register_challenge_no_session_not_401() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/auth/register/challenge")
+                    .header("content-type", "application/json")
+                    .body(Body::from(br#"{"username":"alice","otp":"ABCD1234"}"#.to_vec()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_ne!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn require_auth_otp_external_no_session_returns_401() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let mut req = Request::builder()
+            .method("POST")
+            .uri("/api/auth/otp")
+            .header("content-type", "application/json")
+            .body(Body::from(br#"{"username":"alice"}"#.to_vec()))
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn require_auth_sessions_external_no_session_returns_401() {
+        let app = build_app_for_middleware_tests(auth::SessionStore::load(PathBuf::new()));
+        let mut req = Request::builder().uri("/api/auth/sessions").body(Body::empty()).unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }
