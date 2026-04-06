@@ -1,7 +1,7 @@
 +++
 id = "2c6dcdda"
 title = "Built-in TLS support in apm-server"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 6
 risk = 5
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2c6dcdda-built-in-tls-support-in-apm-server"
 created_at = "2026-04-06T06:09:24.235043Z"
-updated_at = "2026-04-06T06:24:18.309516Z"
+updated_at = "2026-04-06T06:24:45.469645Z"
 +++
 
 ## Spec
@@ -159,3 +159,4 @@ Use tower_http::set_header::SetResponseHeaderLayer to inject Strict-Transport-Se
 | 2026-04-06T06:20Z | ammend | in_design | philippepascal |
 | 2026-04-06T06:22Z | in_design | specd | claude-0406-0621-spec1 |
 | 2026-04-06T06:24Z | specd | ammend | apm |
+| 2026-04-06T06:24Z | ammend | in_design | philippepascal |
