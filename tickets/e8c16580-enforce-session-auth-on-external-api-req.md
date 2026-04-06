@@ -32,7 +32,11 @@ The apm-server has a complete WebAuthn/passkey registration and login flow that 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- CSRF protection (SameSite=Lax on the cookie provides a baseline; separate ticket if needed)
+- Per-user authorization / RBAC (all authenticated users have equal access)
+- Rate limiting on auth or API endpoints
+- Session refresh or rotation logic
+- Changes to the WebAuthn registration/login flow itself
 
 ### Approach
 
