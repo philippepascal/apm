@@ -1,7 +1,7 @@
 +++
 id = "e8c16580"
 title = "Enforce session auth on external API requests"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e8c16580-enforce-session-auth-on-external-api-req"
 created_at = "2026-04-06T17:41:57.255655Z"
-updated_at = "2026-04-06T18:30:28.053580Z"
+updated_at = "2026-04-06T18:30:43.885730Z"
 +++
 
 ## Spec
@@ -74,3 +74,4 @@ No new dependencies. Reuses existing `find_session_username` and `is_loopback()`
 | 2026-04-06T17:49Z | groomed | in_design | philippepascal |
 | 2026-04-06T18:27Z | in_design | specd | claude-0406-1735-b2e1 |
 | 2026-04-06T18:30Z | specd | ready | apm |
+| 2026-04-06T18:30Z | ready | in_progress | philippepascal |
