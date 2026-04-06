@@ -136,7 +136,7 @@ Use tower_http::set_header::SetResponseHeaderLayer to inject `Strict-Transport-S
 ### Amendment requests
 
 - [x] Add `--port <port>` flag to configure the listening port (defaults to 3000 for HTTP, 443 for HTTPS)
-- [ ] Add `--bind <addr>` flag to configure the bind address (defaults to `0.0.0.0`)
+- [x] Add `--bind <addr>` flag to configure the bind address (defaults to `0.0.0.0`)
 - [ ] Remove HTTP→HTTPS redirect on port 80 — apm-server listens on a single port only
 - [ ] Remove "Changing the default plain-HTTP port (stays 3000)" from Out of scope (now in scope)
 - [ ] Update Approach to use configurable port/bind instead of hardcoded values
