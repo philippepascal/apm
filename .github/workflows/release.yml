@@ -44,10 +44,6 @@ jobs:
             target: aarch64-apple-darwin
             use_zigbuild: false
             musl: false
-          - os: macos-13
-            target: x86_64-apple-darwin
-            use_zigbuild: false
-            musl: false
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             use_zigbuild: false

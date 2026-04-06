@@ -48,7 +48,6 @@ echo "$ASSETS" | grep -q "checksums.txt" || abort "Release $LATEST_TAG has no ch
 
 EXPECTED_ASSETS=(
     "apm-${LATEST_TAG}-aarch64-apple-darwin.tar.gz"
-    "apm-${LATEST_TAG}-x86_64-apple-darwin.tar.gz"
     "checksums.txt"
 )
 
@@ -58,7 +57,7 @@ for asset in "${EXPECTED_ASSETS[@]}"; do
     fi
 done
 
-green "All expected macOS assets present"
+green "All expected assets present"
 echo
 
 # ---------------------------------------------------------------------------
@@ -70,13 +69,10 @@ CHECKSUMS=$(gh release download "$LATEST_TAG" --repo "$APM_REPO" --pattern "chec
     || abort "Failed to download checksums.txt"
 
 SHA_ARM64=$(echo "$CHECKSUMS" | grep "aarch64-apple-darwin" | awk '{print $1}')
-SHA_X86=$(echo "$CHECKSUMS" | grep "x86_64-apple-darwin" | awk '{print $1}')
 
 [[ -n "$SHA_ARM64" ]] || abort "No arm64 checksum found in checksums.txt"
-[[ -n "$SHA_X86" ]]   || abort "No x86_64 checksum found in checksums.txt"
 
 echo "  arm64:  $SHA_ARM64"
-echo "  x86_64: $SHA_X86"
 echo
 
 # ---------------------------------------------------------------------------
@@ -94,10 +90,6 @@ class Apm < Formula
     on_arm do
       url "https://github.com/$APM_REPO/releases/download/v#{version}/apm-v#{version}-aarch64-apple-darwin.tar.gz"
       sha256 "$SHA_ARM64"
-    end
-    on_intel do
-      url "https://github.com/$APM_REPO/releases/download/v#{version}/apm-v#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "$SHA_X86"
     end
   end
 

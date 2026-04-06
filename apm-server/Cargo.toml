@@ -23,6 +23,7 @@ tokio-stream = "0.1"
 rand = "0.8"
 cookie = "0.18"
 webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+openssl = { version = "0.10", features = ["vendored"] }
 uuid = { version = "1", features = ["v4", "v5"] }
 
 [dev-dependencies]
