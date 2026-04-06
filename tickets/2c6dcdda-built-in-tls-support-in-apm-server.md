@@ -26,7 +26,7 @@ The goal is to make production HTTPS as easy as `apm-server --tls --domain=apm.e
 - [x] `--tls-domain <domain>` and `--tls-email <email>` configure the ACME certificate request
 - [x] Certificates are cached to `~/.apm/certs/` (or configurable path via `--tls-cert-dir`) and survive restarts without re-issuing
 - [x] Automatic renewal before expiry (background task)
-- [ ] `--tls-cert <path> --tls-key <path>` allows using a custom certificate instead of Let's Encrypt (e.g. corporate CA, wildcard cert)
+- [x] `--tls-cert <path> --tls-key <path>` allows using a custom certificate instead of Let's Encrypt (e.g. corporate CA, wildcard cert)
 - [ ] `--tls=self-signed` generates a self-signed certificate for local development/testing (no internet required)
 - [ ] HSTS header (Strict-Transport-Security) is set on all HTTPS responses
 - [ ] Without `--tls`, apm-server runs plain HTTP on port 3000 as today — no behavior change
