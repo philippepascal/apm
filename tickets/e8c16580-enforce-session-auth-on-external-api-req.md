@@ -1,14 +1,15 @@
 +++
 id = "e8c16580"
 title = "Enforce session auth on external API requests"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+owner = "philippepascal"
 branch = "ticket/e8c16580-enforce-session-auth-on-external-api-req"
 created_at = "2026-04-06T17:41:57.255655Z"
-updated_at = "2026-04-06T17:43:43.817351Z"
+updated_at = "2026-04-06T17:49:26.429541Z"
 +++
 
 ## Spec
@@ -44,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-06T17:41Z | — | new | philippepascal |
 | 2026-04-06T17:43Z | new | groomed | apm |
+| 2026-04-06T17:49Z | groomed | in_design | philippepascal |
