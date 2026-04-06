@@ -4,12 +4,12 @@ title = "Enforce session auth on external API requests"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e8c16580-enforce-session-auth-on-external-api-req"
 created_at = "2026-04-06T17:41:57.255655Z"
-updated_at = "2026-04-06T18:27:03.999651Z"
+updated_at = "2026-04-06T18:27:13.550439Z"
 +++
 
 ## Spec
