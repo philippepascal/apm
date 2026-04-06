@@ -67,20 +67,23 @@ Fields:
 - --tls-cert: Option<PathBuf> (requires tls-key)
 - --tls-key: Option<PathBuf> (requires tls-cert)
 - --port: Option<u16> — overrides the default port; defaults to 3000 in HTTP mode, 443 in any TLS mode
+- --bind: Option<String> — bind address; defaults to "0.0.0.0"
 
 TlsMode is a clap::ValueEnum with variants: Acme, SelfSigned
 
 **Mode dispatch in main()**
 
-Replace the hardcoded main() with Cli::parse() and branch on (cli.tls, cli.tls_cert):
-- (None, None) -> plain HTTP on cli.port.unwrap_or(3000)
-- (None, Some(_)) -> custom cert mode on cli.port.unwrap_or(443)
-- (Some(Acme), _) -> Let's Encrypt mode on cli.port.unwrap_or(443)
-- (Some(SelfSigned), _) -> self-signed mode on cli.port.unwrap_or(443)
+Resolve bind address and port, then branch on (cli.tls, cli.tls_cert):
+- (None, None) -> plain HTTP; addr = `{bind}:{port}` where port defaults to 3000
+- (None, Some(_)) -> custom cert mode; addr = `{bind}:{port}` where port defaults to 443
+- (Some(Acme), _) -> Let's Encrypt mode; addr = `{bind}:{port}` where port defaults to 443
+- (Some(SelfSigned), _) -> self-signed mode; addr = `{bind}:{port}` where port defaults to 443
+
+Bind address: `format!("{}:{}", cli.bind.as_deref().unwrap_or("0.0.0.0"), port)`
 
 **Plain HTTP (unchanged)**
 
-tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)) plus axum::serve() — port resolved as above.
+`tokio::net::TcpListener::bind(addr)` plus `axum::serve()` — addr resolved from --bind and --port as above.
 
 **Let's Encrypt (ACME) mode**
 
@@ -88,33 +91,28 @@ tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)) plus axum::serve() �
 2. Cert cache dir: cli.tls_cert_dir or ~/.apm/certs/ (expand via std::env::var("HOME")).
 3. Build rustls_acme::AcmeConfig with domain, email, cache dir, production ACME URL.
 4. rustls_acme manages a rustls::ServerConfig and handles renewal; wrap with tokio_rustls::TlsAcceptor.
-5. Bind the resolved HTTPS port, accept raw TCP, wrap each stream in TlsAcceptor, serve axum with the HSTS router.
-6. Spawn a second tokio::task for the HTTP redirect service on :80 (always port 80, not configurable).
+5. Bind the resolved addr, accept raw TCP, wrap each stream in TlsAcceptor, serve axum with the HSTS router.
 
 **Self-signed mode**
 
 1. rcgen::generate_simple_self_signed(vec![domain_or_localhost])
 2. Convert to rustls pki_types (CertificateDer and PrivateKeyDer)
 3. Build rustls::ServerConfig from the cert+key.
-4. Wrap listener on the resolved HTTPS port with tokio_rustls::TlsAcceptor.
+4. Wrap listener on the resolved addr with tokio_rustls::TlsAcceptor.
 5. Print a startup warning that the cert is self-signed and untrusted by browsers.
-6. Same redirect + HSTS setup as ACME mode.
+6. Same HSTS setup as ACME mode.
 
 **Custom certificate mode**
 
 1. Read PEM files from --tls-cert and --tls-key paths.
 2. Parse with rustls_pemfile (pulled in transitively by rustls).
 3. Build rustls::ServerConfig with the loaded cert chain and private key.
-4. Wrap listener on the resolved HTTPS port with tokio_rustls::TlsAcceptor.
-5. Same redirect + HSTS setup.
-
-**HTTP to HTTPS redirect service**
-
-A minimal axum router that responds 301 for every path, inserting the https:// Location header. Location includes the configured HTTPS port only when it differs from 443 (standard port omission). Bound on :80, spawned as a tokio::task alongside the HTTPS server.
+4. Wrap listener on the resolved addr with tokio_rustls::TlsAcceptor.
+5. Same HSTS setup.
 
 **HSTS middleware**
 
-Use tower_http::set_header::SetResponseHeaderLayer to inject Strict-Transport-Security: max-age=63072000; includeSubDomains on every response when TLS is enabled. Applied as a layer on the axum router before passing to axum::serve(). Only applied in TLS modes.
+Use tower_http::set_header::SetResponseHeaderLayer to inject `Strict-Transport-Security: max-age=63072000; includeSubDomains` on every response when TLS is enabled. Applied as a layer on the axum router before passing to axum::serve(). Only applied in TLS modes.
 
 **File layout**
 
@@ -124,14 +122,13 @@ Use tower_http::set_header::SetResponseHeaderLayer to inject Strict-Transport-Se
 **Order of implementation**
 
 1. Add deps to apm-server/Cargo.toml
-2. Add Cli struct and main() arg parsing (including --port)
+2. Add Cli struct and main() arg parsing (including --port and --bind)
 3. Verify existing plain-HTTP path and all tests still pass
 4. Implement custom cert mode (easiest to test locally)
 5. Implement self-signed mode (rcgen; test with curl --insecure)
 6. Implement ACME mode (wired but not integration-tested against LE)
 7. Add HSTS layer
-8. Add redirect service on :80
-9. Run cargo test --workspace
+8. Run cargo test --workspace
 
 ### Open questions
 
