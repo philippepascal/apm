@@ -1,14 +1,14 @@
 +++
 id = "755166f8"
 title = "remove apm-proxy"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/755166f8-remove-apm-proxy"
 created_at = "2026-04-06T20:50:54.696634Z"
-updated_at = "2026-04-06T20:50:54.696634Z"
+updated_at = "2026-04-06T21:22:25.579089Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-06T20:50Z | — | new | philippepascal |
+| 2026-04-06T21:22Z | new | groomed | apm |
