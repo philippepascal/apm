@@ -2,6 +2,8 @@
 
 A git-native ticket system for human+AI teams. Tickets are Markdown files with TOML frontmatter, stored on per-ticket branches. No database, no SaaS — just git.
 
+APM ships as two binaries: `apm` (CLI) and `apm-server` (web UI). The UI replicates nearly all command-line functionality and includes its own agent dispatcher loop. The workflow states, ticket structure, completion strategies, and agent instructions are all fully customizable.
+
 ## Why APM
 
 Traditional project management tools assume humans drive all work. APM is built for teams where AI agents and humans collaborate:
@@ -53,65 +55,15 @@ apm show <id>
 
 # Set priority (higher = more urgent)
 apm set <id> priority 10
-```
 
-## Spec workflow
+# Transition a ticket's state
+apm state <id> ready
 
-Tickets go through a spec phase before implementation:
+# Review a spec — approve or request amendments
+apm review <id>
 
-```bash
-# Move ticket to design phase
-apm state <id> in_design
-
-# Write spec sections
-apm spec <id> --section Problem --set "Users on slow connections get a 408..."
-apm spec <id> --section "Acceptance criteria" --set "- [ ] Timeout is configurable..."
-apm spec <id> --section Approach --set "Add a timeout_ms parameter to..."
-
-# Or write from a file
-apm spec <id> --section Problem --set-file /tmp/problem.md
-
-# Set effort and risk estimates
-apm set <id> effort 3
-apm set <id> risk 2
-
-# Submit spec for review
-apm state <id> specd
-```
-
-A supervisor reviews the spec and either moves it to `ready` or `ammend` with amendment requests.
-
-## Implementation workflow
-
-```bash
-# Claim a ticket — provisions a worktree, sets state to in_progress
-apm start <id>
-# Prints the worktree path, e.g. ../myproject--worktrees/0001-fix-login-timeout
-
-# Work in the worktree
-git -C <worktree-path> add src/auth.rs
-git -C <worktree-path> commit -m "Increase default timeout to 30s"
-
-# Mark as done — pushes branch and opens PR (depending on completion strategy)
-apm state <id> implemented
-```
-
-## Agent workflow
-
-Agents pick up work autonomously:
-
-```bash
-# Find the next actionable ticket
-apm next
-
-# Claim and start (provisions worktree)
-apm start <id>
-
-# Or let APM pick the next ticket and spawn a worker agent
-apm start --next --spawn
-
-# Run a dispatch loop (spawns workers up to max_concurrent)
-apm work
+# Force-close a ticket from any state
+apm close <id> --reason "Superseded by #abcd1234"
 ```
 
 ## Epics
@@ -159,9 +111,6 @@ apm clean
 apm clean --dry-run
 apm clean --branches        # also remove local branches
 apm clean --remote          # also remove remote branches
-
-# Force-close a stuck ticket
-apm close <id> --reason "Superseded by #abcd1234"
 ```
 
 ## Configuration
@@ -214,6 +163,67 @@ max_concurrent = 3
 
 [sync]
 aggressive = true
+```
+
+## Agent workflow
+
+Agents work autonomously through the spec and implementation phases.
+
+### Dispatching agents
+
+```bash
+# Spawn a worker on the next actionable ticket
+apm start --next --spawn
+
+# Run a dispatch loop (spawns workers up to max_concurrent)
+apm work
+```
+
+### Spec phase (agent)
+
+Agents pick up `groomed` tickets and write structured specs:
+
+```bash
+# Claim ticket for design
+apm state <id> in_design
+
+# Write spec sections
+apm spec <id> --section Problem --set-file /tmp/problem.md
+apm spec <id> --section "Acceptance criteria" --set "- [ ] Timeout is configurable..."
+apm spec <id> --section Approach --set "Add a timeout_ms parameter to..."
+
+# Set effort and risk estimates
+apm set <id> effort 3
+apm set <id> risk 2
+
+# Submit for supervisor review
+apm state <id> specd
+```
+
+The supervisor reviews and either moves the ticket to `ready` or `ammend` with amendment requests.
+
+### Implementation phase (agent)
+
+```bash
+# Claim a ticket — provisions a worktree, sets state to in_progress
+apm start <id>
+# Prints the worktree path, e.g. ../myproject--worktrees/0001-fix-login-timeout
+
+# Work in the worktree (never checkout in the main directory)
+git -C <worktree-path> add src/auth.rs
+git -C <worktree-path> commit -m "Increase default timeout to 30s"
+
+# Mark as done — pushes branch and opens PR (depending on completion strategy)
+apm state <id> implemented
+```
+
+### Agent instructions
+
+APM generates agent instructions from `.apm/agents.md`. Agents receive these when spawned, covering workflow rules, shell discipline, and branch conventions.
+
+```bash
+# Print the current agent instructions
+apm agents
 ```
 
 ## License
