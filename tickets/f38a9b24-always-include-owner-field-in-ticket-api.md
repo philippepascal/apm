@@ -37,7 +37,15 @@ The GET /api/tickets and GET /api/tickets/:id endpoints omit the owner field ent
 
 ### Approach
 
-How the implementation will work.
+All changes in `apm-server/src/main.rs` only; `apm-core/` untouched.
+
+Root cause: `Frontmatter.owner` has `#[serde(skip_serializing_if = "Option::is_none")]` which correctly protects TOML writes (TOML has no null). The fix must be at the API layer.
+
+1. Add `owner: Option<String>` (without `skip_serializing_if`) to `TicketResponse` and `TicketDetailResponse`. This field serializes as `null` when `None`.
+2. In `list_tickets` (~line 608): extract owner from frontmatter before serializing. Pass `owner` to `TicketResponse`.
+3. In `get_ticket` (~line 652): extract owner from frontmatter before serializing. Pass `owner` to `TicketDetailResponse`.
+4. Tighten `list_tickets_owner_field_absent` test: `assert!(arr[0]["owner"].is_null())`.
+5. Add `get_ticket_owner_field_absent` and `get_ticket_owner_field_present` tests.
 
 ### Open questions
 
