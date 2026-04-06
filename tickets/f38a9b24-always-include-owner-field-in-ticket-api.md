@@ -1,14 +1,14 @@
 +++
 id = "f38a9b24"
 title = "Always include owner field in ticket API responses"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/f38a9b24-always-include-owner-field-in-ticket-api"
 created_at = "2026-04-06T20:57:23.971981Z"
-updated_at = "2026-04-06T20:57:23.971981Z"
+updated_at = "2026-04-06T21:22:35.330838Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-06T20:57Z | — | new | philippepascal |
+| 2026-04-06T21:22Z | new | groomed | apm |
