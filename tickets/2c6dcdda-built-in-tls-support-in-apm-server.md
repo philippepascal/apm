@@ -15,7 +15,9 @@ updated_at = "2026-04-06T06:09:24.235043Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+apm-server currently runs plain HTTP only. Production deployments require a separate reverse proxy (nginx via apm-proxy Docker image) for TLS termination. This adds operational complexity — users need Docker, a separate component, and a different mental model — undermining APM's single-binary simplicity.
+
+The goal is to make production HTTPS as easy as `apm-server --tls --domain=apm.example.com --email=you@example.com`, with automatic certificate management built into the binary itself.
 
 ### Acceptance criteria
 
@@ -32,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
