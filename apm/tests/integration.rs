@@ -1337,6 +1337,9 @@ dir = "tickets"
 [worktrees]
 dir = "worktrees"
 
+[workers]
+command = "/usr/bin/true"
+
 [agents]
 max_concurrent = 3
 
@@ -1553,20 +1556,6 @@ terminal = true
 
 /// Write a minimal fake `claude` executable to `bin_dir` and prepend it to PATH.
 /// Returns the old PATH so the caller can restore it.
-fn fake_claude_in_path(bin_dir: &std::path::Path) -> String {
-    let old_path = std::env::var("PATH").unwrap_or_default();
-    let script = "#!/bin/sh\nexit 0\n";
-    let exe = bin_dir.join("claude");
-    std::fs::write(&exe, script).unwrap();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
-    }
-    let new_path = format!("{}:{old_path}", bin_dir.display());
-    std::env::set_var("PATH", &new_path);
-    old_path
-}
 
 #[test]
 fn start_spawn_sets_agent_to_worker_pid() {
@@ -1574,13 +1563,8 @@ fn start_spawn_sets_agent_to_worker_pid() {
     let p = dir.path();
     write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
     apm::cmd::start::run(p, "1", true, true, false, "delegator-agent").unwrap();
-
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
@@ -1607,13 +1591,8 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     let p = dir.path();
     write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
-
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
@@ -1736,6 +1715,9 @@ dir = "tickets"
 [worktrees]
 dir = "worktrees"
 
+[workers]
+command = "/usr/bin/true"
+
 [agents]
 max_concurrent = 3
 
@@ -1804,12 +1786,8 @@ fn spawn_new_ticket_transitions_to_in_design() {
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
     write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
     assert!(content.contains("state = \"in_design\""), "new ticket should transition to in_design: {content}");
@@ -1822,12 +1800,8 @@ fn spawn_ammend_ticket_transitions_to_in_design() {
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
     write_ticket_to_branch(p, "ticket/0001-fix-spec", "0001-fix-spec.md", "ammend", 1, "fix spec");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-fix-spec", "tickets/0001-fix-spec.md");
     assert!(content.contains("state = \"in_design\""), "ammend ticket should transition to in_design: {content}");
@@ -1840,12 +1814,8 @@ fn spawn_ready_ticket_transitions_to_in_progress() {
     std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
     write_ticket_to_branch(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-implement-me", "tickets/0001-implement-me.md");
     assert!(content.contains("state = \"in_progress\""), "ready ticket should transition to in_progress: {content}");
@@ -1858,12 +1828,8 @@ fn start_next_spawn_new_ticket_transitions_correctly() {
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
     write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
     assert!(content.contains("state = \"in_design\""), "run_next on new ticket should go to in_design: {content}");
@@ -1876,12 +1842,8 @@ fn start_next_spawn_ready_ticket_transitions_correctly() {
     std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
     write_ticket_to_branch(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me");
 
-    let bin_dir = tempfile::tempdir().unwrap();
-    let old_path = fake_claude_in_path(bin_dir.path());
-
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
-    std::env::set_var("PATH", &old_path);
 
     let content = branch_content(p, "ticket/0001-implement-me", "tickets/0001-implement-me.md");
     assert!(content.contains("state = \"in_progress\""), "run_next on ready ticket should go to in_progress: {content}");
