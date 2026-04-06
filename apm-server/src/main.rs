@@ -492,7 +492,8 @@ async fn sync_handler(
                         let n = candidates.close.len();
                         if n > 0 {
                             let aggressive = config.sync.aggressive;
-                            let _ = apm_core::sync::apply(&root, &config, &candidates, "apm-ui", aggressive);
+                            let author = apm_core::config::resolve_identity(&root);
+                            let _ = apm_core::sync::apply(&root, &config, &candidates, &author, aggressive);
                         }
                         n
                     }
