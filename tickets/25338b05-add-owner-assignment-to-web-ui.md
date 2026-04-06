@@ -49,7 +49,35 @@ The result is that owner assignment is effectively CLI-only — any team member 
 
 ### Approach
 
-How the implementation will work.
+**1. Backend — `apm-server/src/main.rs`**
+
+Add `owner: Option<String>` to `PatchTicketRequest` (currently defined around lines 137-141). In the `patch_ticket` handler, after the existing effort/risk/priority processing, check if `owner` is `Some(v)`: if `v` is empty, call `set_field("owner", "-")` (the clear sentinel); otherwise call `set_field("owner", v)`. `TicketDetailResponse` already serializes the `owner` field (`skip_serializing_if = "Option::is_none"`), so no response struct changes are needed.
+
+Add three server-side tests following the existing `patch_ticket` pattern:
+- set owner to a new value -> persisted and returned
+- set owner to empty string -> field cleared in frontmatter
+- omit owner field -> existing value unchanged
+
+**2. Frontend — new `InlineOwnerField` component**
+
+Create `apm-ui/src/components/InlineOwnerField.tsx`. Model it after `InlineNumberField.tsx`:
+- Props: `value: string | undefined`, `suggestions: string[]`, `onCommit: (v: string) => void`
+- Renders current value as text with a click-to-edit affordance; shows placeholder when `value` is undefined
+- On click: renders `<input>` with a `<datalist>` populated from `suggestions`
+- On Enter or blur: calls `onCommit(inputValue)` (empty string = clear)
+- On Escape: reverts to display mode without calling `onCommit`
+
+**3. Frontend — `TicketDetail.tsx`**
+
+Add an owner row in the metadata section alongside effort/risk/priority. Wire `InlineOwnerField` to call `PATCH /api/tickets/:id` with `{ owner: v }` via the existing React Query mutation. On success, invalidate or update the ticket cache so the UI reflects the change immediately.
+
+Accept a new `availableOwners: string[]` prop and pass it to `InlineOwnerField` as `suggestions`.
+
+**4. Frontend — `SupervisorView.tsx`**
+
+`SupervisorView` already computes distinct owners from the ticket list (lines ~108-112). Pass this array as the `availableOwners` prop to `TicketDetail` — no additional network request needed.
+
+**Implementation order:** backend (struct + handler + tests) -> `InlineOwnerField` component -> wire into `TicketDetail` -> pass suggestions from `SupervisorView`.
 
 ### Open questions
 
