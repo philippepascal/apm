@@ -40,7 +40,21 @@ The apm-server has a complete WebAuthn/passkey registration and login flow that 
 
 ### Approach
 
-How the implementation will work.
+All building blocks exist in `apm-server/src/main.rs` and `apm-server/src/auth.rs`; this is purely a wiring task.
+
+1. Add `require_auth` middleware function in `main.rs` that:
+   - Extracts `ConnectInfo<SocketAddr>` from request extensions
+   - Allows loopback IPs through unconditionally
+   - Checks `__Host-apm-session` cookie via existing `find_session_username()`
+   - Returns 401 `{"error":"unauthorized"}` if neither condition is met
+
+2. Split `build_app` into two sub-routers:
+   - **protected** — all data API routes, with `.layer(axum::middleware::from_fn_with_state(state, require_auth))`
+   - **open** — `/health`, `/register`, `/login`, `/api/auth/register/*`, `/api/auth/login/*`, `serve_ui` fallback
+
+3. Merge both routers into the final `Router` with `.with_state(state)`
+
+No new dependencies. Reuses existing `find_session_username` and `is_loopback()` pattern.
 
 ### Open questions
 
