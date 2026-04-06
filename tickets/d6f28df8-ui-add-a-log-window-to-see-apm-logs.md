@@ -1,14 +1,14 @@
 +++
 id = "d6f28df8"
 title = "UI add a log window to see apm logs"
-state = "new"
+state = "closed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/d6f28df8-ui-add-a-log-window-to-see-apm-logs"
 created_at = "2026-04-06T01:38:22.747603Z"
-updated_at = "2026-04-06T01:38:22.747603Z"
+updated_at = "2026-04-06T21:21:30.219472Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-06T01:38Z | — | new | philippepascal |
+| 2026-04-06T21:21Z | new | closed | apm |
