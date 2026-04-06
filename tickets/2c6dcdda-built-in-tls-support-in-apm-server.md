@@ -3,13 +3,13 @@ id = "2c6dcdda"
 title = "Built-in TLS support in apm-server"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 6
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2c6dcdda-built-in-tls-support-in-apm-server"
 created_at = "2026-04-06T06:09:24.235043Z"
-updated_at = "2026-04-06T06:12:49.250564Z"
+updated_at = "2026-04-06T06:16:12.763486Z"
 +++
 
 ## Spec
