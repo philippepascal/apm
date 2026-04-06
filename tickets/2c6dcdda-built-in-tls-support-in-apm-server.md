@@ -42,7 +42,7 @@ The goal is to make production HTTPS as easy as `apm-server --tls --domain=apm.e
 - HTTP/2-specific configuration (comes automatically with rustls but not explicitly configured)
 - Removing or replacing the apm-proxy Docker image (it remains, documented as optional/legacy)
 - Integration tests that contact Let's Encrypt staging or production (network-dependent; testing uses self-signed path)
-- Configuring the HTTP-to-HTTPS redirect port (always :80)
+- HTTP-to-HTTPS redirect (apm-server listens on a single port only)
 
 ### Approach
 
