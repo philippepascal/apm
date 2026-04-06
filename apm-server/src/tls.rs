@@ -135,14 +135,30 @@ pub async fn serve_acme(
 ) {
     use rustls_acme::AcmeConfig;
     use rustls_acme::caches::DirCache;
+    use tokio_stream::StreamExt;
+    use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
 
-    let state = AcmeConfig::new(vec![domain.as_str()])
+    #[allow(deprecated)]
+    let mut state = AcmeConfig::new(vec![domain.as_str()])
         .contact_push(format!("mailto:{email}"))
         .cache(DirCache::new(cache_dir))
         .directory_lets_encrypt(true)
         .state();
 
-    let acceptor = TlsAcceptor::from(state.default_rustls_config());
+    #[allow(deprecated)]
+    let acceptor = state.acceptor();
+    let rustls_config = state.default_rustls_config();
+
+    // Drive the ACME state machine (certificate issuance & renewal).
+    tokio::spawn(async move {
+        while let Some(event) = state.next().await {
+            match event {
+                Ok(ok) => eprintln!("acme event: {ok:?}"),
+                Err(err) => eprintln!("acme error: {err:?}"),
+            }
+        }
+    });
+
     let listener = TcpListener::bind(addr).await.expect("bind ACME listener");
     println!("Listening on https://{addr} (Let's Encrypt ACME)");
 
@@ -155,20 +171,33 @@ pub async fn serve_acme(
             }
         };
         let acceptor = acceptor.clone();
+        let rustls_config = rustls_config.clone();
         let app = app.clone();
         tokio::spawn(async move {
-            let Ok(tls) = acceptor.accept(tcp).await else { return };
-            let io = TokioIo::new(tls);
-            let svc = hyper::service::service_fn(move |mut req: Request<Incoming>| {
-                req.extensions_mut().insert(ConnectInfo(remote_addr));
-                let req = req.map(Body::new);
-                let mut app = app.clone();
-                async move { app.call(req).await }
-            });
-            AutoBuilder::new(TokioExecutor::new())
-                .serve_connection_with_upgrades(io, svc)
-                .await
-                .ok();
+            // Bridge tokio TcpStream to futures-io for rustls-acme.
+            let compat_tcp = tcp.compat();
+            match acceptor.accept(compat_tcp).await {
+                Ok(None) => {} // ACME TLS-ALPN-01 challenge handled
+                Ok(Some(start)) => {
+                    let Ok(tls) = start.into_stream(rustls_config).await else {
+                        return;
+                    };
+                    // Bridge futures-io TlsStream back to tokio-io for hyper.
+                    let io = TokioIo::new(tls.compat());
+                    let svc =
+                        hyper::service::service_fn(move |mut req: Request<Incoming>| {
+                            req.extensions_mut().insert(ConnectInfo(remote_addr));
+                            let req = req.map(Body::new);
+                            let mut app = app.clone();
+                            async move { app.call(req).await }
+                        });
+                    AutoBuilder::new(TokioExecutor::new())
+                        .serve_connection_with_upgrades(io, svc)
+                        .await
+                        .ok();
+                }
+                Err(e) => eprintln!("tls accept error: {e}"),
+            }
         });
     }
 }

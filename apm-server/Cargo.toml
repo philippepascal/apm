@@ -21,6 +21,7 @@ include_dir = { workspace = true }
 mime_guess = { workspace = true }
 clap = { workspace = true }
 tokio-stream = { version = "0.1", features = ["net"] }
+tokio-util = { version = "0.7", features = ["compat"] }
 rand = "0.8"
 cookie = "0.18"
 webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
