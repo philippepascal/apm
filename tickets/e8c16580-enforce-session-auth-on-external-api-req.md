@@ -20,7 +20,15 @@ The apm-server has a complete WebAuthn/passkey registration and login flow that 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] GET `/api/tickets` from an external IP with no session cookie returns 401 with `{"error":"unauthorized"}`
+- [ ] GET `/api/tickets` from an external IP with a valid `__Host-apm-session` cookie returns 200
+- [ ] GET `/api/tickets` from an external IP with an expired or invalid session token returns 401
+- [ ] GET `/api/tickets` from loopback (127.0.0.1 or ::1) with no session cookie returns 200
+- [ ] POST `/api/auth/login/challenge` from an external IP with no session cookie returns 200 (auth routes stay open)
+- [ ] POST `/api/auth/register/challenge` from an external IP with no session cookie returns 200
+- [ ] GET `/health` from an external IP with no session cookie returns 200
+- [ ] All protected routes (`/api/sync`, `/api/clean`, `/api/tickets/:id`, `/api/tickets/:id/body`, `/api/tickets/:id/transition`, `/api/tickets/batch/*`, `/api/queue`, `/api/workers`, `/api/workers/:pid`, `/api/work/*`, `/api/agents/config`, `/api/log/stream`, `/api/epics`, `/api/epics/:id`, `/api/me`, `/api/auth/otp`, `/api/auth/sessions`) return 401 when called externally without a valid session
+- [ ] Existing localhost-only guards in `otp_handler` and session handlers continue to work after the middleware is added
 
 ### Out of scope
 
