@@ -3,13 +3,13 @@ id = "25338b05"
 title = "Add owner assignment to web UI"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25338b05-add-owner-assignment-to-web-ui"
 created_at = "2026-04-06T20:57:16.722499Z"
-updated_at = "2026-04-06T23:22:20.980324Z"
+updated_at = "2026-04-06T23:31:32.639323Z"
 depends_on = ["f38a9b24", "87fb645e"]
 +++
 
