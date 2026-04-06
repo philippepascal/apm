@@ -19,7 +19,6 @@
     "@tanstack/react-query": "^5.96.0",
     "clsx": "^2.1.1",
     "codemirror": "^6.0.2",
-    "lightningcss-darwin-arm64": "^1.32.0",
     "lucide-react": "^1.7.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

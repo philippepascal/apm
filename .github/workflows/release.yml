@@ -28,7 +28,7 @@ jobs:
       - name: Build apm-ui assets
         working-directory: apm-ui
         run: |
-          npm install --no-package-lock
+          npm ci
           npm run build
 
       - name: Run tests
@@ -76,7 +76,7 @@ jobs:
       - name: Build apm-ui assets
         working-directory: apm-ui
         run: |
-          npm install --no-package-lock
+          npm ci
           npm run build
 
       - name: Add Rust target
