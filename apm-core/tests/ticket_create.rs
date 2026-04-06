@@ -4,6 +4,7 @@ use tempfile::TempDir;
 
 fn git(dir: &std::path::Path, args: &[&str]) {
     Command::new("git")
+        .arg("-c").arg("init.defaultBranch=main")
         .args(args)
         .current_dir(dir)
         .env("GIT_AUTHOR_NAME", "test")
