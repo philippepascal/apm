@@ -17,3 +17,7 @@ pr-body.txt
 .apm/*.init
 .apm/sessions.json
 .apm/credentials.json
+start-server.sh
+
+# personal config/scripts
+s/
