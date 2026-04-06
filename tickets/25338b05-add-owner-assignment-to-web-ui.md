@@ -40,7 +40,12 @@ The result is that owner assignment is effectively CLI-only — any team member 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- User account management or validation that the entered owner matches a known system user
+- Permission enforcement (restricting who may change the owner)
+- Bulk owner assignment via the web UI
+- Notifications or webhooks triggered by owner changes
+- Worker view (WorkerView) — owner display there is not changed by this ticket
+- Any changes to the CLI assign command or apm-proxy
 
 ### Approach
 
