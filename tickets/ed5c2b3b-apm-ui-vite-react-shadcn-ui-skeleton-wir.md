@@ -6,10 +6,9 @@ priority = 70
 effort = 4
 risk = 2
 author = "apm"
-agent = "51401"
 branch = "ticket/ed5c2b3b-apm-ui-vite-react-shadcn-ui-skeleton-wir"
 created_at = "2026-03-31T06:11:40.599936Z"
-updated_at = "2026-04-01T04:57:05.289149Z"
+updated_at = "2026-04-06T06:49:12.572530Z"
 +++
 
 ## Spec
@@ -204,3 +203,4 @@ Steps to confirm it works end-to-end:
 | 2026-03-31T21:52Z | in_progress | implemented | claude-0331-2145-b7f2 |
 | 2026-03-31T23:12Z | implemented | accepted | philippepascal |
 | 2026-04-01T04:57Z | accepted | closed | apm-sync |
+| 2026-04-06T06:49Z | closed | closed | apm |
