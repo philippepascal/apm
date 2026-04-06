@@ -4,6 +4,7 @@ description = "Git-native, agent-first project management tool"
 
 [tickets]
 dir = "tickets"
+archive_dir = "archive/tickets"
 
 [worktrees]
 dir = "../apm--worktrees"

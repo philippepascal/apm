@@ -563,7 +563,9 @@ Example:
     /// Move closed ticket files to the archive directory
     #[command(long_about = "Move terminal-state ticket files from tickets/ to the configured archive_dir.
 
-Requires `archive_dir` to be set in [tickets] in .apm/config.toml:
+Requires `archive_dir` under the [tickets] section of .apm/config.toml:
+
+  [tickets]
   archive_dir = \"archive/tickets\"
 
 Examples:
