@@ -4,12 +4,12 @@ title = "remove apm-proxy"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/755166f8-remove-apm-proxy"
 created_at = "2026-04-06T20:50:54.696634Z"
-updated_at = "2026-04-06T21:34:05.208084Z"
+updated_at = "2026-04-06T21:34:31.926068Z"
 +++
 
 ## Spec
