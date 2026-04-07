@@ -19,6 +19,3 @@ tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.5", features = [] }
 include_dir = "0.7"
 mime_guess = "2"
-
-[patch.crates-io]
-rustls-acme = { path = "patches/rustls-acme" }

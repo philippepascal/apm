@@ -28,7 +28,7 @@ webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"]
 openssl = { version = "0.10", features = ["vendored"] }
 uuid = { version = "1", features = ["v4", "v5"] }
 tower = "0.5"
-rustls-acme = { version = "0.12", features = ["tokio", "ring"] }
+rustls-acme = { version = "0.15", features = ["tokio", "ring"] }
 rcgen = "0.13"
 tokio-rustls = "0.26"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
