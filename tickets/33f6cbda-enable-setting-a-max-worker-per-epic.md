@@ -1,14 +1,14 @@
 +++
 id = "33f6cbda"
 title = "enable setting a max worker per epic"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 3
 author = "philippepascal"
 branch = "ticket/33f6cbda-enable-setting-a-max-worker-per-epic"
 created_at = "2026-04-07T19:08:03.080608Z"
-updated_at = "2026-04-07T19:23:37.472087Z"
+updated_at = "2026-04-07T19:24:42.260364Z"
 +++
 
 ## Spec
@@ -242,3 +242,4 @@ apm epic set-max-workers <epic-id> --unset
 | 2026-04-07T19:08Z | — | new | philippepascal |
 | 2026-04-07T19:08Z | new | groomed | apm |
 | 2026-04-07T19:19Z | groomed | in_design | philippepascal |
+| 2026-04-07T19:24Z | in_design | specd | claude-0407-1919-a370 |
