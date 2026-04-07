@@ -1,14 +1,14 @@
 +++
 id = "a71186da"
 title = "Deduplicate identity resolution: remove identity.rs, use config.rs"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/a71186da-deduplicate-identity-resolution-remove-i"
 created_at = "2026-04-07T22:30:44.747975Z"
-updated_at = "2026-04-07T22:30:44.747975Z"
+updated_at = "2026-04-07T22:43:57.336954Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -52,3 +52,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T22:30Z | — | new | philippepascal |
+| 2026-04-07T22:43Z | new | groomed | apm |
