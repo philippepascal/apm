@@ -34,7 +34,42 @@ Editor-opening logic is duplicated across three command handlers with slight but
 
 ### Approach
 
-How the implementation will work.
+1. **Create `src/editor.rs`** — new module with two public functions:
+
+   ```rust
+   /// Returns the editor to use: $VISUAL, then $EDITOR, then "vi".
+   pub fn resolve() -> String
+
+   /// Resolves the editor, spawns it on `path` with inherited stdio,
+   /// and returns an error if the process could not be launched or
+   /// exited with a non-zero status.
+   pub fn open(path: &Path) -> Result<()>
+   ```
+
+   `open` splits the resolved editor string on whitespace to extract binary + flags,
+   spawns with `Stdio::inherit()` on all three streams, and bails via `anyhow::bail!`
+   on non-zero exit — matching the current behaviour in `show.rs` and `review.rs`.
+
+2. **Register the module in `src/lib.rs`** — add `pub mod editor;`.
+
+3. **Update `cmd/review.rs`** — delete the local `open_editor` function (lines 158–180).
+   Call `crate::editor::open(path)?` in its place.
+
+4. **Update `cmd/show.rs`** — replace the inline editor-resolution and spawn block
+   (lines 93–114 approximately) with `crate::editor::open(&tmp_path)?`.
+   Keep the temp-file write, read-back, diff, and `git::commit_to_branch` logic unchanged.
+
+5. **Update `cmd/new.rs`** — replace the inline editor-resolution and spawn block with:
+   ```rust
+   let _ = crate::editor::open(&file_path);
+   ```
+   The `let _ =` intentionally discards the error, preserving the existing
+   "commit whatever the user wrote, even if editor exits non-zero" behaviour.
+   Keep the branch-checkout, git-add, git-commit, and branch-restore logic unchanged.
+
+6. **Run `cargo test`** to confirm no regressions.
+
+No changes to public CLI surface, config, ticket format, or git helpers.
 
 ### Open questions
 
