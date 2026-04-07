@@ -43,7 +43,13 @@ The desired behaviour is a named **worker profile** system. Users define profile
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-profile `keychain` (API key) overrides — keychain stays global
+- Per-profile `skip_permissions` — remains a global flag on `AgentsConfig`
+- A `--profile` CLI flag to override the profile at invocation time
+- Profile overrides in `local.toml` (local per-machine profile overrides)
+- UI surface for editing or selecting profiles
+- Profile inheritance / composition (profiles extending other profiles)
+- Hot-reloading profiles without restarting `apm work`
 
 ### Approach
 
