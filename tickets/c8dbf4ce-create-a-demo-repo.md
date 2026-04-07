@@ -24,7 +24,7 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 ### Acceptance criteria
 
 - [x] A public GitHub repository named `apm-demo` exists and is cloneable without authentication
-- [ ] The repo contains a Rust CLI project that compiles with `cargo build` without errors
+- [x] The repo contains a Rust CLI project that compiles with `cargo build` without errors
 - [ ] Running the compiled binary (e.g. `./jot list`) produces output without panicking
 - [ ] The repo contains a `.apm/config.toml` with project name, default branch, and merge strategy configured
 - [ ] `apm list` run from the cloned repo shows tickets across at least 8 distinct states
