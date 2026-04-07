@@ -17,15 +17,7 @@ target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 
 ### Problem
 
-Editor-opening logic is duplicated in three command handlers with slight variations:
-
-1. `cmd/new.rs:76-128` — checks out ticket branch, opens editor on the ticket file, commits changes, restores original branch
-2. `cmd/show.rs:83-130` — writes ticket to temp file, opens editor, reads back, diffs for changes, commits if modified
-3. `cmd/review.rs:158-180` — opens editor with stdio inheritance, reads result back
-
-All three resolve `$EDITOR` / `$VISUAL`, handle the fallback to `vi`, spawn the process, and check the exit code. The differences are in what happens before and after the editor runs (branch management, temp files, commit logic).
-
-This makes it error-prone to change editor behavior (e.g., adding a new env var fallback, changing error handling) since the fix must be applied in three places.
+Editor-opening logic is duplicated across three command handlers with slight but meaningful variations:\n\n1. **`cmd/new.rs` lines 76–128** — resolves the editor, checks out the ticket branch, opens the editor on the ticket file, auto-commits (ignoring non-zero exit with a warning), then restores the original branch.\n2. **`cmd/show.rs` lines 83–130** — resolves the editor, writes ticket content to a temp file, opens it with inherited stdio, bails on non-zero exit, diffs the result, and commits via `git::commit_to_branch` if changed.\n3. **`cmd/review.rs` lines 158–180** — resolves the editor, opens it on an existing path with inherited stdio, bails on non-zero exit.\n\nAll three contain an identical block that reads `$VISUAL`, falls back to `$EDITOR`, then falls back to `"vi"`, and spawns the process by splitting the string on whitespace. This means any change to editor resolution or invocation (e.g., adding a new env var, changing error handling, adding logging) must be applied in three places, increasing the chance of divergence.
 
 ### Acceptance criteria
 
