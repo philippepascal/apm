@@ -36,7 +36,10 @@ Both patterns should be centralised as methods on `impl Config` in `apm-core/src
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The `terminal || worker_end` combined filter in `apm/src/cmd/workers.rs` and `apm-server/src/workers.rs` — this is a distinct semantic (worker lifecycle boundary) and belongs in a separate ticket if centralisation is desired
+- Adding helper methods for any other `StateConfig` or `TicketSection` properties not already repeated at multiple call sites
+- Changing the `StateConfig` or `TicketSection` data model
+- Updating the standard `.apm.toml` config to ensure `"closed"` is present (assumed already true; if not, that is a separate defect)
 
 ### Approach
 
