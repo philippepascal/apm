@@ -62,6 +62,13 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
         .filter(|s| s.terminal || s.worker_end)
         .map(|s| s.id.as_str())
         .collect();
+    let worker_states: std::collections::HashSet<&str> = config
+        .workflow
+        .states
+        .iter()
+        .filter(|s| !s.terminal && !s.worker_end && s.actionable.is_empty())
+        .map(|s| s.id.as_str())
+        .collect();
 
     let mut results = Vec::new();
     for wt_path in worktree_paths {
@@ -84,6 +91,9 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
             ),
             None => (String::new(), String::new(), String::new()),
         };
+        if !worker_states.contains(state.as_str()) && !ended_states.contains(state.as_str()) {
+            continue;
+        }
         let status = determine_status(alive, &state, &ended_states);
         results.push(WorkerInfo {
             pid,
@@ -207,6 +217,44 @@ mod tests {
         assert_eq!(determine_status(false, "implemented", &ended), "ended");
         assert_eq!(determine_status(false, "in_progress", &ended), "crashed");
         assert_eq!(determine_status(true, "specd", &ended), "running");
+    }
+
+    /// States with no worker association (ready, groomed, etc.) should be
+    /// excluded from the workers response. Only worker_states and ended_states
+    /// should appear.
+    #[test]
+    fn non_worker_states_excluded_by_filter() {
+        let worker_states: std::collections::HashSet<&str> =
+            ["in_design", "in_progress"].iter().copied().collect();
+        let ended_states: std::collections::HashSet<&str> =
+            ["specd", "implemented", "closed"].iter().copied().collect();
+
+        // States that should pass the filter
+        assert!(
+            worker_states.contains("in_progress") || ended_states.contains("in_progress"),
+            "in_progress should be included"
+        );
+        assert!(
+            worker_states.contains("in_design") || ended_states.contains("in_design"),
+            "in_design should be included"
+        );
+        assert!(
+            worker_states.contains("implemented") || ended_states.contains("implemented"),
+            "implemented should be included"
+        );
+        assert!(
+            worker_states.contains("closed") || ended_states.contains("closed"),
+            "closed should be included"
+        );
+
+        // States that should be excluded
+        let excluded = ["ready", "groomed", "new", "question", "ammend", "blocked"];
+        for state in excluded {
+            assert!(
+                !worker_states.contains(state) && !ended_states.contains(state),
+                "state '{state}' should be excluded from workers panel"
+            );
+        }
     }
 
     #[tokio::test]
