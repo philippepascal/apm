@@ -35,7 +35,21 @@ cargo test --workspace fails for apm-server because include_dir!("apm-ui/dist") 
 
 ### Approach
 
-How the implementation will work.
+Add .github/workflows/ci.yml — a new workflow triggered on every push and pull_request to the default branch. The workflow has a single job with these steps:
+
+1. actions/checkout@v4
+2. actions/setup-node@v4 with Node 20 (matching release.yml)
+3. dtolnay/rust-toolchain@stable (matching release.yml)
+4. Build the UI: npm ci then npm run build in apm-ui/
+5. Run tests: cargo test --workspace
+
+Key constraints:
+- Mirror the Node/Rust versions from release.yml exactly to avoid version skew
+- Single Ubuntu runner, no matrix — correctness check only, not cross-compilation
+- No separate build/test jobs; keep it flat like the release workflow pattern
+- No other files change — the root cause (compile-time panic without dist/) is not being fixed structurally; the workflow simply pre-builds the UI, which is already the pattern in release.yml
+
+File to create: .github/workflows/ci.yml
 
 ### Open questions
 
