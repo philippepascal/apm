@@ -1,14 +1,14 @@
 +++
 id = "c8dbf4ce"
 title = "create a demo repo"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 5
 risk = 2
 author = "philippepascal"
 branch = "ticket/c8dbf4ce-create-a-demo-repo"
 created_at = "2026-04-07T17:01:04.559759Z"
-updated_at = "2026-04-07T18:30:14.987450Z"
+updated_at = "2026-04-07T18:36:47.276512Z"
 +++
 
 ## Spec
@@ -228,3 +228,4 @@ apm-server
 | 2026-04-07T18:15Z | specd | ammend | claude-0407-review |
 | 2026-04-07T18:28Z | ammend | in_design | philippepascal |
 | 2026-04-07T18:30Z | in_design | specd | claude-0407-1828-aac0 |
+| 2026-04-07T18:36Z | specd | ready | apm |
