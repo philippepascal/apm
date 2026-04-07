@@ -30,7 +30,7 @@ State transition logic is scattered across four modules in apm-core. The canonic
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Routing `start::run()` through `state::transition()` — spawning, worker resolution, and base-branch merging are inherently start-specific and do not belong in the generic transition engine\n- Routing `ticket::close()` entirely through `state::transition()` — the stale-branch lookup (finding a ticket whose branch was already deleted) is close-specific logic that `transition()` does not handle\n- Changing any public type signatures (`TransitionOutput`, `StartOutput`, `CompletionStrategy`, etc.) consumed by the `apm` or `apm-server` crates\n- Adding new transition states, triggers, or completion strategies\n- Moving `review.rs` spec-editing utilities (`split_body`, `apply_review`, `normalize_amendments`) — these are legitimately review-flow concerns\n- Performance or async changes
 
 ### Approach
 
