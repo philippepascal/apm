@@ -1,7 +1,7 @@
 +++
 id = "25338b05"
 title = "Add owner assignment to web UI"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25338b05-add-owner-assignment-to-web-ui"
 created_at = "2026-04-06T20:57:16.722499Z"
-updated_at = "2026-04-07T00:15:09.005536Z"
+updated_at = "2026-04-07T00:41:36.777824Z"
 depends_on = ["f38a9b24", "87fb645e"]
 +++
 
@@ -99,3 +99,4 @@ Accept a new `availableOwners: string[]` prop and pass it to `InlineOwnerField` 
 | 2026-04-06T23:22Z | groomed | in_design | philippepascal |
 | 2026-04-06T23:32Z | in_design | specd | claude-0406-1735-b2e1 |
 | 2026-04-07T00:15Z | specd | ready | apm |
+| 2026-04-07T00:41Z | ready | in_progress | philippepascal |
