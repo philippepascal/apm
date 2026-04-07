@@ -8,6 +8,7 @@ archive_dir = "archive/tickets"
 
 [worktrees]
 dir = "../apm--worktrees"
+agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [[repos.code]]
 path = "philippepascal/apm"

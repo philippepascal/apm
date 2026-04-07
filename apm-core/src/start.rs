@@ -213,6 +213,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let worktrees_base = root.join(&config.worktrees.dir);
     let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
+    git::sync_agent_dirs(root, &wt_display, &config.worktrees.agent_dirs);
 
     let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")

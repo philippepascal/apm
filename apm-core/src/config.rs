@@ -302,11 +302,16 @@ fn default_true() -> bool { true }
 #[derive(Debug, Deserialize)]
 pub struct WorktreesConfig {
     pub dir: PathBuf,
+    #[serde(default)]
+    pub agent_dirs: Vec<String>,
 }
 
 impl Default for WorktreesConfig {
     fn default() -> Self {
-        Self { dir: PathBuf::from("../worktrees") }
+        Self {
+            dir: PathBuf::from("../worktrees"),
+            agent_dirs: Vec::new(),
+        }
     }
 }
 
