@@ -52,9 +52,39 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 
 ### Approach
 
+**Deliverable — `scripts/create-demo.sh`**
+
+The output of this ticket is a single bash script committed to the APM repo at
+`scripts/create-demo.sh`. The script is runnable as one command; it creates the
+`apm-demo` GitHub repo, writes the Rust project files, initialises APM,
+populates all tickets, and pushes. Actually running the script to create the
+public repo is a **manual post-merge step** — the worker only implements and
+validates the script inside the APM worktree.
+
+The script structure:
+
+```
+scripts/create-demo.sh
+  ├── 0. Preflight checks (gh auth, cargo, apm in PATH)
+  ├── 1. Create temp working directory
+  ├── 2. Create & clone GitHub repo (gh repo create philippepascal/apm-demo --public)
+  ├── 3. Write Cargo project (Cargo.toml + src/main.rs)
+  ├── 4. apm init
+  ├── 5. apm epic new "Search feature"
+  ├── 6. Create 14 tickets (apm new + apm spec + apm state + apm set)
+  └── 7. git add / commit / push
+```
+
+The script uses `set -euo pipefail`, has a `#!/usr/bin/env bash` shebang, and
+is committed as executable (`chmod +x`). It exits non-zero on any failure.
+
+---
+
 **Fictional project — `jot`**
 
-The demo Rust CLI is called `jot`, a minimal command-line notes tool. It gives natural APM ticket material ("add tagging", "search", "delete", "export") and is simple enough to understand at a glance.
+The demo Rust CLI is called `jot`, a minimal command-line notes tool. It gives
+natural APM ticket material ("add tagging", "search", "delete", "export") and
+is simple enough to understand at a glance.
 
 Working commands in the frozen state:
 - `jot add "<text>"` — appends a note to `~/.jot/notes.txt`
@@ -89,7 +119,8 @@ Use the default workflow (11 states) — no custom `workflow.toml` needed.
 
 **Epic**
 
-Create one epic: "Search feature" via `apm epic new "Search feature"`. Tickets in the epic set `epic = "<id>"` and `target_branch = "epic/<id>-search-feature"`.
+Create one epic: "Search feature" via `apm epic new "Search feature"`. Tickets
+in the epic set `epic = "<id>"` and `target_branch = "epic/<id>-search-feature"`.
 
 ---
 
@@ -130,21 +161,24 @@ Dependency chain: 1→2→3→4, 3→5→6, 5→12. Priority 5 on tickets 4 and 
 
 **README structure**
 
-Sections: About this repo, Prerequisites, Build & run jot, Explore with APM (apm list, apm show, apm next, apm state, apm epic list, apm-server), Next steps (apm help, apm work, apm register).
+Sections: About this repo, Prerequisites, Build & run jot, Explore with APM
+(apm list, apm show, apm next, apm state, apm epic list, apm-server), Next
+steps (apm help, apm work, apm register).
+
+The README is written inline in the script via a heredoc and committed as part
+of the initial push.
 
 ---
 
-**Repository setup steps**
+**Script implementation notes**
 
-1. Create public GitHub repo `apm-demo` under the `philippepascal` account
-2. Init git, add Cargo project (`Cargo.toml`, `src/main.rs`), write README.md
-3. Run `apm init` with project name "jot"
-4. Create tickets with `apm new`, fill specs with `apm spec`, advance states with `apm state`
-5. For closed/implemented tickets use `apm state <id> --force closed` (no real branch to merge)
-6. For in-progress tickets set branch manually: `apm set <id> branch "ticket/..."` — do not run `apm start` (it would try to create worktrees)
-7. Push to GitHub
-
-Git history realism is not an AC; a single "initial commit" is acceptable.
+- Use `apm state <id> --force <state>` for closed/implemented tickets (no real
+  branch to merge)
+- For in-progress tickets, set branch manually via `apm set <id> branch
+  "ticket/..."` — do not run `apm start` (it would try to create worktrees)
+- Ticket IDs from `apm new` are captured and stored in shell variables for
+  later `depends_on` / `epic` cross-references
+- Git history realism is not an AC; a single "initial commit" is acceptable
 
 ### See all tickets
 
