@@ -25,18 +25,18 @@ The result is that owner assignment is effectively CLI-only — any team member 
 
 ### Acceptance criteria
 
-- [ ] `PATCH /api/tickets/:id` accepts an `owner` field and persists it to the ticket frontmatter in git
-- [ ] `PATCH /api/tickets/:id` with `owner` set to an empty string or `"-"` clears the owner (sets it to None)
-- [ ] `PATCH /api/tickets/:id` that omits the `owner` field leaves the existing owner unchanged
-- [ ] `PATCH /api/tickets/:id` returns the updated ticket including the new owner value in the response body
-- [ ] The ticket detail panel displays the owner field; shows the username when assigned
-- [ ] The ticket detail panel shows a placeholder (e.g. "Unassigned") when no owner is set
-- [ ] Clicking the owner field in the detail panel activates an inline edit input
-- [ ] The inline input offers autocomplete suggestions drawn from the distinct owners already present in the ticket list
-- [ ] Submitting the inline input with a non-empty value assigns that owner and updates the display without a page reload
-- [ ] Submitting the inline input with an empty value clears the owner and updates the display without a page reload
-- [ ] Pressing Escape while editing the owner field cancels the edit and reverts to the previous display
-- [ ] After assigning or clearing an owner via the web UI, refreshing the page shows the persisted value
+- [x] `PATCH /api/tickets/:id` accepts an `owner` field and persists it to the ticket frontmatter in git
+- [x] `PATCH /api/tickets/:id` with `owner` set to an empty string or `"-"` clears the owner (sets it to None)
+- [x] `PATCH /api/tickets/:id` that omits the `owner` field leaves the existing owner unchanged
+- [x] `PATCH /api/tickets/:id` returns the updated ticket including the new owner value in the response body
+- [x] The ticket detail panel displays the owner field; shows the username when assigned
+- [x] The ticket detail panel shows a placeholder (e.g. "Unassigned") when no owner is set
+- [x] Clicking the owner field in the detail panel activates an inline edit input
+- [x] The inline input offers autocomplete suggestions drawn from the distinct owners already present in the ticket list
+- [x] Submitting the inline input with a non-empty value assigns that owner and updates the display without a page reload
+- [x] Submitting the inline input with an empty value clears the owner and updates the display without a page reload
+- [x] Pressing Escape while editing the owner field cancels the edit and reverts to the previous display
+- [x] After assigning or clearing an owner via the web UI, refreshing the page shows the persisted value
 
 ### Out of scope
 
