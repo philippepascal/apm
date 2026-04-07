@@ -79,10 +79,11 @@ pub fn epic_max_workers(&self, epic_id: &str) -> Option<usize> {
 }
 ```
 
-#### 2. `apm/src/cmd/epic.rs` — new `set-max-workers` subcommand
+#### 2. `apm/src/cmd/epic.rs` — extend existing `set` subcommand
 
-- Add `SetMaxWorkers { epic_id: String, max_workers: Option<usize> }` variant to `EpicCommand` (`None` = unset/remove).
-- Validate: epic must exist via `epic_branches(root)`; `max_workers` must be ≥ 1 if provided.
+- The `epic set` subcommand already follows the `apm set <id> <field> <value>` pattern; add `max_workers` as a recognised field.
+- Dispatch: `apm epic set <epic-id> max_workers <N>` sets the limit; `apm epic set <epic-id> max_workers -` unsets it (the `-` sentinel matches the clear convention used by `apm set`).
+- Validate: epic must exist via `epic_branches(root)`; value must be a positive integer (≥ 1) or the literal `-`.
 - Load `.apm/config.toml` via `toml_edit` (preserves comments and key order), insert/update or remove `epics."<id>".max_workers`, write back.
 
 #### 3. `apm/src/cmd/epic.rs` — update `show`
@@ -103,17 +104,17 @@ fn epic_worker_count(workers: &[Worker], epic_id: &str) -> usize {
 
 #### 5. `apm/src/main.rs`
 
-Add `set-max-workers` to the `epic` subcommand tree:
+Wire `max_workers` into the existing `epic set` subcommand tree (no new top-level subcommand needed):
 
 ```
-apm epic set-max-workers <epic-id> <N>
-apm epic set-max-workers <epic-id> --unset
+apm epic set <epic-id> max_workers <N>   # set limit
+apm epic set <epic-id> max_workers -     # unset / remove limit
 ```
 
 #### Order of changes
 
 1. `config.rs` — add `EpicConfig`, `HashMap<String, EpicConfig>`, helper (no behaviour change)
-2. `epic.rs` + `main.rs` — add `set-max-workers` subcommand and `show` update
+2. `epic.rs` + `main.rs` — extend `set` to handle `max_workers` field; update `show`
 3. `start.rs` / `work.rs` — add `epic_id` to `Worker`; add `blocked_epics` filtering to the spawn loop
 
 #### Constraints
@@ -121,6 +122,7 @@ apm epic set-max-workers <epic-id> --unset
 - Use `toml_edit` (not `toml` serde round-trip) when writing `config.toml` to preserve comments.
 - Fully backward-compatible: no `[epics.*]` tables → identical behaviour to today.
 - `max_workers > max_concurrent` is valid but the global cap still binds first.
+- The `-` sentinel for unset matches existing `apm set` clear behaviour — no new `--unset` flag needed.
 
 ### Storage: `.apm/config.toml`
 
