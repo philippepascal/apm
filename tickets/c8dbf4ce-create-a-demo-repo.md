@@ -3,12 +3,12 @@ id = "c8dbf4ce"
 title = "create a demo repo"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 branch = "ticket/c8dbf4ce-create-a-demo-repo"
 created_at = "2026-04-07T17:01:04.559759Z"
-updated_at = "2026-04-07T17:43:43.554278Z"
+updated_at = "2026-04-07T17:48:08.133083Z"
 +++
 
 ## Spec
