@@ -43,6 +43,60 @@ Both patterns should be centralised as methods on `impl Config` in `apm-core/src
 
 ### Approach
 
+Add three methods to the existing `impl Config` block in `apm-core/src/config.rs` (after `actionable_states_for`), then migrate all duplicated call sites to use them.
+
+#### New methods on `impl Config`
+
+```rust
+/// Returns the IDs of all terminal workflow states (`StateConfig::terminal == true`).
+pub fn terminal_state_ids(&self) -> std::collections::HashSet<String> {
+    self.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.clone())
+        .collect()
+}
+
+/// Case-insensitive lookup of a ticket section by name.
+pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
+    self.ticket.sections.iter()
+        .find(|s| s.name.eq_ignore_ascii_case(name))
+}
+
+/// Returns `true` if a ticket section with the given name exists (case-insensitive).
+pub fn has_section(&self, name: &str) -> bool {
+    self.find_section(name).is_some()
+}
+```
+
+No new imports are needed; `TicketSection` is defined in the same file.
+
+#### Migrate terminal-state call sites
+
+Remove the inline `filter`/`collect` block in each file below and replace with `config.terminal_state_ids()`. Use `HashSet<String>` as the type (no lifetime needed). Remove dead `use std::collections::HashSet` imports if they become unused.
+
+- `apm-core/src/archive.rs` lines 17-26 — remove `.insert("closed".to_string())`
+- `apm-core/src/clean.rs` lines 108-115 — remove `.insert("closed"...)`
+- `apm-core/src/clean.rs` lines 338-347 — remove `.insert("closed"...)`
+- `apm-core/src/sync.rs` lines 20-23
+- `apm-core/src/verify.rs` lines 13-16
+- `apm-core/src/ticket.rs` lines 743-746
+- `apm-core/src/review.rs` lines 42-45
+
+Callers that previously used `HashSet<&str>` should switch to `HashSet<String>`; downstream `.contains(s.id.as_str())` calls remain valid because `HashSet<String>` implements `contains<str>` via `Borrow<str>`.
+
+Before removing the `"closed"` inserts, verify that the standard configs in `testdata/` include a state with `id = "closed"` and `terminal = true`. If any config lacks it, keep the insert at that call site and add a TODO comment.
+
+#### Migrate section-lookup call sites
+
+- `apm/src/cmd/spec.rs` line 47: `config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name))` → `config.has_section(name)`
+- `apm/src/cmd/spec.rs` line 59: `.iter().find(|s| s.name.eq_ignore_ascii_case(name)).unwrap()` → `config.find_section(name).unwrap()`
+- `apm-core/src/ticket.rs` line 510: `.iter().any(|s| s.name.eq_ignore_ascii_case(&section))` → `config.has_section(&section)`
+- `apm-core/src/ticket.rs` line 529: `.find(|s| s.name.eq_ignore_ascii_case(name))` → `config.find_section(name)`
+
+#### Verify
+
+Run `cargo test --workspace` and `cargo clippy --workspace -- -D warnings` to confirm nothing regressed.
+
 ### 1. Add helper methods to `impl Config` — `apm-core/src/config.rs`
 
 Insert three new methods into the existing `impl Config` block (after `actionable_states_for`):
