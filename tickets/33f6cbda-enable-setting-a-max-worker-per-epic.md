@@ -30,7 +30,7 @@ The desired behaviour is: users can assign a `max_workers` ceiling to a specific
 - [x] `apm epic show <epic-id>` prints the current `max_workers` limit when one is set
 - [x] `apm work` (without `--epic`) respects each epic's `max_workers` limit: it does not spawn a new worker for a ticket whose epic already has `max_workers` active workers
 - [x] `apm work --epic <id>` also respects the `max_workers` limit for that epic
-- [ ] When a running worker finishes and a slot opens up, `apm work` spawns the next eligible ticket in that epic (normal pick-next behaviour resumes)
+- [x] When a running worker finishes and a slot opens up, `apm work` spawns the next eligible ticket in that epic (normal pick-next behaviour resumes)
 - [ ] Tickets with no epic, or whose epic has no `max_workers` set, are unaffected — they are still bounded only by `[agents] max_concurrent`
 - [ ] Setting `max_workers` greater than `[agents] max_concurrent` is allowed but has no additional effect (the global cap still binds)
 - [ ] `apm epic set <epic-id> max_workers <N>` with a non-existent epic ID prints an error and exits non-zero
