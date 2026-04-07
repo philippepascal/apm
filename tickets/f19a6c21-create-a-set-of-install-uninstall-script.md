@@ -23,7 +23,27 @@ Supported platforms match what the release workflow already builds: `aarch64-app
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Running `curl -fsSL https://raw.githubusercontent.com/philippepascal/apm/main/scripts/install.sh | sh` completes without error on macOS aarch64
+- [ ] Running the same command completes without error on Linux x86_64
+- [ ] After install, `apm --help` runs successfully from a new shell session
+- [ ] After install, `apm-server --help` runs successfully from a new shell session
+- [ ] The script detects the platform automatically without user input
+- [ ] The script fetches the latest release version from the GitHub API when no version is specified
+- [ ] The script respects an `APM_VERSION` environment variable to install a specific version
+- [ ] The script verifies the SHA256 checksum of the downloaded archive against the published `checksums.txt`
+- [ ] The script exits with a non-zero code and a descriptive error message if the checksum does not match
+- [ ] The script installs binaries to `~/.local/bin` by default
+- [ ] The script respects an `APM_INSTALL_DIR` environment variable to override the install directory
+- [ ] The script creates the install directory if it does not already exist
+- [ ] The script adds the install directory to `$PATH` in `~/.bashrc`, `~/.zshrc`, and `~/.profile` if it is not already present
+- [ ] The script prints a clear success message with the installed version and next steps
+- [ ] The script exits with a non-zero code and a descriptive error message when run on an unsupported platform (e.g. Windows, macOS x86_64)
+- [ ] The script exits with a non-zero code and a descriptive error message if `curl` or `tar` are not available
+- [ ] Running `scripts/uninstall.sh` removes the `apm` binary from the install directory
+- [ ] Running `scripts/uninstall.sh` removes the `apm-server` binary from the install directory
+- [ ] Running `scripts/uninstall.sh` removes the PATH-export lines added by `install.sh` from `~/.bashrc`, `~/.zshrc`, and `~/.profile`
+- [ ] Running `scripts/uninstall.sh` prints a confirmation message listing what was removed
+- [ ] Running `scripts/uninstall.sh` when APM is not installed exits cleanly with an informative message (no error)
 
 ### Out of scope
 
