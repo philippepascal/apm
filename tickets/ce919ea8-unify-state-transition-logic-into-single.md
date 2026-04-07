@@ -1,14 +1,14 @@
 +++
 id = "ce919ea8"
 title = "Unify state transition logic into single module"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/ce919ea8-unify-state-transition-logic-into-single"
 created_at = "2026-04-07T22:30:50.389099Z"
-updated_at = "2026-04-07T22:44:12.919566Z"
+updated_at = "2026-04-07T22:59:02.485513Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 depends_on = ["eea2c9bc"]
@@ -59,3 +59,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-07T22:30Z | — | new | philippepascal |
 | 2026-04-07T22:44Z | new | groomed | apm |
+| 2026-04-07T22:59Z | groomed | in_design | philippepascal |
