@@ -1,14 +1,14 @@
 +++
 id = "fe6e9d1d"
 title = "Consolidate editor-opening logic into shared CLI module"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/fe6e9d1d-consolidate-editor-opening-logic-into-sh"
 created_at = "2026-04-07T22:30:48.429150Z"
-updated_at = "2026-04-07T22:44:07.909014Z"
+updated_at = "2026-04-07T22:56:44.443948Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -54,3 +54,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-07T22:30Z | — | new | philippepascal |
 | 2026-04-07T22:44Z | new | groomed | apm |
+| 2026-04-07T22:56Z | groomed | in_design | philippepascal |
