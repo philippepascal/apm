@@ -43,7 +43,59 @@ Both patterns should be centralised as methods on `impl Config` in `apm-core/src
 
 ### Approach
 
-How the implementation will work.
+### 1. Add helper methods to `impl Config` — `apm-core/src/config.rs`
+
+Insert three new methods into the existing `impl Config` block (after `actionable_states_for`):
+
+```rust
+/// Returns the IDs of all terminal workflow states (where `StateConfig::terminal == true`).
+pub fn terminal_state_ids(&self) -> std::collections::HashSet<String> {
+    self.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.clone())
+        .collect()
+}
+
+/// Case-insensitive lookup of a ticket section by name.
+pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
+    self.ticket.sections.iter()
+        .find(|s| s.name.eq_ignore_ascii_case(name))
+}
+
+/// Returns `true` if a ticket section with the given name exists (case-insensitive).
+pub fn has_section(&self, name: &str) -> bool {
+    self.find_section(name).is_some()
+}
+```
+
+No new imports are needed — `HashSet` is already in scope or can be fully qualified; `TicketSection` is defined in the same file.
+
+### 2. Migrate terminal-state call sites
+
+For each of the files below, remove the inline `filter`/`collect` block and replace with `config.terminal_state_ids()`. Adjust the type annotation to `HashSet<String>` (no lifetime needed). Unused `HashSet` imports from `std::collections` can be removed if they become dead.
+
+- `apm-core/src/archive.rs` lines 17-26 — also remove the `.insert("closed".to_string())` line after confirming redundancy
+- `apm-core/src/clean.rs` lines 108-115 — remove `.insert("closed"...)`
+- `apm-core/src/clean.rs` lines 338-347 — remove `.insert("closed"...)`
+- `apm-core/src/sync.rs` lines 20-23
+- `apm-core/src/verify.rs` lines 13-16
+- `apm-core/src/ticket.rs` lines 743-746
+- `apm-core/src/review.rs` lines 42-45
+
+For callers that previously used `HashSet<&str>` (borrowed refs), switch to `HashSet<String>` and update any downstream `.contains(s.id.as_str())` calls to `.contains(&s.id)` or `.contains(s.id.as_str())` via `HashSet::contains` on `String`/`&str` — this works because `HashSet<String>` implements `contains<Q>` where `Q: Hash + Eq` and `String: Borrow<str>`.
+
+**Confirming "closed" redundancy:** Before removing the inserts, grep the default `testdata/` configs and any `.apm.toml` in the repo for a state with `id = "closed"` and `terminal = true`. If it is always present in config, the inserts are redundant. If it is absent from any config, keep the insert in that call site and add a TODO comment for a future config-hygiene ticket.
+
+### 3. Migrate section-lookup call sites
+
+- `apm/src/cmd/spec.rs` line 47: replace `config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name))` → `config.has_section(name)`
+- `apm/src/cmd/spec.rs` line 59: replace `.iter().find(|s| s.name.eq_ignore_ascii_case(name)).unwrap()` → `config.find_section(name).unwrap()`
+- `apm-core/src/ticket.rs` line 510: replace `.iter().any(|s| s.name.eq_ignore_ascii_case(&section))` → `config.has_section(&section)`
+- `apm-core/src/ticket.rs` line 529: replace `.find(|s| s.name.eq_ignore_ascii_case(name))` → `config.find_section(name)`
+
+### 4. Verify
+
+Run `cargo test --workspace` and `cargo clippy --workspace -- -D warnings` to confirm nothing regressed.
 
 ### Open questions
 
