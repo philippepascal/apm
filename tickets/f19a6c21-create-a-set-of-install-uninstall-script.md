@@ -1,14 +1,14 @@
 +++
 id = "f19a6c21"
 title = "create a set of install/uninstall scripts for apm on all platforms supported, including brew"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 3
 author = "philippepascal"
 branch = "ticket/f19a6c21-create-a-set-of-install-uninstall-script"
 created_at = "2026-04-07T17:07:48.816446Z"
-updated_at = "2026-04-07T17:46:46.878614Z"
+updated_at = "2026-04-07T17:47:33.643278Z"
 +++
 
 ## Spec
@@ -259,3 +259,4 @@ List each file/entry that was removed. If nothing was found, print "APM does not
 | 2026-04-07T17:07Z | — | new | philippepascal |
 | 2026-04-07T17:42Z | new | groomed | apm |
 | 2026-04-07T17:44Z | groomed | in_design | philippepascal |
+| 2026-04-07T17:47Z | in_design | specd | claude-0407-1744-0f90 |
