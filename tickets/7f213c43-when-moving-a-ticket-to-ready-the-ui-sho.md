@@ -36,7 +36,11 @@ Root cause: the /api/workers endpoint in apm-server/src/workers.rs uses determin
 
 ### Approach
 
-How the implementation will work.
+Modify the /api/workers endpoint in apm-server/src/workers.rs to filter out tickets whose current state does not involve an active worker. Only tickets in states that have a worker phase (in_design, in_progress) or that just completed one (worker_end/terminal states) should appear in the workers list.
+
+Specifically, add a worker_states set containing states where a worker is expected to be active (in_design, in_progress). Exclude tickets from the workers response if their state is not in worker_states and not in ended_states. This way, tickets in ready, specd, groomed, etc. are excluded entirely rather than showing as crashed.
+
+File to modify: apm-server/src/workers.rs — update the filtering logic around determine_status() to skip tickets that have no worker association in their current state.
 
 ### Open questions
 
