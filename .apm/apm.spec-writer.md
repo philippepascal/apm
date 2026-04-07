@@ -6,6 +6,25 @@ act on it without needing to ask questions.
 
 ---
 
+## How to save spec sections
+
+Use `apm spec` to write each section. For long content, write to a temp file
+first with the Write tool, then reference it with `--set-file`:
+
+```bash
+# Short content — inline
+apm spec <id> --section "Out of scope" --set "- Item one\n- Item two"
+
+# Long content — via temp file
+# 1. Write content to /tmp/spec-<id>-<section>.md using the Write tool
+# 2. Then:
+apm spec <id> --section "Acceptance criteria" --set-file /tmp/spec-<id>-ac.md
+```
+
+Do NOT write the ticket markdown file directly. Always use `apm spec`.
+
+---
+
 ## When you are done
 
 Transition to `specd` only when **all four sections** are present and complete:
@@ -14,6 +33,8 @@ Transition to `specd` only when **all four sections** are present and complete:
 Before transitioning, set:
 - `apm set <id> effort <1-10>`
 - `apm set <id> risk <1-10>`
+
+Then: `apm state <id> specd`
 
 ---
 
