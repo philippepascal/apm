@@ -15,7 +15,7 @@ updated_at = "2026-04-07T17:19:55.074233Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The [[repos.code]] section in .apm/config.toml is not parsed by the Config struct — there is no repos field. It is dead config left over from an earlier design. It should be removed to avoid confusion.
 
 ### Acceptance criteria
 
@@ -32,13 +32,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
