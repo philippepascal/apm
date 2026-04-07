@@ -47,7 +47,109 @@ The desired behaviour is: users can assign a `max_workers` ceiling to a specific
 
 ### Approach
 
-How the implementation will work.
+### Storage: `.apm/config.toml`
+
+Add a TOML table-per-epic in the existing config file. TOML supports dotted keys for this:
+
+```toml
+[epics."8db73240"]
+max_workers = 2
+
+[epics."a1b2c3d4"]
+max_workers = 1
+```
+
+No new file is needed. The `epics` key lives alongside `[agents]`, `[workers]`, etc.
+
+### 1. `apm-core/src/config.rs`
+
+- Add `EpicConfig` struct:
+  ```rust
+  #[derive(Debug, Deserialize, Default)]
+  pub struct EpicConfig {
+      pub max_workers: Option<usize>,
+  }
+  ```
+- Add field to `Config`:
+  ```rust
+  #[serde(default)]
+  pub epics: HashMap<String, EpicConfig>,
+  ```
+- Add helper:
+  ```rust
+  impl Config {
+      pub fn epic_max_workers(&self, epic_id: &str) -> Option<usize> {
+          self.epics.get(epic_id).and_then(|e| e.max_workers)
+      }
+  }
+  ```
+
+### 2. `apm/src/cmd/epic.rs` — new `set-max-workers` subcommand
+
+- Add `SetMaxWorkers { epic_id: String, max_workers: Option<usize> }` variant to the `EpicCommand` enum (a `None` value means unset/remove).
+- Validate: epic must exist (`epic_branches(root)` must contain a branch whose ID prefix matches); `max_workers` must be ≥ 1 if provided.
+- Load `.apm/config.toml` as raw text using `toml_edit` (already a dependency or add it).
+- Insert or update `epics."<id>".max_workers = N`, or remove the key if unsetting.
+- Write the file back.
+
+### 3. `apm/src/cmd/epic.rs` — update `show`
+
+- After printing ticket list, if `config.epic_max_workers(id)` returns `Some(n)`, print `Max workers: n`.
+
+### 4. `apm/src/cmd/work.rs` and `apm-core/src/work.rs`
+
+Currently the worker loop tracks a flat `Vec<Worker>`. Extend the spawn-check:
+
+```rust
+// Before spawning, count active workers in the target epic.
+fn epic_worker_count(workers: &[Worker], epic_id: &str) -> usize {
+    workers.iter().filter(|w| w.epic_id.as_deref() == Some(epic_id)).count()
+}
+
+// Spawn guard:
+let can_spawn_for_epic = |epic_id: Option<&str>| -> bool {
+    match epic_id {
+        None => true,
+        Some(id) => match config.epic_max_workers(id) {
+            None => true,
+            Some(limit) => epic_worker_count(&workers, id) < limit,
+        },
+    }
+};
+```
+
+The `Worker` struct needs an `epic_id: Option<String>` field populated at spawn time from the ticket's frontmatter.
+
+`spawn_next_worker` in `apm-core/src/start.rs` already receives the full ticket; add `epic_id` to the returned/created `Worker` record.
+
+The pick-next call also needs to pass a per-epic exclusion list: if an epic is already at its limit, skip all tickets in that epic before calling `pick_next`. Alternatively, `spawn_next_worker` can accept a `blocked_epics: &[&str]` parameter to pre-filter tickets.
+
+**Recommended approach** (simpler, no change to `pick_next`):
+- Before spawning, compute `blocked_epics`: the set of epic IDs currently at their `max_workers` limit.
+- Pass `blocked_epics` to `spawn_next_worker`; it filters out those tickets before running `pick_next`.
+- Signature change: `spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter, blocked_epics: &[String])`.
+
+### 5. `apm/src/main.rs`
+
+Add `set-max-workers` to the `epic` subcommand tree:
+
+```
+apm epic set-max-workers <epic-id> <N>
+apm epic set-max-workers <epic-id> --unset
+```
+
+### Order of changes
+
+1. `config.rs` — add `EpicConfig` + `HashMap<String, EpicConfig>` + helper (no behaviour change yet)
+2. `epic.rs` — add `set-max-workers` + `show` update + wire up in `main.rs`
+3. `start.rs` — add `epic_id` to `Worker` struct; populate from ticket frontmatter at spawn
+4. `work.rs` — add `blocked_epics` computation and pass it through to `spawn_next_worker`
+
+### Constraints
+
+- `toml_edit` must be used (not `toml` serde round-trip) to preserve comments and ordering in `config.toml`.
+- The feature must be fully backward-compatible: configs without any `[epics.*]` tables behave identically to today.
+- Epic IDs in the config key use the 8-char prefix only (same as `ticket.frontmatter.epic`).
 
 ### Open questions
 
