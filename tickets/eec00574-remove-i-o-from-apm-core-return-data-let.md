@@ -60,7 +60,131 @@ The fix is to have apm-core functions return structured results (data, warnings,
 
 ### Approach
 
-How the implementation will work.
+The existing pattern — `TransitionOutput` returned by `state::transition`, printed by `apm/src/cmd/state.rs` — is the reference. Every change here follows that exact pattern.
+
+Add `#![deny(clippy::print_stdout, clippy::print_stderr)]` to `apm-core/src/lib.rs` first. The compiler errors that result are the work list. Fix them module by module.
+
+---
+
+**apm-core/src/init.rs**
+
+The `setup()` function calls several internal helpers (`write_default`, `ensure_gitignore`, `ensure_claude_md`, `maybe_initial_commit`, `ensure_worktrees_dir`) that each println the action they took. Thread a `messages: &mut Vec<String>` parameter through all of them; replace every `println!` call with `messages.push(format!(...))`. Return `SetupOutput { messages: Vec<String> }` from `setup()`.
+
+For `setup_docker()`, return `SetupDockerOutput { messages: Vec<String> }` the same way.
+
+The interactive prompt helpers (`prompt_project_info`, `prompt_username`) use stdin/stdout. Move their bodies into `apm/src/cmd/init.rs` — the CLI handler already calls `setup()`, so the prompts run first in the CLI, collect the strings, and pass them as parameters (e.g. `setup(root, name: Option<&str>, description: Option<&str>, username: Option<&str>)`). When any `Option` is `None`, the core function uses a sensible default or derives the value non-interactively (e.g. from git config).
+
+Update `apm/src/cmd/init.rs` to: run prompts → call `apm_core::init::setup(...)` → print `out.messages`.
+
+---
+
+**apm-core/src/state.rs**
+
+`TransitionOutput` already exists. Add two fields:
+```rust
+pub warnings: Vec<String>,
+pub messages: Vec<String>,
+```
+Replace every `eprintln!` in `transition`, `pull_default`, `push_and_sync_refs`, and `gh_pr_create_or_update` with `warnings.push(...)`. Replace every `println!` (PR URL, merge confirmation) with `messages.push(...)`. Propagate the vectors through each internal call site.
+
+Update `apm/src/cmd/state.rs` to print `out.warnings` to stderr and `out.messages` to stdout after the existing `id: old → new` line.
+
+---
+
+**apm-core/src/start.rs**
+
+`run()` already returns `StartOutput`; add `warnings: Vec<String>` to it and replace its `eprintln!` calls. No CLI change needed for `run()` beyond printing new warnings.
+
+`run_next()` currently returns `Result<()>` and prints directly. Give it a return type:
+```rust
+pub struct RunNextOutput {
+    pub ticket_id: Option<String>,
+    pub messages: Vec<String>,
+    pub warnings: Vec<String>,
+    pub worker_pid: Option<u32>,
+    pub log_path: Option<PathBuf>,
+}
+```
+Replace all `println!`/`eprintln!` in `run_next` with pushes into these vectors; return `Ok(RunNextOutput { ... })`.
+
+`spawn_next_worker` is called by `run_next`. Collect its output into the `RunNextOutput` vectors rather than printing.
+
+Update `apm/src/cmd/start.rs::run_next` to print fields from `RunNextOutput`.
+
+---
+
+**apm-core/src/archive.rs**
+
+Change `archive()` signature to return:
+```rust
+pub struct ArchiveOutput {
+    pub moves: Vec<(String, String)>,   // (old_rel_path, new_rel_path)
+    pub archived_count: usize,
+    pub warnings: Vec<String>,
+}
+pub fn archive(...) -> Result<ArchiveOutput>
+```
+Collect moves in a `Vec` (already done for the dry-run loop), replace `println!("nothing to archive")` and `println!("archived {} ticket(s)")` with data in the struct. Collect `eprintln!` calls into `warnings`.
+
+Update `apm/src/cmd/archive.rs` to print the moves, count, and warnings.
+
+---
+
+**apm-core/src/sync.rs**
+
+`apply()` currently returns `Result<()>`. Change to:
+```rust
+pub struct ApplyOutput {
+    pub closed: Vec<String>,            // ids successfully closed
+    pub failed: Vec<(String, String)>,  // (id, error message)
+}
+pub fn apply(...) -> Result<ApplyOutput>
+```
+Replace `eprintln!("warning: could not close ...")` with a push to `failed`.
+
+Update `apm/src/cmd/sync.rs` to print failed closures as warnings.
+
+---
+
+**apm-core/src/git.rs**
+
+All I/O here is `eprintln!` warnings in helper functions (`sync_agent_dirs`, `push_and_sync_refs`, `sync_local_ticket_refs`, `merge_default_branch`). These helpers are called by `state::transition` and `start::run`, which now carry `warnings: Vec<String>`. Pass `&mut Vec<String>` down to the git helpers so they push into the caller's warning list. No new public structs needed; the existing `TransitionOutput.warnings` and `StartOutput.warnings` absorb them.
+
+---
+
+**apm-core/src/clean.rs**
+
+`remove()` currently returns `Result<()>`. Change to:
+```rust
+pub struct RemoveOutput {
+    pub warnings: Vec<String>,
+}
+pub fn remove(...) -> Result<RemoveOutput>
+```
+Replace the two branch-deletion `eprintln!` calls with pushes to `warnings`.
+
+`candidates()` has one `eprintln!`. Add a `warnings: Vec<String>` field to its existing return tuple or wrap in a struct:
+```rust
+pub struct CandidatesOutput {
+    pub candidates: Vec<CleanCandidate>,
+    pub dirty: Vec<DirtyWorktree>,
+    pub warnings: Vec<String>,
+}
+```
+
+Update `apm/src/cmd/clean.rs` to print the warnings.
+
+---
+
+**Order of changes**
+
+1. Add the deny lint to `lib.rs` — this surfaces all sites at once
+2. Fix `git.rs` helpers first (they are called by state/start; fixing them unblocks those)
+3. Fix `state.rs`, `start.rs` (high call-graph, touch most warnings)
+4. Fix `archive.rs`, `sync.rs`, `clean.rs` (isolated, straightforward)
+5. Fix `init.rs` last (most involved due to stdin prompts)
+6. Update all CLI handlers in `apm/src/cmd/`
+7. Confirm `cargo test` passes and the deny lint has no violations
 
 ### Open questions
 
