@@ -22,7 +22,11 @@ State transition logic is scattered across four modules in apm-core. The canonic
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `ticket::close()` no longer contains inline history-appending code; it calls `state::append_history()` instead
+- [ ] `review::available_transitions()` is moved to `state.rs`; `review.rs` re-exports it so existing callers compile unchanged
+- [ ] A `provision_worktree` helper exists in `state.rs` (or `git.rs`) and is called by both the `in_design` branch in `state::transition()` and by `start::run()` — neither site contains its own `ensure_worktree` + `sync_agent_dirs` pair
+- [ ] `cargo test` passes with no regressions after all changes
+- [ ] A contributor reading only `state.rs` can find: history appending, amendment section insertion, available-transition filtering, worktree provisioning, completion strategy execution, and all state-entry validations — without needing to open `ticket.rs` or `review.rs`
 
 ### Out of scope
 
