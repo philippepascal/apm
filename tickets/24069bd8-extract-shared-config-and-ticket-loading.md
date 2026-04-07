@@ -54,7 +54,12 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Refactoring `show.rs` or `spec.rs` — they use a per-branch fetch (`git::fetch_branch`) and read a single ticket directly; a different helper shape would be needed
+- Refactoring `sync.rs` — it has an `--offline` flag that inverts the fetch guard and delegates ticket loading internally to `sync::detect`; its shape does not match the common pattern
+- Refactoring `state.rs` or `start.rs` — they delegate entirely to `apm-core` and contain no CLI-layer loading boilerplate
+- Extracting a push-after-modification helper — commands that push after writing a ticket are addressed in a separate ticket
+- Moving any logic into `apm-core` — this ticket only adds a thin helper within the `apm` (CLI) crate
+- Changing the behaviour of any command — this is a pure mechanical refactor; observable behaviour must remain identical
 
 ### Approach
 
