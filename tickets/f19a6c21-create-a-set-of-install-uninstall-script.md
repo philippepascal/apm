@@ -3,12 +3,12 @@ id = "f19a6c21"
 title = "create a set of install/uninstall scripts for apm on all platforms supported, including brew"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 branch = "ticket/f19a6c21-create-a-set-of-install-uninstall-script"
 created_at = "2026-04-07T17:07:48.816446Z"
-updated_at = "2026-04-07T17:44:01.761396Z"
+updated_at = "2026-04-07T17:46:39.986382Z"
 +++
 
 ## Spec
