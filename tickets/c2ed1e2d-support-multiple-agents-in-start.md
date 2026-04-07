@@ -1,14 +1,14 @@
 +++
 id = "c2ed1e2d"
 title = "support multiple agents in start"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
 author = "philippepascal"
 branch = "ticket/c2ed1e2d-support-multiple-agents-in-start"
 created_at = "2026-04-07T17:14:02.689742Z"
-updated_at = "2026-04-07T18:12:15.007216Z"
+updated_at = "2026-04-07T18:16:36.623138Z"
 +++
 
 ## Spec
@@ -239,3 +239,4 @@ Both functions are called from `start_worker_in_worktree`. Profile resolution ha
 | 2026-04-07T17:54Z | in_design | specd | claude-0407-1747-3908 |
 | 2026-04-07T18:12Z | specd | ammend | claude-0407-review |
 | 2026-04-07T18:12Z | ammend | in_design | philippepascal |
+| 2026-04-07T18:16Z | in_design | specd | claude-0407-1812-bd88 |
