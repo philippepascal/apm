@@ -4,11 +4,11 @@ title = "Deduplicate identity resolution: remove identity.rs, use config.rs"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/a71186da-deduplicate-identity-resolution-remove-i"
 created_at = "2026-04-07T22:30:44.747975Z"
-updated_at = "2026-04-07T22:52:23.431436Z"
+updated_at = "2026-04-07T22:52:28.343711Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
