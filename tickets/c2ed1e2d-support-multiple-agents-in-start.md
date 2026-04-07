@@ -224,7 +224,7 @@ Both functions are called from `start_worker_in_worktree`. Profile resolution ha
 ### Amendment requests
 
 - [x] Move `profile` from `StateConfig` to the transition definition. The profile determines which agent to spawn, and spawning happens on the transition (e.g. groomed→in_design, ready→in_progress), not while sitting in a state. In workflow.toml this would look like: `[[workflow.states.transitions]]` with `profile = "spec_agent"` on the groomed→in_design transition and `profile = "impl_agent"` on the ready→in_progress transition. Update the Approach, AC, and config examples accordingly. The existing `instructions` field on states should be superseded by the profile's `instructions` when a profile is present on the transition.
-- [ ] Remove the duplicated sections 1-5 at the bottom of the Approach that repeat the content already covered above
+- [x] Remove the duplicated sections 1-5 at the bottom of the Approach that repeat the content already covered above
 
 ### Code review
 
