@@ -42,7 +42,12 @@ The desired state is a single identity resolution function (`config::resolve_ide
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the implementation of `config::resolve_identity()` itself (token logic, fallback order, GitHub API calls)
+- Migrating existing tickets that currently have `author = "apm"` to `"unassigned"` — old data is not touched
+- Adding GitHub API token support to the CLI (`apm new`, `apm list`) — the server already has this
+- Changing the `apm-server` callers of `resolve_identity()` — they already use the canonical function
+- Renaming `resolve_identity()` to `resolve_current_user()` or any other public API rename
+- Adding new identity fallback strategies (e.g. `APM_AGENT_NAME` env var support — not present in either current function)
 
 ### Approach
 
