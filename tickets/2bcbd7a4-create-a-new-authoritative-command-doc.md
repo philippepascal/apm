@@ -23,7 +23,7 @@ The desired outcome is a single Markdown file committed to the repository that s
 
 ### Acceptance criteria
 
-- [ ] A file `docs/commands.md` exists in the repository on the ticket branch
+- [x] A file `docs/commands.md` exists in the repository on the ticket branch
 - [ ] Every command exposed by `apm --help` has a dedicated section in the document
 - [ ] Each command section includes a one-paragraph high-level description of what the command does
 - [ ] Each command section includes a SYNOPSIS block showing the exact invocation syntax with arguments and flags
