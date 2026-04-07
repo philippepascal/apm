@@ -41,7 +41,14 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Building or publishing a binary release for the demo CLI
+- CI/CD configuration (GitHub Actions, etc.) for the demo repo
+- Automated testing of the demo repo itself
+- apm-server deployment or hosting of the web UI
+- Using `apm register` / `apm sessions` / `apm revoke` (server auth commands) — those require a running server instance and are mentioned in the README as a next step, not demonstrated
+- Creating tickets for every single possible state combination — a representative subset is sufficient
+- Keeping the demo repo in sync with future APM feature changes (out-of-scope for this ticket; a separate maintenance process is needed)
+- The Rust CLI being a genuinely useful piece of software — it only needs to be plausible and compilable
 
 ### Approach
 
