@@ -20,14 +20,14 @@ The GET /api/tickets and GET /api/tickets/:id endpoints omit the owner field ent
 
 ### Acceptance criteria
 
-- [ ] GET /api/tickets includes `"owner": null` for a ticket whose owner is unset
-- [ ] GET /api/tickets includes `"owner": "<username>"` for a ticket whose owner is set
-- [ ] GET /api/tickets/:id includes `"owner": null` for a ticket whose owner is unset
-- [ ] GET /api/tickets/:id includes `"owner": "<username>"` for a ticket whose owner is set
-- [ ] Existing `list_tickets_owner_field_absent` test asserts `arr[0]["owner"].is_null()` rather than accepting absence
-- [ ] New test: `get_ticket_owner_field_absent` asserts `json["owner"].is_null()`
-- [ ] New test: `get_ticket_owner_field_present` asserts `json["owner"] == "alice"`
-- [ ] `Ticket::serialize()` (TOML) is unaffected — absent owner still omits the key
+- [x] GET /api/tickets includes `"owner": null` for a ticket whose owner is unset
+- [x] GET /api/tickets includes `"owner": "<username>"` for a ticket whose owner is set
+- [x] GET /api/tickets/:id includes `"owner": null` for a ticket whose owner is unset
+- [x] GET /api/tickets/:id includes `"owner": "<username>"` for a ticket whose owner is set
+- [x] Existing `list_tickets_owner_field_absent` test asserts `arr[0]["owner"].is_null()` rather than accepting absence
+- [x] New test: `get_ticket_owner_field_absent` asserts `json["owner"].is_null()`
+- [x] New test: `get_ticket_owner_field_present` asserts `json["owner"] == "alice"`
+- [x] `Ticket::serialize()` (TOML) is unaffected — absent owner still omits the key
 
 ### Out of scope
 
