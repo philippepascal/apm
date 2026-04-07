@@ -4,11 +4,11 @@ title = "Remove unused [[repos.code]] section from config"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 branch = "ticket/0c197dd4-remove-unused-repos-code-section-from-co"
 created_at = "2026-04-07T17:19:55.074233Z"
-updated_at = "2026-04-07T17:50:25.941271Z"
+updated_at = "2026-04-07T17:50:33.219829Z"
 +++
 
 ## Spec
