@@ -1,14 +1,14 @@
 +++
 id = "c8dbf4ce"
 title = "create a demo repo"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/c8dbf4ce-create-a-demo-repo"
 created_at = "2026-04-07T17:01:04.559759Z"
-updated_at = "2026-04-07T17:01:04.559759Z"
+updated_at = "2026-04-07T17:42:05.378818Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T17:01Z | — | new | philippepascal |
+| 2026-04-07T17:42Z | new | groomed | apm |
