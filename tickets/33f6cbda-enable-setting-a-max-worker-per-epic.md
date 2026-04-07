@@ -47,6 +47,81 @@ The desired behaviour is: users can assign a `max_workers` ceiling to a specific
 
 ### Approach
 
+Store per-epic limits in `.apm/config.toml` using TOML table-per-epic syntax alongside existing `[agents]` and `[workers]` sections:
+
+```toml
+[epics."8db73240"]
+max_workers = 2
+
+[epics."a1b2c3d4"]
+max_workers = 1
+```
+
+No new file is needed. Epic IDs use the 8-char prefix only (same as `ticket.frontmatter.epic`).
+
+#### 1. `apm-core/src/config.rs`
+
+Add `EpicConfig` struct and wire it into `Config`:
+
+```rust
+#[derive(Debug, Deserialize, Default)]
+pub struct EpicConfig {
+    pub max_workers: Option<usize>,
+}
+
+// In Config:
+#[serde(default)]
+pub epics: HashMap<String, EpicConfig>,
+
+// Helper on Config:
+pub fn epic_max_workers(&self, epic_id: &str) -> Option<usize> {
+    self.epics.get(epic_id).and_then(|e| e.max_workers)
+}
+```
+
+#### 2. `apm/src/cmd/epic.rs` — new `set-max-workers` subcommand
+
+- Add `SetMaxWorkers { epic_id: String, max_workers: Option<usize> }` variant to `EpicCommand` (`None` = unset/remove).
+- Validate: epic must exist via `epic_branches(root)`; `max_workers` must be ≥ 1 if provided.
+- Load `.apm/config.toml` via `toml_edit` (preserves comments and key order), insert/update or remove `epics."<id>".max_workers`, write back.
+
+#### 3. `apm/src/cmd/epic.rs` — update `show`
+
+After printing the ticket list, print `Max workers: N` if `config.epic_max_workers(id)` returns `Some(n)`.
+
+#### 4. `apm-core/src/work.rs` and `apm/src/cmd/work.rs`
+
+Add `epic_id: Option<String>` to the `Worker` struct; populate it at spawn time from `ticket.frontmatter.epic`.
+
+Before each spawn attempt, compute `blocked_epics`: the set of epic IDs where `epic_worker_count(&workers, id) >= config.epic_max_workers(id)`. Pass `blocked_epics: &[String]` to `spawn_next_worker`, which pre-filters tickets belonging to those epics before calling `pick_next`. This keeps `pick_next` unchanged.
+
+```rust
+fn epic_worker_count(workers: &[Worker], epic_id: &str) -> usize {
+    workers.iter().filter(|w| w.epic_id.as_deref() == Some(epic_id)).count()
+}
+```
+
+#### 5. `apm/src/main.rs`
+
+Add `set-max-workers` to the `epic` subcommand tree:
+
+```
+apm epic set-max-workers <epic-id> <N>
+apm epic set-max-workers <epic-id> --unset
+```
+
+#### Order of changes
+
+1. `config.rs` — add `EpicConfig`, `HashMap<String, EpicConfig>`, helper (no behaviour change)
+2. `epic.rs` + `main.rs` — add `set-max-workers` subcommand and `show` update
+3. `start.rs` / `work.rs` — add `epic_id` to `Worker`; add `blocked_epics` filtering to the spawn loop
+
+#### Constraints
+
+- Use `toml_edit` (not `toml` serde round-trip) when writing `config.toml` to preserve comments.
+- Fully backward-compatible: no `[epics.*]` tables → identical behaviour to today.
+- `max_workers > max_concurrent` is valid but the global cap still binds first.
+
 ### Storage: `.apm/config.toml`
 
 Add a TOML table-per-epic in the existing config file. TOML supports dotted keys for this:
