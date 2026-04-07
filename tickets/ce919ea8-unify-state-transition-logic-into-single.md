@@ -34,7 +34,68 @@ State transition logic is scattered across four modules in apm-core. The canonic
 
 ### Approach
 
-How the implementation will work.
+The goal is to make `state.rs` the single authoritative home for transition logic. Three discrete changes accomplish this; they are independent and can be done in any order.
+
+**1. Fix history-appending duplication in `ticket.rs`**
+
+In `ticket::close()` (around line 408), replace the 12-line inline history-append block with a call to the already-public `state::append_history()`:
+
+```rust
+// Before (inline in close()):
+let row = format!("| {when} | {prev} | closed | {by} |");
+if t.body.contains("## History") { ... } else { ... }
+
+// After:
+state::append_history(&mut t.body, &prev, "closed", &when, by);
+```
+
+Add `use crate::state;` (or adjust the existing import) at the top of `ticket.rs`. No logic change — the two blocks are byte-for-byte identical in behaviour.
+
+**2. Move `available_transitions()` from `review.rs` to `state.rs`**
+
+`available_transitions(config, state) -> Vec<&TransitionConfig>` filters a state's transitions to those with a `command:` trigger and a non-terminal target. It belongs in `state.rs` alongside the rest of the transition machinery.
+
+- Copy the function body into `state.rs` as `pub fn available_transitions(...)`.
+- In `review.rs`, replace the function body with a delegation:
+  ```rust
+  pub fn available_transitions<'a>(config: &'a Config, state: &str) -> Vec<&'a TransitionConfig> {
+      crate::state::available_transitions(config, state)
+  }
+  ```
+- No callers outside `review.rs` need changing; the re-export keeps the API stable.
+
+**3. Extract `provision_worktree` helper**
+
+Both `state.rs` (in_design branch, ~lines 175–182) and `start.rs` (~lines 257–259) call:
+```rust
+let wt = git::ensure_worktree(root, &worktrees_base, &branch)?;
+git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs);
+```
+
+Add to `state.rs`:
+```rust
+/// Create (or re-use) the worktree for `branch` and sync agent dirs into it.
+/// Returns the worktree path.
+pub fn provision_worktree(root: &Path, config: &Config, branch: &str) -> Result<PathBuf> {
+    let worktrees_base = root.join(&config.worktrees.dir);
+    let wt = git::ensure_worktree(root, &worktrees_base, branch)?;
+    git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs);
+    Ok(wt)
+}
+```
+
+Replace both call sites with `state::provision_worktree(root, config, &branch)?`. The `start.rs` call currently passes `&worktrees_base` that it builds itself — delete that local let-binding once the helper handles it.
+
+**What does NOT change**
+
+- `ticket::close()` continues to own the stale-branch lookup and the merge-to-default logic; only the history-append line is delegated.
+- `start::run()` continues to own spawning, worker resolution, and base-branch merging; only the worktree provisioning pair is delegated.
+- Public type signatures in `TransitionOutput`, `StartOutput`, `CompletionStrategy`, etc. are untouched.
+- No new modules are created; `state.rs` is promoted, not replaced.
+
+**Verification**
+
+After all three changes: `cargo test --workspace` must pass. The tests in `state.rs` (PR title formatting), `start.rs` (profile/worker resolution, 22+ tests), `ticket.rs` (parsing/serialisation), and `review.rs` (split_body, available_transitions, normalize_amendments, apply_review) must all remain green.
 
 ### Open questions
 
