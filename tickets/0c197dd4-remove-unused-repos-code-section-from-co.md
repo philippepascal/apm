@@ -1,14 +1,14 @@
 +++
 id = "0c197dd4"
 title = "Remove unused [[repos.code]] section from config"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
 author = "philippepascal"
 branch = "ticket/0c197dd4-remove-unused-repos-code-section-from-co"
 created_at = "2026-04-07T17:19:55.074233Z"
-updated_at = "2026-04-07T18:06:50.760904Z"
+updated_at = "2026-04-07T18:07:06.681808Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ The [[repos.code]] section in .apm/config.toml is not parsed by the Config struc
 | 2026-04-07T17:48Z | groomed | in_design | philippepascal |
 | 2026-04-07T17:50Z | in_design | specd | claude-0407-1748-58c8 |
 | 2026-04-07T18:06Z | specd | ready | apm |
+| 2026-04-07T18:07Z | ready | in_progress | philippepascal |
