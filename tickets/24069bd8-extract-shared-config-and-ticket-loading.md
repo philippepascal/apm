@@ -1,14 +1,14 @@
 +++
 id = "24069bd8"
 title = "Extract shared config-and-ticket loading helper in CLI crate"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/24069bd8-extract-shared-config-and-ticket-loading"
 created_at = "2026-04-07T22:30:46.572883Z"
-updated_at = "2026-04-07T22:30:46.572883Z"
+updated_at = "2026-04-07T22:44:02.601668Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -60,3 +60,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T22:30Z | — | new | philippepascal |
+| 2026-04-07T22:44Z | new | groomed | apm |
