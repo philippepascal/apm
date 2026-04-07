@@ -10,10 +10,6 @@ archive_dir = "archive/tickets"
 dir = "../apm--worktrees"
 agent_dirs = [".claude", ".cursor", ".windsurf"]
 
-[[repos.code]]
-path = "philippepascal/apm"
-default_branch = "main"
-
 [git_host]
 provider = "github"
 repo = "philippepascal/apm"
