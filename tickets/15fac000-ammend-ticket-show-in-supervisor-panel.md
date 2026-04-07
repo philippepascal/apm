@@ -24,10 +24,13 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 ### Acceptance criteria
 
 - [ ] `ammend` tickets do not appear in the supervisor panel
-- [ ] `question`, `specd`, `blocked`, and `implemented` tickets continue to appear in the supervisor panel
-- [ ] The supervisor panel's visible-state list is derived at runtime from the server's workflow configuration, not from a hardcoded state-name list in the UI
-- [ ] No state name (including `'ammend'`) is hardcoded in the supervisor panel display logic
-- [ ] Adding or renaming a state in `workflow.toml` updates the supervisor panel automatically without requiring a UI code change
+- [ ] `new`, `question`, `specd`, `blocked`, and `implemented` tickets continue to appear in the supervisor panel
+- [ ] `new` tickets always appear in the supervisor panel regardless of its `actionable` value in `workflow.toml`
+- [ ] Terminal-state tickets (e.g. `closed`) never appear in the supervisor panel regardless of `actionable`
+- [ ] `GET /api/tickets` returns a `{ tickets: [...], supervisor_states: [...] }` envelope instead of a plain array
+- [ ] `supervisor_states` in the envelope lists state ids that are either `"new"` (hardcoded) or have `actionable` containing `"supervisor"` and are not terminal
+- [ ] No state name other than `"new"` is hardcoded in the supervisor panel display logic
+- [ ] Adding or renaming a non-structural state in `workflow.toml` automatically updates the supervisor panel without a UI code change
 
 ### Out of scope
 
