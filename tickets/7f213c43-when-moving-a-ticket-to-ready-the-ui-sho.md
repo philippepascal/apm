@@ -15,7 +15,9 @@ updated_at = "2026-04-07T02:59:03.359894Z"
 
 ### Problem
 
-it should not be in the workers panel (it should only be in the queue). it should appear in the workers panel only after it's started by the dispatcher
+When a ticket transitions to the ready state, the UI incorrectly shows it in the Workers panel with a crashed status. The ticket should only appear in the Priority Queue panel at this point — it has not been dispatched to a worker yet.
+
+Root cause: the /api/workers endpoint in apm-server/src/workers.rs uses determine_status() which classifies any ticket with a dead worker process as crashed if its state is not in the ended_states set. The ready state is neither terminal nor worker_end, so tickets that were previously in_design (with a spec-writer worker) show as crashed when they advance to ready.
 
 ### Acceptance criteria
 
