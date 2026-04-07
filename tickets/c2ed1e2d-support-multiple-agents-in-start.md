@@ -4,11 +4,11 @@ title = "support multiple agents in start"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/c2ed1e2d-support-multiple-agents-in-start"
 created_at = "2026-04-07T17:14:02.689742Z"
-updated_at = "2026-04-07T17:53:03.136217Z"
+updated_at = "2026-04-07T17:53:11.730961Z"
 +++
 
 ## Spec
