@@ -1,14 +1,14 @@
 +++
 id = "f19a6c21"
 title = "create a set of install/uninstall scripts for apm on all platforms supported, including brew"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/f19a6c21-create-a-set-of-install-uninstall-script"
 created_at = "2026-04-07T17:07:48.816446Z"
-updated_at = "2026-04-07T17:42:15.716043Z"
+updated_at = "2026-04-07T17:44:01.761396Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-07T17:07Z | — | new | philippepascal |
 | 2026-04-07T17:42Z | new | groomed | apm |
+| 2026-04-07T17:44Z | groomed | in_design | philippepascal |
