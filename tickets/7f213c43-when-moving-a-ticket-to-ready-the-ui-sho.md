@@ -21,11 +21,11 @@ Root cause: the /api/workers endpoint in apm-server/src/workers.rs uses determin
 
 ### Acceptance criteria
 
-- [ ] A ticket in ready state does not appear in the Workers panel
-- [ ] A ticket in specd state does not appear in the Workers panel
-- [ ] A ticket in in_progress state with a live worker shows as running in the Workers panel
-- [ ] A ticket in in_progress state with a dead worker shows as crashed in the Workers panel
-- [ ] A ticket that completed its worker phase (implemented, closed, etc.) shows as ended, not crashed
+- [x] A ticket in ready state does not appear in the Workers panel
+- [x] A ticket in specd state does not appear in the Workers panel
+- [x] A ticket in in_progress state with a live worker shows as running in the Workers panel
+- [x] A ticket in in_progress state with a dead worker shows as crashed in the Workers panel
+- [x] A ticket that completed its worker phase (implemented, closed, etc.) shows as ended, not crashed
 
 ### Out of scope
 
