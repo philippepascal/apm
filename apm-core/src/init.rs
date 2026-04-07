@@ -331,6 +331,18 @@ instructions = ".apm/agents.md"
 command = "claude"
 args = ["--print"]
 
+[worker_profiles.spec_agent]
+command = "claude"
+args = ["--print"]
+instructions = ".apm/apm.spec-writer.md"
+role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
+
+[worker_profiles.impl_agent]
+command = "claude"
+args = ["--print"]
+instructions = ".apm/apm.worker.md"
+role_prefix = "You are a Worker agent assigned to ticket #<id>."
+
 [logging]
 enabled = false
 file = "{log_file}"
@@ -387,6 +399,7 @@ instructions = ".apm/apm.spec-writer.md"
   to              = "in_design"
   trigger         = "command:start"
   actor           = "agent"
+  profile         = "spec_agent"
   context_section = "Problem"
 
   [[workflow.states.transitions]]
@@ -458,6 +471,7 @@ instructions   = ".apm/apm.spec-writer.md"
   to      = "in_design"
   trigger = "command:start"
   actor   = "agent"
+  profile = "spec_agent"
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -503,6 +517,7 @@ instructions   = ".apm/apm.worker.md"
   to      = "in_progress"
   trigger = "command:start"
   actor   = "agent"
+  profile = "impl_agent"
 
   [[workflow.states.transitions]]
   to      = "ammend"
