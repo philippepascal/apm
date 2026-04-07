@@ -35,7 +35,18 @@ The fix is to have apm-core functions return structured results (data, warnings,
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core` compiles with `#![deny(clippy::print_stdout, clippy::print_stderr)]` without errors — confirming zero println!/eprintln! remain in the library crate
+- [ ] `apm init` produces identical user-visible output to today's behaviour after moving all println!/stdin logic to `apm/src/cmd/init.rs`
+- [ ] `apm init --with-docker` prints Docker setup instructions via the CLI handler, not from within `apm_core::init::setup_docker`
+- [ ] `apm state <id> <state>` continues to print `<id>: <old> → <new>` and the worktree path, driven by the CLI handler printing fields from `TransitionOutput`
+- [ ] `apm state` warnings (push failures, merge conflict notices) are printed by the CLI handler using a `warnings: Vec<String>` field on `TransitionOutput`
+- [ ] `apm start <id>` continues to print worker spawn status and branch info, driven by `StartOutput` fields printed in `apm/src/cmd/start.rs`
+- [ ] `apm start --next` continues to print "No actionable tickets." or spawn info, now returned via a `RunNextOutput` struct instead of printed inside `apm_core::start::run_next`
+- [ ] `apm archive` prints archived file moves and a final count, driven by an `ArchiveOutput` struct with `moves: Vec<(String, String)>`, `archived_count: usize`, and `warnings: Vec<String>` fields
+- [ ] `apm sync` apply warnings (failed closures) are surfaced to the caller via an `ApplyOutput` struct rather than eprintln in `apm_core::sync::apply`
+- [ ] `apm clean` branch-deletion warnings are returned as collected strings in the `remove` return value rather than printed inside `apm_core::clean::remove`
+- [ ] All existing integration/unit tests pass after the refactor
+- [ ] No existing public API symbols are removed — only return types are widened (existing struct fields are preserved; new fields are additive)
 
 ### Out of scope
 
