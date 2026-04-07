@@ -27,7 +27,7 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 - [x] The repo contains a Rust CLI project that compiles with `cargo build` without errors
 - [x] Running the compiled binary (e.g. `./jot list`) produces output without panicking
 - [x] The repo contains a `.apm/config.toml` with project name, default branch, and merge strategy configured
-- [ ] `apm list` run from the cloned repo shows tickets across at least 8 distinct states
+- [x] `apm list` run from the cloned repo shows tickets across at least 8 distinct states
 - [ ] At least one epic exists and `apm epic list` shows it
 - [ ] At least two tickets have `depends_on` set referencing other tickets in the repo
 - [ ] At least one ticket is assigned to the epic (has `epic` field set)
