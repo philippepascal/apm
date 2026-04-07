@@ -16,6 +16,8 @@ updated_at = "2026-04-07T17:14:02.689742Z"
 ### Problem
 
 apm start, work, UI dispatcher currently on type of agent (claude by default). user should be able to start a different type of agent for spec writing and for implementation.
+add a level of indirection in config: a user can create as many worker profiles as he wants. in our case we have spec_agent and impl_agent. They have their own configuration for how to spawn, and what instructions to use.
+in workflow, we use these profiles for state transition instead of just the instructions.
 
 ### Acceptance criteria
 
