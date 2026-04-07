@@ -17,18 +17,11 @@ target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 
 ### Problem
 
-The same terminal-state lookup pattern is repeated in at least 6 files across the codebase: `archive.rs`, `clean.rs`, `sync.rs`, `verify.rs`, `validate.rs`, and `apm/src/cmd/workers.rs`. Each repeats a variant of:
+The same terminal-state lookup pattern is repeated across at least seven locations in the codebase (`archive.rs`, `clean.rs` ×2, `sync.rs`, `verify.rs`, `apm-core/src/ticket.rs`, and `apm-core/src/review.rs`). Each independently reconstructs a set of terminal state IDs by iterating `config.workflow.states`, filtering on `s.terminal`, and collecting into a `HashSet`. Three of those callers also manually insert a hardcoded `"closed"` string as a fallback, while others do not — an inconsistency that is invisible at each individual call site.
 
-```rust
-let terminal_ids: Vec<&str> = config.workflow.states.iter()
-    .filter(|s| s.terminal)
-    .map(|s| s.id.as_str())
-    .collect();
-```
+A related duplication exists for section name lookups: `apm/src/cmd/spec.rs` and `apm-core/src/ticket.rs` each repeat case-insensitive `eq_ignore_ascii_case` searches against `config.ticket.sections` to validate or retrieve a `TicketSection`.
 
-Similarly, section name lookups by name are repeated in `spec.rs` and `ticket.rs` without a centralized helper on `Config`.
-
-This creates maintenance risk: if the filtering logic needs to change (e.g., adding a new state property), every call site must be updated independently.
+Both patterns should be centralised as methods on `impl Config` in `apm-core/src/config.rs`, where the existing `actionable_states_for` helper already establishes the pattern. Callers are then migrated to use the helpers, and the hardcoded `"closed"` insertions are audited and removed if redundant.
 
 ### Acceptance criteria
 
