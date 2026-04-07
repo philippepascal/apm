@@ -84,15 +84,25 @@ instructions = ".apm/apm.worker.md"
 role_prefix = "You are a Worker agent assigned to ticket #<id>."
 ```
 
-**2. Profile field on `StateConfig` (`apm-core/src/config.rs`)**
+**2. Profile field on `TransitionConfig` (`apm-core/src/config.rs`)**
 
-Add `#[serde(default)] pub profile: Option<String>` to `StateConfig`.
+Add `#[serde(default)] pub profile: Option<String>` to `TransitionConfig`, not `StateConfig`. The profile determines which agent binary/config to use at spawn time, and spawning is triggered by a transition.
+
+TOML surface in `.apm/workflow.toml`:
+```toml
+[[workflow.states.transitions]]
+to      = "in_design"
+trigger = "command:start"
+actor   = "agent"
+profile = "spec_agent"
+```
 
 **3. Profile resolution helpers in `start.rs`**
 
-- `resolve_profile<'a>(state_id: &str, config: &'a Config) -> Option<&'a WorkerProfileConfig>`: looks up the state's `profile` field, then looks up the profile in `config.worker_profiles`; if the name is set but not found, logs a warning and returns `None`.
+- `resolve_profile<'a>(transition: &TransitionConfig, config: &'a Config) -> Option<&'a WorkerProfileConfig>`: if `transition.profile` is `Some(name)`, looks up `config.worker_profiles[name]`; if the name is set but not found, logs a warning and returns `None`.
 - `effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams`: merges profile fields over global workers — `command`, `args`, `model`, `env` (profile env merged on top of workers env), `container` all fall back to `workers.*` if absent in profile.
-- `resolve_system_prompt` and `agent_role_prefix` are updated to accept an `Option<&WorkerProfileConfig>` and read from profile fields, falling back to `.apm/apm.worker.md` / the default "Worker agent" prefix.
+- `resolve_system_prompt`: reads `profile.instructions` path, falling back to the state's existing `instructions` field, then `.apm/apm.worker.md`.
+- `agent_role_prefix`: reads `profile.role_prefix` with `<id>` substituted, falling back to the default "Worker agent" prefix.
 - Remove the `spec_writer_states: ["groomed", "ammend"]` static array entirely.
 
 **4. Thread effective params into spawn functions**
@@ -101,12 +111,12 @@ Add `#[serde(default)] pub profile: Option<String>` to `StateConfig`.
 
 **5. Update project config files**
 
-- `.apm/workflow.toml`: add `profile = "spec_agent"` to the `groomed` and `ammend` state tables; add `profile = "impl_agent"` to the `ready` state table.
+- `.apm/workflow.toml`: add `profile = "spec_agent"` to the `groomed → in_design` and `ammend → in_design` transition tables; add `profile = "impl_agent"` to the `ready → in_progress` transition table. The existing `instructions` fields on states remain as fallbacks.
 - `.apm/config.toml`: add `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` sections pointing to the existing `.apm/apm.spec-writer.md` and `.apm/apm.worker.md` files.
 
 **Order of steps**
 
-1. Add `WorkerProfileConfig` + `worker_profiles` to `Config`; add `profile` to `StateConfig`; compile-check only.
+1. Add `WorkerProfileConfig` + `worker_profiles` to `Config`; add `profile` to `TransitionConfig`; compile-check only.
 2. Add `resolve_profile` + `effective_spawn_params` helpers in `start.rs`.
 3. Thread effective params into spawn functions; remove `spec_writer_states` hardcode.
 4. Update `.apm/config.toml` and `.apm/workflow.toml`.
@@ -114,7 +124,7 @@ Add `#[serde(default)] pub profile: Option<String>` to `StateConfig`.
 
 **Constraints**
 
-- Backward-compatible: states without `profile` get global workers config + `.apm/apm.worker.md` (no behaviour change for existing projects).
+- Backward-compatible: transitions without `profile` fall through to state `instructions` field then `.apm/apm.worker.md` (no behaviour change for existing projects).
 - `keychain` stays on `WorkersConfig`, not on profiles.
 - No HTTP API or UI changes required.
 
