@@ -1,14 +1,14 @@
 +++
 id = "7f213c43"
 title = "when moving a ticket to ready the ui shows it as crashed"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
 author = "philippepascal"
 branch = "ticket/7f213c43-when-moving-a-ticket-to-ready-the-ui-sho"
 created_at = "2026-04-07T00:18:08.759817Z"
-updated_at = "2026-04-07T04:55:10.385474Z"
+updated_at = "2026-04-07T05:03:06.331989Z"
 +++
 
 ## Spec
@@ -61,3 +61,4 @@ File to modify: apm-server/src/workers.rs — update the filtering logic around 
 | 2026-04-07T04:52Z | in_design | specd | claude-0406-fix-stuck |
 | 2026-04-07T04:53Z | specd | ready | apm |
 | 2026-04-07T04:55Z | ready | in_progress | philippepascal |
+| 2026-04-07T05:03Z | in_progress | implemented | claude-0407-0455-3958 |
