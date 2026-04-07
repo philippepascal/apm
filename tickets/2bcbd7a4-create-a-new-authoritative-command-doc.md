@@ -27,7 +27,7 @@ The desired outcome is a single Markdown file committed to the repository that s
 - [x] Every command exposed by `apm --help` has a dedicated section in the document
 - [x] Each command section includes a one-paragraph high-level description of what the command does
 - [x] Each command section includes a SYNOPSIS block showing the exact invocation syntax with arguments and flags
-- [ ] Each command section lists every flag and argument with its type, default (if any), and a one-sentence description
+- [x] Each command section lists every flag and argument with its type, default (if any), and a one-sentence description
 - [ ] Each command section that performs git operations includes a "Git internals" subsection listing each git call and a one-sentence explanation of why it is needed
 - [ ] Commands that perform no git operations (e.g. `agents`, `register`, `sessions`, `revoke`) explicitly state "No git operations"
 - [ ] The document's command list is complete: no command present in the binary is absent from the document
