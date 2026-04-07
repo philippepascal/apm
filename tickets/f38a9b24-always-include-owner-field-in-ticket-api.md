@@ -1,7 +1,7 @@
 +++
 id = "f38a9b24"
 title = "Always include owner field in ticket API responses"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f38a9b24-always-include-owner-field-in-ticket-api"
 created_at = "2026-04-06T20:57:23.971981Z"
-updated_at = "2026-04-07T00:15:13.639404Z"
+updated_at = "2026-04-07T00:24:36.706423Z"
 +++
 
 ## Spec
@@ -65,3 +65,4 @@ Root cause: `Frontmatter.owner` has `#[serde(skip_serializing_if = "Option::is_n
 | 2026-04-06T21:42Z | groomed | in_design | philippepascal |
 | 2026-04-06T23:13Z | in_design | specd | claude-0406-1735-b2e1 |
 | 2026-04-07T00:15Z | specd | ready | apm |
+| 2026-04-07T00:24Z | ready | in_progress | philippepascal |
