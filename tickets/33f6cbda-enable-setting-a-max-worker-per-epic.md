@@ -38,7 +38,12 @@ The desired behaviour is: users can assign a `max_workers` ceiling to a specific
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Setting a global default `max_workers` that applies to all epics without an explicit override
+- Per-ticket concurrency limits (only epic-level granularity is in scope)
+- Dynamically adjusting `max_workers` while `apm work` is already running (takes effect on next loop iteration only; no hot-reload)
+- Surfacing per-epic worker counts in `apm epic list`
+- Any UI (apm-ui) changes
+- Migrating or deprecating the existing `[agents] max_concurrent` global setting
 
 ### Approach
 
