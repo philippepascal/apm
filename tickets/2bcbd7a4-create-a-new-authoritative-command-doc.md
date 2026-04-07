@@ -33,7 +33,7 @@ The desired outcome is a single Markdown file committed to the repository that s
 - [x] The document's command list is complete: no command present in the binary is absent from the document
 - [x] The document contains no commands that do not exist in the binary
 - [x] Hidden/internal commands (e.g. `_hook`) are documented in a clearly marked "Internal commands" section rather than the main command list
-- [ ] The document includes a top-level introduction section explaining what APM is and how to navigate the reference
+- [x] The document includes a top-level introduction section explaining what APM is and how to navigate the reference
 - [ ] The document groups commands into logical sections (e.g. Ticket lifecycle, Inspection, Workflow orchestration, Administration, Server)
 
 ### Out of scope
