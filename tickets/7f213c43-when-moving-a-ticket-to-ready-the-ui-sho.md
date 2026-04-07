@@ -4,11 +4,11 @@ title = "when moving a ticket to ready the ui shows it as crashed"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/7f213c43-when-moving-a-ticket-to-ready-the-ui-sho"
 created_at = "2026-04-07T00:18:08.759817Z"
-updated_at = "2026-04-07T04:51:52.805015Z"
+updated_at = "2026-04-07T04:51:57.746294Z"
 +++
 
 ## Spec
