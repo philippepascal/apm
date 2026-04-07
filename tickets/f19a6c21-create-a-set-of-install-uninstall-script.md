@@ -15,8 +15,11 @@ updated_at = "2026-04-07T17:44:01.761396Z"
 
 ### Problem
 
-These shell scripts will allow users to install apm straight from the home page of apm. they support linux and mac (aarch64-apple-darwin and x86_64-unknown-linux-musl) (complement brew). They live in the script director of apm,
-Typically, with a simple command line, a user can have the script run on their terminal. Running it will download the appropriate binary, put it in the right place ,set the path, etc. uninstall will do the cleanup.
+APM currently ships binaries via a Homebrew tap (`philippepascal/homebrew-tap`), but Homebrew is not available on all systems and is not the preferred installation path for users on Linux or for those who want a quick one-liner from the APM home page. There is no general-purpose install/uninstall script today.
+
+The desired end-state is a pair of shell scripts — `scripts/install.sh` and `scripts/uninstall.sh` — that let any user on a supported platform install APM with a single `curl | sh` command, without needing a package manager. The scripts handle platform detection, binary download from the GitHub release, checksum verification, placement on `$PATH`, and clean removal.
+
+Supported platforms match what the release workflow already builds: `aarch64-apple-darwin` (macOS Apple Silicon) and `x86_64-unknown-linux-musl` (Linux x86_64). The scripts complement Homebrew — they are an alternative path, not a replacement for it.
 
 ### Acceptance criteria
 
@@ -33,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
