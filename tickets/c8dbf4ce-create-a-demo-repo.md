@@ -212,7 +212,7 @@ apm-server
 ### Amendment requests
 
 - [x] The deliverable is a bash script (scripts/create-demo.sh), not the demo repo itself. The script creates the repo, initializes apm, populates tickets, and pushes — runnable as a single command. The worker implements and tests the script inside the apm worktree; running it to actually create the repo is a manual post-merge step.
-- [ ] Remove the leaked README draft content at the bottom of the Approach section (the raw sections starting with `### See all tickets` that were accidentally pasted into the spec body)
+- [x] Remove the leaked README draft content at the bottom of the Approach section (the raw sections starting with `### See all tickets` that were accidentally pasted into the spec body)
 
 ### Code review
 
