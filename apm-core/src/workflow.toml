@@ -4,7 +4,6 @@
 id    = "new"
 label = "New"
 
-
   [[workflow.states.transitions]]
   to      = "groomed"
   trigger = "manual"
@@ -16,15 +15,14 @@ label = "New"
 [[workflow.states]]
 id           = "groomed"
 label        = "Groomed"
-
 actionable   = ["agent"]
 dep_requires = "spec"
 instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-  profile = "spec_agent"
+  to              = "in_design"
+  trigger         = "command:start"
+  profile         = "spec_agent"
   context_section = "Problem"
 
   [[workflow.states.transitions]]
@@ -34,7 +32,6 @@ instructions = ".apm/apm.spec-writer.md"
 [[workflow.states]]
 id         = "question"
 label      = "Question"
-
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
@@ -48,7 +45,6 @@ actionable = ["supervisor"]
 [[workflow.states]]
 id             = "specd"
 label          = "Specd"
-
 actionable     = ["supervisor"]
 satisfies_deps = "spec"
 worker_end     = true
@@ -68,7 +64,6 @@ worker_end     = true
 [[workflow.states]]
 id             = "ammend"
 label          = "Ammend"
-
 actionable     = ["agent"]
 dep_requires   = "spec"
 satisfies_deps = "spec"
@@ -94,7 +89,6 @@ instructions   = ".apm/apm.spec-writer.md"
 [[workflow.states]]
 id           = "in_design"
 label        = "In Design"
-
 instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
@@ -116,7 +110,6 @@ instructions = ".apm/apm.spec-writer.md"
 [[workflow.states]]
 id             = "ready"
 label          = "Ready"
-
 actionable     = ["agent"]
 satisfies_deps = "spec"
 instructions   = ".apm/apm.worker.md"
@@ -141,14 +134,12 @@ instructions   = ".apm/apm.worker.md"
 [[workflow.states]]
 id             = "in_progress"
 label          = "In Progress"
-
 satisfies_deps = "spec"
 instructions   = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to         = "implemented"
   trigger    = "manual"
-#  completion = "pr_or_epic_merge"
   completion = "merge"
 
   [[workflow.states.transitions]]
@@ -172,7 +163,6 @@ instructions   = ".apm/apm.worker.md"
 [[workflow.states]]
 id         = "blocked"
 label      = "Blocked"
-
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
@@ -187,15 +177,14 @@ actionable = ["supervisor"]
 [[workflow.states]]
 id             = "implemented"
 label          = "Implemented"
-
 actionable     = ["supervisor"]
 satisfies_deps = true
 worker_end     = true
 
   [[workflow.states.transitions]]
-  to             = "ready"
-  trigger        = "manual"
-  focus_section  = "Code review"
+  to            = "ready"
+  trigger       = "manual"
+  focus_section = "Code review"
 
   [[workflow.states.transitions]]
   to           = "ammend"
@@ -212,10 +201,8 @@ worker_end     = true
 [[workflow.states]]
 id             = "closed"
 label          = "Closed"
-
 terminal       = true
 satisfies_deps = true
-
 
 [workflow.prioritization]
 priority_weight = 10.0

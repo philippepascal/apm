@@ -701,9 +701,6 @@ mod tests {
         TransitionConfig {
             to: "in_progress".into(),
             trigger: "command:start".into(),
-            actor: "agent".into(),
-            preconditions: vec![],
-            side_effects: vec![],
             label: String::new(),
             hint: String::new(),
             completion: CompletionStrategy::None,
