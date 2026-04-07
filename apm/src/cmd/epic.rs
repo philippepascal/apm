@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
 
@@ -198,6 +198,9 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
     println!("Epic:   {title}");
     println!("Branch: {branch}");
     println!("State:  {derived}");
+    if let Some(limit) = config.epic_max_workers(epic_id) {
+        println!("Max workers: {limit}");
+    }
 
     if epic_tickets.is_empty() {
         println!();
@@ -233,6 +236,79 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
         );
     }
 
+    Ok(())
+}
+
+pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -> anyhow::Result<()> {
+    if field != "max_workers" {
+        anyhow::bail!("unknown field {field:?}; valid fields: max_workers");
+    }
+
+    // Validate the epic exists.
+    let matches = apm_core::git::find_epic_branches(root, id_arg);
+    if matches.is_empty() {
+        eprintln!("error: no epic branch found matching '{id_arg}'");
+        std::process::exit(1);
+    }
+    if matches.len() > 1 {
+        anyhow::bail!(
+            "ambiguous id '{id_arg}': matches {}\n  {}",
+            matches.len(),
+            matches.join("\n  ")
+        );
+    }
+    let branch = &matches[0];
+    let after_prefix = branch.trim_start_matches("epic/");
+    let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
+
+    // Determine the config path.
+    let apm_dir = root.join(".apm");
+    let config_path = if apm_dir.join("config.toml").exists() {
+        apm_dir.join("config.toml")
+    } else {
+        root.join("apm.toml")
+    };
+
+    let raw = std::fs::read_to_string(&config_path)
+        .with_context(|| format!("cannot read {}", config_path.display()))?;
+    let mut doc: toml_edit::DocumentMut = raw.parse()
+        .with_context(|| format!("cannot parse {}", config_path.display()))?;
+
+    if value == "-" {
+        // Remove max_workers from the epic table.
+        if let Some(epics) = doc.get_mut("epics") {
+            if let Some(epic_tbl) = epics.get_mut(&epic_id) {
+                if let Some(t) = epic_tbl.as_table_mut() {
+                    t.remove("max_workers");
+                }
+            }
+        }
+    } else {
+        let n: i64 = value.parse().map_err(|_| anyhow::anyhow!("max_workers must be a positive integer, got {value:?}"))?;
+        if n <= 0 {
+            eprintln!("error: max_workers must be ≥ 1, got {n}");
+            std::process::exit(1);
+        }
+
+        // Ensure [epics] table exists.
+        if doc.get("epics").is_none() {
+            let mut t = toml_edit::Table::new();
+            t.set_implicit(true);
+            doc["epics"] = toml_edit::Item::Table(t);
+        }
+        // Ensure [epics."<id>"] table exists.
+        {
+            let epics = doc["epics"].as_table_mut()
+                .ok_or_else(|| anyhow::anyhow!("[epics] is not a table"))?;
+            if epics.get(&epic_id).is_none() {
+                epics.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
+            }
+        }
+        doc["epics"][&epic_id]["max_workers"] = toml_edit::value(n);
+    }
+
+    std::fs::write(&config_path, doc.to_string())
+        .with_context(|| format!("cannot write {}", config_path.display()))?;
     Ok(())
 }
 

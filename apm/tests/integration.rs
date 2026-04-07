@@ -4713,3 +4713,100 @@ fn pr_or_epic_merge_with_target_branch_pushes_target_to_origin() {
     assert!(!local_sha.is_empty(), "local epic/push-test should exist");
     assert_eq!(local_sha, remote_sha, "origin/epic/push-test should match local after push");
 }
+
+// --- epic set max_workers ---
+
+#[test]
+fn epic_set_max_workers_writes_config() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2").unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.epic_max_workers(&epic_id), Some(2));
+}
+
+#[test]
+fn epic_set_max_workers_updates_existing_value() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "3").unwrap();
+    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "1").unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.epic_max_workers(&epic_id), Some(1));
+}
+
+#[test]
+fn epic_set_max_workers_clear_removes_field() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2").unwrap();
+    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "-").unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.epic_max_workers(&epic_id), None);
+}
+
+#[test]
+fn epic_set_max_workers_invalid_value_is_error() {
+    let (dir, epic_id) = setup_with_epic();
+    let result = apm::cmd::epic::run_set(dir.path(), &epic_id, "max_workers", "not_a_number");
+    assert!(result.is_err(), "expected error for non-integer value");
+}
+
+#[test]
+fn epic_set_unknown_field_is_error() {
+    let (dir, epic_id) = setup_with_epic();
+    let result = apm::cmd::epic::run_set(dir.path(), &epic_id, "unknown_field", "5");
+    assert!(result.is_err(), "expected error for unknown field");
+}
+
+#[test]
+fn epic_set_nonexistent_epic_exits_nonzero() {
+    let dir = setup();
+    // No epic branch exists, so any ID should fail.
+    // run_set calls std::process::exit(1) for nonexistent epic, so we test via subprocess.
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "set", "deadbeef", "max_workers", "2"])
+        .current_dir(dir.path())
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected non-zero exit for nonexistent epic");
+}
+
+#[test]
+fn epic_set_zero_value_exits_nonzero() {
+    let (dir, epic_id) = setup_with_epic();
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "set", &epic_id, "max_workers", "0"])
+        .current_dir(dir.path())
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected non-zero exit for max_workers = 0");
+}
+
+#[test]
+fn epic_set_preserves_existing_config_content() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    // The existing apm.toml has [agents] max_concurrent = 3.
+    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2").unwrap();
+
+    // Config should still parse correctly with all original fields intact.
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.agents.max_concurrent, 3);
+    assert_eq!(config.epic_max_workers(&epic_id), Some(2));
+}

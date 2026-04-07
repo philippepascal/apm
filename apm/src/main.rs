@@ -56,6 +56,15 @@ enum EpicCommand {
         #[arg(long)]
         no_aggressive: bool,
     },
+    /// Set a field on an epic (e.g. max_workers)
+    Set {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+        /// Field to update (e.g. max_workers)
+        field: String,
+        /// New value (use "-" to clear)
+        value: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -765,6 +774,7 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
         Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
+        Command::Epic { command: EpicCommand::Set { id, field, value } } => cmd::epic::run_set(&root, &id, &field, &value),
         Command::Register { username } => {
             let inferred = username.is_none();
             let config = apm_core::config::Config::load(&root)?;

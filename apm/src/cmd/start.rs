@@ -26,6 +26,7 @@ pub fn spawn_next_worker(
     no_aggressive: bool,
     skip_permissions: bool,
     epic_filter: Option<&str>,
-) -> Result<Option<(String, std::process::Child, std::path::PathBuf)>> {
-    apm_core::start::spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter)
+    blocked_epics: &[String],
+) -> Result<Option<(String, Option<String>, std::process::Child, std::path::PathBuf)>> {
+    apm_core::start::spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter, blocked_epics)
 }
