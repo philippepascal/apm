@@ -44,26 +44,64 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 
 ### Approach
 
-**Step 1 — Server endpoint** (`apm-server/src/main.rs`)
+### Step 1 — Wrap `/api/tickets` response in an envelope (`apm-server/src/main.rs`)
 
-Add `GET /api/workflow/states` to the protected router. The handler reads the loaded `Config`, iterates `config.workflow.states`, and serialises a JSON array with `id` and `actionable` fields for each state. Only these two fields are needed by the UI.
+Add a new serialisable struct:
+```rust
+#[derive(serde::Serialize)]
+struct TicketsEnvelope {
+    tickets: Vec<TicketResponse>,
+    supervisor_states: Vec<String>,
+}
+```
 
-**Step 2 — supervisorUtils.ts** (`apm-ui/src/lib/supervisorUtils.ts`)
+In `list_tickets`, after building `response: Vec<TicketResponse>`, compute `supervisor_states`:
 
-- Delete the `SUPERVISOR_STATES` constant.
-- Export a pure helper `supervisorStatesFromWorkflow(states: WorkflowState[]): string[]` that returns the `id` of each state where `actionable` includes `"supervisor"`.
+- Always include `"new"` (structural — always visible to supervisor)
+- For each non-terminal state in `cfg.workflow.states`, if `actionable` contains `"supervisor"`, include its `id`
+- If config cannot be loaded, fall back to the static list `["new", "question", "specd", "blocked", "implemented"]`
 
-**Step 3 — SupervisorView.tsx** (`apm-ui/src/components/supervisor/SupervisorView.tsx`)
+Change the return type from `Json<Vec<TicketResponse>>` to `Json<TicketsEnvelope>` and return the envelope.
 
-- On component mount, call `GET /api/workflow/states` alongside the existing `/api/tickets` fetch.
-- Pass the result to `supervisorStatesFromWorkflow` to compute the dynamic supervisor state list.
-- Replace the `SUPERVISOR_STATES` import and every usage with this derived list wherever `visibleStates` is calculated.
+**Note on tests:** Server tests that parse `/api/tickets` as a plain array (e.g. `list_tickets_returns_200_json_array`, `list_tickets_excludes_closed_by_default`, etc.) must be updated to deserialise the envelope and access `.tickets`. Search for `.uri("/api/tickets")` in the test section of `main.rs` to find all affected tests.
 
-Steps must be done in order (server endpoint unblocks the UI work).
+### Step 2 — Remove hardcoded list from `supervisorUtils.ts` (`apm-ui/src/lib/supervisorUtils.ts`)
 
-**Gotcha — `new` state:** `new` currently has no `actionable` entries in `workflow.toml`, so it would fall off the supervisor panel under this scheme. If it should remain visible, add `actionable = ["supervisor"]` to the `new` state in `.apm/workflow.toml` as part of this ticket. Confirm with the author first.
+- Remove the exported `SUPERVISOR_STATES` const and `SupervisorState` type.
+- `groupBySupervisorState` is used by `WorkScreen.tsx` (the agent view) and must remain. Update it to accept a `string[]` states parameter rather than iterating over the removed constant:
+  ```ts
+  export function groupBySupervisorState(states: string[], tickets: Ticket[]): [string, Ticket[]][] {
+    return states
+      .map((state): [string, Ticket[]] => [state, tickets.filter((t) => t.state === state)])
+      .filter(([, group]) => group.length > 0)
+  }
+  ```
+- Update the call site in `WorkScreen.tsx` to pass its own local states list (it can keep any hardcoded list it needs since it is the agent view, not the supervisor panel).
 
-The new endpoint is purely additive — no existing endpoints change.
+### Step 3 — Consume the envelope in `SupervisorView.tsx` (`apm-ui/src/components/supervisor/SupervisorView.tsx`)
+
+- Update `fetchTickets` return type to `Promise<{ tickets: Ticket[]; supervisor_states: string[] }>` and read both fields from the JSON response.
+- From the query result, destructure `data.tickets` (use as the tickets list) and `data.supervisor_states`.
+- Derive the visible-state base list:
+  ```ts
+  const supervisorStates = data?.supervisor_states ?? ['new', 'question', 'specd', 'blocked', 'implemented']
+  ```
+- In the `visibleStates` memo, replace `[...SUPERVISOR_STATES]` with `[...supervisorStates]`.
+- Remove the `SUPERVISOR_STATES` import.
+
+### Order of steps
+
+1. Server change first — establishes the envelope shape
+2. `supervisorUtils.ts` — remove `SUPERVISOR_STATES`, update `groupBySupervisorState`
+3. `WorkScreen.tsx` — update call to `groupBySupervisorState` to pass its own state list
+4. `SupervisorView.tsx` — consume envelope, replace `SUPERVISOR_STATES`
+
+### Constraints / gotchas
+
+- The API envelope change is breaking for any consumer expecting a plain array from `/api/tickets`. All server-side tests hitting that route must be updated.
+- The `new` state has no `actionable` entries in `workflow.toml`; it is included in `supervisor_states` unconditionally by the server (hardcoded in the server-side computation, not in the UI).
+- `closed` (and any other terminal state) is excluded from `supervisor_states` unconditionally, even if `actionable` were set. The UI also retains its existing `showClosed` toggle which appends `'closed'` to `visibleStates` — this remains correct.
+- `groupBySupervisorState`'s signature change requires updating `WorkScreen.tsx`; scope this change carefully so it does not break the agent view.
 
 ### 1. Add a server endpoint to expose workflow state config
 
