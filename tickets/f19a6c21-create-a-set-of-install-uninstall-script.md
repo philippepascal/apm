@@ -58,7 +58,137 @@ Supported platforms match what the release workflow already builds: `aarch64-app
 
 ### Approach
 
-How the implementation will work.
+### Files to create
+
+- `scripts/install.sh` — POSIX-compatible shell installer
+- `scripts/uninstall.sh` — POSIX-compatible shell remover
+
+Both scripts must be POSIX `sh` (not bash-specific) so they work on the widest range of systems, including minimal Linux containers where only `/bin/sh` is guaranteed.
+
+---
+
+### `scripts/install.sh` — step by step
+
+**1. Detect platform**
+
+```sh
+OS=$(uname -s)
+ARCH=$(uname -m)
+```
+
+Map to release target triple:
+
+| `uname -s` | `uname -m` | Target triple |
+|------------|------------|---------------|
+| Darwin | arm64 | aarch64-apple-darwin |
+| Linux | x86_64 | x86_64-unknown-linux-musl |
+| anything else | — | error + exit 1 |
+
+**2. Check prerequisites**
+
+Exit with a clear error if `curl` or `tar` is not on `$PATH`.
+
+**3. Resolve version**
+
+If `APM_VERSION` is set, use it (strip any leading `v`). Otherwise query:
+
+```sh
+curl -fsSL https://api.github.com/repos/philippepascal/apm/releases/latest \
+  | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/'
+```
+
+**4. Build download URLs**
+
+```
+BASE=https://github.com/philippepascal/apm/releases/download/v${VERSION}
+ARCHIVE=${BASE}/apm-v${VERSION}-${TARGET}.tar.gz
+CHECKSUM_URL=${BASE}/checksums.txt
+```
+
+**5. Download**
+
+Download both the archive and `checksums.txt` to a temp directory (use `mktemp -d`, remove on EXIT via `trap`).
+
+**6. Verify checksum**
+
+Extract the expected SHA256 for the archive name from `checksums.txt`, then:
+
+- On Linux: `sha256sum --check`
+- On macOS: `shasum -a 256 --check`
+
+Exit 1 with an error if the checksum does not match.
+
+**7. Resolve install directory**
+
+Use `${APM_INSTALL_DIR:-$HOME/.local/bin}`. Create with `mkdir -p` if absent.
+
+**8. Extract and install**
+
+```sh
+tar -xzf "$ARCHIVE" -C "$TMPDIR"
+cp "$TMPDIR/apm" "$INSTALL_DIR/"
+cp "$TMPDIR/apm-server" "$INSTALL_DIR/"
+chmod +x "$INSTALL_DIR/apm" "$INSTALL_DIR/apm-server"
+```
+
+**9. Add to PATH**
+
+For each of `$HOME/.bashrc`, `$HOME/.zshrc`, `$HOME/.profile`:
+- If the file exists and does not already contain a line exporting `INSTALL_DIR`, append:
+
+```sh
+# Added by APM installer
+export PATH="$INSTALL_DIR:$PATH"
+```
+
+Use a sentinel comment (`# Added by APM installer`) so uninstall can find and remove the exact block.
+
+**10. Print success**
+
+```
+APM v{VERSION} installed to {INSTALL_DIR}
+
+  apm --help        to get started
+  apm-server --help for the web server
+
+Restart your shell or run:  export PATH="{INSTALL_DIR}:$PATH"
+```
+
+---
+
+### `scripts/uninstall.sh` — step by step
+
+**1. Resolve install directory**
+
+Use `${APM_INSTALL_DIR:-$HOME/.local/bin}`.
+
+**2. Remove binaries**
+
+If `$INSTALL_DIR/apm` exists, remove it; otherwise note it was not found. Same for `$INSTALL_DIR/apm-server`.
+
+**3. Remove PATH entries**
+
+For each of `$HOME/.bashrc`, `$HOME/.zshrc`, `$HOME/.profile`: if the file exists, remove the two-line block:
+
+```
+# Added by APM installer
+export PATH="..."
+```
+
+Use a portable `sed` in-place pattern — on macOS `sed -i ''`, on Linux `sed -i`. Detect which form to use via `uname -s`.
+
+**4. Print confirmation**
+
+List each file/entry that was removed. If nothing was found, print "APM does not appear to be installed — nothing to do." and exit 0.
+
+---
+
+### Constraints / gotchas
+
+- `sed -i` is not portable: macOS requires `-i ''`; Linux requires `-i` alone. Detect OS and branch.
+- The GitHub API may rate-limit unauthenticated requests. The script should gracefully handle a failed version lookup (exit with a clear message telling the user to set `APM_VERSION`).
+- Both scripts must be idempotent: running them twice should not double-add PATH entries or error on missing files.
+- Do not use `bash`-isms (`[[ ]]`, `local`, process substitution, etc.) — keep everything POSIX `sh`.
 
 ### Open questions
 
