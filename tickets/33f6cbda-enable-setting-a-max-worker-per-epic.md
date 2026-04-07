@@ -34,7 +34,7 @@ The desired behaviour is: users can assign a `max_workers` ceiling to a specific
 - [x] Tickets with no epic, or whose epic has no `max_workers` set, are unaffected — they are still bounded only by `[agents] max_concurrent`
 - [x] Setting `max_workers` greater than `[agents] max_concurrent` is allowed but has no additional effect (the global cap still binds)
 - [x] `apm epic set <epic-id> max_workers <N>` with a non-existent epic ID prints an error and exits non-zero
-- [ ] `apm epic set <epic-id> max_workers <N>` with a value ≤ 0 prints an error and exits non-zero
+- [x] `apm epic set <epic-id> max_workers <N>` with a value ≤ 0 prints an error and exits non-zero
 
 ### Out of scope
 
