@@ -1,14 +1,14 @@
 +++
 id = "0c197dd4"
 title = "Remove unused [[repos.code]] section from config"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/0c197dd4-remove-unused-repos-code-section-from-co"
 created_at = "2026-04-07T17:19:55.074233Z"
-updated_at = "2026-04-07T17:19:55.074233Z"
+updated_at = "2026-04-07T17:42:26.063077Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T17:19Z | — | new | philippepascal |
+| 2026-04-07T17:42Z | new | groomed | apm |
