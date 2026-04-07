@@ -31,7 +31,7 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 - [x] At least one epic exists and `apm epic list` shows it
 - [x] At least two tickets have `depends_on` set referencing other tickets in the repo
 - [x] At least one ticket is assigned to the epic (has `epic` field set)
-- [ ] `apm show <id>` on a `closed` ticket shows a fully-populated spec (all four sections filled)
+- [x] `apm show <id>` on a `closed` ticket shows a fully-populated spec (all four sections filled)
 - [ ] `apm show <id>` on a ticket in `ammend` state shows a `### Amendment requests` section with at least one unchecked checkbox
 - [ ] `apm show <id>` on a ticket in `question` state shows a `### Open questions` section with a pending question
 - [ ] `apm next` returns a ticket (the highest-priority actionable one)
