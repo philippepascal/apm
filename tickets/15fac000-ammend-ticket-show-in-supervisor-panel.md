@@ -1,14 +1,14 @@
 +++
 id = "15fac000"
 title = "ammend ticket show in supervisor panel"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
 author = "philippepascal"
 branch = "ticket/15fac000-ammend-ticket-show-in-supervisor-panel"
 created_at = "2026-04-07T18:17:11.036755Z"
-updated_at = "2026-04-07T19:33:09.638450Z"
+updated_at = "2026-04-07T22:39:33.498010Z"
 +++
 
 ## Spec
@@ -197,3 +197,4 @@ Add `GET /api/workflow/states` to the protected router. The handler reads the lo
 | 2026-04-07T19:08Z | specd | ready | apm |
 | 2026-04-07T19:24Z | ready | in_progress | philippepascal |
 | 2026-04-07T19:33Z | in_progress | implemented | claude-0407-1925-1c50 |
+| 2026-04-07T22:39Z | implemented | closed | philippepascal |
