@@ -34,9 +34,12 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 
 ### Out of scope
 
+- Adding a new `/api/workflow/states` endpoint (superseded by envelope field on `/api/tickets`)
+- Changing the `actionable` field of `new` in `workflow.toml` (visibility of `new` is structural, not config-driven)
 - Changing how the agent work queue determines which tickets to surface (already driven by `actionable` in the server)
 - Updating `ALL_WORKFLOW_STATES` in `SupervisorView.tsx` (used only for the filter dropdown, separate concern)
-- Adding or modifying states in `workflow.toml`
+- Updating `groupBySupervisorState` in `supervisorUtils.ts` or `WorkScreen.tsx` (agent view, separate concern)
+- Adding or modifying other states in `workflow.toml`
 - State colours or labels in the UI
 
 ### Approach
