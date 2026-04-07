@@ -19,7 +19,7 @@ Tickets in the `ammend` state currently appear in the supervisor panel in the AP
 
 The root cause is that `apm-ui/src/lib/supervisorUtils.ts` hardcodes a `SUPERVISOR_STATES` array that explicitly names `'ammend'`. The supervisor panel uses this array to decide what to render, with no reference to `workflow.toml`. Any future workflow changes (new states, renamed states, changed `actionable` actors) require manual UI edits or risk the same bug recurring.
 
-The desired behaviour is that the supervisor panel derives its visible-state list from the `actionable` property already present in `workflow.toml`: it should show states where the `supervisor` actor is listed as actionable. The `ammend` state (`actionable = ["agent"]`) is then excluded automatically, with no string matching on state names in the UI.
+The desired behaviour is that the supervisor panel derives its visible-state list from `workflow.toml` configuration surfaced by the server, with two structural exceptions: `new` is always visible (it has no `actionable` entries but supervisors must act on it), and terminal states (e.g. `closed`) are never visible. All other states show in the supervisor panel only when `actionable` includes `"supervisor"`. The `ammend` state (`actionable = ["agent"]`) is then excluded automatically.
 
 ### Acceptance criteria
 
