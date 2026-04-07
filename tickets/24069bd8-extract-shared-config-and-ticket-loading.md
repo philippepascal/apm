@@ -17,7 +17,7 @@ target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 
 ### Problem
 
-Approximately 15 command handlers in `apm/src/cmd/` repeat the same boilerplate sequence:
+Approximately 12 command handlers in `apm/src/cmd/` open with the same boilerplate sequence:
 
 ```rust
 let config = Config::load(root)?;
@@ -30,9 +30,11 @@ if aggressive {
 let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
 ```
 
-This appears in `list.rs`, `show.rs`, `review.rs`, `validate.rs`, `verify.rs`, `spec.rs`, `set.rs`, `sync.rs`, `new.rs`, `epic.rs`, `work.rs`, `clean.rs`, and others. Each copy is slightly different: some skip the aggressive fetch, some load tickets conditionally, some add extra steps.
+The commands that use the full standard pattern are: `list.rs`, `verify.rs`, `validate.rs`, `review.rs`, `set.rs`, and the three sub-functions in `epic.rs`. Commands `new.rs` and `clean.rs` share the `Config::load` step but diverge immediately after (no fetch, no ticket load). Commands `show.rs` and `spec.rs` use a per-branch fetch variant and do not load all tickets, making them a different shape that does not benefit from the same helper.
 
-The duplication means that any change to the loading sequence (e.g., adding a validation step, changing the fetch behavior) must be applied to every file independently. It also makes it hard to see what each command actually does — the real logic is buried under 5-8 lines of identical setup.
+Each copy drifts slightly — some omit the `!no_aggressive` guard, some load tickets conditionally — so future changes to the loading sequence (e.g. adding a validation step or changing fetch behaviour) must be hunted down and applied individually. The boilerplate also obscures the real command logic: 5–8 lines of identical setup must be read past before the interesting code begins.
+
+The desired state is a single `CmdContext` type and a small set of constructor functions living in `apm/src/ctx.rs`, so that each command handler expresses its setup intent in one line and its unique logic without noise.
 
 ### Acceptance criteria
 
