@@ -30,7 +30,7 @@ Editor-opening logic is duplicated across three command handlers with slight but
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing any user-visible behaviour of the editor flow (temp file strategy, commit messages, branch handling)\n- Consolidating the git operations that wrap the editor call (branch checkout in new.rs, commit_to_branch in show.rs)\n- Supporting editor commands with quoted arguments containing spaces (e.g. EDITOR='vim --cmd "set ft=markdown"')\n- Adding new editor-related features (syntax highlighting hints, line-number flags, etc.)
 
 ### Approach
 
