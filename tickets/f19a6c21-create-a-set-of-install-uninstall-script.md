@@ -15,7 +15,7 @@ updated_at = "2026-04-07T17:07:48.816446Z"
 
 ### Problem
 
-These shell scripts will allow users to install apm straight from the home page of apm. they support linux and mac (complement brew). They live in the script director of apm,
+These shell scripts will allow users to install apm straight from the home page of apm. they support linux and mac (aarch64-apple-darwin and x86_64-unknown-linux-musl) (complement brew). They live in the script director of apm,
 Typically, with a simple command line, a user can have the script run on their terminal. Running it will download the appropriate binary, put it in the right place ,set the path, etc. uninstall will do the cleanup.
 
 ### Acceptance criteria
