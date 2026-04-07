@@ -38,7 +38,12 @@ The desired outcome is a single Markdown file committed to the repository that s
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- CLI tutorial or getting-started guide (narrative walkthrough; this is a reference only)
+- Documentation for apm-server internals or its API endpoints
+- Man page generation or HTML output (plain Markdown only)
+- Documenting private/internal Rust functions or library APIs (apm_core crate internals)
+- Automated doc generation from source (no tooling changes; doc is hand-written)
+- Any source code changes to add or modify commands
 
 ### Approach
 
