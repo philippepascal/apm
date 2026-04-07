@@ -321,6 +321,7 @@ dir = "tickets"
 
 [worktrees]
 dir = "../{name}--worktrees"
+agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [agents]
 max_concurrent = 3

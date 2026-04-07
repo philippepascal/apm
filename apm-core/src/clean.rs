@@ -44,6 +44,7 @@ pub fn diagnose_worktree(
     ticket_title: &str,
     branch: &str,
     local_branch_exists: bool,
+    agent_dirs: &[String],
 ) -> Result<DirtyWorktree> {
     let out = Command::new("git")
         .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
@@ -64,9 +65,12 @@ pub fn diagnose_worktree(
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
+        let top_dir = file.split('/').next().unwrap_or("");
 
         if xy == "??" {
-            if KNOWN_TEMP_FILES.contains(&filename.as_str()) {
+            if KNOWN_TEMP_FILES.contains(&filename.as_str())
+                || agent_dirs.iter().any(|d| d.trim_end_matches('/') == top_dir)
+            {
                 known_temp.push(PathBuf::from(file));
             } else {
                 other_untracked.push(PathBuf::from(file));
@@ -91,7 +95,9 @@ pub fn diagnose_worktree(
 pub fn remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()> {
     for file in files {
         let full_path = wt_path.join(file);
-        if full_path.exists() {
+        if full_path.is_dir() {
+            std::fs::remove_dir_all(&full_path)?;
+        } else if full_path.exists() {
             std::fs::remove_file(&full_path)?;
         }
     }
@@ -186,7 +192,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                     .map(|o| o.status.success())
                     .unwrap_or(false);
                 let diagnosis =
-                    diagnose_worktree(path, &id, &t.frontmatter.title, &branch, lbe)?;
+                    diagnose_worktree(path, &id, &t.frontmatter.title, &branch, lbe, &config.worktrees.agent_dirs)?;
                 if diagnosis.modified_tracked.is_empty() {
                     if force {
                         // Force mode: git worktree remove --force handles remaining files.
