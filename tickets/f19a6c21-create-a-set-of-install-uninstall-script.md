@@ -4,11 +4,11 @@ title = "create a set of install/uninstall scripts for apm on all platforms supp
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "philippepascal"
 branch = "ticket/f19a6c21-create-a-set-of-install-uninstall-script"
 created_at = "2026-04-07T17:07:48.816446Z"
-updated_at = "2026-04-07T17:46:39.986382Z"
+updated_at = "2026-04-07T17:46:46.878614Z"
 +++
 
 ## Spec
