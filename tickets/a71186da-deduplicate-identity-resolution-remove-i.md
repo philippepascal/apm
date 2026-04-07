@@ -17,14 +17,16 @@ target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 
 ### Problem
 
-Two modules resolve the current user's identity with overlapping logic:
+Two modules in `apm-core` independently resolve the current user's identity with overlapping logic that has drifted apart:
 
-- `identity.rs::resolve_current_user()` (68 lines) — reads `APM_AGENT_NAME` env var, falls back to git config `user.name`
-- `config.rs::resolve_identity()` (~50 lines within Config::load) — reads `.apm/local.toml` username, falls back to GitHub API, then git config
+- `identity.rs::resolve_current_user()` (69 lines) — reads `.apm/local.toml` username, checks `git_host` config, calls `gh_username()` for GitHub, falls back to the literal string `"apm"`.
+- `config.rs::resolve_identity()` (~37 lines) — reads `.apm/local.toml` username, checks `git_host` config, calls `gh_username()` then `fetch_authenticated_user()` with token resolution, falls back to `"unassigned"`.
 
-Both exist because identity resolution evolved: `identity.rs` was the original, `config.rs` added the richer version when git_host support landed. Neither calls the other. Callers must choose which to use, and the two can return different values for the same user depending on which fallback path triggers.
+The split happened because identity resolution evolved: `config.rs` added fuller GitHub API token support when `git_host` landed, but `identity.rs` was never removed or updated to delegate. Neither function calls the other.
 
-This creates a correctness risk: a user could be identified as "philippepascal" by one path and "Philippe Pascal" by the other, leading to inconsistent `agent` field values on tickets.
+Callers are split across the CLI and server layers. `apm new` and `apm list --mine` (in the `apm` crate) use `identity::resolve_current_user()`. The `apm-server` handlers (sync, POST /api/tickets, GET /api/me, queue access control) use `config::resolve_identity()`. This means a user who has no identity configured gets `author = "apm"` on tickets created via the CLI but `"unassigned"` when created via the server — the same user can appear under two different identities in the same project.
+
+The desired state is a single identity resolution function (`config::resolve_identity()`) used by all callers. The `identity.rs` module and its `pub mod identity` declaration should be removed entirely.
 
 ### Acceptance criteria
 
