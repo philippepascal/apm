@@ -1,7 +1,7 @@
 +++
 id = "755166f8"
 title = "remove apm-proxy"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/755166f8-remove-apm-proxy"
 created_at = "2026-04-06T20:50:54.696634Z"
-updated_at = "2026-04-07T00:15:04.280033Z"
+updated_at = "2026-04-07T00:18:24.713808Z"
 +++
 
 ## Spec
@@ -75,3 +75,4 @@ No changes are needed anywhere in the Rust workspace, documentation, or CI confi
 | 2026-04-06T21:30Z | groomed | in_design | philippepascal |
 | 2026-04-06T21:42Z | in_design | specd | claude-0406-2130-eda0 |
 | 2026-04-07T00:15Z | specd | ready | apm |
+| 2026-04-07T00:18Z | ready | in_progress | philippepascal |
