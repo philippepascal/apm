@@ -4,11 +4,11 @@ title = "Consolidate editor-opening logic into shared CLI module"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 branch = "ticket/fe6e9d1d-consolidate-editor-opening-logic-into-sh"
 created_at = "2026-04-07T22:30:48.429150Z"
-updated_at = "2026-04-07T22:58:33.484049Z"
+updated_at = "2026-04-07T22:58:39.735322Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
