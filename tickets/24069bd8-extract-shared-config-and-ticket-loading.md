@@ -63,7 +63,76 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 
 ### Approach
 
-How the implementation will work.
+**1. Create `apm/src/ctx.rs`**
+
+Add a new module with two public items:
+
+```rust
+use std::path::Path;
+use anyhow::Result;
+use apm_core::{config::Config, ticket::Ticket, git};
+
+pub struct CmdContext {
+    pub config: Config,
+    pub tickets: Vec<Ticket>,
+    pub aggressive: bool,
+}
+
+impl CmdContext {
+    /// Load config, optionally fetch all remotes, then load all tickets.
+    /// A fetch failure is a warning, not a hard error.
+    pub fn load(root: &Path, no_aggressive: bool) -> Result<Self> {
+        let config = Config::load(root)?;
+        let aggressive = config.sync.aggressive && !no_aggressive;
+        if aggressive {
+            if let Err(e) = git::fetch_all(root) {
+                eprintln!("warning: fetch failed: {e:#}");
+            }
+        }
+        let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+        Ok(Self { config, tickets, aggressive })
+    }
+
+    /// Load config only — no fetch, no ticket load.
+    pub fn load_config_only(root: &Path) -> Result<Config> {
+        Config::load(root)
+    }
+}
+```
+
+**2. Register the module in `apm/src/main.rs` (or `lib.rs`)**
+
+Add `mod ctx;` alongside the existing `mod cmd;` declarations. No public re-export is needed; callers refer to `crate::ctx::CmdContext`.
+
+**3. Update command handlers — full pattern (use `CmdContext::load`)**
+
+For each of `list.rs`, `verify.rs`, `validate.rs`, `review.rs`, `set.rs`:
+- Replace the 4–8 line boilerplate block with `let ctx = CmdContext::load(root, no_aggressive)?;`
+- Replace subsequent references:
+  - `config` → `ctx.config`
+  - `tickets` → `ctx.tickets`
+  - `aggressive` → `ctx.aggressive`
+- For `validate.rs` where tickets are only loaded when `!config_only`: call `CmdContext::load_config_only(root)?` for the config-only path, and `CmdContext::load(root, no_aggressive)?` otherwise.
+
+**4. Update `epic.rs` sub-functions**
+
+- `run_list`: calls `git::fetch_all` when `config.sync.aggressive` is true (no `no_aggressive` arg); replace with `CmdContext::load(root, false)?` — `no_aggressive: false` preserves the existing behaviour since the flag doesn't exist in this subcommand.
+- `run_show`: replace with `CmdContext::load(root, no_aggressive)?`.
+- `run_close`: config-only load followed by manual ticket load; replace the `Config::load` line with `CmdContext::load_config_only(root)?` for config, keep the existing ticket load since it filters tickets before all-ticket loading.
+
+**5. Update `new.rs` and `clean.rs`**
+
+Both call `Config::load(root)?` as their only boilerplate. Replace with `let config = CmdContext::load_config_only(root)?;`. No other changes needed.
+
+**6. Verify**
+
+Run `cargo test -p apm` and `cargo clippy -p apm -- -D warnings` to confirm no regressions. No test changes should be necessary.
+
+**Constraints**
+
+- Do not change any function signatures visible outside the `apm` crate.
+- Preserve the exact warning message text (`"warning: fetch failed: {e:#}"`) so existing test fixtures that match stderr output keep passing.
+- `CmdContext::load_config_only` returns `Config` directly (not `CmdContext`) to avoid allocating an empty `Vec<Ticket>` in callers that never need it.
 
 ### Open questions
 
