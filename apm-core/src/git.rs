@@ -341,12 +341,79 @@ pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()> {
 
 /// Remove a permanent worktree.
 pub fn remove_worktree(root: &Path, wt_path: &Path, force: bool) -> Result<()> {
+    clean_agent_dirs(root, wt_path);
     let path_str = wt_path.to_string_lossy();
     if force {
         run(root, &["worktree", "remove", "--force", &path_str]).map(|_| ())
     } else {
         run(root, &["worktree", "remove", &path_str]).map(|_| ())
     }
+}
+
+/// Copy agent config directories from the main repo into a worktree.
+/// Only copies directories that are NOT tracked by git (untracked/gitignored).
+pub fn sync_agent_dirs(root: &Path, wt_path: &Path, agent_dirs: &[String]) {
+    for dir_name in agent_dirs {
+        let src = root.join(dir_name);
+        if !src.is_dir() {
+            continue;
+        }
+        if is_tracked(root, dir_name) {
+            continue;
+        }
+        let dst = wt_path.join(dir_name);
+        if let Err(e) = copy_dir_recursive(&src, &dst) {
+            eprintln!("warning: could not copy {dir_name} to worktree: {e}");
+        }
+    }
+}
+
+/// Remove agent config directories from a worktree before cleanup.
+/// Only removes directories that are NOT tracked by git.
+fn clean_agent_dirs(root: &Path, wt_path: &Path) {
+    let config = match crate::config::Config::load(root) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    for dir_name in &config.worktrees.agent_dirs {
+        let dir = wt_path.join(dir_name);
+        if !dir.is_dir() {
+            continue;
+        }
+        if is_tracked(root, dir_name) {
+            continue;
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+fn is_tracked(root: &Path, path: &str) -> bool {
+    Command::new("git")
+        .args(["ls-files", "--error-unmatch", path])
+        .current_dir(root)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    if dst.exists() {
+        std::fs::remove_dir_all(dst)?;
+    }
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            std::fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
 }
 
 /// Commit a file to a specific branch without disturbing the current working tree.

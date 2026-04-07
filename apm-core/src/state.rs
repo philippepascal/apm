@@ -174,7 +174,9 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
 
     let worktree_path = if new_state == "in_design" {
         let worktrees_base = root.join(&config.worktrees.dir);
-        Some(git::ensure_worktree(root, &worktrees_base, &branch)?)
+        let wt = git::ensure_worktree(root, &worktrees_base, &branch)?;
+        git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs);
+        Some(wt)
     } else {
         None
     };
