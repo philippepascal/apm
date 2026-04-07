@@ -63,49 +63,6 @@ Top-level H2 sections grouping commands:
 Each command gets an H3 section with this template:
 
 ```
-### apm <command>
-
-<one-line tagline>
-
-#### Synopsis
-    apm <command> [<id>] [--flag <value>] ...
-
-#### Description
-One to three paragraphs. Note notable side-effects (worktree provisioning, remote push, etc.)
-
-#### Options
-| Flag / Arg | Type | Default | Description |
-|------------|------|---------|-------------|
-
-#### Git internals
-| Command | Why |
-|---------|-----|
-```
-
-Commands with no git operations state "No git operations" in the Git internals subsection.
-
-**Source of truth:** All details come from `src/cmd/<command>.rs` and `apm_core::git`. Implementer must cross-check each section against the source. Pay attention to:
-- Exact flag names (long and short) from `main.rs` clap definitions
-- `apm_core::git` helpers — trace each to the underlying `git` invocation
-- Which commands push only in aggressive mode vs. unconditionally
-
-**Key git helper → git command mapping** (document in a reference table at the top of the file):
-- `fetch_all` → `git fetch --all --prune`
-- `fetch_branch` → `git fetch origin <branch>`
-- `read_from_branch` → `git show <branch>:<path>`
-- `commit_to_branch` → orphan commit chain (writes file to branch without checkout)
-- `push_branch` → `git push origin <branch>`
-- `delete_remote_branch` → `git push origin --delete <branch>`
-- `merged_into_main` → `git branch --merged <default>`
-- `find_worktree_for_branch` → `git worktree list --porcelain`
-- `remove_worktree` → `git worktree remove <path>`
-- `list_files_on_branch` → `git ls-tree -r --name-only <branch> <dir>`
-
-**Order of work:**
-1. Add introduction section (what APM is, git-native model, aggressive mode explained)
-2. Write command sections in group order above
-3. Verify each section against source before committing
-4. Single commit on the ticket branch
 
 ### apm <command>
 
@@ -141,6 +98,8 @@ Mention any notable side-effects (e.g. worktree provisioning, push to remote).
 
 ### Amendment requests
 
+- [ ] Correct the command grouping to match the actual CLI. The full command list from the source is: init, list, show, new, state, set, start, next, sync, assign, worktrees, review, verify, validate, _hook, agents, work, close, archive, clean, workers, epic (new/close/list/show), spec, register, sessions, revoke. The spec lists some commands that don't exist as top-level commands and groups them incorrectly.
+- [ ] Remove the duplicated template content at the bottom of the Approach section (the raw markdown block starting with `### apm <command>` that repeats the template already described above it)
 
 ### Code review
 
