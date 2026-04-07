@@ -38,7 +38,19 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] A `CmdContext` struct exists in `apm/src/ctx.rs` with public fields `config: Config`, `tickets: Vec<Ticket>`, and `aggressive: bool`
+- [ ] `CmdContext::load(root: &Path, no_aggressive: bool) -> Result<CmdContext>` loads config, performs `git::fetch_all` when `config.sync.aggressive && !no_aggressive` (printing a warning on failure, not returning an error), then loads all tickets
+- [ ] `CmdContext::load_config_only(root: &Path) -> Result<Config>` loads and returns the config without performing any fetch or ticket load
+- [ ] `list.rs` uses `CmdContext::load` and removes its inline boilerplate
+- [ ] `verify.rs` uses `CmdContext::load` and removes its inline boilerplate
+- [ ] `validate.rs` uses `CmdContext::load` (or `load_config_only` for the `--config-only` branch) and removes its inline boilerplate
+- [ ] `review.rs` uses `CmdContext::load` and removes its inline boilerplate
+- [ ] `set.rs` uses `CmdContext::load` and removes its inline boilerplate
+- [ ] `epic.rs` sub-functions (`run_list`, `run_show`, `run_close`) each use whichever helper matches their pattern and remove their inline boilerplate
+- [ ] `new.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
+- [ ] `clean.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
+- [ ] All existing `apm` integration tests and unit tests pass without modification
+- [ ] `cargo clippy` reports no new warnings in the `apm` crate
 
 ### Out of scope
 
