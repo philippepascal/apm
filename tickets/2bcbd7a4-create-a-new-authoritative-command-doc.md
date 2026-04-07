@@ -1,14 +1,14 @@
 +++
 id = "2bcbd7a4"
 title = "create a new authoritative command doc"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 5
 risk = 2
 author = "philippepascal"
 branch = "ticket/2bcbd7a4-create-a-new-authoritative-command-doc"
 created_at = "2026-04-07T17:06:49.569239Z"
-updated_at = "2026-04-07T18:36:52.385938Z"
+updated_at = "2026-04-07T19:33:29.640820Z"
 +++
 
 ## Spec
@@ -123,3 +123,4 @@ Mention any notable side-effects (e.g. worktree provisioning, push to remote).
 | 2026-04-07T18:30Z | ammend | in_design | philippepascal |
 | 2026-04-07T18:32Z | in_design | specd | claude-0407-1830-1200 |
 | 2026-04-07T18:36Z | specd | ready | apm |
+| 2026-04-07T19:33Z | ready | in_progress | philippepascal |
