@@ -15,12 +15,14 @@ updated_at = "2026-04-07T17:06:49.569239Z"
 
 ### Problem
 
-a master toml doc, with all commands. For all commands, 
+a master .md doc, with all commands. For all commands, 
 . what they do at high level
 . their arguments
-. a detail of what they do with a full list of the git commands
+. a detail of what they do with a full list of the git commands, and why they are run
 
-For the format, inspire yourself from other popular clis docs (like git). Make sure that what is documented matches what is implemented
+For the format, inspire yourself from other popular clis docs (like git). Make sure that what is documented matches what is implemented.
+
+This is for contributors or users that want a full understanding.
 
 ### Acceptance criteria
 
