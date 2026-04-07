@@ -1,14 +1,14 @@
 +++
 id = "2bcbd7a4"
 title = "create a new authoritative command doc"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/2bcbd7a4-create-a-new-authoritative-command-doc"
 created_at = "2026-04-07T17:06:49.569239Z"
-updated_at = "2026-04-07T17:06:49.569239Z"
+updated_at = "2026-04-07T17:42:10.577726Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T17:06Z | — | new | philippepascal |
+| 2026-04-07T17:42Z | new | groomed | apm |
