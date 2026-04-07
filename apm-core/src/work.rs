@@ -12,9 +12,11 @@ pub fn run_engine_loop(
     skip_permissions: bool,
     epic_filter: Option<String>,
 ) -> Result<()> {
-    let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
+    let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut no_more = false;
     let mut next_poll = Instant::now();
+    // Load config once on first spawn attempt; ignore errors (epic blocking is best-effort).
+    let mut config_cache: Option<crate::config::Config> = None;
 
     loop {
         if cancel.load(Ordering::Relaxed) {
@@ -22,7 +24,7 @@ pub fn run_engine_loop(
         }
 
         let mut reaped = false;
-        workers.retain_mut(|(_, child, _pid_path)| {
+        workers.retain_mut(|(_, _epic_id, child, _pid_path)| {
             let done = matches!(child.try_wait(), Ok(Some(_)));
             if done {
                 reaped = true;
@@ -45,13 +47,33 @@ pub fn run_engine_loop(
         }
 
         if !no_more && workers.len() < max_concurrent {
-            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref()) {
+            if config_cache.is_none() {
+                config_cache = crate::config::Config::load(root).ok();
+            }
+            let blocked_epics: Vec<String> = if let Some(ref config) = config_cache {
+                let mut blocked = Vec::new();
+                let distinct: std::collections::HashSet<&str> = workers.iter()
+                    .filter_map(|(_, eid, _, _)| eid.as_deref())
+                    .collect();
+                for eid in distinct {
+                    if let Some(limit) = config.epic_max_workers(eid) {
+                        let count = workers.iter().filter(|(_, e, _, _)| e.as_deref() == Some(eid)).count();
+                        if count >= limit {
+                            blocked.push(eid.to_string());
+                        }
+                    }
+                }
+                blocked
+            } else {
+                Vec::new()
+            };
+            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);
                     no_more = true;
                 }
-                Ok(Some((id, child, pid_path))) => {
-                    workers.push((id, child, pid_path));
+                Ok(Some((id, epic_id, child, pid_path))) => {
+                    workers.push((id, epic_id, child, pid_path));
                     no_more = false;
                 }
                 Err(_) => {

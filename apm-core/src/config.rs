@@ -2,6 +2,11 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Deserialize, Default)]
+pub struct EpicConfig {
+    pub max_workers: Option<usize>,
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionType {
@@ -152,6 +157,8 @@ pub struct Config {
     pub git_host: GitHostConfig,
     #[serde(default)]
     pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
+    #[serde(default)]
+    pub epics: std::collections::HashMap<String, EpicConfig>,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,
@@ -453,6 +460,10 @@ impl WorkersConfig {
 }
 
 impl Config {
+    pub fn epic_max_workers(&self, epic_id: &str) -> Option<usize> {
+        self.epics.get(epic_id).and_then(|e| e.max_workers)
+    }
+
     /// States where `actor` can actively pick up / act on tickets.
     /// Matches "any" as a wildcard in addition to the literal actor name.
     pub fn actionable_states_for(&self, actor: &str) -> Vec<String> {
@@ -1042,5 +1053,55 @@ dir = "tickets"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.tickets.archive_dir.is_none());
+    }
+
+    #[test]
+    fn epic_config_parses_max_workers() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[epics.ab12cd34]
+max_workers = 2
+
+[epics.ff001122]
+max_workers = 1
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.epic_max_workers("ab12cd34"), Some(2));
+        assert_eq!(config.epic_max_workers("ff001122"), Some(1));
+        assert_eq!(config.epic_max_workers("nonexistent"), None);
+    }
+
+    #[test]
+    fn epic_config_absent_defaults_empty() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.epics.is_empty());
+        assert_eq!(config.epic_max_workers("any_id"), None);
+    }
+
+    #[test]
+    fn epic_config_no_max_workers_returns_none() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[epics.ab12cd34]
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.epic_max_workers("ab12cd34"), None);
     }
 }

@@ -509,7 +509,8 @@ pub fn spawn_next_worker(
     no_aggressive: bool,
     skip_permissions: bool,
     epic_filter: Option<&str>,
-) -> Result<Option<(String, std::process::Child, PathBuf)>> {
+    blocked_epics: &[String],
+) -> Result<Option<(String, Option<String>, std::process::Child, PathBuf)>> {
     let config = Config::load(root)?;
     let skip_permissions = skip_permissions || config.agents.skip_permissions;
     let p = &config.workflow.prioritization;
@@ -520,11 +521,19 @@ pub fn spawn_next_worker(
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let all_tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let tickets: Vec<ticket::Ticket> = match epic_filter {
-        Some(epic_id) => all_tickets.into_iter()
-            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
-            .collect(),
-        None => all_tickets,
+    let tickets: Vec<ticket::Ticket> = {
+        let epic_filtered: Vec<ticket::Ticket> = match epic_filter {
+            Some(epic_id) => all_tickets.into_iter()
+                .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+                .collect(),
+            None => all_tickets,
+        };
+        epic_filtered.into_iter()
+            .filter(|t| match t.frontmatter.epic.as_deref() {
+                Some(eid) => !blocked_epics.iter().any(|b| b == eid),
+                None => true,
+            })
+            .collect()
     };
     let agent_name = resolve_agent_name();
 
@@ -533,6 +542,7 @@ pub fn spawn_next_worker(
     };
 
     let id = candidate.frontmatter.id.clone();
+    let epic_id = candidate.frontmatter.epic.clone();
     let old_state = candidate.frontmatter.state.clone();
 
     let triggering_transition_owned = config.workflow.states.iter()
@@ -641,7 +651,7 @@ pub fn spawn_next_worker(
     println!("Worker spawned: PID={pid}, log={}", log_path.display());
     println!("Agent name: {worker_name}");
 
-    Ok(Some((id, child, pid_path)))
+    Ok(Some((id, epic_id, child, pid_path)))
 }
 
 fn resolve_system_prompt(root: &Path, profile: Option<&WorkerProfileConfig>, state_instructions: Option<&str>) -> String {
@@ -753,6 +763,7 @@ mod tests {
             server: Default::default(),
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
+            epics: Default::default(),
             load_warnings: vec![],
         };
         let profile = make_profile(Some(".apm/spec.md"), Some("Spec-Writer for #<id>"));
@@ -783,6 +794,7 @@ mod tests {
             server: Default::default(),
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
+            epics: Default::default(),
             load_warnings: vec![],
         };
         let tr = make_transition(Some("nonexistent_profile"));
@@ -810,6 +822,7 @@ mod tests {
             server: Default::default(),
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
+            epics: Default::default(),
             load_warnings: vec![],
         };
         let tr = make_transition(None);
