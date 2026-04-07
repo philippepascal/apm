@@ -1,1 +1,1 @@
-# user-mgmt
+# Code separation and reuse cleanup
