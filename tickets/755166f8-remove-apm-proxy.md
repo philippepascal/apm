@@ -1,7 +1,7 @@
 +++
 id = "755166f8"
 title = "remove apm-proxy"
-state = "in_progress"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/755166f8-remove-apm-proxy"
 created_at = "2026-04-06T20:50:54.696634Z"
-updated_at = "2026-04-07T00:18:24.713808Z"
+updated_at = "2026-04-07T01:23:22.944390Z"
 +++
 
 ## Spec
@@ -24,13 +24,13 @@ Keeping apm-proxy in the repository creates unnecessary maintenance surface, mis
 
 ### Acceptance criteria
 
-- [ ] The apm-proxy/ directory no longer exists in the repository
-- [ ] scripts/proxy-build.sh no longer exists in the repository
-- [ ] scripts/proxy-deploy.sh no longer exists in the repository
-- [ ] scripts/proxy-local.sh no longer exists in the repository
-- [ ] No file in the repository (excluding the ticket file itself) contains the string apm-proxy
-- [ ] cargo build --workspace succeeds after the removal
-- [ ] cargo test --workspace passes after the removal
+- [x] The apm-proxy/ directory no longer exists in the repository
+- [x] scripts/proxy-build.sh no longer exists in the repository
+- [x] scripts/proxy-deploy.sh no longer exists in the repository
+- [x] scripts/proxy-local.sh no longer exists in the repository
+- [x] No file in the repository (excluding the ticket file itself) contains the string apm-proxy
+- [x] cargo build --workspace succeeds after the removal
+- [x] cargo test --workspace passes after the removal
 
 ### Out of scope
 
@@ -76,3 +76,5 @@ No changes are needed anywhere in the Rust workspace, documentation, or CI confi
 | 2026-04-06T21:42Z | in_design | specd | claude-0406-2130-eda0 |
 | 2026-04-07T00:15Z | specd | ready | apm |
 | 2026-04-07T00:18Z | ready | in_progress | philippepascal |
+| 2026-04-07T00:24Z | in_progress | implemented | claude-0407-0018-50c0 |
+| 2026-04-07T01:23Z | implemented | closed | philippepascal |

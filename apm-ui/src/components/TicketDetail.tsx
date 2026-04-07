@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm'
 import { Minimize2, Loader2 } from 'lucide-react'
 import { useLayoutStore } from '../store/useLayoutStore'
 import InlineNumberField from './InlineNumberField'
+import InlineOwnerField from './InlineOwnerField'
 import { getStateColors } from '../lib/stateColors'
 
 interface TicketDetail {
@@ -14,6 +15,7 @@ interface TicketDetail {
   effort: number
   risk: number
   priority: number
+  owner?: string
   body: string
   raw: string
   valid_transitions: { to: string; label: string; warning?: string }[]
@@ -252,8 +254,11 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
     refetchInterval: 10_000,
   })
 
+  const allTickets = queryClient.getQueryData<Array<{ id: string; owner?: string }>>(['tickets']) ?? []
+  const availableOwners = Array.from(new Set(allTickets.flatMap((t) => (t.owner ? [t.owner] : [])))).sort()
+
   const patchMutation = useMutation({
-    mutationFn: (patch: { effort?: number; risk?: number; priority?: number }) =>
+    mutationFn: (patch: { effort?: number; risk?: number; priority?: number; owner?: string }) =>
       fetch(`/api/tickets/${selectedTicketId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -353,6 +358,12 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
                 min={0}
                 max={255}
                 onCommit={(v) => patchMutation.mutate({ priority: v })}
+                disabled={patchMutation.isPending}
+              />
+              <InlineOwnerField
+                value={data.owner}
+                suggestions={availableOwners}
+                onCommit={(v) => patchMutation.mutate({ owner: v })}
                 disabled={patchMutation.isPending}
               />
               {patchError && <span className="text-xs text-red-500">{patchError}</span>}
