@@ -72,6 +72,12 @@ struct TicketResponse {
     owner: Option<String>,
 }
 
+#[derive(serde::Serialize)]
+struct TicketsEnvelope {
+    tickets: Vec<TicketResponse>,
+    supervisor_states: Vec<String>,
+}
+
 fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
     let marker = format!("### {heading}");
     let Some(start) = body.find(&marker) else {
@@ -552,24 +558,34 @@ struct ListTicketsQuery {
 async fn list_tickets(
     State(state): State<Arc<AppState>>,
     Query(params): Query<ListTicketsQuery>,
-) -> Result<Json<Vec<TicketResponse>>, AppError> {
+) -> Result<Json<TicketsEnvelope>, AppError> {
     let mut tickets = load_tickets(&state).await?;
-    let (resolved_ids, terminal_ids): (Vec<String>, Vec<String>) = match state.git_root() {
+    let fallback_supervisor_states = || vec![
+        "new".to_string(), "question".to_string(), "specd".to_string(),
+        "blocked".to_string(), "implemented".to_string(),
+    ];
+    let (resolved_ids, terminal_ids, supervisor_states): (Vec<String>, Vec<String>, Vec<String>) = match state.git_root() {
         Some(root) => match apm_core::config::Config::load(root) {
             Ok(cfg) => {
                 let resolved = cfg.workflow.states.iter()
                     .filter(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
                     .map(|s| s.id.clone())
                     .collect();
+                let mut supervisor = vec!["new".to_string()];
+                supervisor.extend(
+                    cfg.workflow.states.iter()
+                        .filter(|s| !s.terminal && s.id != "new" && s.actionable.iter().any(|a| a == "supervisor"))
+                        .map(|s| s.id.clone())
+                );
                 let terminal = cfg.workflow.states.into_iter()
                     .filter(|s| s.terminal)
                     .map(|s| s.id)
                     .collect();
-                (resolved, terminal)
+                (resolved, terminal, supervisor)
             }
-            Err(_) => (vec![], vec!["closed".to_string()]),
+            Err(_) => (vec![], vec!["closed".to_string()], fallback_supervisor_states()),
         },
-        None => (vec![], vec!["closed".to_string()]),
+        None => (vec![], vec!["closed".to_string()], fallback_supervisor_states()),
     };
     if !params.include_closed.unwrap_or(false) {
         let terminal_set: std::collections::HashSet<&str> =
@@ -595,7 +611,7 @@ async fn list_tickets(
         .iter()
         .map(|t| (t.frontmatter.id.clone(), t.frontmatter.state.clone()))
         .collect();
-    let response = tickets
+    let tickets: Vec<TicketResponse> = tickets
         .into_iter()
         .map(|t| {
             let has_open_questions = !extract_section(&t.body, "Open questions").trim().is_empty();
@@ -626,7 +642,7 @@ async fn list_tickets(
             }
         })
         .collect();
-    Ok(Json(response))
+    Ok(Json(TicketsEnvelope { tickets, supervisor_states }))
 }
 
 async fn get_ticket(
@@ -1873,8 +1889,29 @@ mod tests {
             .contains("application/json"));
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert!(json.is_array());
-        assert_eq!(json.as_array().unwrap().len(), 2);
+        assert!(json["tickets"].is_array());
+        assert_eq!(json["tickets"].as_array().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn list_tickets_envelope_has_supervisor_states() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let supervisor_states = json["supervisor_states"].as_array().unwrap();
+        assert!(supervisor_states.iter().any(|s| s == "new"), "new must be in supervisor_states");
+        assert!(!supervisor_states.iter().any(|s| s == "closed"), "closed must not be in supervisor_states");
+        assert!(!supervisor_states.iter().any(|s| s == "ammend"), "ammend must not be in supervisor_states (agent-only)");
     }
 
     #[tokio::test]
@@ -1895,7 +1932,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["id"].as_str().unwrap(), "ccccdddd-open-one");
     }
@@ -1918,7 +1955,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(json.as_array().unwrap().len(), 2);
+        assert_eq!(json["tickets"].as_array().unwrap().len(), 2);
     }
 
     #[test]
@@ -1957,7 +1994,7 @@ mod tests {
             .unwrap();
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
 
         let q = arr.iter().find(|t| t["id"] == "11112222-badge-test-q").unwrap();
         assert_eq!(q["has_open_questions"], true);
@@ -2100,7 +2137,7 @@ satisfies_deps = true
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
 
         let no_deps = arr.iter().find(|t| t["id"] == "aaaaaaaa-no-deps").unwrap();
         assert_eq!(no_deps["blocking_deps"], serde_json::json!([]));
@@ -2932,7 +2969,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["author"], "unassigned");
     }
@@ -2956,7 +2993,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["id"], "aaaabbbb-alice-ticket");
         assert_eq!(arr[0]["author"], "alice");
@@ -2981,7 +3018,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["id"], "aaaabbbb-unassigned");
         assert_eq!(arr[0]["author"], "unassigned");
@@ -3627,7 +3664,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr[0]["owner"], "alice");
     }
 
@@ -3647,7 +3684,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert!(arr[0]["owner"].is_null());
     }
 
@@ -3709,7 +3746,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["id"], "ccccdddd-owner-alice");
     }
@@ -3732,7 +3769,7 @@ label = "In Progress"
         assert_eq!(response.status(), StatusCode::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let arr = json.as_array().unwrap();
+        let arr = json["tickets"].as_array().unwrap();
         assert_eq!(arr.len(), 1);
         assert_eq!(arr[0]["id"], "ffff0000-owner-none");
     }
