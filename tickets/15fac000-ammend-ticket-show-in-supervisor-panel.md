@@ -4,11 +4,11 @@ title = "ammend ticket show in supervisor panel"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/15fac000-ammend-ticket-show-in-supervisor-panel"
 created_at = "2026-04-07T18:17:11.036755Z"
-updated_at = "2026-04-07T18:26:54.144806Z"
+updated_at = "2026-04-07T18:27:02.986678Z"
 +++
 
 ## Spec
