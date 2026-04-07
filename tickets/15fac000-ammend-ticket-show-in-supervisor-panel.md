@@ -3,12 +3,12 @@ id = "15fac000"
 title = "ammend ticket show in supervisor panel"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 branch = "ticket/15fac000-ammend-ticket-show-in-supervisor-panel"
 created_at = "2026-04-07T18:17:11.036755Z"
-updated_at = "2026-04-07T18:22:06.257873Z"
+updated_at = "2026-04-07T18:26:54.144806Z"
 +++
 
 ## Spec
