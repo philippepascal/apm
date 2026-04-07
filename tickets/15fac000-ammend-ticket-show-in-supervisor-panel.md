@@ -1,14 +1,14 @@
 +++
 id = "15fac000"
 title = "ammend ticket show in supervisor panel"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/15fac000-ammend-ticket-show-in-supervisor-panel"
 created_at = "2026-04-07T18:17:11.036755Z"
-updated_at = "2026-04-07T18:17:11.036755Z"
+updated_at = "2026-04-07T18:17:26.555215Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T18:17Z | — | new | philippepascal |
+| 2026-04-07T18:17Z | new | groomed | apm |
