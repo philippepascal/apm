@@ -78,6 +78,10 @@ The approach does **not** need to be step-by-step prose; numbered lists or
 bullet points are fine. It should be at the right level of detail: too brief
 leaves the implementer guessing; too detailed becomes stale.
 
+**Write the Approach as a single pass.** Do not write a high-level summary
+followed by a detailed per-step breakdown — that produces duplication. Pick one
+level of detail and cover every step once.
+
 ---
 
 ## Effort scale

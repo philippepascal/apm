@@ -1361,7 +1361,6 @@ actionable = ["agent"]
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "command:start"
-  actor   = "agent"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -1433,7 +1432,6 @@ instructions = "worker-instructions.txt"
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "command:start"
-  actor   = "agent"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -1525,7 +1523,6 @@ actionable = ["agent"]
   [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "command:start"
-  actor   = "agent"
 
 [[workflow.states]]
 id    = "in_design"
@@ -1721,7 +1718,6 @@ actionable = ["agent"]
   [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "command:start"
-  actor   = "agent"
 
 [[workflow.states]]
 id    = "in_design"
@@ -1735,7 +1731,6 @@ actionable = ["agent"]
   [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "command:start"
-  actor   = "agent"
 
 [[workflow.states]]
 id         = "ready"
@@ -1745,7 +1740,6 @@ actionable = ["agent"]
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "command:start"
-  actor   = "agent"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -4127,7 +4121,6 @@ label = "In Progress"
   [[workflow.states.transitions]]
   to         = "implemented"
   trigger    = "manual"
-  actor      = "agent"
   completion = "pr_or_epic_merge"
 
 [[workflow.states]]
@@ -4628,7 +4621,6 @@ label = "In Progress"
   [[workflow.states.transitions]]
   to         = "implemented"
   trigger    = "manual"
-  actor      = "agent"
   completion = "merge"
 
 [[workflow.states]]

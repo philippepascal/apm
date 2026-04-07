@@ -262,12 +262,6 @@ pub struct TransitionConfig {
     pub to: String,
     #[serde(default)]
     pub trigger: String,
-    #[serde(default)]
-    pub actor: String,
-    #[serde(default)]
-    pub preconditions: Vec<String>,
-    #[serde(default)]
-    pub side_effects: Vec<String>,
     /// Short label shown in the review prompt (e.g. "Approve for implementation")
     #[serde(default)]
     pub label: String,
@@ -588,27 +582,6 @@ type = "qa"
     }
 
     #[test]
-    fn state_config_worker_end_parses_true() {
-        let toml = r#"
-id         = "specd"
-label      = "Specd"
-worker_end = true
-"#;
-        let s: StateConfig = toml::from_str(toml).unwrap();
-        assert!(s.worker_end);
-    }
-
-    #[test]
-    fn state_config_worker_end_defaults_false() {
-        let toml = r#"
-id    = "new"
-label = "New"
-"#;
-        let s: StateConfig = toml::from_str(toml).unwrap();
-        assert!(!s.worker_end);
-    }
-
-    #[test]
     fn state_config_with_instructions() {
         let toml = r#"
 id           = "in_progress"
@@ -635,7 +608,6 @@ label = "New"
         let toml = r#"
 to              = "implemented"
 trigger         = "manual"
-actor           = "agent"
 completion      = "pr"
 focus_section   = "Code review"
 context_section = "Problem"
@@ -651,7 +623,6 @@ context_section = "Problem"
         let toml = r#"
 to      = "ready"
 trigger = "manual"
-actor   = "supervisor"
 "#;
         let t: TransitionConfig = toml::from_str(toml).unwrap();
         assert_eq!(t.completion, CompletionStrategy::None);

@@ -2,15 +2,6 @@ use crate::config::{CompletionStrategy, Config};
 use std::collections::HashSet;
 use std::path::Path;
 
-pub const KNOWN_PRECONDITIONS: &[&str] = &[
-    "spec_not_empty",
-    "spec_has_acceptance_criteria",
-    "pr_exists",
-    "pr_all_closing_merged",
-];
-
-pub const KNOWN_SIDE_EFFECTS: &[&str] = &["set_agent_null"];
-
 pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
 
@@ -80,26 +71,6 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
                     "config: state.{}.transition({}) — target state '{}' does not exist",
                     state.id, transition.to, transition.to
                 ));
-            }
-
-            // Unknown preconditions.
-            for precondition in &transition.preconditions {
-                if !KNOWN_PRECONDITIONS.contains(&precondition.as_str()) {
-                    errors.push(format!(
-                        "config: state.{}.transition({}).preconditions — unknown precondition '{}'",
-                        state.id, transition.to, precondition
-                    ));
-                }
-            }
-
-            // Unknown side effects.
-            for side_effect in &transition.side_effects {
-                if !KNOWN_SIDE_EFFECTS.contains(&side_effect.as_str()) {
-                    errors.push(format!(
-                        "config: state.{}.transition({}).side_effects — unknown side_effect '{}'",
-                        state.id, transition.to, side_effect
-                    ));
-                }
             }
 
             // context_section must match a known ticket section.
@@ -247,44 +218,6 @@ to = "closed"
         assert!(
             errors.iter().any(|e| e.contains("state.closed") && e.contains("terminal")),
             "expected terminal error in {errors:?}"
-        );
-    }
-
-    // Test 4: unknown precondition is detected
-    #[test]
-    fn unknown_precondition_detected() {
-        let toml = r#"
-[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id    = "new"
-label = "New"
-
-[[workflow.states.transitions]]
-to            = "ready"
-preconditions = ["totally_made_up"]
-
-[[workflow.states]]
-id    = "ready"
-label = "Ready"
-
-[[workflow.states.transitions]]
-to = "closed"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#;
-        let config = load_config(toml);
-        let errors = validate_config(&config, Path::new("/tmp"));
-        assert!(
-            errors.iter().any(|e| e.contains("totally_made_up")),
-            "expected unknown precondition error in {errors:?}"
         );
     }
 
