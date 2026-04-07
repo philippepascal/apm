@@ -16,7 +16,7 @@ updated_at = "2026-04-07T17:01:04.559759Z"
 ### Problem
 
 a public repo called apm-demo, with a simple "dummy but functional software" (like a simple rust command line that just outputs some text).
-it uses apm, apm is preinstalled.
+it uses apm, apm is preinstalled (but assumes the user has installed the binaries)
 It's frozen in middle of development, but compile and runs.
 It has tickets in all possible states and combinations (or at least a representative subset), but making sense in the context of the project. it should touch all features (tickets, epics, depends, default branch, merge strategy, etc)
 I allows someone to clone it, use apm to "kick the tires".
