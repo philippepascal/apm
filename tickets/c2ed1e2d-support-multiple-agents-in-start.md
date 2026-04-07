@@ -1,14 +1,14 @@
 +++
 id = "c2ed1e2d"
 title = "support multiple agents in start"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/c2ed1e2d-support-multiple-agents-in-start"
 created_at = "2026-04-07T17:14:02.689742Z"
-updated_at = "2026-04-07T17:14:02.689742Z"
+updated_at = "2026-04-07T17:42:21.078630Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T17:14Z | — | new | philippepascal |
+| 2026-04-07T17:42Z | new | groomed | apm |
