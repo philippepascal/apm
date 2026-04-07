@@ -51,18 +51,25 @@ The desired outcome is a single Markdown file committed to the repository that s
 
 **Document structure:**
 
-Top-level H2 sections grouping commands:
+Top-level H2 sections grouping commands (derived from the actual binary command list: init, list, show, new, state, set, start, next, sync, assign, worktrees, review, verify, validate, _hook, agents, work, close, archive, clean, workers, epic new/close/list/show, spec, register, sessions, revoke):
+
 - **Ticket lifecycle** — `new`, `state`, `set`, `close`, `assign`
 - **Inspection** — `list`, `show`, `next`, `spec`
 - **Workflow orchestration** — `start`, `work`, `workers`, `sync`, `review`
-- **Epics** — `epic list`, `epic new`, `epic close`, `epic show`
+- **Epics** — `epic new`, `epic close`, `epic list`, `epic show`
 - **Repository maintenance** — `init`, `verify`, `validate`, `archive`, `clean`, `worktrees`
-- **Server (requires apm-server)** — `register`, `sessions`, `revoke`
+- **Server & agent management (requires apm-server)** — `register`, `sessions`, `revoke`, `agents`
 - **Internal** — `_hook`
 
-Each command gets an H3 section with this template:
+Each command gets an H3 section with this structure:
 
-```
+- **Tagline** — bold one-liner immediately under the heading
+- **Synopsis** — indented code block showing exact invocation syntax
+- **Description** — one to three paragraphs covering behaviour and notable side-effects
+- **Options** — Markdown table: Flag/Arg | Type | Default | Description
+- **Git internals** — Markdown table: Command | Why (or "No git operations" if none)
+
+Write sections in the order the groups appear above; within each group, document commands in alphabetical order. The `epic` subcommands are documented under the Epics H2 as individual H3 entries (`### apm epic new`, etc.).
 
 ### apm <command>
 
