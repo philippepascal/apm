@@ -1,14 +1,14 @@
 +++
 id = "c8041bff"
 title = "apm-server tests fail in CI due to missing apm-ui/dist"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/c8041bff-apm-server-tests-fail-in-ci-due-to-missi"
 created_at = "2026-04-07T00:22:33.027201Z"
-updated_at = "2026-04-07T00:22:33.027201Z"
+updated_at = "2026-04-07T01:17:51.231809Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-07T00:22Z | — | new | philippepascal |
+| 2026-04-07T01:17Z | new | groomed | apm |
