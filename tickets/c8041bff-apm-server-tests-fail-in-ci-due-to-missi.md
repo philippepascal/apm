@@ -1,14 +1,14 @@
 +++
 id = "c8041bff"
 title = "apm-server tests fail in CI due to missing apm-ui/dist"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
 branch = "ticket/c8041bff-apm-server-tests-fail-in-ci-due-to-missi"
 created_at = "2026-04-07T00:22:33.027201Z"
-updated_at = "2026-04-07T04:51:13.551821Z"
+updated_at = "2026-04-07T04:53:38.218099Z"
 +++
 
 ## Spec
@@ -68,3 +68,4 @@ File to create: .github/workflows/ci.yml
 | 2026-04-07T01:17Z | new | groomed | apm |
 | 2026-04-07T03:05Z | groomed | in_design | philippepascal |
 | 2026-04-07T04:51Z | in_design | specd | claude-0406-fix-stuck |
+| 2026-04-07T04:53Z | specd | ready | apm |
