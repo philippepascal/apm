@@ -19,11 +19,11 @@ cargo test --workspace fails for apm-server because include_dir!("apm-ui/dist") 
 
 ### Acceptance criteria
 
-- [ ] A GitHub Actions workflow runs on every push and pull request to the default branch
-- [ ] That workflow builds the apm-ui assets (npm ci && npm run build) before invoking cargo test --workspace
-- [ ] cargo test --workspace passes in that workflow when no worktree modifications have been made
-- [ ] The workflow reports a clear failure (not a cryptic compile-time panic) if the UI build step itself fails
-- [ ] The existing release.yml workflow is unchanged and continues to pass
+- [x] A GitHub Actions workflow runs on every push and pull request to the default branch
+- [x] That workflow builds the apm-ui assets (npm ci && npm run build) before invoking cargo test --workspace
+- [x] cargo test --workspace passes in that workflow when no worktree modifications have been made
+- [x] The workflow reports a clear failure (not a cryptic compile-time panic) if the UI build step itself fails
+- [x] The existing release.yml workflow is unchanged and continues to pass
 
 ### Out of scope
 
