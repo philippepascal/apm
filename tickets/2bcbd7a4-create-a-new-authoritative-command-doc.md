@@ -3,12 +3,12 @@ id = "2bcbd7a4"
 title = "create a new authoritative command doc"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 branch = "ticket/2bcbd7a4-create-a-new-authoritative-command-doc"
 created_at = "2026-04-07T17:06:49.569239Z"
-updated_at = "2026-04-07T17:43:53.349020Z"
+updated_at = "2026-04-07T17:47:09.821352Z"
 +++
 
 ## Spec
