@@ -47,7 +47,14 @@ Supported platforms match what the release workflow already builds: `aarch64-app
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Windows support (no Windows build target exists)
+- macOS x86_64 / Intel Mac (no x86_64-apple-darwin build target exists)
+- System-wide installation to `/usr/local/bin` or `/usr/bin` (requires sudo; brew covers this use-case)
+- Fish shell PATH configuration (bash and zsh only)
+- Upgrading an existing APM installation (a future ticket)
+- Modifying or replacing the Homebrew formula or tap automation
+- Packaging APM as a `.deb`, `.rpm`, or any other system package format
+- Installing the `apm-server` separately from the `apm` CLI (both are installed together from the same archive)
 
 ### Approach
 
