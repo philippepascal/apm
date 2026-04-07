@@ -58,6 +58,59 @@ Supported platforms match what the release workflow already builds: `aarch64-app
 
 ### Approach
 
+Create two POSIX `sh` scripts in the existing `scripts/` directory. Both must avoid bash-isms (`[[ ]]`, `local`, process substitution) so they work on any system where `/bin/sh` is available.
+
+**Files to create**
+
+- `scripts/install.sh` — downloads, verifies, and installs APM binaries
+- `scripts/uninstall.sh` — removes binaries and PATH entries
+
+**`install.sh` — implementation steps**
+
+1. **Detect platform** via `uname -s` / `uname -m`. Map `Darwin/arm64` → `aarch64-apple-darwin` and `Linux/x86_64` → `x86_64-unknown-linux-musl`. Any other combination prints an error and exits 1.
+
+2. **Check prerequisites** — exit with a clear error if `curl` or `tar` is missing from `$PATH`.
+
+3. **Resolve version** — use `$APM_VERSION` if set (strip any leading `v`); otherwise query `https://api.github.com/repos/philippepascal/apm/releases/latest` with `curl` + `grep` + `sed`. If the API call fails, exit 1 and tell the user to set `APM_VERSION` manually.
+
+4. **Build URLs**:
+   ```
+   BASE=https://github.com/philippepascal/apm/releases/download/v${VERSION}
+   ARCHIVE=${BASE}/apm-v${VERSION}-${TARGET}.tar.gz
+   CHECKSUM_URL=${BASE}/checksums.txt
+   ```
+
+5. **Download** archive and `checksums.txt` into a temp dir (`mktemp -d`). Register a `trap` on EXIT to remove the temp dir.
+
+6. **Verify checksum** — extract the expected SHA256 for the archive filename from `checksums.txt`. On macOS use `shasum -a 256`; on Linux use `sha256sum`. Exit 1 with an error if the check fails.
+
+7. **Resolve install dir** — `${APM_INSTALL_DIR:-$HOME/.local/bin}`. Create with `mkdir -p` if absent.
+
+8. **Extract and copy** — `tar -xzf` into the temp dir, then `cp` both `apm` and `apm-server` to the install dir; `chmod +x` both.
+
+9. **Add to PATH** — for each of `$HOME/.bashrc`, `$HOME/.zshrc`, `$HOME/.profile`: skip if the file does not exist or already references the install dir. Otherwise append the two-line block:
+   ```sh
+   # Added by APM installer
+   export PATH="<INSTALL_DIR>:$PATH"
+   ```
+   The sentinel comment allows `uninstall.sh` to find and remove the exact block.
+
+10. **Print success** — show installed version, install dir, and a one-liner the user can run immediately without restarting their shell.
+
+**`uninstall.sh` — implementation steps**
+
+1. Resolve install dir the same way as `install.sh`.
+2. Remove `$INSTALL_DIR/apm` and `$INSTALL_DIR/apm-server` if they exist; note each one removed or not found.
+3. For each of `$HOME/.bashrc`, `$HOME/.zshrc`, `$HOME/.profile`: if the file exists, delete the sentinel comment line and the following `export PATH=` line using `sed -i` (use `-i ''` on macOS, `-i` on Linux — detect via `uname -s`).
+4. If nothing was removed, print "APM does not appear to be installed — nothing to do." and exit 0. Otherwise print a summary of what was removed.
+
+**Constraints**
+
+- `sed -i` portability: macOS requires `sed -i ''`; Linux requires `sed -i`. Branch on `uname -s`.
+- Idempotency: running either script twice must not double-add PATH entries or fail on missing files.
+- No bash-isms anywhere in either script.
+- GitHub API rate-limiting: gracefully handle a failed version lookup.
+
 ### Files to create
 
 - `scripts/install.sh` — POSIX-compatible shell installer
