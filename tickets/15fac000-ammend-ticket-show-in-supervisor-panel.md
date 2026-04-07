@@ -141,7 +141,7 @@ Add `GET /api/workflow/states` to the protected router. The handler reads the lo
 ### Amendment requests
 
 - [x] Do not add a new /api/workflow/states endpoint. Instead, add a supervisor_states field to the existing /api/tickets response envelope. The workflow config is static for the server lifetime — no need for a separate endpoint for a single consumer.
-- [ ] Hardcode new as always visible in the supervisor panel and terminal states (closed) as never visible. These are structural states native to apm, not configuration-bound. Only non-structural states should derive visibility from the actionable field in workflow.toml. Update the Approach, AC, and supervisorUtils logic accordingly.
+- [x] Hardcode new as always visible in the supervisor panel and terminal states (closed) as never visible. These are structural states native to apm, not configuration-bound. Only non-structural states should derive visibility from the actionable field in workflow.toml. Update the Approach, AC, and supervisorUtils logic accordingly.
 
 ### Code review
 
