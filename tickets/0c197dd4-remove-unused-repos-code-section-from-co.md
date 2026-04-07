@@ -23,7 +23,7 @@ The [[repos.code]] section in .apm/config.toml is not parsed by the Config struc
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing or changing any Rust source code (no `repos` field exists in Config to delete)\n- Adding a `repos` field to Config or implementing the multi-repo feature\n- Changing `git_host` or any other config section\n- Updating archive files or historical specs that mention `repos.code`
 
 ### Approach
 
