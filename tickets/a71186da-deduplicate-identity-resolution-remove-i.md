@@ -51,6 +51,34 @@ The desired state is a single identity resolution function (`config::resolve_ide
 
 ### Approach
 
+**Files that change:**
+
+- `apm-core/src/identity.rs` — **delete**
+- `apm-core/src/lib.rs` — remove `pub mod identity;`
+- `apm/src/cmd/new.rs` — remove `identity` from use statement; replace `identity::resolve_current_user(root)` with `config::resolve_identity(root)` (the `apm` crate already imports `apm_core::config::Config`, so adding `resolve_identity` to the use path is straightforward)
+- `apm/src/cmd/list.rs` — same: remove `identity` import, update call site
+- `apm-core/src/config.rs` — add any unit test cases not already covered by existing `resolve_identity` tests (see Test migration below)
+
+**Fallback value change:** `resolve_current_user()` returned `"apm"` when no identity is configured; `resolve_identity()` returns `"unassigned"`. This is an intentional correctness fix — `"unassigned"` is the canonical sentinel for an unknown author, matching server behaviour. No migration of existing ticket data is required.
+
+**Test migration:** `identity.rs` had four unit tests. Verify which are already covered by the existing `resolve_identity` block in `config.rs`, then add the gaps:
+
+- returns `"unassigned"` when `.apm/local.toml` is absent
+- returns the `local.toml` username when present and non-empty
+- returns `"unassigned"` when `local.toml` has no `username` key
+- returns `"unassigned"` when `username = ""`
+
+**Steps in order:**
+
+1. Delete `apm-core/src/identity.rs`.
+2. Remove `pub mod identity;` from `apm-core/src/lib.rs`.
+3. Update `apm/src/cmd/new.rs`: remove identity import; call `config::resolve_identity(root)`.
+4. Update `apm/src/cmd/list.rs`: same.
+5. Add missing test cases to `config.rs` test module.
+6. Run `cargo build` and `cargo test -p apm-core` to confirm clean compile and passing tests.
+
+**Constraints:** `config::resolve_identity()` is already `pub`. No other crate besides `apm` and `apm-server` references `identity::resolve_current_user`; `apm-server` already uses `resolve_identity` and is untouched.
+
 ### Files that change
 
 | File | Change |
