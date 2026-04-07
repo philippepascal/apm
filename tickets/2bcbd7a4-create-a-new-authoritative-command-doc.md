@@ -105,7 +105,7 @@ Mention any notable side-effects (e.g. worktree provisioning, push to remote).
 
 ### Amendment requests
 
-- [ ] Correct the command grouping to match the actual CLI. The full command list from the source is: init, list, show, new, state, set, start, next, sync, assign, worktrees, review, verify, validate, _hook, agents, work, close, archive, clean, workers, epic (new/close/list/show), spec, register, sessions, revoke. The spec lists some commands that don't exist as top-level commands and groups them incorrectly.
+- [x] Correct the command grouping to match the actual CLI. The full command list from the source is: init, list, show, new, state, set, start, next, sync, assign, worktrees, review, verify, validate, _hook, agents, work, close, archive, clean, workers, epic (new/close/list/show), spec, register, sessions, revoke. The spec lists some commands that don't exist as top-level commands and groups them incorrectly.
 - [ ] Remove the duplicated template content at the bottom of the Approach section (the raw markdown block starting with `### apm <command>` that repeats the template already described above it)
 
 ### Code review
