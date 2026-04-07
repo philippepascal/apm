@@ -38,6 +38,27 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 
 ### Approach
 
+**Step 1 — Server endpoint** (`apm-server/src/main.rs`)
+
+Add `GET /api/workflow/states` to the protected router. The handler reads the loaded `Config`, iterates `config.workflow.states`, and serialises a JSON array with `id` and `actionable` fields for each state. Only these two fields are needed by the UI.
+
+**Step 2 — supervisorUtils.ts** (`apm-ui/src/lib/supervisorUtils.ts`)
+
+- Delete the `SUPERVISOR_STATES` constant.
+- Export a pure helper `supervisorStatesFromWorkflow(states: WorkflowState[]): string[]` that returns the `id` of each state where `actionable` includes `"supervisor"`.
+
+**Step 3 — SupervisorView.tsx** (`apm-ui/src/components/supervisor/SupervisorView.tsx`)
+
+- On component mount, call `GET /api/workflow/states` alongside the existing `/api/tickets` fetch.
+- Pass the result to `supervisorStatesFromWorkflow` to compute the dynamic supervisor state list.
+- Replace the `SUPERVISOR_STATES` import and every usage with this derived list wherever `visibleStates` is calculated.
+
+Steps must be done in order (server endpoint unblocks the UI work).
+
+**Gotcha — `new` state:** `new` currently has no `actionable` entries in `workflow.toml`, so it would fall off the supervisor panel under this scheme. If it should remain visible, add `actionable = ["supervisor"]` to the `new` state in `.apm/workflow.toml` as part of this ticket. Confirm with the author first.
+
+The new endpoint is purely additive — no existing endpoints change.
+
 ### 1. Add a server endpoint to expose workflow state config
 
 **File:** apm-server/src/main.rs
