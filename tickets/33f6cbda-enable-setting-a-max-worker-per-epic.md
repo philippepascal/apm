@@ -233,7 +233,7 @@ apm epic set-max-workers <epic-id> --unset
 
 ### Amendment requests
 
-- [ ] Use `apm epic set <epic-id> max_workers <N>` instead of `apm epic set-max-workers <epic-id> <N>`. This is consistent with the existing `apm set <id> <field> <value>` pattern. Use `apm epic set <epic-id> max_workers -` to unset (matching the clear convention from `apm set`). Update the Approach, AC, and main.rs wiring accordingly.
+- [x] Use `apm epic set <epic-id> max_workers <N>` instead of `apm epic set-max-workers <epic-id> <N>`. This is consistent with the existing `apm set <id> <field> <value>` pattern. Use `apm epic set <epic-id> max_workers -` to unset (matching the clear convention from `apm set`). Update the Approach, AC, and main.rs wiring accordingly.
 
 ### Code review
 
