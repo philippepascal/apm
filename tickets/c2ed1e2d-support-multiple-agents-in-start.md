@@ -15,9 +15,11 @@ updated_at = "2026-04-07T17:47:54.483986Z"
 
 ### Problem
 
-apm start, work, UI dispatcher currently on type of agent (claude by default). user should be able to start a different type of agent for spec writing and for implementation.
-add a level of indirection in config: a user can create as many worker profiles as he wants. in our case we have spec_agent and impl_agent. They have their own configuration for how to spawn, and what instructions to use.
-in workflow, we use these profiles for state transition instead of just the instructions.
+Currently, `apm start`, `apm work`, and the UI work engine all share a single global worker configuration (`[workers]` in `config.toml`). The only differentiation between agent roles is hardcoded in `start.rs`: a static array `["groomed", "ammend"]` controls whether the spec-writer system prompt (`.apm/apm.spec-writer.md`) or the default worker prompt (`.apm/apm.worker.md`) is injected — but the spawn command, args, model, and environment are identical for both roles.
+
+This makes it impossible to run a different binary, model, or container image for spec-writing vs. implementation, and impossible to add new agent roles (e.g. a QA agent, a review agent) without modifying Rust source code.
+
+The desired behaviour is a named **worker profile** system. Users define profiles (e.g. `spec_agent`, `impl_agent`) in config, each with its own spawn command, args, model, environment, and instructions file. States in `workflow.toml` reference a profile by name. When `apm start` (or `apm work`) picks up a ticket, it reads the pre-transition state's profile and spawns the correct agent type automatically. Adding a new agent role becomes a config-only change.
 
 ### Acceptance criteria
 
