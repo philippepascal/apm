@@ -18,7 +18,19 @@ depends_on = ["eea2c9bc"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+State transition logic is scattered across four modules in apm-core:
+
+- `state.rs` — the core `transition()` function: validates target state, updates frontmatter, appends history, handles completion strategy (merge/PR)
+- `start.rs` — `run()` transitions to `in_progress`, provisions worktrees, spawns workers; duplicates some of the transition validation from `state.rs`
+- `ticket.rs` — `close()` handles terminal transitions, duplicates history appending
+- `review.rs` — `apply_review()` manipulates spec body during review transitions, including amendment normalization
+
+The transition engine in `state.rs` is the canonical path, but `start.rs` and `ticket.rs` bypass it for their specific transitions. This means:
+- History appending logic exists in both `state.rs` and `ticket.rs`
+- Post-transition side effects (worktree provisioning, PR creation, merge) are handled inline in `state.rs` rather than being composable
+- Adding a new transition behavior requires understanding which of the four files handles that particular state change
+
+A contributor modifying transition behavior must read all four files to understand the full picture.
 
 ### Acceptance criteria
 
@@ -35,13 +47,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
