@@ -51,7 +51,45 @@ The desired state is a single identity resolution function (`config::resolve_ide
 
 ### Approach
 
-How the implementation will work.
+### Files that change
+
+| File | Change |
+|------|--------|
+| `apm-core/src/identity.rs` | **Delete** |
+| `apm-core/src/lib.rs` | Remove `pub mod identity;` line |
+| `apm/src/cmd/new.rs` | Remove `identity` from use statement; replace `identity::resolve_current_user(root)` with `apm_core::config::resolve_identity(root)` (or adjust use imports accordingly) |
+| `apm/src/cmd/list.rs` | Remove `identity` from use statement; replace `identity::resolve_current_user(root)` with `apm_core::config::resolve_identity(root)` |
+| `apm-core/src/config.rs` | Add unit tests covering the cases formerly in `identity.rs` that are not already covered by the existing `resolve_identity` tests (see below) |
+
+### Fallback value change
+
+`resolve_current_user()` returned `"apm"` when no identity is configured. `resolve_identity()` returns `"unassigned"`. This is an intentional correctness fix — `"unassigned"` is the canonical sentinel for an unknown author, matching server behaviour. No migration of existing ticket data is required.
+
+### Test migration
+
+`identity.rs` had four unit tests. Check what the existing `resolve_identity` tests in `config.rs` already cover. Add any missing cases to the `#[cfg(test)]` block in `config.rs`:
+
+- `resolve_identity` returns `"unassigned"` when `.apm/local.toml` is absent (analogous to `returns_apm_when_file_absent`)
+- `resolve_identity` returns the username from `local.toml` when present and non-empty (analogous to `returns_username_when_present`)
+- `resolve_identity` returns `"unassigned"` when `local.toml` exists but has no `username` key (analogous to `returns_apm_when_username_key_absent`)
+- `resolve_identity` returns `"unassigned"` when `username = ""` (analogous to `returns_apm_when_username_is_empty`)
+
+If any of these are already covered, skip duplication.
+
+### Steps in order
+
+1. Delete `apm-core/src/identity.rs`.
+2. Remove `pub mod identity;` from `apm-core/src/lib.rs`.
+3. Update `apm/src/cmd/new.rs`: remove the `identity` import, call `config::resolve_identity(root)` instead.
+4. Update `apm/src/cmd/list.rs`: same — remove import, update call site.
+5. Add any missing test cases to `config.rs`.
+6. Run `cargo build` and `cargo test -p apm-core` to verify no compile errors and all tests pass.
+
+### Constraints
+
+- `config::resolve_identity()` is already `pub` — no visibility change needed.
+- The `apm` crate imports `apm_core::config::Config` already; adding `resolve_identity` to that use path is straightforward.
+- No other crates outside `apm` and `apm-server` reference `identity::resolve_current_user`; `apm-server` already uses `resolve_identity`, so it is untouched.
 
 ### Open questions
 
