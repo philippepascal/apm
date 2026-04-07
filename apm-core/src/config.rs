@@ -85,6 +85,18 @@ impl Default for WorkersConfig {
 fn default_command() -> String { "claude".to_string() }
 fn default_args() -> Vec<String> { vec!["--print".to_string()] }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct WorkerProfileConfig {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+    pub container: Option<String>,
+    pub instructions: Option<String>,
+    pub role_prefix: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub struct WorkConfig {
     #[serde(default)]
@@ -138,6 +150,8 @@ pub struct Config {
     pub server: ServerConfig,
     #[serde(default)]
     pub git_host: GitHostConfig,
+    #[serde(default)]
+    pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,
@@ -243,7 +257,7 @@ pub struct StateConfig {
     pub instructions: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct TransitionConfig {
     pub to: String,
     #[serde(default)]
@@ -268,6 +282,8 @@ pub struct TransitionConfig {
     pub context_section: Option<String>,
     #[serde(default)]
     pub warning: Option<String>,
+    #[serde(default)]
+    pub profile: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]

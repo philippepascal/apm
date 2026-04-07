@@ -29,6 +29,7 @@ instructions = ".apm/apm.spec-writer.md"
   to      = "in_design"
   trigger = "command:start"
   actor   = "agent"
+  profile = "spec_agent"
   context_section = "Problem"
 
   [[workflow.states.transitions]]
@@ -103,6 +104,7 @@ instructions   = ".apm/apm.spec-writer.md"
   to      = "in_design"
   trigger = "command:start"
   actor   = "agent"
+  profile = "spec_agent"
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -150,6 +152,7 @@ instructions   = ".apm/apm.worker.md"
   to      = "in_progress"
   trigger = "command:start"
   actor   = "agent"
+  profile = "impl_agent"
 
   [[workflow.states.transitions]]
   to      = "ammend"
