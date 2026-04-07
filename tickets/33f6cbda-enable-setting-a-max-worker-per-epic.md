@@ -8,7 +8,7 @@ risk = 3
 author = "philippepascal"
 branch = "ticket/33f6cbda-enable-setting-a-max-worker-per-epic"
 created_at = "2026-04-07T19:08:03.080608Z"
-updated_at = "2026-04-07T19:50:22.938479Z"
+updated_at = "2026-04-07T19:51:51.851855Z"
 +++
 
 ## Spec
