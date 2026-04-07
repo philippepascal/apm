@@ -24,13 +24,13 @@ Keeping apm-proxy in the repository creates unnecessary maintenance surface, mis
 
 ### Acceptance criteria
 
-- [ ] The apm-proxy/ directory no longer exists in the repository
-- [ ] scripts/proxy-build.sh no longer exists in the repository
-- [ ] scripts/proxy-deploy.sh no longer exists in the repository
-- [ ] scripts/proxy-local.sh no longer exists in the repository
-- [ ] No file in the repository (excluding the ticket file itself) contains the string apm-proxy
-- [ ] cargo build --workspace succeeds after the removal
-- [ ] cargo test --workspace passes after the removal
+- [x] The apm-proxy/ directory no longer exists in the repository
+- [x] scripts/proxy-build.sh no longer exists in the repository
+- [x] scripts/proxy-deploy.sh no longer exists in the repository
+- [x] scripts/proxy-local.sh no longer exists in the repository
+- [x] No file in the repository (excluding the ticket file itself) contains the string apm-proxy
+- [x] cargo build --workspace succeeds after the removal
+- [x] cargo test --workspace passes after the removal
 
 ### Out of scope
 
