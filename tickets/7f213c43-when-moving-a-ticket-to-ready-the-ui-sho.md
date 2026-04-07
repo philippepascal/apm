@@ -29,7 +29,10 @@ Root cause: the /api/workers endpoint in apm-server/src/workers.rs uses determin
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing how workers are spawned or killed
+- Modifying the Priority Queue panel logic
+- Adding worker lifecycle events or logging
+- Frontend-only filtering (the fix belongs in the backend API)
 
 ### Approach
 
