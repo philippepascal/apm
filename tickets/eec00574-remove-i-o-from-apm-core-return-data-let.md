@@ -50,7 +50,13 @@ The fix is to have apm-core functions return structured results (data, warnings,
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the text/wording of any user-facing messages (this ticket only moves where they are printed, not what they say)
+- Adding structured logging, tracing, or a logging framework to apm-core
+- Removing or changing the interactive prompts in `apm init` beyond moving them from core to the CLI layer
+- apm-server or any web-facing consumer of apm-core (no server-side I/O handlers are written here)
+- The `config.rs` identity/collaborator eprintln calls — these are very minor and can be addressed in a follow-on cleanup ticket
+- Adding new commands or changing command behaviour
+- Fixing unrelated bugs discovered during the refactor (note them, don't fix them)
 
 ### Approach
 
