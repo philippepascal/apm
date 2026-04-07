@@ -37,7 +37,7 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 - [x] `apm next` returns a ticket (the highest-priority actionable one)
 - [x] The README contains a "Getting started" section that covers: cloning, verifying binaries, `apm list`, `apm show`, `apm next`, `apm-server`
 - [x] The README explains the fictional project context so the ticket backlog makes narrative sense
-- [ ] All ticket states from the default workflow appear at least once across the ticket set: `new`, `groomed`, `in_design`, `specd`, `question`, `ammend`, `ready`, `in_progress`, `blocked`, `implemented`, `closed`
+- [x] All ticket states from the default workflow appear at least once across the ticket set: `new`, `groomed`, `in_design`, `specd`, `question`, `ammend`, `ready`, `in_progress`, `blocked`, `implemented`, `closed`
 
 ### Out of scope
 
