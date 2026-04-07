@@ -15,7 +15,9 @@ updated_at = "2026-04-07T17:01:04.559759Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+a public repo, with a simple "dummy but functional software" (like a simple rust command line that just outputs some text).
+It's frozen in middle of development, with tickets in all possible states and combinations, but making sense in the context of the project.
+I allows someone to clone it, use apm to "kick the tires".
 
 ### Acceptance criteria
 
