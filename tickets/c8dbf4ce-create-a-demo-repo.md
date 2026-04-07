@@ -15,12 +15,11 @@ updated_at = "2026-04-07T17:43:43.554278Z"
 
 ### Problem
 
-a public repo called apm-demo, with a simple "dummy but functional software" (like a simple rust command line that just outputs some text).
-it uses apm, apm is preinstalled (but assumes the user has installed the binaries)
-It's frozen in middle of development, but compile and runs.
-It has tickets in all possible states and combinations (or at least a representative subset), but making sense in the context of the project. it should touch all features (tickets, epics, depends, default branch, merge strategy, etc)
-I allows someone to clone it, use apm to "kick the tires".
-The readme runs a user through next steps to learn how to use apm. apm init if needed (or just mentionned it was already run), apm commands, apm-server, etc
+APM has no standalone public demo that a new user can clone and explore without first building a project from scratch. The only way to currently "kick the tires" is to run `apm init` on a blank repo (no pre-existing tickets, no context) or wade through the actual APM source tickets (complex, hundreds of entries, opaque to outsiders).
+
+A purpose-built demo repo solves this by giving new users a realistic, self-contained project they can clone and immediately explore. It provides a believable software project with a representative ticket backlog, so every APM command has something meaningful to act on.
+
+The demo must cover the full feature surface: multiple ticket states, epics, cross-ticket dependencies, the `apm-server` web UI, and the README-driven onboarding flow. Without it, the "getting started" story for APM is fragile and requires significant upfront investment from the user.
 
 ### Acceptance criteria
 
@@ -37,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
