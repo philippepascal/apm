@@ -1,7 +1,7 @@
 +++
 id = "87fb645e"
 title = "Remove auto-assignment of owner during state transitions"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/87fb645e-remove-auto-assignment-of-owner-during-s"
 created_at = "2026-04-06T20:57:32.658671Z"
-updated_at = "2026-04-07T00:41:20.328306Z"
+updated_at = "2026-04-07T01:23:29.220234Z"
 +++
 
 ## Spec
@@ -88,3 +88,4 @@ Delete the three `owner_can_claim_*` unit tests alongside the helper function.
 | 2026-04-07T00:15Z | specd | ready | apm |
 | 2026-04-07T00:36Z | ready | in_progress | philippepascal |
 | 2026-04-07T00:41Z | in_progress | implemented | claude-0407-0036-1568 |
+| 2026-04-07T01:23Z | implemented | closed | philippepascal |
