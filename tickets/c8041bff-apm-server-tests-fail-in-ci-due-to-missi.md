@@ -27,7 +27,11 @@ cargo test --workspace fails for apm-server because include_dir!("apm-ui/dist") 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Making cargo test work without the UI built in local dev environments (no build.rs, no feature flags)
+- Adding a build.rs script to auto-build the UI during Rust compilation
+- Changes to how apm-server embeds the UI at compile time (the include_dir! macro stays as-is)
+- Modifications to release.yml
+- UI build caching or artifact reuse between CI jobs
 
 ### Approach
 
