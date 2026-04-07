@@ -19,7 +19,7 @@ The [[repos.code]] section in .apm/config.toml is not parsed by the Config struc
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `[[repos.code]]` section is absent from `.apm/config.toml`\n- [ ] `apm config show` (or equivalent) loads successfully after the removal\n- [ ] No other file in the repo still references `[[repos.code]]` in non-archival, non-ticket contexts
 
 ### Out of scope
 
