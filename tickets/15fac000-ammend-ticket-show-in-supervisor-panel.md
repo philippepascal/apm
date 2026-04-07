@@ -23,7 +23,11 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 
 ### Acceptance criteria
 
-- [ ] make sure ammend is not hardcoded in the logic. it should only use existing worflow.toml properties
+- [ ] `ammend` tickets do not appear in the supervisor panel
+- [ ] `question`, `specd`, `blocked`, and `implemented` tickets continue to appear in the supervisor panel
+- [ ] The supervisor panel's visible-state list is derived at runtime from the server's workflow configuration, not from a hardcoded state-name list in the UI
+- [ ] No state name (including `'ammend'`) is hardcoded in the supervisor panel display logic
+- [ ] Adding or renaming a state in `workflow.toml` updates the supervisor panel automatically without requiring a UI code change
 
 ### Out of scope
 
