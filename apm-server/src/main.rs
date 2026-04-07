@@ -138,6 +138,7 @@ struct PatchTicketRequest {
     effort: Option<u8>,
     risk: Option<u8>,
     priority: Option<u8>,
+    owner: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -896,6 +897,10 @@ async fn patch_ticket(
     }
     if let Some(v) = req.priority {
         apm_core::ticket::set_field(&mut fm, "priority", &v.to_string())?;
+    }
+    if let Some(v) = req.owner {
+        let val = if v.is_empty() { "-".to_string() } else { v };
+        apm_core::ticket::set_field(&mut fm, "owner", &val)?;
     }
 
     let updated = apm_core::ticket::Ticket {
@@ -2425,6 +2430,129 @@ label = "In Progress"
         let rel_path = ticket.path.strip_prefix(&p).unwrap().to_string_lossy().to_string();
         let content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
         assert!(content.contains("priority = 42"), "expected priority = 42 in: {content}");
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_owner_persists_to_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p, &config, "test ticket".to_string(), "test".to_string(),
+            None, None, false, vec![], None, None, None, None,
+        ).unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app = build_app(p.clone(), None);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"owner":"alice"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["owner"], "alice");
+
+        let branch = ticket.frontmatter.branch.unwrap();
+        let rel_path = ticket.path.strip_prefix(&p).unwrap().to_string_lossy().to_string();
+        let file_content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
+        assert!(file_content.contains(r#"owner = "alice""#), "expected owner in frontmatter: {file_content}");
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_owner_empty_clears() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p, &config, "test ticket".to_string(), "test".to_string(),
+            None, None, false, vec![], None, None, None, None,
+        ).unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app1 = build_app(p.clone(), None);
+        app1.oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"owner":"alice"}"#))
+                .unwrap(),
+        ).await.unwrap();
+
+        let app2 = build_app(p.clone(), None);
+        let response = app2
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"owner":""}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["owner"].is_null(), "owner should be absent after clear");
+
+        let branch = ticket.frontmatter.branch.unwrap();
+        let rel_path = ticket.path.strip_prefix(&p).unwrap().to_string_lossy().to_string();
+        let file_content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
+        assert!(!file_content.contains("owner ="), "owner should be absent in frontmatter: {file_content}");
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_owner_omitted_unchanged() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p, &config, "test ticket".to_string(), "test".to_string(),
+            None, None, false, vec![], None, None, None, None,
+        ).unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app1 = build_app(p.clone(), None);
+        app1.oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"owner":"alice"}"#))
+                .unwrap(),
+        ).await.unwrap();
+
+        let app2 = build_app(p.clone(), None);
+        let response = app2
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"priority":5}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["owner"], "alice", "owner should be unchanged when field omitted");
     }
 
     #[tokio::test]
