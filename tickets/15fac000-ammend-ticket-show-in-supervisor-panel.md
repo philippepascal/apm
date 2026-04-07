@@ -44,6 +44,57 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 
 ### Approach
 
+**Step 1 — Wrap `/api/tickets` response in an envelope** (`apm-server/src/main.rs`)
+
+Add a new serialisable struct:
+```rust
+#[derive(serde::Serialize)]
+struct TicketsEnvelope {
+    tickets: Vec<TicketResponse>,
+    supervisor_states: Vec<String>,
+}
+```
+
+In `list_tickets`, after building `response: Vec<TicketResponse>`, compute `supervisor_states`:
+
+- Always include `"new"` (structural — always visible to supervisor)
+- For each non-terminal state in `cfg.workflow.states`, if `actionable` contains `"supervisor"`, include its `id`
+- If config cannot be loaded, fall back to the static list `["new", "question", "specd", "blocked", "implemented"]`
+
+Change the return type from `Json<Vec<TicketResponse>>` to `Json<TicketsEnvelope>` and return the envelope.
+
+Server tests that parse `/api/tickets` as a plain array (search for `.uri("/api/tickets")` in the test section of `main.rs`) must be updated to deserialise the envelope and access `.tickets`.
+
+**Step 2 — Remove hardcoded list from `supervisorUtils.ts`** (`apm-ui/src/lib/supervisorUtils.ts`)
+
+- Remove the exported `SUPERVISOR_STATES` const and `SupervisorState` type.
+- `groupBySupervisorState` is used by `WorkScreen.tsx` (agent view) and must remain. Update its signature to accept a `string[]` states parameter rather than iterating over the removed constant:
+  ```ts
+  export function groupBySupervisorState(states: string[], tickets: Ticket[]): [string, Ticket[]][] {
+    return states
+      .map((state): [string, Ticket[]] => [state, tickets.filter((t) => t.state === state)])
+      .filter(([, group]) => group.length > 0)
+  }
+  ```
+
+**Step 3 — Update `WorkScreen.tsx`** (`apm-ui/src/components/WorkScreen.tsx`)
+
+Update the call to `groupBySupervisorState` to pass a local states list. `WorkScreen.tsx` can define its own hardcoded list as needed for the agent view — this is not the supervisor panel.
+
+**Step 4 — Consume the envelope in `SupervisorView.tsx`** (`apm-ui/src/components/supervisor/SupervisorView.tsx`)
+
+- Update `fetchTickets` return type to `Promise<{ tickets: Ticket[]; supervisor_states: string[] }>` and parse both fields from the JSON response.
+- Derive the visible-state base list: `data?.supervisor_states ?? ['new', 'question', 'specd', 'blocked', 'implemented']`
+- In the `visibleStates` memo, replace `[...SUPERVISOR_STATES]` with the derived list.
+- Remove the `SUPERVISOR_STATES` import.
+
+**Order:** Step 1 (server) → Step 2 (`supervisorUtils.ts`) → Step 3 (`WorkScreen.tsx`) → Step 4 (`SupervisorView.tsx`).
+
+**Constraints / gotchas**
+
+- The API envelope change is breaking for any consumer expecting a plain array from `/api/tickets`. All server-side tests hitting that route must be updated.
+- `new` is included in `supervisor_states` unconditionally by the server. The `closed` (and any terminal state) is excluded unconditionally, even if `actionable` were set. The UI's existing `showClosed` toggle (appends `'closed'` to `visibleStates`) remains correct and unchanged.
+
 ### Step 1 — Wrap `/api/tickets` response in an envelope (`apm-server/src/main.rs`)
 
 Add a new serialisable struct:
@@ -91,17 +142,14 @@ Change the return type from `Json<Vec<TicketResponse>>` to `Json<TicketsEnvelope
 
 ### Order of steps
 
-1. Server change first — establishes the envelope shape
-2. `supervisorUtils.ts` — remove `SUPERVISOR_STATES`, update `groupBySupervisorState`
-3. `WorkScreen.tsx` — update call to `groupBySupervisorState` to pass its own state list
-4. `SupervisorView.tsx` — consume envelope, replace `SUPERVISOR_STATES`
+1. Server endpoint first (unblocks UI work).
+2. `supervisorUtils.ts` helper (pure function, easy to unit-test in isolation).
+3. `SupervisorView.tsx` integration.
 
 ### Constraints / gotchas
 
-- The API envelope change is breaking for any consumer expecting a plain array from `/api/tickets`. All server-side tests hitting that route must be updated.
-- The `new` state has no `actionable` entries in `workflow.toml`; it is included in `supervisor_states` unconditionally by the server (hardcoded in the server-side computation, not in the UI).
-- `closed` (and any other terminal state) is excluded from `supervisor_states` unconditionally, even if `actionable` were set. The UI also retains its existing `showClosed` toggle which appends `'closed'` to `visibleStates` — this remains correct.
-- `groupBySupervisorState`'s signature change requires updating `WorkScreen.tsx`; scope this change carefully so it does not break the agent view.
+- The `new` state currently has no `actionable` entries in `workflow.toml`. If it should remain visible in the supervisor panel, `actionable = ["supervisor"]` must be added to the `new` state in `.apm/workflow.toml`. Confirm with the author before implementing; update `workflow.toml` as part of this ticket if yes.
+- The new endpoint is purely additive — no existing endpoints change behaviour.
 
 ### 1. Add a server endpoint to expose workflow state config
 
@@ -123,17 +171,6 @@ Add `GET /api/workflow/states` to the protected router. The handler reads the lo
 - On component mount, call `GET /api/workflow/states` alongside the existing `/api/tickets` fetch.
 - Pass the result to `supervisorStatesFromWorkflow` to compute the dynamic supervisor state list.
 - Replace the `SUPERVISOR_STATES` import and every usage with this derived list wherever `visibleStates` is calculated.
-
-### Order of steps
-
-1. Server endpoint first (unblocks UI work).
-2. `supervisorUtils.ts` helper (pure function, easy to unit-test in isolation).
-3. `SupervisorView.tsx` integration.
-
-### Constraints / gotchas
-
-- The `new` state currently has no `actionable` entries in `workflow.toml`. If it should remain visible in the supervisor panel, `actionable = ["supervisor"]` must be added to the `new` state in `.apm/workflow.toml`. Confirm with the author before implementing; update `workflow.toml` as part of this ticket if yes.
-- The new endpoint is purely additive — no existing endpoints change behaviour.
 
 ### Open questions
 
