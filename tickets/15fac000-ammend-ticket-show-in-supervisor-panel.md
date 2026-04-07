@@ -8,7 +8,7 @@ risk = 2
 author = "philippepascal"
 branch = "ticket/15fac000-ammend-ticket-show-in-supervisor-panel"
 created_at = "2026-04-07T18:17:11.036755Z"
-updated_at = "2026-04-07T18:47:20.412768Z"
+updated_at = "2026-04-07T18:51:48.678856Z"
 +++
 
 ## Spec
