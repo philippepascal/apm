@@ -1625,7 +1625,7 @@ fn write_ticket_with_owner(dir: &std::path::Path, branch: &str, filename: &str, 
 }
 
 #[test]
-fn start_sets_owner_when_unowned() {
+fn start_does_not_set_owner_when_unowned() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
@@ -1634,24 +1634,11 @@ fn start_sets_owner_when_unowned() {
     apm::cmd::start::run(p, "1", true, false, false, "alice").unwrap();
 
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(content.contains("owner = \"alice\""), "owner should be set when unowned: {content}");
+    assert!(!content.contains("owner ="), "owner should not be set by apm start when unowned: {content}");
 }
 
 #[test]
-fn start_sets_owner_when_same_owner_resumes() {
-    let dir = setup_with_local_worktrees();
-    let p = dir.path();
-    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "alice");
-
-    std::env::set_var("APM_AGENT_NAME", "alice");
-    apm::cmd::start::run(p, "1", true, false, false, "alice").unwrap();
-
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
-    assert!(content.contains("owner = \"alice\""), "owner should stay alice when same owner resumes: {content}");
-}
-
-#[test]
-fn start_does_not_overwrite_different_owner() {
+fn start_does_not_modify_owner_when_already_owned() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "alice");
@@ -1664,10 +1651,10 @@ fn start_does_not_overwrite_different_owner() {
     assert!(!content.contains("owner = \"bob\""), "bob must not become owner: {content}");
 }
 
-// ── apm state in_design: owner guard ─────────────────────────────────────────
+// ── apm state in_design: owner unchanged ─────────────────────────────────────
 
 #[test]
-fn in_design_sets_owner_when_unowned() {
+fn in_design_does_not_set_owner_when_unowned() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
@@ -1676,7 +1663,7 @@ fn in_design_sets_owner_when_unowned() {
     apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
 
     let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
-    assert!(content.contains("owner = \"alice\""), "owner should be set when transitioning to in_design unowned: {content}");
+    assert!(!content.contains("owner ="), "owner should not be set when transitioning to in_design unowned: {content}");
 }
 
 #[test]

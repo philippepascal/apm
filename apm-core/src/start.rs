@@ -142,13 +142,6 @@ fn build_spawn_command(
     Ok(cmd.spawn()?)
 }
 
-fn owner_can_claim(ticket: &ticket::Ticket, new_owner: &str) -> bool {
-    match ticket.frontmatter.owner.as_deref() {
-        None => true,
-        Some(existing) => existing == new_owner,
-    }
-}
-
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -189,16 +182,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
     crate::state::append_history(&mut t.body, &old_state, &new_state, &when, agent_name);
-
-    let claimed = owner_can_claim(t, agent_name);
-    if claimed {
-        t.frontmatter.owner = Some(agent_name.to_string());
-    } else {
-        eprintln!(
-            "warning: ticket {} is owned by {}; not overwriting (use `apm set {} owner <name>` to reassign)",
-            id, t.frontmatter.owner.as_deref().unwrap_or("unknown"), id
-        );
-    }
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -313,14 +296,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
-
-    if claimed {
-        t.frontmatter.owner = Some(worker_name.clone());
-        t.frontmatter.updated_at = Some(chrono::Utc::now());
-        let spawn_content = t.serialize()?;
-        git::commit_to_branch(root, &branch, &rel_path, &spawn_content,
-            &format!("ticket({id}): set owner to spawned worker"))?;
-    }
 
     std::thread::spawn(move || {
         let _ = child.wait();
@@ -625,34 +600,9 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{owner_can_claim, resolve_agent_name, resolve_system_prompt, agent_role_prefix};
-    use crate::ticket::Ticket;
-    use std::path::Path;
+    use super::{resolve_agent_name, resolve_system_prompt, agent_role_prefix};
     use std::sync::Mutex;
 
-    fn make_ticket(owner: Option<&str>) -> Ticket {
-        let owner_line = owner.map(|o| format!("owner = \"{o}\"\n")).unwrap_or_default();
-        let raw = format!("+++\nid = \"abc\"\ntitle = \"T\"\nstate = \"ready\"\n{owner_line}+++\n");
-        Ticket::parse(Path::new("tickets/abc.md"), &raw).unwrap()
-    }
-
-    #[test]
-    fn owner_can_claim_when_unowned() {
-        let t = make_ticket(None);
-        assert!(owner_can_claim(&t, "alice"));
-    }
-
-    #[test]
-    fn owner_can_claim_when_same_owner_resumes() {
-        let t = make_ticket(Some("alice"));
-        assert!(owner_can_claim(&t, "alice"));
-    }
-
-    #[test]
-    fn owner_can_claim_blocked_when_different_owner() {
-        let t = make_ticket(Some("alice"));
-        assert!(!owner_can_claim(&t, "bob"));
-    }
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 

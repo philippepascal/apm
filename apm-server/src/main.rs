@@ -69,6 +69,7 @@ struct TicketResponse {
     has_open_questions: bool,
     has_pending_amendments: bool,
     blocking_deps: Vec<BlockingDep>,
+    owner: Option<String>,
 }
 
 fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
@@ -97,6 +98,7 @@ struct TicketDetailResponse {
     raw: String,
     valid_transitions: Vec<TransitionOption>,
     blocking_deps: Vec<BlockingDep>,
+    owner: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -138,6 +140,7 @@ struct PatchTicketRequest {
     effort: Option<u8>,
     risk: Option<u8>,
     priority: Option<u8>,
+    owner: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -351,12 +354,15 @@ async fn get_epic(
             let has_open_questions = !extract_section(&t.body, "Open questions").trim().is_empty();
             let has_pending_amendments =
                 extract_section(&t.body, "Amendment requests").contains("- [ ]");
+            let mut fm = t.frontmatter;
+            let owner = fm.owner.take();
             TicketResponse {
-                frontmatter: t.frontmatter,
+                frontmatter: fm,
                 body: t.body,
                 has_open_questions,
                 has_pending_amendments,
                 blocking_deps: vec![],
+                owner,
             }
         })
         .collect();
@@ -609,12 +615,14 @@ async fn list_tickets(
             if fm.author.is_none() {
                 fm.author = Some("unassigned".to_string());
             }
+            let owner = fm.owner.take();
             TicketResponse {
                 frontmatter: fm,
                 body: t.body,
                 has_open_questions,
                 has_pending_amendments,
                 blocking_deps,
+                owner,
             }
         })
         .collect();
@@ -654,12 +662,14 @@ async fn get_ticket(
             if ticket.frontmatter.author.is_none() {
                 ticket.frontmatter.author = Some("unassigned".to_string());
             }
+            let owner = ticket.frontmatter.owner.take();
             Ok(Json(TicketDetailResponse {
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
                 raw,
                 valid_transitions,
                 blocking_deps,
+                owner,
             })
             .into_response())
         }
@@ -720,12 +730,16 @@ async fn transition_ticket(
                     })
                     .await?;
                     let raw = ticket.serialize().unwrap_or_default();
+                    let owner = ticket.frontmatter.owner.clone();
+                    let mut fm = ticket.frontmatter;
+                    fm.owner = None;
                     Ok(Json(TicketDetailResponse {
-                        frontmatter: ticket.frontmatter,
+                        frontmatter: fm,
                         body: ticket.body,
                         raw,
                         valid_transitions,
                         blocking_deps,
+                        owner,
                     })
                     .into_response())
                 }
@@ -897,6 +911,10 @@ async fn patch_ticket(
     if let Some(v) = req.priority {
         apm_core::ticket::set_field(&mut fm, "priority", &v.to_string())?;
     }
+    if let Some(v) = req.owner {
+        let val = if v.is_empty() { "-".to_string() } else { v };
+        apm_core::ticket::set_field(&mut fm, "owner", &val)?;
+    }
 
     let updated = apm_core::ticket::Ticket {
         frontmatter: fm,
@@ -923,12 +941,16 @@ async fn patch_ticket(
     let valid_transitions =
         tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
     let raw = updated.serialize().unwrap_or_default();
+    let owner = updated.frontmatter.owner.clone();
+    let mut fm = updated.frontmatter;
+    fm.owner = None;
     Ok(Json(TicketDetailResponse {
-        frontmatter: updated.frontmatter,
+        frontmatter: fm,
         body: updated.body,
         raw,
         valid_transitions,
         blocking_deps,
+        owner,
     })
     .into_response())
 }
@@ -1088,12 +1110,15 @@ async fn create_ticket(
         Ok(ticket) => {
             let has_open_questions = !extract_section(&ticket.body, "Open questions").trim().is_empty();
             let has_pending_amendments = extract_section(&ticket.body, "Amendment requests").contains("- [ ]");
+            let mut fm = ticket.frontmatter;
+            let owner = fm.owner.take();
             let response = TicketResponse {
-                frontmatter: ticket.frontmatter,
+                frontmatter: fm,
                 body: ticket.body,
                 has_open_questions,
                 has_pending_amendments,
                 blocking_deps: vec![],
+                owner,
             };
             Ok((StatusCode::CREATED, Json(response)).into_response())
         }
@@ -2428,6 +2453,129 @@ label = "In Progress"
     }
 
     #[tokio::test]
+    async fn patch_ticket_owner_persists_to_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p, &config, "test ticket".to_string(), "test".to_string(),
+            None, None, false, vec![], None, None, None, None,
+        ).unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app = build_app(p.clone(), None);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"owner":"alice"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["owner"], "alice");
+
+        let branch = ticket.frontmatter.branch.unwrap();
+        let rel_path = ticket.path.strip_prefix(&p).unwrap().to_string_lossy().to_string();
+        let file_content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
+        assert!(file_content.contains(r#"owner = "alice""#), "expected owner in frontmatter: {file_content}");
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_owner_empty_clears() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p, &config, "test ticket".to_string(), "test".to_string(),
+            None, None, false, vec![], None, None, None, None,
+        ).unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app1 = build_app(p.clone(), None);
+        app1.oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"owner":"alice"}"#))
+                .unwrap(),
+        ).await.unwrap();
+
+        let app2 = build_app(p.clone(), None);
+        let response = app2
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"owner":""}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["owner"].is_null(), "owner should be absent after clear");
+
+        let branch = ticket.frontmatter.branch.unwrap();
+        let rel_path = ticket.path.strip_prefix(&p).unwrap().to_string_lossy().to_string();
+        let file_content = apm_core::git::read_from_branch(&p, &branch, &rel_path).unwrap();
+        assert!(!file_content.contains("owner ="), "owner should be absent in frontmatter: {file_content}");
+    }
+
+    #[tokio::test]
+    async fn patch_ticket_owner_omitted_unchanged() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let ticket = apm_core::ticket::create(
+            &p, &config, "test ticket".to_string(), "test".to_string(),
+            None, None, false, vec![], None, None, None, None,
+        ).unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app1 = build_app(p.clone(), None);
+        app1.oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"owner":"alice"}"#))
+                .unwrap(),
+        ).await.unwrap();
+
+        let app2 = build_app(p.clone(), None);
+        let response = app2
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"priority":5}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["owner"], "alice", "owner should be unchanged when field omitted");
+    }
+
+    #[tokio::test]
     async fn patch_ticket_unknown_id_returns_not_implemented_for_in_memory() {
         let app = build_app_with_tickets(test_tickets());
         let response = app
@@ -3500,7 +3648,46 @@ label = "In Progress"
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         let arr = json.as_array().unwrap();
-        assert!(arr[0].get("owner").is_none() || arr[0]["owner"].is_null());
+        assert!(arr[0]["owner"].is_null());
+    }
+
+    #[tokio::test]
+    async fn get_ticket_owner_field_absent() {
+        let ticket = fake_ticket("cccc1111-owner-absent-detail", "Owner absent detail");
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/cccc1111")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["owner"].is_null());
+    }
+
+    #[tokio::test]
+    async fn get_ticket_owner_field_present() {
+        let mut ticket = fake_ticket("dddd2222-owner-present-detail", "Owner present detail");
+        ticket.frontmatter.owner = Some("alice".to_string());
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/dddd2222")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["owner"], "alice");
     }
 
     #[tokio::test]
