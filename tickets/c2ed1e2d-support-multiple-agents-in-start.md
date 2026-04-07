@@ -53,7 +53,95 @@ The desired behaviour is a named **worker profile** system. Users define profile
 
 ### Approach
 
-How the implementation will work.
+### 1. New config struct — `WorkerProfileConfig` (`apm-core/src/config.rs`)
+
+Add a new struct, all fields optional (absent = fall back to global `[workers]`):
+
+```rust
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct WorkerProfileConfig {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub model: Option<String>,
+    #[serde(default)]
+    pub env: HashMap<String, String>,
+    pub container: Option<String>,
+    pub instructions: Option<String>,   // path to system-prompt file
+    pub role_prefix: Option<String>,    // e.g. "You are a Spec-Writer agent assigned to ticket #<id>."
+}
+```
+
+Add to `Config`:
+```rust
+#[serde(default)]
+pub worker_profiles: HashMap<String, WorkerProfileConfig>,
+```
+
+TOML surface:
+```toml
+[worker_profiles.spec_agent]
+instructions = ".apm/apm.spec-writer.md"
+role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
+
+[worker_profiles.impl_agent]
+instructions = ".apm/apm.worker.md"
+role_prefix = "You are a Worker agent assigned to ticket #<id>."
+```
+
+(`<id>` is replaced at runtime with the ticket ID, matching the existing interpolation pattern.)
+
+### 2. Profile field on `StateConfig` (`apm-core/src/config.rs`)
+
+```rust
+#[serde(default)]
+pub profile: Option<String>,
+```
+
+### 3. Profile resolution in `start.rs`
+
+Add `resolve_profile<'a>(state_id: &str, config: &'a Config) -> Option<&'a WorkerProfileConfig>`:
+- Look up `StateConfig` for `state_id`
+- If `state.profile` is `Some(name)`, look up `config.worker_profiles[name]`; if missing, warn and return `None`
+- If `state.profile` is `None`, return `None`
+
+Add `effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig)` that merges profile over globals:
+- `command` = profile.command falling back to workers.command
+- `args` = profile.args falling back to workers.args
+- `model` = profile.model falling back to workers.model
+- `env` = workers.env merged with profile.env (profile wins on collision)
+- `container` = profile.container falling back to workers.container
+
+Replace `resolve_system_prompt` with a lookup of `profile.instructions` path (falling back to `.apm/apm.worker.md`).
+
+Replace `agent_role_prefix` with `profile.role_prefix` with `<id>` substituted (falling back to `"You are a Worker agent assigned to ticket #<id>."`).
+
+Remove the `spec_writer_states` static array entirely.
+
+### 4. Thread effective params into spawn functions
+
+`build_spawn_command` and `spawn_container_worker` currently read directly from `config.workers`. Introduce an `EffectiveWorkerParams` struct (or pass individual values) derived from the merge above, and update both functions to accept it instead of `&WorkersConfig` directly.
+
+Both functions are called from `start_worker_in_worktree`. Profile resolution happens once there, before either spawn path is taken.
+
+### 5. Update project config files
+
+`.apm/workflow.toml` — add `profile = "spec_agent"` to `groomed` and `ammend` state tables; add `profile = "impl_agent"` to `ready`.
+
+`.apm/config.toml` — add `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` sections pointing to the existing instruction files.
+
+### Order of steps
+
+1. Add `WorkerProfileConfig` and `worker_profiles` to `Config`; add `profile` to `StateConfig`; update deserialization — compile-check only.
+2. Add `resolve_profile` and `effective_spawn_params` helpers in `start.rs`.
+3. Thread effective params into `build_spawn_command` / `spawn_container_worker`; remove `spec_writer_states` hardcode.
+4. Update `.apm/config.toml` and `.apm/workflow.toml`.
+5. Run existing test suite; add unit tests for `resolve_profile` (missing profile warns + falls back) and `effective_spawn_params` (merge precedence).
+
+### Constraints
+
+- Must remain backward-compatible: projects without `profile` on their states get the old behaviour (global workers config + `.apm/apm.worker.md`).
+- `keychain` stays on `WorkersConfig`, not on profiles.
+- No changes to the HTTP API or UI are required for this ticket.
 
 ### Open questions
 
