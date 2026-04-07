@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, Loader2, Plus, X, Minimize2, Trash2 } from 'lucide-react'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
-import { SUPERVISOR_STATES } from '../../lib/supervisorUtils'
 import { useLayoutStore } from '../../store/useLayoutStore'
 
 const ALL_WORKFLOW_STATES = [
@@ -20,7 +19,7 @@ const ALL_WORKFLOW_STATES = [
   'closed',
 ]
 
-async function fetchTickets(includeClosed: boolean): Promise<Ticket[]> {
+async function fetchTickets(includeClosed: boolean): Promise<{ tickets: Ticket[]; supervisor_states: string[] }> {
   const url = includeClosed ? '/api/tickets?include_closed=true' : '/api/tickets'
   const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch tickets')
@@ -63,11 +62,13 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
 
   const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
 
-  const { data: tickets = [] } = useQuery({
+  const { data } = useQuery({
     queryKey: ['tickets', showClosed],
     queryFn: () => fetchTickets(showClosed),
     refetchInterval: 10_000,
   })
+  const tickets = data?.tickets ?? []
+  const supervisorStates = data?.supervisor_states ?? ['new', 'question', 'specd', 'blocked', 'implemented']
 
   const syncMutation = useMutation({
     mutationFn: postSync,
@@ -122,10 +123,10 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
 
   const visibleStates = useMemo(() => {
     if (stateFilter !== null) return [stateFilter]
-    const base = [...SUPERVISOR_STATES] as string[]
+    const base = [...supervisorStates]
     if (showClosed) base.push('closed')
     return base
-  }, [stateFilter, showClosed])
+  }, [stateFilter, showClosed, supervisorStates])
 
   const columns = useMemo(() => {
     const query = searchText.trim().toLowerCase()

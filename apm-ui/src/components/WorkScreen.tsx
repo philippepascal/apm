@@ -77,8 +77,10 @@ export default function WorkScreen() {
 
       event.preventDefault()
 
-      const tickets = (queryClient.getQueryData<Ticket[]>(['tickets'])) ?? []
-      const columns = groupBySupervisorState(tickets)
+      const AGENT_VIEW_STATES = ['new', 'question', 'specd', 'ammend', 'blocked', 'implemented', 'accepted']
+      const ticketsData = queryClient.getQueryData<{ tickets: Ticket[] }>(['tickets'])
+      const tickets = ticketsData?.tickets ?? []
+      const columns = groupBySupervisorState(AGENT_VIEW_STATES, tickets)
       if (columns.length === 0) return
 
       if (!selectedTicketId) {
