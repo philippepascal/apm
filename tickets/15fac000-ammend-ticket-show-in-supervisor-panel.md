@@ -31,7 +31,10 @@ The desired behaviour is that the supervisor panel derives its visible-state lis
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing how the agent work queue determines which tickets to surface (already driven by `actionable` in the server)
+- Updating `ALL_WORKFLOW_STATES` in `SupervisorView.tsx` (used only for the filter dropdown, separate concern)
+- Adding or modifying states in `workflow.toml`
+- State colours or labels in the UI
 
 ### Approach
 
