@@ -20,13 +20,13 @@ When a ticket transitions to in_design (state.rs:113-125) or when work starts vi
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> in_design` does not set or modify the `owner` field when the ticket is unowned
-- [ ] `apm state <id> in_design` does not set or modify the `owner` field when the ticket is already owned by a different actor
-- [ ] `apm start <id>` does not set or modify the `owner` field when the ticket is unowned
-- [ ] `apm start <id>` does not set or modify the `owner` field when the ticket is already owned by a different actor
-- [ ] `apm start <id> --spawn` does not set or modify the `owner` field (spawned worker name is not written to the ticket)
-- [ ] `apm assign <id> <username>` continues to set the owner field as before
-- [ ] `apm set <id> owner <username>` continues to set the owner field as before
+- [x] `apm state <id> in_design` does not set or modify the `owner` field when the ticket is unowned
+- [x] `apm state <id> in_design` does not set or modify the `owner` field when the ticket is already owned by a different actor
+- [x] `apm start <id>` does not set or modify the `owner` field when the ticket is unowned
+- [x] `apm start <id>` does not set or modify the `owner` field when the ticket is already owned by a different actor
+- [x] `apm start <id> --spawn` does not set or modify the `owner` field (spawned worker name is not written to the ticket)
+- [x] `apm assign <id> <username>` continues to set the owner field as before
+- [x] `apm set <id> owner <username>` continues to set the owner field as before
 
 ### Out of scope
 
