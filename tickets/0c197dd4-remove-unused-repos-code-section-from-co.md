@@ -27,7 +27,7 @@ The [[repos.code]] section in .apm/config.toml is not parsed by the Config struc
 
 ### Approach
 
-How the implementation will work.
+1. Open `.apm/config.toml`\n2. Delete the three lines that make up the `[[repos.code]]` block:\n   ```toml\n   [[repos.code]]\n   path = "philippepascal/apm"\n   default_branch = "main"\n   ```\n3. No code changes required — the Config struct has no `repos` field and the TOML parser silently ignores unknown keys, so this is a pure config-file deletion.\n4. Verify the config still loads cleanly (e.g. `apm config show` or `cargo test`).
 
 ### Open questions
 
