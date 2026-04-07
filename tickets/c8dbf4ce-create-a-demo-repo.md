@@ -52,25 +52,25 @@ The demo must cover the full feature surface: multiple ticket states, epics, cro
 
 ### Approach
 
-## 1. Fictional project: `jot`
+**Fictional project — `jot`**
 
-The demo Rust CLI is called **`jot`** — a minimal command-line notes tool. This is a thematically apt choice (APM manages tasks; `jot` manages notes), simple enough to understand in 30 seconds, and gives natural ticket material ("add tagging", "search", "delete", "export").
+The demo Rust CLI is called `jot`, a minimal command-line notes tool. It gives natural APM ticket material ("add tagging", "search", "delete", "export") and is simple enough to understand at a glance.
 
-**Working commands (already implemented in the frozen state):**
+Working commands in the frozen state:
 - `jot add "<text>"` — appends a note to `~/.jot/notes.txt`
 - `jot list` — prints all notes with indices
 
-**Stubbed / in-progress commands (exist in code but not finished):**
-- `jot delete <n>` — deletes note by index (panics or prints "not yet implemented")
-- `jot search <query>` — returns `unimplemented!()`
+Stubbed / in-progress commands (exist in code but not finished):
+- `jot delete <n>` — prints "not yet implemented"
+- `jot search <query>` — `unimplemented!()`
 
-The Cargo project lives at the repo root. `src/main.rs` is ~80 lines using only `std`.
+Cargo project at repo root. `src/main.rs` is ~80 lines using only `std`.
 
 ---
 
-## 2. APM initialisation
+**APM initialisation**
 
-Run `apm init` in the repo (or manually create the files). Config:
+Run `apm init` (or place files manually). Key config:
 
 ```toml
 # .apm/config.toml
@@ -83,116 +83,94 @@ default_branch = "main"
 completion = "pr_or_epic_merge"
 ```
 
-Keep the default workflow (11 states). No custom `workflow.toml` override needed — the defaults demonstrate all states already.
+Use the default workflow (11 states) — no custom `workflow.toml` needed.
 
 ---
 
-## 3. Epic
+**Epic**
 
-Create one epic: **"Search feature"** (`apm epic new "Search feature"`).
-
-Tickets that belong to this epic set `epic = "<search-epic-id>"` and `target_branch = "epic/<search-epic-id>-search-feature"`.
+Create one epic: "Search feature" via `apm epic new "Search feature"`. Tickets in the epic set `epic = "<id>"` and `target_branch = "epic/<id>-search-feature"`.
 
 ---
 
-## 4. Ticket set (12–14 tickets)
+**Ticket set (14 tickets)**
 
-Design the backlog to cover every default workflow state at least once, with realistic narrative:
+Create one ticket per target state to cover every workflow state at least once:
 
-| # | Title | State | Epic | depends_on | Notes |
-|---|-------|-------|------|-----------|-------|
-| 1 | Initial CLI scaffold | `closed` | — | — | Full spec, all AC checked |
-| 2 | Add note to file (`jot add`) | `closed` | — | 1 | Full spec |
-| 3 | List notes command (`jot list`) | `implemented` | — | 2 | PR open, not merged |
-| 4 | Delete note command (`jot delete`) | `in_progress` | — | 3 | Spec complete, being coded |
-| 5 | Add full-text search | `in_progress` | search-epic | 3 | Being implemented |
-| 6 | Search result highlighting | `ready` | search-epic | 5 | Spec approved, not started |
-| 7 | Export notes to markdown | `specd` | — | — | Spec written, awaiting review |
-| 8 | Note tagging support | `in_design` | — | — | Spec being written |
-| 9 | Configuration file (`~/.jot/config.toml`) | `groomed` | — | — | Groomed, not yet in design |
-| 10 | Pagination for long note lists | `new` | — | — | Just filed |
-| 11 | Interactive TUI mode | `question` | — | — | Has open question about TUI framework choice |
-| 12 | Fuzzy search fallback | `ammend` | search-epic | 5 | Spec needs revision |
-| 13 | Fix list command index off-by-one | `blocked` | — | — | Blocked on design decision re: 0- vs 1-indexed |
-| 14 | Add `--count` flag to `jot list` | `ready` | — | 3 | Low-priority polish |
+| Title | State | Epic | depends_on |
+|-------|-------|------|-----------|
+| Initial CLI scaffold | closed | — | — |
+| Add note to file (jot add) | closed | — | 1 |
+| List notes command (jot list) | implemented | — | 2 |
+| Delete note command (jot delete) | in_progress | — | 3 |
+| Add full-text search | in_progress | search | 3 |
+| Search result highlighting | ready | search | 5 |
+| Export notes to markdown | specd | — | — |
+| Note tagging support | in_design | — | — |
+| Configuration file support | groomed | — | — |
+| Pagination for long note lists | new | — | — |
+| Interactive TUI mode | question | — | — |
+| Fuzzy search fallback | ammend | search | 5 |
+| Fix list command index off-by-one | blocked | — | — |
+| Add --count flag to jot list | ready | — | 3 |
 
-**Dependency chain:** 1 → 2 → 3 → 4 and 3 → 5 → 6 and 5 → 12 give a multi-level dependency graph to demo `depends_on`.
-
-**Priority spread:** tickets 4 and 5 get priority 5; ticket 1-3 (closed/implemented) can be 0; the rest vary 1–3.
+Dependency chain: 1→2→3→4, 3→5→6, 5→12. Priority 5 on tickets 4 and 5; rest 0–3.
 
 ---
 
-## 5. Ticket content quality
+**Ticket content quality**
 
-- Tickets 1–3 (`closed`/`implemented`): fully filled spec with all AC checked `[x]`
-- Ticket 11 (`question`): has `### Open questions` with an unanswered Q
-- Ticket 12 (`ammend`): has `### Amendment requests` with one unchecked checkbox
-- Ticket 13 (`blocked`): problem and approach filled; AC present; `### Open questions` explains what the supervisor must decide
-- All other tickets: at minimum `### Problem` and partial `### Acceptance criteria`
+- Tickets 1–3 (closed/implemented): all spec sections filled, all AC checked [x]
+- Ticket 11 (question): `### Open questions` with an unanswered question about TUI framework
+- Ticket 12 (ammend): `### Amendment requests` with one unchecked checkbox
+- Ticket 13 (blocked): problem and approach filled; open question explains what supervisor must decide
+- All others: at minimum `### Problem` and partial `### Acceptance criteria`
 
 ---
 
-## 6. README structure
+**README structure**
 
-```
-# jot — a minimal notes CLI
+Sections: About this repo, Prerequisites, Build & run jot, Explore with APM (apm list, apm show, apm next, apm state, apm epic list, apm-server), Next steps (apm help, apm work, apm register).
 
-> Demo repository for [APM](https://github.com/philippepascal/apm)
+---
 
-## About this repo
-<1-paragraph description of jot and why it's frozen mid-development>
+**Repository setup steps**
 
-## Prerequisites
-- `apm` and `apm-server` installed (see APM installation guide)
-- Rust toolchain (for building jot)
+1. Create public GitHub repo `apm-demo` under the `philippepascal` account
+2. Init git, add Cargo project (`Cargo.toml`, `src/main.rs`), write README.md
+3. Run `apm init` with project name "jot"
+4. Create tickets with `apm new`, fill specs with `apm spec`, advance states with `apm state`
+5. For closed/implemented tickets use `apm state <id> --force closed` (no real branch to merge)
+6. For in-progress tickets set branch manually: `apm set <id> branch "ticket/..."` — do not run `apm start` (it would try to create worktrees)
+7. Push to GitHub
 
-## Build & run jot
-cargo build
-./target/debug/jot list
-
-## Explore with APM
+Git history realism is not an AC; a single "initial commit" is acceptable.
 
 ### See all tickets
+
 apm list
 
 ### Inspect a ticket
+
 apm show <id>
 
 ### Find the next actionable ticket
+
 apm next
 
 ### Transition a ticket (example: start working)
+
 apm state <id> in_progress
 
 ### Browse epics
+
 apm epic list
 apm epic show <epic-id>
 
 ### Launch the web UI
+
 apm-server
 # then open http://localhost:3000
-
-## Next steps
-- Run `apm help` to see all commands
-- Try `apm work` to auto-dispatch agents
-- Register with apm-server for team features: `apm register`
-```
-
----
-
-## 7. Repository setup
-
-1. Create new public GitHub repo `apm-demo` under the `philippepascal` account (or `apm-project` org if preferred)
-2. Init git, add Cargo project files (`Cargo.toml`, `src/main.rs`)
-3. Run `apm init` (or manually place `.apm/` files) — answer prompts with project name "jot"
-4. Create tickets using `apm new` with appropriate metadata, then `apm spec` to fill sections, then `apm state` to advance each to its target state
-5. For `closed` / `implemented` tickets, use `apm state <id> --force closed` since there is no actual branch to merge
-6. Write README.md
-7. Push to GitHub
-
-**Note on git history:** the repo should have a plausible commit history (a few commits). The implementer may squash into a single "initial commit" if preferred — realism of history is not an AC.
-
-**Note on worktrees:** the demo repo does not need actual worktrees — the `branch` field on tickets is sufficient for demonstration. Do not run `apm start` for in-progress tickets (it would try to create worktrees); instead set `branch` manually with `apm set <id> branch "ticket/..."`.
 
 ### Open questions
 
