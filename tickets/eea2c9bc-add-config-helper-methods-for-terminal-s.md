@@ -4,11 +4,11 @@ title = "Add Config helper methods for terminal states and section lookup"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/eea2c9bc-add-config-helper-methods-for-terminal-s"
 created_at = "2026-04-07T22:22:22.370019Z"
-updated_at = "2026-04-07T22:48:07.679427Z"
+updated_at = "2026-04-07T22:48:14.014701Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
