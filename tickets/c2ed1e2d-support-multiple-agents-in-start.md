@@ -25,20 +25,20 @@ The desired behaviour is a named **worker profile** system. Users define profile
 
 - [ ] A `[worker_profiles.<name>]` table can be defined in `.apm/config.toml`; `apm` loads it without error
 - [ ] `WorkerProfileConfig` supports optional fields: `command`, `args`, `model`, `env`, `container`, `instructions`, `role_prefix`
-- [ ] A state in `workflow.toml` can declare `profile = "<name>"`; `apm` loads the workflow without error
-- [ ] When `apm start` is called on a ticket whose pre-transition state has `profile = "spec_agent"`, the `spec_agent` profile's `instructions` file is used as the system prompt
-- [ ] When `apm start` is called on a ticket whose pre-transition state has `profile = "impl_agent"`, the `impl_agent` profile's `instructions` file is used as the system prompt
+- [ ] A transition in `workflow.toml` can declare `profile = "<name>"`; `apm` loads the workflow without error
+- [ ] When `apm start` is called on a ticket and the triggering transition has `profile = "spec_agent"`, the `spec_agent` profile's `instructions` file is used as the system prompt
+- [ ] When `apm start` is called on a ticket and the triggering transition has `profile = "impl_agent"`, the `impl_agent` profile's `instructions` file is used as the system prompt
 - [ ] A profile's `command` overrides the global `[workers].command` for spawned subprocesses
 - [ ] A profile's `model` overrides the global `[workers].model` for spawned subprocesses
 - [ ] A profile's `env` is merged on top of the global `[workers].env` for spawned subprocesses
 - [ ] A profile's `container` overrides the global `[workers].container` for spawned subprocesses
 - [ ] Profile fields that are absent fall back to the corresponding global `[workers]` value
-- [ ] When a state has no `profile` field, the global `[workers]` config is used and `.apm/apm.worker.md` is the system prompt (existing behaviour preserved)
-- [ ] When a state references a profile name that is not defined in config, `apm start` falls back to global `[workers]` config and prints a warning
-- [ ] `apm work` dispatches each worker using the profile of its ticket's pre-transition state
+- [ ] When a transition has no `profile` field, the global `[workers]` config is used and the state's `instructions` file (or `.apm/apm.worker.md` fallback) is the system prompt (existing behaviour preserved)
+- [ ] When a transition references a profile name that is not defined in config, `apm start` falls back to global `[workers]` config and prints a warning
+- [ ] `apm work` dispatches each worker using the profile of its ticket's triggering transition
 - [ ] The hardcoded `spec_writer_states` array `["groomed", "ammend"]` is removed from `start.rs`
-- [ ] The project's own `.apm/workflow.toml` declares `profile = "spec_agent"` on the `groomed` and `ammend` states
-- [ ] The project's own `.apm/workflow.toml` declares `profile = "impl_agent"` on the `ready` state
+- [ ] The project's own `.apm/workflow.toml` declares `profile = "spec_agent"` on the `groomed → in_design` and `ammend → in_design` transitions
+- [ ] The project's own `.apm/workflow.toml` declares `profile = "impl_agent"` on the `ready → in_progress` transition
 - [ ] The project's own `.apm/config.toml` defines `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` with their respective `instructions` paths
 
 ### Out of scope
