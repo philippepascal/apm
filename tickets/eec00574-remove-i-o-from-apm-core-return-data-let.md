@@ -175,15 +175,26 @@ Update `apm/src/cmd/clean.rs` to print the warnings.
 
 ---
 
+**apm-core/src/config.rs**
+
+Two `eprintln!` calls remain:
+
+1. `resolve_identity` (line 399): the `eprintln!("apm: could not resolve identity from git_host")` fires just before returning the fallback `"unassigned"`. Remove the `eprintln!` entirely — the "unassigned" return value already signals the failure to callers; the warning adds no actionable information and no call site currently checks for it. No signature change required.
+
+2. `resolve_collaborators` (line 430): currently returns `Vec<String>`. Change to return a tuple `(Vec<String>, Vec<String>)` — `(collaborators, warnings)`. Replace the `eprintln!` with a push to the warnings vec. Update all call sites (search for `resolve_collaborators` in `apm-core` and `apm`) to destructure the tuple; print the warning strings to stderr in the CLI handler.
+
+---
+
 **Order of changes**
 
 1. Add the deny lint to `lib.rs` — this surfaces all sites at once
 2. Fix `git.rs` helpers first (they are called by state/start; fixing them unblocks those)
 3. Fix `state.rs`, `start.rs` (high call-graph, touch most warnings)
 4. Fix `archive.rs`, `sync.rs`, `clean.rs` (isolated, straightforward)
-5. Fix `init.rs` last (most involved due to stdin prompts)
-6. Update all CLI handlers in `apm/src/cmd/`
-7. Confirm `cargo test` passes and the deny lint has no violations
+5. Fix `config.rs` (two minor calls; no new structs for `resolve_identity`)
+6. Fix `init.rs` last (most involved due to stdin prompts)
+7. Update all CLI handlers in `apm/src/cmd/`
+8. Confirm `cargo test` passes and the deny lint has no violations
 
 ### Open questions
 
