@@ -1,3 +1,4 @@
+#![deny(clippy::print_stdout, clippy::print_stderr)]
 pub mod archive;
 pub mod clean;
 pub mod config;

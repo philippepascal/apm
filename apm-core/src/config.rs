@@ -396,7 +396,6 @@ pub fn resolve_identity(repo_root: &Path) -> String {
                 }
             }
         }
-        eprintln!("apm: could not resolve identity from git_host");
         return "unassigned".to_string();
     }
 
@@ -421,18 +420,19 @@ pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     crate::github::fetch_authenticated_user(&token).ok()
 }
 
-pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> Vec<String> {
+pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> (Vec<String>, Vec<String>) {
+    let mut warnings = Vec::new();
     if config.git_host.provider.as_deref() == Some("github") {
         if let Some(ref repo) = config.git_host.repo {
             if let Some(token) = effective_github_token(local, &config.git_host) {
                 match crate::github::fetch_repo_collaborators(&token, repo) {
-                    Ok(logins) => return logins,
-                    Err(e) => eprintln!("apm: GitHub collaborators fetch failed: {e}"),
+                    Ok(logins) => return (logins, warnings),
+                    Err(e) => warnings.push(format!("apm: GitHub collaborators fetch failed: {e}")),
                 }
             }
         }
     }
-    config.project.collaborators.clone()
+    (config.project.collaborators.clone(), warnings)
 }
 
 impl WorkersConfig {
@@ -988,7 +988,7 @@ dir = "tickets"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         let local = LocalConfig::default();
-        let result = resolve_collaborators(&config, &local);
+        let (result, _) = resolve_collaborators(&config, &local);
         assert_eq!(result, vec!["alice", "bob"]);
     }
 
@@ -1011,7 +1011,7 @@ repo = "owner/name"
         // No token in local, and GITHUB_TOKEN env var should not be set in test env
         // (if it is, the test would make a real API call — so we just check fallback works)
         // We can't guarantee env is clean, so we only test the no-token path
-        let _ = resolve_collaborators(&config, &local);
+        let (_, _) = resolve_collaborators(&config, &local);
     }
 
     #[test]

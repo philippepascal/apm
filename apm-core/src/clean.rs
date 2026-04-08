@@ -104,7 +104,12 @@ pub fn remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()> {
     Ok(())
 }
 
-pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dry_run: bool) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
+pub struct RemoveOutput {
+    pub warnings: Vec<String>,
+}
+
+pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dry_run: bool) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>, Vec<String>)> {
+    let mut warnings: Vec<String> = Vec::new();
     let mut terminal_states: std::collections::HashSet<String> = config
         .workflow
         .states
@@ -170,9 +175,9 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
             let remote_tip = git::remote_branch_tip(root, &branch);
             if let (Some(ref lt), Some(ref rt)) = (&local_tip, &remote_tip) {
                 if lt != rt && !wt_clean {
-                    eprintln!(
+                    warnings.push(format!(
                         "warning: {branch} local tip differs from origin/{branch} — skipping"
-                    );
+                    ));
                     continue;
                 }
             }
@@ -260,10 +265,12 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
         });
     }
 
-    Ok((result, dirty_result))
+    Ok((result, dirty_result, warnings))
 }
 
-pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool) -> Result<()> {
+pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool) -> Result<RemoveOutput> {
+    let mut warnings: Vec<String> = Vec::new();
+
     if let Some(ref path) = candidate.worktree {
         git::remove_worktree(root, path, force)?;
     }
@@ -282,17 +289,17 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
             Ok(o) if o.status.success() => {}
             Ok(o) => {
                 let msg = String::from_utf8_lossy(&o.stderr);
-                eprintln!(
+                warnings.push(format!(
                     "warning: could not delete branch {}: {}",
                     candidate.branch,
                     msg.trim()
-                );
+                ));
             }
             Err(e) => {
-                eprintln!(
+                warnings.push(format!(
                     "warning: could not delete branch {}: {e}",
                     candidate.branch
-                );
+                ));
             }
         }
         // Prune the remote tracking ref so sync_local_ticket_refs does not
@@ -308,7 +315,7 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
             .output();
     }
 
-    Ok(())
+    Ok(RemoveOutput { warnings })
 }
 
 /// Parse an --older-than threshold into a UTC DateTime.

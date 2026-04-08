@@ -58,7 +58,11 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     };
 
     let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
-    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch)?;
+    let mut warnings = Vec::new();
+    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch, &mut warnings)?;
+    for w in &warnings {
+        eprintln!("{w}");
+    }
     let id = &t.frontmatter.id;
     let branch = t.frontmatter.branch.as_deref().unwrap_or("");
     let filename = t.path.file_name().unwrap().to_string_lossy();

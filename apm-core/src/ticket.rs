@@ -255,9 +255,9 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
         match crate::git::read_from_branch(root, branch, &rel_path) {
             Ok(content) => match Ticket::parse(&dummy_path, &content) {
                 Ok(t) => tickets.push(t),
-                Err(e) => eprintln!("warning: {branch}: {e:#}"),
+                Err(_) => {}
             },
-            Err(e) => eprintln!("warning: cannot read {branch}: {e:#}"),
+            Err(_) => {}
         }
     }
     tickets.sort_by_key(|t| t.frontmatter.created_at);
@@ -334,7 +334,8 @@ pub fn close(
     reason: Option<&str>,
     agent: &str,
     aggressive: bool,
-) -> Result<()> {
+) -> Result<Vec<String>> {
+    let mut output: Vec<String> = Vec::new();
     let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
     let prefixes = id_arg_prefixes(id_arg)?;
 
@@ -431,18 +432,20 @@ pub fn close(
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
     crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
 
-    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch) {
-        eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
+    let mut merge_warnings: Vec<String> = Vec::new();
+    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch, &mut merge_warnings) {
+        output.push(format!("warning: merge into {} failed: {e:#}", config.project.default_branch));
     }
+    output.extend(merge_warnings);
 
     if aggressive {
         if let Err(e) = crate::git::push_branch(root, &branch) {
-            eprintln!("warning: push failed for {branch}: {e:#}");
+            output.push(format!("warning: push failed for {branch}: {e:#}"));
         }
     }
 
-    println!("{id}: {prev} → closed");
-    Ok(())
+    output.push(format!("{id}: {prev} → closed"));
+    Ok(output)
 }
 
 pub fn create(
@@ -458,6 +461,7 @@ pub fn create(
     target_branch: Option<String>,
     depends_on: Option<Vec<String>>,
     base_branch: Option<String>,
+    warnings: &mut Vec<String>,
 ) -> Result<Ticket> {
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
@@ -554,7 +558,7 @@ pub fn create(
 
     if aggressive {
         if let Err(e) = crate::git::push_branch(root, &branch) {
-            eprintln!("warning: push failed: {e:#}");
+            warnings.push(format!("warning: push failed: {e:#}"));
         }
     }
 

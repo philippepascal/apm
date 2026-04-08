@@ -12,12 +12,12 @@ pub struct EffectiveWorkerParams {
     pub container: Option<String>,
 }
 
-fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a Config) -> Option<&'a WorkerProfileConfig> {
+fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a Config, warnings: &mut Vec<String>) -> Option<&'a WorkerProfileConfig> {
     let name = transition.profile.as_deref()?;
     match config.worker_profiles.get(name) {
         Some(p) => Some(p),
         None => {
-            eprintln!("warning: worker profile {name:?} not found — using global [workers] config");
+            warnings.push(format!("warning: worker profile {name:?} not found — using global [workers] config"));
             None
         }
     }
@@ -48,6 +48,15 @@ pub struct StartOutput {
     pub worker_pid: Option<u32>,
     pub log_path: Option<PathBuf>,
     pub worker_name: Option<String>,
+    pub warnings: Vec<String>,
+}
+
+pub struct RunNextOutput {
+    pub ticket_id: Option<String>,
+    pub messages: Vec<String>,
+    pub warnings: Vec<String>,
+    pub worker_pid: Option<u32>,
+    pub log_path: Option<PathBuf>,
 }
 
 pub fn resolve_agent_name() -> String {
@@ -184,6 +193,7 @@ fn build_spawn_command(
 }
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
+    let mut warnings: Vec<String> = Vec::new();
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
     let skip_permissions = skip_permissions || config.agents.skip_permissions;
@@ -245,10 +255,10 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     if aggressive {
         if let Err(e) = git::fetch_branch(root, &branch) {
-            eprintln!("warning: fetch failed: {e:#}");
+            warnings.push(format!("warning: fetch failed: {e:#}"));
         }
         if let Err(e) = git::fetch_branch(root, default_branch) {
-            eprintln!("warning: fetch {} failed: {e:#}", default_branch);
+            warnings.push(format!("warning: fetch {} failed: {e:#}", default_branch));
         }
     }
 
@@ -256,7 +266,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let worktrees_base = root.join(&config.worktrees.dir);
     let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
-    git::sync_agent_dirs(root, &wt_display, &config.worktrees.agent_dirs);
+    git::sync_agent_dirs(root, &wt_display, &config.worktrees.agent_dirs, &mut warnings);
 
     let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")
@@ -284,15 +294,15 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             }
         }
         Ok(out) => {
-            eprintln!(
+            warnings.push(format!(
                 "warning: merge {} failed: {}",
                 merge_ref,
                 String::from_utf8_lossy(&out.stderr).trim()
-            );
+            ));
             None
         }
         Err(e) => {
-            eprintln!("warning: merge failed: {e}");
+            warnings.push(format!("warning: merge failed: {e}"));
             None
         }
     };
@@ -309,13 +319,14 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             worker_pid: None,
             log_path: None,
             worker_name: None,
+            warnings,
         });
     }
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config));
+    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let state_instructions = config.workflow.states.iter()
         .find(|s| s.id == old_state)
         .and_then(|sc| sc.instructions.as_deref());
@@ -361,10 +372,13 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         worker_pid: Some(pid),
         log_path: Some(log_path),
         worker_name: Some(worker_name),
+        warnings,
     })
 }
 
-pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
+pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<RunNextOutput> {
+    let mut messages: Vec<String> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
     let config = Config::load(root)?;
     let skip_permissions = skip_permissions || config.agents.skip_permissions;
     let p = &config.workflow.prioritization;
@@ -378,8 +392,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let agent_name = resolve_agent_name();
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
-        println!("No actionable tickets.");
-        return Ok(());
+        messages.push("No actionable tickets.".to_string());
+        return Ok(RunNextOutput { ticket_id: None, messages, warnings, worker_pid: None, log_path: None });
     };
 
     let id = candidate.frontmatter.id.clone();
@@ -389,30 +403,37 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .find(|s| s.id == old_state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
         .cloned();
-    let profile = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config));
+    let profile = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let state_instructions = config.workflow.states.iter()
         .find(|s| s.id == old_state)
         .and_then(|sc| sc.instructions.as_deref())
         .map(|s| s.to_string());
     let instructions_text = profile
         .and_then(|p| p.instructions.as_deref())
-        .map(|path| std::fs::read_to_string(root.join(path))
-            .unwrap_or_else(|_| { eprintln!("warning: instructions file not found"); String::new() }))
+        .map(|path| {
+            match std::fs::read_to_string(root.join(path)) {
+                Ok(s) => s,
+                Err(_) => { warnings.push("warning: instructions file not found".to_string()); String::new() }
+            }
+        })
         .filter(|s| !s.is_empty())
         .or_else(|| state_instructions.as_deref()
-            .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
-                .or_else(|| { eprintln!("warning: instructions file not found"); None })));
+            .and_then(|path| {
+                std::fs::read_to_string(root.join(path)).ok()
+                    .or_else(|| { warnings.push("warning: instructions file not found".to_string()); None })
+            }));
     let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
+    warnings.extend(start_out.warnings);
 
     if let Some(ref msg) = start_out.merge_message {
-        println!("{msg}");
+        messages.push(msg.clone());
     }
-    println!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch);
-    println!("Worktree: {}", start_out.worktree_path.display());
+    messages.push(format!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch));
+    messages.push(format!("Worktree: {}", start_out.worktree_path.display()));
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets2.iter().find(|t| t.frontmatter.id == id) else {
-        return Ok(());
+        return Ok(RunNextOutput { ticket_id: Some(id), messages, warnings, worker_pid: None, log_path: None });
     };
 
     let focus_hint = if let Some(ref section) = t.frontmatter.focus_section {
@@ -447,15 +468,15 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
     if !spawn {
         if !prompt.is_empty() {
-            println!("Prompt:\n{prompt}");
+            messages.push(format!("Prompt:\n{prompt}"));
         }
-        return Ok(());
+        return Ok(RunNextOutput { ticket_id: Some(id), messages, warnings, worker_pid: None, log_path: None });
     }
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config));
+    let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let state_instr2 = config.workflow.states.iter()
         .find(|s| s.id == old_state)
         .and_then(|sc| sc.instructions.as_deref());
@@ -498,10 +519,10 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         let _ = child.wait();
     });
 
-    println!("Worker spawned: PID={pid}, log={}", log_path.display());
-    println!("Agent name: {worker_name}");
+    messages.push(format!("Worker spawned: PID={pid}, log={}", log_path.display()));
+    messages.push(format!("Agent name: {worker_name}"));
 
-    Ok(())
+    Ok(RunNextOutput { ticket_id: Some(id), messages, warnings, worker_pid: Some(pid), log_path: Some(log_path) })
 }
 
 pub fn spawn_next_worker(
@@ -509,6 +530,8 @@ pub fn spawn_next_worker(
     no_aggressive: bool,
     skip_permissions: bool,
     epic_filter: Option<&str>,
+    messages: &mut Vec<String>,
+    warnings: &mut Vec<String>,
 ) -> Result<Option<(String, std::process::Child, PathBuf)>> {
     let config = Config::load(root)?;
     let skip_permissions = skip_permissions || config.agents.skip_permissions;
@@ -539,26 +562,33 @@ pub fn spawn_next_worker(
         .find(|s| s.id == old_state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
         .cloned();
-    let profile = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config));
+    let profile = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, warnings));
     let state_instructions = config.workflow.states.iter()
         .find(|s| s.id == old_state)
         .and_then(|sc| sc.instructions.as_deref())
         .map(|s| s.to_string());
     let instructions_text = profile
         .and_then(|p| p.instructions.as_deref())
-        .map(|path| std::fs::read_to_string(root.join(path))
-            .unwrap_or_else(|_| { eprintln!("warning: instructions file not found"); String::new() }))
+        .map(|path| {
+            match std::fs::read_to_string(root.join(path)) {
+                Ok(s) => s,
+                Err(_) => { warnings.push("warning: instructions file not found".to_string()); String::new() }
+            }
+        })
         .filter(|s| !s.is_empty())
         .or_else(|| state_instructions.as_deref()
-            .and_then(|path| std::fs::read_to_string(root.join(path)).ok()
-                .or_else(|| { eprintln!("warning: instructions file not found"); None })));
+            .and_then(|path| {
+                std::fs::read_to_string(root.join(path)).ok()
+                    .or_else(|| { warnings.push("warning: instructions file not found".to_string()); None })
+            }));
     let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
+    warnings.extend(start_out.warnings);
 
     if let Some(ref msg) = start_out.merge_message {
-        println!("{msg}");
+        messages.push(msg.clone());
     }
-    println!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch);
-    println!("Worktree: {}", start_out.worktree_path.display());
+    messages.push(format!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch));
+    messages.push(format!("Worktree: {}", start_out.worktree_path.display()));
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let Some(t) = tickets2.iter().find(|t| t.frontmatter.id == id) else {
@@ -595,11 +625,12 @@ pub fn spawn_next_worker(
         prompt.push_str(hint);
         prompt.push('\n');
     }
+    let _ = prompt; // prompt used only for run_next, not spawn_next_worker
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
 
-    let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config));
+    let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, warnings));
     let state_instr2 = config.workflow.states.iter()
         .find(|s| s.id == old_state)
         .and_then(|sc| sc.instructions.as_deref());
@@ -638,8 +669,8 @@ pub fn spawn_next_worker(
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
 
-    println!("Worker spawned: PID={pid}, log={}", log_path.display());
-    println!("Agent name: {worker_name}");
+    messages.push(format!("Worker spawned: PID={pid}, log={}", log_path.display()));
+    messages.push(format!("Agent name: {worker_name}"));
 
     Ok(Some((id, child, pid_path)))
 }
@@ -759,7 +790,8 @@ mod tests {
         config.worker_profiles.insert("spec_agent".into(), profile);
 
         let tr = make_transition(Some("spec_agent"));
-        assert!(resolve_profile(&tr, &config).is_some());
+        let mut w = Vec::new();
+        assert!(resolve_profile(&tr, &config, &mut w).is_some());
     }
 
     #[test]
@@ -786,7 +818,8 @@ mod tests {
             load_warnings: vec![],
         };
         let tr = make_transition(Some("nonexistent_profile"));
-        assert!(resolve_profile(&tr, &config).is_none());
+        let mut w = Vec::new();
+        assert!(resolve_profile(&tr, &config, &mut w).is_none());
     }
 
     #[test]
@@ -813,7 +846,8 @@ mod tests {
             load_warnings: vec![],
         };
         let tr = make_transition(None);
-        assert!(resolve_profile(&tr, &config).is_none());
+        let mut w = Vec::new();
+        assert!(resolve_profile(&tr, &config, &mut w).is_none());
     }
 
     // --- effective_spawn_params ---
