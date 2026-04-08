@@ -17,7 +17,7 @@ target_branch = "epic/18dab82d-ticket-ownership-model"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a ticket is created with `apm new`, the `owner` field is not set (or set to empty/None). Per the ownership spec, owner should default to the author (the current user creating the ticket). This ensures the creator has immediate control over the ticket and can assign it to others or dispatch workers against it.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
