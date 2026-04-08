@@ -42,7 +42,46 @@ The remaining work is: switch `ticket::create()` to use `push_branch_tracking`, 
 
 ### Approach
 
-In `apm-core/src/ticket.rs` `create()`, after the branch is created and the initial commit is made, check `config.sync.aggressive`. If true, call `git::push_branch_tracking()` and handle errors as warnings. Same pattern in `apm-core/src/epic.rs` `create()` (verify it already pushes — if so, just confirm the aggressive gate). The config needs to be passed to or loaded within `ticket::create()`.
+**Step 1 — Switch to tracking push in `ticket::create()`**
+
+File: `apm-core/src/ticket.rs`, lines ~547–551.
+
+The push block currently reads:
+```rust
+if aggressive {
+    if let Err(e) = crate::git::push_branch(root, &branch) {
+        warnings.push(format!("warning: push failed: {e:#}"));
+    }
+}
+```
+Change `push_branch` to `push_branch_tracking`. No other changes needed in this function — the `aggressive` parameter is already wired from the caller, the warning pattern is already correct, and the config is already in scope via `config.sync.aggressive` (though the function receives the pre-computed bool, not the config directly — this is fine).
+
+**Step 2 — Verify `epic::create()` (no code change)**
+
+File: `apm-core/src/epic.rs`, line ~162. It already calls `push_branch_tracking()` unconditionally on every `apm epic new`. The acceptance criterion is satisfied as-is. Leave this function unchanged — gating epics on aggressive is out of scope and would be a behaviour change.
+
+**Step 3 — Add tests with a real remote**
+
+File: `apm-core/tests/ticket_create.rs`. Add a `setup_with_remote()` helper that:
+1. Creates a bare repo with `git init --bare` in a second temp dir
+2. Creates the working repo (reuse existing `setup()` logic)
+3. Adds the bare repo as `origin` via `git remote add origin <path>`
+
+Then add three new tests:
+
+- `create_pushes_branch_when_aggressive`: call `ticket::create()` with `aggressive=true`, then verify the branch appears in origin via `git ls-remote origin <branch>` (or `git -C <bare_path> branch --list`). Assert it's non-empty.
+
+- `create_no_push_when_not_aggressive`: call `ticket::create()` with `aggressive=false` (remote configured), verify the branch does NOT appear in origin.
+
+- `create_push_failure_is_warning`: call `ticket::create()` with `aggressive=true` but NO remote configured (use the existing `setup()` which has no remote). Assert the call returns `Ok(...)` and `warnings` is non-empty.
+
+Note: the existing `create_no_push_when_not_aggressive` test (lines ~161–185) already tests no-push without a remote. The new version should use a properly configured remote to make the distinction clear. Rename or keep both.
+
+**Step 4 — No changes needed elsewhere**
+
+- `apm/src/cmd/new.rs`: already correctly passes `config.sync.aggressive && !no_aggressive` — no change.
+- `apm-server/src/main.rs`: hardcodes `aggressive=false` intentionally (server has no auth context to push). Leave it.
+- `apm-core/src/git.rs`: `push_branch_tracking()` already exists and is correct.
 
 ### Open questions
 
