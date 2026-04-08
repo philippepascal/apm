@@ -33,7 +33,7 @@ Preventing other field changes on closed tickets (only owner is gated here).
 
 ### Approach
 
-How the implementation will work.
+Add a terminal-state check in the `check_owner()` helper (from ticket b0708201) before the ownership comparison. Load the workflow config, find the state config for the ticket's current state, and reject if `terminal == true`. See `docs/ownership-spec.md`.
 
 ### Open questions
 
