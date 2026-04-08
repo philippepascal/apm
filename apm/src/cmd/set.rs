@@ -12,6 +12,11 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String, no_aggressiv
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");
     };
+    if field == "owner" {
+        ticket::check_owner(root, t)?;
+        let local = apm_core::config::LocalConfig::load(root);
+        apm_core::validate::validate_owner(&ctx.config, &local, &value)?;
+    }
     ticket::set_field(&mut t.frontmatter, &field, &value)?;
     t.frontmatter.updated_at = Some(Utc::now());
 
