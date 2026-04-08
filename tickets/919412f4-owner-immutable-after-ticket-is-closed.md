@@ -29,7 +29,7 @@ Closed tickets should be immutable records. Changing the owner of a closed ticke
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Preventing other field changes on closed tickets (only owner is gated here).
 
 ### Approach
 
