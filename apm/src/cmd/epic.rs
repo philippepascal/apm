@@ -228,8 +228,8 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
 }
 
 pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -> anyhow::Result<()> {
-    if field != "max_workers" {
-        anyhow::bail!("unknown field {field:?}; valid fields: max_workers");
+    if field != "max_workers" && field != "owner" {
+        anyhow::bail!("unknown field {field:?}; valid fields: max_workers, owner");
     }
 
     // Validate the epic exists.
@@ -248,6 +248,57 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     let branch = &matches[0];
     let after_prefix = branch.trim_start_matches("epic/");
     let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
+
+    if field == "owner" {
+        let config = apm_core::config::Config::load(root)?;
+        let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+        let terminal = config.terminal_state_ids();
+
+        let (mut to_change, skipped): (Vec<_>, Vec<_>) = all_tickets
+            .into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
+            .partition(|t| !terminal.contains(&t.frontmatter.state));
+
+        // Pre-flight: ownership check (abort before any writes if any fail)
+        for t in &to_change {
+            apm_core::ticket::check_owner(root, t)?;
+        }
+
+        // Pre-flight: validate the new owner
+        let local = apm_core::config::LocalConfig::load(root);
+        apm_core::validate::validate_owner(&config, &local, value)?;
+
+        // Apply changes
+        for t in &mut to_change {
+            apm_core::ticket::set_field(&mut t.frontmatter, "owner", value)?;
+            let content = t.serialize()?;
+            let rel_path = format!(
+                "{}/{}",
+                config.tickets.dir.to_string_lossy(),
+                t.path.file_name().unwrap().to_string_lossy()
+            );
+            let ticket_branch = t.frontmatter.branch.clone()
+                .or_else(|| apm_core::git::branch_name_from_path(&t.path))
+                .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
+            apm_core::git::commit_to_branch(
+                root,
+                &ticket_branch,
+                &rel_path,
+                &content,
+                &format!("ticket({}): bulk set owner = {}", t.frontmatter.id, value),
+            )?;
+        }
+
+        // Output
+        for t in &to_change {
+            println!("changed  {}  {}", t.frontmatter.id, t.frontmatter.title);
+        }
+        for t in &skipped {
+            println!("skipped  {}  {}  (state: {})", t.frontmatter.id, t.frontmatter.title, t.frontmatter.state);
+        }
+        println!("{} ticket(s) changed, {} skipped.", to_change.len(), skipped.len());
+        return Ok(());
+    }
 
     let apm_dir = root.join(".apm");
     let epics_path = apm_dir.join("epics.toml");

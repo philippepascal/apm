@@ -1,10 +1,12 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::{Config, LocalConfig}, git, ticket};
 use chrono::Utc;
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    let local = LocalConfig::load(root);
+    apm_core::validate::validate_owner(&config, &local, username)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
@@ -26,6 +28,7 @@ pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool) -> Re
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");
     };
+    ticket::check_owner(root, t)?;
     ticket::set_field(&mut t.frontmatter, "owner", username)?;
     t.frontmatter.updated_at = Some(Utc::now());
 

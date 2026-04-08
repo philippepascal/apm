@@ -298,6 +298,8 @@ may be combined.
     apm list --actionable agent       # tickets an agent can act on now
     apm list --mine                   # your own tickets
 
+`--mine` filters by `author` (the user who created the ticket). `--owner` filters by the `owner` field. Since dispatchers pick only tickets the current user owns, `apm list --owner <your-username>` shows the queue that `apm work` will draw from.
+
 #### Options
 
 | Flag / Arg | Type | Default | Description |
@@ -796,16 +798,22 @@ closed the epic is `done`; if any are `in_progress` it is `active`; otherwise `p
 
     apm epic set <id> max_workers <N>
     apm epic set <id> max_workers -
+    apm epic set <id> owner <username>
+    apm epic set <id> owner -
 
 #### Description
 
-Sets or clears the `max_workers` limit for an epic. When set, the work engine will not dispatch
-more than `N` workers concurrently on tickets belonging to this epic.
+Sets or clears a configuration field on an epic.
 
-Pass `-` as the value to remove the limit.
+Set `max_workers` to cap how many workers the dispatcher launches concurrently on tickets
+belonging to this epic. Pass `-` as the value to remove the limit.
 
-Configuration is stored in `.apm/epics.toml`, a file separate from the main `config.toml`. The
-file is created automatically on first use. Format:
+Set `owner` to bulk-assign ownership of all non-closed tickets in the epic to `<username>`. Pass
+`-` to clear the owner field on all non-closed tickets. The current user must be the owner of
+every ticket to be changed; if any check fails, no tickets are modified. Closed tickets are
+skipped.
+
+`max_workers` configuration is stored in `.apm/epics.toml`. Format:
 
     [<epic-id>]
     max_workers = 2
@@ -815,14 +823,17 @@ file is created automatically on first use. Format:
 | Flag / Arg | Type | Default | Description |
 |------------|------|---------|-------------|
 | `<id>` | positional | — | Epic ID (4–8 char hex prefix) |
-| `max_workers` | positional | — | Field name (currently the only supported field) |
-| `<N>` or `-` | positional | — | Positive integer to set, or `-` to clear |
+| `max_workers` | positional | — | Limit concurrent dispatched workers for this epic |
+| `owner` | positional | — | Bulk-assign ownership of all non-closed tickets in this epic |
+| `<N>`, `<username>`, or `-` | positional | — | New value, or `-` to clear |
 
 #### File internals
 
-| File | Why |
-|------|-----|
-| `.apm/epics.toml` | Read existing epic config, write updated value |
+| File / Command | Why |
+|----------------|-----|
+| `.apm/epics.toml` | Read existing epic config, write updated `max_workers` value |
+| `git add` + `git commit` per ticket branch | Persist updated `owner` field in each ticket's frontmatter |
+| `git push` | (aggressive mode) Push updated ticket branches to origin |
 
 ---
 

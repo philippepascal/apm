@@ -194,6 +194,7 @@ pub async fn get_work_dry_run(
             .collect();
         let actionable_owned = config.actionable_states_for("agent");
 
+        let current_user = apm_core::config::resolve_identity(&root);
         let tickets = apm_core::ticket::load_all_from_git(&root, &tickets_dir)?;
         let mut filtered: Vec<&apm_core::ticket::Ticket> = tickets
             .iter()
@@ -203,6 +204,7 @@ pub async fn get_work_dry_run(
                     && (startable.is_empty() || startable.iter().any(|s| s == st))
             })
             .collect();
+        filtered.retain(|t| t.frontmatter.owner.as_deref() == Some(current_user.as_str()));
         filtered.sort_by(|a, b| {
             b.score(pw, ew, rw)
                 .partial_cmp(&a.score(pw, ew, rw))
