@@ -191,6 +191,7 @@ Update `apm/src/cmd/clean.rs` to print the warnings.
 
 ### Amendment requests
 
+- [ ] The spec excludes `config.rs` eprintln calls ("can be addressed in a follow-on cleanup ticket"), but the proposed `#![deny(clippy::print_stdout, clippy::print_stderr)]` lint will fail to compile if those calls remain. Either: (a) include `config.rs` in scope and remove it from the Out of scope section, or (b) change the approach to use `#![warn(...)]` initially and note that a follow-on ticket upgrades to `deny` after `config.rs` is cleaned up. Pick whichever is simpler.
 
 ### Code review
 
