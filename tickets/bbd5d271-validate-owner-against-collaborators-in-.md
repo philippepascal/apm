@@ -34,7 +34,31 @@ GitHub-based validation (separate ticket c738d9cc). Adding users to the collabor
 
 ### Approach
 
-Add a `validate_owner(config: &Config, username: &str) -> Result<()>` function in `apm-core`. In config-based mode, check `config.project.collaborators`. If the list is non-empty and the username is not in it, return an error. Wire this into the ownership check helper from ticket b0708201. See `docs/ownership-spec.md`.
+Add a `validate_owner(config: &Config, username: &str) -> Result<()>` function in `apm-core/src/validate.rs` (the existing validation module). Logic:
+
+- If `config.git_host.provider` is `Some(_)` (e.g. GitHub mode), return `Ok(())` immediately — this ticket only covers config-based mode.
+- If `config.project.collaborators` is empty, return `Ok(())` — no restriction.
+- If `username == "-"` (owner clear), return `Ok(())` — clearing is always allowed.
+- Otherwise, if `username` is not in `config.project.collaborators`, return an error: `"unknown user '{username}'; valid collaborators: {list}"` where `{list}` is the collaborators joined by `", "`.
+
+Wire the validation into both command handlers, after loading config and resolving the username, before calling `ticket::set_field()`:
+
+**`apm/src/cmd/assign.rs`** — after `let config = Config::load(root)?;`, add:
+
+    apm_core::validate::validate_owner(&config, username)?;
+
+**`apm/src/cmd/set.rs`** — detect `field.as_str() == "owner"` and add the same call before `ticket::set_field()`. The config is available via `ctx.config`.
+
+Export: `validate_owner` is added to the existing `validate` module already re-exported from `apm-core/src/lib.rs`.
+
+**Tests** — add a `#[cfg(test)]` block in `apm-core/src/validate.rs` covering:
+- `valid_collaborator_accepted`: collaborators `["alice", "bob"]`, call with `"alice"` → `Ok(())`.
+- `unknown_user_rejected`: same config, call with `"charlie"` → `Err` whose message contains `"unknown user 'charlie'"` and `"alice, bob"`.
+- `empty_collaborators_skips_validation`: `collaborators = []`, any username → `Ok(())`.
+- `clear_owner_always_allowed`: collaborators `["alice"]`, username `"-"` → `Ok(())`.
+- `github_mode_skips_validation`: `git_host.provider = Some("github")`, collaborators `["alice"]`, username `"charlie"` → `Ok(())`.
+
+No changes to `ticket::set_field()` or the state machine. The `docs/ownership-spec.md` referenced in the original draft does not exist; ignore it.
 
 ### Open questions
 
