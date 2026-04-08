@@ -17,7 +17,7 @@ target_branch = "epic/18dab82d-ticket-ownership-model"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Currently anyone can change a ticket's owner via `apm assign` or `apm set owner` with no checks. The ownership model requires that only the current owner can reassign ownership. This prevents accidental or unauthorized reassignment and creates a clear audit trail of ownership transfers. The check uses `resolve_identity()` to determine the current user and compares against the ticket's owner field.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
