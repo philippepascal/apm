@@ -1,14 +1,14 @@
 +++
 id = "56cf5dca"
 title = "Push ticket branches to origin on creation when aggressive sync is enabled"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
 branch = "ticket/56cf5dca-push-ticket-branches-to-origin-on-creati"
 created_at = "2026-04-08T15:40:56.947438Z"
-updated_at = "2026-04-08T21:55:31.979673Z"
+updated_at = "2026-04-08T21:55:40.127326Z"
 +++
 
 ## Spec
@@ -99,3 +99,4 @@ Note: the existing `create_no_push_when_not_aggressive` test (lines ~161–185) 
 | 2026-04-08T15:40Z | — | new | philippepascal |
 | 2026-04-08T21:47Z | new | groomed | apm |
 | 2026-04-08T21:51Z | groomed | in_design | philippepascal |
+| 2026-04-08T21:55Z | in_design | specd | claude-0408-2151-a888 |
