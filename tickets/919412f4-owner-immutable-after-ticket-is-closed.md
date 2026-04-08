@@ -22,10 +22,10 @@ Closed tickets should be immutable records. Changing the owner of a closed ticke
 
 ### Acceptance criteria
 
-- [ ] `apm assign <id> <user>` on a closed ticket fails with "cannot change owner of a closed ticket"
-- [ ] `apm set <id> owner <user>` on a closed ticket fails with same error
-- [ ] The check uses the workflow config `terminal` flag on the ticket's current state
-- [ ] Tests cover: owner change rejected on closed ticket, allowed on non-terminal states
+- [x] `apm assign <id> <user>` on a closed ticket fails with "cannot change owner of a closed ticket"
+- [x] `apm set <id> owner <user>` on a closed ticket fails with same error
+- [x] The check uses the workflow config `terminal` flag on the ticket's current state
+- [x] Tests cover: owner change rejected on closed ticket, allowed on non-terminal states
 
 ### Out of scope
 
