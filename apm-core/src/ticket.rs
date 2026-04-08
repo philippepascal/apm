@@ -405,18 +405,7 @@ pub fn close(
     t.frontmatter.state = "closed".into();
     t.frontmatter.updated_at = Some(now);
 
-    let row = format!("| {when} | {prev} | closed | {by} |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') {
-            t.body.push('\n');
-        }
-        t.body.push_str(&row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
-        ));
-    }
+    crate::state::append_history(&mut t.body, &prev, "closed", &when, &by);
 
     let content = t.serialize()?;
     let rel_path = format!(

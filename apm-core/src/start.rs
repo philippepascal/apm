@@ -254,9 +254,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
 
-    let worktrees_base = root.join(&config.worktrees.dir);
-    let wt_display = git::ensure_worktree(root, &worktrees_base, &branch)?;
-    git::sync_agent_dirs(root, &wt_display, &config.worktrees.agent_dirs);
+    let wt_display = crate::state::provision_worktree(root, &config, &branch)?;
 
     let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")
