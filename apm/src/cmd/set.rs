@@ -14,6 +14,7 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String, no_aggressiv
     };
     if field == "owner" {
         ticket::check_owner(root, t)?;
+        apm_core::validate::validate_owner(&ctx.config, &value)?;
     }
     ticket::set_field(&mut t.frontmatter, &field, &value)?;
     t.frontmatter.updated_at = Some(Utc::now());
