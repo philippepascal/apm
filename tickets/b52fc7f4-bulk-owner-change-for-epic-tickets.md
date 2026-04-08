@@ -22,7 +22,13 @@ When a supervisor wants to hand off an entire epic to another supervisor, they m
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic set <epic-id> owner <user>` changes owner on all non-closed tickets in the epic
+- [ ] Closed (terminal) tickets are skipped
+- [ ] Output lists each ticket that was changed and any that were skipped
+- [ ] The ownership check applies: current user must be the owner of each ticket being changed
+- [ ] If any ticket fails the ownership check, none are changed (atomic: all or nothing)
+- [ ] Owner validation (collaborator check) applies to the new owner
+- [ ] Tests cover: bulk change succeeds, closed tickets skipped, non-owner blocked
 
 ### Out of scope
 
