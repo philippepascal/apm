@@ -1,7 +1,7 @@
 +++
 id = "059d0a50"
 title = "modify apm-demo script"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/059d0a50-modify-apm-demo-script"
 created_at = "2026-04-08T23:59:41.422002Z"
-updated_at = "2026-04-08T23:59:41.422002Z"
+updated_at = "2026-04-08T23:59:54.080923Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-08T23:59Z | — | new | philippepascal |
+| 2026-04-08T23:59Z | new | groomed | apm |
