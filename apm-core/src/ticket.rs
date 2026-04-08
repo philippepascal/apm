@@ -467,7 +467,7 @@ pub fn create(
         effort: 0,
         risk: 0,
         author: Some(author.clone()),
-        owner: None,
+        owner: Some(author.clone()),
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
