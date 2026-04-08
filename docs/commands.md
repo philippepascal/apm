@@ -3,14 +3,15 @@
 ## Introduction
 
 APM (Agent Project Manager) is a git-native ticket system designed for teams where humans and AI
-agents collaborate. Tickets are Markdown files stored on per-ticket branches (`ticket/<id>-<slug>`).
-State is encoded in TOML frontmatter at the top of each file; the state machine is defined in
-`.apm/apm.toml`. Because every ticket lives on its own branch, no merge conflicts arise between
-concurrent ticket edits, and the full history of a ticket is preserved in git.
+agents collaborate. Tickets are Markdown files stored on per-ticket branches (`ticket/<id>-<slug>`). Tickets provide a full history of all specs used to develop the project.
+State is encoded in TOML frontmatter at the top of each file.
+The state machine is defined in `.apm/workflow.toml` and is entirely customizable.
+The ticket structure is defined in `.apm/tickets.toml` and is entirely customizable.
+Merge strategies primitives, epics with dedicated branches, ticket with dedicated branches, and ticket dependencies, all allow to have worker agents work independantly, and optionally concurrently, while keeping minimal merge conflicts.
 
 This document is the authoritative reference for every command exposed by the `apm` binary. It
 covers the exact invocation syntax, all flags and arguments with their types and defaults, and a
-detailed breakdown of the git operations each command performs internally.
+detailed breakdown of the git operations each command performs internally. `apm-serve` internally uses the same `apm-core` library as the CLI, so all UI actions work the same way, apart from the UI dispatcher which is slightly different from `apm work`.
 
 **How to navigate this reference:**
 
