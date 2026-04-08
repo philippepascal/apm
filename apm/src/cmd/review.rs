@@ -1,8 +1,9 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, review as core_review, ticket};
+use apm_core::{git, review as core_review, ticket};
 use chrono::Utc;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
+use crate::ctx::CmdContext;
 
 struct TransitionOption {
     to: String,
@@ -11,26 +12,14 @@ struct TransitionOption {
 }
 
 pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -> Result<()> {
-    let config = Config::load(root)?;
-    let aggressive = config.sync.aggressive && !no_aggressive;
-
-    let branches = git::ticket_branches(root)?;
-    let branch_name = git::resolve_ticket_branch(&branches, id_arg)?;
-
-    if aggressive {
-        if let Err(e) = git::fetch_branch(root, &branch_name) {
-            eprintln!("warning: fetch failed: {e:#}");
-        }
-    }
-
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
-    let Some(mut t) = tickets.into_iter().find(|t| t.frontmatter.id == id) else {
+    let ctx = CmdContext::load(root, no_aggressive)?;
+    let id = ticket::resolve_id_in_slice(&ctx.tickets, id_arg)?;
+    let Some(mut t) = ctx.tickets.into_iter().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");
     };
 
     let current_state = t.frontmatter.state.clone();
-    let raw_transitions = core_review::available_transitions(&config, &current_state);
+    let raw_transitions = core_review::available_transitions(&ctx.config, &current_state);
     let transitions: Vec<TransitionOption> = raw_transitions.into_iter()
         .map(|(to, label, hint)| TransitionOption { to, label, hint })
         .collect();
@@ -38,7 +27,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
     // Pre-validate --to before opening editor.
     if let Some(ref target) = to {
         let valid = transitions.iter().any(|tr| &tr.to == target)
-            || config.workflow.states.iter().any(|s| &s.id == target && s.terminal);
+            || ctx.config.workflow.states.iter().any(|s| &s.id == target && s.terminal);
         if !valid {
             let options: Vec<&str> = transitions.iter().map(|t| t.to.as_str()).collect();
             bail!(
@@ -63,7 +52,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
     };
     std::fs::write(&tmp_path, format!("{header}\n{}\n\n{spec_body}", core_review::SENTINEL))?;
 
-    open_editor(&tmp_path)?;
+    crate::editor::open(&tmp_path)?;
 
     let edited_raw = std::fs::read_to_string(&tmp_path)?;
     let _ = std::fs::remove_file(&tmp_path);
@@ -89,7 +78,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
 
     let rel_path = format!(
         "{}/{}",
-        config.tickets.dir.to_string_lossy(),
+        ctx.config.tickets.dir.to_string_lossy(),
         t.path.file_name().unwrap().to_string_lossy()
     );
     let branch = t.frontmatter.branch.clone()
@@ -104,7 +93,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
         let content = t.serialize()?;
         git::commit_to_branch(root, &branch, &rel_path, &content,
             &format!("ticket({id}): review edit"))?;
-        if aggressive {
+        if ctx.aggressive {
             if let Err(e) = git::push_branch(root, &branch) {
                 eprintln!("warning: push failed: {e:#}");
             }
@@ -153,30 +142,6 @@ fn build_header(
     lines.push("#".to_string());
     lines.push("# Lines starting with \"# \" are ignored. Do not delete the dashed line below.".to_string());
     lines.join("\n")
-}
-
-fn open_editor(path: &Path) -> Result<()> {
-    let editor = std::env::var("VISUAL")
-        .ok()
-        .filter(|e| !e.is_empty())
-        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
-        .unwrap_or_else(|| "vi".to_string());
-
-    let mut parts = editor.split_whitespace();
-    let bin = parts.next().unwrap();
-    let status = std::process::Command::new(bin)
-        .args(parts)
-        .arg(path)
-        .stdin(std::process::Stdio::inherit())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .status()
-        .map_err(|e| anyhow::anyhow!("could not launch editor '{editor}': {e}"))?;
-
-    if !status.success() {
-        bail!("editor exited with non-zero status");
-    }
-    Ok(())
 }
 
 fn prompt_transition(

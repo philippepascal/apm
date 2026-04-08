@@ -68,6 +68,7 @@ fn create_returns_ticket_with_correct_fields() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     let t = ticket::create(
         root,
         &config,
@@ -81,6 +82,7 @@ fn create_returns_ticket_with_correct_fields() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 
@@ -99,6 +101,7 @@ fn create_branch_exists_in_repo() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     let t = ticket::create(
         root,
         &config,
@@ -112,6 +115,7 @@ fn create_branch_exists_in_repo() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 
@@ -131,6 +135,7 @@ fn create_context_injected_into_problem() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     let t = ticket::create(
         root,
         &config,
@@ -144,6 +149,7 @@ fn create_context_injected_into_problem() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 
@@ -159,6 +165,7 @@ fn create_no_push_when_not_aggressive() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     ticket::create(
         root,
         &config,
@@ -172,6 +179,7 @@ fn create_no_push_when_not_aggressive() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 }

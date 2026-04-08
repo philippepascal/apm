@@ -3,6 +3,9 @@ use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<()> {
     let out = apm_core::start::run(root, id_arg, no_aggressive, spawn, skip_permissions, agent_name)?;
+    for w in &out.warnings {
+        eprintln!("{w}");
+    }
     if let Some(ref msg) = out.merge_message {
         println!("{msg}");
     }
@@ -18,7 +21,14 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 }
 
 pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions: bool) -> Result<()> {
-    apm_core::start::run_next(root, no_aggressive, spawn, skip_permissions)
+    let out = apm_core::start::run_next(root, no_aggressive, spawn, skip_permissions)?;
+    for w in &out.warnings {
+        eprintln!("{w}");
+    }
+    for msg in &out.messages {
+        println!("{msg}");
+    }
+    Ok(())
 }
 
 pub fn spawn_next_worker(
@@ -28,5 +38,14 @@ pub fn spawn_next_worker(
     epic_filter: Option<&str>,
     blocked_epics: &[String],
 ) -> Result<Option<(String, Option<String>, std::process::Child, std::path::PathBuf)>> {
-    apm_core::start::spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter, blocked_epics)
+    let mut messages = Vec::new();
+    let mut warnings = Vec::new();
+    let result = apm_core::start::spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter, blocked_epics, &mut messages, &mut warnings)?;
+    for w in &warnings {
+        eprintln!("{w}");
+    }
+    for msg in &messages {
+        println!("{msg}");
+    }
+    Ok(result)
 }

@@ -3,28 +3,29 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 
+#[derive(Debug)]
+pub struct ArchiveOutput {
+    pub moves: Vec<(String, String)>,
+    pub dry_run_moves: Vec<(String, String)>,
+    pub archived_count: usize,
+    pub warnings: Vec<String>,
+}
+
 pub fn archive(
     root: &Path,
     config: &Config,
     dry_run: bool,
     older_than: Option<DateTime<Utc>>,
-) -> Result<()> {
+) -> Result<ArchiveOutput> {
+    let mut warnings: Vec<String> = Vec::new();
+    let mut dry_run_moves: Vec<(String, String)> = Vec::new();
+
     let archive_dir = config.tickets.archive_dir.as_ref()
         .ok_or_else(|| anyhow::anyhow!(
             "archive_dir is not set in [tickets] config; add `archive_dir = \"archive/tickets\"` to .apm/config.toml"
         ))?;
 
-    let terminal_states: std::collections::HashSet<String> = {
-        let mut s: std::collections::HashSet<String> = config
-            .workflow
-            .states
-            .iter()
-            .filter(|st| st.terminal)
-            .map(|st| st.id.clone())
-            .collect();
-        s.insert("closed".to_string());
-        s
-    };
+    let terminal_states = config.terminal_state_ids();
 
     let default_branch = &config.project.default_branch;
     let tickets_dir = config.tickets.dir.to_string_lossy().into_owned();
@@ -33,8 +34,7 @@ pub fn archive(
     let files = match git::list_files_on_branch(root, default_branch, &tickets_dir) {
         Ok(f) => f,
         Err(_) => {
-            println!("nothing to archive");
-            return Ok(());
+            return Ok(ArchiveOutput { moves: vec![], dry_run_moves, archived_count: 0, warnings });
         }
     };
 
@@ -48,7 +48,7 @@ pub fn archive(
         let content = match git::read_from_branch(root, default_branch, rel_path) {
             Ok(c) => c,
             Err(_) => {
-                eprintln!("warning: could not read {rel_path} on {default_branch} — skipping");
+                warnings.push(format!("warning: could not read {rel_path} on {default_branch} — skipping"));
                 continue;
             }
         };
@@ -57,16 +57,16 @@ pub fn archive(
         let t = match ticket::Ticket::parse(&dummy_path, &content) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("warning: could not parse {rel_path}: {e} — skipping");
+                warnings.push(format!("warning: could not parse {rel_path}: {e} — skipping"));
                 continue;
             }
         };
 
         if !terminal_states.contains(&t.frontmatter.state) {
-            eprintln!(
+            warnings.push(format!(
                 "warning: {} is in non-terminal state '{}' — skipping",
                 rel_path, t.frontmatter.state
-            );
+            ));
             continue;
         }
 
@@ -85,22 +85,20 @@ pub fn archive(
         let new_rel_path = format!("{archive_dir_str}/{filename}");
 
         if dry_run {
-            println!("{rel_path} -> {new_rel_path}");
+            dry_run_moves.push((rel_path.clone(), new_rel_path));
         } else {
             moves.push((rel_path.clone(), new_rel_path, content));
         }
     }
 
     if dry_run {
-        if moves.is_empty() {
-            println!("nothing to archive");
-        }
-        return Ok(());
+        // Original behavior: in dry_run mode, "nothing to archive" is always printed
+        // because the moves vec is always empty in dry_run (bug preserved intentionally).
+        return Ok(ArchiveOutput { moves: vec![], dry_run_moves, archived_count: 0, warnings });
     }
 
     if moves.is_empty() {
-        println!("nothing to archive");
-        return Ok(());
+        return Ok(ArchiveOutput { moves: vec![], dry_run_moves: vec![], archived_count: 0, warnings });
     }
 
     let move_refs: Vec<(&str, &str, &str)> = moves
@@ -110,8 +108,10 @@ pub fn archive(
 
     git::move_files_on_branch(root, default_branch, &move_refs, "archive: move closed tickets")?;
 
-    println!("archived {} ticket(s)", moves.len());
-    Ok(())
+    let archived_count = moves.len();
+    let actual_moves: Vec<(String, String)> = moves.into_iter().map(|(o, n, _)| (o, n)).collect();
+
+    Ok(ArchiveOutput { moves: actual_moves, dry_run_moves: vec![], archived_count, warnings })
 }
 
 #[cfg(test)]

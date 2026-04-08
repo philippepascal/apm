@@ -53,7 +53,9 @@ pub fn run_engine_loop(
                     config.blocked_epics(&epic_ids)
                 })
                 .unwrap_or_default();
-            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics) {
+            let mut _messages = Vec::new();
+            let mut _warnings = Vec::new();
+            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics, &mut _messages, &mut _warnings) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);
                     no_more = true;

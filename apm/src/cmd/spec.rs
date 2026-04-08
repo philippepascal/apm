@@ -44,7 +44,7 @@ pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<Strin
         }
         return Ok(());
     };
-    if config_active && !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(name)) {
+    if config_active && !config.has_section(name) {
         bail!("unknown section {:?}; not defined in [ticket.sections]", name);
     }
     let set_resolved = match (set, set_file) {
@@ -56,7 +56,7 @@ pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<Strin
         let text = if value == "-" { let mut b = String::new(); std::io::stdin().read_to_string(&mut b)?; b } else { value };
         let trimmed = text.trim().to_string();
         let formatted = if config_active {
-            let section_config = config.ticket.sections.iter().find(|s| s.name.eq_ignore_ascii_case(name)).unwrap();
+            let section_config = config.find_section(name).unwrap();
             spec::apply_section_type(&section_config.type_, trimmed)
         } else {
             trimmed

@@ -255,9 +255,9 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
         match crate::git::read_from_branch(root, branch, &rel_path) {
             Ok(content) => match Ticket::parse(&dummy_path, &content) {
                 Ok(t) => tickets.push(t),
-                Err(e) => eprintln!("warning: {branch}: {e:#}"),
+                Err(_) => {}
             },
-            Err(e) => eprintln!("warning: cannot read {branch}: {e:#}"),
+            Err(_) => {}
         }
     }
     tickets.sort_by_key(|t| t.frontmatter.created_at);
@@ -334,7 +334,8 @@ pub fn close(
     reason: Option<&str>,
     agent: &str,
     aggressive: bool,
-) -> Result<()> {
+) -> Result<Vec<String>> {
+    let mut output: Vec<String> = Vec::new();
     let mut tickets = load_all_from_git(root, &config.tickets.dir)?;
     let prefixes = id_arg_prefixes(id_arg)?;
 
@@ -405,18 +406,7 @@ pub fn close(
     t.frontmatter.state = "closed".into();
     t.frontmatter.updated_at = Some(now);
 
-    let row = format!("| {when} | {prev} | closed | {by} |");
-    if t.body.contains("## History") {
-        if !t.body.ends_with('\n') {
-            t.body.push('\n');
-        }
-        t.body.push_str(&row);
-        t.body.push('\n');
-    } else {
-        t.body.push_str(&format!(
-            "\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n{row}\n"
-        ));
-    }
+    crate::state::append_history(&mut t.body, &prev, "closed", &when, &by);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -431,18 +421,20 @@ pub fn close(
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
     crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
 
-    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch) {
-        eprintln!("warning: merge into {} failed: {e:#}", config.project.default_branch);
+    let mut merge_warnings: Vec<String> = Vec::new();
+    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch, &mut merge_warnings) {
+        output.push(format!("warning: merge into {} failed: {e:#}", config.project.default_branch));
     }
+    output.extend(merge_warnings);
 
     if aggressive {
         if let Err(e) = crate::git::push_branch(root, &branch) {
-            eprintln!("warning: push failed for {branch}: {e:#}");
+            output.push(format!("warning: push failed for {branch}: {e:#}"));
         }
     }
 
-    println!("{id}: {prev} → closed");
-    Ok(())
+    output.push(format!("{id}: {prev} → closed"));
+    Ok(output)
 }
 
 pub fn create(
@@ -458,6 +450,7 @@ pub fn create(
     target_branch: Option<String>,
     depends_on: Option<Vec<String>>,
     base_branch: Option<String>,
+    warnings: &mut Vec<String>,
 ) -> Result<Ticket> {
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
@@ -507,7 +500,7 @@ pub fn create(
             .or(transition_section)
             .unwrap_or_else(|| "Problem".to_string());
         if !config.ticket.sections.is_empty()
-            && !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(&section))
+            && !config.has_section(&section)
         {
             anyhow::bail!("section '### {section}' not found in ticket body template");
         }
@@ -525,8 +518,7 @@ pub fn create(
         for (name, value) in &section_sets {
             let trimmed = value.trim().to_string();
             let formatted = if !config.ticket.sections.is_empty() {
-                let section_config = config.ticket.sections.iter()
-                    .find(|s| s.name.eq_ignore_ascii_case(name))
+                let section_config = config.find_section(name)
                     .ok_or_else(|| anyhow::anyhow!("unknown section {:?}", name))?;
                 crate::spec::apply_section_type(&section_config.type_, trimmed)
             } else {
@@ -554,7 +546,7 @@ pub fn create(
 
     if aggressive {
         if let Err(e) = crate::git::push_branch(root, &branch) {
-            eprintln!("warning: push failed: {e:#}");
+            warnings.push(format!("warning: push failed: {e:#}"));
         }
     }
 
@@ -740,10 +732,7 @@ pub fn list_filtered<'a>(
     owner_filter: Option<&str>,
     mine_user: Option<&str>,
 ) -> Vec<&'a Ticket> {
-    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
+    let terminal = config.terminal_state_ids();
     let actionable_map: std::collections::HashMap<&str, &Vec<String>> = config.workflow.states.iter()
         .map(|s| (s.id.as_str(), &s.actionable))
         .collect();

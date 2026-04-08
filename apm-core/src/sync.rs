@@ -12,15 +12,18 @@ pub struct Candidates {
     pub close: Vec<CloseCandidate>,
 }
 
+pub struct ApplyOutput {
+    pub closed: Vec<String>,
+    pub failed: Vec<(String, String)>,
+    pub messages: Vec<String>,
+}
+
 pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
     let branches = git::ticket_branches(root)?;
     let merged = git::merged_into_main(root, &config.project.default_branch)?;
     let merged_set: HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
 
-    let terminal: HashSet<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
+    let terminal = config.terminal_state_ids();
 
     let branch_set: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
 
@@ -67,12 +70,21 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
     Ok(Candidates { close })
 }
 
-pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str, aggressive: bool) -> Result<()> {
+pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str, aggressive: bool) -> Result<ApplyOutput> {
+    let mut closed = Vec::new();
+    let mut failed = Vec::new();
+    let mut messages = Vec::new();
     for c in &candidates.close {
         let id = c.ticket.frontmatter.id.clone();
-        if let Err(e) = crate::ticket::close(root, config, &id, None, author, aggressive) {
-            eprintln!("warning: could not close {id:?}: {e:#}");
+        match crate::ticket::close(root, config, &id, None, author, aggressive) {
+            Ok(msgs) => {
+                closed.push(id);
+                messages.extend(msgs);
+            }
+            Err(e) => {
+                failed.push((id, format!("{e:#}")));
+            }
         }
     }
-    Ok(())
+    Ok(ApplyOutput { closed, failed, messages })
 }

@@ -7,5 +7,11 @@ pub fn run(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool, fo
     if let Some(wt) = out.worktree_path {
         println!("{}", wt.display());
     }
+    for msg in &out.messages {
+        println!("{msg}");
+    }
+    for w in &out.warnings {
+        eprintln!("{w}");
+    }
     Ok(())
 }

@@ -97,26 +97,9 @@ fn show_ticket(
     let tmp_path = std::env::temp_dir().join(format!("apm-{id}.md"));
     std::fs::write(&tmp_path, content)?;
 
-    let editor = std::env::var("VISUAL")
-        .ok()
-        .filter(|e| !e.is_empty())
-        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
-        .unwrap_or_else(|| "vi".to_string());
-
-    let mut parts = editor.split_whitespace();
-    let bin = parts.next().unwrap();
-    let status = std::process::Command::new(bin)
-        .args(parts)
-        .arg(&tmp_path)
-        .stdin(std::process::Stdio::inherit())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .status()
-        .map_err(|e| anyhow::anyhow!("could not launch editor '{editor}': {e}"))?;
-
-    if !status.success() {
+    if let Err(e) = crate::editor::open(&tmp_path) {
         let _ = std::fs::remove_file(&tmp_path);
-        bail!("editor exited with non-zero status");
+        return Err(e);
     }
 
     let edited = std::fs::read_to_string(&tmp_path)?;

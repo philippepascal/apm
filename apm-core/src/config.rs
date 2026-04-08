@@ -403,7 +403,6 @@ pub fn resolve_identity(repo_root: &Path) -> String {
                 }
             }
         }
-        eprintln!("apm: could not resolve identity from git_host");
         return "unassigned".to_string();
     }
 
@@ -428,18 +427,19 @@ pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     crate::github::fetch_authenticated_user(&token).ok()
 }
 
-pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> Vec<String> {
+pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> (Vec<String>, Vec<String>) {
+    let mut warnings = Vec::new();
     if config.git_host.provider.as_deref() == Some("github") {
         if let Some(ref repo) = config.git_host.repo {
             if let Some(token) = effective_github_token(local, &config.git_host) {
                 match crate::github::fetch_repo_collaborators(&token, repo) {
-                    Ok(logins) => return logins,
-                    Err(e) => eprintln!("apm: GitHub collaborators fetch failed: {e}"),
+                    Ok(logins) => return (logins, warnings),
+                    Err(e) => warnings.push(format!("apm: GitHub collaborators fetch failed: {e}")),
                 }
             }
         }
     }
-    config.project.collaborators.clone()
+    (config.project.collaborators.clone(), warnings)
 }
 
 impl WorkersConfig {
@@ -491,6 +491,24 @@ impl Config {
             .filter(|s| s.actionable.iter().any(|a| a == actor || a == "any"))
             .map(|s| s.id.clone())
             .collect()
+    }
+
+    pub fn terminal_state_ids(&self) -> std::collections::HashSet<String> {
+        let mut ids: std::collections::HashSet<String> = self.workflow.states.iter()
+            .filter(|s| s.terminal)
+            .map(|s| s.id.clone())
+            .collect();
+        ids.insert("closed".to_string());
+        ids
+    }
+
+    pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
+        self.ticket.sections.iter()
+            .find(|s| s.name.eq_ignore_ascii_case(name))
+    }
+
+    pub fn has_section(&self, name: &str) -> bool {
+        self.find_section(name).is_some()
     }
 
     pub fn load(repo_root: &Path) -> Result<Self> {
@@ -919,6 +937,15 @@ dir = "tickets"
     }
 
     #[test]
+    fn resolve_identity_returns_unassigned_when_username_key_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "[workers]\ncommand = \"claude\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
     fn local_config_username_parses() {
         let toml = r#"
 username = "bob"
@@ -1019,7 +1046,7 @@ dir = "tickets"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         let local = LocalConfig::default();
-        let result = resolve_collaborators(&config, &local);
+        let (result, _) = resolve_collaborators(&config, &local);
         assert_eq!(result, vec!["alice", "bob"]);
     }
 
@@ -1042,7 +1069,7 @@ repo = "owner/name"
         // No token in local, and GITHUB_TOKEN env var should not be set in test env
         // (if it is, the test would make a real API call — so we just check fallback works)
         // We can't guarantee env is clean, so we only test the no-token path
-        let _ = resolve_collaborators(&config, &local);
+        let (_, _) = resolve_collaborators(&config, &local);
     }
 
     #[test]
