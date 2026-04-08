@@ -34,7 +34,13 @@ Migrating existing tickets that have supervisor set. They will simply be ignored
 
 ### Approach
 
-How the implementation will work.
+1. Remove `supervisor` from `Frontmatter` struct in `apm-core/src/ticket.rs`. Keep `#[serde(default)]` so old tickets with the field still deserialize.
+2. Remove `supervisor` case from `set_field()` in `ticket.rs`.
+3. Remove `--supervisor` filter from `apm list` in `apm/src/cmd/list.rs`.
+4. Remove any supervisor references in `apm-server/src/main.rs` (API endpoints, JSON serialization).
+5. Update tests.
+
+See `docs/ownership-spec.md` for the full ownership model.
 
 ### Open questions
 
