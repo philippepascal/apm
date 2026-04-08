@@ -34,7 +34,13 @@ Validation that the new owner is a valid collaborator (separate tickets bbd5d271
 
 ### Approach
 
-How the implementation will work.
+1. Add a helper `check_owner(config: &Config, ticket: &Ticket) -> Result<()>` in `apm-core` that resolves the current user via `resolve_identity()` and compares against `ticket.frontmatter.owner`.
+2. Call this helper in `apm assign` (`apm/src/cmd/assign.rs`) before modifying the ticket.
+3. Call the same helper in `set_field()` when the field is "owner".
+4. Error messages should include both the current user and the current owner for clarity.
+5. Add unit tests with mock identity.
+
+See `docs/ownership-spec.md` for the full ownership model.
 
 ### Open questions
 
