@@ -29,12 +29,46 @@ The codebase has two dead-code problems and one naming/documentation problem tha
 
 ### Approach
 
-1. Delete `resolve_collaborators()` and its tests from `apm-core/src/config.rs`.
-2. Delete `fetch_repo_collaborators()` from `apm-core/src/github.rs` if only used by the above.
-3. Audit `resolve_agent_name()` call sites in `start.rs` — ensure it is only used for `append_history()` and worker spawning env vars, never for ownership checks or ticket filtering.
-4. Add a doc comment on `resolve_agent_name()` clarifying: "Returns the name recorded in ticket history. This is NOT the ticket owner."
+**1. Remove `resolve_collaborators()` from `apm-core/src/config.rs`**
+- Delete the `pub fn resolve_collaborators` function (lines ~430-443)
+- Delete both tests: `resolve_collaborators_returns_static_when_no_git_host` and `resolve_collaborators_returns_static_when_github_but_no_token` (lines ~1052-1087)
+- Remove any `pub use` re-export of this function if present
 
-See `docs/ownership-spec.md` for the full ownership model.
+**2. Remove `fetch_repo_collaborators()` from `apm-core/src/github.rs`**
+- Confirm no other call site remains by grepping for `fetch_repo_collaborators` before deleting
+- Delete the `pub fn fetch_repo_collaborators` function (lines ~34-55)
+- Delete the `#[ignore]` live test `fetch_repo_collaborators_live` (~line 74)
+
+**3. Rename `resolve_agent_name()` → `resolve_caller_name()` in `apm-core/src/start.rs`**
+- Rename the function definition at line ~62
+- Update all call sites:
+  - `start.rs:237` — history logging path
+  - `start.rs:313` and `start.rs:366` — `StartOutput` struct initialization
+  - `start.rs:390` — passed to `pick_next()` in `run_next()`
+  - `start.rs:559` — passed to `pick_next()` in `pick_epic_ticket()`
+  - `apm/src/cmd/next.rs:19` — passed to `pick_next()`
+  - `apm/src/main.rs:753` — start command handler
+  - Test call sites in start.rs (~lines 986, 996, 1006)
+
+**4. Add doc comment to `resolve_caller_name()`**
+
+```rust
+/// Returns the caller identity for this process.
+///
+/// This value is used in two places:
+/// - Recorded as the acting party in ticket history entries.
+/// - Compared against a ticket's `owner` field when filtering candidates
+///   in `pick_next()` / `sorted_actionable()`. Tickets owned by another
+///   identity are excluded from the pick set.
+///
+/// Resolution order: `APM_AGENT_NAME` env var → `USER` → `USERNAME` → `"apm"`.
+```
+
+**5. Verify**
+- `cargo test` — all tests green
+- `grep -r resolve_agent_name .` — no matches
+- `grep -r fetch_repo_collaborators .` — no matches
+- `grep -r resolve_collaborators .` — no matches
 
 ### Open questions
 
