@@ -1,14 +1,14 @@
 +++
 id = "6f3f7790"
 title = "Update README and help text with ownership model"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 1
 author = "philippepascal"
 branch = "ticket/6f3f7790-update-readme-and-help-text-with-ownersh"
 created_at = "2026-04-08T15:32:38.451292Z"
-updated_at = "2026-04-08T16:21:11.968459Z"
+updated_at = "2026-04-08T21:47:46.668185Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["751f65f6", "b52fc7f4"]
@@ -166,3 +166,4 @@ the dispatch loop.
 | 2026-04-08T15:34Z | new | groomed | apm |
 | 2026-04-08T16:17Z | groomed | in_design | philippepascal |
 | 2026-04-08T16:21Z | in_design | specd | claude-0408-1617-9168 |
+| 2026-04-08T21:47Z | specd | ready | apm |
