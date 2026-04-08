@@ -32,12 +32,15 @@ The desired state is that a user reading the README understands the full ownersh
 
 ### Acceptance criteria
 
-- [ ] README has a section explaining ticket ownership (author vs owner, who can reassign, dispatcher behavior)
-- [ ] README documents `apm assign` and `apm epic set <id> owner`
-- [ ] README documents identity setup (local.toml username for config mode, git_host for GitHub mode)
-- [ ] `apm assign --help` text is clear and accurate
-- [ ] `docs/commands.md` updated with ownership-related commands
-- [ ] Happy path walkthrough reflects ownership (supervisor creates and owns, dispatches to workers)
+- [ ] README has a section explaining ticket ownership: author vs owner distinction, who can reassign (owner or supervisor), and dispatcher behavior (dispatchers pick only tickets they own)
+- [ ] README documents `apm assign <id> <username>` and `apm assign <id> -` with a short example
+- [ ] README documents `apm epic set <id> owner <user>` for bulk assignment
+- [ ] README documents identity setup: config mode (`username` in `.apm/local.toml`) and GitHub mode (`[git_host] provider = "github"`)
+- [ ] README happy path step 3 notes that the spec agent picks up only tickets assigned (owned) to it
+- [ ] `apm assign --help` long description mentions that ownership gates dispatcher pickup
+- [ ] `apm epic set --help` field description includes `owner` alongside `max_workers`
+- [ ] `docs/commands.md` `apm epic set` section documents `owner` as a supported field with synopsis, description, and options table
+- [ ] `docs/commands.md` `apm list` description paragraph explains the relationship between `--mine`, `--owner`, and dispatcher filtering
 
 ### Out of scope
 
