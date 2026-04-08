@@ -32,7 +32,7 @@ When a supervisor wants to hand off an entire epic to another supervisor, they m
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Bulk owner change across multiple epics. Changing owner of the epic itself (epics do not have owners).
 
 ### Approach
 
