@@ -1,3 +1,5 @@
+pub mod editor;
+
 pub mod cmd {
     pub mod archive;
     pub mod agents;

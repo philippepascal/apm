@@ -74,12 +74,6 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
 }
 
 fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> Result<()> {
-    let editor = std::env::var("VISUAL")
-        .ok()
-        .filter(|e| !e.is_empty())
-        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
-        .unwrap_or_else(|| "vi".to_string());
-
     // Check out the ticket branch, open editor, commit result, return to previous branch.
     let prev_branch = std::process::Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
@@ -96,14 +90,9 @@ fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> R
         .status();
 
     let file_path = root.join(rel_path);
-    let mut parts = editor.split_whitespace();
-    let bin = parts.next().unwrap();
-    let status = std::process::Command::new(bin)
-        .args(parts)
-        .arg(&file_path)
-        .status();
-
     // Commit whatever the user wrote, even if editor exited non-zero.
+    let _ = crate::editor::open(&file_path);
+
     let _ = std::process::Command::new("git")
         .args(["-c", "commit.gpgsign=false", "add", rel_path])
         .current_dir(root)
@@ -117,12 +106,6 @@ fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> R
         .args(["checkout", &prev_branch])
         .current_dir(root)
         .status();
-
-    if let Ok(s) = status {
-        if !s.success() {
-            eprintln!("warning: editor exited with non-zero status");
-        }
-    }
 
     Ok(())
 }
