@@ -1,14 +1,14 @@
 +++
 id = "919412f4"
 title = "Owner immutable after ticket is closed"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/919412f4-owner-immutable-after-ticket-is-closed"
 created_at = "2026-04-08T15:09:50.464294Z"
-updated_at = "2026-04-08T15:33:39.679158Z"
+updated_at = "2026-04-08T15:52:41.667528Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -50,3 +50,4 @@ Add a terminal-state check in the `check_owner()` helper (from ticket b0708201) 
 |------|------|----|----|
 | 2026-04-08T15:09Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
+| 2026-04-08T15:52Z | groomed | in_design | philippepascal |
