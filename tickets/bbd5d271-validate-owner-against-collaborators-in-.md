@@ -34,7 +34,7 @@ GitHub-based validation (separate ticket c738d9cc). Adding users to the collabor
 
 ### Approach
 
-How the implementation will work.
+Add a `validate_owner(config: &Config, username: &str) -> Result<()>` function in `apm-core`. In config-based mode, check `config.project.collaborators`. If the list is non-empty and the username is not in it, return an error. Wire this into the ownership check helper from ticket b0708201. See `docs/ownership-spec.md`.
 
 ### Open questions
 
