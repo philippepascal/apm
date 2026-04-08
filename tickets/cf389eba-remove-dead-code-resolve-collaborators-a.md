@@ -17,7 +17,7 @@ target_branch = "epic/18dab82d-ticket-ownership-model"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The codebase has dead code that confuses the ownership model: (1) `resolve_collaborators()` in config.rs is defined and tested but never called at runtime. (2) `resolve_agent_name()` in start.rs is used for history/logging but its name suggests an ownership concept — it should be clearly scoped to history only. (3) The `agent` concept in ticket history overlaps conceptually with `owner`, creating confusion about who is responsible for a ticket vs who is working on it.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
