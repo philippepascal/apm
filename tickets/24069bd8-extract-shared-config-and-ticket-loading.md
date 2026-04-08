@@ -46,7 +46,7 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 - [x] `validate.rs` uses `CmdContext::load` (or `load_config_only` for the `--config-only` branch) and removes its inline boilerplate
 - [x] `review.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [x] `set.rs` uses `CmdContext::load` and removes its inline boilerplate
-- [ ] `epic.rs` sub-functions (`run_list`, `run_show`, `run_close`) each use whichever helper matches their pattern and remove their inline boilerplate
+- [x] `epic.rs` sub-functions (`run_list`, `run_show`, `run_close`) each use whichever helper matches their pattern and remove their inline boilerplate
 - [ ] `new.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
 - [ ] `clean.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
 - [ ] All existing `apm` integration tests and unit tests pass without modification
