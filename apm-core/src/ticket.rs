@@ -44,8 +44,6 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub supervisor: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
@@ -159,15 +157,13 @@ pub fn sorted_actionable<'a>(
     pw: f64,
     ew: f64,
     rw: f64,
-    caller: Option<&str>,
+    _caller: Option<&str>,
+    owner_filter: Option<&str>,
 ) -> Vec<&'a Ticket> {
     let mut candidates: Vec<&Ticket> = tickets
         .iter()
         .filter(|t| actionable.contains(&t.frontmatter.state.as_str()))
-        .filter(|t| match t.frontmatter.owner.as_deref() {
-            None => true,
-            Some(owner) => caller.map_or(true, |c| c == owner),
-        })
+        .filter(|t| owner_filter.map_or(true, |f| t.frontmatter.owner.as_deref() == Some(f)))
         .collect();
     let rev_idx = build_reverse_index(&candidates);
     candidates.sort_by(|a, b| {
@@ -213,8 +209,9 @@ pub fn pick_next<'a>(
     rw: f64,
     config: &crate::config::Config,
     caller: Option<&str>,
+    owner_filter: Option<&str>,
 ) -> Option<&'a Ticket> {
-    sorted_actionable(tickets, actionable, pw, ew, rw, caller)
+    sorted_actionable(tickets, actionable, pw, ew, rw, caller, owner_filter)
         .into_iter()
         .find(|t| {
             let state = t.frontmatter.state.as_str();
@@ -469,8 +466,7 @@ pub fn create(
         effort: 0,
         risk: 0,
         author: Some(author.clone()),
-        supervisor: None,
-        owner: None,
+        owner: Some(author.clone()),
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
@@ -726,7 +722,6 @@ pub fn list_filtered<'a>(
     state_filter: Option<&str>,
     unassigned: bool,
     all: bool,
-    supervisor_filter: Option<&str>,
     actionable_filter: Option<&str>,
     author_filter: Option<&str>,
     owner_filter: Option<&str>,
@@ -743,7 +738,6 @@ pub fn list_filtered<'a>(
         let agent_ok = !unassigned || fm.author.as_deref() == Some("unassigned");
         let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
         let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
-        let supervisor_ok = supervisor_filter.map_or(true, |s| fm.supervisor.as_deref() == Some(s));
         let actionable_ok = actionable_filter.map_or(true, |actor| {
             actionable_map.get(fm.state.as_str())
                 .map_or(false, |actors| actors.iter().any(|a| a == actor || a == "any"))
@@ -753,8 +747,32 @@ pub fn list_filtered<'a>(
         let mine_ok = mine_user.map_or(true, |me| {
             fm.author.as_deref() == Some(me) || fm.owner.as_deref() == Some(me)
         });
-        state_ok && agent_ok && terminal_ok && supervisor_ok && actionable_ok && author_ok && owner_ok && mine_ok
+        state_ok && agent_ok && terminal_ok && actionable_ok && author_ok && owner_ok && mine_ok
     }).collect()
+}
+
+pub fn check_owner(root: &Path, ticket: &Ticket) -> anyhow::Result<()> {
+    let cfg = crate::config::Config::load(root)?;
+    let is_terminal = cfg.workflow.states.iter()
+        .find(|s| s.id == ticket.frontmatter.state)
+        .map(|s| s.terminal)
+        .unwrap_or(false);
+    if is_terminal {
+        anyhow::bail!("cannot change owner of a closed ticket");
+    }
+    let Some(o) = &ticket.frontmatter.owner else {
+        return Ok(());
+    };
+    let identity = crate::config::resolve_identity(root);
+    if identity == "unassigned" {
+        anyhow::bail!(
+            "cannot reassign: identity not configured (set local.user in .apm/local.toml or configure a GitHub token)"
+        );
+    }
+    if &identity != o {
+        anyhow::bail!("only the current owner ({o}) can reassign this ticket");
+    }
+    Ok(())
 }
 
 pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Result<()> {
@@ -763,7 +781,6 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "effort"   => fm.effort   = value.parse().map_err(|_| anyhow::anyhow!("effort must be 0–255"))?,
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
         "author"   => anyhow::bail!("author is immutable"),
-        "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.to_string()) },
         "owner"    => fm.owner    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
@@ -1245,7 +1262,7 @@ mod tests {
             make_ticket("0002", "ready", None),
             make_ticket("0003", "new", None),
         ];
-        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None, None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.state == "new"));
     }
@@ -1258,16 +1275,16 @@ mod tests {
             make_ticket("0002", "closed", None),
         ];
         // By default, terminal states are hidden.
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.state, "new");
 
         // With all=true, terminal states are shown.
-        let result_all = list_filtered(&tickets, &config, None, false, true, None, None, None, None, None);
+        let result_all = list_filtered(&tickets, &config, None, false, true, None, None, None, None);
         assert_eq!(result_all.len(), 2);
 
         // With state_filter matching the terminal state, it's shown.
-        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None, None, None, None);
+        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None, None, None);
         assert_eq!(result_filtered.len(), 1);
         assert_eq!(result_filtered[0].frontmatter.state, "closed");
     }
@@ -1288,7 +1305,7 @@ mod tests {
             make_with_author("0003", Some("unassigned")),
             make_with_author("0004", None),
         ];
-        let result = list_filtered(&tickets, &config, None, true, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, None, true, false, None, None, None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("unassigned")));
     }
@@ -1309,7 +1326,7 @@ mod tests {
             make_ticket_with_author("0002", "new", Some("bob")),
             make_ticket_with_author("0003", "ready", Some("alice")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, Some("alice"), None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, Some("alice"), None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("alice")));
     }
@@ -1321,7 +1338,7 @@ mod tests {
             make_ticket_with_author("0001", "new", Some("alice")),
             make_ticket_with_author("0002", "new", Some("bob")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None);
         assert_eq!(result.len(), 2);
     }
 
@@ -1342,7 +1359,7 @@ mod tests {
             make_ticket_with_owner("0002", "new", Some("bob"), Some("bob")),
             make_ticket_with_owner("0003", "new", Some("carol"), None),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"), None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, Some("alice"), None);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "0001");
     }
@@ -1354,7 +1371,7 @@ mod tests {
             make_ticket_with_owner("0001", "new", Some("alice"), Some("bob")),
             make_ticket_with_owner("0002", "new", Some("bob"), Some("carol")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, Some("alice"));
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"));
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "0001");
     }
@@ -1366,7 +1383,7 @@ mod tests {
             make_ticket_with_owner("0001", "new", Some("bob"), Some("alice")),
             make_ticket_with_owner("0002", "new", Some("carol"), Some("bob")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, Some("alice"));
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"));
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "0001");
     }
@@ -1379,7 +1396,7 @@ mod tests {
             make_ticket_with_owner("0002", "new", Some("bob"), Some("alice")),
             make_ticket_with_owner("0003", "new", Some("carol"), Some("carol")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, Some("alice"));
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"));
         assert_eq!(result.len(), 2);
         let ids: Vec<&str> = result.iter().map(|t| t.frontmatter.id.as_str()).collect();
         assert!(ids.contains(&"0001"));
@@ -1397,7 +1414,6 @@ mod tests {
             effort: 0,
             risk: 0,
             author: None,
-            supervisor: None,
             owner: None,
             branch: None,
             created_at: None,
@@ -1598,7 +1614,7 @@ terminal = true
             make_ticket_with_deps("aaaa0001", "groomed", Some(vec!["bbbb0001"])),
             make_ticket_with_deps("bbbb0001", "specd", None),
         ];
-        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
     }
 
@@ -1609,7 +1625,7 @@ terminal = true
             make_ticket_with_deps("aaaa0001", "groomed", Some(vec!["bbbb0001"])),
             make_ticket_with_deps("bbbb0001", "in_progress", None),
         ];
-        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["groomed"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
     }
 
@@ -1620,7 +1636,7 @@ terminal = true
             make_ticket_with_deps("aaaa0001", "ready", Some(vec!["bbbb0001"])),
             make_ticket_with_deps("bbbb0001", "specd", None),
         ];
-        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert!(result.is_none());
     }
 
@@ -1650,7 +1666,7 @@ terminal = true
         ];
         // aaaa0001 depends on bbbb0001 which is in "ready" (not satisfies_deps)
         // should skip aaaa0001 and return bbbb0001 (next by score, no deps)
-        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert!(result.is_some());
         let id = &result.unwrap().frontmatter.id;
         assert_ne!(id, "aaaa0001", "dep-blocked ticket should be skipped");
@@ -1663,7 +1679,7 @@ terminal = true
             make_ticket_with_deps("aaaa0001", "ready", Some(vec!["bbbb0001"])),
             make_ticket_with_deps("bbbb0001", "done", None),
         ];
-        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
     }
 
@@ -1673,7 +1689,7 @@ terminal = true
         let tickets = vec![
             make_ticket_with_deps("aaaa0001", "ready", Some(vec!["unknown1"])),
         ];
-        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
     }
 
@@ -1683,7 +1699,7 @@ terminal = true
         let raw = "+++\nid = \"aaaa0001\"\ntitle = \"T\"\nstate = \"ready\"\ndepends_on = []\n+++\n\n";
         let t = Ticket::parse(dummy_path(), raw).unwrap();
         let tickets = vec![t];
-        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None);
+        let result = pick_next(&tickets, &["ready"], &[], 10.0, -2.0, -1.0, &config, None, None);
         assert_eq!(result.unwrap().frontmatter.id, "aaaa0001");
     }
 
@@ -1766,7 +1782,7 @@ terminal = true
         let a = make_ticket_with_priority("aaaa", "ready", 2, None);
         let b = make_ticket_with_priority("bbbb", "ready", 9, Some(vec!["aaaa"]));
         let tickets = vec![a, b];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None);
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, None);
         assert_eq!(result.len(), 2);
         let ids: Vec<&str> = result.iter().map(|t| t.frontmatter.id.as_str()).collect();
         assert!(ids.contains(&"aaaa"), "A must appear in results");
@@ -1785,7 +1801,7 @@ terminal = true
         let b = make_ticket_with_priority("bbbb", "ready", 7, None);
         let c = make_ticket_with_priority("cccc", "ready", 9, Some(vec!["aaaa"]));
         let tickets = vec![a, b, c];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None);
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, None);
         assert_eq!(result.len(), 3);
         let ids: Vec<&str> = result.iter().map(|t| t.frontmatter.id.as_str()).collect();
         let a_pos = ids.iter().position(|&id| id == "aaaa").unwrap();
@@ -1798,7 +1814,7 @@ terminal = true
         let a = make_ticket_with_priority("aaaa", "ready", 3, None);
         let b = make_ticket_with_priority("bbbb", "ready", 7, None);
         let tickets = vec![a, b];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None);
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, None);
         assert_eq!(result[0].frontmatter.id, "bbbb");
         assert_eq!(result[1].frontmatter.id, "aaaa");
     }
@@ -1815,7 +1831,7 @@ terminal = true
     fn sorted_actionable_excludes_ticket_owned_by_other() {
         let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
         let tickets = vec![t];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, Some("bob"));
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, Some("bob"));
         assert!(result.is_empty(), "ticket owned by alice should not appear for bob");
     }
 
@@ -1823,7 +1839,7 @@ terminal = true
     fn sorted_actionable_includes_ticket_owned_by_caller() {
         let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
         let tickets = vec![t];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, Some("alice"));
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, Some("alice"));
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "aaaa");
     }
@@ -1832,17 +1848,117 @@ terminal = true
     fn sorted_actionable_includes_unowned_ticket() {
         let t = make_ticket_with_owner_field("aaaa", "ready", None);
         let tickets = vec![t];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, Some("bob"));
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].frontmatter.id, "aaaa");
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, Some("bob"));
+        assert!(result.is_empty(), "unowned ticket should be excluded when owner_filter is set");
     }
 
     #[test]
-    fn sorted_actionable_no_caller_shows_all() {
+    fn sorted_actionable_no_owner_filter_shows_all() {
         let t1 = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
         let t2 = make_ticket_with_owner_field("bbbb", "ready", Some("bob"));
         let tickets = vec![t1, t2];
-        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None);
+        let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None, None);
         assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn pick_next_skips_unowned_ticket_when_owner_filter_set() {
+        let config = config_with_dep_states();
+        let t = make_ticket_with_owner_field("aaaa", "ready", None);
+        let tickets = vec![t];
+        let result = pick_next(&tickets, &["ready"], &[], 1.0, 0.0, 0.0, &config, None, Some("alice"));
+        assert!(result.is_none(), "unowned ticket should be skipped when owner_filter is set");
+    }
+
+    #[test]
+    fn pick_next_skips_ticket_owned_by_other() {
+        let config = config_with_dep_states();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("bob"));
+        let tickets = vec![t];
+        let result = pick_next(&tickets, &["ready"], &[], 1.0, 0.0, 0.0, &config, None, Some("alice"));
+        assert!(result.is_none(), "ticket owned by bob should be skipped for alice");
+    }
+
+    #[test]
+    fn pick_next_picks_ticket_owned_by_current_user() {
+        let config = config_with_dep_states();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let tickets = vec![t];
+        let result = pick_next(&tickets, &["ready"], &[], 1.0, 0.0, 0.0, &config, None, Some("alice"));
+        assert!(result.is_some(), "ticket owned by alice should be picked");
+        assert_eq!(result.unwrap().frontmatter.id, "aaaa");
+    }
+
+    #[test]
+    fn check_owner_passes_when_identity_matches_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        assert!(check_owner(tmp.path(), &t).is_ok());
+    }
+
+    #[test]
+    fn check_owner_fails_when_identity_does_not_match_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"bob\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(err.to_string().contains("alice"), "error should mention the owner");
+    }
+
+    #[test]
+    fn check_owner_fails_when_identity_is_unassigned() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(err.to_string().contains("identity not configured"));
+    }
+
+    #[test]
+    fn check_owner_passes_when_ticket_has_no_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", None);
+        assert!(check_owner(tmp.path(), &t).is_ok());
+    }
+
+    #[test]
+    fn check_owner_rejects_owner_change_on_terminal_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cfg_toml = concat!(
+            "[project]\nname = \"test\"\n\n",
+            "[[workflow.states]]\nid = \"open\"\nlabel = \"Open\"\nterminal = false\n\n",
+            "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
+        );
+        std::fs::write(tmp.path().join("apm.toml"), cfg_toml).unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "closed", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(
+            err.to_string().contains("cannot change owner of a closed ticket"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn check_owner_allows_owner_change_on_non_terminal_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        let cfg_toml = concat!(
+            "[project]\nname = \"test\"\n\n",
+            "[[workflow.states]]\nid = \"open\"\nlabel = \"Open\"\nterminal = false\n\n",
+            "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
+        );
+        std::fs::write(tmp.path().join("apm.toml"), cfg_toml).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "open", Some("alice"));
+        assert!(check_owner(tmp.path(), &t).is_ok());
     }
 }

@@ -333,7 +333,7 @@ fn list_shows_all_tickets() {
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, false, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, false, true, None, None).unwrap();
 }
 
 #[test]
@@ -350,7 +350,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true, false, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, false, true, None, None).unwrap();
 }
 
 #[test]
@@ -376,7 +376,7 @@ fn list_mine_filter() {
     std::fs::write(apm_dir.join("local.toml"), "username = \"testuser\"\n").unwrap();
 
     // --mine should show only the first ticket.
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, true, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, true, true, None, None).unwrap();
 }
 
 // --- show ---
@@ -1255,7 +1255,7 @@ fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
     apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
-    apm::cmd::list::run(p, None, false, false, None, None, false, false, None, None).unwrap();
+    apm::cmd::list::run(p, None, false, false, None, false, false, None, None).unwrap();
 }
 
 #[test]
@@ -1392,7 +1392,9 @@ fn start_next_no_tickets_prints_message() {
 fn start_next_claims_highest_priority_ticket() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
+    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "test-agent");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, false, false).unwrap();
     let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
@@ -1459,12 +1461,14 @@ terminal = true
 fn start_next_clears_focus_section_from_ticket() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
 
     // Write ticket with focus_section set
     let branch = "ticket/0001-focused";
     let filename = "0001-focused.md";
     let path = format!("tickets/{filename}");
-    let content = "+++\nid = 1\ntitle = \"focused\"\nstate = \"ready\"\nbranch = \"ticket/0001-focused\"\nfocus_section = \"Approach\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+    let content = "+++\nid = 1\ntitle = \"focused\"\nstate = \"ready\"\nbranch = \"ticket/0001-focused\"\nowner = \"test-agent\"\nfocus_section = \"Approach\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
     let branch_exists = std::process::Command::new("git")
         .args(["rev-parse", "--verify", branch])
         .current_dir(p)
@@ -1539,8 +1543,10 @@ terminal = true
     git(p, &["add", "apm.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
 
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "test-agent");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, false, false).unwrap();
 
@@ -1586,7 +1592,9 @@ fn start_non_spawn_keeps_agent_name() {
 fn start_next_spawn_sets_agent_to_worker_pid() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"delegator-agent\"\n").unwrap();
+    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "delegator-agent");
 
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
@@ -1806,8 +1814,9 @@ fn spawn_ready_ticket_transitions_to_in_progress() {
 fn start_next_spawn_new_ticket_transitions_correctly() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
@@ -1820,8 +1829,9 @@ fn start_next_spawn_new_ticket_transitions_correctly() {
 fn start_next_spawn_ready_ticket_transitions_correctly() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
     std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me");
+    write_ticket_with_owner(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
@@ -2978,7 +2988,7 @@ fn clean_force_skips_modified_tracked() {
     assert!(wt_path.exists(), "worktree should NOT be removed — modified tracked file");
 }
 
-// --- resolve_agent_name fallback ---
+// --- resolve_caller_name fallback ---
 
 #[test]
 fn start_without_apm_agent_name_uses_fallback() {
@@ -3665,7 +3675,7 @@ fn next_skips_dep_blocked_returns_unblocked() {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p_cfg = &config.workflow.prioritization;
 
-    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None);
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None, None);
     assert!(next.is_some(), "should find an actionable ticket");
     assert_eq!(next.unwrap().frontmatter.id, "aaaa0001", "dep-blocked ticket B should be skipped, A returned");
 }
@@ -3691,7 +3701,7 @@ fn next_returns_dep_blocked_after_dep_satisfies() {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p_cfg = &config.workflow.prioritization;
 
-    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None);
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None, None);
     assert!(next.is_some(), "should find an actionable ticket");
     assert_eq!(next.unwrap().frontmatter.id, "bbbb0002", "ticket B should be returned once dep A satisfies_deps");
 }
@@ -3722,7 +3732,7 @@ fn next_picks_low_priority_blocker_before_higher_raw_independent() {
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p_cfg = &config.workflow.prioritization;
 
-    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None);
+    let next = ticket::pick_next(&tickets, &actionable, &[], p_cfg.priority_weight, p_cfg.effort_weight, p_cfg.risk_weight, &config, None, None);
     assert!(next.is_some(), "should find an actionable ticket");
     // C is dep-blocked (A not satisfied), so the contest is A (ep=9) vs B (ep=7)
     assert_eq!(next.unwrap().frontmatter.id, "aaaa0003", "A (ep=9) should beat B (ep=7)");
@@ -4435,6 +4445,9 @@ fn revoke_with_device_hint() {
 #[test]
 fn assign_sets_owner_field() {
     let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
     apm::cmd::new::run(dir.path(), "Assign test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "assign-test");
     let id = find_ticket_id(dir.path(), "assign-test");
@@ -4447,6 +4460,9 @@ fn assign_sets_owner_field() {
 #[test]
 fn assign_clears_owner_field() {
     let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
     apm::cmd::new::run(dir.path(), "Assign clear test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "assign-clear-test");
     let id = find_ticket_id(dir.path(), "assign-clear-test");
