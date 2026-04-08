@@ -50,7 +50,7 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 - [x] `new.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
 - [x] `clean.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
 - [x] All existing `apm` integration tests and unit tests pass without modification
-- [ ] `cargo clippy` reports no new warnings in the `apm` crate
+- [x] `cargo clippy` reports no new warnings in the `apm` crate
 
 ### Out of scope
 
