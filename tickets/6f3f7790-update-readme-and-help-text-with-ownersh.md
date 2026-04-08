@@ -33,7 +33,7 @@ The desired state is that a user reading the README understands the full ownersh
 ### Acceptance criteria
 
 - [x] README has a section explaining ticket ownership: author vs owner distinction, who can reassign (owner or supervisor), and dispatcher behavior (dispatchers pick only tickets they own)
-- [ ] README documents `apm assign <id> <username>` and `apm assign <id> -` with a short example
+- [x] README documents `apm assign <id> <username>` and `apm assign <id> -` with a short example
 - [ ] README documents `apm epic set <id> owner <user>` for bulk assignment
 - [ ] README documents identity setup: config mode (`username` in `.apm/local.toml`) and GitHub mode (`[git_host] provider = "github"`)
 - [ ] README happy path step 3 notes that the spec agent picks up only tickets assigned (owned) to it
