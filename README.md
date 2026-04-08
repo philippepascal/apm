@@ -90,6 +90,20 @@ cargo install --path apm
 cargo install --path apm-server
 ```
 
+## Try the demo
+
+The [apm-demo](https://github.com/philippepascal/apm-demo) repo is a small Rust CLI project with 14 pre-populated tickets across all workflow states, an epic, cross-ticket dependencies, and an open amendment request. Clone it and explore:
+
+```bash
+git clone https://github.com/philippepascal/apm-demo.git
+cd apm-demo
+git fetch --all
+apm list
+apm-server   # browse at http://localhost:3000
+```
+
+Since apm-demo is read-only on GitHub, commands that push (state transitions, `apm start`, `apm work`) will fail. To get a fully functional copy you can write to, run `scripts/create-demo.sh` from the APM repo — it creates the demo under your own GitHub account.
+
 ## Getting started
 
 ```bash
