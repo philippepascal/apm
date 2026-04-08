@@ -26,6 +26,7 @@ pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool) -> Re
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");
     };
+    ticket::check_owner(root, t)?;
     ticket::set_field(&mut t.frontmatter, "owner", username)?;
     t.frontmatter.updated_at = Some(Utc::now());
 
