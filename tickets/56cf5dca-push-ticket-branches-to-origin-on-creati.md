@@ -3,12 +3,12 @@ id = "56cf5dca"
 title = "Push ticket branches to origin on creation when aggressive sync is enabled"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 branch = "ticket/56cf5dca-push-ticket-branches-to-origin-on-creati"
 created_at = "2026-04-08T15:40:56.947438Z"
-updated_at = "2026-04-08T21:51:19.448573Z"
+updated_at = "2026-04-08T21:55:23.968122Z"
 +++
 
 ## Spec
