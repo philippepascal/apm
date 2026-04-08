@@ -38,7 +38,7 @@ The desired state is a single identity resolution function (`config::resolve_ide
 - [x] `apm list --mine` with no identity configured matches tickets whose author is `"unassigned"`
 - [x] `cargo build` completes without errors or unused-import warnings across all workspace crates
 - [x] All `identity::` references are absent from the `apm` crate source
-- [ ] The test coverage previously provided by `identity.rs` unit tests is present in `config.rs` or is superseded by existing `resolve_identity` tests
+- [x] The test coverage previously provided by `identity.rs` unit tests is present in `config.rs` or is superseded by existing `resolve_identity` tests
 
 ### Out of scope
 
