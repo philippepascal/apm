@@ -33,7 +33,12 @@ Building new collaborator validation — that is covered by tickets bbd5d271 and
 
 ### Approach
 
-How the implementation will work.
+1. Delete `resolve_collaborators()` and its tests from `apm-core/src/config.rs`.
+2. Delete `fetch_repo_collaborators()` from `apm-core/src/github.rs` if only used by the above.
+3. Audit `resolve_agent_name()` call sites in `start.rs` — ensure it is only used for `append_history()` and worker spawning env vars, never for ownership checks or ticket filtering.
+4. Add a doc comment on `resolve_agent_name()` clarifying: "Returns the name recorded in ticket history. This is NOT the ticket owner."
+
+See `docs/ownership-spec.md` for the full ownership model.
 
 ### Open questions
 
