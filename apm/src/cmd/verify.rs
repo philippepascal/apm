@@ -66,7 +66,12 @@ fn apply_fixes(
             let id = fm.id.clone();
             let old_state = fm.state.clone();
             match apm_core::ticket::close(root, config, &id, None, "verify --fix", false) {
-                Ok(_) => println!("  fixed {id}: {old_state} → closed"),
+                Ok(msgs) => {
+                    for msg in &msgs {
+                        println!("{msg}");
+                    }
+                    println!("  fixed {id}: {old_state} → closed");
+                }
                 Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
             }
         }

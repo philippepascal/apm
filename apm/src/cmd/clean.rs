@@ -20,7 +20,10 @@ pub fn run(
     }
 
     let config = CmdContext::load_config_only(root)?;
-    let (candidates, dirty) = clean::candidates(root, &config, force, untracked, dry_run)?;
+    let (candidates, dirty, candidate_warnings) = clean::candidates(root, &config, force, untracked, dry_run)?;
+    for w in &candidate_warnings {
+        eprintln!("{w}");
+    }
 
     if candidates.is_empty() && dirty.is_empty() && !remote {
         println!("Nothing to clean.");
@@ -84,7 +87,10 @@ pub fn run(
                 if branches && candidate.local_branch_exists {
                     println!("removed branch {}", candidate.branch);
                 }
-                clean::remove(root, candidate, true, branches)?;
+                let remove_out = clean::remove(root, candidate, true, branches)?;
+                for w in &remove_out.warnings {
+                    eprintln!("{w}");
+                }
             } else {
                 eprintln!("skipping {}", candidate.branch);
             }
@@ -97,7 +103,10 @@ pub fn run(
             } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
                 println!("kept branch {} (not merged into main)", candidate.branch);
             }
-            clean::remove(root, candidate, false, branches)?;
+            let remove_out = clean::remove(root, candidate, false, branches)?;
+            for w in &remove_out.warnings {
+                eprintln!("{w}");
+            }
         }
     }
 

@@ -45,7 +45,9 @@ pub fn run_engine_loop(
         }
 
         if !no_more && workers.len() < max_concurrent {
-            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref()) {
+            let mut _messages = Vec::new();
+            let mut _warnings = Vec::new();
+            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &mut _messages, &mut _warnings) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);
                     no_more = true;
