@@ -397,8 +397,9 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let agent_name = resolve_caller_name();
+    let current_user = crate::config::resolve_identity(root);
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
         messages.push("No actionable tickets.".to_string());
         return Ok(RunNextOutput { ticket_id: None, messages, warnings, worker_pid: None, log_path: None });
     };
@@ -566,8 +567,9 @@ pub fn spawn_next_worker(
             .collect()
     };
     let agent_name = resolve_caller_name();
+    let current_user = crate::config::resolve_identity(root);
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
         return Ok(None);
     };
 
