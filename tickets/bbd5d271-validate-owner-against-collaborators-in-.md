@@ -22,7 +22,11 @@ In config-based mode (no git_host provider), there is no validation when changin
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When `git_host.provider` is not set, `apm assign` validates the new owner against `project.collaborators`
+- [ ] If the new owner is not in the collaborators list, command fails with "unknown user '<name>'; valid collaborators: <list>"
+- [ ] If collaborators list is empty, validation is skipped (no restriction)
+- [ ] `apm set <id> owner <user>` has the same validation
+- [ ] Tests cover: valid collaborator accepted, unknown user rejected, empty collaborators list skips validation
 
 ### Out of scope
 
