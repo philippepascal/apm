@@ -1,14 +1,14 @@
 +++
 id = "b0708201"
 title = "Only owner can change owner"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
 author = "philippepascal"
 branch = "ticket/b0708201-only-owner-can-change-owner"
 created_at = "2026-04-08T15:09:45.724421Z"
-updated_at = "2026-04-08T15:52:18.943470Z"
+updated_at = "2026-04-08T15:52:25.929826Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -70,3 +70,4 @@ Validation that the new owner is a valid collaborator (separate tickets bbd5d271
 | 2026-04-08T15:09Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
 | 2026-04-08T15:49Z | groomed | in_design | philippepascal |
+| 2026-04-08T15:52Z | in_design | specd | claude-0408-1549-eb70 |
