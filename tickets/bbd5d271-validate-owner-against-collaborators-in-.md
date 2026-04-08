@@ -18,7 +18,7 @@ depends_on = ["b0708201"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+In config-based mode (no git_host provider), there is no validation when changing a ticket's owner. A typo in a username goes undetected. The `project.collaborators` list exists in config.toml but is never checked at runtime. Owner changes should validate the new owner against this list.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
