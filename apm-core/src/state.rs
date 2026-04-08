@@ -150,12 +150,12 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             if let Err(e) = git::push_branch_tracking(root, &branch) {
                 eprintln!("warning: could not push {branch}: {e}");
             }
-            merge_into_default(root, &branch, merge_target, is_main)?;
+            merge_into_default(root, &config, &branch, merge_target, is_main)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch_tracking(root, &branch)?;
             if let Some(ref target) = t.frontmatter.target_branch {
-                merge_into_default(root, &branch, target, false)?;
+                merge_into_default(root, &config, &branch, target, false)?;
             } else {
                 gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
             }
@@ -223,7 +223,7 @@ fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &
     Ok(())
 }
 
-fn merge_into_default(root: &Path, branch: &str, default_branch: &str, skip_push: bool) -> Result<()> {
+fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool) -> Result<()> {
     let _ = std::process::Command::new("git")
         .args(["fetch", "origin", default_branch])
         .current_dir(root)
@@ -238,8 +238,8 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str, skip_push
     let merge_dir = if current_branch == default_branch {
         root.to_path_buf()
     } else {
-        git::find_worktree_for_branch(root, default_branch)
-            .unwrap_or_else(|| root.to_path_buf())
+        let worktrees_base = root.join(&config.worktrees.dir);
+        git::ensure_worktree(root, &worktrees_base, default_branch)?
     };
 
     let out = std::process::Command::new("git")
