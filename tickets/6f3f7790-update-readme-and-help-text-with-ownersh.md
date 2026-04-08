@@ -48,7 +48,106 @@ The desired state is that a user reading the README understands the full ownersh
 
 ### Approach
 
-Update README.md, docs/commands.md, and CLI help strings (clap descriptions in apm/src/main.rs). Use docs/ownership-spec.md as the source of truth. This ticket should be done last after all other ownership tickets are implemented and merged.
+This ticket is purely documentation — no logic changes. Three files change: `README.md`, `docs/commands.md`, and `apm/src/main.rs`. Apply changes after all other ownership tickets in epic `18dab82d` are merged into the target epic branch.
+
+---
+
+### README.md
+
+**1. Add a new "## Ticket ownership" section** after "## Working with tickets" and before "## Agent workflow". Content:
+
+```markdown
+## Ticket ownership
+
+Every ticket has two identity fields:
+
+- **`author`** — set when the ticket is created; immutable. Records who created it.
+- **`owner`** — who is responsible for the ticket. Dispatchers (`apm work`, `apm start --next`, the UI loop) only pick up tickets whose `owner` matches the current user's identity. Tickets with no owner are never auto-dispatched.
+
+Assign a ticket before dispatching:
+
+    apm assign <id> alice        # assign to alice
+    apm assign <id> -            # clear the owner field
+
+Bulk-assign all non-closed tickets in an epic at once:
+
+    apm epic set <epic-id> owner alice
+
+To filter the list by owner:
+
+    apm list --owner alice       # tickets owned by alice
+    apm list --mine              # tickets authored by the current user
+
+### Identity setup
+
+APM resolves the current user's identity in two modes:
+
+**Config mode** (no `[git_host]` in `config.toml`): set `username` in `.apm/local.toml`:
+
+    # .apm/local.toml
+    username = "alice"
+
+**GitHub mode** (`[git_host]` with `provider = "github"` in `config.toml`): identity is resolved from the `gh` CLI (if installed and authenticated) or from a GitHub token. No `local.toml` entry is needed — the GitHub login is used automatically.
+```
+
+**2. Update happy path step 3** from:
+
+> **Spec agent picks it up** — the dispatch loop (`apm work`) assigns a worker.
+
+to:
+
+> **Spec agent picks it up** — but only if the ticket is assigned to it. The supervisor runs `apm assign a1b2 <agent-identity>` first. Then the dispatch loop (`apm work`) picks it up.
+
+**3. Update "### Dispatching agents"** paragraph to note that dispatchers only pick owned tickets. Add a note under the dispatch examples:
+
+> Dispatchers only pick up tickets whose `owner` matches the current user's identity. Assign tickets with `apm assign` before running `apm work`.
+
+**4. Update the configuration table** — the `local.toml` row description (currently "Per-user settings (username, worker overrides) — untracked") is fine as-is; no change needed there.
+
+---
+
+### docs/commands.md
+
+**1. `apm epic set` section** — extend the synopsis, description, and options table to cover `owner`:
+
+- Add to synopsis:
+  ```
+  apm epic set <id> owner <username>
+  apm epic set <id> owner -
+  ```
+- Add to description: "Set `owner` to bulk-assign ownership of all non-closed tickets in the epic to `<username>`. Pass `-` to clear the owner field on all non-closed tickets. The current user must be the owner of every ticket to be changed; if any check fails, no tickets are modified. Closed tickets are skipped."
+- Update the options table: change `max_workers` row label to make clear it is one of multiple supported fields; add `owner` row.
+- Add a "git internals" row for the ticket branch commits that `owner` triggers (same pattern as `apm assign` — `git add` + `git commit` per ticket branch, `git push` in aggressive mode).
+
+**2. `apm list` section** — add a paragraph after the existing description paragraph explaining the relationship between `--mine`, `--owner`, and dispatch:
+
+> `--mine` filters by `author` (the user who created the ticket). `--owner` filters by the `owner` field. Since dispatchers pick only tickets the current user owns, `apm list --owner <your-username>` shows the queue that `apm work` will draw from.
+
+---
+
+### apm/src/main.rs
+
+**1. `Assign` command `long_about`** — extend the existing text to explain the dispatcher connection. Change:
+
+```
+Use this to assign a ticket to a user or agent, or to clear the owner field.
+```
+
+to:
+
+```
+Use this to assign a ticket to a user or agent, or to clear the owner field.
+
+Ownership gates dispatcher pickup: `apm work`, `apm start --next`, and the UI
+dispatch loop only pick up tickets whose owner matches the current user's identity.
+Tickets with no owner are never auto-dispatched. Assign a ticket before running
+the dispatch loop.
+```
+
+**2. `EpicCommand::Set` doc comments** — update the two doc comments that mention only `max_workers`:
+
+- `/// Set a field on an epic (e.g. max_workers)` → `/// Set a field on an epic (max_workers or owner)`
+- `/// Field to update (e.g. max_workers)` → `/// Field to update: max_workers or owner`
 
 ### Open questions
 
