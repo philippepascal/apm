@@ -18,7 +18,17 @@ depends_on = ["751f65f6", "b52fc7f4"]
 
 ### Problem
 
-The README and CLI help text do not document the ownership model: who owns tickets, how dispatchers filter by owner, how to assign/reassign, the two identity modes (config vs GitHub). Users have no way to understand the ownership workflow without reading code.
+The README and CLI help text do not document the ownership model that is being introduced across the `18dab82d` epic. Specifically:
+
+- There is no explanation of the **author vs owner distinction**: `author` is set at creation and is immutable; `owner` is the responsible party and determines who dispatchers will pick work for.
+- The **dispatcher filtering rule** — that `apm work`, `apm start --next`, and the UI dispatch loop only pick up tickets whose `owner` matches the current user's identity — is undocumented. Users who create tickets without assigning owners will be confused why nothing gets dispatched.
+- `apm assign` exists but its help text does not explain the dispatcher connection.
+- `apm epic set <id> owner <user>` (added by ticket b52fc7f4) is entirely undocumented.
+- The **two identity modes** are not explained: config mode (no `[git_host]`, set `username` in `.apm/local.toml`) and GitHub mode (`[git_host] provider = "github"`, identity resolved from the `gh` CLI or GitHub token). Without this, users cannot understand why `--mine` or dispatcher ownership checks use the wrong name.
+- `apm list --mine` and `apm list --owner` are listed in the options table but not explained in context.
+- The happy path walkthrough does not mention that the spec agent picks only tickets assigned to it.
+
+The desired state is that a user reading the README understands the full ownership workflow end-to-end, and that `apm assign --help` and `apm epic set --help` accurately describe the effect on dispatch.
 
 ### Acceptance criteria
 
