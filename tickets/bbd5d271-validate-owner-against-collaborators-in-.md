@@ -30,7 +30,7 @@ In config-based mode (no git_host provider), there is no validation when changin
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+GitHub-based validation (separate ticket c738d9cc). Adding users to the collaborators list (manual config edit).
 
 ### Approach
 
