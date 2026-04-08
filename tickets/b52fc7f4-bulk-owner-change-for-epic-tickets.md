@@ -1,14 +1,14 @@
 +++
 id = "b52fc7f4"
 title = "Bulk owner change for epic tickets"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
 author = "philippepascal"
 branch = "ticket/b52fc7f4-bulk-owner-change-for-epic-tickets"
 created_at = "2026-04-08T15:10:08.148508Z"
-updated_at = "2026-04-08T22:56:37.315124Z"
+updated_at = "2026-04-08T23:47:27.364929Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -96,3 +96,4 @@ After all updates print:
 | 2026-04-08T21:47Z | specd | ready | apm |
 | 2026-04-08T22:49Z | ready | in_progress | philippepascal |
 | 2026-04-08T22:56Z | in_progress | implemented | claude-0408-2249-c6d8 |
+| 2026-04-08T23:47Z | implemented | closed | apm-sync |
