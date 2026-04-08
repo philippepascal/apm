@@ -34,13 +34,33 @@ Migrating existing tickets that have supervisor set. They will simply be ignored
 
 ### Approach
 
-1. Remove `supervisor` from `Frontmatter` struct in `apm-core/src/ticket.rs`. Keep `#[serde(default)]` so old tickets with the field still deserialize.
-2. Remove `supervisor` case from `set_field()` in `ticket.rs`.
-3. Remove `--supervisor` filter from `apm list` in `apm/src/cmd/list.rs`.
-4. Remove any supervisor references in `apm-server/src/main.rs` (API endpoints, JSON serialization).
-5. Update tests.
+Files to change and what to do in each:
 
-See `docs/ownership-spec.md` for the full ownership model.
+**`apm-core/src/ticket.rs`**
+- Remove `pub supervisor: Option<String>` field from `Frontmatter` struct (~line 47). No special serde annotation needed — serde ignores unknown TOML keys by default, so old tickets with `supervisor = "…"` will parse cleanly.
+- Remove `supervisor: None` from the struct literal in `create()` (~line 472).
+- Remove the `"supervisor"` arm from `set_field()` (~line 768).
+- Remove `supervisor_filter: Option<&str>` parameter from `list_filtered()` (~line 723), remove the `supervisor_ok` binding (~line 746), and remove `supervisor_ok &&` from the final filter predicate (~line 756).
+- Remove `supervisor: None` from the `fake_ticket()` test helper (~line 1400).
+
+**`apm/src/cmd/list.rs`**
+- Remove `supervisor_filter: Option<String>` from `run()` signature.
+- Remove the `supervisor_filter.as_deref()` argument passed to `list_filtered()`.
+
+**`apm/src/main.rs`**
+- Remove the `--supervisor` CLI argument block (~lines 122–124) from the `List` subcommand definition.
+- Remove `supervisor` from the `Command::List { … }` destructure and the matching `cmd::list::run(…)` call (~line 742).
+- Remove `supervisor` from the `set` command help text (~line 255) and field list (~line 270).
+
+**`apm-core/src/queue.rs`**
+- Remove `supervisor: None` from the ticket struct literal (~line 126).
+
+**`apm-server/src/main.rs`**
+- Remove `supervisor: None` from the test helper struct literal (~line 1852).
+- Leave `supervisor_states` in `TicketsEnvelope` and `list_tickets()` untouched — it describes which workflow states require supervisor *role* action, not the removed frontmatter field.
+
+**Tests**
+- After the above changes, run `cargo test` to confirm all tests pass. Fix any remaining compilation errors from missed struct literal fields.
 
 ### Open questions
 
