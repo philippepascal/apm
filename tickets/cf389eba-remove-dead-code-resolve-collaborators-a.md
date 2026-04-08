@@ -21,7 +21,12 @@ The codebase has two dead-code problems and one naming/documentation problem tha
 
 ### Acceptance criteria
 
-- [ ] `resolve_collaborators()` and both its tests removed from `apm-core/src/config.rs`\n- [ ] `fetch_repo_collaborators()` and its live `#[ignore]` test removed from `apm-core/src/github.rs`\n- [ ] `resolve_agent_name()` renamed to `resolve_caller_name()` (or equivalent) across all call sites\n- [ ] The renamed function has a doc comment that states: it returns the identity used (a) to record history entries and (b) as the caller when filtering tickets by `owner`\n- [ ] No remaining code refers to the old `resolve_agent_name` name\n- [ ] All existing tests pass
+- [x] `resolve_collaborators()` and both its tests removed from `apm-core/src/config.rs`
+- [x] `fetch_repo_collaborators()` and its live `#[ignore]` test removed from `apm-core/src/github.rs`
+- [x] `resolve_agent_name()` renamed to `resolve_caller_name()` (or equivalent) across all call sites
+- [x] The renamed function has a doc comment that states: it returns the identity used (a) to record history entries and (b) as the caller when filtering tickets by `owner`
+- [x] No remaining code refers to the old `resolve_agent_name` name
+- [x] All existing tests pass
 
 ### Out of scope
 
