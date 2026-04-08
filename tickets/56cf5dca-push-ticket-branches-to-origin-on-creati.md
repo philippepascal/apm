@@ -38,7 +38,7 @@ The remaining work is: switch `ticket::create()` to use `push_branch_tracking`, 
 
 ### Out of scope
 
-Auto-pushing on every commit within a worktree. Pushing on state transitions (already handled by completion strategies).
+- Auto-pushing on every commit within a worktree\n- Pushing on state transitions (already handled by completion strategies)\n- Gating epic::create() push on the aggressive flag (it always pushes; changing that behaviour is a separate decision)
 
 ### Approach
 
