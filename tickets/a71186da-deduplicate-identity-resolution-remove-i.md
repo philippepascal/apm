@@ -124,6 +124,7 @@ If any of these are already covered, skip duplication.
 
 ### Amendment requests
 
+- [ ] Remove duplicated approach content: everything after the first "Constraints" paragraph (the "Files that change" table, "Fallback value change", "Test migration", "Steps in order", and second "Constraints" sections) is a near-verbatim repeat of the earlier approach. Keep only the first pass.
 
 ### Code review
 
