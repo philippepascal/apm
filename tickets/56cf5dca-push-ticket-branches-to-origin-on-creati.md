@@ -36,7 +36,7 @@ Auto-pushing on every commit within a worktree. Pushing on state transitions (al
 
 ### Approach
 
-How the implementation will work.
+In `apm-core/src/ticket.rs` `create()`, after the branch is created and the initial commit is made, check `config.sync.aggressive`. If true, call `git::push_branch_tracking()` and handle errors as warnings. Same pattern in `apm-core/src/epic.rs` `create()` (verify it already pushes — if so, just confirm the aggressive gate). The config needs to be passed to or loaded within `ticket::create()`.
 
 ### Open questions
 
