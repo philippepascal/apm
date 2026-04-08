@@ -29,13 +29,13 @@ This is the key behavioral change that makes ownership meaningful.
 
 ### Acceptance criteria
 
-- [ ] `pick_next()` in `ticket.rs` adds an owner filter: only tickets where `owner == current_user`
-- [ ] `apm start --next` resolves current user and passes it to `pick_next()`
-- [ ] `apm work` / `spawn_next_worker()` applies the same owner filter
-- [ ] UI dispatcher applies the same filter (using the authenticated user)
-- [ ] Tickets with no owner are NOT picked up by dispatchers (they must be assigned first)
-- [ ] `apm next` output reflects the owner filter
-- [ ] Tests: dispatcher skips unowned tickets, dispatcher skips tickets owned by others, dispatcher picks owned tickets
+- [x] `pick_next()` in `ticket.rs` adds an owner filter: only tickets where `owner == current_user`
+- [x] `apm start --next` resolves current user and passes it to `pick_next()`
+- [x] `apm work` / `spawn_next_worker()` applies the same owner filter
+- [x] UI dispatcher applies the same filter (using the authenticated user)
+- [x] Tickets with no owner are NOT picked up by dispatchers (they must be assigned first)
+- [x] `apm next` output reflects the owner filter
+- [x] Tests: dispatcher skips unowned tickets, dispatcher skips tickets owned by others, dispatcher picks owned tickets
 
 ### Out of scope
 
