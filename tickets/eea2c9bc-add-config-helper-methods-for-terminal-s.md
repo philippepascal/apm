@@ -1,14 +1,14 @@
 +++
 id = "eea2c9bc"
 title = "Add Config helper methods for terminal states and section lookup"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
 author = "philippepascal"
 branch = "ticket/eea2c9bc-add-config-helper-methods-for-terminal-s"
 created_at = "2026-04-07T22:22:22.370019Z"
-updated_at = "2026-04-08T00:14:21.115720Z"
+updated_at = "2026-04-08T04:03:00.066341Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -171,3 +171,4 @@ Run `cargo test --workspace` and `cargo clippy --workspace -- -D warnings` to co
 | 2026-04-08T00:03Z | specd | ready | philippepascal |
 | 2026-04-08T00:06Z | ready | in_progress | philippepascal |
 | 2026-04-08T00:14Z | in_progress | implemented | claude-0408-0006-df00 |
+| 2026-04-08T04:03Z | implemented | closed | apm-sync |
