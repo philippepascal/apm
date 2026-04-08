@@ -1849,7 +1849,6 @@ mod tests {
                 effort: 0,
                 risk: 0,
                 author: None,
-                supervisor: None,
                 owner: None,
                 branch: None,
                 created_at: None,

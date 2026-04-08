@@ -44,8 +44,6 @@ pub struct Frontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub supervisor: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
@@ -469,8 +467,7 @@ pub fn create(
         effort: 0,
         risk: 0,
         author: Some(author.clone()),
-        supervisor: None,
-        owner: None,
+        owner: Some(author.clone()),
         branch: Some(branch.clone()),
         created_at: Some(now),
         updated_at: Some(now),
@@ -726,7 +723,6 @@ pub fn list_filtered<'a>(
     state_filter: Option<&str>,
     unassigned: bool,
     all: bool,
-    supervisor_filter: Option<&str>,
     actionable_filter: Option<&str>,
     author_filter: Option<&str>,
     owner_filter: Option<&str>,
@@ -743,7 +739,6 @@ pub fn list_filtered<'a>(
         let agent_ok = !unassigned || fm.author.as_deref() == Some("unassigned");
         let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
         let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
-        let supervisor_ok = supervisor_filter.map_or(true, |s| fm.supervisor.as_deref() == Some(s));
         let actionable_ok = actionable_filter.map_or(true, |actor| {
             actionable_map.get(fm.state.as_str())
                 .map_or(false, |actors| actors.iter().any(|a| a == actor || a == "any"))
@@ -753,8 +748,24 @@ pub fn list_filtered<'a>(
         let mine_ok = mine_user.map_or(true, |me| {
             fm.author.as_deref() == Some(me) || fm.owner.as_deref() == Some(me)
         });
-        state_ok && agent_ok && terminal_ok && supervisor_ok && actionable_ok && author_ok && owner_ok && mine_ok
+        state_ok && agent_ok && terminal_ok && actionable_ok && author_ok && owner_ok && mine_ok
     }).collect()
+}
+
+pub fn check_owner(root: &Path, ticket: &Ticket) -> anyhow::Result<()> {
+    let Some(o) = &ticket.frontmatter.owner else {
+        return Ok(());
+    };
+    let identity = crate::config::resolve_identity(root);
+    if identity == "unassigned" {
+        anyhow::bail!(
+            "cannot reassign: identity not configured (set local.user in .apm/local.toml or configure a GitHub token)"
+        );
+    }
+    if &identity != o {
+        anyhow::bail!("only the current owner ({o}) can reassign this ticket");
+    }
+    Ok(())
 }
 
 pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Result<()> {
@@ -763,7 +774,6 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "effort"   => fm.effort   = value.parse().map_err(|_| anyhow::anyhow!("effort must be 0–255"))?,
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
         "author"   => anyhow::bail!("author is immutable"),
-        "supervisor" => fm.supervisor = if value == "-" { None } else { Some(value.to_string()) },
         "owner"    => fm.owner    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
@@ -1245,7 +1255,7 @@ mod tests {
             make_ticket("0002", "ready", None),
             make_ticket("0003", "new", None),
         ];
-        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, Some("new"), false, false, None, None, None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.state == "new"));
     }
@@ -1258,16 +1268,16 @@ mod tests {
             make_ticket("0002", "closed", None),
         ];
         // By default, terminal states are hidden.
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.state, "new");
 
         // With all=true, terminal states are shown.
-        let result_all = list_filtered(&tickets, &config, None, false, true, None, None, None, None, None);
+        let result_all = list_filtered(&tickets, &config, None, false, true, None, None, None, None);
         assert_eq!(result_all.len(), 2);
 
         // With state_filter matching the terminal state, it's shown.
-        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None, None, None, None);
+        let result_filtered = list_filtered(&tickets, &config, Some("closed"), false, false, None, None, None, None);
         assert_eq!(result_filtered.len(), 1);
         assert_eq!(result_filtered[0].frontmatter.state, "closed");
     }
@@ -1288,7 +1298,7 @@ mod tests {
             make_with_author("0003", Some("unassigned")),
             make_with_author("0004", None),
         ];
-        let result = list_filtered(&tickets, &config, None, true, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, None, true, false, None, None, None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("unassigned")));
     }
@@ -1309,7 +1319,7 @@ mod tests {
             make_ticket_with_author("0002", "new", Some("bob")),
             make_ticket_with_author("0003", "ready", Some("alice")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, Some("alice"), None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, Some("alice"), None, None);
         assert_eq!(result.len(), 2);
         assert!(result.iter().all(|t| t.frontmatter.author.as_deref() == Some("alice")));
     }
@@ -1321,7 +1331,7 @@ mod tests {
             make_ticket_with_author("0001", "new", Some("alice")),
             make_ticket_with_author("0002", "new", Some("bob")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None);
         assert_eq!(result.len(), 2);
     }
 
@@ -1342,7 +1352,7 @@ mod tests {
             make_ticket_with_owner("0002", "new", Some("bob"), Some("bob")),
             make_ticket_with_owner("0003", "new", Some("carol"), None),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"), None);
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, Some("alice"), None);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "0001");
     }
@@ -1354,7 +1364,7 @@ mod tests {
             make_ticket_with_owner("0001", "new", Some("alice"), Some("bob")),
             make_ticket_with_owner("0002", "new", Some("bob"), Some("carol")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, Some("alice"));
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"));
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "0001");
     }
@@ -1366,7 +1376,7 @@ mod tests {
             make_ticket_with_owner("0001", "new", Some("bob"), Some("alice")),
             make_ticket_with_owner("0002", "new", Some("carol"), Some("bob")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, Some("alice"));
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"));
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].frontmatter.id, "0001");
     }
@@ -1379,7 +1389,7 @@ mod tests {
             make_ticket_with_owner("0002", "new", Some("bob"), Some("alice")),
             make_ticket_with_owner("0003", "new", Some("carol"), Some("carol")),
         ];
-        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, None, Some("alice"));
+        let result = list_filtered(&tickets, &config, None, false, false, None, None, None, Some("alice"));
         assert_eq!(result.len(), 2);
         let ids: Vec<&str> = result.iter().map(|t| t.frontmatter.id.as_str()).collect();
         assert!(ids.contains(&"0001"));
@@ -1397,7 +1407,6 @@ mod tests {
             effort: 0,
             risk: 0,
             author: None,
-            supervisor: None,
             owner: None,
             branch: None,
             created_at: None,
@@ -1844,5 +1853,41 @@ terminal = true
         let tickets = vec![t1, t2];
         let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None);
         assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn check_owner_passes_when_identity_matches_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        assert!(check_owner(tmp.path(), &t).is_ok());
+    }
+
+    #[test]
+    fn check_owner_fails_when_identity_does_not_match_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"bob\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(err.to_string().contains("alice"), "error should mention the owner");
+    }
+
+    #[test]
+    fn check_owner_fails_when_identity_is_unassigned() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(err.to_string().contains("identity not configured"));
+    }
+
+    #[test]
+    fn check_owner_passes_when_ticket_has_no_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", None);
+        assert!(check_owner(tmp.path(), &t).is_ok());
     }
 }
