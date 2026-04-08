@@ -4435,6 +4435,9 @@ fn revoke_with_device_hint() {
 #[test]
 fn assign_sets_owner_field() {
     let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
     apm::cmd::new::run(dir.path(), "Assign test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "assign-test");
     let id = find_ticket_id(dir.path(), "assign-test");
@@ -4447,6 +4450,9 @@ fn assign_sets_owner_field() {
 #[test]
 fn assign_clears_owner_field() {
     let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
     apm::cmd::new::run(dir.path(), "Assign clear test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "assign-clear-test");
     let id = find_ticket_id(dir.path(), "assign-clear-test");

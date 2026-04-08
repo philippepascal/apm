@@ -752,6 +752,22 @@ pub fn list_filtered<'a>(
     }).collect()
 }
 
+pub fn check_owner(root: &Path, ticket: &Ticket) -> anyhow::Result<()> {
+    let Some(o) = &ticket.frontmatter.owner else {
+        return Ok(());
+    };
+    let identity = crate::config::resolve_identity(root);
+    if identity == "unassigned" {
+        anyhow::bail!(
+            "cannot reassign: identity not configured (set local.user in .apm/local.toml or configure a GitHub token)"
+        );
+    }
+    if &identity != o {
+        anyhow::bail!("only the current owner ({o}) can reassign this ticket");
+    }
+    Ok(())
+}
+
 pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Result<()> {
     match field {
         "priority" => fm.priority = value.parse().map_err(|_| anyhow::anyhow!("priority must be 0–255"))?,
@@ -1837,5 +1853,41 @@ terminal = true
         let tickets = vec![t1, t2];
         let result = sorted_actionable(&tickets, &["ready"], 1.0, 0.0, 0.0, None);
         assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn check_owner_passes_when_identity_matches_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        assert!(check_owner(tmp.path(), &t).is_ok());
+    }
+
+    #[test]
+    fn check_owner_fails_when_identity_does_not_match_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"bob\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(err.to_string().contains("alice"), "error should mention the owner");
+    }
+
+    #[test]
+    fn check_owner_fails_when_identity_is_unassigned() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(err.to_string().contains("identity not configured"));
+    }
+
+    #[test]
+    fn check_owner_passes_when_ticket_has_no_owner() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "ready", None);
+        assert!(check_owner(tmp.path(), &t).is_ok());
     }
 }
