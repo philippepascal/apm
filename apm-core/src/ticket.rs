@@ -753,6 +753,14 @@ pub fn list_filtered<'a>(
 }
 
 pub fn check_owner(root: &Path, ticket: &Ticket) -> anyhow::Result<()> {
+    let cfg = crate::config::Config::load(root)?;
+    let is_terminal = cfg.workflow.states.iter()
+        .find(|s| s.id == ticket.frontmatter.state)
+        .map(|s| s.terminal)
+        .unwrap_or(false);
+    if is_terminal {
+        anyhow::bail!("cannot change owner of a closed ticket");
+    }
     let Some(o) = &ticket.frontmatter.owner else {
         return Ok(());
     };
@@ -1860,6 +1868,7 @@ terminal = true
         let tmp = tempfile::tempdir().unwrap();
         let apm_dir = tmp.path().join(".apm");
         std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
         std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
         let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
         assert!(check_owner(tmp.path(), &t).is_ok());
@@ -1870,6 +1879,7 @@ terminal = true
         let tmp = tempfile::tempdir().unwrap();
         let apm_dir = tmp.path().join(".apm");
         std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
         std::fs::write(apm_dir.join("local.toml"), "username = \"bob\"\n").unwrap();
         let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
         let err = check_owner(tmp.path(), &t).unwrap_err();
@@ -1879,6 +1889,7 @@ terminal = true
     #[test]
     fn check_owner_fails_when_identity_is_unassigned() {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
         let t = make_ticket_with_owner_field("aaaa", "ready", Some("alice"));
         let err = check_owner(tmp.path(), &t).unwrap_err();
         assert!(err.to_string().contains("identity not configured"));
@@ -1887,7 +1898,41 @@ terminal = true
     #[test]
     fn check_owner_passes_when_ticket_has_no_owner() {
         let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
         let t = make_ticket_with_owner_field("aaaa", "ready", None);
+        assert!(check_owner(tmp.path(), &t).is_ok());
+    }
+
+    #[test]
+    fn check_owner_rejects_owner_change_on_terminal_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cfg_toml = concat!(
+            "[project]\nname = \"test\"\n\n",
+            "[[workflow.states]]\nid = \"open\"\nlabel = \"Open\"\nterminal = false\n\n",
+            "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
+        );
+        std::fs::write(tmp.path().join("apm.toml"), cfg_toml).unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "closed", Some("alice"));
+        let err = check_owner(tmp.path(), &t).unwrap_err();
+        assert!(
+            err.to_string().contains("cannot change owner of a closed ticket"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn check_owner_allows_owner_change_on_non_terminal_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        let cfg_toml = concat!(
+            "[project]\nname = \"test\"\n\n",
+            "[[workflow.states]]\nid = \"open\"\nlabel = \"Open\"\nterminal = false\n\n",
+            "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
+        );
+        std::fs::write(tmp.path().join("apm.toml"), cfg_toml).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+        let t = make_ticket_with_owner_field("aaaa", "open", Some("alice"));
         assert!(check_owner(tmp.path(), &t).is_ok());
     }
 }
