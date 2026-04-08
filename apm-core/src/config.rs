@@ -462,6 +462,24 @@ impl Config {
             .collect()
     }
 
+    pub fn terminal_state_ids(&self) -> std::collections::HashSet<String> {
+        let mut ids: std::collections::HashSet<String> = self.workflow.states.iter()
+            .filter(|s| s.terminal)
+            .map(|s| s.id.clone())
+            .collect();
+        ids.insert("closed".to_string());
+        ids
+    }
+
+    pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
+        self.ticket.sections.iter()
+            .find(|s| s.name.eq_ignore_ascii_case(name))
+    }
+
+    pub fn has_section(&self, name: &str) -> bool {
+        self.find_section(name).is_some()
+    }
+
     pub fn load(repo_root: &Path) -> Result<Self> {
         let apm_dir = repo_root.join(".apm");
         let apm_dir_config = apm_dir.join("config.toml");
