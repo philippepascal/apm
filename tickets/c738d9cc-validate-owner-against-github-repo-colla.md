@@ -18,7 +18,7 @@ depends_on = ["b0708201"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+In GitHub mode (`git_host.provider = "github"`), owner changes are not validated against the actual repo collaborators. A ticket can be assigned to a username that has no access to the repository. The existing `fetch_repo_collaborators()` in github.rs provides the mechanism but is never called at runtime.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
