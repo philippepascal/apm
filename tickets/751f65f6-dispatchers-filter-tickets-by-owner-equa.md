@@ -1,14 +1,14 @@
 +++
 id = "751f65f6"
 title = "Dispatchers filter tickets by owner equals current user"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 4
 risk = 3
 author = "philippepascal"
 branch = "ticket/751f65f6-dispatchers-filter-tickets-by-owner-equa"
 created_at = "2026-04-08T15:09:55.270545Z"
-updated_at = "2026-04-08T16:02:26.524266Z"
+updated_at = "2026-04-08T21:47:26.145350Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["3d784167"]
@@ -104,3 +104,4 @@ Filtering `apm list` by owner (already exists as --owner flag). Role-based filte
 | 2026-04-08T15:33Z | new | groomed | apm |
 | 2026-04-08T15:56Z | groomed | in_design | philippepascal |
 | 2026-04-08T16:02Z | in_design | specd | claude-0408-1556-81f8 |
+| 2026-04-08T21:47Z | specd | ready | apm |
