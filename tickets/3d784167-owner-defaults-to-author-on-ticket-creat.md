@@ -1,14 +1,14 @@
 +++
 id = "3d784167"
 title = "Owner defaults to author on ticket creation"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
 author = "philippepascal"
 branch = "ticket/3d784167-owner-defaults-to-author-on-ticket-creat"
 created_at = "2026-04-08T15:09:41.414576Z"
-updated_at = "2026-04-08T15:49:22.075210Z"
+updated_at = "2026-04-08T15:49:28.993580Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -88,3 +88,4 @@ Add a test after create_returns_ticket_with_correct_fields (line 66). Use the sa
 | 2026-04-08T15:09Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
 | 2026-04-08T15:46Z | groomed | in_design | philippepascal |
+| 2026-04-08T15:49Z | in_design | specd | claude-0408-1546-9708 |
