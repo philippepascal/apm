@@ -1,14 +1,14 @@
 +++
 id = "cf389eba"
 title = "Remove dead code: resolve_collaborators and agent_name ownership overlap"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
 branch = "ticket/cf389eba-remove-dead-code-resolve-collaborators-a"
 created_at = "2026-04-08T15:09:36.685009Z"
-updated_at = "2026-04-08T21:52:08.653335Z"
+updated_at = "2026-04-08T23:47:43.469758Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -95,3 +95,4 @@ The codebase has two dead-code problems and one naming/documentation problem tha
 | 2026-04-08T21:47Z | specd | ready | apm |
 | 2026-04-08T21:47Z | ready | in_progress | philippepascal |
 | 2026-04-08T21:52Z | in_progress | implemented | claude-0408-2147-1ba0 |
+| 2026-04-08T23:47Z | implemented | closed | apm-sync |
