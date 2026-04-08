@@ -5,6 +5,7 @@ use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
+    apm_core::validate::validate_owner(&config, username)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
     let mut tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;

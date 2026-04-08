@@ -1,6 +1,24 @@
 use crate::config::{CompletionStrategy, Config};
+use anyhow::{bail, Result};
 use std::collections::HashSet;
 use std::path::Path;
+
+pub fn validate_owner(config: &Config, username: &str) -> Result<()> {
+    if config.git_host.provider.is_some() {
+        return Ok(());
+    }
+    if config.project.collaborators.is_empty() {
+        return Ok(());
+    }
+    if username == "-" {
+        return Ok(());
+    }
+    if config.project.collaborators.iter().any(|c| c == username) {
+        return Ok(());
+    }
+    let list = config.project.collaborators.join(", ");
+    bail!("unknown user '{username}'; valid collaborators: {list}");
+}
 
 pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
@@ -514,6 +532,81 @@ dir = "tickets"
         let config = load_config(toml);
         let warnings = super::validate_warnings(&config);
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn valid_collaborator_accepted() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, "alice").is_ok());
+    }
+
+    #[test]
+    fn unknown_user_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        let err = super::validate_owner(&config, "charlie").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("unknown user 'charlie'"), "unexpected message: {msg}");
+        assert!(msg.contains("alice, bob"), "unexpected message: {msg}");
+    }
+
+    #[test]
+    fn empty_collaborators_skips_validation() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, "anyone").is_ok());
+    }
+
+    #[test]
+    fn clear_owner_always_allowed() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, "-").is_ok());
+    }
+
+    #[test]
+    fn github_mode_skips_validation() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice"]
+
+[tickets]
+dir = "tickets"
+
+[git_host]
+provider = "github"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, "charlie").is_ok());
     }
 
     #[test]
