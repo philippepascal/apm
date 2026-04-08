@@ -34,7 +34,13 @@ Owner validation against collaborators (separate tickets). Changing owner after 
 
 ### Approach
 
-How the implementation will work.
+1. In `apm-core/src/ticket.rs` `create()`, set `owner` to the same value as `author` in the frontmatter.
+2. Ensure `owner` is serialized in the TOML frontmatter (it may already be Optional — make it always present on new tickets).
+3. Update `apm show` output to display owner.
+4. Update `apm list` to show owner in the output columns.
+5. Add tests for owner == author on creation.
+
+See `docs/ownership-spec.md` for the full ownership model.
 
 ### Open questions
 
