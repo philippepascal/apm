@@ -39,7 +39,7 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 ### Acceptance criteria
 
 - [x] A `CmdContext` struct exists in `apm/src/ctx.rs` with public fields `config: Config`, `tickets: Vec<Ticket>`, and `aggressive: bool`
-- [ ] `CmdContext::load(root: &Path, no_aggressive: bool) -> Result<CmdContext>` loads config, performs `git::fetch_all` when `config.sync.aggressive && !no_aggressive` (printing a warning on failure, not returning an error), then loads all tickets
+- [x] `CmdContext::load(root: &Path, no_aggressive: bool) -> Result<CmdContext>` loads config, performs `git::fetch_all` when `config.sync.aggressive && !no_aggressive` (printing a warning on failure, not returning an error), then loads all tickets
 - [ ] `CmdContext::load_config_only(root: &Path) -> Result<Config>` loads and returns the config without performing any fetch or ticket load
 - [ ] `list.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [ ] `verify.rs` uses `CmdContext::load` and removes its inline boilerplate
