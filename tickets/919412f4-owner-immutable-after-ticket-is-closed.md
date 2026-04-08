@@ -1,14 +1,14 @@
 +++
 id = "919412f4"
 title = "Owner immutable after ticket is closed"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
 branch = "ticket/919412f4-owner-immutable-after-ticket-is-closed"
 created_at = "2026-04-08T15:09:50.464294Z"
-updated_at = "2026-04-08T15:55:53.142300Z"
+updated_at = "2026-04-08T21:47:21.263526Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -86,3 +86,4 @@ Follow the tempfile + config-writing pattern used in existing ownership and conf
 | 2026-04-08T15:33Z | new | groomed | apm |
 | 2026-04-08T15:52Z | groomed | in_design | philippepascal |
 | 2026-04-08T15:55Z | in_design | specd | claude-0408-1552-3420 |
+| 2026-04-08T21:47Z | specd | ready | apm |
