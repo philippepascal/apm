@@ -18,7 +18,7 @@ depends_on = ["b0708201"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a supervisor wants to hand off an entire epic to another supervisor, they must change the owner on each ticket individually. This is tedious for epics with many tickets. A convenience command should change the owner of all non-closed tickets in an epic at once.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
