@@ -1,14 +1,14 @@
 +++
 id = "56cf5dca"
 title = "Push ticket branches to origin on creation when aggressive sync is enabled"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/56cf5dca-push-ticket-branches-to-origin-on-creati"
 created_at = "2026-04-08T15:40:56.947438Z"
-updated_at = "2026-04-08T21:47:43.037622Z"
+updated_at = "2026-04-08T21:51:19.448573Z"
 +++
 
 ## Spec
@@ -53,3 +53,4 @@ In `apm-core/src/ticket.rs` `create()`, after the branch is created and the init
 |------|------|----|----|
 | 2026-04-08T15:40Z | — | new | philippepascal |
 | 2026-04-08T21:47Z | new | groomed | apm |
+| 2026-04-08T21:51Z | groomed | in_design | philippepascal |
