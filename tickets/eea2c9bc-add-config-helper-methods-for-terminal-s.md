@@ -32,7 +32,7 @@ Both patterns should be centralised as methods on `impl Config` in `apm-core/src
 - [x] Every `eq_ignore_ascii_case` section search in `apm/src/cmd/spec.rs` and `apm-core/src/ticket.rs` is replaced with calls to `config.has_section(name)` or `config.find_section(name)`
 - [x] The hardcoded `.insert("closed".to_string())` calls in `archive.rs` and `clean.rs` are removed (after confirming `"closed"` is present in the standard workflow config)
 - [x] All existing tests pass (`cargo test --workspace`)
-- [ ] No new `clippy` warnings are introduced by the change (`cargo clippy --workspace`)
+- [x] No new `clippy` warnings are introduced by the change (`cargo clippy --workspace`)
 
 ### Out of scope
 
