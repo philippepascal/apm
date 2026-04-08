@@ -35,7 +35,7 @@ GitLab or other provider support (future work). Caching collaborator lists.
 
 ### Approach
 
-How the implementation will work.
+Wire the existing `fetch_repo_collaborators()` from `github.rs` into the `validate_owner()` function (from ticket bbd5d271). Add a GitHub code path: if git_host.provider == "github" and repo is set, try fetching collaborators via API. On failure, fall back to config.project.collaborators with a warning. See `docs/ownership-spec.md`.
 
 ### Open questions
 
