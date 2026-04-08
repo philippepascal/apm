@@ -21,12 +21,12 @@ The ticket frontmatter has a `supervisor` field that is not part of the ownershi
 
 ### Acceptance criteria
 
-- [ ] `supervisor` field removed from `Frontmatter` struct in `ticket.rs`
-- [ ] `apm set <id> supervisor` no longer accepted (returns error)
-- [ ] `apm list --supervisor` filter removed
-- [ ] Any server/UI references to supervisor field removed
-- [ ] Existing tickets with supervisor field still parse without error (field ignored)
-- [ ] All tests pass
+- [x] `supervisor` field removed from `Frontmatter` struct in `ticket.rs`
+- [x] `apm set <id> supervisor` no longer accepted (returns error)
+- [x] `apm list --supervisor` filter removed
+- [x] Any server/UI references to supervisor field removed
+- [x] Existing tickets with supervisor field still parse without error (field ignored)
+- [x] All tests pass
 
 ### Out of scope
 
