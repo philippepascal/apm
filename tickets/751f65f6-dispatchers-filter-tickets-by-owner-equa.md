@@ -43,14 +43,49 @@ Filtering `apm list` by owner (already exists as --owner flag). Role-based filte
 
 ### Approach
 
-1. Add `owner_filter: Option<&str>` parameter to `pick_next()` / `sorted_actionable()` in `apm-core/src/ticket.rs`. Filter tickets where `frontmatter.owner == Some(owner_filter)`.
-2. In `apm-core/src/start.rs` `spawn_next_worker()`, resolve current user via `resolve_identity()` and pass as owner filter.
-3. In `apm/src/cmd/start.rs` (CLI `apm start --next`), same approach.
-4. In `apm-core/src/work.rs` dispatch loop, same approach.
-5. In `apm-server` dispatcher endpoint, use the authenticated user as the owner filter.
-6. Existing `caller` parameter in `pick_next()` (used for agent_name matching on already-started tickets) should be kept separate from the new owner filter.
+**Background on existing code:** `sorted_actionable()` in `ticket.rs` already uses the `caller` parameter for a partial owner filter — it includes unowned tickets, excludes tickets owned by others. But `caller` is the *agent name* (e.g. `"claude"`), not the supervisor identity. This means tickets owned by a supervisor (e.g. `"alice"`) are already excluded when an agent runs dispatch, but the semantics are wrong: unowned tickets still get dispatched, and the supervisor identity is never used. This ticket fixes both issues.
 
-See `docs/ownership-spec.md` for the full ownership model.
+**Step 1 — `apm-core/src/ticket.rs`: replace caller-based owner filter with explicit `owner_filter`**
+
+- Add `owner_filter: Option<&str>` as a new parameter to `sorted_actionable()` and `pick_next()`.
+- Remove the existing owner-matching code from `sorted_actionable()` that uses `caller` (the `None => true / Some(owner) => caller.map_or(true, |c| c == owner)` filter). This is being replaced, not extended.
+- Add a new filter clause: when `owner_filter = Some(user)`, only include tickets where `frontmatter.owner == Some(user)`. Unowned tickets are excluded.
+- When `owner_filter = None`, no owner filtering is applied (all tickets pass through).
+- The existing `caller` parameter stays — its role is to identify the calling agent for any future agent-name-specific logic; it no longer drives ownership filtering.
+- Update all internal call sites of `sorted_actionable()` and `pick_next()` to pass `owner_filter` (pass `None` for non-dispatcher callers that don't need ownership gating).
+
+**Step 2 — `apm-core/src/start.rs::run_next()` (backs `apm start --next`)**
+
+- After loading config, call `let current_user = resolve_identity(root);`.
+- Pass `Some(current_user.as_str())` as `owner_filter` to `pick_next()`.
+
+**Step 3 — `apm-core/src/start.rs::spawn_next_worker()` (backs `apm work` and the server engine loop)**
+
+- After loading config, call `let current_user = resolve_identity(root);`.
+- Pass `Some(current_user.as_str())` as `owner_filter` to `pick_next()`.
+- No signature change to `spawn_next_worker()` needed; `resolve_identity` is available in `apm_core`.
+
+**Step 4 — `apm/src/cmd/next.rs` (backs `apm next`)**
+
+- After loading config, call `let current_user = apm_core::config::resolve_identity(root);`.
+- Pass `Some(current_user.as_str())` as `owner_filter` to `pick_next()`.
+
+**Step 5 — `apm-server/src/work.rs::get_work_dry_run()`**
+
+- Inside the `spawn_blocking` closure, after loading config, call `let current_user = apm_core::config::resolve_identity(&root);`.
+- Add an owner filter to the existing `filtered` vec: `filtered.retain(|t| t.frontmatter.owner.as_deref() == Some(current_user.as_str()));`
+- This endpoint does not use `pick_next()`, so it needs an inline filter.
+
+**Step 6 — Tests in `apm-core/src/ticket.rs`**
+
+- Update `sorted_actionable_includes_unowned_ticket`: change assertion so that unowned tickets are *excluded* when an `owner_filter` is supplied.
+- Update `sorted_actionable_no_caller_shows_all`: when `owner_filter = None`, all tickets still pass through.
+- Add `pick_next_skips_unowned_ticket_when_owner_filter_set`.
+- Add `pick_next_skips_ticket_owned_by_other`.
+- Add `pick_next_picks_ticket_owned_by_current_user`.
+- The `sorted_actionable_excludes_ticket_owned_by_other` and `sorted_actionable_includes_ticket_owned_by_caller` tests from the prior ticket (`3d784167`) will need their call signatures updated to use `owner_filter` instead of `caller`.
+
+**Note:** `docs/ownership-spec.md` is referenced in the original draft but does not exist. Ignore that reference.
 
 ### Open questions
 
