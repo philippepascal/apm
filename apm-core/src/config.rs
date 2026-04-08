@@ -362,6 +362,16 @@ pub struct LocalWorkersOverride {
     pub env: std::collections::HashMap<String, String>,
 }
 
+impl LocalConfig {
+    pub fn load(root: &Path) -> Self {
+        let local_path = root.join(".apm").join("local.toml");
+        std::fs::read_to_string(&local_path)
+            .ok()
+            .and_then(|s| toml::from_str(&s).ok())
+            .unwrap_or_default()
+    }
+}
+
 fn effective_github_token(local: &LocalConfig, git_host: &GitHostConfig) -> Option<String> {
     if let Some(ref t) = local.github_token {
         if !t.is_empty() {
@@ -427,6 +437,20 @@ pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     crate::github::fetch_authenticated_user(&token).ok()
 }
 
+pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> (Vec<String>, Vec<String>) {
+    let mut warnings = Vec::new();
+    if config.git_host.provider.as_deref() == Some("github") {
+        if let Some(ref repo) = config.git_host.repo {
+            if let Some(token) = effective_github_token(local, &config.git_host) {
+                match crate::github::fetch_repo_collaborators(&token, repo) {
+                    Ok(logins) => return (logins, warnings),
+                    Err(e) => warnings.push(format!("apm: GitHub collaborators fetch failed: {e:#}")),
+                }
+            }
+        }
+    }
+    (config.project.collaborators.clone(), warnings)
+}
 
 impl WorkersConfig {
     pub fn merge_local(&mut self, local: &LocalWorkersOverride) {
