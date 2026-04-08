@@ -26,7 +26,7 @@ Both patterns should be centralised as methods on `impl Config` in `apm-core/src
 ### Acceptance criteria
 
 - [x] `Config::terminal_state_ids(&self) -> HashSet<String>` exists on `impl Config` in `apm-core/src/config.rs` and returns exactly the state IDs where `StateConfig::terminal == true`
-- [ ] `Config::find_section(&self, name: &str) -> Option<&TicketSection>` exists on `impl Config` and returns the first `TicketSection` whose `name` matches case-insensitively, or `None`
+- [x] `Config::find_section(&self, name: &str) -> Option<&TicketSection>` exists on `impl Config` and returns the first `TicketSection` whose `name` matches case-insensitively, or `None`
 - [ ] `Config::has_section(&self, name: &str) -> bool` exists on `impl Config` and returns `true` iff a matching section exists (delegates to `find_section`)
 - [ ] Every inline terminal-state `filter`/`collect` block in `archive.rs`, `clean.rs`, `sync.rs`, `verify.rs`, `apm-core/src/ticket.rs`, and `apm-core/src/review.rs` is replaced with a call to `config.terminal_state_ids()`
 - [ ] Every `eq_ignore_ascii_case` section search in `apm/src/cmd/spec.rs` and `apm-core/src/ticket.rs` is replaced with calls to `config.has_section(name)` or `config.find_section(name)`
