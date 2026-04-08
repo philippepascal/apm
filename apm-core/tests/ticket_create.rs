@@ -96,6 +96,45 @@ fn create_returns_ticket_with_correct_fields() {
 }
 
 #[test]
+fn create_sets_owner_to_author() {
+    let dir = setup();
+    let root = dir.path();
+    let config = Config::load(root).unwrap();
+
+    let mut warnings = Vec::new();
+    let t = ticket::create(
+        root,
+        &config,
+        "Owner test ticket".to_string(),
+        "agent-owner".to_string(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    assert_eq!(t.frontmatter.owner.as_deref(), Some("agent-owner"));
+
+    // Re-parse the persisted content from git and verify owner is in the frontmatter.
+    let branch = t.frontmatter.branch.as_deref().unwrap();
+    let slug = branch.strip_prefix("ticket/").unwrap();
+    let git_path = format!("tickets/{slug}.md");
+    let out = Command::new("git")
+        .args(["show", &format!("{branch}:{git_path}")])
+        .current_dir(root)
+        .output()
+        .unwrap();
+    let content = String::from_utf8(out.stdout).unwrap();
+    assert!(content.contains("owner = \"agent-owner\""), "owner not in persisted frontmatter: {content}");
+}
+
+#[test]
 fn create_branch_exists_in_repo() {
     let dir = setup();
     let root = dir.path();

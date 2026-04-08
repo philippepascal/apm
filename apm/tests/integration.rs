@@ -333,7 +333,7 @@ fn list_shows_all_tickets() {
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, false, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, false, true, None, None).unwrap();
 }
 
 #[test]
@@ -350,7 +350,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, None, true, false, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, false, true, None, None).unwrap();
 }
 
 #[test]
@@ -376,7 +376,7 @@ fn list_mine_filter() {
     std::fs::write(apm_dir.join("local.toml"), "username = \"testuser\"\n").unwrap();
 
     // --mine should show only the first ticket.
-    apm::cmd::list::run(dir.path(), None, false, false, None, None, true, true, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, true, true, None, None).unwrap();
 }
 
 // --- show ---
@@ -1255,7 +1255,7 @@ fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
     apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
-    apm::cmd::list::run(p, None, false, false, None, None, false, false, None, None).unwrap();
+    apm::cmd::list::run(p, None, false, false, None, false, false, None, None).unwrap();
 }
 
 #[test]
@@ -2978,7 +2978,7 @@ fn clean_force_skips_modified_tracked() {
     assert!(wt_path.exists(), "worktree should NOT be removed — modified tracked file");
 }
 
-// --- resolve_agent_name fallback ---
+// --- resolve_caller_name fallback ---
 
 #[test]
 fn start_without_apm_agent_name_uses_fallback() {
@@ -4435,6 +4435,9 @@ fn revoke_with_device_hint() {
 #[test]
 fn assign_sets_owner_field() {
     let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
     apm::cmd::new::run(dir.path(), "Assign test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "assign-test");
     let id = find_ticket_id(dir.path(), "assign-test");
@@ -4447,6 +4450,9 @@ fn assign_sets_owner_field() {
 #[test]
 fn assign_clears_owner_field() {
     let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
     apm::cmd::new::run(dir.path(), "Assign clear test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "assign-clear-test");
     let id = find_ticket_id(dir.path(), "assign-clear-test");
