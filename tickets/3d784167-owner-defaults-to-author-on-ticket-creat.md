@@ -34,13 +34,43 @@ Owner validation against collaborators (separate tickets). Changing owner after 
 
 ### Approach
 
-1. In `apm-core/src/ticket.rs` `create()`, set `owner` to the same value as `author` in the frontmatter.
-2. Ensure `owner` is serialized in the TOML frontmatter (it may already be Optional — make it always present on new tickets).
-3. Update `apm show` output to display owner.
-4. Update `apm list` to show owner in the output columns.
-5. Add tests for owner == author on creation.
+All changes are in Rust. No schema migrations needed — owner is already Option<String> in Frontmatter and serializes when Some.
 
-See `docs/ownership-spec.md` for the full ownership model.
+**1. Set owner on creation — apm-core/src/ticket.rs ~line 473**
+
+In create(), the Frontmatter literal sets owner: None. Change to:
+
+    owner: Some(author.clone()),
+
+author is already in scope as the create() parameter. Because Frontmatter.owner uses #[serde(skip_serializing_if = "Option::is_none")], setting Some(...) is sufficient for it to appear in the persisted TOML frontmatter.
+
+**2. Display owner in apm show — apm/src/cmd/show.rs ~lines 123-138**
+
+Inside print_ticket(), add after existing metadata lines:
+
+    if let Some(o) = &ticket.frontmatter.owner {
+        println!("  owner:  {}", o);
+    }
+
+**3. Display owner in apm list — apm/src/cmd/list.rs ~lines 29-32**
+
+Current format string:
+    println!("{:<8} [{:<12}] {}", fm.id, fm.state, fm.title);
+
+Extend to include owner (show "-" when None):
+    let owner = fm.owner.as_deref().unwrap_or("-");
+    println!("{:<8} [{:<12}] {:<16} {}", fm.id, fm.state, owner, fm.title);
+
+**4. Backward compatibility — no action needed**
+
+Existing tickets without an owner field already parse correctly: Option<String> deserialises to None when the key is absent.
+
+**5. Tests — apm-core/tests/ticket_create.rs**
+
+Add a test after create_returns_ticket_with_correct_fields (line 66). Use the same repo-scaffold pattern:
+- Call ticket::create(...) with a known author string.
+- Assert ticket.frontmatter.owner == Some(author_string).
+- Re-parse the persisted markdown file and assert owner appears in the TOML frontmatter with the correct value.
 
 ### Open questions
 
