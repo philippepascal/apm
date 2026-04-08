@@ -1,14 +1,14 @@
 +++
 id = "24069bd8"
 title = "Extract shared config-and-ticket loading helper in CLI crate"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
 author = "philippepascal"
 branch = "ticket/24069bd8-extract-shared-config-and-ticket-loading"
 created_at = "2026-04-07T22:30:46.572883Z"
-updated_at = "2026-04-08T00:27:22.429187Z"
+updated_at = "2026-04-08T04:02:41.386761Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -154,3 +154,4 @@ Run `cargo test -p apm` and `cargo clippy -p apm -- -D warnings` to confirm no r
 | 2026-04-08T00:06Z | specd | ready | apm |
 | 2026-04-08T00:18Z | ready | in_progress | philippepascal |
 | 2026-04-08T00:27Z | in_progress | implemented | claude-0408-0018-5cc8 |
+| 2026-04-08T04:02Z | implemented | closed | apm-sync |
