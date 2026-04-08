@@ -31,7 +31,7 @@ In GitHub mode (`git_host.provider = "github"`), owner changes are not validated
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+GitLab or other provider support (future work). Caching collaborator lists.
 
 ### Approach
 
