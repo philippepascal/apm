@@ -1,14 +1,14 @@
 +++
 id = "cf389eba"
 title = "Remove dead code: resolve_collaborators and agent_name ownership overlap"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/cf389eba-remove-dead-code-resolve-collaborators-a"
 created_at = "2026-04-08T15:09:36.685009Z"
-updated_at = "2026-04-08T15:33:24.823562Z"
+updated_at = "2026-04-08T15:42:27.925830Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -55,3 +55,4 @@ See `docs/ownership-spec.md` for the full ownership model.
 |------|------|----|----|
 | 2026-04-08T15:09Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
+| 2026-04-08T15:42Z | groomed | in_design | philippepascal |
