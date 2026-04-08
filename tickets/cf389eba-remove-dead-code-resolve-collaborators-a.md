@@ -29,7 +29,7 @@ The codebase has dead code that confuses the ownership model: (1) `resolve_colla
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Building new collaborator validation — that is covered by tickets bbd5d271 and c738d9cc.
 
 ### Approach
 
