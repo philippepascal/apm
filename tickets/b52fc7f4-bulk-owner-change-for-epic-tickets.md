@@ -1,14 +1,14 @@
 +++
 id = "b52fc7f4"
 title = "Bulk owner change for epic tickets"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/b52fc7f4-bulk-owner-change-for-epic-tickets"
 created_at = "2026-04-08T15:10:08.148508Z"
-updated_at = "2026-04-08T15:10:08.148508Z"
+updated_at = "2026-04-08T15:33:59.732622Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -52,3 +52,4 @@ Extend `apm epic set` (in `apm/src/cmd/epic.rs` `run_set()`) to handle "owner" a
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-08T15:10Z | — | new | philippepascal |
+| 2026-04-08T15:33Z | new | groomed | apm |
