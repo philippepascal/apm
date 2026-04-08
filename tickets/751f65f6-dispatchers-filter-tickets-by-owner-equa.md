@@ -43,7 +43,14 @@ Filtering `apm list` by owner (already exists as --owner flag). Role-based filte
 
 ### Approach
 
-How the implementation will work.
+1. Add `owner_filter: Option<&str>` parameter to `pick_next()` / `sorted_actionable()` in `apm-core/src/ticket.rs`. Filter tickets where `frontmatter.owner == Some(owner_filter)`.
+2. In `apm-core/src/start.rs` `spawn_next_worker()`, resolve current user via `resolve_identity()` and pass as owner filter.
+3. In `apm/src/cmd/start.rs` (CLI `apm start --next`), same approach.
+4. In `apm-core/src/work.rs` dispatch loop, same approach.
+5. In `apm-server` dispatcher endpoint, use the authenticated user as the owner filter.
+6. Existing `caller` parameter in `pick_next()` (used for agent_name matching on already-started tickets) should be kept separate from the new owner filter.
+
+See `docs/ownership-spec.md` for the full ownership model.
 
 ### Open questions
 
