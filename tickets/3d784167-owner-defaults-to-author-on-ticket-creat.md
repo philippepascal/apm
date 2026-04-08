@@ -4,11 +4,11 @@ title = "Owner defaults to author on ticket creation"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/3d784167-owner-defaults-to-author-on-ticket-creat"
 created_at = "2026-04-08T15:09:41.414576Z"
-updated_at = "2026-04-08T15:49:14.493386Z"
+updated_at = "2026-04-08T15:49:22.075210Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
