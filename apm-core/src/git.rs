@@ -812,12 +812,12 @@ pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
 }
 
 pub fn push_branch_tracking(root: &Path, branch: &str) -> anyhow::Result<()> {
-    let status = std::process::Command::new("git")
+    let out = std::process::Command::new("git")
         .args(["push", "--set-upstream", "origin", &format!("{branch}:{branch}")])
         .current_dir(root)
-        .status()?;
-    if !status.success() {
-        anyhow::bail!("git push failed");
+        .output()?;
+    if !out.status.success() {
+        anyhow::bail!("git push failed: {}", String::from_utf8_lossy(&out.stderr).trim());
     }
     Ok(())
 }
