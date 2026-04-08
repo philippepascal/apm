@@ -16,7 +16,7 @@ pub fn run(root: &Path, json: bool, no_aggressive: bool) -> Result<()> {
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let p = &config.workflow.prioritization;
-    let agent_name = apm_core::start::resolve_agent_name();
+    let agent_name = apm_core::start::resolve_caller_name();
 
     match ticket::pick_next(&tickets, &actionable, &[], p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) {
         None => {

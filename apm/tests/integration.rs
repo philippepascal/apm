@@ -2978,7 +2978,7 @@ fn clean_force_skips_modified_tracked() {
     assert!(wt_path.exists(), "worktree should NOT be removed — modified tracked file");
 }
 
-// --- resolve_agent_name fallback ---
+// --- resolve_caller_name fallback ---
 
 #[test]
 fn start_without_apm_agent_name_uses_fallback() {
