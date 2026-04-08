@@ -1,14 +1,14 @@
 +++
 id = "d9436266"
 title = "apm-core has 15 pre-existing clippy -D warnings violations"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/d9436266-apm-core-has-15-pre-existing-clippy-d-wa"
 created_at = "2026-04-08T00:24:00.645866Z"
-updated_at = "2026-04-08T00:24:00.645866Z"
+updated_at = "2026-04-08T23:49:45.268479Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-08T00:24Z | — | new | philippepascal |
+| 2026-04-08T23:49Z | new | groomed | apm |
