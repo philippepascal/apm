@@ -49,7 +49,7 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 - [x] `epic.rs` sub-functions (`run_list`, `run_show`, `run_close`) each use whichever helper matches their pattern and remove their inline boilerplate
 - [x] `new.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
 - [x] `clean.rs` uses `CmdContext::load_config_only` and removes its inline `Config::load` call
-- [ ] All existing `apm` integration tests and unit tests pass without modification
+- [x] All existing `apm` integration tests and unit tests pass without modification
 - [ ] `cargo clippy` reports no new warnings in the `apm` crate
 
 ### Out of scope
