@@ -249,26 +249,23 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     let after_prefix = branch.trim_start_matches("epic/");
     let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
 
-    // Determine the config path.
     let apm_dir = root.join(".apm");
-    let config_path = if apm_dir.join("config.toml").exists() {
-        apm_dir.join("config.toml")
-    } else {
-        root.join("apm.toml")
-    };
+    let epics_path = apm_dir.join("epics.toml");
 
-    let raw = std::fs::read_to_string(&config_path)
-        .with_context(|| format!("cannot read {}", config_path.display()))?;
+    let raw = if epics_path.exists() {
+        std::fs::read_to_string(&epics_path)
+            .with_context(|| format!("cannot read {}", epics_path.display()))?
+    } else {
+        String::new()
+    };
     let mut doc: toml_edit::DocumentMut = raw.parse()
-        .with_context(|| format!("cannot parse {}", config_path.display()))?;
+        .with_context(|| format!("cannot parse {}", epics_path.display()))?;
 
     if value == "-" {
         // Remove max_workers from the epic table.
-        if let Some(epics) = doc.get_mut("epics") {
-            if let Some(epic_tbl) = epics.get_mut(&epic_id) {
-                if let Some(t) = epic_tbl.as_table_mut() {
-                    t.remove("max_workers");
-                }
+        if let Some(epic_tbl) = doc.get_mut(&epic_id) {
+            if let Some(t) = epic_tbl.as_table_mut() {
+                t.remove("max_workers");
             }
         }
     } else {
@@ -278,25 +275,16 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
             std::process::exit(1);
         }
 
-        // Ensure [epics] table exists.
-        if doc.get("epics").is_none() {
-            let mut t = toml_edit::Table::new();
-            t.set_implicit(true);
-            doc["epics"] = toml_edit::Item::Table(t);
+        // Ensure [<epic_id>] table exists.
+        if doc.get(&epic_id).is_none() {
+            doc.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
         }
-        // Ensure [epics."<id>"] table exists.
-        {
-            let epics = doc["epics"].as_table_mut()
-                .ok_or_else(|| anyhow::anyhow!("[epics] is not a table"))?;
-            if epics.get(&epic_id).is_none() {
-                epics.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
-            }
-        }
-        doc["epics"][&epic_id]["max_workers"] = toml_edit::value(n);
+        doc[&epic_id]["max_workers"] = toml_edit::value(n);
     }
 
-    std::fs::write(&config_path, doc.to_string())
-        .with_context(|| format!("cannot write {}", config_path.display()))?;
+    std::fs::create_dir_all(&apm_dir)?;
+    std::fs::write(&epics_path, doc.to_string())
+        .with_context(|| format!("cannot write {}", epics_path.display()))?;
     Ok(())
 }
 

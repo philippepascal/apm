@@ -20,7 +20,7 @@ detailed breakdown of the git operations each command performs internally. `apm-
 | [Ticket lifecycle](#ticket-lifecycle) | `assign`, `close`, `new`, `set`, `state` |
 | [Inspection](#inspection) | `list`, `next`, `show`, `spec` |
 | [Workflow orchestration](#workflow-orchestration) | `review`, `start`, `sync`, `work`, `workers` |
-| [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic show` |
+| [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic set`, `epic show` |
 | [Repository maintenance](#repository-maintenance) | `archive`, `clean`, `init`, `validate`, `verify`, `worktrees` |
 | [Server & agent management](#server--agent-management-requires-apm-server) | `agents`, `register`, `revoke`, `sessions` |
 | [Internal commands](#internal-commands) | `_hook` |
@@ -785,6 +785,44 @@ closed the epic is `done`; if any are `in_progress` it is `active`; otherwise `p
 | `git fetch --all --quiet` | (aggressive only) Sync before reading epic and ticket data |
 | `git branch --list epic/*` + `git branch -r --list origin/epic/*` | Enumerate all epic branches |
 | `git branch --list ticket/*` + `git show <branch>:<path>` | Load all tickets to compute per-epic state and counts |
+
+---
+
+### apm epic set
+
+**Set a configuration field on an epic.**
+
+#### Synopsis
+
+    apm epic set <id> max_workers <N>
+    apm epic set <id> max_workers -
+
+#### Description
+
+Sets or clears the `max_workers` limit for an epic. When set, the work engine will not dispatch
+more than `N` workers concurrently on tickets belonging to this epic.
+
+Pass `-` as the value to remove the limit.
+
+Configuration is stored in `.apm/epics.toml`, a file separate from the main `config.toml`. The
+file is created automatically on first use. Format:
+
+    [<epic-id>]
+    max_workers = 2
+
+#### Options
+
+| Flag / Arg | Type | Default | Description |
+|------------|------|---------|-------------|
+| `<id>` | positional | — | Epic ID (4–8 char hex prefix) |
+| `max_workers` | positional | — | Field name (currently the only supported field) |
+| `<N>` or `-` | positional | — | Positive integer to set, or `-` to clear |
+
+#### File internals
+
+| File | Why |
+|------|-----|
+| `.apm/epics.toml` | Read existing epic config, write updated value |
 
 ---
 

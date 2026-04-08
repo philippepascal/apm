@@ -552,6 +552,20 @@ impl Config {
             config.ticket = tk.ticket;
         }
 
+        let epics_path = apm_dir.join("epics.toml");
+        if epics_path.exists() {
+            let ep_contents = std::fs::read_to_string(&epics_path)
+                .with_context(|| format!("cannot read {}", epics_path.display()))?;
+            let ep: std::collections::HashMap<String, EpicConfig> = toml::from_str(&ep_contents)
+                .with_context(|| format!("cannot parse {}", epics_path.display()))?;
+            if !config.epics.is_empty() {
+                config.load_warnings.push(
+                    "both .apm/epics.toml and [epics] in config.toml exist; epics.toml takes precedence".into()
+                );
+            }
+            config.epics = ep;
+        }
+
         let local_path = apm_dir.join("local.toml");
         if local_path.exists() {
             let local_contents = std::fs::read_to_string(&local_path)
@@ -1103,21 +1117,14 @@ dir = "tickets"
     }
 
     #[test]
-    fn epic_config_parses_max_workers() {
-        let toml = r#"
-[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[epics.ab12cd34]
-max_workers = 2
-
-[epics.ff001122]
-max_workers = 1
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
+    fn epic_config_parses_from_epics_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let apm_dir = root.join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
+        std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\nmax_workers = 2\n\n[ff001122]\nmax_workers = 1\n").unwrap();
+        let config = Config::load(root).unwrap();
         assert_eq!(config.epic_max_workers("ab12cd34"), Some(2));
         assert_eq!(config.epic_max_workers("ff001122"), Some(1));
         assert_eq!(config.epic_max_workers("nonexistent"), None);
@@ -1125,30 +1132,25 @@ max_workers = 1
 
     #[test]
     fn epic_config_absent_defaults_empty() {
-        let toml = r#"
-[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let apm_dir = root.join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
+        let config = Config::load(root).unwrap();
         assert!(config.epics.is_empty());
         assert_eq!(config.epic_max_workers("any_id"), None);
     }
 
     #[test]
     fn epic_config_no_max_workers_returns_none() {
-        let toml = r#"
-[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[epics.ab12cd34]
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let apm_dir = root.join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
+        std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\n").unwrap();
+        let config = Config::load(root).unwrap();
         assert_eq!(config.epic_max_workers("ab12cd34"), None);
     }
 }
