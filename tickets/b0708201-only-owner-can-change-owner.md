@@ -34,13 +34,25 @@ Validation that the new owner is a valid collaborator (separate tickets bbd5d271
 
 ### Approach
 
-1. Add a helper `check_owner(config: &Config, ticket: &Ticket) -> Result<()>` in `apm-core` that resolves the current user via `resolve_identity()` and compares against `ticket.frontmatter.owner`.
-2. Call this helper in `apm assign` (`apm/src/cmd/assign.rs`) before modifying the ticket.
-3. Call the same helper in `set_field()` when the field is "owner".
-4. Error messages should include both the current user and the current owner for clarity.
-5. Add unit tests with mock identity.
+1. Add a helper `check_owner(root: &Path, ticket: &Ticket) -> Result<()>` in `apm-core/src/ticket.rs` (alongside `set_field`):
+   - Calls `resolve_identity(root)` to get the current user as a `String`
+   - If identity resolves to `"unassigned"`, bail: `"cannot reassign: identity not configured (set local.user in .apm/local.toml or configure a GitHub token)"`
+   - Compares result against `ticket.frontmatter.owner` (an `Option<String>`):
+     - If `owner` is `None`, anyone can claim — no check needed (unowned ticket); return `Ok(())`
+     - If `owner` is `Some(o)` and current user != `o`, bail: `"only the current owner ({o}) can reassign this ticket"`
+   - Returns `Ok(())` if the check passes
 
-See `docs/ownership-spec.md` for the full ownership model.
+2. Call `check_owner(root, &t)` in `apm/src/cmd/assign.rs` immediately before the `ticket::set_field()` call (currently line 29). The `root` path is already available in the function signature.
+
+3. Call `check_owner(root, &t)` in `apm/src/cmd/set.rs` when the field being set is `"owner"`, before the `ticket::set_field()` call. Add an `if field == "owner"` guard around it. The `CmdContext` already carries `root`.
+
+4. Do **not** add the check inside `ticket::set_field()` — that function only receives `&mut Frontmatter` and has no access to repo root or identity resolution.
+
+5. Add unit tests in `apm-core` (following the tempfile pattern used in `config.rs` tests):
+   - Owner matches current user → `Ok(())`
+   - Owner differs from current user → error containing the owner's name
+   - Identity resolves to `"unassigned"` → error asking to configure identity
+   - Ticket has no owner (`None`) → `Ok(())` (open for claiming)
 
 ### Open questions
 
