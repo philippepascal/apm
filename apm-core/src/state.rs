@@ -173,10 +173,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     }
 
     let worktree_path = if new_state == "in_design" {
-        let worktrees_base = root.join(&config.worktrees.dir);
-        let wt = git::ensure_worktree(root, &worktrees_base, &branch)?;
-        git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs);
-        Some(wt)
+        Some(provision_worktree(root, &config, &branch)?)
     } else {
         None
     };
@@ -331,6 +328,37 @@ pub fn ensure_amendment_section(body: &mut String) {
     } else {
         body.push_str(placeholder);
     }
+}
+
+pub fn provision_worktree(root: &Path, config: &Config, branch: &str) -> Result<PathBuf> {
+    let worktrees_base = root.join(&config.worktrees.dir);
+    let wt = git::ensure_worktree(root, &worktrees_base, branch)?;
+    git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs);
+    Ok(wt)
+}
+
+pub fn available_transitions(config: &crate::config::Config, current_state: &str) -> Vec<(String, String, String)> {
+    let terminal_ids: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
+
+    let state_cfg = config.workflow.states.iter().find(|s| s.id == current_state);
+
+    if let Some(sc) = state_cfg {
+        if !sc.transitions.is_empty() {
+            return sc.transitions.iter()
+                .filter(|tr| !tr.trigger.starts_with("event:"))
+                .map(|tr| (tr.to.clone(), tr.label.clone(), tr.hint.clone()))
+                .collect();
+        }
+    }
+
+    // No explicit transitions: all non-terminal, non-current states are valid.
+    config.workflow.states.iter()
+        .filter(|s| s.id != current_state && !terminal_ids.contains(&s.id.as_str()))
+        .map(|s| (s.id.clone(), s.label.clone(), String::new()))
+        .collect()
 }
 
 pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &str) {
