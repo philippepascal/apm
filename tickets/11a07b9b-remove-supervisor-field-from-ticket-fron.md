@@ -30,7 +30,7 @@ The ticket frontmatter has a `supervisor` field that is not part of the ownershi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Migrating existing tickets that have supervisor set. They will simply be ignored on parse.
 
 ### Approach
 
