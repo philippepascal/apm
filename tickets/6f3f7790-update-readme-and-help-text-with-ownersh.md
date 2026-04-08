@@ -36,7 +36,7 @@ The desired state is that a user reading the README understands the full ownersh
 - [x] README documents `apm assign <id> <username>` and `apm assign <id> -` with a short example
 - [x] README documents `apm epic set <id> owner <user>` for bulk assignment
 - [x] README documents identity setup: config mode (`username` in `.apm/local.toml`) and GitHub mode (`[git_host] provider = "github"`)
-- [ ] README happy path step 3 notes that the spec agent picks up only tickets assigned (owned) to it
+- [x] README happy path step 3 notes that the spec agent picks up only tickets assigned (owned) to it
 - [ ] `apm assign --help` long description mentions that ownership gates dispatcher pickup
 - [ ] `apm epic set --help` field description includes `owner` alongside `max_workers`
 - [ ] `docs/commands.md` `apm epic set` section documents `owner` as a supported field with synopsis, description, and options table
