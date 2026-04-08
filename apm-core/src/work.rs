@@ -15,8 +15,6 @@ pub fn run_engine_loop(
     let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut no_more = false;
     let mut next_poll = Instant::now();
-    // Load config once on first spawn attempt; ignore errors (epic blocking is best-effort).
-    let mut config_cache: Option<crate::config::Config> = None;
 
     loop {
         if cancel.load(Ordering::Relaxed) {
@@ -47,26 +45,14 @@ pub fn run_engine_loop(
         }
 
         if !no_more && workers.len() < max_concurrent {
-            if config_cache.is_none() {
-                config_cache = crate::config::Config::load(root).ok();
-            }
-            let blocked_epics: Vec<String> = if let Some(ref config) = config_cache {
-                let mut blocked = Vec::new();
-                let distinct: std::collections::HashSet<&str> = workers.iter()
-                    .filter_map(|(_, eid, _, _)| eid.as_deref())
-                    .collect();
-                for eid in distinct {
-                    if let Some(limit) = config.epic_max_workers(eid) {
-                        let count = workers.iter().filter(|(_, e, _, _)| e.as_deref() == Some(eid)).count();
-                        if count >= limit {
-                            blocked.push(eid.to_string());
-                        }
-                    }
-                }
-                blocked
-            } else {
-                Vec::new()
-            };
+            let blocked_epics: Vec<String> = crate::config::Config::load(root)
+                .map(|config| {
+                    let epic_ids: Vec<Option<String>> = workers.iter()
+                        .map(|(_, eid, _, _)| eid.clone())
+                        .collect();
+                    config.blocked_epics(&epic_ids)
+                })
+                .unwrap_or_default();
             match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);

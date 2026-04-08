@@ -464,6 +464,26 @@ impl Config {
         self.epics.get(epic_id).and_then(|e| e.max_workers)
     }
 
+    /// Returns epic IDs that have reached their `max_workers` limit
+    /// given the currently active worker epic assignments.
+    pub fn blocked_epics(&self, active_epic_ids: &[Option<String>]) -> Vec<String> {
+        let distinct: std::collections::HashSet<&str> = active_epic_ids.iter()
+            .filter_map(|eid| eid.as_deref())
+            .collect();
+        let mut blocked = Vec::new();
+        for eid in distinct {
+            if let Some(limit) = self.epic_max_workers(eid) {
+                let count = active_epic_ids.iter()
+                    .filter(|e| e.as_deref() == Some(eid))
+                    .count();
+                if count >= limit {
+                    blocked.push(eid.to_string());
+                }
+            }
+        }
+        blocked
+    }
+
     /// States where `actor` can actively pick up / act on tickets.
     /// Matches "any" as a wildcard in addition to the literal actor name.
     pub fn actionable_states_for(&self, actor: &str) -> Vec<String> {
