@@ -19,7 +19,11 @@ When `apm new` creates a ticket, the branch is only created locally. In a multi-
 
 Additionally, state transitions fetch dependency branches from origin (`git fetch origin <branch>`), producing noisy `fatal: couldn't find remote ref` errors in server logs when those branches are local-only. Pushing on creation would eliminate this noise.
 
-When `aggressive = true` in sync config, `apm new` (and other branch-creating commands like `apm epic new`) should push the branch to origin immediately after creation. This matches the aggressive sync philosophy: keep local and remote in sync at all times.
+When `aggressive = true` in sync config, `apm new` should push the branch to origin immediately after creation. This matches the aggressive sync philosophy: keep local and remote in sync at all times.
+
+**Current state:** Most of the implementation already exists. `ticket::create()` accepts `aggressive: bool`, the CLI handler (`apm/src/cmd/new.rs`) already derives `aggressive = config.sync.aggressive && !no_aggressive` and passes it through, and the push block already exists in `ticket.rs` (lines ~547–551). However, it calls `git::push_branch()` (no `--set-upstream`) rather than `git::push_branch_tracking()`. Additionally, no tests exercise the push path against an actual remote. `epic::create()` already calls `push_branch_tracking()` unconditionally on every creation.
+
+The remaining work is: switch `ticket::create()` to use `push_branch_tracking`, and add tests that exercise the push path using a local bare-repo remote.
 
 ### Acceptance criteria
 
