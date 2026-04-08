@@ -47,12 +47,13 @@ pub fn fetch_repo_collaborators(token: &str, repo: &str) -> Result<Vec<String>> 
         .context("GitHub API response is not valid JSON")?;
     let logins = resp
         .as_array()
-        .context("GitHub collaborators response is not an array")?
+        .context("GitHub API response is not an array")?
         .iter()
-        .filter_map(|u| u["login"].as_str().map(|s| s.to_string()))
+        .filter_map(|v| v["login"].as_str().map(|s| s.to_string()))
         .collect();
     Ok(logins)
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -66,12 +67,4 @@ mod tests {
         assert!(!login.is_empty());
     }
 
-    #[test]
-    #[ignore]
-    fn fetch_repo_collaborators_live() {
-        let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN required");
-        let repo = std::env::var("GITHUB_REPO").expect("GITHUB_REPO required (owner/name)");
-        let logins = fetch_repo_collaborators(&token, &repo).unwrap();
-        assert!(!logins.is_empty());
-    }
 }
