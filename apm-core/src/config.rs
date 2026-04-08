@@ -427,20 +427,6 @@ pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     crate::github::fetch_authenticated_user(&token).ok()
 }
 
-pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> (Vec<String>, Vec<String>) {
-    let mut warnings = Vec::new();
-    if config.git_host.provider.as_deref() == Some("github") {
-        if let Some(ref repo) = config.git_host.repo {
-            if let Some(token) = effective_github_token(local, &config.git_host) {
-                match crate::github::fetch_repo_collaborators(&token, repo) {
-                    Ok(logins) => return (logins, warnings),
-                    Err(e) => warnings.push(format!("apm: GitHub collaborators fetch failed: {e}")),
-                }
-            }
-        }
-    }
-    (config.project.collaborators.clone(), warnings)
-}
 
 impl WorkersConfig {
     pub fn merge_local(&mut self, local: &LocalWorkersOverride) {
@@ -1046,44 +1032,6 @@ dir = "tickets"
     fn local_config_github_token_absent_defaults_none() {
         let local: LocalConfig = toml::from_str("").unwrap();
         assert!(local.github_token.is_none());
-    }
-
-    #[test]
-    fn resolve_collaborators_returns_static_when_no_git_host() {
-        let toml = r#"
-[project]
-name = "test"
-collaborators = ["alice", "bob"]
-
-[tickets]
-dir = "tickets"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
-        let local = LocalConfig::default();
-        let (result, _) = resolve_collaborators(&config, &local);
-        assert_eq!(result, vec!["alice", "bob"]);
-    }
-
-    #[test]
-    fn resolve_collaborators_returns_static_when_github_but_no_token() {
-        let toml = r#"
-[project]
-name = "test"
-collaborators = ["alice", "bob"]
-
-[tickets]
-dir = "tickets"
-
-[git_host]
-provider = "github"
-repo = "owner/name"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
-        let local = LocalConfig::default();
-        // No token in local, and GITHUB_TOKEN env var should not be set in test env
-        // (if it is, the test would make a real API call — so we just check fallback works)
-        // We can't guarantee env is clean, so we only test the no-token path
-        let (_, _) = resolve_collaborators(&config, &local);
     }
 
     #[test]
