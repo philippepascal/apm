@@ -1,14 +1,14 @@
 +++
 id = "a71186da"
 title = "Deduplicate identity resolution: remove identity.rs, use config.rs"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 2
 author = "philippepascal"
 branch = "ticket/a71186da-deduplicate-identity-resolution-remove-i"
 created_at = "2026-04-07T22:30:44.747975Z"
-updated_at = "2026-04-07T22:53:03.499955Z"
+updated_at = "2026-04-08T00:03:23.884540Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -137,3 +137,4 @@ If any of these are already covered, skip duplication.
 | 2026-04-07T22:43Z | new | groomed | apm |
 | 2026-04-07T22:49Z | groomed | in_design | philippepascal |
 | 2026-04-07T22:53Z | in_design | specd | claude-0407-2249-4438 |
+| 2026-04-08T00:03Z | specd | ammend | philippepascal |
