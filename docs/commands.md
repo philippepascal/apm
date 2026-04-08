@@ -233,7 +233,9 @@ must still exist in the configuration; document-level validations still apply.
 
 Certain transitions trigger additional side-effects depending on the `completion` strategy
 configured for that transition: `pr` opens a GitHub pull request, `merge` merges the branch into
-the default branch, and `pull` pulls the default branch.
+the target branch (the epic branch if `target_branch` is set, otherwise the default branch), and
+`pull` pulls the default branch. If the target branch has no existing worktree, one is provisioned
+automatically so the merge can proceed.
 
 Transitioning to `in_design` also provisions a permanent worktree for the ticket branch.
 
@@ -259,8 +261,9 @@ Transitioning to `in_design` also provisions a permanent worktree for the ticket
 | `git show <branch>:<path>` | Read ticket content |
 | `git fetch origin <branch>` | (aggressive only) Sync before writing |
 | `git add <path>` + `git commit -m "ticket(<id>): <old> → <new>"` | Write the new state and history entry to the ticket branch |
-| `git push origin <branch>` + `gh pr create` | (`completion = "pr"`) Push branch and open a GitHub PR targeting the default branch |
-| `git push origin <branch>` + `git merge <branch>` | (`completion = "merge"`) Push branch and merge it into the default branch |
+| `git push origin <branch>` + `gh pr create` | (`completion = "pr"`) Push branch and open a GitHub PR targeting `target_branch` or the default branch |
+| `git push origin <branch>` + `git merge <branch>` | (`completion = "merge"`) Push branch and merge it into the target branch (`target_branch` or default); provisions a worktree for the target if needed |
+| `git push origin <branch>` + `git merge` or `gh pr create` | (`completion = "pr_or_epic_merge"`) If `target_branch` is set, merge into it (provisioning a worktree if needed); otherwise open a PR against the default branch |
 | `git pull origin <default-branch>` | (`completion = "pull"`) Pull latest default branch |
 | `git push origin <branch>` | (aggressive + `completion = "none"`) Publish the state change |
 | `git fetch origin <branch>` + `git worktree add <path> <branch>` | (`in_design` target) Provision a permanent worktree for the ticket |
