@@ -56,11 +56,11 @@ enum EpicCommand {
         #[arg(long)]
         no_aggressive: bool,
     },
-    /// Set a field on an epic (e.g. max_workers)
+    /// Set a field on an epic (max_workers or owner)
     Set {
         /// Epic ID (4–8 char hex prefix)
         id: String,
-        /// Field to update (e.g. max_workers)
+        /// Field to update: max_workers or owner
         field: String,
         /// New value (use "-" to clear)
         value: String,
@@ -369,6 +369,11 @@ Examples:
     #[command(long_about = "Set the owner field on any ticket, regardless of its current state.
 
 Use this to assign a ticket to a user or agent, or to clear the owner field.
+
+Ownership gates dispatcher pickup: `apm work`, `apm start --next`, and the UI
+dispatch loop only pick up tickets whose owner matches the current user's identity.
+Tickets with no owner are never auto-dispatched. Assign a ticket before running
+the dispatch loop.
 
 Examples:
   apm assign 42 alice        # assign ticket 42 to alice
