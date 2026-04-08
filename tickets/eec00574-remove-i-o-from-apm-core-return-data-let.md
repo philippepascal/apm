@@ -1,14 +1,14 @@
 +++
 id = "eec00574"
 title = "Remove I/O from apm-core: return data, let CLI print"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 6
 risk = 3
 author = "philippepascal"
 branch = "ticket/eec00574-remove-i-o-from-apm-core-return-data-let"
 created_at = "2026-04-07T22:31:00.075025Z"
-updated_at = "2026-04-08T01:08:56.395725Z"
+updated_at = "2026-04-08T01:09:21.797890Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 depends_on = ["eea2c9bc", "a71186da", "24069bd8", "fe6e9d1d", "ce919ea8"]
@@ -218,3 +218,4 @@ Two `eprintln!` calls remain:
 | 2026-04-08T00:37Z | ammend | in_design | philippepascal |
 | 2026-04-08T00:40Z | in_design | specd | claude-0408-0037-2de0 |
 | 2026-04-08T01:08Z | specd | ready | apm |
+| 2026-04-08T01:09Z | ready | in_progress | philippepascal |
