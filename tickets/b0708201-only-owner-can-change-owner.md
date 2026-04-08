@@ -4,11 +4,11 @@ title = "Only owner can change owner"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/b0708201-only-owner-can-change-owner"
 created_at = "2026-04-08T15:09:45.724421Z"
-updated_at = "2026-04-08T15:52:12.677462Z"
+updated_at = "2026-04-08T15:52:18.943470Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
