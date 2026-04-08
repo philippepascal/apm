@@ -1,14 +1,14 @@
 +++
 id = "b0708201"
 title = "Only owner can change owner"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/b0708201-only-owner-can-change-owner"
 created_at = "2026-04-08T15:09:45.724421Z"
-updated_at = "2026-04-08T15:33:34.711156Z"
+updated_at = "2026-04-08T15:49:43.919512Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -57,3 +57,4 @@ See `docs/ownership-spec.md` for the full ownership model.
 |------|------|----|----|
 | 2026-04-08T15:09Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
+| 2026-04-08T15:49Z | groomed | in_design | philippepascal |
