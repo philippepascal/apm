@@ -44,7 +44,7 @@ The desired state is that a user reading the README understands the full ownersh
 
 ### Out of scope
 
-Documenting the ownership spec itself (already in docs/ownership-spec.md). API documentation for apm-server.
+- Documenting ownership-spec.md (the file does not exist; ownership semantics are captured in the specs of the individual implementation tickets)\n- API documentation for apm-server endpoints\n- Changing the ownership enforcement logic (this ticket is documentation only)
 
 ### Approach
 
