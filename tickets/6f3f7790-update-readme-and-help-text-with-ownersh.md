@@ -31,7 +31,7 @@ The README and CLI help text do not document the ownership model: who owns ticke
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Documenting the ownership spec itself (already in docs/ownership-spec.md). API documentation for apm-server.
 
 ### Approach
 
