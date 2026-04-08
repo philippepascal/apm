@@ -1,14 +1,14 @@
 +++
 id = "6f3f7790"
 title = "Update README and help text with ownership model"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/6f3f7790-update-readme-and-help-text-with-ownersh"
 created_at = "2026-04-08T15:32:38.451292Z"
-updated_at = "2026-04-08T15:32:38.451292Z"
+updated_at = "2026-04-08T15:34:05.080025Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["751f65f6", "b52fc7f4"]
@@ -51,3 +51,4 @@ Update README.md, docs/commands.md, and CLI help strings (clap descriptions in a
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-08T15:32Z | — | new | philippepascal |
+| 2026-04-08T15:34Z | new | groomed | apm |
