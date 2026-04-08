@@ -1,14 +1,14 @@
 +++
 id = "11a07b9b"
 title = "Remove supervisor field from ticket frontmatter"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
 author = "philippepascal"
 branch = "ticket/11a07b9b-remove-supervisor-field-from-ticket-fron"
 created_at = "2026-04-08T15:09:32.454090Z"
-updated_at = "2026-04-08T21:57:34.350115Z"
+updated_at = "2026-04-08T23:46:55.501361Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -83,3 +83,4 @@ Files to change and what to do in each:
 | 2026-04-08T21:47Z | specd | ready | apm |
 | 2026-04-08T21:51Z | ready | in_progress | philippepascal |
 | 2026-04-08T21:57Z | in_progress | implemented | claude-0408-2151-8410 |
+| 2026-04-08T23:46Z | implemented | closed | apm-sync |
