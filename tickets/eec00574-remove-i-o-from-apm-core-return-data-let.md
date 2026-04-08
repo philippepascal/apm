@@ -1,14 +1,14 @@
 +++
 id = "eec00574"
 title = "Remove I/O from apm-core: return data, let CLI print"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 6
 risk = 3
 author = "philippepascal"
 branch = "ticket/eec00574-remove-i-o-from-apm-core-return-data-let"
 created_at = "2026-04-07T22:31:00.075025Z"
-updated_at = "2026-04-08T00:03:30.609953Z"
+updated_at = "2026-04-08T00:37:37.827385Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 depends_on = ["eea2c9bc", "a71186da", "24069bd8", "fe6e9d1d", "ce919ea8"]
@@ -205,3 +205,4 @@ Update `apm/src/cmd/clean.rs` to print the warnings.
 | 2026-04-07T23:03Z | groomed | in_design | philippepascal |
 | 2026-04-07T23:07Z | in_design | specd | claude-0407-2303-b708 |
 | 2026-04-08T00:03Z | specd | ammend | philippepascal |
+| 2026-04-08T00:37Z | ammend | in_design | philippepascal |
