@@ -30,7 +30,7 @@ When a ticket is created with `apm new`, the `owner` field is not set (or set to
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Owner validation against collaborators (separate tickets). Changing owner after creation (separate ticket).
 
 ### Approach
 
