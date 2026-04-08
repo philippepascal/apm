@@ -1,14 +1,14 @@
 +++
 id = "11a07b9b"
 title = "Remove supervisor field from ticket frontmatter"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/11a07b9b-remove-supervisor-field-from-ticket-fron"
 created_at = "2026-04-08T15:09:32.454090Z"
-updated_at = "2026-04-08T15:33:19.294621Z"
+updated_at = "2026-04-08T15:39:32.651937Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
@@ -57,3 +57,4 @@ See `docs/ownership-spec.md` for the full ownership model.
 |------|------|----|----|
 | 2026-04-08T15:09Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
+| 2026-04-08T15:39Z | groomed | in_design | philippepascal |
