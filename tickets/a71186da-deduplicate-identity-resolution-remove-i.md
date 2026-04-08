@@ -34,7 +34,7 @@ The desired state is a single identity resolution function (`config::resolve_ide
 - [x] `pub mod identity` is not declared anywhere in `apm-core/src/lib.rs`
 - [x] `apm new` sets the ticket `author` field using `config::resolve_identity()`
 - [x] `apm list --mine` filters tickets by the value returned by `config::resolve_identity()`
-- [ ] `apm new` with no identity configured (no `local.toml` username, no `git_host`) sets `author = "unassigned"`
+- [x] `apm new` with no identity configured (no `local.toml` username, no `git_host`) sets `author = "unassigned"`
 - [ ] `apm list --mine` with no identity configured matches tickets whose author is `"unassigned"`
 - [ ] `cargo build` completes without errors or unused-import warnings across all workspace crates
 - [ ] All `identity::` references are absent from the `apm` crate source
