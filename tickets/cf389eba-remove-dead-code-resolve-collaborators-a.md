@@ -21,11 +21,7 @@ The codebase has two dead-code problems and one naming/documentation problem tha
 
 ### Acceptance criteria
 
-- [ ] `resolve_collaborators()` removed from `config.rs` (will be replaced by active validation in a later ticket)
-- [ ] `resolve_agent_name()` renamed or documented to clarify it is for history/logging only, not ownership
-- [ ] No code path uses agent_name as an ownership or filtering concept
-- [ ] Tests for removed functions cleaned up
-- [ ] All remaining tests pass
+- [ ] `resolve_collaborators()` and both its tests removed from `apm-core/src/config.rs`\n- [ ] `fetch_repo_collaborators()` and its live `#[ignore]` test removed from `apm-core/src/github.rs`\n- [ ] `resolve_agent_name()` renamed to `resolve_caller_name()` (or equivalent) across all call sites\n- [ ] The renamed function has a doc comment that states: it returns the identity used (a) to record history entries and (b) as the caller when filtering tickets by `owner`\n- [ ] No remaining code refers to the old `resolve_agent_name` name\n- [ ] All existing tests pass
 
 ### Out of scope
 
