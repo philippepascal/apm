@@ -43,7 +43,7 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 - [x] `CmdContext::load_config_only(root: &Path) -> Result<Config>` loads and returns the config without performing any fetch or ticket load
 - [x] `list.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [x] `verify.rs` uses `CmdContext::load` and removes its inline boilerplate
-- [ ] `validate.rs` uses `CmdContext::load` (or `load_config_only` for the `--config-only` branch) and removes its inline boilerplate
+- [x] `validate.rs` uses `CmdContext::load` (or `load_config_only` for the `--config-only` branch) and removes its inline boilerplate
 - [ ] `review.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [ ] `set.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [ ] `epic.rs` sub-functions (`run_list`, `run_show`, `run_close`) each use whichever helper matches their pattern and remove their inline boilerplate
