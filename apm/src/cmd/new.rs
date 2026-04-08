@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, identity, ticket};
+use apm_core::{config::{Config, resolve_identity}, git, ticket};
 use std::path::Path;
 
 pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>, epic: Option<String>, depends_on: Vec<String>) -> Result<()> {
@@ -33,7 +33,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
     }
 
-    let author = identity::resolve_current_user(root);
+    let author = resolve_identity(root);
 
     let (epic_id, target_branch, base_branch) = if let Some(ref id) = epic {
         match git::find_epic_branch(root, id) {

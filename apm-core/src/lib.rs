@@ -2,7 +2,6 @@ pub mod archive;
 pub mod clean;
 pub mod config;
 pub mod github;
-pub mod identity;
 pub mod credentials;
 pub mod epic;
 pub mod git;
