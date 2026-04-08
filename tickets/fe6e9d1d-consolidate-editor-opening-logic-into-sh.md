@@ -21,12 +21,12 @@ Editor-opening logic is duplicated across three command handlers with slight but
 
 ### Acceptance criteria
 
-- [ ] `apm new` behaves identically to before — opens the editor, commits the result, restores the original branch
-- [ ] `apm show --edit` behaves identically to before — opens the editor on a temp file, commits if the content changed
-- [ ] `apm review` behaves identically to before — opens the editor on the review file and bails on non-zero exit
-- [ ] Changing `$VISUAL` or `$EDITOR` at runtime is reflected in all three commands without touching cmd/ files
-- [ ] When neither `$VISUAL` nor `$EDITOR` is set, all three commands fall back to `vi`
-- [ ] `cargo test` passes with no new failures
+- [x] `apm new` behaves identically to before — opens the editor, commits the result, restores the original branch
+- [x] `apm show --edit` behaves identically to before — opens the editor on a temp file, commits if the content changed
+- [x] `apm review` behaves identically to before — opens the editor on the review file and bails on non-zero exit
+- [x] Changing `$VISUAL` or `$EDITOR` at runtime is reflected in all three commands without touching cmd/ files
+- [x] When neither `$VISUAL` nor `$EDITOR` is set, all three commands fall back to `vi`
+- [x] `cargo test` passes with no new failures
 
 ### Out of scope
 
