@@ -352,7 +352,7 @@ pub fn remove_worktree(root: &Path, wt_path: &Path, force: bool) -> Result<()> {
 
 /// Copy agent config directories from the main repo into a worktree.
 /// Only copies directories that are NOT tracked by git (untracked/gitignored).
-pub fn sync_agent_dirs(root: &Path, wt_path: &Path, agent_dirs: &[String]) {
+pub fn sync_agent_dirs(root: &Path, wt_path: &Path, agent_dirs: &[String], warnings: &mut Vec<String>) {
     for dir_name in agent_dirs {
         let src = root.join(dir_name);
         if !src.is_dir() {
@@ -363,7 +363,7 @@ pub fn sync_agent_dirs(root: &Path, wt_path: &Path, agent_dirs: &[String]) {
         }
         let dst = wt_path.join(dir_name);
         if let Err(e) = copy_dir_recursive(&src, &dst) {
-            eprintln!("warning: could not copy {dir_name} to worktree: {e}");
+            warnings.push(format!("warning: could not copy {dir_name} to worktree: {e}"));
         }
     }
 }
@@ -575,7 +575,7 @@ pub fn resolve_ticket_branch(branches: &[String], arg: &str) -> Result<String> {
 
 /// Push all local ticket/* branches that have commits not yet on origin.
 /// Non-fatal: logs warnings on push failure. No-op when no origin is configured.
-pub fn push_ticket_branches(root: &Path) {
+pub fn push_ticket_branches(root: &Path, warnings: &mut Vec<String>) {
     if run(root, &["remote", "get-url", "origin"]).is_err() {
         return;
     }
@@ -591,7 +591,7 @@ pub fn push_ticket_branches(root: &Path) {
             .unwrap_or(0);
         if count > 0 {
             if let Err(e) = run(root, &["push", "origin", branch]) {
-                eprintln!("warning: push {branch} failed: {e:#}");
+                warnings.push(format!("warning: push {branch} failed: {e:#}"));
             }
         }
     }
@@ -600,7 +600,7 @@ pub fn push_ticket_branches(root: &Path) {
 /// Update local refs for all ticket/* branches to match origin after a fetch.
 /// Skips branches that are currently checked out in any worktree (main or permanent).
 /// All failures are handled as warnings — this function never panics or returns an error.
-pub fn sync_local_ticket_refs(root: &Path) {
+pub fn sync_local_ticket_refs(root: &Path, warnings: &mut Vec<String>) {
     // Collect all branches currently checked out across all worktrees.
     let checked_out: std::collections::HashSet<String> = {
         let mut set = std::collections::HashSet::new();
@@ -639,7 +639,7 @@ pub fn sync_local_ticket_refs(root: &Path) {
 
         // Create or update the local ref unconditionally.
         if let Err(e) = run(root, &["update-ref", &format!("refs/heads/{branch}"), &sha]) {
-            eprintln!("warning: could not update local ref {branch}: {e:#}");
+            warnings.push(format!("warning: could not update local ref {branch}: {e:#}"));
         }
     }
 }
@@ -812,12 +812,12 @@ pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
 }
 
 pub fn push_branch_tracking(root: &Path, branch: &str) -> anyhow::Result<()> {
-    let status = std::process::Command::new("git")
+    let out = std::process::Command::new("git")
         .args(["push", "--set-upstream", "origin", &format!("{branch}:{branch}")])
         .current_dir(root)
-        .status()?;
-    if !status.success() {
-        anyhow::bail!("git push failed");
+        .output()?;
+    if !out.status.success() {
+        anyhow::bail!("git push failed: {}", String::from_utf8_lossy(&out.stderr).trim());
     }
     Ok(())
 }
@@ -982,7 +982,7 @@ pub fn move_files_on_branch(
     result
 }
 
-pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str) -> Result<()> {
+pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str, warnings: &mut Vec<String>) -> Result<()> {
     let _ = run(root, &["fetch", "origin", default_branch]);
 
     let merge_dir = if current_branch(root).ok().as_deref() == Some(default_branch) {
@@ -998,7 +998,7 @@ pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str
 
     if has_remote(root) {
         if let Err(e) = run(&merge_dir, &["push", "origin", default_branch]) {
-            eprintln!("warning: push {default_branch} failed: {e:#}");
+            warnings.push(format!("warning: push {default_branch} failed: {e:#}"));
         }
     }
     Ok(())

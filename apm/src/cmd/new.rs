@@ -1,9 +1,10 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, identity, ticket};
+use apm_core::{config::{Config, resolve_identity}, git, ticket};
 use std::path::Path;
+use crate::ctx::CmdContext;
 
 pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>, epic: Option<String>, depends_on: Vec<String>) -> Result<()> {
-    let config = Config::load(root)?;
+    let config = CmdContext::load_config_only(root)?;
 
     if context_section.is_some() && context.is_none() {
         anyhow::bail!("--context-section requires --context");
@@ -33,7 +34,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
     }
 
-    let author = identity::resolve_current_user(root);
+    let author = resolve_identity(root);
 
     let (epic_id, target_branch, base_branch) = if let Some(ref id) = epic {
         match git::find_epic_branch(root, id) {
@@ -58,7 +59,11 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     };
 
     let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
-    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch)?;
+    let mut warnings = Vec::new();
+    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch, &mut warnings)?;
+    for w in &warnings {
+        eprintln!("{w}");
+    }
     let id = &t.frontmatter.id;
     let branch = t.frontmatter.branch.as_deref().unwrap_or("");
     let filename = t.path.file_name().unwrap().to_string_lossy();
@@ -74,12 +79,6 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
 }
 
 fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> Result<()> {
-    let editor = std::env::var("VISUAL")
-        .ok()
-        .filter(|e| !e.is_empty())
-        .or_else(|| std::env::var("EDITOR").ok().filter(|e| !e.is_empty()))
-        .unwrap_or_else(|| "vi".to_string());
-
     // Check out the ticket branch, open editor, commit result, return to previous branch.
     let prev_branch = std::process::Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
@@ -96,14 +95,9 @@ fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> R
         .status();
 
     let file_path = root.join(rel_path);
-    let mut parts = editor.split_whitespace();
-    let bin = parts.next().unwrap();
-    let status = std::process::Command::new(bin)
-        .args(parts)
-        .arg(&file_path)
-        .status();
-
     // Commit whatever the user wrote, even if editor exited non-zero.
+    let _ = crate::editor::open(&file_path);
+
     let _ = std::process::Command::new("git")
         .args(["-c", "commit.gpgsign=false", "add", rel_path])
         .current_dir(root)
@@ -117,12 +111,6 @@ fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> R
         .args(["checkout", &prev_branch])
         .current_dir(root)
         .status();
-
-    if let Ok(s) = status {
-        if !s.success() {
-            eprintln!("warning: editor exited with non-zero status");
-        }
-    }
 
     Ok(())
 }

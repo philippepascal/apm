@@ -29,7 +29,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
         sig_count_clone.fetch_add(1, Ordering::Relaxed);
     });
 
-    let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
+    let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut started_ids: Vec<String> = Vec::new();
     let mut no_more = false;
     // next_poll only used in daemon mode
@@ -57,7 +57,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
                     drain_announced = true;
                 }
                 // Reap finished workers during drain.
-                workers.retain_mut(|(id, child, _pid_path)| {
+                workers.retain_mut(|(id, _epic_id, child, _pid_path)| {
                     let done = matches!(child.try_wait(), Ok(Some(_)));
                     if done {
                         log(&format!("Worker for ticket #{id} finished"));
@@ -77,7 +77,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
 
         // Reap finished workers.
         let mut reaped = false;
-        workers.retain_mut(|(id, child, _pid_path)| {
+        workers.retain_mut(|(id, _epic_id, child, _pid_path)| {
             let done = matches!(child.try_wait(), Ok(Some(_)));
             if done {
                 log(&format!("Worker for ticket #{id} finished"));
@@ -108,7 +108,13 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
         }
 
         if !no_more && workers.len() < max_concurrent {
-            match super::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref()) {
+            let blocked_epics: Vec<String> = {
+                let epic_ids: Vec<Option<String>> = workers.iter()
+                    .map(|(_, eid, _, _)| eid.clone())
+                    .collect();
+                config.blocked_epics(&epic_ids)
+            };
+            match super::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics) {
                 Ok(None) => {
                     if daemon {
                         let secs = interval_secs;
@@ -117,12 +123,12 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
                     }
                     no_more = true;
                 }
-                Ok(Some((id, child, pid_path))) => {
+                Ok(Some((id, epic_id, child, pid_path))) => {
                     log(&format!(
                         "Dispatched worker for ticket #{id}"
                     ));
                     started_ids.push(id.clone());
-                    workers.push((id, child, pid_path));
+                    workers.push((id, epic_id, child, pid_path));
                     no_more = false;
                 }
                 Err(e) => {

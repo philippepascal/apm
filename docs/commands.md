@@ -3,14 +3,15 @@
 ## Introduction
 
 APM (Agent Project Manager) is a git-native ticket system designed for teams where humans and AI
-agents collaborate. Tickets are Markdown files stored on per-ticket branches (`ticket/<id>-<slug>`).
-State is encoded in TOML frontmatter at the top of each file; the state machine is defined in
-`.apm/apm.toml`. Because every ticket lives on its own branch, no merge conflicts arise between
-concurrent ticket edits, and the full history of a ticket is preserved in git.
+agents collaborate. Tickets are Markdown files stored on per-ticket branches (`ticket/<id>-<slug>`). Tickets provide a full history of all specs used to develop the project.
+State is encoded in TOML frontmatter at the top of each file.
+The state machine is defined in `.apm/workflow.toml` and is entirely customizable.
+The ticket structure is defined in `.apm/tickets.toml` and is entirely customizable.
+Merge strategies primitives, epics with dedicated branches, ticket with dedicated branches, and ticket dependencies, all allow to have worker agents work independantly, and optionally concurrently, while keeping minimal merge conflicts.
 
 This document is the authoritative reference for every command exposed by the `apm` binary. It
 covers the exact invocation syntax, all flags and arguments with their types and defaults, and a
-detailed breakdown of the git operations each command performs internally.
+detailed breakdown of the git operations each command performs internally. `apm-serve` internally uses the same `apm-core` library as the CLI, so all UI actions work the same way, apart from the UI dispatcher which is slightly different from `apm work`.
 
 **How to navigate this reference:**
 
@@ -19,7 +20,7 @@ detailed breakdown of the git operations each command performs internally.
 | [Ticket lifecycle](#ticket-lifecycle) | `assign`, `close`, `new`, `set`, `state` |
 | [Inspection](#inspection) | `list`, `next`, `show`, `spec` |
 | [Workflow orchestration](#workflow-orchestration) | `review`, `start`, `sync`, `work`, `workers` |
-| [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic show` |
+| [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic set`, `epic show` |
 | [Repository maintenance](#repository-maintenance) | `archive`, `clean`, `init`, `validate`, `verify`, `worktrees` |
 | [Server & agent management](#server--agent-management-requires-apm-server) | `agents`, `register`, `revoke`, `sessions` |
 | [Internal commands](#internal-commands) | `_hook` |
@@ -232,7 +233,9 @@ must still exist in the configuration; document-level validations still apply.
 
 Certain transitions trigger additional side-effects depending on the `completion` strategy
 configured for that transition: `pr` opens a GitHub pull request, `merge` merges the branch into
-the default branch, and `pull` pulls the default branch.
+the target branch (the epic branch if `target_branch` is set, otherwise the default branch), and
+`pull` pulls the default branch. If the target branch has no existing worktree, one is provisioned
+automatically so the merge can proceed.
 
 Transitioning to `in_design` also provisions a permanent worktree for the ticket branch.
 
@@ -258,8 +261,9 @@ Transitioning to `in_design` also provisions a permanent worktree for the ticket
 | `git show <branch>:<path>` | Read ticket content |
 | `git fetch origin <branch>` | (aggressive only) Sync before writing |
 | `git add <path>` + `git commit -m "ticket(<id>): <old> → <new>"` | Write the new state and history entry to the ticket branch |
-| `git push origin <branch>` + `gh pr create` | (`completion = "pr"`) Push branch and open a GitHub PR targeting the default branch |
-| `git push origin <branch>` + `git merge <branch>` | (`completion = "merge"`) Push branch and merge it into the default branch |
+| `git push origin <branch>` + `gh pr create` | (`completion = "pr"`) Push branch and open a GitHub PR targeting `target_branch` or the default branch |
+| `git push origin <branch>` + `git merge <branch>` | (`completion = "merge"`) Push branch and merge it into the target branch (`target_branch` or default); provisions a worktree for the target if needed |
+| `git push origin <branch>` + `git merge` or `gh pr create` | (`completion = "pr_or_epic_merge"`) If `target_branch` is set, merge into it (provisioning a worktree if needed); otherwise open a PR against the default branch |
 | `git pull origin <default-branch>` | (`completion = "pull"`) Pull latest default branch |
 | `git push origin <branch>` | (aggressive + `completion = "none"`) Publish the state change |
 | `git fetch origin <branch>` + `git worktree add <path> <branch>` | (`in_design` target) Provision a permanent worktree for the ticket |
@@ -293,6 +297,8 @@ may be combined.
     apm list --unassigned             # no agent assigned yet
     apm list --actionable agent       # tickets an agent can act on now
     apm list --mine                   # your own tickets
+
+`--mine` filters by `author` (the user who created the ticket). `--owner` filters by the `owner` field. Since dispatchers pick only tickets the current user owns, `apm list --owner <your-username>` shows the queue that `apm work` will draw from.
 
 #### Options
 
@@ -781,6 +787,53 @@ closed the epic is `done`; if any are `in_progress` it is `active`; otherwise `p
 | `git fetch --all --quiet` | (aggressive only) Sync before reading epic and ticket data |
 | `git branch --list epic/*` + `git branch -r --list origin/epic/*` | Enumerate all epic branches |
 | `git branch --list ticket/*` + `git show <branch>:<path>` | Load all tickets to compute per-epic state and counts |
+
+---
+
+### apm epic set
+
+**Set a configuration field on an epic.**
+
+#### Synopsis
+
+    apm epic set <id> max_workers <N>
+    apm epic set <id> max_workers -
+    apm epic set <id> owner <username>
+    apm epic set <id> owner -
+
+#### Description
+
+Sets or clears a configuration field on an epic.
+
+Set `max_workers` to cap how many workers the dispatcher launches concurrently on tickets
+belonging to this epic. Pass `-` as the value to remove the limit.
+
+Set `owner` to bulk-assign ownership of all non-closed tickets in the epic to `<username>`. Pass
+`-` to clear the owner field on all non-closed tickets. The current user must be the owner of
+every ticket to be changed; if any check fails, no tickets are modified. Closed tickets are
+skipped.
+
+`max_workers` configuration is stored in `.apm/epics.toml`. Format:
+
+    [<epic-id>]
+    max_workers = 2
+
+#### Options
+
+| Flag / Arg | Type | Default | Description |
+|------------|------|---------|-------------|
+| `<id>` | positional | — | Epic ID (4–8 char hex prefix) |
+| `max_workers` | positional | — | Limit concurrent dispatched workers for this epic |
+| `owner` | positional | — | Bulk-assign ownership of all non-closed tickets in this epic |
+| `<N>`, `<username>`, or `-` | positional | — | New value, or `-` to clear |
+
+#### File internals
+
+| File / Command | Why |
+|----------------|-----|
+| `.apm/epics.toml` | Read existing epic config, write updated `max_workers` value |
+| `git add` + `git commit` per ticket branch | Persist updated `owner` field in each ticket's frontmatter |
+| `git push` | (aggressive mode) Push updated ticket branches to origin |
 
 ---
 

@@ -1,10 +1,11 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket};
 pub use apm_core::validate::validate_config;
 pub use apm_core::validate::validate_warnings;
+use apm_core::{config::Config, git, ticket};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::path::Path;
+use crate::ctx::CmdContext;
 
 #[derive(Debug, Serialize)]
 struct Issue {
@@ -14,23 +15,24 @@ struct Issue {
 }
 
 pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive: bool) -> Result<()> {
-    let config = Config::load(root)?;
-    let aggressive = config.sync.aggressive && !no_aggressive;
-
-    if aggressive {
-        if let Err(e) = git::fetch_all(root) {
-            eprintln!("warning: fetch failed: {e:#}");
-        }
-    }
-
-    let config_errors = validate_config(&config, root);
-    let config_warnings = validate_warnings(&config);
+    let config_errors;
+    let config_warnings;
     let mut ticket_issues: Vec<Issue> = Vec::new();
     let mut tickets_checked = 0usize;
+    let config: Config;
 
-    if !config_only {
-        let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-        tickets_checked = tickets.len();
+    if config_only {
+        config = CmdContext::load_config_only(root)?;
+        config_errors = validate_config(&config, root);
+        config_warnings = validate_warnings(&config);
+    } else {
+        let ctx = CmdContext::load(root, no_aggressive)?;
+        config = ctx.config;
+        config_errors = validate_config(&config, root);
+        config_warnings = validate_warnings(&config);
+        tickets_checked = ctx.tickets.len();
+
+        let tickets = ctx.tickets;
 
         let state_ids: HashSet<&str> = config.workflow.states.iter()
             .map(|s| s.id.as_str())

@@ -1,30 +1,51 @@
-commit 27e6688b5b8e718eb9504958c1c124d14167f13c
-Author: philippepascal <philippe@pascalonline.org>
-Date:   Thu Mar 26 17:06:01 2026 -0700
++++
+id = 14
+title = "apm state accepts any string as state without validation"
+state = "closed"
+priority = 8
+effort = 2
+risk = 2
+updated_at = "2026-03-27T00:06:00.986851Z"
++++
 
-    ticket(14): ready → closed
+## Spec
 
-diff --git a/tickets/0014-bug-invalid-state-accepted-with-command-.md b/tickets/0014-bug-invalid-state-accepted-with-command-.md
-index 954e4f0..a277810 100644
---- a/tickets/0014-bug-invalid-state-accepted-with-command-.md
-+++ b/tickets/0014-bug-invalid-state-accepted-with-command-.md
-@@ -1,12 +1,11 @@
- +++
- id = 14
- title = "apm state accepts any string as state without validation"
--state = "ready"
-+state = "closed"
- priority = 8
- effort = 2
- risk = 2
--created = "2026-03-25"
--updated = "2026-03-26"
-+updated_at = "2026-03-27T00:06:00.986851Z"
- +++
- 
- ## Spec
-@@ -49,3 +48,4 @@ and return early before loading or modifying any ticket file.
- | 2026-03-25 | manual | new → specd | |
- | 2026-03-26 | manual | ammend → specd | |
- | 2026-03-26 | manual | specd → ready | |
-+| 2026-03-27T00:06Z | ready | closed | apm |
+### Amendment requests
+
+- [x] create new ticket for first item out of scope
+
+  Created ticket #20: "apm state enforces valid transitions from state machine config"
+
+### Problem
+
+`apm state <id> <state>` accepts any arbitrary string as the new state with no
+validation. Running `apm state 12 rready` silently writes `state = "rready"` to
+the ticket file. The ticket is then invisible to `apm next` and all state-based
+filtering. Silent corruption.
+
+### Acceptance criteria
+
+- [ ] `apm state <id> <state>` rejects state values not present in `[[workflow.states]]` in `apm.toml`
+- [ ] Error message names the invalid value and lists valid states: `unknown state "rready" — valid states: new, question, specd, ammend, ready, in_progress, implemented, accepted, closed`
+- [ ] Exit code is non-zero on validation failure
+- [ ] No file is modified if validation fails
+
+### Out of scope
+
+- Enforcing valid state *transitions* (from→to rules) — that is a separate, larger ticket
+- Validating states on ticket load (surfaced as a verify check in #5)
+
+### Approach
+
+In `cmd/state.rs`, after loading the config, collect the set of valid state ids from
+`config.workflow.states`. If the requested state is not in the set, print the error
+and return early before loading or modifying any ticket file.
+
+## History
+
+| Date | Actor | Transition | Note |
+|------|-------|------------|------|
+| 2026-03-25 | manual | new → specd | |
+| 2026-03-26 | manual | ammend → specd | |
+| 2026-03-26 | manual | specd → ready | |
+| 2026-03-27T00:06Z | ready | closed | apm |

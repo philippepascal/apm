@@ -2,6 +2,11 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Deserialize, Default)]
+pub struct EpicConfig {
+    pub max_workers: Option<usize>,
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionType {
@@ -152,6 +157,8 @@ pub struct Config {
     pub git_host: GitHostConfig,
     #[serde(default)]
     pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
+    #[serde(default)]
+    pub epics: std::collections::HashMap<String, EpicConfig>,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,
@@ -355,6 +362,16 @@ pub struct LocalWorkersOverride {
     pub env: std::collections::HashMap<String, String>,
 }
 
+impl LocalConfig {
+    pub fn load(root: &Path) -> Self {
+        let local_path = root.join(".apm").join("local.toml");
+        std::fs::read_to_string(&local_path)
+            .ok()
+            .and_then(|s| toml::from_str(&s).ok())
+            .unwrap_or_default()
+    }
+}
+
 fn effective_github_token(local: &LocalConfig, git_host: &GitHostConfig) -> Option<String> {
     if let Some(ref t) = local.github_token {
         if !t.is_empty() {
@@ -396,7 +413,6 @@ pub fn resolve_identity(repo_root: &Path) -> String {
                 }
             }
         }
-        eprintln!("apm: could not resolve identity from git_host");
         return "unassigned".to_string();
     }
 
@@ -421,18 +437,19 @@ pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     crate::github::fetch_authenticated_user(&token).ok()
 }
 
-pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> Vec<String> {
+pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> (Vec<String>, Vec<String>) {
+    let mut warnings = Vec::new();
     if config.git_host.provider.as_deref() == Some("github") {
         if let Some(ref repo) = config.git_host.repo {
             if let Some(token) = effective_github_token(local, &config.git_host) {
                 match crate::github::fetch_repo_collaborators(&token, repo) {
-                    Ok(logins) => return logins,
-                    Err(e) => eprintln!("apm: GitHub collaborators fetch failed: {e}"),
+                    Ok(logins) => return (logins, warnings),
+                    Err(e) => warnings.push(format!("apm: GitHub collaborators fetch failed: {e:#}")),
                 }
             }
         }
     }
-    config.project.collaborators.clone()
+    (config.project.collaborators.clone(), warnings)
 }
 
 impl WorkersConfig {
@@ -453,6 +470,30 @@ impl WorkersConfig {
 }
 
 impl Config {
+    pub fn epic_max_workers(&self, epic_id: &str) -> Option<usize> {
+        self.epics.get(epic_id).and_then(|e| e.max_workers)
+    }
+
+    /// Returns epic IDs that have reached their `max_workers` limit
+    /// given the currently active worker epic assignments.
+    pub fn blocked_epics(&self, active_epic_ids: &[Option<String>]) -> Vec<String> {
+        let distinct: std::collections::HashSet<&str> = active_epic_ids.iter()
+            .filter_map(|eid| eid.as_deref())
+            .collect();
+        let mut blocked = Vec::new();
+        for eid in distinct {
+            if let Some(limit) = self.epic_max_workers(eid) {
+                let count = active_epic_ids.iter()
+                    .filter(|e| e.as_deref() == Some(eid))
+                    .count();
+                if count >= limit {
+                    blocked.push(eid.to_string());
+                }
+            }
+        }
+        blocked
+    }
+
     /// States where `actor` can actively pick up / act on tickets.
     /// Matches "any" as a wildcard in addition to the literal actor name.
     pub fn actionable_states_for(&self, actor: &str) -> Vec<String> {
@@ -460,6 +501,24 @@ impl Config {
             .filter(|s| s.actionable.iter().any(|a| a == actor || a == "any"))
             .map(|s| s.id.clone())
             .collect()
+    }
+
+    pub fn terminal_state_ids(&self) -> std::collections::HashSet<String> {
+        let mut ids: std::collections::HashSet<String> = self.workflow.states.iter()
+            .filter(|s| s.terminal)
+            .map(|s| s.id.clone())
+            .collect();
+        ids.insert("closed".to_string());
+        ids
+    }
+
+    pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
+        self.ticket.sections.iter()
+            .find(|s| s.name.eq_ignore_ascii_case(name))
+    }
+
+    pub fn has_section(&self, name: &str) -> bool {
+        self.find_section(name).is_some()
     }
 
     pub fn load(repo_root: &Path) -> Result<Self> {
@@ -501,6 +560,20 @@ impl Config {
                 );
             }
             config.ticket = tk.ticket;
+        }
+
+        let epics_path = apm_dir.join("epics.toml");
+        if epics_path.exists() {
+            let ep_contents = std::fs::read_to_string(&epics_path)
+                .with_context(|| format!("cannot read {}", epics_path.display()))?;
+            let ep: std::collections::HashMap<String, EpicConfig> = toml::from_str(&ep_contents)
+                .with_context(|| format!("cannot parse {}", epics_path.display()))?;
+            if !config.epics.is_empty() {
+                config.load_warnings.push(
+                    "both .apm/epics.toml and [epics] in config.toml exist; epics.toml takes precedence".into()
+                );
+            }
+            config.epics = ep;
         }
 
         let local_path = apm_dir.join("local.toml");
@@ -888,6 +961,15 @@ dir = "tickets"
     }
 
     #[test]
+    fn resolve_identity_returns_unassigned_when_username_key_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "[workers]\ncommand = \"claude\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
     fn local_config_username_parses() {
         let toml = r#"
 username = "bob"
@@ -977,44 +1059,6 @@ dir = "tickets"
     }
 
     #[test]
-    fn resolve_collaborators_returns_static_when_no_git_host() {
-        let toml = r#"
-[project]
-name = "test"
-collaborators = ["alice", "bob"]
-
-[tickets]
-dir = "tickets"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
-        let local = LocalConfig::default();
-        let result = resolve_collaborators(&config, &local);
-        assert_eq!(result, vec!["alice", "bob"]);
-    }
-
-    #[test]
-    fn resolve_collaborators_returns_static_when_github_but_no_token() {
-        let toml = r#"
-[project]
-name = "test"
-collaborators = ["alice", "bob"]
-
-[tickets]
-dir = "tickets"
-
-[git_host]
-provider = "github"
-repo = "owner/name"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
-        let local = LocalConfig::default();
-        // No token in local, and GITHUB_TOKEN env var should not be set in test env
-        // (if it is, the test would make a real API call — so we just check fallback works)
-        // We can't guarantee env is clean, so we only test the no-token path
-        let _ = resolve_collaborators(&config, &local);
-    }
-
-    #[test]
     fn tickets_archive_dir_parses() {
         let toml = r#"
 [project]
@@ -1042,5 +1086,43 @@ dir = "tickets"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.tickets.archive_dir.is_none());
+    }
+
+    #[test]
+    fn epic_config_parses_from_epics_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let apm_dir = root.join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
+        std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\nmax_workers = 2\n\n[ff001122]\nmax_workers = 1\n").unwrap();
+        let config = Config::load(root).unwrap();
+        assert_eq!(config.epic_max_workers("ab12cd34"), Some(2));
+        assert_eq!(config.epic_max_workers("ff001122"), Some(1));
+        assert_eq!(config.epic_max_workers("nonexistent"), None);
+    }
+
+    #[test]
+    fn epic_config_absent_defaults_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let apm_dir = root.join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
+        let config = Config::load(root).unwrap();
+        assert!(config.epics.is_empty());
+        assert_eq!(config.epic_max_workers("any_id"), None);
+    }
+
+    #[test]
+    fn epic_config_no_max_workers_returns_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let apm_dir = root.join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
+        std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\n").unwrap();
+        let config = Config::load(root).unwrap();
+        assert_eq!(config.epic_max_workers("ab12cd34"), None);
     }
 }

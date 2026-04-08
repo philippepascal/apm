@@ -12,7 +12,7 @@ pub fn run_engine_loop(
     skip_permissions: bool,
     epic_filter: Option<String>,
 ) -> Result<()> {
-    let mut workers: Vec<(String, std::process::Child, std::path::PathBuf)> = Vec::new();
+    let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
     let mut no_more = false;
     let mut next_poll = Instant::now();
 
@@ -22,7 +22,7 @@ pub fn run_engine_loop(
         }
 
         let mut reaped = false;
-        workers.retain_mut(|(_, child, _pid_path)| {
+        workers.retain_mut(|(_, _epic_id, child, _pid_path)| {
             let done = matches!(child.try_wait(), Ok(Some(_)));
             if done {
                 reaped = true;
@@ -45,13 +45,23 @@ pub fn run_engine_loop(
         }
 
         if !no_more && workers.len() < max_concurrent {
-            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref()) {
+            let blocked_epics: Vec<String> = crate::config::Config::load(root)
+                .map(|config| {
+                    let epic_ids: Vec<Option<String>> = workers.iter()
+                        .map(|(_, eid, _, _)| eid.clone())
+                        .collect();
+                    config.blocked_epics(&epic_ids)
+                })
+                .unwrap_or_default();
+            let mut _messages = Vec::new();
+            let mut _warnings = Vec::new();
+            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics, &mut _messages, &mut _warnings) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);
                     no_more = true;
                 }
-                Ok(Some((id, child, pid_path))) => {
-                    workers.push((id, child, pid_path));
+                Ok(Some((id, epic_id, child, pid_path))) => {
+                    workers.push((id, epic_id, child, pid_path));
                     no_more = false;
                 }
                 Err(_) => {

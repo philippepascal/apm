@@ -1,23 +1,102 @@
 use anyhow::Result;
 use serde_json::Value;
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool) -> Result<()> {
     if migrate {
-        return apm_core::init::migrate(root);
+        let msgs = apm_core::init::migrate(root)?;
+        for msg in msgs {
+            println!("{msg}");
+        }
+        return Ok(());
     }
 
-    apm_core::init::setup(root)?;
+    let is_tty = std::io::stdin().is_terminal();
+
+    // Check if git_host is configured
+    let has_git_host = {
+        let config_path = root.join(".apm/config.toml");
+        config_path.exists() && apm_core::config::Config::load(root)
+            .map(|cfg| cfg.git_host.provider.is_some())
+            .unwrap_or(false)
+    };
+    let local_toml = root.join(".apm/local.toml");
+
+    let username = if !has_git_host && !local_toml.exists() && is_tty {
+        prompt_username()?
+    } else {
+        String::new()
+    };
+
+    let default_name = root.file_name().and_then(|n| n.to_str()).unwrap_or("project").to_string();
+    let (name, description) = if is_tty && !root.join(".apm/config.toml").exists() {
+        prompt_project_info(&default_name)?
+    } else {
+        (String::new(), String::new())
+    };
+
+    let name_opt = if name.is_empty() { None } else { Some(name.as_str()) };
+    let desc_opt = if description.is_empty() { None } else { Some(description.as_str()) };
+    let user_opt = if username.is_empty() { None } else { Some(username.as_str()) };
+
+    let setup_out = apm_core::init::setup(root, name_opt, desc_opt, user_opt)?;
+    for msg in &setup_out.messages {
+        println!("{msg}");
+    }
+
     if with_docker {
-        apm_core::init::setup_docker(root)?;
+        let docker_out = apm_core::init::setup_docker(root)?;
+        for msg in &docker_out.messages {
+            if msg.is_empty() {
+                println!();
+            } else {
+                println!("{msg}");
+            }
+        }
     }
     update_claude_settings(root, no_claude)?;
     update_user_claude_settings()?;
     warn_if_settings_untracked(root);
     println!("apm initialized.");
     Ok(())
+}
+
+fn prompt_username() -> Result<String> {
+    let mut stdout = std::io::stdout();
+    let stdin = std::io::stdin();
+    print!("Username []: ");
+    stdout.flush()?;
+    let mut input = String::new();
+    stdin.lock().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+fn prompt_project_info(default_name: &str) -> Result<(String, String)> {
+    let mut stdout = std::io::stdout();
+    let stdin = std::io::stdin();
+
+    print!("Project name [{}]: ", default_name);
+    stdout.flush()?;
+    let mut name_input = String::new();
+    stdin.lock().read_line(&mut name_input)?;
+    let name = {
+        let trimmed = name_input.trim();
+        if trimmed.is_empty() {
+            default_name.to_string()
+        } else {
+            trimmed.to_string()
+        }
+    };
+
+    print!("Project description []: ");
+    stdout.flush()?;
+    let mut desc_input = String::new();
+    stdin.lock().read_line(&mut desc_input)?;
+    let description = desc_input.trim().to_string();
+
+    Ok((name, description))
 }
 
 fn warn_if_settings_untracked(root: &Path) {

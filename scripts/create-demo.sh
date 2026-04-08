@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/create-demo.sh — create the philippepascal/apm-demo GitHub repository.
+# scripts/create-demo.sh — create an apm-demo GitHub repository under your account.
 #
 # Usage:  bash scripts/create-demo.sh
 #
@@ -20,7 +20,8 @@
 
 set -euo pipefail
 
-REPO="philippepascal/apm-demo"
+GH_USER=$(gh api user --jq .login 2>/dev/null) || { echo "ERROR: cannot determine GitHub username"; exit 1; }
+REPO="${GH_USER}/apm-demo"
 REPO_URL="https://github.com/${REPO}.git"
 
 # ─── 0. Preflight checks ──────────────────────────────────────────────────────
@@ -632,7 +633,7 @@ The unfinished commands exist because several tickets in the backlog are still
 ### 1. Clone and fetch all ticket branches
 
 ```bash
-git clone https://github.com/philippepascal/apm-demo.git
+git clone https://github.com/${GH_USER}/apm-demo.git
 cd apm-demo
 git fetch --all
 ```

@@ -78,7 +78,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "apm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "apm-core",
@@ -91,11 +91,12 @@ dependencies = [
  "serde_json",
  "tempfile",
  "toml",
+ "toml_edit",
 ]
 
 [[package]]
 name = "apm-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -109,7 +110,7 @@ dependencies = [
 
 [[package]]
 name = "apm-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "apm-core",

@@ -1,10 +1,17 @@
 use anyhow::Result;
-use std::io::IsTerminal;
-use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
+pub struct SetupOutput {
+    pub messages: Vec<String>,
+}
+
+pub struct SetupDockerOutput {
+    pub messages: Vec<String>,
+}
+
 /// What happened when we tried to write a default file.
+#[allow(dead_code)]
 enum WriteAction {
     Created,
     Unchanged,
@@ -14,12 +21,11 @@ enum WriteAction {
 }
 
 /// Write `content` to `path`. If the file already exists and differs from the
-/// default, prompt the user: [s]kip, [r]eplace, or write a .init copy for
-/// comparison. In non-interactive mode, silently writes the .init copy.
-fn write_default(path: &Path, content: &str, label: &str) -> Result<WriteAction> {
+/// default, write a .init copy for comparison (always non-interactive in core).
+fn write_default(path: &Path, content: &str, label: &str, messages: &mut Vec<String>) -> Result<WriteAction> {
     if !path.exists() {
         std::fs::write(path, content)?;
-        println!("Created {label}");
+        messages.push(format!("Created {label}"));
         return Ok(WriteAction::Created);
     }
 
@@ -28,34 +34,11 @@ fn write_default(path: &Path, content: &str, label: &str) -> Result<WriteAction>
         return Ok(WriteAction::Unchanged);
     }
 
-    if !std::io::stdin().is_terminal() {
-        let init_path = init_path_for(path);
-        std::fs::write(&init_path, content)?;
-        println!("{label} differs from default — wrote {}.init for comparison", label);
-        return Ok(WriteAction::InitWritten);
-    }
-
-    print!("{label} exists and differs from default. [s]kip / [r]eplace / [c]ompare (.init)? ");
-    std::io::stdout().flush()?;
-    let mut line = String::new();
-    std::io::stdin().read_line(&mut line)?;
-    match line.trim().to_ascii_lowercase().as_str() {
-        "r" | "replace" => {
-            std::fs::write(path, content)?;
-            println!("Replaced {label}");
-            Ok(WriteAction::Replaced)
-        }
-        "c" | "compare" => {
-            let init_path = init_path_for(path);
-            std::fs::write(&init_path, content)?;
-            println!("Wrote {label}.init — compare with your version and delete when done");
-            Ok(WriteAction::InitWritten)
-        }
-        _ => {
-            println!("Skipped {label}");
-            Ok(WriteAction::Skipped)
-        }
-    }
+    // Always take the non-interactive path in the library: write .init copy.
+    let init_path = init_path_for(path);
+    std::fs::write(&init_path, content)?;
+    messages.push(format!("{label} differs from default — wrote {label}.init for comparison"));
+    Ok(WriteAction::InitWritten)
 }
 
 /// foo.toml → foo.toml.init, agents.md → agents.md.init
@@ -65,18 +48,19 @@ fn init_path_for(path: &Path) -> std::path::PathBuf {
     path.with_file_name(name)
 }
 
-pub fn setup(root: &Path) -> Result<()> {
+pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, username: Option<&str>) -> Result<SetupOutput> {
+    let mut messages: Vec<String> = Vec::new();
+
     let tickets_dir = root.join("tickets");
     if !tickets_dir.exists() {
         std::fs::create_dir_all(&tickets_dir)?;
-        println!("Created tickets/");
+        messages.push("Created tickets/".to_string());
     }
 
     let apm_dir = root.join(".apm");
     std::fs::create_dir_all(&apm_dir)?;
 
     let local_toml = apm_dir.join("local.toml");
-    let is_tty = std::io::stdin().is_terminal();
 
     // Check if git_host is configured — if so, identity comes from the provider
     let has_git_host = {
@@ -86,104 +70,95 @@ pub fn setup(root: &Path) -> Result<()> {
             .unwrap_or(false)
     };
 
-    // Only prompt for local username when there is no git_host
-    let username = if !has_git_host && !local_toml.exists() {
-        let u = if is_tty {
-            prompt_username()?
-        } else {
-            String::new()
-        };
-        if !u.is_empty() {
-            write_local_toml(&apm_dir, &u)?;
-            println!("Created .apm/local.toml");
-            u
-        } else {
-            String::new()
+    // Only write local username when there is no git_host
+    if !has_git_host && !local_toml.exists() {
+        if let Some(u) = username {
+            if !u.is_empty() {
+                write_local_toml(&apm_dir, u)?;
+                messages.push("Created .apm/local.toml".to_string());
+            }
         }
-    } else {
-        String::new()
-    };
+    }
 
+    let effective_username = username.unwrap_or("");
     let config_path = apm_dir.join("config.toml");
     if !config_path.exists() {
-        let default_name = root
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("project");
-        let (name, description) = if is_tty {
-            prompt_project_info(default_name)?
-        } else {
-            (default_name.to_string(), String::new())
-        };
-        let collaborators: Vec<&str> = if username.is_empty() {
+        let default_name = name.unwrap_or_else(|| {
+            root.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("project")
+        });
+        let effective_description = description.unwrap_or("");
+        let collaborators: Vec<&str> = if effective_username.is_empty() {
             vec![]
         } else {
-            vec![username.as_str()]
+            vec![effective_username]
         };
         let branch = detect_default_branch(root);
-        std::fs::write(&config_path, default_config(&name, &description, &branch, &collaborators))?;
-        println!("Created .apm/config.toml");
+        std::fs::write(&config_path, default_config(default_name, effective_description, &branch, &collaborators))?;
+        messages.push("Created .apm/config.toml".to_string());
     } else {
         // Extract project values from existing config to generate a
         // comparable default (so the .init file has the right name/branch).
         let existing = std::fs::read_to_string(&config_path)?;
         if let Ok(val) = existing.parse::<toml::Value>() {
-            let name = val.get("project")
+            let n = val.get("project")
                 .and_then(|p| p.get("name"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("project");
-            let description = val.get("project")
+            let d = val.get("project")
                 .and_then(|p| p.get("description"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            let branch = val.get("project")
+            let b = val.get("project")
                 .and_then(|p| p.get("default_branch"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("main");
-            write_default(&config_path, &default_config(name, description, branch, &[]), ".apm/config.toml")?;
+            write_default(&config_path, &default_config(n, d, b, &[]), ".apm/config.toml", &mut messages)?;
         }
     }
-    write_default(&apm_dir.join("workflow.toml"), default_workflow_toml(), ".apm/workflow.toml")?;
-    write_default(&apm_dir.join("ticket.toml"), default_ticket_toml(), ".apm/ticket.toml")?;
-    write_default(&apm_dir.join("agents.md"), default_agents_md(), ".apm/agents.md")?;
-    write_default(&apm_dir.join("apm.spec-writer.md"), include_str!("apm.spec-writer.md"), ".apm/apm.spec-writer.md")?;
-    write_default(&apm_dir.join("apm.worker.md"), include_str!("apm.worker.md"), ".apm/apm.worker.md")?;
-    ensure_claude_md(root, ".apm/agents.md")?;
+    write_default(&apm_dir.join("workflow.toml"), default_workflow_toml(), ".apm/workflow.toml", &mut messages)?;
+    write_default(&apm_dir.join("ticket.toml"), default_ticket_toml(), ".apm/ticket.toml", &mut messages)?;
+    write_default(&apm_dir.join("agents.md"), default_agents_md(), ".apm/agents.md", &mut messages)?;
+    write_default(&apm_dir.join("apm.spec-writer.md"), include_str!("apm.spec-writer.md"), ".apm/apm.spec-writer.md", &mut messages)?;
+    write_default(&apm_dir.join("apm.worker.md"), include_str!("apm.worker.md"), ".apm/apm.worker.md", &mut messages)?;
+    ensure_claude_md(root, ".apm/agents.md", &mut messages)?;
     let gitignore = root.join(".gitignore");
-    ensure_gitignore(&gitignore)?;
-    maybe_initial_commit(root)?;
-    ensure_worktrees_dir(root)?;
-    Ok(())
+    ensure_gitignore(&gitignore, &mut messages)?;
+    maybe_initial_commit(root, &mut messages)?;
+    ensure_worktrees_dir(root, &mut messages)?;
+    Ok(SetupOutput { messages })
 }
 
-pub fn migrate(root: &Path) -> Result<()> {
+pub fn migrate(root: &Path) -> Result<Vec<String>> {
+    let mut messages: Vec<String> = Vec::new();
     let apm_dir = root.join(".apm");
     let new_config = apm_dir.join("config.toml");
 
     if new_config.exists() {
-        println!("Already migrated.");
-        return Ok(());
+        messages.push("Already migrated.".to_string());
+        return Ok(messages);
     }
 
     let old_config = root.join("apm.toml");
     let old_agents = root.join("apm.agents.md");
 
     if !old_config.exists() && !old_agents.exists() {
-        println!("Nothing to migrate.");
-        return Ok(());
+        messages.push("Nothing to migrate.".to_string());
+        return Ok(messages);
     }
 
     std::fs::create_dir_all(&apm_dir)?;
 
     if old_config.exists() {
         std::fs::rename(&old_config, &new_config)?;
-        println!("Moved apm.toml → .apm/config.toml");
+        messages.push("Moved apm.toml → .apm/config.toml".to_string());
     }
 
     if old_agents.exists() {
         let new_agents = apm_dir.join("agents.md");
         std::fs::rename(&old_agents, &new_agents)?;
-        println!("Moved apm.agents.md → .apm/agents.md");
+        messages.push("Moved apm.agents.md → .apm/agents.md".to_string());
     }
 
     let claude_path = root.join("CLAUDE.md");
@@ -192,11 +167,11 @@ pub fn migrate(root: &Path) -> Result<()> {
         if contents.contains("@apm.agents.md") {
             let updated = contents.replace("@apm.agents.md", "@.apm/agents.md");
             std::fs::write(&claude_path, updated)?;
-            println!("Updated CLAUDE.md (@apm.agents.md → @.apm/agents.md)");
+            messages.push("Updated CLAUDE.md (@apm.agents.md → @.apm/agents.md)".to_string());
         }
     }
 
-    Ok(())
+    Ok(messages)
 }
 
 pub fn detect_default_branch(root: &Path) -> String {
@@ -212,8 +187,8 @@ pub fn detect_default_branch(root: &Path) -> String {
         .unwrap_or_else(|| "main".to_string())
 }
 
-pub fn ensure_gitignore(path: &Path) -> Result<()> {
-    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+pub fn ensure_gitignore(path: &Path, messages: &mut Vec<String>) -> Result<()> {
+    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;
@@ -229,16 +204,16 @@ pub fn ensure_gitignore(path: &Path) -> Result<()> {
         }
         if changed {
             std::fs::write(path, &contents)?;
-            println!("Updated .gitignore");
+            messages.push("Updated .gitignore".to_string());
         }
     } else {
         std::fs::write(path, entries.join("\n") + "\n")?;
-        println!("Created .gitignore");
+        messages.push("Created .gitignore".to_string());
     }
     Ok(())
 }
 
-fn ensure_claude_md(root: &Path, agents_path: &str) -> Result<()> {
+fn ensure_claude_md(root: &Path, agents_path: &str, messages: &mut Vec<String>) -> Result<()> {
     let import_line = format!("@{agents_path}");
     let claude_path = root.join("CLAUDE.md");
     if claude_path.exists() {
@@ -247,10 +222,10 @@ fn ensure_claude_md(root: &Path, agents_path: &str) -> Result<()> {
             return Ok(());
         }
         std::fs::write(&claude_path, format!("{import_line}\n\n{contents}"))?;
-        println!("Updated CLAUDE.md (added {import_line} import).");
+        messages.push(format!("Updated CLAUDE.md (added {import_line} import)."));
     } else {
         std::fs::write(&claude_path, format!("{import_line}\n"))?;
-        println!("Created CLAUDE.md.");
+        messages.push("Created CLAUDE.md.".to_string());
     }
     Ok(())
 }
@@ -267,32 +242,6 @@ fn default_log_file(name: &str) -> String {
 #[cfg(not(target_os = "macos"))]
 fn default_log_file(name: &str) -> String {
     format!("~/.local/state/apm/{name}.log")
-}
-
-fn prompt_project_info(default_name: &str) -> Result<(String, String)> {
-    let mut stdout = std::io::stdout();
-    let stdin = std::io::stdin();
-
-    print!("Project name [{}]: ", default_name);
-    stdout.flush()?;
-    let mut name_input = String::new();
-    stdin.read_line(&mut name_input)?;
-    let name = {
-        let trimmed = name_input.trim();
-        if trimmed.is_empty() {
-            default_name.to_string()
-        } else {
-            trimmed.to_string()
-        }
-    };
-
-    print!("Project description []: ");
-    stdout.flush()?;
-    let mut desc_input = String::new();
-    stdin.read_line(&mut desc_input)?;
-    let description = desc_input.trim().to_string();
-
-    Ok((name, description))
 }
 
 fn toml_escape(s: &str) -> String {
@@ -351,16 +300,6 @@ file = "{log_file}"
     )
 }
 
-fn prompt_username() -> Result<String> {
-    let mut stdout = std::io::stdout();
-    let stdin = std::io::stdin();
-    print!("Username []: ");
-    stdout.flush()?;
-    let mut input = String::new();
-    stdin.read_line(&mut input)?;
-    Ok(input.trim().to_string())
-}
-
 fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()> {
     let path = apm_dir.join("local.toml");
     if !path.exists() {
@@ -378,7 +317,7 @@ fn default_ticket_toml() -> &'static str {
     include_str!("ticket.toml")
 }
 
-fn maybe_initial_commit(root: &Path) -> Result<()> {
+fn maybe_initial_commit(root: &Path, messages: &mut Vec<String>) -> Result<()> {
     let has_commits = Command::new("git")
         .args(["rev-parse", "HEAD"])
         .current_dir(root)
@@ -401,44 +340,45 @@ fn maybe_initial_commit(root: &Path) -> Result<()> {
         .output()?;
 
     if out.status.success() {
-        println!("Created initial commit.");
+        messages.push("Created initial commit.".to_string());
     }
     Ok(())
 }
 
-fn ensure_worktrees_dir(root: &Path) -> Result<()> {
+fn ensure_worktrees_dir(root: &Path, messages: &mut Vec<String>) -> Result<()> {
     if let Ok(config) = crate::config::Config::load(root) {
         let wt_dir = root.join(&config.worktrees.dir);
         if !wt_dir.exists() {
             std::fs::create_dir_all(&wt_dir)?;
-            println!("Created worktrees dir: {}", wt_dir.display());
+            messages.push(format!("Created worktrees dir: {}", wt_dir.display()));
         }
     }
     Ok(())
 }
 
-pub fn setup_docker(root: &Path) -> Result<()> {
+pub fn setup_docker(root: &Path) -> Result<SetupDockerOutput> {
+    let mut messages: Vec<String> = Vec::new();
     let apm_dir = root.join(".apm");
     std::fs::create_dir_all(&apm_dir)?;
     let dockerfile_path = apm_dir.join("Dockerfile.apm-worker");
     if dockerfile_path.exists() {
-        println!(".apm/Dockerfile.apm-worker already exists — not overwriting.");
-        return Ok(());
+        messages.push(".apm/Dockerfile.apm-worker already exists — not overwriting.".to_string());
+        return Ok(SetupDockerOutput { messages });
     }
     std::fs::write(&dockerfile_path, DOCKERFILE_TEMPLATE)?;
-    println!("Created .apm/Dockerfile.apm-worker");
-    println!();
-    println!("Next steps:");
-    println!("  1. Review .apm/Dockerfile.apm-worker and add project-specific dependencies.");
-    println!("  2. Build the image:");
-    println!("       docker build -f .apm/Dockerfile.apm-worker -t apm-worker .");
-    println!("  3. Add to .apm/config.toml:");
-    println!("       [workers]");
-    println!("       container = \"apm-worker\"");
-    println!("  4. Configure credential lookup (optional, macOS only):");
-    println!("       [workers.keychain]");
-    println!("       ANTHROPIC_API_KEY = \"anthropic-api-key\"");
-    Ok(())
+    messages.push("Created .apm/Dockerfile.apm-worker".to_string());
+    messages.push(String::new());
+    messages.push("Next steps:".to_string());
+    messages.push("  1. Review .apm/Dockerfile.apm-worker and add project-specific dependencies.".to_string());
+    messages.push("  2. Build the image:".to_string());
+    messages.push("       docker build -f .apm/Dockerfile.apm-worker -t apm-worker .".to_string());
+    messages.push("  3. Add to .apm/config.toml:".to_string());
+    messages.push("       [workers]".to_string());
+    messages.push("       container = \"apm-worker\"".to_string());
+    messages.push("  4. Configure credential lookup (optional, macOS only):".to_string());
+    messages.push("       [workers.keychain]".to_string());
+    messages.push("       ANTHROPIC_API_KEY = \"anthropic-api-key\"".to_string());
+    Ok(SetupDockerOutput { messages })
 }
 
 const DOCKERFILE_TEMPLATE: &str = r#"FROM rust:1.82-slim
@@ -507,7 +447,8 @@ mod tests {
     fn ensure_gitignore_creates_file() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join(".gitignore");
-        ensure_gitignore(&path).unwrap();
+        let mut msgs = Vec::new();
+        ensure_gitignore(&path, &mut msgs).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("tickets/NEXT_ID"));
         assert!(contents.contains(".apm/local.toml"));
@@ -521,7 +462,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join(".gitignore");
         std::fs::write(&path, "node_modules\n").unwrap();
-        ensure_gitignore(&path).unwrap();
+        let mut msgs = Vec::new();
+        ensure_gitignore(&path, &mut msgs).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("node_modules"));
         assert!(contents.contains("tickets/NEXT_ID"));
@@ -531,9 +473,10 @@ mod tests {
     fn ensure_gitignore_idempotent() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join(".gitignore");
-        ensure_gitignore(&path).unwrap();
+        let mut msgs = Vec::new();
+        ensure_gitignore(&path, &mut msgs).unwrap();
         let before = std::fs::read_to_string(&path).unwrap();
-        ensure_gitignore(&path).unwrap();
+        ensure_gitignore(&path, &mut msgs).unwrap();
         let after = std::fs::read_to_string(&path).unwrap();
         assert_eq!(before, after);
     }
@@ -542,7 +485,7 @@ mod tests {
     fn setup_creates_expected_files() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
 
         assert!(tmp.path().join("tickets").exists());
         assert!(tmp.path().join(".apm/config.toml").exists());
@@ -559,7 +502,7 @@ mod tests {
     fn setup_non_tty_uses_dir_name_and_empty_description() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
 
         let config = std::fs::read_to_string(tmp.path().join(".apm/config.toml")).unwrap();
         let dir_name = tmp.path().file_name().unwrap().to_str().unwrap();
@@ -571,13 +514,13 @@ mod tests {
     fn setup_is_idempotent() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
 
         // Write sentinel content to config
         let config_path = tmp.path().join(".apm/config.toml");
         let original = std::fs::read_to_string(&config_path).unwrap();
 
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
         let after = std::fs::read_to_string(&config_path).unwrap();
         assert_eq!(original, after);
     }
@@ -671,7 +614,7 @@ mod tests {
     fn setup_non_tty_no_local_toml() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
         assert!(!tmp.path().join(".apm/local.toml").exists());
     }
 
@@ -696,7 +639,8 @@ mod tests {
     fn write_default_creates_new_file() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("test.toml");
-        let action = write_default(&path, "content", "test.toml").unwrap();
+        let mut msgs = Vec::new();
+        let action = write_default(&path, "content", "test.toml", &mut msgs).unwrap();
         assert!(matches!(action, WriteAction::Created));
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "content");
     }
@@ -706,7 +650,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("test.toml");
         std::fs::write(&path, "content").unwrap();
-        let action = write_default(&path, "content", "test.toml").unwrap();
+        let mut msgs = Vec::new();
+        let action = write_default(&path, "content", "test.toml", &mut msgs).unwrap();
         assert!(matches!(action, WriteAction::Unchanged));
     }
 
@@ -717,7 +662,8 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("test.toml");
         std::fs::write(&path, "modified").unwrap();
-        let action = write_default(&path, "default", "test.toml").unwrap();
+        let mut msgs = Vec::new();
+        let action = write_default(&path, "default", "test.toml", &mut msgs).unwrap();
         assert!(matches!(action, WriteAction::InitWritten));
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "modified");
         assert_eq!(
@@ -740,14 +686,14 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
         // First setup: creates all files
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
 
         // Modify a file
         let workflow = tmp.path().join(".apm/workflow.toml");
         std::fs::write(&workflow, "# custom workflow\n").unwrap();
 
         // Second setup (non-tty): should write .init copy
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
         assert!(tmp.path().join(".apm/workflow.toml.init").exists());
         // Original should be untouched
         assert_eq!(std::fs::read_to_string(&workflow).unwrap(), "# custom workflow\n");
@@ -760,7 +706,7 @@ mod tests {
     fn setup_writes_config_init_when_modified() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
 
         // Modify config.toml (add a custom section)
         let config_path = tmp.path().join(".apm/config.toml");
@@ -769,7 +715,7 @@ mod tests {
         std::fs::write(&config_path, &content).unwrap();
 
         // Second setup (non-tty): should write config.toml.init
-        setup(tmp.path()).unwrap();
+        setup(tmp.path(), None, None, None).unwrap();
         assert!(tmp.path().join(".apm/config.toml.init").exists());
         // Original should be untouched
         assert!(std::fs::read_to_string(&config_path).unwrap().contains("[custom]"));

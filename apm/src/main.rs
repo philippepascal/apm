@@ -56,6 +56,15 @@ enum EpicCommand {
         #[arg(long)]
         no_aggressive: bool,
     },
+    /// Set a field on an epic (max_workers or owner)
+    Set {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+        /// Field to update: max_workers or owner
+        field: String,
+        /// New value (use "-" to clear)
+        value: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -110,9 +119,6 @@ Examples:
         /// Include terminal-state tickets (e.g. closed)
         #[arg(long)]
         all: bool,
-        /// Filter by supervisor name
-        #[arg(long)]
-        supervisor: Option<String>,
         /// Show only tickets actionable by this actor (agent, supervisor, engineer)
         #[arg(long, value_name = "ACTOR")]
         actionable: Option<String>,
@@ -243,7 +249,6 @@ Valid field names:
   risk        — integer 1-10; technical risk estimate
   title       — short human-readable summary
   agent       — name of the assigned agent (use \"-\" to clear)
-  supervisor  — name of the assigned supervisor (use \"-\" to clear)
   branch      — override the ticket's branch name (use \"-\" to clear)
   depends_on  — comma-separated list of blocker IDs (use \"-\" to clear)
 
@@ -258,10 +263,10 @@ Examples:
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
         id: String,
-        /// Field to update: priority, effort, risk, title, agent, supervisor, branch, depends_on
+        /// Field to update: priority, effort, risk, title, agent, branch, depends_on
         #[arg(value_name = "FIELD")]
         field: String,
-        /// New value for the field (use "-" to clear agent/supervisor/branch)
+        /// New value for the field (use "-" to clear agent/branch)
         #[arg(value_name = "VALUE")]
         value: String,
         /// Skip automatic git fetch/push
@@ -364,6 +369,11 @@ Examples:
     #[command(long_about = "Set the owner field on any ticket, regardless of its current state.
 
 Use this to assign a ticket to a user or agent, or to clear the owner field.
+
+Ownership gates dispatcher pickup: `apm work`, `apm start --next`, and the UI
+dispatch loop only pick up tickets whose owner matches the current user's identity.
+Tickets with no owner are never auto-dispatched. Assign a ticket before running
+the dispatch loop.
 
 Examples:
   apm assign 42 alice        # assign ticket 42 to alice
@@ -730,7 +740,7 @@ fn main() -> Result<()> {
     apm_core::logger::log("cmd", &args.join(" "));
     match cli.command {
         Command::Init { no_claude, migrate, with_docker } => cmd::init::run(&root, no_claude, migrate, with_docker),
-        Command::List { state, unassigned, all, supervisor, actionable, no_aggressive, mine, author, owner } => cmd::list::run(&root, state, unassigned, all, supervisor, actionable, no_aggressive, mine, author, owner),
+        Command::List { state, unassigned, all, actionable, no_aggressive, mine, author, owner } => cmd::list::run(&root, state, unassigned, all, actionable, no_aggressive, mine, author, owner),
         Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
         Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
         Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
@@ -741,7 +751,7 @@ fn main() -> Result<()> {
                 (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
                 (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
                 (false, Some(id)) => {
-                    let agent_name = apm_core::start::resolve_agent_name();
+                    let agent_name = apm_core::start::resolve_caller_name();
                     cmd::start::run(&root, &id, no_aggressive, spawn, skip_permissions, &agent_name)
                 }
                 (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
@@ -765,6 +775,7 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
         Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
+        Command::Epic { command: EpicCommand::Set { id, field, value } } => cmd::epic::run_set(&root, &id, &field, &value),
         Command::Register { username } => {
             let inferred = username.is_none();
             let config = apm_core::config::Config::load(&root)?;

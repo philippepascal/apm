@@ -39,27 +39,7 @@ pub fn extract_spec(content: &str) -> String {
 /// Returns the manual (non-auto) transitions available from the current state
 /// as `(to, label, hint)` tuples.
 pub fn available_transitions(config: &Config, current_state: &str) -> Vec<(String, String, String)> {
-    let terminal_ids: Vec<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
-
-    let state_cfg = config.workflow.states.iter().find(|s| s.id == current_state);
-
-    if let Some(sc) = state_cfg {
-        if !sc.transitions.is_empty() {
-            return sc.transitions.iter()
-                .filter(|tr| !tr.trigger.starts_with("event:"))
-                .map(|tr| (tr.to.clone(), tr.label.clone(), tr.hint.clone()))
-                .collect();
-        }
-    }
-
-    // No explicit transitions: all non-terminal, non-current states are valid.
-    config.workflow.states.iter()
-        .filter(|s| s.id != current_state && !terminal_ids.contains(&s.id.as_str()))
-        .map(|s| (s.id.clone(), s.label.clone(), String::new()))
-        .collect()
+    crate::state::available_transitions(config, current_state)
 }
 
 /// Convert plain `- ` bullets in `### Amendment requests` to `- [ ] ` checkboxes.

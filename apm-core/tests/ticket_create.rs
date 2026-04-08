@@ -68,6 +68,7 @@ fn create_returns_ticket_with_correct_fields() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     let t = ticket::create(
         root,
         &config,
@@ -81,6 +82,7 @@ fn create_returns_ticket_with_correct_fields() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 
@@ -94,11 +96,51 @@ fn create_returns_ticket_with_correct_fields() {
 }
 
 #[test]
+fn create_sets_owner_to_author() {
+    let dir = setup();
+    let root = dir.path();
+    let config = Config::load(root).unwrap();
+
+    let mut warnings = Vec::new();
+    let t = ticket::create(
+        root,
+        &config,
+        "Owner test ticket".to_string(),
+        "agent-owner".to_string(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    assert_eq!(t.frontmatter.owner.as_deref(), Some("agent-owner"));
+
+    // Re-parse the persisted content from git and verify owner is in the frontmatter.
+    let branch = t.frontmatter.branch.as_deref().unwrap();
+    let slug = branch.strip_prefix("ticket/").unwrap();
+    let git_path = format!("tickets/{slug}.md");
+    let out = Command::new("git")
+        .args(["show", &format!("{branch}:{git_path}")])
+        .current_dir(root)
+        .output()
+        .unwrap();
+    let content = String::from_utf8(out.stdout).unwrap();
+    assert!(content.contains("owner = \"agent-owner\""), "owner not in persisted frontmatter: {content}");
+}
+
+#[test]
 fn create_branch_exists_in_repo() {
     let dir = setup();
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     let t = ticket::create(
         root,
         &config,
@@ -112,6 +154,7 @@ fn create_branch_exists_in_repo() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 
@@ -131,6 +174,7 @@ fn create_context_injected_into_problem() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     let t = ticket::create(
         root,
         &config,
@@ -144,6 +188,7 @@ fn create_context_injected_into_problem() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 
@@ -159,6 +204,7 @@ fn create_no_push_when_not_aggressive() {
     let root = dir.path();
     let config = Config::load(root).unwrap();
 
+    let mut warnings = Vec::new();
     ticket::create(
         root,
         &config,
@@ -172,6 +218,7 @@ fn create_no_push_when_not_aggressive() {
         None,
         None,
         None,
+        &mut warnings,
     )
     .unwrap();
 }

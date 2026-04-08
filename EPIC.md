@@ -1,1 +1,1 @@
-# Code separation and reuse cleanup
+# Ticket ownership model

@@ -1,22 +1,17 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
+use crate::ctx::CmdContext;
 
 pub fn run_list(root: &Path) -> Result<()> {
-    let config = apm_core::config::Config::load(root)?;
-
-    if config.sync.aggressive {
-        if let Err(e) = apm_core::git::fetch_all(root) {
-            eprintln!("warning: git fetch failed: {e}");
-        }
-    }
+    let ctx = CmdContext::load(root, false)?;
 
     let epic_branches = apm_core::git::epic_branches(root)?;
     if epic_branches.is_empty() {
         return Ok(());
     }
 
-    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let tickets = ctx.tickets;
 
     for branch in &epic_branches {
         // branch = "epic/<8-char-id>-<slug>"
@@ -33,7 +28,7 @@ pub fn run_list(root: &Path) -> Result<()> {
         // Collect StateConfig references for each ticket (skip unknown states).
         let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
             .iter()
-            .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+            .filter_map(|t| ctx.config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
             .collect();
 
         let derived = apm_core::epic::derive_epic_state(&state_configs);
@@ -63,7 +58,7 @@ pub fn run_new(root: &Path, title: String) -> Result<()> {
 }
 
 pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
-    let config = apm_core::config::Config::load(root)?;
+    let config = CmdContext::load_config_only(root)?;
 
     // 1. Resolve the epic branch from the id prefix.
     let matches = apm_core::git::find_epic_branches(root, id_arg);
@@ -159,13 +154,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
 }
 
 pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> anyhow::Result<()> {
-    let config = apm_core::config::Config::load(root)?;
-
-    if !no_aggressive {
-        if let Err(e) = apm_core::git::fetch_all(root) {
-            eprintln!("warning: git fetch failed: {e}");
-        }
-    }
+    let ctx = CmdContext::load(root, no_aggressive)?;
 
     let matches = apm_core::git::find_epic_branches(root, id_arg);
     let branch = match matches.len() {
@@ -182,15 +171,14 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
     let epic_id = after_prefix.split('-').next().unwrap_or("");
     let title = branch_to_title(&branch);
 
-    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let epic_tickets: Vec<_> = tickets
+    let epic_tickets: Vec<_> = ctx.tickets
         .iter()
         .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
         .collect();
 
     let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
         .iter()
-        .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+        .filter_map(|t| ctx.config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
         .collect();
 
     let derived = apm_core::epic::derive_epic_state(&state_configs);
@@ -198,6 +186,9 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
     println!("Epic:   {title}");
     println!("Branch: {branch}");
     println!("State:  {derived}");
+    if let Some(limit) = ctx.config.epic_max_workers(epic_id) {
+        println!("Max workers: {limit}");
+    }
 
     if epic_tickets.is_empty() {
         println!();
@@ -233,6 +224,118 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
         );
     }
 
+    Ok(())
+}
+
+pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -> anyhow::Result<()> {
+    if field != "max_workers" && field != "owner" {
+        anyhow::bail!("unknown field {field:?}; valid fields: max_workers, owner");
+    }
+
+    // Validate the epic exists.
+    let matches = apm_core::git::find_epic_branches(root, id_arg);
+    if matches.is_empty() {
+        eprintln!("error: no epic branch found matching '{id_arg}'");
+        std::process::exit(1);
+    }
+    if matches.len() > 1 {
+        anyhow::bail!(
+            "ambiguous id '{id_arg}': matches {}\n  {}",
+            matches.len(),
+            matches.join("\n  ")
+        );
+    }
+    let branch = &matches[0];
+    let after_prefix = branch.trim_start_matches("epic/");
+    let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
+
+    if field == "owner" {
+        let config = apm_core::config::Config::load(root)?;
+        let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+        let terminal = config.terminal_state_ids();
+
+        let (mut to_change, skipped): (Vec<_>, Vec<_>) = all_tickets
+            .into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
+            .partition(|t| !terminal.contains(&t.frontmatter.state));
+
+        // Pre-flight: ownership check (abort before any writes if any fail)
+        for t in &to_change {
+            apm_core::ticket::check_owner(root, t)?;
+        }
+
+        // Pre-flight: validate the new owner
+        let local = apm_core::config::LocalConfig::load(root);
+        apm_core::validate::validate_owner(&config, &local, value)?;
+
+        // Apply changes
+        for t in &mut to_change {
+            apm_core::ticket::set_field(&mut t.frontmatter, "owner", value)?;
+            let content = t.serialize()?;
+            let rel_path = format!(
+                "{}/{}",
+                config.tickets.dir.to_string_lossy(),
+                t.path.file_name().unwrap().to_string_lossy()
+            );
+            let ticket_branch = t.frontmatter.branch.clone()
+                .or_else(|| apm_core::git::branch_name_from_path(&t.path))
+                .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
+            apm_core::git::commit_to_branch(
+                root,
+                &ticket_branch,
+                &rel_path,
+                &content,
+                &format!("ticket({}): bulk set owner = {}", t.frontmatter.id, value),
+            )?;
+        }
+
+        // Output
+        for t in &to_change {
+            println!("changed  {}  {}", t.frontmatter.id, t.frontmatter.title);
+        }
+        for t in &skipped {
+            println!("skipped  {}  {}  (state: {})", t.frontmatter.id, t.frontmatter.title, t.frontmatter.state);
+        }
+        println!("{} ticket(s) changed, {} skipped.", to_change.len(), skipped.len());
+        return Ok(());
+    }
+
+    let apm_dir = root.join(".apm");
+    let epics_path = apm_dir.join("epics.toml");
+
+    let raw = if epics_path.exists() {
+        std::fs::read_to_string(&epics_path)
+            .with_context(|| format!("cannot read {}", epics_path.display()))?
+    } else {
+        String::new()
+    };
+    let mut doc: toml_edit::DocumentMut = raw.parse()
+        .with_context(|| format!("cannot parse {}", epics_path.display()))?;
+
+    if value == "-" {
+        // Remove max_workers from the epic table.
+        if let Some(epic_tbl) = doc.get_mut(&epic_id) {
+            if let Some(t) = epic_tbl.as_table_mut() {
+                t.remove("max_workers");
+            }
+        }
+    } else {
+        let n: i64 = value.parse().map_err(|_| anyhow::anyhow!("max_workers must be a positive integer, got {value:?}"))?;
+        if n <= 0 {
+            eprintln!("error: max_workers must be ≥ 1, got {n}");
+            std::process::exit(1);
+        }
+
+        // Ensure [<epic_id>] table exists.
+        if doc.get(&epic_id).is_none() {
+            doc.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
+        }
+        doc[&epic_id]["max_workers"] = toml_edit::value(n);
+    }
+
+    std::fs::create_dir_all(&apm_dir)?;
+    std::fs::write(&epics_path, doc.to_string())
+        .with_context(|| format!("cannot write {}", epics_path.display()))?;
     Ok(())
 }
 

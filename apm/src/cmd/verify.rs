@@ -1,27 +1,19 @@
 use anyhow::Result;
-use apm_core::{config::{CompletionStrategy, Config}, git, ticket};
+use apm_core::config::{CompletionStrategy, Config};
 use std::collections::HashSet;
 use std::path::Path;
+use crate::ctx::CmdContext;
 
 pub fn run(root: &Path, fix: bool, no_aggressive: bool) -> Result<()> {
-    let config = Config::load(root)?;
-    let aggressive = config.sync.aggressive && !no_aggressive;
+    let ctx = CmdContext::load(root, no_aggressive)?;
 
-    if aggressive {
-        if let Err(e) = git::fetch_all(root) {
-            eprintln!("warning: fetch failed: {e:#}");
-        }
-    }
-
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-
-    let merged = git::merged_into_main(root, &config.project.default_branch).unwrap_or_default();
+    let merged = apm_core::git::merged_into_main(root, &ctx.config.project.default_branch).unwrap_or_default();
     let merged_set: HashSet<String> = merged.into_iter().collect();
 
-    let issues = apm_core::verify::verify_tickets(&config, &tickets, &merged_set);
+    let issues = apm_core::verify::verify_tickets(&ctx.config, &ctx.tickets, &merged_set);
 
     // Report completion strategies configured on transitions.
-    for state in &config.workflow.states {
+    for state in &ctx.config.workflow.states {
         for tr in &state.transitions {
             let label = match &tr.completion {
                 CompletionStrategy::Pr => "pr",
@@ -34,10 +26,10 @@ pub fn run(root: &Path, fix: bool, no_aggressive: bool) -> Result<()> {
         }
     }
 
-    if config.logging.enabled {
+    if ctx.config.logging.enabled {
         let log_path = apm_core::logger::resolve_log_path(
-            &config.project.name,
-            config.logging.file.as_deref(),
+            &ctx.config.project.name,
+            ctx.config.logging.file.as_deref(),
         );
         println!("logging: {}", log_path.display());
     }
@@ -53,7 +45,7 @@ pub fn run(root: &Path, fix: bool, no_aggressive: bool) -> Result<()> {
 
     if fix {
         let merged_refs: HashSet<&str> = merged_set.iter().map(|s| s.as_str()).collect();
-        apply_fixes(root, &config, &tickets, &merged_refs)?;
+        apply_fixes(root, &ctx.config, &ctx.tickets, &merged_refs)?;
     }
 
     std::process::exit(1);
@@ -74,7 +66,12 @@ fn apply_fixes(
             let id = fm.id.clone();
             let old_state = fm.state.clone();
             match apm_core::ticket::close(root, config, &id, None, "verify --fix", false) {
-                Ok(_) => println!("  fixed {id}: {old_state} → closed"),
+                Ok(msgs) => {
+                    for msg in &msgs {
+                        println!("{msg}");
+                    }
+                    println!("  fixed {id}: {old_state} → closed");
+                }
                 Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
             }
         }

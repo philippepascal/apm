@@ -71,6 +71,7 @@ pub async fn queue_handler(
             p.priority_weight,
             p.effort_weight,
             p.risk_weight,
+            None,
             caller.as_deref(),
         );
         let result: Vec<QueueEntry> = sorted
@@ -123,7 +124,6 @@ mod tests {
                 effort,
                 risk,
                 author: None,
-                supervisor: None,
                 owner: None,
                 branch: None,
                 created_at: None,

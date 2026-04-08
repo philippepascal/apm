@@ -2,7 +2,7 @@ use axum::{
     extract::{ConnectInfo, Path, Query, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, patch, post, put},
+    routing::{get, post, put},
     Json, Router,
 };
 use include_dir::{include_dir, Dir};
@@ -22,6 +22,7 @@ mod webauthn_state;
 mod work;
 mod workers;
 
+#[allow(dead_code)] // InMemory is constructed in tests but matched in shared code
 enum TicketSource {
     Git(PathBuf, PathBuf),
     InMemory(Vec<apm_core::ticket::Ticket>),
@@ -494,7 +495,8 @@ async fn sync_handler(
     };
     let (fetch_error, branches, closed) = tokio::task::spawn_blocking(move || {
         let fetch_error = apm_core::git::fetch_all(&root).err().map(|e| e.to_string());
-        apm_core::git::sync_local_ticket_refs(&root);
+        let mut _sync_warnings: Vec<String> = Vec::new();
+        apm_core::git::sync_local_ticket_refs(&root, &mut _sync_warnings);
         let branches = apm_core::git::ticket_branches(&root)
             .map(|b| b.len())
             .unwrap_or(0);
@@ -534,11 +536,11 @@ async fn clean_handler(
     };
     let removed = tokio::task::spawn_blocking(move || -> anyhow::Result<usize> {
         let config = apm_core::config::Config::load(&root)?;
-        let (candidates, _dirty) = apm_core::clean::candidates(&root, &config, false, false, false)?;
+        let (candidates, _dirty, _warnings) = apm_core::clean::candidates(&root, &config, false, false, false)?;
         let mut count = 0;
         for candidate in &candidates {
             if candidate.worktree.is_some() {
-                apm_core::clean::remove(&root, candidate, false, false)?;
+                apm_core::clean::remove(&root, candidate, false, false)?;  // RemoveOutput discarded
                 count += 1;
             }
         }
@@ -1106,6 +1108,7 @@ async fn create_ticket(
     let result = tokio::task::spawn_blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         let author = apm_core::config::resolve_identity(&root);
+        let mut _warnings = Vec::new();
         apm_core::ticket::create(
             &root,
             &config,
@@ -1119,6 +1122,7 @@ async fn create_ticket(
             target_branch,
             depends_on,
             None,
+            &mut _warnings,
         )
     })
     .await?;
@@ -1845,7 +1849,6 @@ mod tests {
                 effort: 0,
                 risk: 0,
                 author: None,
-                supervisor: None,
                 owner: None,
                 branch: None,
                 created_at: None,
@@ -2448,6 +2451,7 @@ label = "In Progress"
         git_setup(&p);
 
         let config = apm_core::config::Config::load(&p).unwrap();
+        let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
             &p,
             &config,
@@ -2461,6 +2465,7 @@ label = "In Progress"
             None,
             None,
             None,
+            &mut _warnings,
         )
         .unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
@@ -2496,9 +2501,10 @@ label = "In Progress"
         git_setup(&p);
 
         let config = apm_core::config::Config::load(&p).unwrap();
+        let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
             &p, &config, "test ticket".to_string(), "test".to_string(),
-            None, None, false, vec![], None, None, None, None,
+            None, None, false, vec![], None, None, None, None, &mut _warnings,
         ).unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
 
@@ -2532,9 +2538,10 @@ label = "In Progress"
         git_setup(&p);
 
         let config = apm_core::config::Config::load(&p).unwrap();
+        let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
             &p, &config, "test ticket".to_string(), "test".to_string(),
-            None, None, false, vec![], None, None, None, None,
+            None, None, false, vec![], None, None, None, None, &mut _warnings,
         ).unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
 
@@ -2578,9 +2585,10 @@ label = "In Progress"
         git_setup(&p);
 
         let config = apm_core::config::Config::load(&p).unwrap();
+        let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
             &p, &config, "test ticket".to_string(), "test".to_string(),
-            None, None, false, vec![], None, None, None, None,
+            None, None, false, vec![], None, None, None, None, &mut _warnings,
         ).unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
 

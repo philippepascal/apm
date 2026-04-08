@@ -8,9 +8,14 @@ pub struct TransitionOutput {
     pub old_state: String,
     pub new_state: String,
     pub worktree_path: Option<PathBuf>,
+    pub warnings: Vec<String>,
+    pub messages: Vec<String>,
 }
 
 pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: bool, force: bool) -> Result<TransitionOutput> {
+    let mut warnings: Vec<String> = Vec::new();
+    let mut messages: Vec<String> = Vec::new();
+
     let config = Config::load(root)?;
     let valid_states: std::collections::HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
@@ -33,7 +38,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
                 .unwrap_or(false)
         }) {
             if let Err(e) = git::fetch_branch(root, b) {
-                eprintln!("warning: fetch failed: {e:#}");
+                warnings.push(format!("warning: fetch failed: {e:#}"));
             }
         }
     }
@@ -63,7 +68,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
                 }
                 let found = tr.unwrap();
                 if let Some(ref w) = found.warning {
-                    eprintln!("⚠ {w}");
+                    warnings.push(format!("⚠ {w}"));
                 }
                 found.completion.clone()
             } else {
@@ -141,42 +146,39 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             git::push_branch_tracking(root, &branch)?;
             let pr_base = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
-            gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title)?;
+            gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &mut messages)?;
         }
         CompletionStrategy::Merge => {
             let merge_target = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
             let is_main = merge_target == config.project.default_branch;
             if let Err(e) = git::push_branch_tracking(root, &branch) {
-                eprintln!("warning: could not push {branch}: {e}");
+                warnings.push(format!("warning: could not push {branch}: {e}"));
             }
-            merge_into_default(root, &branch, merge_target, is_main)?;
+            merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch_tracking(root, &branch)?;
             if let Some(ref target) = t.frontmatter.target_branch {
-                merge_into_default(root, &branch, target, false)?;
+                merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
             } else {
-                gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title)?;
+                gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
             }
         }
         CompletionStrategy::Pull => {
-            pull_default(root, &config.project.default_branch)?;
+            pull_default(root, &config.project.default_branch, &mut warnings)?;
         }
         CompletionStrategy::None => {
             if aggressive {
                 if let Err(e) = git::push_branch_tracking(root, &branch) {
-                    eprintln!("warning: push failed: {e:#}");
+                    warnings.push(format!("warning: push failed: {e:#}"));
                 }
             }
         }
     }
 
     let worktree_path = if new_state == "in_design" {
-        let worktrees_base = root.join(&config.worktrees.dir);
-        let wt = git::ensure_worktree(root, &worktrees_base, &branch)?;
-        git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs);
-        Some(wt)
+        Some(provision_worktree(root, &config, &branch, &mut warnings)?)
     } else {
         None
     };
@@ -186,10 +188,12 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         old_state,
         new_state,
         worktree_path,
+        warnings,
+        messages,
     })
 }
 
-fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str) -> Result<()> {
+fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str, messages: &mut Vec<String>) -> Result<()> {
     let existing = std::process::Command::new("gh")
         .args(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--jq", ".[0].number"])
         .current_dir(root)
@@ -197,7 +201,7 @@ fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &
 
     let pr_num = String::from_utf8_lossy(&existing.stdout).trim().to_string();
     if !pr_num.is_empty() && pr_num != "null" {
-        println!("PR #{pr_num} already open for {branch}");
+        messages.push(format!("PR #{pr_num} already open for {branch}"));
         return Ok(());
     }
 
@@ -216,14 +220,14 @@ fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &
 
     if out.status.success() {
         let url = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        println!("PR created: {url}");
+        messages.push(format!("PR created: {url}"));
     } else {
         bail!("gh pr create failed: {}", String::from_utf8_lossy(&out.stderr).trim());
     }
     Ok(())
 }
 
-fn merge_into_default(root: &Path, branch: &str, default_branch: &str, skip_push: bool) -> Result<()> {
+fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool, messages: &mut Vec<String>, _warnings: &mut Vec<String>) -> Result<()> {
     let _ = std::process::Command::new("git")
         .args(["fetch", "origin", default_branch])
         .current_dir(root)
@@ -238,8 +242,8 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str, skip_push
     let merge_dir = if current_branch == default_branch {
         root.to_path_buf()
     } else {
-        git::find_worktree_for_branch(root, default_branch)
-            .unwrap_or_else(|| root.to_path_buf())
+        let worktrees_base = root.join(&config.worktrees.dir);
+        git::ensure_worktree(root, &worktrees_base, default_branch)?
     };
 
     let out = std::process::Command::new("git")
@@ -259,15 +263,15 @@ fn merge_into_default(root: &Path, branch: &str, default_branch: &str, skip_push
     }
 
     if skip_push {
-        println!("Merged {branch} into {default_branch} (local only).");
+        messages.push(format!("Merged {branch} into {default_branch} (local only)."));
     } else {
         git::push_branch(&merge_dir, default_branch)?;
-        println!("Merged {branch} into {default_branch} and pushed to origin.");
+        messages.push(format!("Merged {branch} into {default_branch} and pushed to origin."));
     }
     Ok(())
 }
 
-fn pull_default(root: &Path, default_branch: &str) -> Result<()> {
+fn pull_default(root: &Path, default_branch: &str, warnings: &mut Vec<String>) -> Result<()> {
     let fetch = std::process::Command::new("git")
         .args(["fetch", "origin", default_branch])
         .current_dir(root)
@@ -275,14 +279,14 @@ fn pull_default(root: &Path, default_branch: &str) -> Result<()> {
 
     match fetch {
         Err(e) => {
-            eprintln!("warning: fetch failed: {e:#}");
+            warnings.push(format!("warning: fetch failed: {e:#}"));
             return Ok(());
         }
         Ok(out) if !out.status.success() => {
-            eprintln!(
+            warnings.push(format!(
                 "warning: fetch failed: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
-            );
+            ));
             return Ok(());
         }
         _ => {}
@@ -308,7 +312,7 @@ fn pull_default(root: &Path, default_branch: &str) -> Result<()> {
         .output()?;
 
     if !out.status.success() {
-        eprintln!("warning: could not fast-forward {default_branch} — pull manually");
+        warnings.push(format!("warning: could not fast-forward {default_branch} — pull manually"));
     }
 
     Ok(())
@@ -331,6 +335,37 @@ pub fn ensure_amendment_section(body: &mut String) {
     } else {
         body.push_str(placeholder);
     }
+}
+
+pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: &mut Vec<String>) -> Result<PathBuf> {
+    let worktrees_base = root.join(&config.worktrees.dir);
+    let wt = git::ensure_worktree(root, &worktrees_base, branch)?;
+    git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs, warnings);
+    Ok(wt)
+}
+
+pub fn available_transitions(config: &crate::config::Config, current_state: &str) -> Vec<(String, String, String)> {
+    let terminal_ids: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.terminal)
+        .map(|s| s.id.as_str())
+        .collect();
+
+    let state_cfg = config.workflow.states.iter().find(|s| s.id == current_state);
+
+    if let Some(sc) = state_cfg {
+        if !sc.transitions.is_empty() {
+            return sc.transitions.iter()
+                .filter(|tr| !tr.trigger.starts_with("event:"))
+                .map(|tr| (tr.to.clone(), tr.label.clone(), tr.hint.clone()))
+                .collect();
+        }
+    }
+
+    // No explicit transitions: all non-terminal, non-current states are valid.
+    config.workflow.states.iter()
+        .filter(|s| s.id != current_state && !terminal_ids.contains(&s.id.as_str()))
+        .map(|s| (s.id.clone(), s.label.clone(), String::new()))
+        .collect()
 }
 
 pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &str) {

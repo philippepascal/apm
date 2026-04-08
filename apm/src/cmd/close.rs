@@ -18,7 +18,10 @@ pub fn run(root: &Path, id_arg: &str, reason: Option<String>, no_aggressive: boo
         }
     }
 
-    ticket::close(root, &config, id_arg, reason.as_deref(), &agent, aggressive)?;
+    let msgs = ticket::close(root, &config, id_arg, reason.as_deref(), &agent, aggressive)?;
+    for msg in &msgs {
+        println!("{msg}");
+    }
 
     Ok(())
 }
