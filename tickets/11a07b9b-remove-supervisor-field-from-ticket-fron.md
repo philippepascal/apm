@@ -4,11 +4,11 @@ title = "Remove supervisor field from ticket frontmatter"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 branch = "ticket/11a07b9b-remove-supervisor-field-from-ticket-fron"
 created_at = "2026-04-08T15:09:32.454090Z"
-updated_at = "2026-04-08T15:41:57.213920Z"
+updated_at = "2026-04-08T15:42:03.716288Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
