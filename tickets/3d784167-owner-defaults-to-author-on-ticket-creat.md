@@ -21,7 +21,12 @@ When a ticket is created with `apm new`, the `owner` field is not set (or set to
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm new` sets `owner` = `author` (from `resolve_identity()`) in the ticket frontmatter
+- [ ] Tickets created without explicit owner have owner == author in the persisted markdown
+- [ ] `apm show <id>` displays the owner field
+- [ ] `apm list` output includes the owner column
+- [ ] Existing tickets without owner field still parse (owner defaults to None/empty)
+- [ ] Tests cover owner-on-creation behavior
 
 ### Out of scope
 
