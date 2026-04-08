@@ -1,7 +1,8 @@
 use anyhow::Result;
-use apm_core::{clean, config::Config, git};
+use apm_core::{clean, git};
 use std::io::IsTerminal;
 use std::path::Path;
+use crate::ctx::CmdContext;
 
 pub fn run(
     root: &Path,
@@ -18,7 +19,7 @@ pub fn run(
         anyhow::bail!("--remote requires --older-than <THRESHOLD>");
     }
 
-    let config = Config::load(root)?;
+    let config = CmdContext::load_config_only(root)?;
     let (candidates, dirty) = clean::candidates(root, &config, force, untracked, dry_run)?;
 
     if candidates.is_empty() && dirty.is_empty() && !remote {

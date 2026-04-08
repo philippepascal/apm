@@ -1,9 +1,10 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, identity, ticket};
 use std::path::Path;
+use crate::ctx::CmdContext;
 
 pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>, epic: Option<String>, depends_on: Vec<String>) -> Result<()> {
-    let config = Config::load(root)?;
+    let config = CmdContext::load_config_only(root)?;
 
     if context_section.is_some() && context.is_none() {
         anyhow::bail!("--context-section requires --context");
