@@ -1,14 +1,14 @@
 +++
 id = "ce919ea8"
 title = "Unify state transition logic into single module"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
 author = "philippepascal"
 branch = "ticket/ce919ea8-unify-state-transition-logic-into-single"
 created_at = "2026-04-07T22:30:50.389099Z"
-updated_at = "2026-04-08T00:33:10.978099Z"
+updated_at = "2026-04-08T00:37:18.063927Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 depends_on = ["eea2c9bc"]
@@ -116,3 +116,4 @@ After all three changes: `cargo test --workspace` must pass. The tests in `state
 | 2026-04-07T23:02Z | in_design | specd | claude-0407-2259-4d90 |
 | 2026-04-08T00:06Z | specd | ready | apm |
 | 2026-04-08T00:33Z | ready | in_progress | philippepascal |
+| 2026-04-08T00:37Z | in_progress | implemented | claude-0408-0033-f5f8 |
