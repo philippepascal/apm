@@ -30,7 +30,8 @@ The ticket frontmatter has a `supervisor` field that is not part of the ownershi
 
 ### Out of scope
 
-Migrating existing tickets that have supervisor set. They will simply be ignored on parse.
+- Migrating existing tickets that have supervisor set — they will parse without error (serde ignores unknown fields by default).
+- Removing the "supervisor" role concept from the workflow system — workflow states can still declare actionable = ["supervisor"] and the server's supervisor_states API remains unchanged. Only the frontmatter field is being removed.
 
 ### Approach
 
