@@ -21,7 +21,11 @@ The codebase has dead code that confuses the ownership model: (1) `resolve_colla
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `resolve_collaborators()` removed from `config.rs` (will be replaced by active validation in a later ticket)
+- [ ] `resolve_agent_name()` renamed or documented to clarify it is for history/logging only, not ownership
+- [ ] No code path uses agent_name as an ownership or filtering concept
+- [ ] Tests for removed functions cleaned up
+- [ ] All remaining tests pass
 
 ### Out of scope
 
