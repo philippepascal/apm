@@ -3,7 +3,7 @@ use apm_core::config::resolve_identity;
 use std::path::Path;
 use crate::ctx::CmdContext;
 
-pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>) -> Result<()> {
+pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>) -> Result<()> {
     let ctx = CmdContext::load(root, no_aggressive)?;
 
     let mine_user: Option<String> = if mine {
@@ -19,7 +19,6 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         state_filter.as_deref(),
         unassigned,
         all,
-        supervisor_filter.as_deref(),
         actionable_filter.as_deref(),
         author_filter.as_deref(),
         owner.as_deref(),
