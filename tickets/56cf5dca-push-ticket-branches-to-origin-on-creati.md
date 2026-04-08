@@ -32,7 +32,7 @@ When `aggressive = true` in sync config, `apm new` (and other branch-creating co
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Auto-pushing on every commit within a worktree. Pushing on state transitions (already handled by completion strategies).
 
 ### Approach
 
