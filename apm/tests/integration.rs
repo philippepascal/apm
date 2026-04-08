@@ -4826,3 +4826,134 @@ fn epic_set_preserves_existing_config_content() {
     assert_eq!(config.agents.max_concurrent, 3);
     assert_eq!(config.epic_max_workers(&epic_id), Some(2));
 }
+
+// --- epic set owner (bulk) ---
+
+fn write_ticket_in_epic(
+    dir: &std::path::Path,
+    branch: &str,
+    filename: &str,
+    state: &str,
+    id: &str,
+    title: &str,
+    owner: &str,
+    epic_id: &str,
+) {
+    let path = format!("tickets/{filename}");
+    let content = format!(
+        "+++\nid = \"{id}\"\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\nowner = \"{owner}\"\nepic = \"{epic_id}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
+    );
+    let branch_exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !branch_exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+fn setup_with_epic_for_owner_tests() -> (tempfile::TempDir, String) {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+    (dir, epic_id)
+}
+
+#[test]
+fn epic_bulk_owner_change_succeeds() {
+    let (dir, epic_id) = setup_with_epic_for_owner_tests();
+    let p = dir.path();
+
+    write_ticket_in_epic(p, "ticket/aa000001-alpha", "aa000001-alpha.md", "ready", "aa000001", "Alpha", "alice", &epic_id);
+    write_ticket_in_epic(p, "ticket/aa000002-beta", "aa000002-beta.md", "ready", "aa000002", "Beta", "alice", &epic_id);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "set", &epic_id, "owner", "bob"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(out.status.success(), "expected success; stderr: {stderr}");
+    assert!(stdout.contains("changed"), "expected 'changed' in output:\n{stdout}");
+    assert!(stdout.contains("aa000001"), "expected ticket aa000001 in output:\n{stdout}");
+    assert!(stdout.contains("aa000002"), "expected ticket aa000002 in output:\n{stdout}");
+    assert!(stdout.contains("2 ticket(s) changed, 0 skipped"), "expected summary in output:\n{stdout}");
+
+    let content1 = branch_content(p, "ticket/aa000001-alpha", "tickets/aa000001-alpha.md");
+    assert!(content1.contains("owner = \"bob\""), "expected owner = bob in aa000001:\n{content1}");
+    let content2 = branch_content(p, "ticket/aa000002-beta", "tickets/aa000002-beta.md");
+    assert!(content2.contains("owner = \"bob\""), "expected owner = bob in aa000002:\n{content2}");
+}
+
+#[test]
+fn epic_bulk_owner_change_skips_closed() {
+    let (dir, epic_id) = setup_with_epic_for_owner_tests();
+    let p = dir.path();
+
+    write_ticket_in_epic(p, "ticket/bb000001-open", "bb000001-open.md", "ready", "bb000001", "Open ticket", "alice", &epic_id);
+    write_ticket_in_epic(p, "ticket/bb000002-closed", "bb000002-closed.md", "closed", "bb000002", "Closed ticket", "alice", &epic_id);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "set", &epic_id, "owner", "bob"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(out.status.success(), "expected success; stderr: {stderr}");
+    assert!(stdout.contains("changed"), "expected 'changed' for open ticket:\n{stdout}");
+    assert!(stdout.contains("skipped"), "expected 'skipped' for closed ticket:\n{stdout}");
+    assert!(stdout.contains("bb000002"), "expected closed ticket id in output:\n{stdout}");
+    assert!(stdout.contains("1 ticket(s) changed, 1 skipped"), "expected summary in output:\n{stdout}");
+
+    let content_open = branch_content(p, "ticket/bb000001-open", "tickets/bb000001-open.md");
+    assert!(content_open.contains("owner = \"bob\""), "expected owner = bob in open ticket:\n{content_open}");
+
+    let content_closed = branch_content(p, "ticket/bb000002-closed", "tickets/bb000002-closed.md");
+    assert!(content_closed.contains("owner = \"alice\""), "expected owner = alice in closed ticket:\n{content_closed}");
+}
+
+#[test]
+fn epic_bulk_owner_change_blocked_non_owner() {
+    let (dir, epic_id) = setup_with_epic_for_owner_tests();
+    let p = dir.path();
+
+    write_ticket_in_epic(p, "ticket/cc000001-mine", "cc000001-mine.md", "ready", "cc000001", "Mine", "alice", &epic_id);
+    write_ticket_in_epic(p, "ticket/cc000002-theirs", "cc000002-theirs.md", "ready", "cc000002", "Theirs", "carol", &epic_id);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["epic", "set", &epic_id, "owner", "bob"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "expected failure when a ticket is not owned by current user");
+
+    // Neither ticket should have been modified
+    let content1 = branch_content(p, "ticket/cc000001-mine", "tickets/cc000001-mine.md");
+    assert!(content1.contains("owner = \"alice\""), "alice's ticket should be unchanged:\n{content1}");
+    let content2 = branch_content(p, "ticket/cc000002-theirs", "tickets/cc000002-theirs.md");
+    assert!(content2.contains("owner = \"carol\""), "carol's ticket should be unchanged:\n{content2}");
+}
