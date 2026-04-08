@@ -30,7 +30,7 @@ Currently anyone can change a ticket's owner via `apm assign` or `apm set owner`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Validation that the new owner is a valid collaborator (separate tickets bbd5d271, c738d9cc). Terminal state check (separate ticket 919412f4).
 
 ### Approach
 
