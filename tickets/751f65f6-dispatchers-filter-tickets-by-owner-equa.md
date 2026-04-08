@@ -39,7 +39,7 @@ This is the key behavioral change that makes ownership meaningful.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Filtering `apm list` by owner (already exists as --owner flag). Role-based filtering (agent vs supervisor actionability).
 
 ### Approach
 
