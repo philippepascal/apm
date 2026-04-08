@@ -59,7 +59,16 @@ pub struct RunNextOutput {
     pub log_path: Option<PathBuf>,
 }
 
-pub fn resolve_agent_name() -> String {
+/// Returns the caller identity for this process.
+///
+/// This value is used in two places:
+/// - Recorded as the acting party in ticket history entries.
+/// - Compared against a ticket's `owner` field when filtering candidates
+///   in `pick_next()` / `sorted_actionable()`. Tickets owned by another
+///   identity are excluded from the pick set.
+///
+/// Resolution order: `APM_AGENT_NAME` env var → `USER` → `USERNAME` → `"apm"`.
+pub fn resolve_caller_name() -> String {
     std::env::var("APM_AGENT_NAME")
         .or_else(|_| std::env::var("USER"))
         .or_else(|_| std::env::var("USERNAME"))
@@ -387,7 +396,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let agent_name = resolve_agent_name();
+    let agent_name = resolve_caller_name();
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
         messages.push("No actionable tickets.".to_string());
@@ -556,7 +565,7 @@ pub fn spawn_next_worker(
             })
             .collect()
     };
-    let agent_name = resolve_agent_name();
+    let agent_name = resolve_caller_name();
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name)) else {
         return Ok(None);
@@ -729,7 +738,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_agent_name, resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params};
+    use super::{resolve_caller_name, resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy, SatisfiesDeps};
     use std::sync::Mutex;
     use std::collections::HashMap;
@@ -983,7 +992,7 @@ mod tests {
     fn prefers_apm_agent_name() {
         let _g = ENV_LOCK.lock().unwrap();
         std::env::set_var("APM_AGENT_NAME", "explicit-agent");
-        assert_eq!(resolve_agent_name(), "explicit-agent");
+        assert_eq!(resolve_caller_name(), "explicit-agent");
         std::env::remove_var("APM_AGENT_NAME");
     }
 
@@ -993,7 +1002,7 @@ mod tests {
         std::env::remove_var("APM_AGENT_NAME");
         std::env::set_var("USER", "unix-user");
         std::env::remove_var("USERNAME");
-        assert_eq!(resolve_agent_name(), "unix-user");
+        assert_eq!(resolve_caller_name(), "unix-user");
         std::env::remove_var("USER");
     }
 
@@ -1003,7 +1012,7 @@ mod tests {
         std::env::remove_var("APM_AGENT_NAME");
         std::env::remove_var("USER");
         std::env::remove_var("USERNAME");
-        assert_eq!(resolve_agent_name(), "apm");
+        assert_eq!(resolve_caller_name(), "apm");
     }
 
     #[test]
