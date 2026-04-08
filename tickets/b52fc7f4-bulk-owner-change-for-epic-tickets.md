@@ -36,7 +36,7 @@ Bulk owner change across multiple epics. Changing owner of the epic itself (epic
 
 ### Approach
 
-How the implementation will work.
+Extend `apm epic set` (in `apm/src/cmd/epic.rs` `run_set()`) to handle "owner" as a field. Load all tickets for the epic, filter out terminal-state tickets, run the ownership check on each, validate the new owner, then update each ticket's owner field on its branch. If any check fails, abort before making changes. See `docs/ownership-spec.md`.
 
 ### Open questions
 
