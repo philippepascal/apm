@@ -6,9 +6,10 @@ priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
+owner = "philippepascal"
 branch = "ticket/6dbc7f97-make-sure-apm-h-manuals-are-all-up-to-da"
 created_at = "2026-04-08T04:04:31.823861Z"
-updated_at = "2026-04-08T23:49:51.278281Z"
+updated_at = "2026-04-08T23:56:16.417618Z"
 +++
 
 ## Spec
