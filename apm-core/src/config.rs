@@ -906,6 +906,15 @@ dir = "tickets"
     }
 
     #[test]
+    fn resolve_identity_returns_unassigned_when_username_key_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("local.toml"), "[workers]\ncommand = \"claude\"\n").unwrap();
+        assert_eq!(resolve_identity(tmp.path()), "unassigned");
+    }
+
+    #[test]
     fn local_config_username_parses() {
         let toml = r#"
 username = "bob"

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, identity, ticket};
+use apm_core::{config::{Config, resolve_identity}, git, ticket};
 use std::path::Path;
 
 pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, supervisor_filter: Option<String>, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>) -> Result<()> {
@@ -13,7 +13,7 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
     }
 
     let mine_user: Option<String> = if mine {
-        Some(identity::resolve_current_user(root))
+        Some(resolve_identity(root))
     } else {
         None
     };

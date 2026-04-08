@@ -295,7 +295,7 @@ fn new_uses_apm_when_no_local_toml() {
     let branch = find_ticket_branch(dir.path(), "unnamed");
     let rel_path = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel_path);
-    assert!(content.contains("author = \"apm\""), "author should be apm without local.toml: {content}");
+    assert!(content.contains("author = \"unassigned\""), "author should be unassigned without local.toml: {content}");
 }
 
 #[test]
