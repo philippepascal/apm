@@ -35,7 +35,69 @@ GitLab or other provider support (future work). Caching collaborator lists.
 
 ### Approach
 
-Wire the existing `fetch_repo_collaborators()` from `github.rs` into the `validate_owner()` function (from ticket bbd5d271). Add a GitHub code path: if git_host.provider == "github" and repo is set, try fetching collaborators via API. On failure, fall back to config.project.collaborators with a warning. See `docs/ownership-spec.md`.
+This ticket is implemented on top of the dependency ticket (b0708201), which adds
+`validate_owner(config: &Config, username: &str) -> Result<()>` to
+`apm-core/src/validate.rs` with an early return that skips GitHub mode. This
+ticket replaces that skip with a real GitHub-aware validation path.
+
+**Files to change:**
+
+1. `apm-core/src/config.rs` -- add `LocalConfig::load(root: &Path) -> Self`.
+   Build path as repo_root/.apm/local.toml, read_to_string ok(), parse toml ok(),
+   unwrap_or_default(). Replace the identical inline pattern in resolve_identity().
+
+2. `apm-core/src/validate.rs` -- extend `validate_owner()`.
+   New signature: `pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> Result<()>`
+   Add `use crate::config::LocalConfig;` to imports.
+   Replace the GitHub early-return with:
+     a. If username == "-" return Ok(()) -- clearing always allowed.
+     b. Call `resolve_collaborators(config, local)` -> (collaborators, warnings).
+     c. Print each warning to stderr with eprintln.
+     d. If collaborators.is_empty() return Ok(()) -- no list to validate.
+     e. If username not in collaborators: return Err with message
+        "unknown user '<name>'; valid collaborators: <comma list>".
+     f. Otherwise return Ok(()).
+   `resolve_collaborators` already handles: GitHub+repo+token calls the API and
+   on error pushes a warning and falls back to project.collaborators; all other
+   cases return project.collaborators with no warning. No direct call to
+   `fetch_repo_collaborators` is needed here.
+
+3. `apm/src/cmd/assign.rs` -- wire validation before the write.
+   After Config::load(root), add:
+     let local = LocalConfig::load(root);
+     validate_owner(&config, &local, username)?;
+   Place immediately before ticket::set_field so a rejected owner never writes.
+
+4. `apm/src/cmd/set.rs` -- guard the owner field.
+   set.rs uses CmdContext (no LocalConfig). Before ticket::set_field, add:
+     if field == "owner" {
+         let local = LocalConfig::load(root);
+         validate_owner(&ctx.config, &local, &value)?;
+     }
+   `root` is already a parameter.
+
+5. Tests in `apm-core/src/validate.rs` -- add to existing cfg(test) block.
+   All tests use inline TOML and `LocalConfig::default()` (no token; API never
+   called; resolve_collaborators returns project.collaborators).
+
+   - `github_mode_known_user_accepted`: provider=github + repo set + username in
+     project.collaborators -> Ok(()).
+   - `github_mode_unknown_user_rejected`: same config, username absent -> Err
+     whose message contains the username.
+   - `github_mode_no_collaborators_skips_check`: provider=github + repo set +
+     project.collaborators empty -> Ok(()) (empty list bypasses validation).
+   - `github_mode_clear_owner_accepted`: username="-" -> Ok(()) regardless of list.
+   - `non_github_mode_unknown_user_rejected`: no git_host, username absent from
+     project.collaborators -> Err (confirms b0708201 behavior preserved).
+
+   The "API unreachable -> warning + fallback" criterion is structurally covered:
+   resolve_collaborators emits warnings and returns project.collaborators on any
+   API error. Unit tests exercise the fallback path directly (no token = no HTTP
+   call; project.collaborators returned). Testing the warning emission path would
+   require a mocked HTTP server and is out of scope.
+
+Order: (1) LocalConfig::load, (2) validate_owner, (3) assign.rs, (4) set.rs,
+(5) cargo test -p apm-core validate && cargo test -p apm.
 
 ### Open questions
 
