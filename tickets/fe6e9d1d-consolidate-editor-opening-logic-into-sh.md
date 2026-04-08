@@ -1,14 +1,14 @@
 +++
 id = "fe6e9d1d"
 title = "Consolidate editor-opening logic into shared CLI module"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
 branch = "ticket/fe6e9d1d-consolidate-editor-opening-logic-into-sh"
 created_at = "2026-04-07T22:30:48.429150Z"
-updated_at = "2026-04-08T00:06:25.823076Z"
+updated_at = "2026-04-08T00:14:38.672964Z"
 epic = "ac0fb648"
 target_branch = "epic/ac0fb648-code-separation-and-reuse-cleanup"
 +++
@@ -89,3 +89,4 @@ No changes to public CLI surface, config, ticket format, or git helpers.
 | 2026-04-07T22:56Z | groomed | in_design | philippepascal |
 | 2026-04-07T22:58Z | in_design | specd | claude-0407-2256-a8f8 |
 | 2026-04-08T00:06Z | specd | ready | apm |
+| 2026-04-08T00:14Z | ready | in_progress | philippepascal |
