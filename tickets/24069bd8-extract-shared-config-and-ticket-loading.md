@@ -42,7 +42,7 @@ The desired state is a single `CmdContext` type and a small set of constructor f
 - [x] `CmdContext::load(root: &Path, no_aggressive: bool) -> Result<CmdContext>` loads config, performs `git::fetch_all` when `config.sync.aggressive && !no_aggressive` (printing a warning on failure, not returning an error), then loads all tickets
 - [x] `CmdContext::load_config_only(root: &Path) -> Result<Config>` loads and returns the config without performing any fetch or ticket load
 - [x] `list.rs` uses `CmdContext::load` and removes its inline boilerplate
-- [ ] `verify.rs` uses `CmdContext::load` and removes its inline boilerplate
+- [x] `verify.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [ ] `validate.rs` uses `CmdContext::load` (or `load_config_only` for the `--config-only` branch) and removes its inline boilerplate
 - [ ] `review.rs` uses `CmdContext::load` and removes its inline boilerplate
 - [ ] `set.rs` uses `CmdContext::load` and removes its inline boilerplate
