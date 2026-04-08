@@ -507,7 +507,7 @@ pub fn create(
             .or(transition_section)
             .unwrap_or_else(|| "Problem".to_string());
         if !config.ticket.sections.is_empty()
-            && !config.ticket.sections.iter().any(|s| s.name.eq_ignore_ascii_case(&section))
+            && !config.has_section(&section)
         {
             anyhow::bail!("section '### {section}' not found in ticket body template");
         }
@@ -525,8 +525,7 @@ pub fn create(
         for (name, value) in &section_sets {
             let trimmed = value.trim().to_string();
             let formatted = if !config.ticket.sections.is_empty() {
-                let section_config = config.ticket.sections.iter()
-                    .find(|s| s.name.eq_ignore_ascii_case(name))
+                let section_config = config.find_section(name)
                     .ok_or_else(|| anyhow::anyhow!("unknown section {:?}", name))?;
                 crate::spec::apply_section_type(&section_config.type_, trimmed)
             } else {
@@ -740,10 +739,7 @@ pub fn list_filtered<'a>(
     owner_filter: Option<&str>,
     mine_user: Option<&str>,
 ) -> Vec<&'a Ticket> {
-    let terminal: std::collections::HashSet<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
+    let terminal = config.terminal_state_ids();
     let actionable_map: std::collections::HashMap<&str, &Vec<String>> = config.workflow.states.iter()
         .map(|s| (s.id.as_str(), &s.actionable))
         .collect();

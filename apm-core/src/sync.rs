@@ -17,10 +17,7 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
     let merged = git::merged_into_main(root, &config.project.default_branch)?;
     let merged_set: HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
 
-    let terminal: HashSet<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
+    let terminal = config.terminal_state_ids();
 
     let branch_set: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
 

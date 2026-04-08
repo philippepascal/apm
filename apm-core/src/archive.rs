@@ -14,17 +14,7 @@ pub fn archive(
             "archive_dir is not set in [tickets] config; add `archive_dir = \"archive/tickets\"` to .apm/config.toml"
         ))?;
 
-    let terminal_states: std::collections::HashSet<String> = {
-        let mut s: std::collections::HashSet<String> = config
-            .workflow
-            .states
-            .iter()
-            .filter(|st| st.terminal)
-            .map(|st| st.id.clone())
-            .collect();
-        s.insert("closed".to_string());
-        s
-    };
+    let terminal_states = config.terminal_state_ids();
 
     let default_branch = &config.project.default_branch;
     let tickets_dir = config.tickets.dir.to_string_lossy().into_owned();

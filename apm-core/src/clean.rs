@@ -105,14 +105,7 @@ pub fn remove_untracked(wt_path: &Path, files: &[PathBuf]) -> Result<()> {
 }
 
 pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dry_run: bool) -> Result<(Vec<CleanCandidate>, Vec<DirtyWorktree>)> {
-    let mut terminal_states: std::collections::HashSet<String> = config
-        .workflow
-        .states
-        .iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.clone())
-        .collect();
-    terminal_states.insert("closed".to_string());
+    let terminal_states = config.terminal_state_ids();
 
     let default_branch = &config.project.default_branch;
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -335,17 +328,7 @@ pub fn remote_candidates(
     config: &Config,
     older_than: DateTime<Utc>,
 ) -> Result<Vec<RemoteCandidate>> {
-    let terminal_states: std::collections::HashSet<String> = {
-        let mut s: std::collections::HashSet<String> = config
-            .workflow
-            .states
-            .iter()
-            .filter(|st| st.terminal)
-            .map(|st| st.id.clone())
-            .collect();
-        s.insert("closed".to_string());
-        s
-    };
+    let terminal_states = config.terminal_state_ids();
     let default_branch = &config.project.default_branch;
     let branches = git::remote_ticket_branches_with_dates(root)?;
     let mut result = Vec::new();

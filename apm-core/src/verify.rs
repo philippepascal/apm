@@ -10,10 +10,7 @@ pub fn verify_tickets(
     let valid_states: HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
         .collect();
-    let terminal: HashSet<&str> = config.workflow.states.iter()
-        .filter(|s| s.terminal)
-        .map(|s| s.id.as_str())
-        .collect();
+    let terminal = config.terminal_state_ids();
 
     let in_progress_states: HashSet<&str> =
         ["in_progress", "implemented"].iter().copied().collect();
