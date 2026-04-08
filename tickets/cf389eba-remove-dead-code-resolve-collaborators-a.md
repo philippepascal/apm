@@ -3,12 +3,12 @@ id = "cf389eba"
 title = "Remove dead code: resolve_collaborators and agent_name ownership overlap"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 branch = "ticket/cf389eba-remove-dead-code-resolve-collaborators-a"
 created_at = "2026-04-08T15:09:36.685009Z"
-updated_at = "2026-04-08T15:42:27.925830Z"
+updated_at = "2026-04-08T15:45:53.041598Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 +++
