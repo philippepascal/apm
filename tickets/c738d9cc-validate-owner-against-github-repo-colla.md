@@ -22,7 +22,12 @@ In GitHub mode (`git_host.provider = "github"`), owner changes are not validated
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When `git_host.provider = "github"` and `git_host.repo` is set, `apm assign` validates the new owner against GitHub repo collaborators
+- [ ] Uses `gh api` or token-based API call to fetch collaborators
+- [ ] If the new owner is not a collaborator, command fails with a clear error
+- [ ] If GitHub API is unreachable (no token, network error), validation is skipped with a warning (do not block offline work)
+- [ ] Falls back to `project.collaborators` list if GitHub API fails
+- [ ] Tests cover: valid GitHub collaborator accepted, unknown user rejected, API failure falls back gracefully
 
 ### Out of scope
 
