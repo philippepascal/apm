@@ -1,14 +1,14 @@
 +++
 id = "c738d9cc"
 title = "Validate owner against GitHub repo collaborators"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
 author = "philippepascal"
 branch = "ticket/c738d9cc-validate-owner-against-github-repo-colla"
 created_at = "2026-04-08T15:10:04.160555Z"
-updated_at = "2026-04-08T15:33:54.587218Z"
+updated_at = "2026-04-08T16:06:11.590136Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -52,3 +52,4 @@ Wire the existing `fetch_repo_collaborators()` from `github.rs` into the `valida
 |------|------|----|----|
 | 2026-04-08T15:10Z | — | new | philippepascal |
 | 2026-04-08T15:33Z | new | groomed | apm |
+| 2026-04-08T16:06Z | groomed | in_design | philippepascal |
