@@ -17,7 +17,7 @@ target_branch = "epic/18dab82d-ticket-ownership-model"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The ticket frontmatter has a `supervisor` field that is not part of the ownership model. The ownership spec defines only two fields: `author` (immutable, who created) and `owner` (who manages). The `supervisor` field adds confusion and overlaps with `owner`. It must be removed from the Frontmatter struct, all set_field handling, list filters, and any UI references.
 
 ### Acceptance criteria
 
@@ -34,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
