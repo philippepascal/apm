@@ -18,7 +18,14 @@ depends_on = ["3d784167"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Currently `pick_next()`, `apm start --next`, and `apm work` pick up any actionable ticket regardless of owner. This allows multiple supervisors to accidentally dispatch workers on each other's tickets, and there is no record of who intended which ticket to be worked on.
+
+Per the ownership model, dispatchers should only act on tickets owned by the current user. This means:
+- A supervisor runs `apm work` → only their owned tickets are dispatched
+- The UI dispatcher filters by the logged-in user's owned tickets
+- `apm start --next` picks from owned tickets only
+
+This is the key behavioral change that makes ownership meaningful.
 
 ### Acceptance criteria
 
@@ -35,13 +42,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
