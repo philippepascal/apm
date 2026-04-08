@@ -15,7 +15,11 @@ updated_at = "2026-04-08T15:40:56.947438Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When `apm new` creates a ticket, the branch is only created locally. In a multi-user setup, other collaborators and the server cannot see the ticket until the branch is pushed to origin. This breaks the collaborative workflow: a supervisor creates tickets and grooms them, but no one else sees them.
+
+Additionally, state transitions fetch dependency branches from origin (`git fetch origin <branch>`), producing noisy `fatal: couldn't find remote ref` errors in server logs when those branches are local-only. Pushing on creation would eliminate this noise.
+
+When `aggressive = true` in sync config, `apm new` (and other branch-creating commands like `apm epic new`) should push the branch to origin immediately after creation. This matches the aggressive sync philosophy: keep local and remote in sync at all times.
 
 ### Acceptance criteria
 
@@ -32,13 +36,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
