@@ -25,7 +25,7 @@ The codebase has two dead-code problems and one naming/documentation problem tha
 
 ### Out of scope
 
-Building new collaborator validation — that is covered by tickets bbd5d271 and c738d9cc.
+- Building new collaborator validation — covered by tickets bbd5d271 and c738d9cc\n- Changing the owner-based filtering behaviour of `pick_next()` / `sorted_actionable()` — this ticket only clarifies naming, not logic\n- Creating `docs/ownership-spec.md` — that document does not yet exist; the full ownership model is defined in a later ticket
 
 ### Approach
 
