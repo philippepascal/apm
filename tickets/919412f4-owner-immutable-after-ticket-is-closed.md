@@ -18,7 +18,7 @@ depends_on = ["b0708201"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Closed tickets should be immutable records. Changing the owner of a closed ticket has no practical purpose and could corrupt the audit trail. The ownership check should reject owner changes on tickets in a terminal state.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
