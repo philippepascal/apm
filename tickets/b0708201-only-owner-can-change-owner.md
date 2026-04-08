@@ -21,7 +21,7 @@ Currently anyone can change a ticket's owner via `apm assign` or `apm set owner`
 
 ### Acceptance criteria
 
-- [ ] `apm assign <id> <user>` checks that current user == ticket owner before changing
+- [x] `apm assign <id> <user>` checks that current user == ticket owner before changing
 - [ ] If current user != owner, command fails with a clear error: "only the current owner (<owner>) can reassign this ticket"
 - [ ] `apm set <id> owner <user>` has the same check
 - [ ] The check uses `resolve_identity()` (respects config-based vs GitHub mode)
