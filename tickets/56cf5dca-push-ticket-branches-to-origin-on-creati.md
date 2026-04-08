@@ -23,7 +23,12 @@ When `aggressive = true` in sync config, `apm new` (and other branch-creating co
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm new` pushes the ticket branch to origin when `sync.aggressive = true`
+- [ ] `apm epic new` pushes the epic branch to origin when aggressive (already does this — verify)
+- [ ] Push failure is non-fatal: warns but does not fail the command (supports offline work)
+- [ ] When `sync.aggressive = false`, no push happens (current behavior preserved)
+- [ ] State transition fetch errors no longer appear for freshly created tickets in aggressive mode
+- [ ] Tests cover: aggressive push on create, non-aggressive skips push, push failure is warning
 
 ### Out of scope
 
