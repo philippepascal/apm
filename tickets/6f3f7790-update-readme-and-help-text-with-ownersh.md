@@ -18,7 +18,7 @@ depends_on = ["751f65f6", "b52fc7f4"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The README and CLI help text do not document the ownership model: who owns tickets, how dispatchers filter by owner, how to assign/reassign, the two identity modes (config vs GitHub). Users have no way to understand the ownership workflow without reading code.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
