@@ -39,7 +39,7 @@ The desired state is that a user reading the README understands the full ownersh
 - [x] README happy path step 3 notes that the spec agent picks up only tickets assigned (owned) to it
 - [x] `apm assign --help` long description mentions that ownership gates dispatcher pickup
 - [x] `apm epic set --help` field description includes `owner` alongside `max_workers`
-- [ ] `docs/commands.md` `apm epic set` section documents `owner` as a supported field with synopsis, description, and options table
+- [x] `docs/commands.md` `apm epic set` section documents `owner` as a supported field with synopsis, description, and options table
 - [ ] `docs/commands.md` `apm list` description paragraph explains the relationship between `--mine`, `--owner`, and dispatcher filtering
 
 ### Out of scope
