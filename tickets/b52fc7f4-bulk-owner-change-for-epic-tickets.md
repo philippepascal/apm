@@ -36,7 +36,45 @@ Bulk owner change across multiple epics. Changing owner of the epic itself (epic
 
 ### Approach
 
-Extend `apm epic set` (in `apm/src/cmd/epic.rs` `run_set()`) to handle "owner" as a field. Load all tickets for the epic, filter out terminal-state tickets, run the ownership check on each, validate the new owner, then update each ticket's owner field on its branch. If any check fails, abort before making changes. See `docs/ownership-spec.md`.
+Extend `run_set()` in `apm/src/cmd/epic.rs` to accept `"owner"` as a valid field alongside the existing `"max_workers"`.
+
+**1. Extend the field guard in `run_set()`**
+
+Change the bail at the top of `run_set()` from only allowing `"max_workers"` to also allow `"owner"`. Add a separate branch for `field == "owner"` that runs the bulk-change logic below; keep the existing `max_workers` branch unchanged.
+
+**2. Load and filter tickets**
+
+Use the same pattern as `run_close()` in the same file:
+- `let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;`
+- Filter to tickets whose `frontmatter.epic` matches `epic_id`.
+- Obtain terminal states: `let terminal = config.terminal_state_ids();` (method on `Config`, always includes `"closed"`).
+- Partition into `to_change` (non-terminal state) and `skipped` (terminal state) vecs.
+
+**3. Pre-flight checks (abort before any writes if any fail)**
+
+Iterate `to_change` without modifying anything:
+- For each ticket call `apm_core::ticket::check_owner(root, ticket)?` — this helper is added by ticket b0708201 and lives in `apm-core/src/ticket.rs`. It bails if the current user (via `resolve_identity()`) is not the ticket's owner.
+- Validate the new owner against collaborators: call `apm_core::config::resolve_collaborators(&config, &local_config)` to obtain the list. If `value != "-"` and the value is not in the collaborators list, bail with `"unknown collaborator: {value}"`. Perform inline if no centralised helper exists.
+- If any check fails for any ticket, return the error immediately — no tickets are modified.
+
+**4. Apply changes**
+
+Only reached when all pre-flight checks pass. For each ticket in `to_change`:
+- `apm_core::ticket::set_field(&mut t.frontmatter, "owner", value)?`
+- `let content = t.serialize()?;`
+- `apm_core::git::commit_to_branch(root, &t.frontmatter.branch, &t.path_in_repo, &content, &format!("ticket({}): bulk set owner = {}", t.frontmatter.id, value))?`
+
+**5. Output**
+
+After all updates print:
+- One line per changed ticket: `changed  <id>  <title>`
+- One line per skipped ticket: `skipped  <id>  <title>  (state: <state>)`
+- A summary line: `N ticket(s) changed, M skipped.`
+
+**6. Tests** — add to `apm/tests/integration.rs` following existing owner test helpers (`write_ticket_with_owner`):
+- `epic_bulk_owner_change_succeeds`: 2 non-terminal tickets owned by current user; assert both updated and output lists them as changed.
+- `epic_bulk_owner_change_skips_closed`: include a closed ticket; assert it appears in skipped output and its owner is unchanged.
+- `epic_bulk_owner_change_blocked_non_owner`: one ticket has a different owner; assert command fails and no ticket (including the validly-owned ones) is modified.
 
 ### Open questions
 
