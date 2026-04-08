@@ -22,7 +22,12 @@ The README and CLI help text do not document the ownership model: who owns ticke
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] README has a section explaining ticket ownership (author vs owner, who can reassign, dispatcher behavior)
+- [ ] README documents `apm assign` and `apm epic set <id> owner`
+- [ ] README documents identity setup (local.toml username for config mode, git_host for GitHub mode)
+- [ ] `apm assign --help` text is clear and accurate
+- [ ] `docs/commands.md` updated with ownership-related commands
+- [ ] Happy path walkthrough reflects ownership (supervisor creates and owns, dispatches to workers)
 
 ### Out of scope
 
