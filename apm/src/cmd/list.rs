@@ -27,7 +27,8 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
 
     for t in filtered {
         let fm = &t.frontmatter;
-        println!("{:<8} [{:<12}] {}", fm.id, fm.state, fm.title);
+        let owner = fm.owner.as_deref().unwrap_or("-");
+        println!("{:<8} [{:<12}] {:<16} {}", fm.id, fm.state, owner, fm.title);
     }
     Ok(())
 }
