@@ -35,7 +35,7 @@ Documenting the ownership spec itself (already in docs/ownership-spec.md). API d
 
 ### Approach
 
-How the implementation will work.
+Update README.md, docs/commands.md, and CLI help strings (clap descriptions in apm/src/main.rs). Use docs/ownership-spec.md as the source of truth. This ticket should be done last after all other ownership tickets are implemented and merged.
 
 ### Open questions
 
