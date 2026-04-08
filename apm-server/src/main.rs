@@ -2,7 +2,7 @@ use axum::{
     extract::{ConnectInfo, Path, Query, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, patch, post, put},
+    routing::{get, post, put},
     Json, Router,
 };
 use include_dir::{include_dir, Dir};
@@ -22,6 +22,7 @@ mod webauthn_state;
 mod work;
 mod workers;
 
+#[allow(dead_code)] // InMemory is constructed in tests but matched in shared code
 enum TicketSource {
     Git(PathBuf, PathBuf),
     InMemory(Vec<apm_core::ticket::Ticket>),
