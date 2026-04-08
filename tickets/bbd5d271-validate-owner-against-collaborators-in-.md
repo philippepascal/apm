@@ -1,14 +1,14 @@
 +++
 id = "bbd5d271"
 title = "Validate owner against collaborators in config-based mode"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
 author = "philippepascal"
 branch = "ticket/bbd5d271-validate-owner-against-collaborators-in-"
 created_at = "2026-04-08T15:09:59.601187Z"
-updated_at = "2026-04-08T21:47:31.380183Z"
+updated_at = "2026-04-08T22:15:55.971974Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -78,3 +78,4 @@ No changes to `ticket::set_field()` or the state machine. The `docs/ownership-sp
 | 2026-04-08T16:02Z | groomed | in_design | philippepascal |
 | 2026-04-08T16:05Z | in_design | specd | claude-0408-1602-1f60 |
 | 2026-04-08T21:47Z | specd | ready | apm |
+| 2026-04-08T22:15Z | ready | in_progress | philippepascal |
