@@ -1,14 +1,14 @@
 +++
 id = "c738d9cc"
 title = "Validate owner against GitHub repo collaborators"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
 author = "philippepascal"
 branch = "ticket/c738d9cc-validate-owner-against-github-repo-colla"
 created_at = "2026-04-08T15:10:04.160555Z"
-updated_at = "2026-04-08T22:23:57.257226Z"
+updated_at = "2026-04-08T23:47:38.001332Z"
 epic = "18dab82d"
 target_branch = "epic/18dab82d-ticket-ownership-model"
 depends_on = ["b0708201"]
@@ -119,3 +119,4 @@ Order: (1) LocalConfig::load, (2) validate_owner, (3) assign.rs, (4) set.rs,
 | 2026-04-08T21:47Z | specd | ready | apm |
 | 2026-04-08T22:19Z | ready | in_progress | philippepascal |
 | 2026-04-08T22:23Z | in_progress | implemented | claude-0408-2219-c768 |
+| 2026-04-08T23:47Z | implemented | closed | apm-sync |
