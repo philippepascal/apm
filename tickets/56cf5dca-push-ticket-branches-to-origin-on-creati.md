@@ -6,9 +6,10 @@ priority = 0
 effort = 2
 risk = 1
 author = "philippepascal"
+owner = "philippepascal"
 branch = "ticket/56cf5dca-push-ticket-branches-to-origin-on-creati"
 created_at = "2026-04-08T15:40:56.947438Z"
-updated_at = "2026-04-08T21:55:40.127326Z"
+updated_at = "2026-04-08T23:56:32.488132Z"
 +++
 
 ## Spec
