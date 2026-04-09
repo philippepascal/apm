@@ -1,7 +1,7 @@
 +++
 id = "7502e379"
 title = "add a force flag to apm assign"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7502e379-add-a-force-flag-to-apm-assign"
 created_at = "2026-04-08T23:57:24.004823Z"
-updated_at = "2026-04-09T00:29:32.027991Z"
+updated_at = "2026-04-09T00:33:22.238187Z"
 +++
 
 ## Spec
@@ -122,3 +122,4 @@ No changes to `apm-core/src/ticket.rs` — `check_owner` is left intact; the byp
 | 2026-04-09T00:14Z | in_design | specd | claude-0409-0010-99a8 |
 | 2026-04-09T00:24Z | specd | ready | apm |
 | 2026-04-09T00:29Z | ready | in_progress | philippepascal |
+| 2026-04-09T00:33Z | in_progress | implemented | claude-0409-0029-4b60 |
