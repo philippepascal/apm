@@ -144,7 +144,7 @@ Command::Epic { command: EpicCommand::Clean { dry_run, yes } } =>
 
 
 ### Amendment requests
-
+include this in the apm clean command instead of the apm epic
 
 ### Code review
 
