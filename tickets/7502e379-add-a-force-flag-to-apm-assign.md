@@ -40,6 +40,20 @@ A `--force` flag would let any collaborator override the ownership check, while 
 
 ### Approach
 
+**`apm/src/cmd/assign.rs`** — Add a `force: bool` parameter to `run()`. Replace the current unconditional `ticket::check_owner(root, t)?` call with a branch: when `force` is false, call `check_owner` as today; when `force` is true, (a) load the config and bail with "cannot change owner of a closed ticket" if the ticket's state is terminal, then (b) if the ticket has an existing owner, print "Ticket {id} is currently owned by {owner}. Reassign to {username}? [y/N] ", flush stdout, read a line from stdin, and return `Ok(())` with message "aborted" unless the trimmed input is `y` or `Y`. Add imports `use std::io::{self, Write, BufRead}` if not already present.
+
+For testability, extract to a private `run_inner(..., confirm_override: Option<bool>)` where `None` uses the interactive stdin prompt and `Some(b)` short-circuits the prompt to `b`. The public `run()` calls `run_inner(..., None)`. Tests call `run_inner(..., Some(true/false))`.
+
+**`apm/src/main.rs`** — Add a `--force` boolean flag to the `assign` subcommand arg definition and pass it through to `assign::run()`.
+
+**`apm/tests/integration.rs`** — Add three tests, all calling `run_inner` directly:
+
+1. `assign_force_succeeds_when_not_owner` — create ticket, assign to `alice`, call force-assign to `bob` with `confirm_override: Some(true)`; assert owner field becomes `bob`.
+2. `assign_force_aborts_on_deny` — same setup, call with `confirm_override: Some(false)`; assert owner remains `alice` and the call returns `Ok(())`.
+3. `assign_force_skips_prompt_when_no_owner` — create ticket (no owner), call force-assign with `confirm_override: Some(true)`; assert owner is set without hitting the prompt path.
+
+No changes to `apm-core/src/ticket.rs` — `check_owner` is left intact; the bypass lives entirely in the CLI layer.
+
 ### `apm/src/cmd/assign.rs`
 
 Add a `force: bool` parameter to `run()`. Replace the current unconditional `ticket::check_owner(root, t)?` call with a branch:
