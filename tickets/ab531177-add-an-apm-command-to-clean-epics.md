@@ -22,7 +22,15 @@ This ticket adds `apm epic clean` — a subcommand that identifies all "done" ep
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic clean` with no flags prints the list of "done" epics and prompts "Delete N epic(s)? [y/N]"; entering "y" deletes them
+- [ ] `apm epic clean --yes` deletes all "done" epics without prompting
+- [ ] `apm epic clean --dry-run` prints what would be deleted and exits without making any changes
+- [ ] Epics whose derived state is not `"done"` are not listed and not deleted
+- [ ] When no "done" epics exist, the command prints "Nothing to clean." and exits 0
+- [ ] After deletion, the epic branch no longer exists locally
+- [ ] After deletion, the epic's entry is removed from `.apm/epics.toml` (or the file is left unchanged if the epic had no entry there)
+- [ ] Running in a non-interactive terminal without `--yes` skips deletion and prints a message advising the user to use `--yes`
+- [ ] Entering anything other than "y" at the prompt leaves all epics untouched
 
 ### Out of scope
 
