@@ -4,12 +4,12 @@ title = "UI: clean option window"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7d7d9c35-ui-clean-option-window"
 created_at = "2026-04-09T05:15:30.189617Z"
-updated_at = "2026-04-09T05:28:36.250438Z"
+updated_at = "2026-04-09T05:28:40.757666Z"
 +++
 
 ## Spec
