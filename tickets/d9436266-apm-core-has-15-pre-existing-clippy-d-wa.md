@@ -1,7 +1,7 @@
 +++
 id = "d9436266"
 title = "apm-core has 15 pre-existing clippy -D warnings violations"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d9436266-apm-core-has-15-pre-existing-clippy-d-wa"
 created_at = "2026-04-08T00:24:00.645866Z"
-updated_at = "2026-04-09T00:24:25.698181Z"
+updated_at = "2026-04-09T00:27:39.489149Z"
 +++
 
 ## Spec
@@ -150,3 +150,4 @@ Add `#[allow(clippy::too_many_arguments)]` on the line immediately before `fn sp
 | 2026-04-09T00:01Z | in_design | specd | claude-0408-2358-dfd0 |
 | 2026-04-09T00:24Z | specd | ready | apm |
 | 2026-04-09T00:24Z | ready | in_progress | philippepascal |
+| 2026-04-09T00:27Z | in_progress | implemented | claude-0409-0024-b5d0 |
