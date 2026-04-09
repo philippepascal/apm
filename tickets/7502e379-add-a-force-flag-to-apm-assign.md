@@ -23,7 +23,7 @@ A `--force` flag would let any collaborator override the ownership check, while 
 ### Acceptance criteria
 
 - [x] `apm assign --force <id> <user>` succeeds when the current user is not the ticket owner
-- [ ] When `--force` is used and the ticket has an existing owner, a prompt shows "Ticket <id> is currently owned by <owner>. Reassign to <user>? [y/N]" before proceeding
+- [x] When `--force` is used and the ticket has an existing owner, a prompt shows "Ticket <id> is currently owned by <owner>. Reassign to <user>? [y/N]" before proceeding
 - [ ] Entering `y` or `Y` at the prompt completes the assignment
 - [ ] Entering anything other than `y`/`Y` (including empty input) aborts with message "aborted" and leaves the ticket unchanged
 - [ ] `--force` on an unowned ticket proceeds without showing a confirmation prompt
