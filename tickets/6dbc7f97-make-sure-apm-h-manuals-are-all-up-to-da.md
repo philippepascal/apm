@@ -30,13 +30,13 @@ Anyone reading `apm worktrees -h`, `apm agents -h`, or `apm init -h` will see in
 
 ### Acceptance criteria
 
-- [ ] `apm worktrees -h` does not mention `--add`
-- [ ] `apm worktrees -h` examples show only `apm worktrees` (list) and `apm worktrees --remove <id>`
-- [ ] `apm agents -h` short description does not reference `apm.agents.md` by name
-- [ ] `apm agents -h` long description references the configurable `[agents] instructions` path, not a hardcoded filename
-- [ ] `apm init -h` lists the correct files created: `config.toml`, `workflow.toml`, `ticket.toml`, `agents.md`, `apm.spec-writer.md`, `apm.worker.md`
-- [ ] `apm init -h` does not mention `apm.toml` or `apm.agents.md` as files that are created (only as migration sources in the `--migrate` description)
-- [ ] `cargo build` succeeds after the edits
+- [x] `apm worktrees -h` does not mention `--add`
+- [x] `apm worktrees -h` examples show only `apm worktrees` (list) and `apm worktrees --remove <id>`
+- [x] `apm agents -h` short description does not reference `apm.agents.md` by name
+- [x] `apm agents -h` long description references the configurable `[agents] instructions` path, not a hardcoded filename
+- [x] `apm init -h` lists the correct files created: `config.toml`, `workflow.toml`, `ticket.toml`, `agents.md`, `apm.spec-writer.md`, `apm.worker.md`
+- [x] `apm init -h` does not mention `apm.toml` or `apm.agents.md` as files that are created (only as migration sources in the `--migrate` description)
+- [x] `cargo build` succeeds after the edits
 
 ### Out of scope
 
