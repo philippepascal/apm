@@ -10,6 +10,7 @@ import TicketDetail from './TicketDetail'
 import ReviewEditor from './ReviewEditor'
 import NewTicketModal from './NewTicketModal'
 import NewEpicModal from './NewEpicModal'
+import CleanModal from './CleanModal'
 import LogPanel from './LogPanel'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
@@ -32,7 +33,7 @@ const CONTENT: Record<ColumnKey, (onMinimize: () => void) => React.ReactNode> = 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen } =
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen, cleanOpen, setCleanOpen } =
     useLayoutStore()
   const queryClient = useQueryClient()
 
@@ -167,6 +168,7 @@ export default function WorkScreen() {
       <div className="h-screen w-screen flex flex-col overflow-hidden">
         <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
         <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
+        <CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel defaultSize={25} minSize={10}>
             <WorkerView />
