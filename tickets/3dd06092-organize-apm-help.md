@@ -34,7 +34,11 @@ This affects every user of the CLI — human engineers, supervisors, and agent w
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-command help text rewrites (doc comments / long_about on individual commands)
+- Reordering commands within a group beyond what the grouping itself implies
+- Adding new commands or removing existing ones
+- Changing any CLI behaviour — only the top-level help display changes
+- Filtering or personalising help output based on user role (agent vs supervisor)
 
 ### Approach
 
