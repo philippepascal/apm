@@ -45,8 +45,8 @@ Side paths handle amendments, open questions, and blocks. Supervisors control al
 ### Happy path: one ticket from idea to merged
 
 1. **Supervisor creates a ticket** — `apm new "Add rate limiting to API"`. APM creates a branch `ticket/a1b2c3d4-add-rate-limiting-to-api` with a Markdown skeleton.
-2. **Supervisor grooms it** — adds context, sets priority, and moves it to `groomed` with `apm review a1b2` (which opens the ticket and presents available transitions).
-3. **Spec agent picks it up** — but only if the ticket is assigned to it. The supervisor runs `apm assign a1b2 <agent-identity>` first. Then the dispatch loop (`apm work`) picks it up. The agent writes the Problem, Acceptance criteria, Out of scope, and Approach sections, sets effort/risk estimates, and submits with `apm state a1b2 specd`.
+2. **Supervisor grooms and assigns it** — adds context, sets priority, moves it to `groomed` with `apm review a1b2`, and assigns it with `apm assign a1b2 alice`. Tickets without an owner are never auto-dispatched.
+3. **Spec agent picks it up** — the dispatch loop (`apm work`) picks the highest-priority owned ticket. The agent writes the Problem, Acceptance criteria, Out of scope, and Approach sections, sets effort/risk estimates, and submits with `apm state a1b2 specd`.
 4. **Supervisor reviews the spec** — `apm review a1b2` opens the ticket and offers transitions: approve (moves to `ready`) or request amendments (moves to `ammend` with checkboxes). If amended, the agent addresses each item and resubmits.
 5. **Implementation agent picks it up** — `apm start a1b2` claims the ticket, provisions a worktree, and merges the latest default branch in. The agent codes, tests, and commits inside the worktree.
 6. **Agent marks it done** — `apm state a1b2 implemented` triggers the completion strategy: opens a PR, merges into the target branch, or merges into the epic branch.
@@ -309,6 +309,26 @@ git -C <worktree-path> commit -m "Increase default timeout to 30s"
 # Mark as done — pushes branch and opens PR (depending on completion strategy)
 apm state <id> implemented
 ```
+
+## Going further
+
+APM has more features than the walkthrough above covers. Here's a quick map:
+
+- **TLS / HTTPS** — `apm-server` has built-in TLS via `--tls acme` (Let's Encrypt) or `--tls self-signed`. See `apm-server --help` and [docs/external-tls-setup.md](docs/external-tls-setup.md).
+- **Authentication** — WebAuthn-based login for the web UI. Register users with `apm register`, manage sessions with `apm sessions` and `apm revoke`.
+- **GitHub integration** — Set `[git_host] provider = "github"` in `config.toml` to enable automatic PR creation on `implemented`, collaborator sync, and GitHub-based identity resolution. Configure a token in `.apm/local.toml`.
+- **Collaborators** — List valid usernames in `project.collaborators` in `config.toml`. When set, `apm assign` validates the target user against this list (or against GitHub collaborators when GitHub mode is enabled).
+- **Docker workers** — Run agents in sandboxed containers. Pass `--with-docker` to `apm init` to generate a Dockerfile, then configure `container` in `config.toml`. See [docs/docker-workers.md](docs/docker-workers.md).
+- **Ticket dependencies** — `apm set <id> depends_on <other-id>` blocks a ticket until its dependency reaches a configured gate state. The dispatcher respects these edges automatically.
+- **Worker profiles** — Define named profiles under `[worker_profiles.<name>]` in `config.toml` with their own `command`, `args`, `model`, `env`, and `instructions`. Assign profiles to transitions in `workflow.toml` to use different agents for different phases.
+- **Config validation** — `apm validate` checks your config and ticket integrity. `apm verify` cross-checks ticket frontmatter against the state machine.
+- **Logging** — APM logs every command to a platform-specific log file. The web UI includes a live log viewer.
+- **Server options** — `apm-server --port <N>`, `--bind <addr>` to customize the listener. The `[server]` section in `config.toml` holds persistent defaults.
+- **Side tickets** — `apm new --side-note "title" --context "what you noticed"` lets agents capture out-of-scope issues without interrupting their current work.
+- **Inline editing** — `apm edit <id>` opens a ticket directly in `$EDITOR` for quick manual changes.
+- **Aggressive sync** — Set `sync.aggressive = true` in `config.toml` to auto-fetch and push on every command. Most multi-user setups should enable this.
+
+For the full command reference, see [docs/commands.md](docs/commands.md).
 
 ## License
 
