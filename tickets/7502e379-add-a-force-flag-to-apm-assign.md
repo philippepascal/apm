@@ -40,7 +40,54 @@ A `--force` flag would let any collaborator override the ownership check, while 
 
 ### Approach
 
-How the implementation will work.
+### `apm/src/cmd/assign.rs`
+
+Add a `force: bool` parameter to `run()`. Replace the current unconditional `ticket::check_owner(root, t)?` call with a branch:
+
+```rust
+if force {
+    // Terminal-state guard still applies
+    let cfg = Config::load(root)?;
+    let is_terminal = cfg.workflow.states.iter()
+        .find(|s| s.id == t.frontmatter.state)
+        .map(|s| s.terminal)
+        .unwrap_or(false);
+    if is_terminal {
+        bail!("cannot change owner of a closed ticket");
+    }
+    // Confirm only when there is a current owner to displace
+    if let Some(current_owner) = &t.frontmatter.owner.clone() {
+        print!("Ticket {id} is currently owned by {current_owner}. Reassign to {username}? [y/N] ");
+        io::stdout().flush()?;
+        let mut line = String::new();
+        io::stdin().lock().read_line(&mut line)?;
+        if !line.trim().eq_ignore_ascii_case("y") {
+            println!("aborted");
+            return Ok(());
+        }
+    }
+} else {
+    ticket::check_owner(root, t)?;
+}
+```
+
+Add imports `use std::io::{self, Write, BufRead};` (check whether they are already present).
+
+For testability, extract the inner logic into a private `run_inner(root, id_arg, username, no_aggressive, force, confirm_override: Option<bool>)` where `None` uses the interactive stdin prompt and `Some(b)` short-circuits to `b`. The public `run()` calls `run_inner(..., None)`. Integration tests call `run_inner(..., Some(true))` or `Some(false)`.
+
+### `apm/src/main.rs`
+
+Add `--force` to the `assign` subcommand arg definition (a boolean flag, no value). Pass it into `assign::run()`.
+
+### `apm/tests/integration.rs`
+
+Add three tests (all calling `run_inner` directly to avoid stdin):
+
+1. `assign_force_succeeds_when_not_owner` — create ticket, assign to `alice`, then call force-assign to `bob` with `confirm_override: Some(true)`; assert owner becomes `bob`.
+2. `assign_force_aborts_on_deny` — same setup, call with `confirm_override: Some(false)`; assert owner remains `alice` and call returns `Ok(())`.
+3. `assign_force_skips_prompt_when_no_owner` — create ticket (no owner), call force-assign with `confirm_override: Some(true)`; assert owner is set. (Ensures unowned path doesn't prompt.)
+
+No changes to `apm-core/src/ticket.rs` — `check_owner` is left intact; the bypass lives entirely in the CLI layer.
 
 ### Open questions
 
