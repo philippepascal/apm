@@ -48,7 +48,11 @@ The fix is to replace the one-click Clean button with a modal window that expose
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-branch confirmation prompts for --force (the modal acts as the single confirmation; --yes is implicitly always true when called from the UI)
+- Streaming log output line-by-line as the command runs (full response returned when complete is sufficient)
+- Keyboard shortcut to open the Clean modal (the button is enough for now)
+- Persisting option selections between modal opens
+- Any changes to apm-core clean logic or apm CLI clean command
 
 ### Approach
 
