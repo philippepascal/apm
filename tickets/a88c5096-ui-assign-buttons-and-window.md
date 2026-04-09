@@ -1,7 +1,7 @@
 +++
 id = "a88c5096"
 title = "UI: assign buttons and window"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a88c5096-ui-assign-buttons-and-window"
 created_at = "2026-04-09T05:16:55.238687Z"
-updated_at = "2026-04-09T05:59:53.456577Z"
+updated_at = "2026-04-09T06:30:36.703357Z"
 +++
 
 ## Spec
@@ -91,3 +91,4 @@ Props: `{ ticketId: string, onDone: () => void }`
 | 2026-04-09T05:52Z | specd | ready | apm |
 | 2026-04-09T05:55Z | ready | in_progress | philippepascal |
 | 2026-04-09T05:59Z | in_progress | implemented | claude-0409-0555-5ff8 |
+| 2026-04-09T06:30Z | implemented | closed | philippepascal |
