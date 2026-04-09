@@ -527,27 +527,147 @@ async fn sync_handler(
     Ok(Json(resp).into_response())
 }
 
+#[derive(serde::Deserialize, Default)]
+struct CleanRequest {
+    dry_run:    Option<bool>,
+    force:      Option<bool>,
+    branches:   Option<bool>,
+    remote:     Option<bool>,
+    older_than: Option<String>,
+    untracked:  Option<bool>,
+}
+
 async fn clean_handler(
     State(state): State<Arc<AppState>>,
+    body: Option<Json<CleanRequest>>,
 ) -> Result<Response, AppError> {
     let root = match state.git_root() {
         Some(r) => r.clone(),
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
-    let removed = tokio::task::spawn_blocking(move || -> anyhow::Result<usize> {
+    let req = body.map(|Json(b)| b).unwrap_or_default();
+    let dry_run   = req.dry_run.unwrap_or(false);
+    let force     = req.force.unwrap_or(false);
+    let branches  = req.branches.unwrap_or(false);
+    let remote    = req.remote.unwrap_or(false);
+    let untracked = req.untracked.unwrap_or(false);
+    let older_than = req.older_than;
+
+    if remote && older_than.is_none() {
+        return Ok((StatusCode::BAD_REQUEST, "remote requires older_than").into_response());
+    }
+
+    let (log, removed) = tokio::task::spawn_blocking(move || -> anyhow::Result<(Vec<String>, usize)> {
+        let mut log: Vec<String> = Vec::new();
+        let mut count = 0usize;
+
         let config = apm_core::config::Config::load(&root)?;
-        let (candidates, _dirty, _warnings) = apm_core::clean::candidates(&root, &config, false, false, false)?;
-        let mut count = 0;
-        for candidate in &candidates {
-            if candidate.worktree.is_some() {
-                apm_core::clean::remove(&root, candidate, false, false)?;  // RemoveOutput discarded
-                count += 1;
+        let (candidates, dirty, candidate_warnings) =
+            apm_core::clean::candidates(&root, &config, force, untracked, dry_run)?;
+        for w in &candidate_warnings {
+            log.push(w.clone());
+        }
+
+        for dw in &dirty {
+            if !dw.modified_tracked.is_empty() {
+                for f in &dw.modified_tracked {
+                    log.push(format!("  M {}", f.display()));
+                }
+                log.push(format!(
+                    "warning: {} has modified tracked files — manual cleanup required — skipping",
+                    dw.branch
+                ));
+            } else {
+                for f in &dw.other_untracked {
+                    log.push(format!("  ? {}", f.display()));
+                }
+                log.push(format!(
+                    "warning: {} has untracked files — re-run with --untracked to remove — skipping",
+                    dw.branch
+                ));
             }
         }
-        Ok(count)
+
+        for candidate in &candidates {
+            if dry_run {
+                if let Some(ref path) = candidate.worktree {
+                    log.push(format!(
+                        "would remove worktree {} (ticket #{}, state: {})",
+                        path.display(),
+                        candidate.ticket_id,
+                        candidate.reason
+                    ));
+                }
+                if branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
+                    log.push(format!(
+                        "would remove branch {} (state: {})",
+                        candidate.branch, candidate.reason
+                    ));
+                } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
+                    log.push(format!(
+                        "would keep branch {} (not merged into main)",
+                        candidate.branch
+                    ));
+                }
+            } else if force {
+                log.push(format!(
+                    "warning: force-removing {} — branch may not be merged",
+                    candidate.branch
+                ));
+                if let Some(ref path) = candidate.worktree {
+                    log.push(format!("removed worktree {}", path.display()));
+                    count += 1;
+                }
+                if branches && candidate.local_branch_exists {
+                    log.push(format!("removed branch {}", candidate.branch));
+                }
+                let remove_out = apm_core::clean::remove(&root, candidate, true, branches)?;
+                for w in &remove_out.warnings {
+                    log.push(w.clone());
+                }
+            } else {
+                if let Some(ref path) = candidate.worktree {
+                    log.push(format!("removed worktree {}", path.display()));
+                    count += 1;
+                }
+                if branches && candidate.local_branch_exists && candidate.branch_merged {
+                    log.push(format!("removed branch {}", candidate.branch));
+                } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
+                    log.push(format!("kept branch {} (not merged into main)", candidate.branch));
+                }
+                let remove_out = apm_core::clean::remove(&root, candidate, false, branches)?;
+                for w in &remove_out.warnings {
+                    log.push(w.clone());
+                }
+            }
+        }
+
+        if remote {
+            let threshold_str = older_than.as_deref().unwrap();
+            let threshold = apm_core::clean::parse_older_than(threshold_str)?;
+            let remote_candidates = apm_core::clean::remote_candidates(&root, &config, threshold)?;
+            if remote_candidates.is_empty() {
+                log.push("No remote branches to clean.".to_string());
+            }
+            for rc in &remote_candidates {
+                if dry_run {
+                    log.push(format!(
+                        "would delete remote branch {} (last commit: {})",
+                        rc.branch,
+                        rc.last_commit.format("%Y-%m-%d")
+                    ));
+                } else {
+                    apm_core::git::delete_remote_branch(&root, &rc.branch)?;
+                    log.push(format!("deleted remote branch {}", rc.branch));
+                }
+            }
+        }
+
+        Ok((log, count))
     })
     .await??;
-    Ok(Json(serde_json::json!({ "removed": removed })).into_response())
+
+    Ok(Json(serde_json::json!({ "log": log.join("\n"), "removed": removed })).into_response())
 }
 
 #[derive(serde::Deserialize, Default)]

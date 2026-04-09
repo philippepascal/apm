@@ -39,18 +39,12 @@ async function postSync(): Promise<void> {
   if (!res.ok) throw new Error('Sync failed')
 }
 
-async function postClean(): Promise<{ removed: number }> {
-  const res = await fetch('/api/clean', { method: 'POST' })
-  if (!res.ok) throw new Error('Clean failed')
-  return res.json()
-}
-
 export default function SupervisorView({ onMinimize }: { onMinimize?: () => void }) {
   const queryClient = useQueryClient()
   const [syncError, setSyncError] = useState<string | null>(null)
-  const [cleanError, setCleanError] = useState<string | null>(null)
   const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
   const setNewEpicOpen = useLayoutStore((s) => s.setNewEpicOpen)
+  const setCleanOpen = useLayoutStore((s) => s.setCleanOpen)
 
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
@@ -79,18 +73,6 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
     },
     onError: (err: Error) => {
       setSyncError(err.message)
-    },
-  })
-
-  const cleanMutation = useMutation({
-    mutationFn: postClean,
-    onSuccess: () => {
-      setCleanError(null)
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      queryClient.invalidateQueries({ queryKey: ['ticket'] })
-    },
-    onError: (err: Error) => {
-      setCleanError(err.message)
     },
   })
 
@@ -164,9 +146,6 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           {syncError && (
             <span className="text-xs text-red-500">{syncError}</span>
           )}
-          {cleanError && (
-            <span className="text-xs text-red-500">{cleanError}</span>
-          )}
           <button
             onClick={() => setNewTicketOpen(true)}
             title="New ticket (n)"
@@ -197,16 +176,11 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
             Sync
           </button>
           <button
-            onClick={() => cleanMutation.mutate()}
-            disabled={cleanMutation.isPending}
+            onClick={() => setCleanOpen(true)}
             title="Remove stale worktrees"
-            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700"
           >
-            {cleanMutation.isPending ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Trash2 className="w-3 h-3" />
-            )}
+            <Trash2 className="w-3 h-3" />
             Clean
           </button>
           {onMinimize && (

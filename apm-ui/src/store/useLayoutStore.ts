@@ -11,6 +11,7 @@ interface LayoutStore {
   reviewMode: boolean
   newTicketOpen: boolean
   newEpicOpen: boolean
+  cleanOpen: boolean
   logPanelOpen: boolean
   epicFilter: string | null
   setSelectedTicketId: (id: string | null) => void
@@ -23,6 +24,7 @@ interface LayoutStore {
   setReviewMode: (v: boolean) => void
   setNewTicketOpen: (v: boolean) => void
   setNewEpicOpen: (v: boolean) => void
+  setCleanOpen: (v: boolean) => void
   setLogPanelOpen: (v: boolean) => void
   setEpicFilter: (id: string | null) => void
 }
@@ -36,6 +38,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   reviewMode: false,
   newTicketOpen: false,
   newEpicOpen: false,
+  cleanOpen: false,
   logPanelOpen: false,
   epicFilter: null,
   setSelectedTicketId: (id) => set({ selectedTicketId: id, selectedTicketIds: [], lastClickedTicketId: id }),
@@ -54,6 +57,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   setReviewMode: (v) => set({ reviewMode: v }),
   setNewTicketOpen: (v) => set({ newTicketOpen: v }),
   setNewEpicOpen: (v) => set({ newEpicOpen: v }),
+  setCleanOpen: (v) => set({ cleanOpen: v }),
   setLogPanelOpen: (v) => set({ logPanelOpen: v }),
   setEpicFilter: (id) => set({ epicFilter: id }),
 }))
