@@ -47,7 +47,58 @@ Anyone reading `apm worktrees -h`, `apm agents -h`, or `apm init -h` will see in
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/src/main.rs`. No runtime logic changes; only string literals in `long_about` and `///` short-description comments.
+
+**Fix 1 -- `apm worktrees` (lines 392-412)**
+
+Remove the paragraph about `--add` and the `--add` example line from `long_about`.
+
+New `long_about`:
+```
+Manage permanent git worktrees for ticket branches.
+
+APM uses permanent worktrees (in the apm--worktrees/ sibling directory by
+default) so that agents can work on a ticket branch without disturbing the
+main working tree. These worktrees survive `apm sync` and are reused across
+sessions.
+
+Examples:
+  apm worktrees              # list all known worktrees
+  apm worktrees --remove 42  # remove the worktree for ticket 42
+```
+
+**Fix 2 -- `apm agents` (lines 499-508)**
+
+Change the `///` short summary from:
+  "Print agent instructions from apm.agents.md"
+to:
+  "Print agent instructions configured in .apm/apm.toml"
+
+Change the opening sentence of `long_about` from:
+  "Print the contents of apm.agents.md to stdout."
+to:
+  "Print the contents of the instructions file configured under [agents] instructions in .apm/apm.toml."
+
+**Fix 3 -- `apm init` (lines 73-86)**
+
+Replace the file list in `long_about` from:
+  * apm.toml      -- project config and state-machine definition
+  * apm.agents.md -- agent onboarding instructions
+
+to:
+  * config.toml        -- project config
+  * workflow.toml      -- state-machine definition
+  * ticket.toml        -- ticket template
+  * agents.md          -- agent onboarding instructions
+  * apm.spec-writer.md -- spec-writer agent manual
+  * apm.worker.md      -- worker agent manual
+
+Update the `--migrate` flag `///` comment from:
+  "Migrate root-level apm.toml and apm.agents.md to .apm/"
+to:
+  "Migrate root-level apm.toml -> .apm/config.toml and apm.agents.md -> .apm/agents.md"
+
+After all edits, run `cargo build -p apm` to confirm no compile errors.
 
 ### Open questions
 
