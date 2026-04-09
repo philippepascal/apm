@@ -16,7 +16,11 @@ updated_at = "2026-04-09T00:55:49.985306Z"
 
 ### Problem
 
-group commands by concerns
+The `apm --help` output lists all ~25 commands in a flat, undifferentiated block. Commands from very different concern areas — browsing tickets, driving workflow, maintaining the repo, administering the server — sit side by side with no visual grouping. A new user or agent scanning the list has no quick signal about which commands matter for their role.
+
+The desired behaviour is a grouped help output where commands are clustered under short headings (e.g. "Ticket management", "Workflow", "Maintenance", "Server"). The order and grouping should match the natural workflow: setup and browsing first, then the actions most commonly used day-to-day, with maintenance and server admin at the bottom.
+
+This affects every user of the CLI — human engineers, supervisors, and agent workers — since `apm --help` is typically the first thing consulted when learning or troubleshooting the tool.
 
 ### Acceptance criteria
 
