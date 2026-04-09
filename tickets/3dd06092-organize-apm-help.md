@@ -1,7 +1,7 @@
 +++
 id = "3dd06092"
 title = "organize apm help"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3dd06092-organize-apm-help"
 created_at = "2026-04-09T00:55:24.172727Z"
-updated_at = "2026-04-09T00:55:24.172727Z"
+updated_at = "2026-04-09T00:55:36.892830Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-09T00:55Z | — | new | philippepascal |
+| 2026-04-09T00:55Z | new | groomed | apm |
