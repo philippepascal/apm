@@ -56,7 +56,89 @@ The fix is to replace the one-click Clean button with a modal window that expose
 
 ### Approach
 
-How the implementation will work.
+### Server — apm-server/src/main.rs
+
+1. Add a `CleanRequest` deserializable struct above `clean_handler`:
+   ```rust
+   #[derive(serde::Deserialize, Default)]
+   struct CleanRequest {
+       dry_run:    Option<bool>,
+       force:      Option<bool>,
+       branches:   Option<bool>,
+       remote:     Option<bool>,
+       older_than: Option<String>,
+       untracked:  Option<bool>,
+   }
+   ```
+
+2. Change the `clean_handler` signature to accept an optional JSON body:
+   ```rust
+   async fn clean_handler(
+       State(state): State<Arc<AppState>>,
+       body: Option<Json<CleanRequest>>,
+   ) -> Result<Response, AppError>
+   ```
+
+3. Replace the current inline logic with a port of the full `apm/src/cmd/clean.rs` logic, collecting output into a `Vec<String>` log buffer instead of calling `println!`/`eprintln!`. Key points:
+   - Validate: if `remote && older_than.is_none()` then return 400 with error message
+   - Call `clean::candidates(root, config, force, untracked, dry_run)` and push `candidate_warnings` into log
+   - For dirty worktrees push the same warning strings as the CLI
+   - For each candidate in dry-run mode push "would remove worktree ..." / "would remove branch ..." / "would keep branch ..." lines
+   - For each candidate in normal mode call `clean::remove` and push removal lines plus `remove_out.warnings`
+   - For remote path call `clean::remote_candidates`; in dry_run push "would delete remote branch ..." lines; in live mode (always yes=true for UI calls) call `git::delete_remote_branch` and push "deleted remote branch ..." lines
+   - Return `Json({ "log": log.join("\n"), "removed": count })`
+
+   The existing `/api/clean` route registration does not change — only the handler body.
+
+---
+
+### UI — Zustand store (apm-ui/src/store/useLayoutStore.ts)
+
+Add two fields alongside the existing `newTicketOpen`/`newEpicOpen` pattern:
+- `cleanOpen: boolean` (default `false`)
+- `setCleanOpen: (v: boolean) => void`
+
+---
+
+### UI — CleanModal component (apm-ui/src/components/CleanModal.tsx)
+
+New file, modelled on `NewTicketModal.tsx`. Local state:
+- `dryRun`, `force`, `branches`, `remote`, `untracked` — boolean checkboxes (all default `false`)
+- `olderThan` — string (default `""`)
+- `log` — string (output area content, default `""`)
+
+Behaviour:
+- `useEffect` on open: reset all state when modal closes (same pattern as `NewTicketModal`)
+- Escape key handler (same pattern)
+- Backdrop click closes modal
+- `useMutation` calling `POST /api/clean` with JSON body `{ dry_run, force, branches, remote, older_than: remote ? olderThan : undefined, untracked }`
+- `onSuccess`: set `log` to `data.log`; if `!dryRun` invalidate `["tickets"]` query
+- `onError`: set `log` to error message string
+- Run button disabled when `isPending` or `(remote && !olderThan.trim())`
+- Run button label: `dryRun ? "Dry run" : "Run"`
+
+Layout (same backdrop/card pattern as `NewTicketModal`):
+- Header: "Clean worktrees"
+- Body:
+  - Checkbox rows: Dry run, Branches, Force, Untracked, Remote
+  - When Remote is checked, show an "Older than" text input inline (e.g. "30d" or "2026-01-01") with a small hint label; hide it when Remote is unchecked
+  - A `<pre>` (or `<textarea readOnly>`) for log output — min-height ~120 px, `overflow-y-auto`, monospace `text-xs`, dark/muted background — empty until Run is clicked
+- Footer: Cancel + Run buttons (Run shows `<Loader2>` spinner while pending)
+
+---
+
+### UI — WorkScreen.tsx
+
+1. Import `CleanModal` and destructure `cleanOpen` / `setCleanOpen` from `useLayoutStore`
+2. Render `<CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />` alongside the existing `NewTicketModal` and `NewEpicModal` (add it in both the `reviewMode` branch and the normal render branch)
+
+---
+
+### UI — SupervisorView (apm-ui/src/components/supervisor/SupervisorView.tsx)
+
+1. Import `setCleanOpen` from `useLayoutStore`
+2. Remove the local `postClean` function, `cleanMutation`, and `cleanError` state
+3. Change the Clean button `onClick` to `() => setCleanOpen(true)`; remove `disabled={cleanMutation.isPending}` and spinner — the button now simply opens the modal
 
 ### Open questions
 
