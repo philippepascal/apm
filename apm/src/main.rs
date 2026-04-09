@@ -6,28 +6,50 @@ use std::path::PathBuf;
 #[command(
     name = "apm",
     about = "Agent Project Manager",
-    long_about = "Agent Project Manager — a git-native ticket system for human+AI teams.
+    help_template = "\
+Agent Project Manager — a git-native ticket system for human+AI teams.
 
-Tickets live as Markdown files on per-ticket branches. State is stored in
-TOML frontmatter; the state machine is defined in .apm/apm.toml.
+{usage-heading} {usage}
 
-Workflow states (typical path):
-  new → in_design → specd → ready → in_progress → implemented → closed
+Setup:
+  init           Initialize apm in the current repository
+  agents         Print agent instructions
 
-Side paths:
-  * ammend  — supervisor requests spec changes (from specd)
-  * blocked — agent is stuck, needs a supervisor decision (from in_progress)
-  * question — spec author needs clarification (from in_design)
+Ticket management:
+  new            Create a new ticket
+  list           List tickets
+  show           Show a ticket
+  set            Set a field on a ticket
+  spec           Read or write individual spec sections
+  close          Force-close a ticket from any state
+  assign         Assign a ticket to an owner
 
-Actors:
-  * agent      — autonomous worker; picks up `ready` tickets via `apm next`
-  * supervisor — human reviewer; approves specs, reviews implementations
-  * engineer   — human developer; may do either role
+Workflow:
+  next           Return the highest-priority actionable ticket
+  start          Claim a ticket and provision its worktree
+  review         Edit ticket spec and transition state
+  state          Transition a ticket's state
+  work           Orchestrate workers: dispatch in a loop
+  sync           Sync with remote (poll events, detect merges)
 
-Common entry points:
-  apm next       — for agents: find the highest-priority actionable ticket
-  apm list       — for humans: browse all tickets
-  apm start <id> — claim a ticket and provision its worktree"
+Epics:
+  epic           Manage epics
+
+Maintenance:
+  worktrees      List or remove permanent git worktrees
+  clean          Remove worktrees and branches for closed tickets
+  workers        List and manage running worker processes
+  verify         Check ticket and cache integrity
+  validate       Validate config and ticket integrity
+  archive        Move closed ticket files to the archive directory
+
+Server:
+  register       Generate a one-time password for device registration
+  sessions       List active sessions
+  revoke         Revoke sessions
+
+{options}
+",
 )]
 struct Cli {
     #[command(subcommand)]
