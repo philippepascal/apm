@@ -237,13 +237,19 @@ EPIC_BRANCH=$(apm epic new 'Search feature')
 EPIC_ID=$(echo "$EPIC_BRANCH" | sed 's|epic/\([0-9a-f]*\)-.*|\1|')
 echo "    Epic branch: $EPIC_BRANCH  (id: $EPIC_ID)"
 
+echo ""
+echo "==> Creating epic: Multi-notebook support"
+EPIC2_BRANCH=$(apm epic new --no-aggressive 'Multi-notebook support')
+EPIC2_ID=$(echo "$EPIC2_BRANCH" | sed 's|epic/\([0-9a-f]*\)-.*|\1|')
+echo "    EPIC2=$EPIC2_ID"
+
 # ─── 7. Create tickets ────────────────────────────────────────────────────────
 # Helper: extract ticket ID from "apm new" output.
 # Output format: "Created ticket <id>: <filename> (branch: <branch>)"
 extract_id() { echo "$1" | awk '{print $3}' | tr -d ':'; }
 
 echo ""
-echo "==> Creating 14 tickets"
+echo "==> Creating 35 tickets"
 
 # ── Ticket 1: Initial CLI scaffold → closed ───────────────────────────────────
 out=$(apm new --no-edit --no-aggressive 'Initial CLI scaffold')
@@ -578,8 +584,482 @@ count string, then exit.  Reuse notes_path() for consistency with cmd_list.'
 apm state "$T14" --no-aggressive --force ready
 echo "    T14 → ready"
 
+# ── Epic 2: Multi-notebook support — TE1 through TE7 ─────────────────────────
+
+# ── Epic ticket TE1: Create a named notebook → closed ─────────────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" 'Create a named notebook')
+TE1=$(extract_id "$out")
+echo "    TE1=$TE1  (Create a named notebook)"
+
+apm spec "$TE1" --no-aggressive --section 'Problem' --set \
+  'Users organising notes into projects need dedicated notebooks.
+jot notebook create <name> should create a new named notebook stored under
+~/.jot/notebooks/<name>/notes.txt.'
+
+apm spec "$TE1" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [x] jot notebook create <name> creates ~/.jot/notebooks/<name>/notes.txt
+- [x] creating a notebook that already exists prints an error and exits non-zero
+- [x] notebook names are restricted to alphanumeric characters, hyphens, and underscores
+- [x] jot notebook list shows the new notebook in its output
+EOF
+
+apm spec "$TE1" --no-aggressive --section 'Out of scope' --set \
+  'Nested notebooks, importing existing note files into a new notebook.'
+
+apm spec "$TE1" --no-aggressive --section 'Approach' --set \
+  'Parse the notebook create <name> subcommand.  Validate the name against a
+regex ([a-zA-Z0-9_-]+).  Call fs::create_dir_all on the notebook path; if the
+directory already exists, return an error.'
+
+apm spec "$TE1" --no-aggressive --section 'Code review' --set - << 'EOF'
+- [x] name validation rejects paths with slashes — no directory traversal
+- [x] create_dir_all error surfaces cleanly through the main error handler
+EOF
+
+apm state "$TE1" --no-aggressive --force closed
+echo "    TE1 → closed"
+
+# ── Epic ticket TE2: Switch active notebook → closed ──────────────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" 'Switch active notebook')
+TE2=$(extract_id "$out")
+echo "    TE2=$TE2  (Switch active notebook)"
+
+apm spec "$TE2" --no-aggressive --section 'Problem' --set \
+  'Once multiple notebooks exist, users need to set which one is active.
+The active notebook determines where jot add writes and jot list reads without
+requiring an explicit --notebook flag on every command.'
+
+apm spec "$TE2" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [x] jot notebook use <name> updates ~/.jot/active to contain <name>
+- [x] switching to a non-existent notebook prints an error and exits non-zero
+- [x] after switching, jot add and jot list operate on the new notebook
+- [x] the active notebook persists across invocations
+EOF
+
+apm spec "$TE2" --no-aggressive --section 'Out of scope' --set \
+  'A --notebook per-command override flag — that is a separate ticket.'
+
+apm spec "$TE2" --no-aggressive --section 'Approach' --set \
+  'Write the notebook name to ~/.jot/active as a plain text file.
+Update notes_path() to read this file (falling back to the default notebook
+if absent) to resolve the current notes file path.'
+
+apm spec "$TE2" --no-aggressive --section 'Code review' --set - << 'EOF'
+- [x] fall-back to default when ~/.jot/active is absent — no error on first run
+- [x] non-existent notebook check happens before the write
+EOF
+
+apm state "$TE2" --no-aggressive --force closed
+echo "    TE2 → closed"
+
+# ── Epic ticket TE3: List all notebooks → implemented ─────────────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" \
+  --depends-on "$TE1" --depends-on "$TE2" 'List all notebooks')
+TE3=$(extract_id "$out")
+echo "    TE3=$TE3  (List all notebooks)"
+
+apm spec "$TE3" --no-aggressive --section 'Problem' --set \
+  'Users need to see all their notebooks at a glance and know which one is
+currently active before running notebook-scoped commands.'
+
+apm spec "$TE3" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [x] jot notebook list prints each notebook name on its own line
+- [x] the active notebook is marked with a * prefix
+- [x] when no extra notebooks exist, the default notebook is shown
+- [x] output is sent to stdout
+EOF
+
+apm spec "$TE3" --no-aggressive --section 'Out of scope' --set \
+  'Note counts per notebook, sorting options, or colour output.'
+
+apm spec "$TE3" --no-aggressive --section 'Approach' --set \
+  'Read ~/.jot/notebooks/ directory entries.  Read ~/.jot/active for the
+current notebook name.  Print each notebook, prepending "* " for the active one.'
+
+apm state "$TE3" --no-aggressive --force implemented
+echo "    TE3 → implemented"
+
+# ── Epic ticket TE4: Delete a notebook → ready ────────────────────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" \
+  --depends-on "$TE1" --depends-on "$TE2" 'Delete a notebook')
+TE4=$(extract_id "$out")
+echo "    TE4=$TE4  (Delete a notebook)"
+
+apm spec "$TE4" --no-aggressive --section 'Problem' --set \
+  'Users want to remove notebooks they no longer need, including all notes
+inside them.  There is currently no command to do this safely.'
+
+apm spec "$TE4" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot notebook delete <name> removes ~/.jot/notebooks/<name>/ and all its contents
+- [ ] deleting the active notebook resets the active pointer to the default
+- [ ] attempting to delete a non-existent notebook prints an error and exits non-zero
+- [ ] a --confirm flag is required to prevent accidental deletion
+EOF
+
+apm spec "$TE4" --no-aggressive --section 'Out of scope' --set \
+  'Archiving notes before deletion, soft-delete or trash functionality.'
+
+apm spec "$TE4" --no-aggressive --section 'Approach' --set \
+  'Verify the notebook exists.  If it is active, write "default" to
+~/.jot/active.  Require --confirm flag; if absent print a warning and exit
+non-zero.  Use fs::remove_dir_all to delete the notebook directory.'
+
+apm state "$TE4" --no-aggressive --force ready
+echo "    TE4 → ready"
+
+# ── Epic ticket TE5: Rename a notebook → specd ────────────────────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" \
+  --depends-on "$TE1" --depends-on "$TE2" 'Rename a notebook')
+TE5=$(extract_id "$out")
+echo "    TE5=$TE5  (Rename a notebook)"
+
+apm spec "$TE5" --no-aggressive --section 'Problem' --set \
+  'Notebook names are fixed after creation, making it impossible to correct
+typos or reflect project renames without recreating the notebook from scratch.'
+
+apm spec "$TE5" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot notebook rename <old> <new> renames the notebook directory
+- [ ] if the new name already exists, prints an error and exits non-zero
+- [ ] if the renamed notebook was active, the active pointer is updated to the new name
+- [ ] the new name must pass the same validation rules as notebook creation
+EOF
+
+apm spec "$TE5" --no-aggressive --section 'Out of scope' --set \
+  'Merging notebooks during rename, renaming the default notebook.'
+
+apm spec "$TE5" --no-aggressive --section 'Approach' --set \
+  'Validate both names.  Check that <old> exists and <new> does not.  Use
+fs::rename on the notebook directory.  If the active pointer matches <old>,
+rewrite ~/.jot/active with <new>.'
+
+apm state "$TE5" --no-aggressive --force specd
+echo "    TE5 → specd"
+
+# ── Epic ticket TE6: Move note between notebooks → in_design ──────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" \
+  --depends-on "$TE3" 'Move note between notebooks')
+TE6=$(extract_id "$out")
+echo "    TE6=$TE6  (Move note between notebooks)"
+
+apm spec "$TE6" --no-aggressive --section 'Problem' --set \
+  'Notes end up in the wrong notebook and there is no way to relocate them
+without manually editing files.  A move command would let users reorganise
+their notes across notebooks.'
+
+apm spec "$TE6" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot note move <index> --to <notebook> moves the note at <index> in the active notebook into <notebook>
+- [ ] the moved note is appended to the target notebook
+EOF
+
+apm state "$TE6" --no-aggressive --force in_design
+echo "    TE6 → in_design"
+
+# ── Epic ticket TE7: Merge two notebooks → new ────────────────────────────────
+out=$(apm new --no-edit --no-aggressive --epic "$EPIC2_ID" \
+  --depends-on "$TE6" 'Merge two notebooks')
+TE7=$(extract_id "$out")
+echo "    TE7=$TE7  (Merge two notebooks — stays new)"
+
+# ── Standalone tickets TS1–TS14 ───────────────────────────────────────────────
+
+# ── Standalone TS1: Add --version flag → closed ───────────────────────────────
+out=$(apm new --no-edit --no-aggressive 'Add --version flag')
+TS1=$(extract_id "$out")
+echo "    TS1=$TS1  (Add --version flag)"
+
+apm spec "$TS1" --no-aggressive --section 'Problem' --set \
+  'Users cannot quickly check which version of jot is installed.  The binary
+should print its version when invoked with --version or -V.'
+
+apm spec "$TS1" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [x] jot --version prints "jot <version>" and exits 0
+- [x] -V is accepted as a short alias
+- [x] the version string matches the version field in Cargo.toml
+EOF
+
+apm spec "$TS1" --no-aggressive --section 'Out of scope' --set \
+  '--long-version with build metadata or git hash.'
+
+apm spec "$TS1" --no-aggressive --section 'Approach' --set \
+  'Add a top-level match arm for "--version" and "-V" before the subcommand
+dispatch.  Print format!("jot {}", env!("CARGO_PKG_VERSION")) and return.'
+
+apm spec "$TS1" --no-aggressive --section 'Code review' --set - << 'EOF'
+- [x] env!("CARGO_PKG_VERSION") is evaluated at compile time — no runtime overhead
+- [x] exits 0 via the normal return path rather than std::process::exit
+EOF
+
+apm state "$TS1" --no-aggressive --force closed
+echo "    TS1 → closed"
+
+# ── Standalone TS2: Colorize list output → implemented ────────────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" 'Colorize list output')
+TS2=$(extract_id "$out")
+echo "    TS2=$TS2  (Colorize list output)"
+
+apm spec "$TS2" --no-aggressive --section 'Problem' --set \
+  'jot list output is plain text, making it hard to scan long note lists.
+Applying colour to the index numbers would improve readability at a glance.'
+
+apm spec "$TS2" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [x] jot list renders index numbers in bold cyan ANSI colour when stdout is a TTY
+- [x] colour is suppressed when stdout is not a TTY (piped or redirected)
+- [x] colour does not appear in the note text itself
+EOF
+
+apm spec "$TS2" --no-aggressive --section 'Out of scope' --set \
+  'Configurable colours, highlighting note content, dark/light theme detection.'
+
+apm spec "$TS2" --no-aggressive --section 'Approach' --set \
+  'Check std::io::IsTerminal on stdout.  If a TTY, wrap each index with ANSI
+escape codes \x1b[1;36m (bold cyan) and \x1b[0m (reset).  Otherwise print
+the plain format unchanged.'
+
+apm state "$TS2" --no-aggressive --force implemented
+echo "    TS2 → implemented"
+
+# ── Standalone TS3: Record timestamp on note creation → implemented ───────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T2" \
+  'Record timestamp on note creation')
+TS3=$(extract_id "$out")
+echo "    TS3=$TS3  (Record timestamp on note creation)"
+
+apm spec "$TS3" --no-aggressive --section 'Problem' --set \
+  'Users cannot tell when a note was written, making it hard to distinguish
+old reminders from recent ones.  Each note should carry an ISO-8601 timestamp.'
+
+apm spec "$TS3" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [x] each note stored in notes.txt is prefixed with an ISO-8601 timestamp [YYYY-MM-DD HH:MM]
+- [x] jot list displays the timestamp prefix before the note text
+- [x] jot add "text" still prints "Note added." — the timestamp is not shown at add time
+EOF
+
+apm spec "$TS3" --no-aggressive --section 'Out of scope' --set \
+  'Editing or removing timestamps, timezone configuration, timestamp filtering.'
+
+apm spec "$TS3" --no-aggressive --section 'Approach' --set \
+  'In cmd_add, format the current UTC time from std::time::SystemTime as
+[YYYY-MM-DD HH:MM] and prepend it to the note text before writing to disk.'
+
+apm state "$TS3" --no-aggressive --force implemented
+echo "    TS3 → implemented"
+
+# ── Standalone TS4: Edit a note in-place (jot edit N) → specd ────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" \
+  'Edit a note in-place (jot edit N)')
+TS4=$(extract_id "$out")
+echo "    TS4=$TS4  (Edit a note in-place)"
+
+apm spec "$TS4" --no-aggressive --section 'Problem' --set \
+  'Fixing a typo in an existing note requires deleting it and re-adding it.
+An edit command would let users amend note text in-place by 1-based index.'
+
+apm spec "$TS4" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot edit N <new text> replaces the text of the note at 1-based index N
+- [ ] index out of range prints an error and exits non-zero
+- [ ] the edited note retains its original position in the list
+- [ ] the timestamp prefix (if present) is preserved on the existing note
+EOF
+
+apm spec "$TS4" --no-aggressive --section 'Out of scope' --set \
+  'Opening an external $EDITOR, multi-line note editing, editing by content match.'
+
+apm spec "$TS4" --no-aggressive --section 'Approach' --set \
+  'Read all lines into Vec<String>.  Validate the index.  Replace the text
+portion of the element at that index.  Rewrite the file atomically via a
+temp file + rename to avoid corruption on crash.'
+
+apm state "$TS4" --no-aggressive --force specd
+echo "    TS4 → specd"
+
+# ── Standalone TS5: Clear all notes (jot clear) → ready ──────────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" 'Clear all notes (jot clear)')
+TS5=$(extract_id "$out")
+echo "    TS5=$TS5  (Clear all notes)"
+
+apm spec "$TS5" --no-aggressive --section 'Problem' --set \
+  'Starting fresh requires manually deleting ~/.jot/notes.txt.  A jot clear
+command would truncate the notes file safely with a confirmation step.'
+
+apm spec "$TS5" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot clear removes all notes from the active notebook
+- [ ] the command requires a --confirm flag to proceed, to prevent accidents
+- [ ] after clearing, jot list prints the "no notes yet" message
+- [ ] jot clear --confirm exits 0 on success
+EOF
+
+apm spec "$TS5" --no-aggressive --section 'Out of scope' --set \
+  'Selective clearing by tag or age, soft-delete or archive-before-clear.'
+
+apm spec "$TS5" --no-aggressive --section 'Approach' --set \
+  'Match the "clear" subcommand.  Require --confirm in argv; if absent, print
+a warning and exit non-zero.  Truncate the file with
+OpenOptions::create(true).write(true).truncate(true).'
+
+apm state "$TS5" --no-aggressive --force ready
+echo "    TS5 → ready"
+
+# ── Standalone TS6: Word count and stats (jot stats) → in_design ─────────────
+out=$(apm new --no-edit --no-aggressive 'Word count and stats (jot stats)')
+TS6=$(extract_id "$out")
+echo "    TS6=$TS6  (Word count and stats)"
+
+apm spec "$TS6" --no-aggressive --section 'Problem' --set \
+  'Users managing a large note collection have no way to see aggregate
+statistics such as total note count, word count, or average note length.'
+
+apm spec "$TS6" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot stats prints total note count, total word count, and average note length
+- [ ] output is human-readable, e.g. "Notes: 42  Words: 387  Avg: 9.2 words/note"
+EOF
+
+apm state "$TS6" --no-aggressive --force in_design
+echo "    TS6 → in_design"
+
+# ── Standalone TS7: Deduplicate notes → groomed ──────────────────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" 'Deduplicate notes')
+TS7=$(extract_id "$out")
+echo "    TS7=$TS7  (Deduplicate notes)"
+
+apm spec "$TS7" --no-aggressive --section 'Problem' --set \
+  'After extensive use, notes.txt can accumulate identical lines from repeated
+jot add calls.  A deduplication command should remove exact duplicates while
+preserving note order.'
+
+apm spec "$TS7" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot dedup removes all but the first occurrence of any exact duplicate line
+- [ ] relative order of unique notes is preserved
+EOF
+
+apm state "$TS7" --no-aggressive --force groomed
+echo "    TS7 → groomed"
+
+# ── Standalone TS8: Pin a note to the top of jot list → new ──────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" \
+  'Pin a note to the top of jot list')
+TS8=$(extract_id "$out")
+echo "    TS8=$TS8  (Pin a note — stays new)"
+
+# ── Standalone TS9: Copy note to clipboard (jot copy N) → new ────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" \
+  'Copy note to clipboard (jot copy N)')
+TS9=$(extract_id "$out")
+echo "    TS9=$TS9  (Copy note to clipboard — stays new)"
+
+# ── Standalone TS10: Archive notes older than N days → blocked ───────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T3" \
+  'Archive notes older than N days')
+TS10=$(extract_id "$out")
+echo "    TS10=$TS10  (Archive notes older than N days)"
+
+apm spec "$TS10" --no-aggressive --section 'Problem' --set \
+  'Long-running note files grow indefinitely.  An archive command should move
+notes older than a given age threshold to a separate archive file, keeping
+the main list focused on recent items.'
+
+apm spec "$TS10" --no-aggressive --section 'Approach' --set - << 'EOF'
+Read each note's timestamp prefix.  Compare to today's date.  Move notes
+older than N days to ~/.jot/archive.txt.  Rewrite notes.txt with the
+remaining notes atomically via temp file + rename.
+EOF
+
+apm spec "$TS10" --no-aggressive --section 'Open questions' --set \
+  'What "age" threshold is appropriate — calendar days since note was written,
+or days since last viewed? Waiting on supervisor guidance.'
+
+apm state "$TS10" --no-aggressive --force blocked
+echo "    TS10 → blocked"
+
+# ── Standalone TS11: Shell completion scripts (bash/zsh) → specd ─────────────
+out=$(apm new --no-edit --no-aggressive 'Shell completion scripts (bash/zsh)')
+TS11=$(extract_id "$out")
+echo "    TS11=$TS11  (Shell completion scripts)"
+
+apm spec "$TS11" --no-aggressive --section 'Problem' --set \
+  'Users who rely on tab completion cannot complete jot subcommand names or
+flags from their shell.  Providing generated completion scripts would reduce
+friction for power users.'
+
+apm spec "$TS11" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot completions bash prints a bash completion script to stdout
+- [ ] jot completions zsh prints a zsh completion script to stdout
+- [ ] the scripts complete subcommand names and known flags
+- [ ] installation instructions are documented in the README
+EOF
+
+apm spec "$TS11" --no-aggressive --section 'Out of scope' --set \
+  'Fish shell completions, PowerShell completions, dynamic completion of note text.'
+
+apm spec "$TS11" --no-aggressive --section 'Approach' --set \
+  'Hardcode completion scripts as string literals in a cmd_completions function.
+Route the "completions" subcommand to it.  Print the appropriate script based
+on the shell argument (bash or zsh).'
+
+apm state "$TS11" --no-aggressive --force specd
+echo "    TS11 → specd"
+
+# ── Standalone TS12: Man page generation → question ──────────────────────────
+out=$(apm new --no-edit --no-aggressive 'Man page generation')
+TS12=$(extract_id "$out")
+echo "    TS12=$TS12  (Man page generation)"
+
+apm spec "$TS12" --no-aggressive --section 'Problem' --set \
+  'Power users expect "man jot" to work.  The project currently has no man
+page, which is a gap for users who prefer offline documentation.'
+
+apm spec "$TS12" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] man jot displays the jot man page after installation
+- [ ] the man page covers all implemented subcommands with examples
+EOF
+
+apm spec "$TS12" --no-aggressive --section 'Open questions' --set - << 'EOF'
+Should the man page be generated from a hand-written Markdown file (using
+pandoc) or auto-generated from clap's help text? Decision needed before
+design can start.
+EOF
+
+apm state "$TS12" --no-aggressive --force question
+echo "    TS12 → question"
+
+# ── Standalone TS13: Encrypted notes at rest → in_progress ───────────────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T2" \
+  'Encrypted notes at rest')
+TS13=$(extract_id "$out")
+echo "    TS13=$TS13  (Encrypted notes at rest)"
+
+apm spec "$TS13" --no-aggressive --section 'Problem' --set \
+  'Notes stored in plaintext at ~/.jot/notes.txt are readable by any process
+with filesystem access.  Sensitive notes — passwords, personal reminders —
+are exposed to other users and processes on the same machine.'
+
+apm spec "$TS13" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot transparently encrypts notes.txt using a user-supplied passphrase
+- [ ] the passphrase is prompted once per session or read from $JOT_PASSPHRASE
+EOF
+
+apm state "$TS13" --no-aggressive --force in_progress
+echo "    TS13 → in_progress"
+
+# ── Standalone TS14: Import notes from a plain-text file → groomed ───────────
+out=$(apm new --no-edit --no-aggressive --depends-on "$T2" \
+  'Import notes from a plain-text file')
+TS14=$(extract_id "$out")
+echo "    TS14=$TS14  (Import notes from a plain-text file)"
+
+apm spec "$TS14" --no-aggressive --section 'Problem' --set \
+  'Users migrating from another notes tool want to bulk-import existing note
+files into jot without adding them one by one via jot add.'
+
+apm spec "$TS14" --no-aggressive --section 'Acceptance criteria' --set - << 'EOF'
+- [ ] jot import <file> appends each line of <file> to the active notebook as a new note
+- [ ] lines beginning with # in the source file are treated as comments and skipped
+EOF
+
+apm state "$TS14" --no-aggressive --force groomed
+echo "    TS14 → groomed"
+
 echo ""
-echo "==> All 14 tickets created and transitioned"
+echo "==> All 35 tickets created and transitioned"
 
 # ─── 8. Write README.md ───────────────────────────────────────────────────────
 
@@ -594,8 +1074,8 @@ A self-contained demo repository for exploring [APM](https://github.com/philippe
 
 The "software project" here is **jot**, a minimal command-line notes tool written in Rust.
 It is intentionally simple so the ticket backlog is easy to understand at a glance.
-The interesting part is the APM ticket set: **14 tickets** spread across all 11 workflow
-states, one epic, cross-ticket dependencies, a pending amendment request, and an open
+The interesting part is the APM ticket set: **35 tickets** spread across all 11 workflow
+states, two epics, cross-ticket dependencies, a pending amendment request, and an open
 question waiting for supervisor input.
 
 Clone this repo and you have an instant APM sandbox.
@@ -653,7 +1133,7 @@ cargo build
 apm list
 ```
 
-You should see 14 tickets in a variety of states:
+You should see 35 tickets in a variety of states:
 `new`, `groomed`, `in_design`, `specd`, `question`, `ammend`,
 `ready`, `in_progress`, `blocked`, `implemented`, `closed`.
 
@@ -686,11 +1166,12 @@ apm state <id> in_progress   # claim the ticket
 apm next                     # now shows the next ready ticket
 ```
 
-### 6. Browse the Search feature epic
+### 6. Browse the epics
 
 ```bash
-apm epic list               # shows the "Search feature" epic with ticket counts
-apm epic show <epic-id>     # lists T5, T6, T12 and their states
+apm epic list                    # shows both epics with ticket counts
+apm epic show <epic-id>          # lists T5, T6, T12 and their states (Search feature)
+apm epic show <epic2-id>         # lists TE1–TE7 and their states (Multi-notebook support)
 ```
 
 ### 7. Launch the web UI
@@ -733,6 +1214,27 @@ apm register   # pair a device with a running apm-server instance
 | Fuzzy search fallback | ammend | Search feature | T5 |
 | Fix list command index off-by-one | blocked | — | — |
 | Add --count flag to jot list | ready | — | T3 |
+| Create a named notebook | closed | Multi-notebook support | — |
+| Switch active notebook | closed | Multi-notebook support | — |
+| List all notebooks | implemented | Multi-notebook support | TE1, TE2 |
+| Delete a notebook | ready | Multi-notebook support | TE1, TE2 |
+| Rename a notebook | specd | Multi-notebook support | TE1, TE2 |
+| Move note between notebooks | in_design | Multi-notebook support | TE3 |
+| Merge two notebooks | new | Multi-notebook support | TE6 |
+| Add --version flag | closed | — | — |
+| Colorize list output | implemented | — | T3 |
+| Record timestamp on note creation | implemented | — | T2 |
+| Edit a note in-place (jot edit N) | specd | — | T3 |
+| Clear all notes (jot clear) | ready | — | T3 |
+| Word count and stats (jot stats) | in_design | — | — |
+| Deduplicate notes | groomed | — | T3 |
+| Pin a note to the top of jot list | new | — | T3 |
+| Copy note to clipboard (jot copy N) | new | — | T3 |
+| Archive notes older than N days | blocked | — | T3 |
+| Shell completion scripts (bash/zsh) | specd | — | — |
+| Man page generation | question | — | — |
+| Encrypted notes at rest | in_progress | — | T2 |
+| Import notes from a plain-text file | groomed | — | T2 |
 README
 
 # ─── 9. Final commit + push all branches ──────────────────────────────────────
