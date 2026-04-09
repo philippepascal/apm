@@ -20,7 +20,14 @@ Running `cargo clippy --package apm-core -- -D warnings` fails with 15 pre-exist
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo clippy --package apm-core -- -D warnings` exits with code 0
+- [ ] `archive.rs` `double_ended_iterator_last` warning is gone (`.last()` replaced with `.next_back()`)
+- [ ] `start.rs` `too_many_arguments` warning on `spawn_container_worker` is suppressed with `#[allow(clippy::too_many_arguments)]`
+- [ ] `ticket.rs` `too_many_arguments` warning on `pick_next` is suppressed with `#[allow(clippy::too_many_arguments)]`
+- [ ] `ticket.rs` `too_many_arguments` warning on `create` is suppressed with `#[allow(clippy::too_many_arguments)]`
+- [ ] `ticket.rs` `unnecessary_map_or` warnings are gone — all instances of `.map_or(true, |x| …)` replaced with `.is_none_or(|x| …)` and `.map_or(false, |x| …)` replaced with `.is_some_and(|x| …)`
+- [ ] `ticket.rs` `manual_strip` warnings are gone — `starts_with(prefix)` + index slice replaced with `strip_prefix(prefix)`
+- [ ] All existing apm-core tests continue to pass (`cargo test --package apm-core`)
 
 ### Out of scope
 
