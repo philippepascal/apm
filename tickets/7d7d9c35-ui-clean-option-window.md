@@ -56,6 +56,80 @@ The fix is to replace the one-click Clean button with a modal window that expose
 
 ### Approach
 
+Five files change: the server handler, the Zustand store, a new CleanModal component, WorkScreen, and SupervisorView.
+
+#### Server — apm-server/src/main.rs
+
+1. Add a `CleanRequest` deserializable struct above `clean_handler`:
+   ```rust
+   #[derive(serde::Deserialize, Default)]
+   struct CleanRequest {
+       dry_run:    Option<bool>,
+       force:      Option<bool>,
+       branches:   Option<bool>,
+       remote:     Option<bool>,
+       older_than: Option<String>,
+       untracked:  Option<bool>,
+   }
+   ```
+
+2. Change the `clean_handler` signature to accept an optional JSON body:
+   ```rust
+   async fn clean_handler(
+       State(state): State<Arc<AppState>>,
+       body: Option<Json<CleanRequest>>,
+   ) -> Result<Response, AppError>
+   ```
+
+3. Replace the current handler body with a port of the full `apm/src/cmd/clean.rs` logic, collecting all output into a `Vec<String>` log buffer instead of calling `println!`/`eprintln!`. Steps:
+   - Unpack `body` with defaults (all false / None)
+   - Validate: if `remote && older_than.is_none()` return 400 with error message
+   - Call `clean::candidates(root, config, force, untracked, dry_run)` — push `candidate_warnings` into log
+   - For each dirty worktree push the same warning strings the CLI prints
+   - For each candidate in dry-run mode push "would remove worktree ..." / "would remove branch ..." / "would keep branch ..." lines
+   - For each candidate in live mode call `clean::remove(root, candidate, force, branches)` and push removal lines plus `remove_out.warnings`
+   - For remote path call `clean::remote_candidates(root, config, threshold)`: in dry_run push "would delete remote branch ..." lines; in live mode (always `yes=true` for UI) call `git::delete_remote_branch` and push "deleted remote branch ..." lines
+   - Return `Json({ "log": log.join("\n"), "removed": count })`
+   - The existing `/api/clean` route registration does not change — only the handler body.
+
+#### UI — Zustand store (apm-ui/src/store/useLayoutStore.ts)
+
+Add two fields alongside the existing `newTicketOpen`/`newEpicOpen` pattern:
+- `cleanOpen: boolean` (default `false`)
+- `setCleanOpen: (v: boolean) => void`
+
+#### UI — CleanModal component (apm-ui/src/components/CleanModal.tsx)
+
+New file, modelled on `NewTicketModal.tsx`. Local state:
+- `dryRun`, `force`, `branches`, `remote`, `untracked` — boolean (all default `false`)
+- `olderThan` — string (default `""`)
+- `log` — string (output area, default `""`)
+
+Behaviour:
+- `useEffect` on open: reset all state when `open` goes false (same pattern as `NewTicketModal`)
+- Escape key handler (same pattern); backdrop click closes
+- `useMutation` calling `POST /api/clean` with JSON body `{ dry_run, force, branches, remote, older_than: remote ? olderThan : undefined, untracked }`
+- `onSuccess`: set `log` to `data.log`; if `!dryRun` invalidate `["tickets"]` query
+- `onError`: set `log` to error message string
+- Run button disabled when `isPending` or `(remote && !olderThan.trim())`
+- Run button label: `dryRun ? "Dry run" : "Run"`
+
+Layout (same backdrop/card pattern as `NewTicketModal`):
+- Header: "Clean worktrees"
+- Body: checkbox rows for Dry run, Branches, Force, Untracked, Remote; when Remote is checked show an "Older than" text input (placeholder "30d or YYYY-MM-DD") — hidden when Remote is unchecked; a `<pre>` (or `<textarea readOnly>`) for log output with min-height ~120 px, `overflow-y-auto`, monospace `text-xs`, dark/muted background
+- Footer: Cancel + Run buttons (Run shows `<Loader2>` spinner while pending)
+
+#### UI — WorkScreen.tsx
+
+1. Import `CleanModal`; destructure `cleanOpen` / `setCleanOpen` from `useLayoutStore`
+2. Render `<CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />` alongside `NewTicketModal` and `NewEpicModal` — in both the `reviewMode` branch and the normal branch
+
+#### UI — SupervisorView (apm-ui/src/components/supervisor/SupervisorView.tsx)
+
+1. Destructure `setCleanOpen` from `useLayoutStore`
+2. Remove the local `postClean` function, `cleanMutation`, and `cleanError` state
+3. Change the Clean button `onClick` to `() => setCleanOpen(true)`; remove `disabled={cleanMutation.isPending}` and the spinner — the button simply opens the modal
+
 ### Server — apm-server/src/main.rs
 
 1. Add a `CleanRequest` deserializable struct above `clean_handler`:
