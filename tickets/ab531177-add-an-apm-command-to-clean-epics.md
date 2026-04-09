@@ -16,7 +16,9 @@ updated_at = "2026-04-09T05:18:26.521041Z"
 
 ### Problem
 
-only closed epics, and with user confirmation
+Epics accumulate over time as a project progresses. Once all tickets in an epic reach a terminal state (`derive_epic_state` returns `"done"`), the epic branch and its `.apm/epics.toml` entry serve no further purpose but remain in the repository indefinitely. There is currently no way to remove them short of manual `git branch -d` and hand-editing `.apm/epics.toml`.
+
+This ticket adds `apm epic clean` — a subcommand that identifies all "done" epics, presents the list to the user, and deletes them (local branch + metadata entry) after confirmation. A `--yes` flag allows non-interactive use, and `--dry-run` lets users preview what would be removed without side effects.
 
 ### Acceptance criteria
 
