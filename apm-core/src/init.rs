@@ -188,7 +188,7 @@ pub fn detect_default_branch(root: &Path) -> String {
 }
 
 pub fn ensure_gitignore(path: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;

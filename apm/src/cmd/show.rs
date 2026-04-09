@@ -133,6 +133,9 @@ fn print_ticket(t: &ticket::Ticket) {
             println!("depends_on:   {}", deps.join(", "));
         }
     }
+    if let Some(o) = &fm.owner {
+        println!("owner:        {o}");
+    }
     println!();
     print!("{}", t.body);
 }

@@ -228,8 +228,8 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
 }
 
 pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -> anyhow::Result<()> {
-    if field != "max_workers" {
-        anyhow::bail!("unknown field {field:?}; valid fields: max_workers");
+    if field != "max_workers" && field != "owner" {
+        anyhow::bail!("unknown field {field:?}; valid fields: max_workers, owner");
     }
 
     // Validate the epic exists.
@@ -249,26 +249,74 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     let after_prefix = branch.trim_start_matches("epic/");
     let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
 
-    // Determine the config path.
-    let apm_dir = root.join(".apm");
-    let config_path = if apm_dir.join("config.toml").exists() {
-        apm_dir.join("config.toml")
-    } else {
-        root.join("apm.toml")
-    };
+    if field == "owner" {
+        let config = apm_core::config::Config::load(root)?;
+        let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+        let terminal = config.terminal_state_ids();
 
-    let raw = std::fs::read_to_string(&config_path)
-        .with_context(|| format!("cannot read {}", config_path.display()))?;
+        let (mut to_change, skipped): (Vec<_>, Vec<_>) = all_tickets
+            .into_iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
+            .partition(|t| !terminal.contains(&t.frontmatter.state));
+
+        // Pre-flight: ownership check (abort before any writes if any fail)
+        for t in &to_change {
+            apm_core::ticket::check_owner(root, t)?;
+        }
+
+        // Pre-flight: validate the new owner
+        let local = apm_core::config::LocalConfig::load(root);
+        apm_core::validate::validate_owner(&config, &local, value)?;
+
+        // Apply changes
+        for t in &mut to_change {
+            apm_core::ticket::set_field(&mut t.frontmatter, "owner", value)?;
+            let content = t.serialize()?;
+            let rel_path = format!(
+                "{}/{}",
+                config.tickets.dir.to_string_lossy(),
+                t.path.file_name().unwrap().to_string_lossy()
+            );
+            let ticket_branch = t.frontmatter.branch.clone()
+                .or_else(|| apm_core::git::branch_name_from_path(&t.path))
+                .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
+            apm_core::git::commit_to_branch(
+                root,
+                &ticket_branch,
+                &rel_path,
+                &content,
+                &format!("ticket({}): bulk set owner = {}", t.frontmatter.id, value),
+            )?;
+        }
+
+        // Output
+        for t in &to_change {
+            println!("changed  {}  {}", t.frontmatter.id, t.frontmatter.title);
+        }
+        for t in &skipped {
+            println!("skipped  {}  {}  (state: {})", t.frontmatter.id, t.frontmatter.title, t.frontmatter.state);
+        }
+        println!("{} ticket(s) changed, {} skipped.", to_change.len(), skipped.len());
+        return Ok(());
+    }
+
+    let apm_dir = root.join(".apm");
+    let epics_path = apm_dir.join("epics.toml");
+
+    let raw = if epics_path.exists() {
+        std::fs::read_to_string(&epics_path)
+            .with_context(|| format!("cannot read {}", epics_path.display()))?
+    } else {
+        String::new()
+    };
     let mut doc: toml_edit::DocumentMut = raw.parse()
-        .with_context(|| format!("cannot parse {}", config_path.display()))?;
+        .with_context(|| format!("cannot parse {}", epics_path.display()))?;
 
     if value == "-" {
         // Remove max_workers from the epic table.
-        if let Some(epics) = doc.get_mut("epics") {
-            if let Some(epic_tbl) = epics.get_mut(&epic_id) {
-                if let Some(t) = epic_tbl.as_table_mut() {
-                    t.remove("max_workers");
-                }
+        if let Some(epic_tbl) = doc.get_mut(&epic_id) {
+            if let Some(t) = epic_tbl.as_table_mut() {
+                t.remove("max_workers");
             }
         }
     } else {
@@ -278,25 +326,16 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
             std::process::exit(1);
         }
 
-        // Ensure [epics] table exists.
-        if doc.get("epics").is_none() {
-            let mut t = toml_edit::Table::new();
-            t.set_implicit(true);
-            doc["epics"] = toml_edit::Item::Table(t);
+        // Ensure [<epic_id>] table exists.
+        if doc.get(&epic_id).is_none() {
+            doc.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
         }
-        // Ensure [epics."<id>"] table exists.
-        {
-            let epics = doc["epics"].as_table_mut()
-                .ok_or_else(|| anyhow::anyhow!("[epics] is not a table"))?;
-            if epics.get(&epic_id).is_none() {
-                epics.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
-            }
-        }
-        doc["epics"][&epic_id]["max_workers"] = toml_edit::value(n);
+        doc[&epic_id]["max_workers"] = toml_edit::value(n);
     }
 
-    std::fs::write(&config_path, doc.to_string())
-        .with_context(|| format!("cannot write {}", config_path.display()))?;
+    std::fs::create_dir_all(&apm_dir)?;
+    std::fs::write(&epics_path, doc.to_string())
+        .with_context(|| format!("cannot write {}", epics_path.display()))?;
     Ok(())
 }
 

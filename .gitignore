@@ -14,6 +14,7 @@ CLAUDE.md
 .apm-worker.log
 pr-body.txt
 .apm/local.toml
+.apm/epics.toml
 .apm/*.init
 .apm/sessions.json
 .apm/credentials.json

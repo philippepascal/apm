@@ -1,14 +1,14 @@
 +++
 id = "33f6cbda"
 title = "enable setting a max worker per epic"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
 author = "philippepascal"
 branch = "ticket/33f6cbda-enable-setting-a-max-worker-per-epic"
 created_at = "2026-04-07T19:08:03.080608Z"
-updated_at = "2026-04-07T23:18:55.994113Z"
+updated_at = "2026-04-08T04:10:53.624555Z"
 +++
 
 ## Spec
@@ -252,3 +252,8 @@ apm epic set-max-workers <epic-id> --unset
 | 2026-04-07T22:43Z | specd | ready | apm |
 | 2026-04-07T23:07Z | ready | in_progress | philippepascal |
 | 2026-04-07T23:18Z | in_progress | implemented | claude-0407-2307-99a0 |
+| 2026-04-08T00:01Z | implemented | ready | apm |
+| 2026-04-08T00:01Z | ready | in_progress | philippepascal |
+| 2026-04-08T00:03Z | in_progress | closed | philippepascal |
+| 2026-04-08T00:04Z | closed | implemented | claude-0408-0001-c928 |
+| 2026-04-08T04:10Z | implemented | closed | apm-sync |

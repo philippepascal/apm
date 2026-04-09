@@ -20,7 +20,7 @@ detailed breakdown of the git operations each command performs internally. `apm-
 | [Ticket lifecycle](#ticket-lifecycle) | `assign`, `close`, `new`, `set`, `state` |
 | [Inspection](#inspection) | `list`, `next`, `show`, `spec` |
 | [Workflow orchestration](#workflow-orchestration) | `review`, `start`, `sync`, `work`, `workers` |
-| [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic show` |
+| [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic set`, `epic show` |
 | [Repository maintenance](#repository-maintenance) | `archive`, `clean`, `init`, `validate`, `verify`, `worktrees` |
 | [Server & agent management](#server--agent-management-requires-apm-server) | `agents`, `register`, `revoke`, `sessions` |
 | [Internal commands](#internal-commands) | `_hook` |
@@ -297,6 +297,8 @@ may be combined.
     apm list --unassigned             # no agent assigned yet
     apm list --actionable agent       # tickets an agent can act on now
     apm list --mine                   # your own tickets
+
+`--mine` filters by `author` (the user who created the ticket). `--owner` filters by the `owner` field. Since dispatchers pick only tickets the current user owns, `apm list --owner <your-username>` shows the queue that `apm work` will draw from.
 
 #### Options
 
@@ -785,6 +787,53 @@ closed the epic is `done`; if any are `in_progress` it is `active`; otherwise `p
 | `git fetch --all --quiet` | (aggressive only) Sync before reading epic and ticket data |
 | `git branch --list epic/*` + `git branch -r --list origin/epic/*` | Enumerate all epic branches |
 | `git branch --list ticket/*` + `git show <branch>:<path>` | Load all tickets to compute per-epic state and counts |
+
+---
+
+### apm epic set
+
+**Set a configuration field on an epic.**
+
+#### Synopsis
+
+    apm epic set <id> max_workers <N>
+    apm epic set <id> max_workers -
+    apm epic set <id> owner <username>
+    apm epic set <id> owner -
+
+#### Description
+
+Sets or clears a configuration field on an epic.
+
+Set `max_workers` to cap how many workers the dispatcher launches concurrently on tickets
+belonging to this epic. Pass `-` as the value to remove the limit.
+
+Set `owner` to bulk-assign ownership of all non-closed tickets in the epic to `<username>`. Pass
+`-` to clear the owner field on all non-closed tickets. The current user must be the owner of
+every ticket to be changed; if any check fails, no tickets are modified. Closed tickets are
+skipped.
+
+`max_workers` configuration is stored in `.apm/epics.toml`. Format:
+
+    [<epic-id>]
+    max_workers = 2
+
+#### Options
+
+| Flag / Arg | Type | Default | Description |
+|------------|------|---------|-------------|
+| `<id>` | positional | — | Epic ID (4–8 char hex prefix) |
+| `max_workers` | positional | — | Limit concurrent dispatched workers for this epic |
+| `owner` | positional | — | Bulk-assign ownership of all non-closed tickets in this epic |
+| `<N>`, `<username>`, or `-` | positional | — | New value, or `-` to clear |
+
+#### File internals
+
+| File / Command | Why |
+|----------------|-----|
+| `.apm/epics.toml` | Read existing epic config, write updated `max_workers` value |
+| `git add` + `git commit` per ticket branch | Persist updated `owner` field in each ticket's frontmatter |
+| `git push` | (aggressive mode) Push updated ticket branches to origin |
 
 ---
 
