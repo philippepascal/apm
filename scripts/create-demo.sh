@@ -50,7 +50,12 @@ gh repo create "${REPO}" \
     2>/dev/null || echo "    (repo may already exist, continuing)"
 
 echo "==> Cloning ${REPO_URL}"
-git clone "${REPO_URL}" "$WORKDIR/apm-demo"
+for i in 1 2 3 4 5; do
+    git clone "${REPO_URL}" "$WORKDIR/apm-demo" 2>/dev/null && break
+    echo "    clone attempt $i failed, retrying in 3s..."
+    sleep 3
+done
+[ -d "$WORKDIR/apm-demo" ] || { echo "ERROR: clone failed after 5 attempts"; exit 1; }
 DEMO="$WORKDIR/apm-demo"
 
 # All subsequent commands run from inside the demo repo.
@@ -239,7 +244,7 @@ echo "    Epic branch: $EPIC_BRANCH  (id: $EPIC_ID)"
 
 echo ""
 echo "==> Creating epic: Multi-notebook support"
-EPIC2_BRANCH=$(apm epic new --no-aggressive 'Multi-notebook support')
+EPIC2_BRANCH=$(apm epic new 'Multi-notebook support')
 EPIC2_ID=$(echo "$EPIC2_BRANCH" | sed 's|epic/\([0-9a-f]*\)-.*|\1|')
 echo "    EPIC2=$EPIC2_ID"
 
