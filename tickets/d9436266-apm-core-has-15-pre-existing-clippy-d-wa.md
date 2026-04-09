@@ -4,12 +4,12 @@ title = "apm-core has 15 pre-existing clippy -D warnings violations"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d9436266-apm-core-has-15-pre-existing-clippy-d-wa"
 created_at = "2026-04-08T00:24:00.645866Z"
-updated_at = "2026-04-09T00:01:16.868230Z"
+updated_at = "2026-04-09T00:01:23.260096Z"
 +++
 
 ## Spec
