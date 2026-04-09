@@ -28,14 +28,14 @@ The remaining work is: switch `ticket::create()` to use `push_branch_tracking`, 
 
 ### Acceptance criteria
 
-- [ ] `apm new` pushes the ticket branch to origin (with tracking) when `sync.aggressive = true`
-- [ ] `apm epic new` pushes the epic branch to origin when `sync.aggressive = true` (already does so unconditionally — confirm by inspection, no code change needed)
-- [ ] Push failure in `ticket::create()` is non-fatal: a warning is emitted but the command succeeds
-- [ ] When `sync.aggressive = false`, `apm new` does not push the ticket branch
-- [ ] After `apm new` runs with aggressive mode and a remote is configured, `git ls-remote origin <branch>` shows the new branch
-- [ ] Tests cover the aggressive-push path using a local bare-repo remote
-- [ ] Tests cover non-aggressive mode: no push attempted, command succeeds
-- [ ] Tests cover push failure (no remote configured + aggressive=true): warning emitted, command succeeds
+- [x] `apm new` pushes the ticket branch to origin (with tracking) when `sync.aggressive = true`
+- [x] `apm epic new` pushes the epic branch to origin when `sync.aggressive = true` (already does so unconditionally — confirm by inspection, no code change needed)
+- [x] Push failure in `ticket::create()` is non-fatal: a warning is emitted but the command succeeds
+- [x] When `sync.aggressive = false`, `apm new` does not push the ticket branch
+- [x] After `apm new` runs with aggressive mode and a remote is configured, `git ls-remote origin <branch>` shows the new branch
+- [x] Tests cover the aggressive-push path using a local bare-repo remote
+- [x] Tests cover non-aggressive mode: no push attempted, command succeeds
+- [x] Tests cover push failure (no remote configured + aggressive=true): warning emitted, command succeeds
 
 ### Out of scope
 
