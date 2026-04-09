@@ -3,13 +3,13 @@ id = "ab531177"
 title = "add an apm command to clean epics"
 state = "in_design"
 priority = 0
-effort = 2
+effort = 3
 risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab531177-add-an-apm-command-to-clean-epics"
 created_at = "2026-04-09T05:07:02.660761Z"
-updated_at = "2026-04-09T05:52:49.271522Z"
+updated_at = "2026-04-09T05:55:20.098804Z"
 +++
 
 ## Spec
