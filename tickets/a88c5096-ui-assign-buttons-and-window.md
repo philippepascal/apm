@@ -16,7 +16,7 @@ updated_at = "2026-04-09T05:29:43.023335Z"
 
 ### Problem
 
-replace the "Reassign to me" to an "assign" button that allows a user to assign a ticket to someone else or himself
+The ticket detail panel has a "Reassign to me" button that only assigns a ticket to the current user. There is no way in the UI to assign a ticket to another collaborator. This is limiting in a team setting where a user may want to hand off a ticket or triage work to others.\n\nAdditionally, the current button calls POST /api/tickets/{id}/take, an endpoint that does not exist on the server, so the feature is currently broken end-to-end.\n\nThe desired behaviour: clicking an "Assign" button opens a small picker listing all project collaborators plus an "Unassigned" option. Selecting an entry assigns or clears the owner and dismisses the picker. The existing PATCH /api/tickets/:id endpoint already accepts an owner field, so the main work is a new collaborators API endpoint and a frontend picker component.
 
 ### Acceptance criteria
 
