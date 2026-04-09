@@ -1150,6 +1150,21 @@ async fn create_ticket(
     }
 }
 
+async fn collaborators_handler(
+    State(state): State<Arc<AppState>>,
+) -> Response {
+    let root = match state.git_root() {
+        Some(r) => r,
+        None => return Json(Vec::<String>::new()).into_response(),
+    };
+    let Ok(config) = apm_core::config::Config::load(root) else {
+        return Json(Vec::<String>::new()).into_response();
+    };
+    let local = apm_core::config::LocalConfig::load(root);
+    let (collaborators, _warnings) = apm_core::config::resolve_collaborators(&config, &local);
+    Json(collaborators).into_response()
+}
+
 async fn me_handler(
     State(state): State<Arc<AppState>>,
     connect_info: Option<ConnectInfo<SocketAddr>>,
@@ -1561,6 +1576,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route("/api/epics", get(list_epics).post(create_epic))
         .route("/api/epics/:id", get(get_epic))
         .route("/api/me", get(me_handler))
+        .route("/api/collaborators", get(collaborators_handler))
         .route("/api/auth/otp", post(otp_handler))
         .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
         .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth));

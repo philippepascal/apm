@@ -7,6 +7,7 @@ import { useLayoutStore } from '../store/useLayoutStore'
 import InlineNumberField from './InlineNumberField'
 import InlineOwnerField from './InlineOwnerField'
 import { getStateColors } from '../lib/stateColors'
+import AssignPicker from './AssignPicker'
 
 interface TicketDetail {
   id: string
@@ -36,7 +37,7 @@ function TransitionButtons({ ticket, onTransitioned }: {
 }) {
   const queryClient = useQueryClient()
   const [transitionError, setTransitionError] = useState<string | null>(null)
-  const [reassignError, setReassignError] = useState<string | null>(null)
+  const [showAssignPicker, setShowAssignPicker] = useState(false)
   const keepRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -68,23 +69,13 @@ function TransitionButtons({ ticket, onTransitioned }: {
     onError: (e) => setTransitionError(String(e instanceof Error ? e.message : e)),
   })
 
-  const reassignMutation = useMutation({
-    mutationFn: () =>
-      fetch(`/api/tickets/${ticket.id}/take`, { method: 'POST' }).then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json()
-          throw new Error(body.error ?? `Error ${res.status}`)
-        }
-      }),
-    onSuccess: () => {
-      setReassignError(null)
-      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-    },
-    onError: (e) => setReassignError(String(e instanceof Error ? e.message : e)),
-  })
+  const anyPending = transitionMutation.isPending
 
-  const anyPending = transitionMutation.isPending || reassignMutation.isPending
+  function handleAssignDone() {
+    setShowAssignPicker(false)
+    queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+    queryClient.invalidateQueries({ queryKey: ['tickets'] })
+  }
 
   return (
     <div className="border-t border-gray-700 p-3 flex flex-wrap gap-2 items-center">
@@ -111,14 +102,18 @@ function TransitionButtons({ ticket, onTransitioned }: {
       >
         Keep at {ticket.state}
       </button>
-      <button
-        className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400"
-        disabled={anyPending}
-        onClick={() => reassignMutation.mutate()}
-      >
-        {reassignMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Reassign to me'}
-      </button>
-      {reassignError && <p className="text-red-600 text-sm w-full">{reassignError}</p>}
+      <div className="relative">
+        <button
+          className="px-3 py-1 text-sm rounded border border-gray-600 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400"
+          disabled={anyPending}
+          onClick={() => setShowAssignPicker(true)}
+        >
+          Assign
+        </button>
+        {showAssignPicker && (
+          <AssignPicker ticketId={ticket.id} onDone={handleAssignDone} />
+        )}
+      </div>
       {transitionError && <p className="text-red-600 text-sm w-full">{transitionError}</p>}
     </div>
   )
