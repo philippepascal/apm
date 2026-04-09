@@ -20,7 +20,7 @@ The ticket detail panel has a "Reassign to me" button that only assigns a ticket
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The "Reassign to me" button is replaced by an "Assign" button in the TransitionButtons component\n- [ ] Clicking "Assign" opens a picker listing all project collaborators\n- [ ] The picker includes an "Unassigned" entry at the top to clear the owner\n- [ ] The current user is always present in the picker list\n- [ ] Selecting a collaborator calls PATCH /api/tickets/:id with { owner: username } and dismisses the picker\n- [ ] Selecting "Unassigned" calls PATCH /api/tickets/:id with { owner: "" } and dismisses the picker\n- [ ] After a successful assignment the ticket detail panel reflects the updated owner without a full page reload\n- [ ] While the assignment request is in-flight, the Assign button is disabled\n- [ ] If the assignment request fails, an error message is shown near the button\n- [ ] Pressing Escape or clicking outside the picker dismisses it without making any change\n- [ ] GET /api/collaborators returns the project collaborator list (from GitHub API or config.toml fallback)
 
 ### Out of scope
 
