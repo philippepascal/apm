@@ -4,12 +4,12 @@ title = "modify apm-demo script"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/059d0a50-modify-apm-demo-script"
 created_at = "2026-04-08T23:59:41.422002Z"
-updated_at = "2026-04-09T00:18:09.297233Z"
+updated_at = "2026-04-09T00:18:15.621486Z"
 +++
 
 ## Spec
