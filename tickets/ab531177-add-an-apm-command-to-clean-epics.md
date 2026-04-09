@@ -26,7 +26,7 @@ This ticket extends the existing `apm clean` command with an `--epics` flag. Whe
 - [x] `apm clean --epics --yes` deletes all "done" epics without prompting
 - [x] `apm clean --epics --dry-run` prints what would be deleted and exits without making any changes
 - [x] Epics whose derived state is not `"done"` are not listed and not deleted
-- [ ] When no "done" epics exist, the command prints "Nothing to clean." and exits 0
+- [x] When no "done" epics exist, the command prints "Nothing to clean." and exits 0
 - [ ] After deletion, the epic's local branch no longer exists
 - [ ] After deletion, the epic's remote branch (`origin/epic/<id>-<slug>`) no longer exists; if the remote branch was absent, the error is suppressed
 - [ ] After deletion, the epic's entry is removed from `.apm/epics.toml` (or the file is left unchanged if the epic had no entry there)
