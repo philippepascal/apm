@@ -40,7 +40,10 @@ Anyone reading `apm worktrees -h`, `apm agents -h`, or `apm init -h` will see in
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating `docs/commands.md` (already accurate)
+- Fixing any other commands not listed above
+- Adding new flags or changing any runtime behaviour
+- Updating `.apm/agents.md` template content
 
 ### Approach
 
