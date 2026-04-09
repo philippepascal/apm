@@ -27,11 +27,13 @@ This ticket extends the existing `apm clean` command with an `--epics` flag. Whe
 - [ ] `apm clean --epics --dry-run` prints what would be deleted and exits without making any changes
 - [ ] Epics whose derived state is not `"done"` are not listed and not deleted
 - [ ] When no "done" epics exist, the command prints "Nothing to clean." and exits 0
-- [ ] After deletion, the epic branch no longer exists locally
+- [ ] After deletion, the epic's local branch no longer exists
+- [ ] After deletion, the epic's remote branch (`origin/epic/<id>-<slug>`) no longer exists; if the remote branch was absent, the error is suppressed
 - [ ] After deletion, the epic's entry is removed from `.apm/epics.toml` (or the file is left unchanged if the epic had no entry there)
 - [ ] Running `apm clean --epics` in a non-interactive terminal without `--yes` skips epic deletion and prints a message advising the user to use `--yes`
 - [ ] Entering anything other than "y" at the prompt leaves all epics untouched
 - [ ] `apm clean --epics` can be combined with other `apm clean` flags (e.g. `--branches`, `--dry-run`); epic cleanup runs after ticket cleanup in the same invocation
+- [ ] `apm clean --remote` (without `--epics`) also deletes "done" epic branches (both local and remote) as a final step after existing ticket cleanup
 
 ### Out of scope
 
