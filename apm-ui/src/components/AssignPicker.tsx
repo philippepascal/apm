@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react'
 
 interface AssignPickerProps {
   ticketId: string
-  onDone: () => void
+  onDone: (changed: boolean) => void
 }
 
 export default function AssignPicker({ ticketId, onDone }: AssignPickerProps) {
@@ -39,16 +39,16 @@ export default function AssignPicker({ ticketId, onDone }: AssignPickerProps) {
           throw new Error(body.error ?? `Error ${res.status}`)
         }
       }),
-    onSuccess: () => onDone(),
+    onSuccess: () => onDone(true),
   })
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onDone()
+      if (e.key === 'Escape') onDone(false)
     }
     function onMouseDown(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
-        onDone()
+        onDone(false)
       }
     }
     window.addEventListener('keydown', onKey)

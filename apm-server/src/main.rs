@@ -614,6 +614,7 @@ async fn clean_handler(
                     "warning: force-removing {} — branch may not be merged",
                     candidate.branch
                 ));
+                let remove_out = apm_core::clean::remove(&root, candidate, true, branches)?;
                 if let Some(ref path) = candidate.worktree {
                     log.push(format!("removed worktree {}", path.display()));
                     count += 1;
@@ -621,11 +622,11 @@ async fn clean_handler(
                 if branches && candidate.local_branch_exists {
                     log.push(format!("removed branch {}", candidate.branch));
                 }
-                let remove_out = apm_core::clean::remove(&root, candidate, true, branches)?;
                 for w in &remove_out.warnings {
                     log.push(w.clone());
                 }
             } else {
+                let remove_out = apm_core::clean::remove(&root, candidate, false, branches)?;
                 if let Some(ref path) = candidate.worktree {
                     log.push(format!("removed worktree {}", path.display()));
                     count += 1;
@@ -635,7 +636,6 @@ async fn clean_handler(
                 } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
                     log.push(format!("kept branch {} (not merged into main)", candidate.branch));
                 }
-                let remove_out = apm_core::clean::remove(&root, candidate, false, branches)?;
                 for w in &remove_out.warnings {
                     log.push(w.clone());
                 }

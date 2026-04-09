@@ -71,10 +71,12 @@ function TransitionButtons({ ticket, onTransitioned }: {
 
   const anyPending = transitionMutation.isPending
 
-  function handleAssignDone() {
+  function handleAssignDone(changed: boolean) {
     setShowAssignPicker(false)
-    queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
-    queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    if (changed) {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    }
   }
 
   return (
