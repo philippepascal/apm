@@ -24,17 +24,17 @@ The desired behaviour: clicking an "Assign" button opens a small picker listing 
 
 ### Acceptance criteria
 
-- [ ] The "Reassign to me" button is replaced by an "Assign" button in the `TransitionButtons` component
-- [ ] Clicking "Assign" opens a picker listing all project collaborators
-- [ ] The picker includes an "Unassigned" entry at the top to clear the owner
-- [ ] The current user is always present in the picker list
-- [ ] Selecting a collaborator calls `PATCH /api/tickets/:id` with `{ owner: username }` and dismisses the picker
-- [ ] Selecting "Unassigned" calls `PATCH /api/tickets/:id` with `{ owner: "" }` and dismisses the picker
-- [ ] After a successful assignment the ticket detail panel reflects the updated owner without a full page reload
-- [ ] While the assignment request is in-flight, the Assign button is disabled
-- [ ] If the assignment request fails, an error message is shown near the button
-- [ ] Pressing Escape or clicking outside the picker dismisses it without making any change
-- [ ] `GET /api/collaborators` returns the project collaborator list (from GitHub API or config.toml fallback)
+- [x] The "Reassign to me" button is replaced by an "Assign" button in the `TransitionButtons` component
+- [x] Clicking "Assign" opens a picker listing all project collaborators
+- [x] The picker includes an "Unassigned" entry at the top to clear the owner
+- [x] The current user is always present in the picker list
+- [x] Selecting a collaborator calls `PATCH /api/tickets/:id` with `{ owner: username }` and dismisses the picker
+- [x] Selecting "Unassigned" calls `PATCH /api/tickets/:id` with `{ owner: "" }` and dismisses the picker
+- [x] After a successful assignment the ticket detail panel reflects the updated owner without a full page reload
+- [x] While the assignment request is in-flight, the Assign button is disabled
+- [x] If the assignment request fails, an error message is shown near the button
+- [x] Pressing Escape or clicking outside the picker dismisses it without making any change
+- [x] `GET /api/collaborators` returns the project collaborator list (from GitHub API or config.toml fallback)
 
 ### Out of scope
 
