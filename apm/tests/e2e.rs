@@ -670,6 +670,14 @@ terminal = true
 fn next_respects_priority_and_actionable_states() {
     let env = Env::setup();
 
+    // Set local identity so resolve_identity() returns "test-agent",
+    // matching the APM_AGENT_NAME used by apm_as("test-agent", ...).
+    std::fs::create_dir_all(env.root().join(".apm")).unwrap();
+    std::fs::write(
+        env.root().join(".apm/local.toml"),
+        "username = \"test-agent\"\n",
+    ).unwrap();
+
     // Create three tickets with different priorities.
     let out = env.apm_as("test-agent", &["new", "Low priority task"]);
     assert!(out.status.success());
@@ -694,7 +702,7 @@ fn next_respects_priority_and_actionable_states() {
     env.apm(&["state", &id3, "groomed"]);
 
     // apm next --json should return the highest-priority actionable ticket.
-    let out = env.apm(&["next", "--json"]);
+    let out = env.apm_as("test-agent", &["next", "--json"]);
     assert!(out.status.success(), "apm next failed:\n{}", stderr(&out));
     let json = stdout(&out);
     // id is now a hex string
@@ -708,7 +716,7 @@ fn next_respects_priority_and_actionable_states() {
     env.apm(&["state", &id2, "in_design"]);
     env.apm(&["state", &id2, "specd"]);
 
-    let out = env.apm(&["next", "--json"]);
+    let out = env.apm_as("test-agent", &["next", "--json"]);
     assert!(out.status.success());
     let json = stdout(&out);
     assert!(

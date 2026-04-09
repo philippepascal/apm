@@ -1,6 +1,25 @@
-use crate::config::{CompletionStrategy, Config};
+use crate::config::{CompletionStrategy, Config, LocalConfig};
+use anyhow::{bail, Result};
 use std::collections::HashSet;
 use std::path::Path;
+
+pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> Result<()> {
+    if username == "-" {
+        return Ok(());
+    }
+    let (collaborators, warnings) = crate::config::resolve_collaborators(config, local);
+    for w in &warnings {
+        eprintln!("{w}");
+    }
+    if collaborators.is_empty() {
+        return Ok(());
+    }
+    if collaborators.iter().any(|c| c == username) {
+        return Ok(());
+    }
+    let list = collaborators.join(", ");
+    bail!("unknown user '{username}'; valid collaborators: {list}");
+}
 
 pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
@@ -120,7 +139,7 @@ pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
+    use crate::config::{Config, LocalConfig};
     use std::path::Path;
 
     fn load_config(toml: &str) -> Config {
@@ -514,6 +533,154 @@ dir = "tickets"
         let config = load_config(toml);
         let warnings = super::validate_warnings(&config);
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn valid_collaborator_accepted() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, &LocalConfig::default(), "alice").is_ok());
+    }
+
+    #[test]
+    fn unknown_user_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        let err = super::validate_owner(&config, &LocalConfig::default(), "charlie").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("unknown user 'charlie'"), "unexpected message: {msg}");
+        assert!(msg.contains("alice, bob"), "unexpected message: {msg}");
+    }
+
+    #[test]
+    fn empty_collaborators_skips_validation() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, &LocalConfig::default(), "anyone").is_ok());
+    }
+
+    #[test]
+    fn clear_owner_always_allowed() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, &LocalConfig::default(), "-").is_ok());
+    }
+
+    #[test]
+    fn github_mode_known_user_accepted() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+
+[git_host]
+provider = "github"
+repo = "org/repo"
+"#;
+        let config = load_config(toml);
+        // No token in LocalConfig::default() — falls back to project.collaborators
+        assert!(super::validate_owner(&config, &LocalConfig::default(), "alice").is_ok());
+    }
+
+    #[test]
+    fn github_mode_unknown_user_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+
+[git_host]
+provider = "github"
+repo = "org/repo"
+"#;
+        let config = load_config(toml);
+        // No token — falls back to project.collaborators; charlie is not in the list
+        let err = super::validate_owner(&config, &LocalConfig::default(), "charlie").unwrap_err();
+        assert!(err.to_string().contains("charlie"), "expected charlie in: {err}");
+    }
+
+    #[test]
+    fn github_mode_no_collaborators_skips_check() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[git_host]
+provider = "github"
+repo = "org/repo"
+"#;
+        let config = load_config(toml);
+        // Empty collaborators list — no validation
+        assert!(super::validate_owner(&config, &LocalConfig::default(), "anyone").is_ok());
+    }
+
+    #[test]
+    fn github_mode_clear_owner_accepted() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice"]
+
+[tickets]
+dir = "tickets"
+
+[git_host]
+provider = "github"
+repo = "org/repo"
+"#;
+        let config = load_config(toml);
+        assert!(super::validate_owner(&config, &LocalConfig::default(), "-").is_ok());
+    }
+
+    #[test]
+    fn non_github_mode_unknown_user_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+collaborators = ["alice", "bob"]
+
+[tickets]
+dir = "tickets"
+"#;
+        let config = load_config(toml);
+        let err = super::validate_owner(&config, &LocalConfig::default(), "charlie").unwrap_err();
+        assert!(err.to_string().contains("charlie"), "expected charlie in: {err}");
     }
 
     #[test]

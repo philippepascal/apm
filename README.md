@@ -46,7 +46,7 @@ Side paths handle amendments, open questions, and blocks. Supervisors control al
 
 1. **Supervisor creates a ticket** — `apm new "Add rate limiting to API"`. APM creates a branch `ticket/a1b2c3d4-add-rate-limiting-to-api` with a Markdown skeleton.
 2. **Supervisor grooms it** — adds context, sets priority, and moves it to `groomed` with `apm review a1b2` (which opens the ticket and presents available transitions).
-3. **Spec agent picks it up** — the dispatch loop (`apm work`) assigns a worker. The agent writes the Problem, Acceptance criteria, Out of scope, and Approach sections, sets effort/risk estimates, and submits with `apm state a1b2 specd`.
+3. **Spec agent picks it up** — but only if the ticket is assigned to it. The supervisor runs `apm assign a1b2 <agent-identity>` first. Then the dispatch loop (`apm work`) picks it up. The agent writes the Problem, Acceptance criteria, Out of scope, and Approach sections, sets effort/risk estimates, and submits with `apm state a1b2 specd`.
 4. **Supervisor reviews the spec** — `apm review a1b2` opens the ticket and offers transitions: approve (moves to `ready`) or request amendments (moves to `ammend` with checkboxes). If amended, the agent addresses each item and resubmits.
 5. **Implementation agent picks it up** — `apm start a1b2` claims the ticket, provisions a worktree, and merges the latest default branch in. The agent codes, tests, and commits inside the worktree.
 6. **Agent marks it done** — `apm state a1b2 implemented` triggers the completion strategy: opens a PR, merges into the target branch, or merges into the epic branch.
@@ -180,6 +180,38 @@ When a ticket reaches `implemented`, the completion strategy determines what hap
 
 Strategies are configured per-transition in `workflow.toml`.
 
+## Ticket ownership
+
+Every ticket has two identity fields:
+
+- **`author`** — set when the ticket is created; immutable. Records who created it.
+- **`owner`** — who is responsible for the ticket. Dispatchers (`apm work`, `apm start --next`, the UI loop) only pick up tickets whose `owner` matches the current user's identity. Tickets with no owner are never auto-dispatched.
+
+Assign a ticket before dispatching:
+
+    apm assign <id> alice        # assign to alice
+    apm assign <id> -            # clear the owner field
+
+Bulk-assign all non-closed tickets in an epic at once:
+
+    apm epic set <epic-id> owner alice
+
+To filter the list by owner:
+
+    apm list --owner alice       # tickets owned by alice
+    apm list --mine              # tickets authored by the current user
+
+### Identity setup
+
+APM resolves the current user's identity in two modes:
+
+**Config mode** (no `[git_host]` in `config.toml`): set `username` in `.apm/local.toml`:
+
+    # .apm/local.toml
+    username = "alice"
+
+**GitHub mode** (`[git_host]` with `provider = "github"` in `config.toml`): identity is resolved from the `gh` CLI (if installed and authenticated) or from a GitHub token. No `local.toml` entry is needed — the GitHub login is used automatically.
+
 ## Agent workflow
 
 Agents work autonomously through the spec and implementation phases. The supervisor dispatches them and reviews their output.
@@ -200,6 +232,8 @@ apm work
 # Run as a daemon — keeps dispatching as tickets become actionable
 apm work --daemon
 ```
+
+Dispatchers only pick up tickets whose `owner` matches the current user's identity. Assign tickets with `apm assign` before running `apm work`.
 
 ## Syncing and housekeeping
 
