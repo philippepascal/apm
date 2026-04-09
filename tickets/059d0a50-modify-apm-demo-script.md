@@ -1,7 +1,7 @@
 +++
 id = "059d0a50"
 title = "modify apm-demo script"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/059d0a50-modify-apm-demo-script"
 created_at = "2026-04-08T23:59:41.422002Z"
-updated_at = "2026-04-09T00:18:15.621486Z"
+updated_at = "2026-04-09T00:18:22.169860Z"
 +++
 
 ## Spec
@@ -153,3 +153,4 @@ Insert new code **after** the existing `T14` block and **before** the `# ──�
 | 2026-04-08T23:59Z | — | new | philippepascal |
 | 2026-04-08T23:59Z | new | groomed | apm |
 | 2026-04-09T00:14Z | groomed | in_design | philippepascal |
+| 2026-04-09T00:18Z | in_design | specd | claude-0409-0014-4828 |
