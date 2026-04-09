@@ -16,7 +16,17 @@ updated_at = "2026-04-09T00:01:47.676790Z"
 
 ### Problem
 
-user docs/commands.md as a reference if needed, look at the code to add more context if needed
+The `apm -h` and `apm <subcommand> -h` help text (defined as `long_about` / `///` doc comments in `apm/src/main.rs`) has drifted from the actual implementation in three places. `docs/commands.md` is already accurate and serves as the authoritative reference; the code's own help output is the thing that needs updating.
+
+The three stale spots are:
+
+1. **`apm worktrees`** -- The `long_about` block describes a `--add <id>` flag and includes an `--add` example. That flag was removed; only `--remove` exists in the struct.
+
+2. **`apm agents`** -- Both the short summary and the `long_about` opening hardcode `apm.agents.md`. The implementation (`cmd/agents.rs`) reads from the path configured under `[agents] instructions` in `.apm/apm.toml`; there is no hardcoded filename in the runtime code.
+
+3. **`apm init`** -- The `long_about` lists the files created as `apm.toml` and `apm.agents.md`. The actual `apm_core::init::setup` creates `config.toml`, `workflow.toml`, `ticket.toml`, `agents.md`, `apm.spec-writer.md`, and `apm.worker.md` inside `.apm/`. These old names predate the `.apm/` directory migration.
+
+Anyone reading `apm worktrees -h`, `apm agents -h`, or `apm init -h` will see incorrect information.
 
 ### Acceptance criteria
 
