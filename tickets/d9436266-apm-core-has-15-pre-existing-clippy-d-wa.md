@@ -35,7 +35,101 @@ Running `cargo clippy --package apm-core -- -D warnings` fails with 15 pre-exist
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/src/`. No public API signatures change. Run `cargo clippy --package apm-core -- -D warnings` after each file to verify incrementally.
+
+**`apm-core/src/archive.rs` — 1 fix**
+
+Line ~83: replace `.last()` with `.next_back()` on the `rel_path.split('/')` chain.
+
+```rust
+// before
+let filename = rel_path.split('/').last().unwrap_or(rel_path.as_str());
+// after
+let filename = rel_path.split('/').next_back().unwrap_or(rel_path.as_str());
+```
+
+**`apm-core/src/start.rs` — 1 suppression**
+
+Add `#[allow(clippy::too_many_arguments)]` on the line immediately before `fn spawn_container_worker(`.
+
+**`apm-core/src/ticket.rs` — multiple fixes**
+
+1. **`too_many_arguments` × 2** — add `#[allow(clippy::too_many_arguments)]` before `pub fn pick_next(` (~line 203) and before `pub fn create(` (~line 437).
+
+2. **`unnecessary_map_or`** — replace every matching pattern. Exact locations from exploration:
+
+   - Line ~166 (inside `pick_next`):
+     ```rust
+     // before
+     .filter(|t| owner_filter.map_or(true, |f| t.frontmatter.owner.as_deref() == Some(f)))
+     // after
+     .filter(|t| owner_filter.is_none_or(|f| t.frontmatter.owner.as_deref() == Some(f)))
+     ```
+   - Line ~737:
+     ```rust
+     // before
+     let state_ok = state_filter.map_or(true, |s| fm.state == s);
+     // after
+     let state_ok = state_filter.is_none_or(|s| fm.state == s);
+     ```
+   - Line ~739:
+     ```rust
+     // before
+     let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
+     // after
+     let state_is_terminal = state_filter.is_some_and(|s| terminal.contains(s));
+     ```
+   - Lines ~741–743:
+     ```rust
+     // before
+     let actionable_ok = actionable_filter.map_or(true, |actor| {
+         actionable_map.get(fm.state.as_str())
+             .map_or(false, |actors| actors.iter().any(|a| a == actor || a == "any"))
+     });
+     // after
+     let actionable_ok = actionable_filter.is_none_or(|actor| {
+         actionable_map.get(fm.state.as_str())
+             .is_some_and(|actors| actors.iter().any(|a| a == actor || a == "any"))
+     });
+     ```
+   - Lines ~745–747:
+     ```rust
+     // before
+     let author_ok = author_filter.map_or(true, |a| fm.author.as_deref() == Some(a));
+     let owner_ok  = owner_filter.map_or(true, |o| fm.owner.as_deref() == Some(o));
+     let mine_ok   = mine_user.map_or(true, |me| { … });
+     // after
+     let author_ok = author_filter.is_none_or(|a| fm.author.as_deref() == Some(a));
+     let owner_ok  = owner_filter.is_none_or(|o| fm.owner.as_deref() == Some(o));
+     let mine_ok   = mine_user.is_none_or(|me| { … });
+     ```
+
+3. **`manual_strip`** — around line 598, replace the `starts_with` + index-slice pattern with `strip_prefix`:
+   ```rust
+   // before
+   if l.starts_with("- [ ] ") {
+       Some(ChecklistItem { checked: false, text: l[6..].to_string() })
+   } else if l.starts_with("- [x] ") {
+       Some(ChecklistItem { checked: true, text: l[6..].to_string() })
+   } else if l.starts_with("- [X] ") {
+       Some(ChecklistItem { checked: true, text: l[6..].to_string() })
+   }
+   // after
+   if let Some(s) = l.strip_prefix("- [ ] ") {
+       Some(ChecklistItem { checked: false, text: s.to_string() })
+   } else if let Some(s) = l.strip_prefix("- [x] ") {
+       Some(ChecklistItem { checked: true, text: s.to_string() })
+   } else if let Some(s) = l.strip_prefix("- [X] ") {
+       Some(ChecklistItem { checked: true, text: s.to_string() })
+   }
+   ```
+
+**Verification order**
+
+1. Edit `archive.rs`, run `cargo clippy --package apm-core -- -D warnings` — confirm 1 fewer warning.
+2. Edit `start.rs`, re-run.
+3. Edit `ticket.rs` (all changes in one pass), re-run — expect zero warnings.
+4. Run `cargo test --package apm-core` — all tests must pass.
 
 ### Open questions
 
