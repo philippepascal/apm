@@ -1,7 +1,7 @@
 +++
 id = "6dbc7f97"
 title = "make sure apm <> -h manuals are all up to date"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6dbc7f97-make-sure-apm-h-manuals-are-all-up-to-da"
 created_at = "2026-04-08T04:04:31.823861Z"
-updated_at = "2026-04-08T23:56:16.417618Z"
+updated_at = "2026-04-09T00:01:47.676790Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-08T04:04Z | — | new | philippepascal |
 | 2026-04-08T23:49Z | new | groomed | apm |
+| 2026-04-09T00:01Z | groomed | in_design | philippepascal |
