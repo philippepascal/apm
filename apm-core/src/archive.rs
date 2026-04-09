@@ -80,7 +80,7 @@ pub fn archive(
 
         let filename = rel_path
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or(rel_path.as_str());
         let new_rel_path = format!("{archive_dir_str}/{filename}");
 
