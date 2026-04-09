@@ -17,6 +17,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
                 eprintln!("warning: fetch failed (no remote configured?): {e:#}");
             }
         }
+        if let Err(e) = git::push_default_branch(root, &config.project.default_branch) {
+            eprintln!("warning: push {branch} failed: {e:#}", branch = config.project.default_branch);
+        }
         for w in &sync_warnings {
             eprintln!("{w}");
         }

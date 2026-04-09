@@ -502,6 +502,7 @@ async fn sync_handler(
             .unwrap_or(0);
         let closed = match apm_core::config::Config::load(&root) {
             Ok(config) => {
+                let _ = apm_core::git::push_default_branch(&root, &config.project.default_branch);
                 match apm_core::sync::detect(&root, &config) {
                     Ok(candidates) => {
                         let n = candidates.close.len();
