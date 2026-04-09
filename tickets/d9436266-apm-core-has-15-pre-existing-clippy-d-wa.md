@@ -31,7 +31,7 @@ Running `cargo clippy --package apm-core -- -D warnings` fails with 15 pre-exist
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Refactoring `too_many_arguments` functions into builder/config structs (a future ticket may do this; here we just suppress the lint)\n- Fixing clippy warnings in any crate other than apm-core\n- Adding `-D warnings` to CI configuration (that is a follow-on ticket once the crate is clean)\n- Any behaviour changes to `pick_next`, `create`, or `spawn_container_worker`
 
 ### Approach
 
