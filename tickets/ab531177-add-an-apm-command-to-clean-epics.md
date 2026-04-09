@@ -37,7 +37,6 @@ This ticket extends the existing `apm clean` command with an `--epics` flag. Whe
 
 ### Out of scope
 
-- Remote epic branch deletion (can be a follow-on with a `--remote` flag or by extending the existing `--remote` behaviour)
 - Cleaning epics in "empty" or "implemented" state
 - Deleting ticket branches or worktrees belonging to the epic (covered by the existing `apm clean` logic)
 - Archiving epic ticket files (covered by `apm archive`)
