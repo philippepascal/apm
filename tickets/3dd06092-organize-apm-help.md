@@ -1,7 +1,7 @@
 +++
 id = "3dd06092"
 title = "organize apm help"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3dd06092-organize-apm-help"
 created_at = "2026-04-09T00:55:24.172727Z"
-updated_at = "2026-04-09T00:59:36.388267Z"
+updated_at = "2026-04-09T00:59:43.911555Z"
 +++
 
 ## Spec
@@ -87,3 +87,4 @@ No handler modules change. The only observable effect is the `apm --help` output
 | 2026-04-09T00:55Z | — | new | philippepascal |
 | 2026-04-09T00:55Z | new | groomed | apm |
 | 2026-04-09T00:55Z | groomed | in_design | philippepascal |
+| 2026-04-09T00:59Z | in_design | specd | claude-0409-0055-acb8 |
