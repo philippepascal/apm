@@ -24,7 +24,7 @@ The ticket detail panel has a "Reassign to me" button that only assigns a ticket
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Creating a POST /api/tickets/:id/take endpoint (the existing PATCH /api/tickets/:id owner field is sufficient)\n- Inline owner editing in the ticket header (InlineOwnerField already handles that; this ticket only changes the TransitionButtons area)\n- Batch assignment across multiple tickets\n- Role-based restrictions on who can assign to whom\n- Assignee validation on the server beyond what apm-core already enforces
 
 ### Approach
 
