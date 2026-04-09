@@ -24,15 +24,15 @@ The goal is to extend the script to add a second epic (7 tickets with intra-epic
 
 ### Acceptance criteria
 
-- [ ] The script creates exactly 2 epics
-- [ ] The new epic contains exactly 7 tickets (assigned via `--epic`)
-- [ ] The new epic tickets include at least 3 intra-epic dependency edges (via `--depends-on`)
-- [ ] The total ticket count after the script runs is 35 (28 non-new-epic + 7 new-epic)
-- [ ] At least 4 tickets across the whole demo are in `implemented` state
-- [ ] Every new ticket title describes a plausible jot feature or fix
-- [ ] Every ticket in `specd`, `implemented`, or `closed` state has all four spec sections populated (Problem, Acceptance criteria, Out of scope, Approach)
-- [ ] The script runs end-to-end without errors on a clean GitHub account
-- [ ] The README is updated to reflect 35 tickets and 2 epics
+- [x] The script creates exactly 2 epics
+- [x] The new epic contains exactly 7 tickets (assigned via `--epic`)
+- [x] The new epic tickets include at least 3 intra-epic dependency edges (via `--depends-on`)
+- [x] The total ticket count after the script runs is 35 (28 non-new-epic + 7 new-epic)
+- [x] At least 4 tickets across the whole demo are in `implemented` state
+- [x] Every new ticket title describes a plausible jot feature or fix
+- [x] Every ticket in `specd`, `implemented`, or `closed` state has all four spec sections populated (Problem, Acceptance criteria, Out of scope, Approach)
+- [x] The script runs end-to-end without errors on a clean GitHub account
+- [x] The README is updated to reflect 35 tickets and 2 epics
 
 ### Out of scope
 
