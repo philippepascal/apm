@@ -25,10 +25,10 @@ Ticket management:
   assign         Assign a ticket to an owner
 
 Workflow:
+  review         Review a ticket and transition state (supervisor)
   next           Return the highest-priority actionable ticket
-  start          Claim a ticket and provision its worktree
-  review         Edit ticket spec and transition state
-  state          Transition a ticket's state
+  start          Claim a ticket and provision its worktree (agent)
+  state          Transition a ticket's state (low-level)
   work           Orchestrate workers: dispatch in a loop
   sync           Sync with remote (poll events, detect merges)
 
