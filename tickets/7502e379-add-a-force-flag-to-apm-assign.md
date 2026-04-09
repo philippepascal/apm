@@ -33,7 +33,10 @@ A `--force` flag would let any collaborator override the ownership check, while 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- A separate `--yes` / `-y` flag to skip the confirmation prompt non-interactively (not requested)
+- Bypassing the terminal-state check (closed tickets remain immutable)
+- Changes to any command other than `apm assign`
+- Audit logging of forced reassignments
 
 ### Approach
 
