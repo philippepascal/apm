@@ -34,7 +34,7 @@ This ticket adds `apm epic clean` — a subcommand that identifies all "done" ep
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Remote branch deletion (can be a follow-on with a --remote flag)\n- Cleaning epics in "empty" or "implemented" state\n- Deleting ticket branches or worktrees belonging to the epic (covered by apm clean)\n- Archiving epic ticket files (covered by apm archive)
 
 ### Approach
 
