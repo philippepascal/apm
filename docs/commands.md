@@ -510,7 +510,7 @@ to Markdown checkboxes.
 
 ### apm start
 
-**Claim a ticket and provision its permanent worktree.**
+**Claim a ticket and provision its worktree for manual work, or spawn a background agent.**
 
 #### Synopsis
 
@@ -527,16 +527,20 @@ starts with the latest base.
 
 Prints the worktree path so the caller can `cd` into it or pass it to `git -C`.
 
+Without `--spawn`, no worker process is launched — the command only claims the ticket and sets up
+the worktree. The engineer then works in the worktree manually. Use this when you want to implement
+the ticket yourself.
+
+With `--spawn`, a background `claude` subprocess is launched in the worktree. Worker output is
+written to `.apm-worker.log` in the worktree directory. `-P` (also `--skip-permissions`) passes
+`--dangerously-skip-permissions` to the spawned process.
+
 `--next` auto-selects the highest-priority actionable ticket, making `apm start --next` equivalent
 to `apm next` + `apm start <id>` in a single call.
 
-`--spawn` launches a `claude` subprocess in the worktree that picks up the ticket autonomously.
-`-P` (also `--skip-permissions`) passes `--dangerously-skip-permissions` to the spawned `claude`
-process.
-
-    apm start 42                   # claim ticket 42
-    apm start --next               # claim the next actionable ticket
-    apm start --spawn 42           # hand ticket 42 to a background claude agent
+    apm start 42                   # claim ticket 42 for manual work
+    apm start --next               # claim the top-priority ticket for manual work
+    apm start --spawn 42           # hand ticket 42 to a background agent
     apm start --spawn --next -P    # background agent, skip permissions
 
 #### Options

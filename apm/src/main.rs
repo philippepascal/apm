@@ -277,7 +277,7 @@ Examples:
         #[arg(long)]
         no_aggressive: bool,
     },
-    /// Claim a ticket and check out its branch
+    /// Claim a ticket and provision its worktree for manual work
     #[command(long_about = "Claim a ticket and provision its permanent worktree.
 
 Sets the ticket's agent field to $APM_AGENT_NAME and transitions state to
@@ -285,16 +285,21 @@ in_progress, then provisions (or reuses) a permanent git worktree for the
 ticket branch. Prints the worktree path so the caller can cd into it or use
 `git -C <path>` for all subsequent git operations.
 
---spawn launches a Claude Code subprocess that picks up the ticket
-autonomously. The subprocess receives the project allow list by default;
-add -P to also pass --dangerously-skip-permissions.
+Without --spawn, the command only claims the ticket and sets up the worktree.
+No worker process is launched — the engineer works in the worktree manually.
+Use this when you want to implement the ticket yourself.
+
+With --spawn, a background Claude Code subprocess is launched in the worktree.
+The subprocess receives the project allow list by default; add -P to also pass
+--dangerously-skip-permissions. Worker output is written to
+.apm-worker.log in the worktree directory.
 
 --next auto-selects the highest-priority actionable ticket; mutually
 exclusive with an explicit ID.
 
 Examples:
-  apm start 42                   # claim ticket 42
-  apm start --next               # claim whatever apm next would return
+  apm start 42                   # claim ticket 42 for manual work
+  apm start --next               # claim the top-priority ticket for manual work
   apm start --spawn 42           # hand ticket 42 to a background agent
   apm start --spawn --next -P    # background agent, skip permissions")]
     Start {
