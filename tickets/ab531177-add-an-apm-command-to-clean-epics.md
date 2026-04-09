@@ -22,7 +22,7 @@ This ticket extends the existing `apm clean` command with an `--epics` flag. Whe
 
 ### Acceptance criteria
 
-- [ ] `apm clean --epics` with no other flags prints the list of "done" epics and prompts "Delete N epic(s)? [y/N]"; entering "y" deletes them
+- [x] `apm clean --epics` with no other flags prints the list of "done" epics and prompts "Delete N epic(s)? [y/N]"; entering "y" deletes them
 - [ ] `apm clean --epics --yes` deletes all "done" epics without prompting
 - [ ] `apm clean --epics --dry-run` prints what would be deleted and exits without making any changes
 - [ ] Epics whose derived state is not `"done"` are not listed and not deleted
