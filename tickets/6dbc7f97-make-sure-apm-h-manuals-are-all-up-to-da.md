@@ -1,7 +1,7 @@
 +++
 id = "6dbc7f97"
 title = "make sure apm <> -h manuals are all up to date"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6dbc7f97-make-sure-apm-h-manuals-are-all-up-to-da"
 created_at = "2026-04-08T04:04:31.823861Z"
-updated_at = "2026-04-09T00:29:16.575441Z"
+updated_at = "2026-04-09T00:50:07.501775Z"
 +++
 
 ## Spec
@@ -120,3 +120,4 @@ After all edits, run `cargo build -p apm` to confirm no compile errors.
 | 2026-04-09T00:24Z | specd | ready | apm |
 | 2026-04-09T00:27Z | ready | in_progress | philippepascal |
 | 2026-04-09T00:29Z | in_progress | implemented | claude-0409-0027-83e8 |
+| 2026-04-09T00:50Z | implemented | closed | apm-sync |
