@@ -19,6 +19,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
   const [branches, setBranches] = useState(false)
   const [remote, setRemote] = useState(false)
   const [untracked, setUntracked] = useState(false)
+  const [epics, setEpics] = useState(false)
   const [olderThan, setOlderThan] = useState('')
   const [log, setLog] = useState('')
 
@@ -29,6 +30,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
       setBranches(false)
       setRemote(false)
       setUntracked(false)
+      setEpics(false)
       setOlderThan('')
       setLog('')
       mutation.reset()
@@ -55,6 +57,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
           remote,
           older_than: remote ? olderThan : undefined,
           untracked,
+          epics,
         }),
       }).then((r) => {
         if (!r.ok)
@@ -119,6 +122,10 @@ export default function CleanModal({ open, onOpenChange }: Props) {
                 />
               </div>
             )}
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input type="checkbox" checked={epics} onChange={(e) => setEpics(e.target.checked)} className="rounded" />
+              Epics (delete done epic branches)
+            </label>
           </div>
           <pre className="min-h-[120px] overflow-y-auto text-xs font-mono bg-gray-900 text-gray-100 rounded p-2 whitespace-pre-wrap break-all">
             {log}

@@ -535,6 +535,7 @@ struct CleanRequest {
     remote:     Option<bool>,
     older_than: Option<String>,
     untracked:  Option<bool>,
+    epics:      Option<bool>,
 }
 
 async fn clean_handler(
@@ -551,6 +552,7 @@ async fn clean_handler(
     let branches  = req.branches.unwrap_or(false);
     let remote    = req.remote.unwrap_or(false);
     let untracked = req.untracked.unwrap_or(false);
+    let epics     = req.epics.unwrap_or(false);
     let older_than = req.older_than;
 
     if remote && older_than.is_none() {
@@ -659,6 +661,89 @@ async fn clean_handler(
                 } else {
                     apm_core::git::delete_remote_branch(&root, &rc.branch)?;
                     log.push(format!("deleted remote branch {}", rc.branch));
+                }
+            }
+        }
+
+        if epics {
+            let local_output = std::process::Command::new("git")
+                .current_dir(&root)
+                .args(["branch", "--list", "epic/*"])
+                .output()?;
+            let local_branches: Vec<String> = String::from_utf8_lossy(&local_output.stdout)
+                .lines()
+                .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect();
+
+            let tickets = apm_core::ticket::load_all_from_git(&root, &config.tickets.dir)?;
+
+            let mut epic_candidates: Vec<String> = Vec::new();
+            for branch in &local_branches {
+                let after_prefix = branch.trim_start_matches("epic/");
+                let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
+                let id = &after_prefix[..id_end];
+                let epic_tickets: Vec<_> = tickets
+                    .iter()
+                    .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+                    .collect();
+                let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
+                    .iter()
+                    .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+                    .collect();
+                if apm_core::epic::derive_epic_state(&state_configs) == "done" {
+                    epic_candidates.push(branch.clone());
+                }
+            }
+
+            if epic_candidates.is_empty() {
+                log.push("No done epics to clean.".to_string());
+            }
+
+            for branch in &epic_candidates {
+                let after_prefix = branch.trim_start_matches("epic/");
+                let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
+                let id = after_prefix[..id_end].to_string();
+
+                if dry_run {
+                    log.push(format!("would delete epic branch {branch}"));
+                    continue;
+                }
+
+                let del_local = std::process::Command::new("git")
+                    .current_dir(&root)
+                    .args(["branch", "-d", branch])
+                    .output()?;
+                if !del_local.status.success() {
+                    log.push(format!(
+                        "error: failed to delete local branch {branch}: {}",
+                        String::from_utf8_lossy(&del_local.stderr).trim()
+                    ));
+                    continue;
+                }
+
+                let del_remote = std::process::Command::new("git")
+                    .current_dir(&root)
+                    .args(["push", "origin", "--delete", branch])
+                    .output()?;
+                if !del_remote.status.success() {
+                    let stderr = String::from_utf8_lossy(&del_remote.stderr);
+                    if !stderr.contains("remote ref does not exist")
+                        && !stderr.contains("error: unable to delete")
+                    {
+                        log.push(format!("warning: failed to delete remote {branch}: {}", stderr.trim()));
+                    }
+                }
+
+                log.push(format!("deleted epic {branch}"));
+
+                let epics_path = root.join(".apm").join("epics.toml");
+                if epics_path.exists() {
+                    let raw = std::fs::read_to_string(&epics_path)?;
+                    let mut table: toml::value::Table = toml::from_str(&raw)?;
+                    if table.remove(&id).is_some() {
+                        std::fs::write(&epics_path, toml::to_string(&table)?)?;
+                    }
                 }
             }
         }

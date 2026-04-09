@@ -186,6 +186,7 @@ export default function WorkScreen() {
     <div className="h-screen w-screen flex flex-col">
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
       <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
+      <CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup orientation="horizontal">
           {COLS.map(({ key, defaultSize, Icon }, i) => (
