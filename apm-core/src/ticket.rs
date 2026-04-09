@@ -541,7 +541,7 @@ pub fn create(
     )?;
 
     if aggressive {
-        if let Err(e) = crate::git::push_branch(root, &branch) {
+        if let Err(e) = crate::git::push_branch_tracking(root, &branch) {
             warnings.push(format!("warning: push failed: {e:#}"));
         }
     }
