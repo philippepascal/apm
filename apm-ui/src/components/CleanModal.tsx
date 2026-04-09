@@ -84,11 +84,11 @@ export default function CleanModal({ open, onOpenChange }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => onOpenChange(false)} />
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-4 py-3 border-b shrink-0">
           <h2 className="text-sm font-semibold">Clean worktrees</h2>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+        <div className="flex-1 min-h-0 px-4 py-3 flex flex-col gap-3">
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
               <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="rounded" />
@@ -127,7 +127,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
               Epics (delete done epic branches)
             </label>
           </div>
-          <pre className="min-h-[120px] overflow-y-auto text-xs font-mono bg-gray-900 text-gray-100 rounded p-2 whitespace-pre-wrap break-all">
+          <pre className="flex-1 min-h-[200px] max-h-[50vh] overflow-y-scroll text-xs font-mono bg-gray-900 text-gray-100 rounded p-2 whitespace-pre-wrap break-all">
             {log}
           </pre>
         </div>
