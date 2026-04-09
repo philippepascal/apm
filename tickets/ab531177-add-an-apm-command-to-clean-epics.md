@@ -1,7 +1,7 @@
 +++
 id = "ab531177"
 title = "add an apm command to clean epics"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab531177-add-an-apm-command-to-clean-epics"
 created_at = "2026-04-09T05:07:02.660761Z"
-updated_at = "2026-04-09T05:41:33.472129Z"
+updated_at = "2026-04-09T05:52:12.374541Z"
 +++
 
 ## Spec
@@ -192,3 +192,4 @@ Command::Epic { command: EpicCommand::Clean { dry_run, yes } } =>
 | 2026-04-09T05:27Z | specd | ammend | apm |
 | 2026-04-09T05:37Z | ammend | in_design | philippepascal |
 | 2026-04-09T05:41Z | in_design | specd | claude-0409-0537-f100 |
+| 2026-04-09T05:52Z | specd | ammend | apm |
