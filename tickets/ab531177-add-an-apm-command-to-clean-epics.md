@@ -38,7 +38,59 @@ This ticket adds `apm epic clean` — a subcommand that identifies all "done" ep
 
 ### Approach
 
-How the implementation will work.
+### Files that change
+
+- `apm/src/main.rs` — add `Clean` variant to `EpicCommand` with `--yes` and `--dry-run` flags; add dispatch arm in the `Command::Epic` match block
+- `apm/src/cmd/epic.rs` — add `run_clean(root, dry_run, yes)` function
+
+### `run_clean` logic
+
+1. Load config (`CmdContext::load_config_only`).
+2. Enumerate all epic branches with `apm_core::git::epic_branches(root)`.
+3. Load all tickets with `apm_core::ticket::load_all_from_git`.
+4. For each epic branch, derive its state (`apm_core::epic::derive_epic_state`) using the same logic as `run_list`. Keep only those whose derived state is `"done"`.
+5. If the candidate list is empty, print "Nothing to clean." and return.
+6. Print the list:
+   ```
+   Would delete N epic(s):
+     <id>  <title>
+     ...
+   ```
+7. **dry-run path** (`--dry-run`): stop here, print "Dry run — no changes made." and return.
+8. **Confirmation**:
+   - If `--yes`: proceed.
+   - Else if `stdout.is_terminal()`: print `"Delete N epic(s)? [y/N] "`, read a line; proceed only if the trimmed input is `"y"` (case-insensitive). Otherwise print "Aborted." and return.
+   - Else (non-interactive, no `--yes`): print "Skipping — non-interactive terminal. Use --yes to confirm." and return.
+9. For each candidate:
+   a. Delete the local branch with `git branch -d <branch>` (use `-D` only if the branch is not merged — but since state is `"done"`, the PR should be merged; use `-d` and surface the error if git refuses).
+   b. Print `"deleted epic/<id>-<slug>"`.
+10. Remove each deleted epic's ID from `.apm/epics.toml`: read the file, drop the matching TOML table, write back. If the file doesn't exist or the ID has no entry, skip silently.
+
+### EpicCommand variant (main.rs)
+
+```rust
+/// Remove local branches for "done" epics
+Clean {
+    /// Preview what would be deleted without making changes
+    #[arg(long)]
+    dry_run: bool,
+    /// Skip confirmation prompt
+    #[arg(long)]
+    yes: bool,
+},
+```
+
+Dispatch:
+```rust
+Command::Epic { command: EpicCommand::Clean { dry_run, yes } } =>
+    cmd::epic::run_clean(&root, dry_run, yes),
+```
+
+### Constraints
+
+- No new dependencies; use the same `toml_edit` already used in `run_set` for `.apm/epics.toml` mutations.
+- Do not delete remote branches — keep scope minimal. Remote cleanup can be a follow-on.
+- The function must compile on both interactive and non-interactive stdout; use `std::io::IsTerminal` (already imported in `clean.rs`).
 
 ### Open questions
 
