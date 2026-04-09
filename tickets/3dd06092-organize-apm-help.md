@@ -24,7 +24,13 @@ This affects every user of the CLI — human engineers, supervisors, and agent w
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm --help` output displays commands under named group headings (e.g. "Ticket management", "Workflow", "Maintenance", "Server")
+- [ ] Each existing command appears under exactly one group heading
+- [ ] Commands not shown in groups (hidden commands like `_hook`) remain hidden
+- [ ] `apm <command> --help` output for individual commands is unchanged
+- [ ] `apm help <command>` still works and shows per-command help
+- [ ] Group headings appear in this order: Setup, Ticket management, Workflow, Epics, Maintenance, Server
+- [ ] The long_about preamble (workflow states, actors, common entry points) is preserved unchanged
 
 ### Out of scope
 
