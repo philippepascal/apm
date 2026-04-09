@@ -1,7 +1,7 @@
 +++
 id = "7d7d9c35"
 title = "UI: clean option window"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7d7d9c35-ui-clean-option-window"
 created_at = "2026-04-09T05:15:30.189617Z"
-updated_at = "2026-04-09T05:48:32.167390Z"
+updated_at = "2026-04-09T06:30:30.222475Z"
 +++
 
 ## Spec
@@ -234,3 +234,4 @@ Layout (same backdrop/card pattern as `NewTicketModal`):
 | 2026-04-09T05:30Z | specd | ready | apm |
 | 2026-04-09T05:41Z | ready | in_progress | philippepascal |
 | 2026-04-09T05:48Z | in_progress | implemented | claude-0409-0541-5f50 |
+| 2026-04-09T06:30Z | implemented | closed | philippepascal |
