@@ -176,7 +176,7 @@ Command::Epic { command: EpicCommand::Clean { dry_run, yes } } =>
 - [x] include this in the apm clean command instead of the apm epic
 - [x] there is no point cleaning the epic branches only locally
 - [x] apm clean --epics only clean epics, and does it to local and remote
-- [ ] apm clean --remote, does the same clean as now and in addition (in a subsequent step) cleans the epics just like apm clean --epics would do
+- [x] apm clean --remote, does the same clean as now and in addition (in a subsequent step) cleans the epics just like apm clean --epics would do
 
 ### Code review
 
