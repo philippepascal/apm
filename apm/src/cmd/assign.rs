@@ -1,9 +1,14 @@
 use anyhow::{bail, Result};
 use apm_core::{config::{Config, LocalConfig}, git, ticket};
 use chrono::Utc;
+use std::io::{self, Write, BufRead};
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool, force: bool) -> Result<()> {
+    run_inner(root, id_arg, username, no_aggressive, force, None)
+}
+
+pub fn run_inner(root: &Path, id_arg: &str, username: &str, no_aggressive: bool, force: bool, confirm_override: Option<bool>) -> Result<()> {
     let config = Config::load(root)?;
     let local = LocalConfig::load(root);
     apm_core::validate::validate_owner(&config, &local, username)?;
@@ -28,7 +33,35 @@ pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool) -> Re
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");
     };
-    ticket::check_owner(root, t)?;
+
+    if force {
+        let is_terminal = config.workflow.states.iter()
+            .find(|s| s.id == t.frontmatter.state)
+            .map(|s| s.terminal)
+            .unwrap_or(false);
+        if is_terminal {
+            bail!("cannot change owner of a closed ticket");
+        }
+        if let Some(current_owner) = &t.frontmatter.owner.clone() {
+            let confirmed = match confirm_override {
+                Some(b) => b,
+                None => {
+                    print!("Ticket {id} is currently owned by {current_owner}. Reassign to {username}? [y/N] ");
+                    io::stdout().flush()?;
+                    let mut line = String::new();
+                    io::stdin().lock().read_line(&mut line)?;
+                    line.trim().eq_ignore_ascii_case("y")
+                }
+            };
+            if !confirmed {
+                println!("aborted");
+                return Ok(());
+            }
+        }
+    } else {
+        ticket::check_owner(root, t)?;
+    }
+
     ticket::set_field(&mut t.frontmatter, "owner", username)?;
     t.frontmatter.updated_at = Some(Utc::now());
 

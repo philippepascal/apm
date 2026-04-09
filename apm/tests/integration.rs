@@ -4452,7 +4452,7 @@ fn assign_sets_owner_field() {
     let branch = find_ticket_branch(dir.path(), "assign-test");
     let id = find_ticket_id(dir.path(), "assign-test");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::assign::run(dir.path(), &id, "alice", true).unwrap();
+    apm::cmd::assign::run(dir.path(), &id, "alice", true, false).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("owner = \"alice\""));
 }
@@ -4467,8 +4467,8 @@ fn assign_clears_owner_field() {
     let branch = find_ticket_branch(dir.path(), "assign-clear-test");
     let id = find_ticket_id(dir.path(), "assign-clear-test");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::assign::run(dir.path(), &id, "alice", true).unwrap();
-    apm::cmd::assign::run(dir.path(), &id, "-", true).unwrap();
+    apm::cmd::assign::run(dir.path(), &id, "alice", true, false).unwrap();
+    apm::cmd::assign::run(dir.path(), &id, "-", true, false).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(!content.contains("owner ="));
 }
@@ -4476,8 +4476,61 @@ fn assign_clears_owner_field() {
 #[test]
 fn assign_unknown_id_errors() {
     let dir = setup();
-    let result = apm::cmd::assign::run(dir.path(), "9999", "alice", true);
+    let result = apm::cmd::assign::run(dir.path(), "9999", "alice", true, false);
     assert!(result.is_err());
+}
+
+#[test]
+fn assign_force_succeeds_when_not_owner() {
+    let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    // Current user is alice
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+    apm::cmd::new::run(dir.path(), "Force assign test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "force-assign-test");
+    let id = find_ticket_id(dir.path(), "force-assign-test");
+    let rel = ticket_rel_path(&branch);
+    // Assign to alice first
+    apm::cmd::assign::run(dir.path(), &id, "alice", true, false).unwrap();
+    // Now force-reassign to bob (alice is the current user, bob is the target)
+    apm::cmd::assign::run_inner(dir.path(), &id, "bob", true, true, Some(true)).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("owner = \"bob\""));
+}
+
+#[test]
+fn assign_force_aborts_on_deny() {
+    let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+    apm::cmd::new::run(dir.path(), "Force deny test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "force-deny-test");
+    let id = find_ticket_id(dir.path(), "force-deny-test");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::assign::run(dir.path(), &id, "alice", true, false).unwrap();
+    // Force with deny: should return Ok(()) but leave owner as alice
+    let result = apm::cmd::assign::run_inner(dir.path(), &id, "bob", true, true, Some(false));
+    assert!(result.is_ok());
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("owner = \"alice\""));
+}
+
+#[test]
+fn assign_force_skips_prompt_when_no_owner() {
+    let dir = setup();
+    let apm_dir = dir.path().join(".apm");
+    std::fs::create_dir_all(&apm_dir).unwrap();
+    std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
+    apm::cmd::new::run(dir.path(), "Force no owner test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "force-no-owner-test");
+    let id = find_ticket_id(dir.path(), "force-no-owner-test");
+    let rel = ticket_rel_path(&branch);
+    // No owner set — force-assign should succeed without prompting
+    apm::cmd::assign::run_inner(dir.path(), &id, "alice", true, true, Some(true)).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("owner = \"alice\""));
 }
 
 // --- archive ---

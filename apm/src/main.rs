@@ -388,6 +388,9 @@ Examples:
         /// Skip automatic git fetch/push
         #[arg(long)]
         no_aggressive: bool,
+        /// Override the ownership check (prompts for confirmation if ticket has an existing owner)
+        #[arg(long)]
+        force: bool,
     },
     /// List or remove permanent git worktrees
     #[command(long_about = "Manage permanent git worktrees for ticket branches.
@@ -758,7 +761,7 @@ fn main() -> Result<()> {
             }
         }
         Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
-        Command::Assign { id, username, no_aggressive } => cmd::assign::run(&root, &id, &username, no_aggressive),
+        Command::Assign { id, username, no_aggressive, force } => cmd::assign::run(&root, &id, &username, no_aggressive, force),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
         Command::Verify { fix, no_aggressive } => cmd::verify::run(&root, fix, no_aggressive),
