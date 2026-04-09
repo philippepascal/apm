@@ -16,7 +16,7 @@ updated_at = "2026-04-08T23:58:20.131402Z"
 
 ### Problem
 
-Running cargo clippy --package apm -- -D warnings fails because apm-core (a dependency) has 15 violations: double_ended_iterator_last in archive.rs, too_many_arguments in start.rs/ticket.rs, unnecessary_map_or in ticket.rs, manual_strip in ticket.rs. These are not new; they existed before ticket 24069bd8 and block any per-crate clippy -D warnings CI for apm.
+Running `cargo clippy --package apm-core -- -D warnings` fails with 15 pre-existing violations across three files in the apm-core crate:\n\n- **archive.rs**: 1 × `double_ended_iterator_last` — `.last()` called on a `DoubleEndedIterator` instead of the more efficient `.next_back()`.\n- **start.rs**: 1 × `too_many_arguments` — `spawn_container_worker` has 10 parameters (clippy default limit: 7).\n- **ticket.rs**: 2 × `too_many_arguments` (`pick_next` at 9 params, `create` at 13 params); 7 × `unnecessary_map_or` (`.map_or(true, …)` / `.map_or(false, …)` should use `is_none_or` / `is_some_and`); 3 × `manual_strip` (`starts_with` + index slice should use `strip_prefix`).\n\nThese warnings are not regressions — they predate ticket 24069bd8 — but they prevent enabling `-D warnings` in per-crate clippy CI for apm. Fixing them unblocks that CI gate without touching any public API signatures.
 
 ### Acceptance criteria
 
