@@ -39,7 +39,7 @@ Maintenance:
   worktrees      List or remove permanent git worktrees
   clean          Remove worktrees and branches for closed tickets
   workers        List and manage running worker processes
-  verify         Check ticket and cache integrity
+  verify         Check ticket and worktree integrity
   validate       Validate config and ticket integrity
   archive        Move closed ticket files to the archive directory
 
@@ -465,16 +465,14 @@ is already decided before opening the editor.")]
         #[arg(long)]
         no_aggressive: bool,
     },
-    /// Check ticket and cache integrity
-    #[command(long_about = "Check ticket and local cache integrity.
+    /// Check ticket and worktree integrity
+    #[command(long_about = "Check ticket branch and worktree integrity.
 
-Scans for inconsistencies between the local branch cache and what is on
-disk: dangling worktrees, branches missing ticket files, cache entries that
-do not match the branch blob, etc.
+Scans for inconsistencies: dangling worktrees, branches missing ticket
+files, ticket frontmatter that does not match the branch state, etc.
 
---fix attempts automatic repairs where safe (removing stale cache entries,
-re-indexing branches). Anything it cannot fix is reported for manual
-attention.
+--fix attempts automatic repairs where safe. Anything it cannot fix is
+reported for manual attention.
 
 Run this if `apm list` or `apm show` is behaving unexpectedly.")]
     Verify {
