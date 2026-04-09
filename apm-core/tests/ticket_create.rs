@@ -222,3 +222,115 @@ fn create_no_push_when_not_aggressive() {
     )
     .unwrap();
 }
+
+fn setup_with_remote() -> (TempDir, TempDir) {
+    let bare = tempfile::tempdir().unwrap();
+    Command::new("git")
+        .args(["init", "--bare", "-q"])
+        .current_dir(bare.path())
+        .status()
+        .unwrap();
+
+    let work = setup();
+    git(work.path(), &["remote", "add", "origin", bare.path().to_str().unwrap()]);
+
+    (work, bare)
+}
+
+#[test]
+fn create_pushes_branch_when_aggressive() {
+    let (work, bare) = setup_with_remote();
+    let root = work.path();
+    let config = Config::load(root).unwrap();
+
+    let mut warnings = Vec::new();
+    let t = ticket::create(
+        root,
+        &config,
+        "Aggressive push ticket".to_string(),
+        "agent-push".to_string(),
+        None,
+        None,
+        true,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+
+    let branch = t.frontmatter.branch.unwrap();
+    let out = Command::new("git")
+        .args(["branch", "--list", &branch])
+        .current_dir(bare.path())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains(&branch), "branch {branch} not found in origin after aggressive push");
+}
+
+#[test]
+fn create_no_push_when_not_aggressive_with_remote() {
+    let (work, bare) = setup_with_remote();
+    let root = work.path();
+    let config = Config::load(root).unwrap();
+
+    let mut warnings = Vec::new();
+    let t = ticket::create(
+        root,
+        &config,
+        "Non-aggressive with remote".to_string(),
+        "agent-nopush".to_string(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    let branch = t.frontmatter.branch.unwrap();
+    let out = Command::new("git")
+        .args(["branch", "--list", &branch])
+        .current_dir(bare.path())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(!stdout.contains(&branch), "branch {branch} should NOT be in origin when not aggressive");
+}
+
+#[test]
+fn create_push_failure_is_warning() {
+    // No remote configured + aggressive=true: push fails but create() still succeeds.
+    let dir = setup();
+    let root = dir.path();
+    let config = Config::load(root).unwrap();
+
+    let mut warnings = Vec::new();
+    let result = ticket::create(
+        root,
+        &config,
+        "Push failure ticket".to_string(),
+        "agent-fail".to_string(),
+        None,
+        None,
+        true,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    );
+
+    assert!(result.is_ok(), "create() should succeed even when push fails");
+    assert!(!warnings.is_empty(), "expected a warning about push failure, got none");
+}
