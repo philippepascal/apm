@@ -659,6 +659,9 @@ ac.txt) are always removed automatically without needing --untracked.")]
         /// Remove untracked non-temp files from worktrees before removal
         #[arg(long)]
         untracked: bool,
+        /// Also clean local and remote branches for "done" epics
+        #[arg(long)]
+        epics: bool,
     },
     /// List and manage running worker processes
     Workers {
@@ -795,7 +798,7 @@ fn main() -> Result<()> {
         Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
-        Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked),
+        Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked, epics),
         Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),

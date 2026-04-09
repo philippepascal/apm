@@ -2512,7 +2512,7 @@ fn clean_default_does_not_remove_local_branch() {
     let (branch, _) = write_closed_ticket(p, 1, "done");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed without --branches");
 }
@@ -2525,7 +2525,7 @@ fn clean_branches_flag_removes_local_branch() {
     let (branch, _) = write_closed_ticket(p, 1, "branches-flag");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false, false, false, true, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, true, false, None, false, false).unwrap();
 
     assert!(!branch_exists(p, &branch), "branch should have been removed with --branches");
 }
@@ -2538,7 +2538,7 @@ fn clean_dry_run_includes_state_in_output() {
     merge_into_main(p, &branch);
 
     // dry_run=true should not actually delete anything
-    apm::cmd::clean::run(p, true, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, true, false, false, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
 }
@@ -2554,7 +2554,7 @@ fn clean_skips_ticket_not_on_main() {
     // -s ours: makes branch tip reachable from main without bringing content
     git(p, &["-c", "commit.gpgsign=false", "merge", "-s", "ours", &branch, "-m", "ours merge"]);
 
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — ticket not on main");
 }
@@ -2621,7 +2621,7 @@ label = "New"
     let (branch, _) = write_closed_ticket(p, 1, "no-terminal-config");
     merge_into_main(p, &branch);
 
-    apm::cmd::clean::run(p, false, false, false, true, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, true, false, None, false, false).unwrap();
 
     assert!(!branch_exists(p, &branch), "closed should be treated as terminal even without config entry");
 }
@@ -2681,7 +2681,7 @@ terminal = true
     git(p, &["checkout", "main"]);
 
     // Local tip ≠ remote tip → should skip
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — local tip ahead of remote");
 }
@@ -2703,7 +2703,7 @@ fn clean_auto_removes_known_temp_files() {
     // Drop a known temp file into the worktree
     std::fs::write(wt_path.join("pr-body.md"), "pr body content").unwrap();
 
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed without --branches");
     assert!(!wt_path.exists(), "worktree should have been removed");
@@ -2724,7 +2724,7 @@ fn clean_skips_modified_tracked_files() {
     // Modify a tracked file without committing
     std::fs::write(wt_path.join(&rel_path), "modified content").unwrap();
 
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed — modified tracked file");
     assert!(wt_path.exists(), "worktree should NOT have been removed");
@@ -2746,7 +2746,7 @@ fn clean_dry_run_diagnoses_dirty_worktree() {
     let temp_file = wt_path.join("pr-body.md");
     std::fs::write(&temp_file, "pr body").unwrap();
 
-    apm::cmd::clean::run(p, true, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, true, false, false, false, false, None, false, false).unwrap();
 
     // dry-run: nothing removed
     assert!(branch_exists(p, &branch), "branch should NOT have been removed in dry-run");
@@ -2771,7 +2771,7 @@ fn clean_untracked_flag_removes_other_untracked_files() {
     // Drop an unrecognised untracked file into the worktree
     std::fs::write(wt_path.join("notes.txt"), "my notes").unwrap();
 
-    apm::cmd::clean::run(p, false, false, false, false, false, None, true).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, true, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT have been removed without --branches");
     assert!(!wt_path.exists(), "worktree should have been removed with --untracked");
@@ -2791,7 +2791,7 @@ fn clean_warns_about_untracked_without_flag() {
     std::fs::write(wt_path.join("notes.txt"), "my notes").unwrap();
 
     // Without --untracked: worktree should stay in place.
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
 
     assert!(wt_path.exists(), "worktree should NOT be removed without --untracked");
     assert!(branch_exists(p, &branch), "branch should NOT be removed without --branches");
@@ -2818,7 +2818,7 @@ fn clean_force_removes_unmerged_branch() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add closed ticket to main"]);
 
     // Normal clean should skip (not merged via git merge).
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
     assert!(branch_exists(p, &branch), "normal clean should skip unmerged branch");
 
     // Force clean with --branches and confirmation removes the local branch.
@@ -2899,7 +2899,7 @@ terminal = true
     std::fs::write(wt_path.join("notes.txt"), "scratch notes").unwrap();
 
     // Normal clean should skip (diverged + dirty worktree, and not an ancestor of main).
-    apm::cmd::clean::run(p, false, false, false, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
     assert!(branch_exists(p, &branch), "normal clean should skip diverged+dirty ticket");
     assert!(wt_path.exists(), "worktree should NOT be removed by normal clean");
 
@@ -2928,7 +2928,7 @@ fn clean_force_still_skips_non_terminal() {
     write_ticket_to_branch(p, "ticket/0001-in-prog", "0001-in-prog.md", "in_progress", 1, "in progress");
 
     // No candidates (non-terminal) → no prompts needed; call library directly.
-    apm::cmd::clean::run(p, false, false, true, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, true, false, false, None, false, false).unwrap();
 
     assert!(
         branch_exists(p, "ticket/0001-in-prog"),
@@ -2982,7 +2982,7 @@ fn clean_force_skips_modified_tracked() {
     std::fs::write(wt_path.join(&rel_path), "modified content").unwrap();
 
     // Force clean: modified tracked files must never be auto-removed.
-    apm::cmd::clean::run(p, false, false, true, false, false, None, false).unwrap();
+    apm::cmd::clean::run(p, false, false, true, false, false, None, false, false).unwrap();
 
     assert!(branch_exists(p, &branch), "branch should NOT be removed — modified tracked file");
     assert!(wt_path.exists(), "worktree should NOT be removed — modified tracked file");
