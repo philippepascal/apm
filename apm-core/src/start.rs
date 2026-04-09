@@ -87,6 +87,7 @@ fn git_config_value(root: &Path, key: &str) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_container_worker(
     root: &Path,
     wt: &Path,
@@ -533,6 +534,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     Ok(RunNextOutput { ticket_id: Some(id), messages, warnings, worker_pid: Some(pid), log_path: Some(log_path) })
 }
 
+#[allow(clippy::type_complexity)]
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,

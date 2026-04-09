@@ -9,7 +9,8 @@ pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> R
     }
     let (collaborators, warnings) = crate::config::resolve_collaborators(config, local);
     for w in &warnings {
-        eprintln!("{w}");
+        #[allow(clippy::print_stderr)]
+        { eprintln!("{w}"); }
     }
     if collaborators.is_empty() {
         return Ok(());

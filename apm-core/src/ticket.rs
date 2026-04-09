@@ -163,7 +163,7 @@ pub fn sorted_actionable<'a>(
     let mut candidates: Vec<&Ticket> = tickets
         .iter()
         .filter(|t| actionable.contains(&t.frontmatter.state.as_str()))
-        .filter(|t| owner_filter.map_or(true, |f| t.frontmatter.owner.as_deref() == Some(f)))
+        .filter(|t| owner_filter.is_none_or(|f| t.frontmatter.owner.as_deref() == Some(f)))
         .collect();
     let rev_idx = build_reverse_index(&candidates);
     candidates.sort_by(|a, b| {
@@ -200,6 +200,7 @@ pub fn dep_satisfied(dep_state: &str, required_gate: Option<&str>, config: &crat
 /// Return the highest-scoring ticket from `tickets` whose state is in
 /// `actionable` and (if `startable` is non-empty) also in `startable`,
 /// and whose `depends_on` deps are all satisfied.
+#[allow(clippy::too_many_arguments)]
 pub fn pick_next<'a>(
     tickets: &'a [Ticket],
     actionable: &[&str],
@@ -249,12 +250,10 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
         let filename = format!("{suffix}.md");
         let rel_path = format!("{}/{}", tickets_dir_rel.to_string_lossy(), filename);
         let dummy_path = root.join(&rel_path);
-        match crate::git::read_from_branch(root, branch, &rel_path) {
-            Ok(content) => match Ticket::parse(&dummy_path, &content) {
-                Ok(t) => tickets.push(t),
-                Err(_) => {}
-            },
-            Err(_) => {}
+        if let Ok(content) = crate::git::read_from_branch(root, branch, &rel_path) {
+            if let Ok(t) = Ticket::parse(&dummy_path, &content) {
+                tickets.push(t);
+            }
         }
     }
     tickets.sort_by_key(|t| t.frontmatter.created_at);
@@ -434,6 +433,7 @@ pub fn close(
     Ok(output)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn create(
     root: &std::path::Path,
     config: &crate::config::Config,
@@ -595,12 +595,12 @@ fn parse_checklist(text: &str) -> Vec<ChecklistItem> {
     text.lines()
         .filter_map(|line| {
             let l = line.trim();
-            if l.starts_with("- [ ] ") {
-                Some(ChecklistItem { checked: false, text: l[6..].to_string() })
-            } else if l.starts_with("- [x] ") || l.starts_with("- [X] ") {
-                Some(ChecklistItem { checked: true, text: l[6..].to_string() })
+            if let Some(s) = l.strip_prefix("- [ ] ") {
+                Some(ChecklistItem { checked: false, text: s.to_string() })
+            } else if let Some(s) = l.strip_prefix("- [x] ") {
+                Some(ChecklistItem { checked: true, text: s.to_string() })
             } else {
-                None
+                l.strip_prefix("- [X] ").map(|s| ChecklistItem { checked: true, text: s.to_string() })
             }
         })
         .collect()
@@ -716,6 +716,7 @@ impl Ticket {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn list_filtered<'a>(
     tickets: &'a [Ticket],
     config: &crate::config::Config,
@@ -734,17 +735,17 @@ pub fn list_filtered<'a>(
 
     tickets.iter().filter(|t| {
         let fm = &t.frontmatter;
-        let state_ok = state_filter.map_or(true, |s| fm.state == s);
+        let state_ok = state_filter.is_none_or(|s| fm.state == s);
         let agent_ok = !unassigned || fm.author.as_deref() == Some("unassigned");
-        let state_is_terminal = state_filter.map_or(false, |s| terminal.contains(s));
+        let state_is_terminal = state_filter.is_some_and(|s| terminal.contains(s));
         let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
-        let actionable_ok = actionable_filter.map_or(true, |actor| {
+        let actionable_ok = actionable_filter.is_none_or(|actor| {
             actionable_map.get(fm.state.as_str())
-                .map_or(false, |actors| actors.iter().any(|a| a == actor || a == "any"))
+                .is_some_and(|actors| actors.iter().any(|a| a == actor || a == "any"))
         });
-        let author_ok = author_filter.map_or(true, |a| fm.author.as_deref() == Some(a));
-        let owner_ok = owner_filter.map_or(true, |o| fm.owner.as_deref() == Some(o));
-        let mine_ok = mine_user.map_or(true, |me| {
+        let author_ok = author_filter.is_none_or(|a| fm.author.as_deref() == Some(a));
+        let owner_ok = owner_filter.is_none_or(|o| fm.owner.as_deref() == Some(o));
+        let mine_ok = mine_user.is_none_or(|me| {
             fm.author.as_deref() == Some(me) || fm.owner.as_deref() == Some(me)
         });
         state_ok && agent_ok && terminal_ok && actionable_ok && author_ok && owner_ok && mine_ok
