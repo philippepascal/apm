@@ -73,8 +73,12 @@ enum Command {
     #[command(long_about = "Initialize apm in the current repository.
 
 Creates the .apm/ directory containing:
-  * apm.toml      — project config and state-machine definition
-  * apm.agents.md — agent onboarding instructions
+  * config.toml        — project config
+  * workflow.toml      — state-machine definition
+  * ticket.toml        — ticket template
+  * agents.md          — agent onboarding instructions
+  * apm.spec-writer.md — spec-writer agent manual
+  * apm.worker.md      — worker agent manual
 
 Also installs git hooks (.git/hooks/post-merge, post-checkout) so apm can
 detect branch merges automatically.
@@ -88,7 +92,7 @@ that need to be moved into .apm/.")]
         /// Skip updating .claude/settings.json allow list
         #[arg(long)]
         no_claude: bool,
-        /// Migrate root-level apm.toml and apm.agents.md to .apm/
+        /// Migrate root-level apm.toml -> .apm/config.toml and apm.agents.md -> .apm/agents.md
         #[arg(long)]
         migrate: bool,
         /// Generate .apm/Dockerfile.apm-worker and print build instructions
@@ -397,13 +401,8 @@ default) so that agents can work on a ticket branch without disturbing the
 main working tree. These worktrees survive `apm sync` and are reused across
 sessions.
 
---add is idempotent: if the worktree already exists it just prints the path.
-Always use `apm worktrees --add <id>` rather than `git worktree add` by hand,
-so the path is recorded in the ticket's metadata.
-
 Examples:
   apm worktrees              # list all known worktrees
-  apm worktrees --add 42     # provision worktree for ticket 42, print path
   apm worktrees --remove 42  # remove the worktree for ticket 42")]
     Worktrees {
         /// Remove the worktree for the given ticket ID
@@ -496,8 +495,8 @@ ticket file on its branch.
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         _extra: Vec<String>,
     },
-    /// Print agent instructions from apm.agents.md
-    #[command(long_about = "Print the contents of apm.agents.md to stdout.
+    /// Print agent instructions configured in .apm/apm.toml
+    #[command(long_about = "Print the contents of the instructions file configured under [agents] instructions in .apm/apm.toml.
 
 Useful for onboarding a new agent subprocess: pipe or paste the output into
 the agent's context so it knows the workflow, branch conventions, and shell
