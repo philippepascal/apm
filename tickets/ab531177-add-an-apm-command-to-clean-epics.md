@@ -45,51 +45,74 @@ This ticket extends the existing `apm clean` command with an `--epics` flag. Whe
 
 **Files that change**
 
-- `apm/src/main.rs` — add `Clean` variant to `EpicCommand` with `--yes` and `--dry-run` flags; add dispatch arm in the `Command::Epic` match block
-- `apm/src/cmd/epic.rs` — add `run_clean(root, dry_run, yes)` function
+- `apm/src/main.rs` — add `--epics` flag (`epics: bool`) to the `Clean` variant; pass it through to `cmd::clean::run()`
+- `apm/src/cmd/clean.rs` — add `epics: bool` parameter to `run()`; at the end of the function, when `epics` is `true`, execute the epic-cleanup block below
 
-**`run_clean` logic**
+**`--epics` flag in `main.rs`**
 
-1. Load config via `CmdContext::load_config_only`.
-2. Enumerate all epic branches with `apm_core::git::epic_branches(root)`.
-3. Load all tickets with `apm_core::ticket::load_all_from_git`.
-4. For each epic branch, parse its 8-char ID, collect its tickets, build `state_configs`, call `apm_core::epic::derive_epic_state`. Keep only branches whose derived state is `"done"`.
-5. If the candidate list is empty, print "Nothing to clean." and return.
-6. Print the candidate list: `"Would delete N epic(s):"` followed by one `"  <id>  <title>"` line per candidate.
-7. If `--dry-run`: print "Dry run — no changes made." and return.
-8. Confirmation gate:
-   - `--yes` → proceed immediately.
-   - Interactive stdout → print `"Delete N epic(s)? [y/N] "`, read a line; if the trimmed input is not `"y"` (case-insensitive), print "Aborted." and return.
-   - Non-interactive stdout, no `--yes` → print "Skipping — non-interactive terminal. Use --yes to confirm." and return.
-9. For each candidate, run `git branch -d <branch>` and print `"deleted <branch>"`. Surface errors if git refuses (e.g. branch not merged).
-10. Remove each deleted epic's ID from `.apm/epics.toml` using `toml_edit`: read the file if it exists, remove the matching top-level table key, write back. If the file is absent or the ID has no entry, skip silently.
-
-**`EpicCommand::Clean` variant**
+Add to the `Clean` variant:
 
 ```rust
-/// Remove local branches for "done" epics
-Clean {
-    /// Preview what would be deleted without making changes
-    #[arg(long)]
-    dry_run: bool,
-    /// Skip confirmation prompt
-    #[arg(long)]
-    yes: bool,
-},
+/// Also clean local branches for "done" epics
+#[arg(long)]
+epics: bool,
 ```
 
-Dispatch arm in the `Command::Epic` match:
+Add `epics` to the existing dispatch arm:
 
 ```rust
-Command::Epic { command: EpicCommand::Clean { dry_run, yes } } =>
-    cmd::epic::run_clean(&root, dry_run, yes),
+Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked, epics } =>
+    cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked, epics),
 ```
+
+**Epic-cleanup block in `cmd/clean.rs`**
+
+At the end of `run()`, after all existing ticket-cleanup logic, insert:
+
+```rust
+if epics {
+    run_epic_clean(root, &config, dry_run, yes)?;
+}
+```
+
+Implement `run_epic_clean(root, config, dry_run, yes)` as a private function in the same file:
+
+1. Call `apm_core::git::epic_branches(root)` — returns all locally-visible epic branch names (already deduplicates local+remote).
+2. Filter to local-only branches: skip any name that was derived from `origin/` in `epic_branches`. Because `epic_branches` already strips the `origin/` prefix during dedup, determine local existence by running `git branch --list <branch>` for each candidate (or reuse the local subset: the function iterates local before remote, so the first dedup pass covers local branches; a simpler filter is `git branch --list 'epic/*'` directly).
+   - **Simpler approach**: call `git branch --list 'epic/*'` directly from `run_epic_clean` to get only local branches.
+3. Load all tickets with `apm_core::ticket::load_all_from_git(root)`.
+4. Load `config.states` to build `state_configs`.
+5. For each local epic branch:
+   a. Parse the 8-char epic ID from the branch name (`epic/<id>-<slug>`).
+   b. Collect tickets whose `epic` field matches this ID.
+   c. Build `&[&StateConfig]` by mapping each ticket's state through `config.states`.
+   d. Call `apm_core::epic::derive_epic_state(&state_configs)`.
+   e. Keep only branches where the result is `"done"`.
+6. If no candidates: print `"No done epics to clean."` and return.
+7. Print:
+   ```
+   Would delete N epic(s):
+     <id>  <title-or-branch-name>
+   ```
+8. If `dry_run`: print `"Dry run — no changes made."` and return.
+9. Confirmation gate (mirrors the existing pattern in `run()`):
+   - `yes` → proceed.
+   - `std::io::stdout().is_terminal()` → print `"Delete N epic(s)? [y/N] "`, flush, read a line; proceed only if the trimmed input equals `"y"` (case-insensitive). Otherwise print `"Aborted."` and return.
+   - Non-interactive, no `--yes` → print `"Skipping — non-interactive terminal. Use --yes to confirm."` and return.
+10. For each candidate:
+    a. Run `git branch -d <branch>`. If git refuses (branch not fully merged), surface the error and continue to the next candidate.
+    b. Print `"deleted <branch>"`.
+    c. Remove the epic's ID key from `.apm/epics.toml` using `toml_edit`: read the file if it exists, drop the top-level table keyed by the ID, write back. If the file is absent or the key is missing, skip silently.
+
+**Title lookup for the candidate list**
+
+Epic title is stored in `.apm/epics.toml` under the epic's ID key (field `title`). Load the TOML file once at the start of `run_epic_clean`; fall back to the branch name when the entry is absent.
 
 **Constraints**
 
-- No new crate dependencies; reuse `toml_edit` (already used in `run_set`) for `.apm/epics.toml` writes.
-- Remote branch deletion is out of scope; use local `git branch -d` only.
-- Use `std::io::IsTerminal` (already imported in `cmd/clean.rs`) for the terminal check.
+- No new crate dependencies. `toml_edit` is already used in `run_set`; `std::io::IsTerminal` is already imported in `clean.rs`.
+- Only local epic branches are targeted (`git branch --list 'epic/*'`). Remote cleanup is out of scope.
+- The function signature of `run()` gains one parameter (`epics: bool`) — update the call site in `main.rs` accordingly.
 
 ### Files that change
 
