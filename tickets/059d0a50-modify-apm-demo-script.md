@@ -36,7 +36,11 @@ The goal is to extend the script to add a second epic (7 tickets with intra-epic
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the jot Rust source code (`src/main.rs`, `Cargo.toml`)
+- Adding a third epic or modifying the existing "Search feature" epic
+- Changing the set of workflow states or APM config
+- Modifying the preflight checks or GitHub repo creation logic
+- Changing how the existing 14 tickets are structured or ordered
 
 ### Approach
 
