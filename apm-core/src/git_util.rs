@@ -821,3 +821,254 @@ pub fn pull_default(root: &Path, default_branch: &str, warnings: &mut Vec<String
 
     Ok(())
 }
+
+pub fn is_worktree_dirty(path: &Path) -> bool {
+    let Ok(out) = Command::new("git")
+        .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
+        .output()
+    else {
+        return false;
+    };
+    !out.stdout.is_empty()
+}
+
+pub fn local_branch_exists(root: &Path, branch: &str) -> bool {
+    Command::new("git")
+        .args(["-C", &root.to_string_lossy(), "rev-parse", "--verify", &format!("refs/heads/{branch}")])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+pub fn delete_local_branch(root: &Path, branch: &str, warnings: &mut Vec<String>) {
+    let Ok(out) = Command::new("git")
+        .args(["-C", &root.to_string_lossy(), "branch", "-D", branch])
+        .output()
+    else {
+        warnings.push(format!("warning: could not delete branch {branch}: command failed"));
+        return;
+    };
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        warnings.push(format!("warning: could not delete branch {branch}: {stderr}"));
+    }
+}
+
+pub fn prune_remote_tracking(root: &Path, branch: &str) {
+    let _ = Command::new("git")
+        .args(["-C", &root.to_string_lossy(), "branch", "-dr", &format!("origin/{branch}")])
+        .output();
+}
+
+pub fn stage_files(root: &Path, files: &[&str]) -> Result<()> {
+    let mut args = vec!["add"];
+    args.extend_from_slice(files);
+    run(root, &args).map(|_| ())
+}
+
+pub fn commit(root: &Path, message: &str) -> Result<()> {
+    run(root, &["commit", "-m", message]).map(|_| ())
+}
+
+pub fn git_config_get(root: &Path, key: &str) -> Option<String> {
+    let out = Command::new("git")
+        .args(["-C", &root.to_string_lossy(), "config", key])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let value = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if value.is_empty() { None } else { Some(value) }
+}
+
+pub fn merge_ref(dir: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String> {
+    let out = match Command::new("git")
+        .args(["-C", &dir.to_string_lossy(), "merge", refname, "--no-edit"])
+        .output()
+    {
+        Ok(o) => o,
+        Err(e) => {
+            warnings.push(format!("warning: merge {refname} failed: {e}"));
+            return None;
+        }
+    };
+    if out.status.success() {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        if stdout.contains("Already up to date") {
+            None
+        } else {
+            Some(format!("Merged {refname} into branch."))
+        }
+    } else {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        warnings.push(format!("warning: merge {refname} failed: {stderr}"));
+        None
+    }
+}
+
+pub fn is_file_tracked(root: &Path, path: &str) -> bool {
+    Command::new("git")
+        .args(["ls-files", "--error-unmatch", path])
+        .current_dir(root)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command as Cmd;
+    use tempfile::TempDir;
+
+    fn git_init() -> TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        Cmd::new("git").args(["init", "-q"]).current_dir(p).status().unwrap();
+        Cmd::new("git").args(["config", "user.email", "t@t.com"]).current_dir(p).status().unwrap();
+        Cmd::new("git").args(["config", "user.name", "test"]).current_dir(p).status().unwrap();
+        dir
+    }
+
+    fn git_cmd(dir: &Path, args: &[&str]) {
+        Cmd::new("git")
+            .args(args)
+            .current_dir(dir)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status()
+            .unwrap();
+    }
+
+    fn make_commit(dir: &Path, filename: &str, content: &str) {
+        std::fs::write(dir.join(filename), content).unwrap();
+        git_cmd(dir, &["add", filename]);
+        git_cmd(dir, &["commit", "-m", "init"]);
+    }
+
+    #[test]
+    fn is_worktree_dirty_clean() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        assert!(!is_worktree_dirty(dir.path()));
+    }
+
+    #[test]
+    fn is_worktree_dirty_dirty() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join("f.txt"), "changed").unwrap();
+        assert!(is_worktree_dirty(dir.path()));
+    }
+
+    #[test]
+    fn local_branch_exists_present_and_absent() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        let on_main = local_branch_exists(dir.path(), "main");
+        let on_master = local_branch_exists(dir.path(), "master");
+        assert!(on_main || on_master);
+        assert!(!local_branch_exists(dir.path(), "no-such-branch"));
+    }
+
+    #[test]
+    fn delete_local_branch_success() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        git_cmd(dir.path(), &["branch", "to-delete"]);
+        let mut warnings = Vec::new();
+        delete_local_branch(dir.path(), "to-delete", &mut warnings);
+        assert!(warnings.is_empty());
+        assert!(!local_branch_exists(dir.path(), "to-delete"));
+    }
+
+    #[test]
+    fn delete_local_branch_failure_adds_warning() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        let mut warnings = Vec::new();
+        delete_local_branch(dir.path(), "nonexistent", &mut warnings);
+        assert!(!warnings.is_empty());
+        assert!(warnings[0].contains("warning:"));
+    }
+
+    #[test]
+    fn prune_remote_tracking_no_panic() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        // Just verify it doesn't panic even when the remote ref doesn't exist.
+        prune_remote_tracking(dir.path(), "nonexistent-branch");
+    }
+
+    #[test]
+    fn stage_files_ok_and_err() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join("new.txt"), "new").unwrap();
+        assert!(stage_files(dir.path(), &["new.txt"]).is_ok());
+        assert!(stage_files(dir.path(), &["missing.txt"]).is_err());
+    }
+
+    #[test]
+    fn commit_ok_and_err() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join("new.txt"), "new").unwrap();
+        git_cmd(dir.path(), &["add", "new.txt"]);
+        assert!(commit(dir.path(), "test commit").is_ok());
+        // Nothing staged — should fail
+        assert!(commit(dir.path(), "empty commit").is_err());
+    }
+
+    #[test]
+    fn git_config_get_some_and_none() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        let val = git_config_get(dir.path(), "user.email");
+        assert_eq!(val, Some("t@t.com".to_string()));
+        let missing = git_config_get(dir.path(), "no.such.key");
+        assert!(missing.is_none());
+    }
+
+    #[test]
+    fn merge_ref_already_up_to_date() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        let branch = {
+            let out = Cmd::new("git").args(["branch", "--show-current"]).current_dir(dir.path()).output().unwrap();
+            String::from_utf8_lossy(&out.stdout).trim().to_string()
+        };
+        let mut warnings = Vec::new();
+        // Merging current branch into itself is already up to date
+        let result = merge_ref(dir.path(), &branch, &mut warnings);
+        assert!(result.is_none());
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn merge_ref_success() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        git_cmd(dir.path(), &["checkout", "-b", "feature"]);
+        make_commit(dir.path(), "g.txt", "there");
+        git_cmd(dir.path(), &["checkout", "main"]);
+        let mut warnings = Vec::new();
+        let result = merge_ref(dir.path(), "feature", &mut warnings);
+        assert!(result.is_some());
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn is_file_tracked_tracked_and_untracked() {
+        let dir = git_init();
+        make_commit(dir.path(), "tracked.txt", "hi");
+        assert!(is_file_tracked(dir.path(), "tracked.txt"));
+        std::fs::write(dir.path().join("untracked.txt"), "new").unwrap();
+        assert!(!is_file_tracked(dir.path(), "untracked.txt"));
+    }
+}
