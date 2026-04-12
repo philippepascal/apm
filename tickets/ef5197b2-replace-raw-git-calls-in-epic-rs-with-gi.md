@@ -39,7 +39,7 @@ Depends on the git_util helpers ticket landing first.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding new git helpers beyond what is consumed here (those belong in the prerequisite ticket 061d0ac1)\n- Changing the behaviour of `epic::create()` — this is a pure refactor\n- Refactoring raw git calls in test helpers (e.g. `git init` setup in tests)\n- Touching any file outside `apm-core/src/epic.rs`\n- Modifying `worktree::add_worktree()` signature to accept a start-point argument
 
 ### Approach
 
