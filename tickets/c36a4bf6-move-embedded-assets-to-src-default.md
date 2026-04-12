@@ -31,7 +31,7 @@ Moving these assets to `apm-core/src/default/` groups all embedded defaults in o
 - [x] `apm-core/src/default/workflow.toml` exists with identical content to the pre-move `apm-core/src/workflow.toml`
 - [x] None of the five asset files remain at `apm-core/src/` (top level)
 - [x] `cargo build -p apm-core` succeeds after the move
-- [ ] `cargo test -p apm-core` passes with no regressions
+- [x] `cargo test -p apm-core` passes with no regressions
 
 ### Out of scope
 
