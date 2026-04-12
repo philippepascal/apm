@@ -1,7 +1,7 @@
 +++
 id = "2d0e3534"
 title = "Share worktree_for_ticket helper between workers.rs and worktrees.rs"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2d0e3534-share-worktree-for-ticket-helper-between"
 created_at = "2026-04-12T09:02:38.703504Z"
-updated_at = "2026-04-12T10:39:19.443892Z"
+updated_at = "2026-04-12T17:10:51.051577Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f"]
@@ -127,3 +127,4 @@ Consolidate any `use` statements with what d3ebdc0f already added at the top of 
 | 2026-04-12T10:24Z | specd | ready | apm |
 | 2026-04-12T10:36Z | ready | in_progress | philippepascal |
 | 2026-04-12T10:39Z | in_progress | implemented | claude-0412-1036-15a8 |
+| 2026-04-12T17:10Z | implemented | closed | philippepascal |
