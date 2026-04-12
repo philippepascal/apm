@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::{Config, resolve_identity}, git, ticket};
+use apm_core::{config::{Config, resolve_identity}, epic, ticket};
 use std::path::Path;
 use crate::ctx::CmdContext;
 
@@ -37,7 +37,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     let author = resolve_identity(root);
 
     let (epic_id, target_branch, base_branch) = if let Some(ref id) = epic {
-        match git::find_epic_branch(root, id) {
+        match epic::find_epic_branch(root, id) {
             Some(branch) => (Some(id.clone()), Some(branch.clone()), Some(branch)),
             None => anyhow::bail!("No epic branch found for id '{id}'"),
         }
