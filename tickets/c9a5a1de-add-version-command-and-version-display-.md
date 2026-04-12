@@ -16,7 +16,9 @@ updated_at = "2026-04-12T08:46:45.537269Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+There is no way to check which version of apm is running or whether it's a development or release build. This matters for debugging, bug reports, and confirming deployments.
+
+The version should be available both from the CLI (`apm version` or `apm -v`) and from the UI (displayed when clicking the "Supervisor" title in the supervisor panel).
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
