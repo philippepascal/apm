@@ -1,7 +1,7 @@
 +++
 id = "4004f5dc"
 title = "Trim state.rs to pure state machine logic"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4004f5dc-trim-state-rs-to-pure-state-machine-logi"
 created_at = "2026-04-12T06:04:38.471678Z"
-updated_at = "2026-04-12T06:12:26.499038Z"
+updated_at = "2026-04-12T06:37:57.772089Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["4f67992b", "eb4789cf"]
@@ -52,3 +52,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T06:04Z | — | new | philippepascal |
 | 2026-04-12T06:12Z | new | groomed | apm |
+| 2026-04-12T06:37Z | groomed | in_design | philippepascal |
