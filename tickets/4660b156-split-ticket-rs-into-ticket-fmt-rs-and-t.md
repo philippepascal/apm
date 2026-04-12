@@ -1,7 +1,7 @@
 +++
 id = "4660b156"
 title = "Split ticket.rs into ticket_fmt.rs and ticket_util.rs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4660b156-split-ticket-rs-into-ticket-fmt-rs-and-t"
 created_at = "2026-04-12T06:04:17.196705Z"
-updated_at = "2026-04-12T06:12:05.918771Z"
+updated_at = "2026-04-12T06:17:18.865761Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
@@ -51,3 +51,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T06:04Z | — | new | philippepascal |
 | 2026-04-12T06:12Z | new | groomed | apm |
+| 2026-04-12T06:17Z | groomed | in_design | philippepascal |
