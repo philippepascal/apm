@@ -28,7 +28,16 @@ Moving these to `apm_core` eliminates duplication between `apm` and `apm-server`
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm_core::epic::branch_to_title(branch: &str) -> String` exists and converts `epic/<id>-some-slug` to `"Some Slug"`
+- [ ] `apm_core::epic::epic_id_from_branch(branch: &str) -> &str` exists and returns the ID segment (before the first `-` after the `epic/` prefix)
+- [ ] Both functions are exported from `apm_core` (`pub fn`)
+- [ ] `apm/src/cmd/epic.rs` no longer defines its own `branch_to_title`; all call sites use `apm_core::epic::branch_to_title`
+- [ ] `apm/src/cmd/epic.rs` no longer inlines the `split('-').next()` ID-parsing pattern; all call sites use `apm_core::epic::epic_id_from_branch`
+- [ ] `apm/src/cmd/clean.rs` no longer inlines the `.trim_start_matches("epic/") … .find('-') … .min(8)` pattern; all three occurrences use `apm_core::epic::epic_id_from_branch`
+- [ ] `apm-server/src/main.rs` no longer defines `parse_epic_branch`; its callers use `apm_core::epic::branch_to_title` and `apm_core::epic::epic_id_from_branch`
+- [ ] Unit tests for `branch_to_title` (currently in `apm/src/cmd/epic.rs` lines 365–388) are moved into `apm_core/src/epic.rs`
+- [ ] Unit tests for `epic_id_from_branch` covering the happy path and the no-dash edge case are added in `apm_core/src/epic.rs`
+- [ ] `cargo test` passes across all three crates (`apm-core`, `apm`, `apm-server`)
 
 ### Out of scope
 
