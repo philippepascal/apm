@@ -19,19 +19,7 @@ depends_on = ["d3ebdc0f"]
 
 ### Problem
 
-After `apm/src/util.rs` is created (by the prerequisite ticket), the following command files still use inline boilerplate instead of the shared helpers:
-
-- `assign.rs` — inline aggressive fetch + fetch warning + confirmation prompt
-- `show.rs` — inline aggressive fetch + fetch warning
-- `next.rs` — inline aggressive fetch + fetch warning
-- `close.rs` — inline aggressive fetch + fetch warning
-- `spec.rs` — inline aggressive fetch + fetch warning
-- `sync.rs` — inline aggressive fetch + fetch warning
-- `new.rs` — inline aggressive fetch
-
-Each of these files should be updated to call `util::fetch_if_aggressive()`, `util::log_fetch_warning()`, and `util::prompt_yes_no()` instead of reimplementing the patterns inline. This is a mechanical find-and-replace across ~7 files.
-
-Note: `clean.rs` and `epic.rs` are handled by separate tickets in this epic to avoid conflicts.
+After `apm/src/util.rs` is introduced by the prerequisite ticket (d3ebdc0f), six command files continue to inline the same boilerplate patterns rather than delegating to the shared helpers. The duplicated logic is:\n\n- **Aggressive fetch (fetch_all variant):** `if aggressive { if let Err(e) = git::fetch_all(root) { eprintln!("warning: fetch failed: {e:#}"); } }` — appears in `next.rs` and `sync.rs`\n- **Aggressive fetch (fetch_branch variant):** same structure but calls `git::fetch_branch(root, branch)` — appears in `assign.rs`, `show.rs`, `close.rs`, `spec.rs`\n- **Confirmation prompt:** inline stdin read with flush — appears in `assign.rs` and as a local helper function `prompt_close` in `sync.rs`\n\nThis duplication means any change to fetch-warning wording or prompt behaviour must be made in multiple places. Centralising the patterns into `util::fetch_if_aggressive`, `util::fetch_branch_if_aggressive`, and `util::prompt_yes_no` removes that maintenance burden.\n\n`new.rs` is listed in the ticket title but on inspection does not contain an inline fetch block — it computes the `aggressive` flag and forwards it to `ticket::create()` in apm-core. No change is needed there.
 
 ### Acceptance criteria
 
