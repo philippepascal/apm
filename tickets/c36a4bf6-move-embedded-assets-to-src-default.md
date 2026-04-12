@@ -1,7 +1,7 @@
 +++
 id = "c36a4bf6"
 title = "Move embedded assets to src/default/"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c36a4bf6-move-embedded-assets-to-src-default"
 created_at = "2026-04-12T06:04:13.294338Z"
-updated_at = "2026-04-12T07:15:13.772703Z"
+updated_at = "2026-04-12T08:49:05.908493Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
@@ -87,3 +87,4 @@ No other files reference these assets by source path. The `include_str!()` paths
 | 2026-04-12T07:12Z | specd | ready | apm |
 | 2026-04-12T07:13Z | ready | in_progress | philippepascal |
 | 2026-04-12T07:15Z | in_progress | implemented | claude-0412-0713-e350 |
+| 2026-04-12T08:49Z | implemented | closed | philippepascal |

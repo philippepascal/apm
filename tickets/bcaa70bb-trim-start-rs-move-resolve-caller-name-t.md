@@ -1,7 +1,7 @@
 +++
 id = "bcaa70bb"
 title = "Trim start.rs: move resolve_caller_name to config.rs"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bcaa70bb-trim-start-rs-move-resolve-caller-name-t"
 created_at = "2026-04-12T06:04:15.262188Z"
-updated_at = "2026-04-12T07:19:22.234192Z"
+updated_at = "2026-04-12T08:48:59.877020Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
@@ -85,3 +85,4 @@ Having `resolve_caller_name()` in `start.rs` means callers in `apm/src/cmd/next.
 | 2026-04-12T07:13Z | specd | ready | apm |
 | 2026-04-12T07:15Z | ready | in_progress | philippepascal |
 | 2026-04-12T07:19Z | in_progress | implemented | claude-0412-0715-e4d8 |
+| 2026-04-12T08:48Z | implemented | closed | philippepascal |
