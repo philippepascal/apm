@@ -23,7 +23,7 @@ After `apm/src/util.rs` is introduced by the prerequisite ticket (d3ebdc0f), six
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm/src/util.rs` is declared as `pub mod util` in `apm/src/lib.rs`\n- [ ] `next.rs` no longer contains an inline `if aggressive { git::fetch_all … }` block\n- [ ] `sync.rs` no longer contains an inline `if !offline { … git::fetch_all … }` fetch block\n- [ ] `assign.rs` no longer contains an inline `if aggressive { git::fetch_branch … }` block\n- [ ] `show.rs` no longer contains an inline `if aggressive { git::fetch_branch … }` block\n- [ ] `close.rs` no longer contains an inline `if aggressive { … git::fetch_branch … }` block\n- [ ] `spec.rs` no longer contains an inline `if aggressive { git::fetch_branch … }` block\n- [ ] `assign.rs` no longer contains an inline stdin-prompt block for reassignment confirmation\n- [ ] `sync.rs` no longer contains the local `prompt_close` helper function\n- [ ] Each replaced call site compiles without warnings (`cargo build -p apm` succeeds)\n- [ ] `cargo test -p apm` passes with no regressions\n- [ ] Files that no longer use `std::io` directly have their now-unused `std::io` imports removed
 
 ### Out of scope
 
