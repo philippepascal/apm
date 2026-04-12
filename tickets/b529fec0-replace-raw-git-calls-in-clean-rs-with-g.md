@@ -35,7 +35,7 @@ This ticket must land after 061d0ac1 is merged into the epic branch, because it 
 - [x] The branch deletion in `remove` uses `git_util::delete_local_branch()`
 - [x] The remote-tracking prune in `remove` uses `git_util::prune_remote_tracking()`
 - [x] `cargo build` succeeds with no new warnings
-- [ ] All existing tests pass unchanged
+- [x] All existing tests pass unchanged
 
 ### Out of scope
 
