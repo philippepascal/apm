@@ -19,7 +19,19 @@ depends_on = ["d3ebdc0f"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+After `apm/src/util.rs` is created (by the prerequisite ticket), the following command files still use inline boilerplate instead of the shared helpers:
+
+- `assign.rs` — inline aggressive fetch + fetch warning + confirmation prompt
+- `show.rs` — inline aggressive fetch + fetch warning
+- `next.rs` — inline aggressive fetch + fetch warning
+- `close.rs` — inline aggressive fetch + fetch warning
+- `spec.rs` — inline aggressive fetch + fetch warning
+- `sync.rs` — inline aggressive fetch + fetch warning
+- `new.rs` — inline aggressive fetch
+
+Each of these files should be updated to call `util::fetch_if_aggressive()`, `util::log_fetch_warning()`, and `util::prompt_yes_no()` instead of reimplementing the patterns inline. This is a mechanical find-and-replace across ~7 files.
+
+Note: `clean.rs` and `epic.rs` are handled by separate tickets in this epic to avoid conflicts.
 
 ### Acceptance criteria
 
@@ -36,13 +48,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
