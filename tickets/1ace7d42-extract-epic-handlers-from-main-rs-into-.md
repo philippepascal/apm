@@ -27,15 +27,15 @@ Note on `parse_epic_branch`: this function duplicates the slug-to-title logic in
 
 ### Acceptance criteria
 
-- [ ] `apm-server/src/handlers/epics.rs` exists and contains all three HTTP handler functions: `list_epics`, `create_epic`, `get_epic`
-- [ ] `apm-server/src/handlers/epics.rs` contains the helper functions: `parse_epic_branch`, `derive_epic_state`, `build_epic_summary`, `find_epic_branch`
-- [ ] `apm-server/src/handlers/mod.rs` declares `pub mod epics`
-- [ ] `main.rs` references epic handlers via `handlers::epics::` (directly or via a use import)
-- [ ] `main.rs` no longer directly defines any of the moved functions (grep for `fn list_epics`, `fn create_epic`, `fn get_epic`, `fn parse_epic_branch`, `fn derive_epic_state`, `fn build_epic_summary`, `fn find_epic_branch` yields zero results in main.rs)
-- [ ] `cargo build -p apm-server` succeeds with no compiler errors or warnings
-- [ ] `cargo test -p apm-server` passes with all existing tests green
-- [ ] The HTTP routes registered in `build_app()` are unchanged — same verbs (`GET /api/epics`, `POST /api/epics`, `GET /api/epics/:id`), same handler function bindings
-- [ ] `AppError` and `AppState` remain defined in `main.rs`; `handlers/epics.rs` imports them from `crate`
+- [x] `apm-server/src/handlers/epics.rs` exists and contains all three HTTP handler functions: `list_epics`, `create_epic`, `get_epic`
+- [x] `apm-server/src/handlers/epics.rs` contains the helper functions: `parse_epic_branch`, `derive_epic_state`, `build_epic_summary`, `find_epic_branch`
+- [x] `apm-server/src/handlers/mod.rs` declares `pub mod epics`
+- [x] `main.rs` references epic handlers via `handlers::epics::` (directly or via a use import)
+- [x] `main.rs` no longer directly defines any of the moved functions (grep for `fn list_epics`, `fn create_epic`, `fn get_epic`, `fn parse_epic_branch`, `fn derive_epic_state`, `fn build_epic_summary`, `fn find_epic_branch` yields zero results in main.rs)
+- [x] `cargo build -p apm-server` succeeds with no compiler errors or warnings
+- [x] `cargo test -p apm-server` passes with all existing tests green
+- [x] The HTTP routes registered in `build_app()` are unchanged — same verbs (`GET /api/epics`, `POST /api/epics`, `GET /api/epics/:id`), same handler function bindings
+- [x] `AppError` and `AppState` remain defined in `main.rs`; `handlers/epics.rs` imports them from `crate`
 
 ### Out of scope
 
