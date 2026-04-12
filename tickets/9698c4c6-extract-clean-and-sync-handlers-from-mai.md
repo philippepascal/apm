@@ -43,7 +43,13 @@ This ticket depends on 1ace7d42 (epic handler extraction) being merged first. By
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Extracting non-maintenance handlers (auth, agents, workers, tickets, epics) — covered by sibling tickets 7bb8eacb and 1ace7d42
+- Renaming any function, struct, or route path
+- Changing any handler logic or behaviour
+- Moving `AppError` or `AppState` out of `main.rs`
+- Refactoring the epic cleanup block inside `clean_handler` to reuse `apm_core` helpers — that requires shared logic to exist in `apm_core` first and belongs to a separate ticket
+- Adding new endpoints, response fields, or request parameters
+- Writing tests that do not already exist
 
 ### Approach
 
