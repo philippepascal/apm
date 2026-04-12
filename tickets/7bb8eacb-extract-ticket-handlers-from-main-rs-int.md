@@ -1,7 +1,7 @@
 +++
 id = "7bb8eacb"
 title = "Extract ticket handlers from main.rs into handlers/tickets.rs"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7bb8eacb-extract-ticket-handlers-from-main-rs-int"
 created_at = "2026-04-12T09:03:09.497239Z"
-updated_at = "2026-04-12T10:24:55.301958Z"
+updated_at = "2026-04-12T11:22:52.797281Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 depends_on = ["a6bc1326", "2973f8d1"]
@@ -127,3 +127,4 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 | 2026-04-12T10:14Z | ammend | in_design | philippepascal |
 | 2026-04-12T10:16Z | in_design | specd | claude-0412-1014-bbe0 |
 | 2026-04-12T10:24Z | specd | ready | apm |
+| 2026-04-12T11:22Z | ready | in_progress | philippepascal |
