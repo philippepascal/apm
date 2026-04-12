@@ -1,7 +1,7 @@
 +++
 id = "124bad5a"
 title = "Standardize config loading with shared async utility"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/124bad5a-standardize-config-loading-with-shared-a"
 created_at = "2026-04-12T09:03:01.972783Z"
-updated_at = "2026-04-12T11:22:33.732080Z"
+updated_at = "2026-04-12T17:10:32.256142Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 +++
@@ -155,3 +155,4 @@ Run `cargo test -p apm-server` and confirm all tests pass. Grep for remaining `.
 | 2026-04-12T10:24Z | specd | ready | apm |
 | 2026-04-12T11:15Z | ready | in_progress | philippepascal |
 | 2026-04-12T11:22Z | in_progress | implemented | claude-0412-1115-5bb0 |
+| 2026-04-12T17:10Z | implemented | closed | philippepascal |
