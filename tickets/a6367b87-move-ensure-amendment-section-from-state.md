@@ -27,7 +27,13 @@ Moving it completes the cleanup started in ticket 4004f5dc and satisfies section
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `ensure_amendment_section` is defined in `apm-core/src/review.rs` and not in `apm-core/src/state.rs`
+- [ ] `ensure_amendment_section` is `pub` in `review.rs` (accessible as `apm_core::review::ensure_amendment_section`)
+- [ ] `state::transition()` calls `review::ensure_amendment_section` (not a local function) when transitioning to `"ammend"`
+- [ ] `apm state <id> ammend` still inserts `### Amendment requests` into a ticket body that lacks the section
+- [ ] `apm state <id> ammend` is a no-op on the amendment section when `### Amendment requests` is already present
+- [ ] `review.rs` has tests for `ensure_amendment_section` covering: body already contains the section (no-op), body contains `### Out of scope` (inserts after the block), body contains `## History` but no `### Out of scope` (inserts before history), body contains neither (appends to end)
+- [ ] All pre-existing tests in `state.rs` and `review.rs` continue to pass
 
 ### Out of scope
 
