@@ -36,7 +36,12 @@ Having both concerns in one file makes it hard to find the right function quickl
 
 ### Out of scope
 
-- Changing any public function or type signatures\n- Moving or rewriting logic — this is a mechanical file split only\n- Splitting tests into a separate `tests/` directory; unit tests move with their functions into `ticket_fmt.rs` or `ticket_util.rs`\n- Making `ticket_fmt` or `ticket_util` public modules in `lib.rs`; they are internal to the `ticket` re-export layer\n- Any changes to `apm`, `apm-server`, or other `apm-core` modules\n- Adding new functionality or fixing existing bugs
+- Changing any public function or type signatures
+- Moving or rewriting logic — this is a mechanical file split only
+- Splitting tests into a separate `tests/` directory; unit tests move with their functions into `ticket_fmt.rs` or `ticket_util.rs`
+- Making `ticket_fmt` or `ticket_util` public modules in `lib.rs`; they are internal to the `ticket` re-export layer
+- Any changes to `apm`, `apm-server`, or other `apm-core` modules
+- Adding new functionality or fixing existing bugs
 
 ### Approach
 
