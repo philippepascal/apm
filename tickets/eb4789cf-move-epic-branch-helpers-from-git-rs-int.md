@@ -19,7 +19,9 @@ depends_on = ["b28fe914"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`epic.rs` currently contains `derive_epic_state()` and `create()` but the epic branch discovery functions (`find_epic_branch`, `find_epic_branches`, `epic_branches`, `create_epic_branch`) live in `git.rs`. These are epic-domain operations that happen to call git commands, not general git utilities. They should live alongside the rest of the epic logic.
+
+See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 8 for the full plan.
 
 ### Acceptance criteria
 
@@ -36,13 +38,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
