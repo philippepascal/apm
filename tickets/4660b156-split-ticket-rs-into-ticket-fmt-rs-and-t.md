@@ -4,12 +4,12 @@ title = "Split ticket.rs into ticket_fmt.rs and ticket_util.rs"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4660b156-split-ticket-rs-into-ticket-fmt-rs-and-t"
 created_at = "2026-04-12T06:04:17.196705Z"
-updated_at = "2026-04-12T06:21:17.385744Z"
+updated_at = "2026-04-12T06:21:24.164086Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
