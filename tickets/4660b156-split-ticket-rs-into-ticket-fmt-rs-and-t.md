@@ -30,7 +30,7 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 4 for the full plan.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing any public function or type signatures\n- Moving or rewriting logic — this is a mechanical file split only\n- Splitting tests into a separate `tests/` directory; unit tests move with their functions into `ticket_fmt.rs` or `ticket_util.rs`\n- Making `ticket_fmt` or `ticket_util` public modules in `lib.rs`; they are internal to the `ticket` re-export layer\n- Any changes to `apm`, `apm-server`, or other `apm-core` modules\n- Adding new functionality or fixing existing bugs
 
 ### Approach
 
