@@ -47,7 +47,49 @@ This is foundational work. Subsequent tickets that split handlers out of `main.r
 
 ### Approach
 
-How the implementation will work.
+**File to create:** `apm-server/src/models.rs`
+**File to modify:** `apm-server/src/main.rs`
+
+### 1. Create `models.rs`
+
+Create `apm-server/src/models.rs`. Group structs by domain with comments for readability, in the order they appear in `main.rs`:
+
+```
+// Ticket DTOs (lines 58–165 in main.rs)
+TransitionOption, TicketResponse, TicketsEnvelope, BlockingDep,
+TicketDetailResponse, TransitionRequest, BatchTransitionRequest,
+BatchPriorityRequest, BatchFailure, BatchResult, PutBodyRequest,
+PatchTicketRequest, CreateTicketRequest
+
+// Epic DTOs (lines 166–192)
+EpicSummary, EpicDetailResponse, CreateEpicRequest
+
+// Misc handler DTOs (scattered — lines 532, 760)
+CleanRequest, ListTicketsQuery
+
+// Auth/WebAuthn DTOs (lines 1460–1653)
+RegisterChallengeRequest, RegisterChallengeResponse,
+RegisterCompleteRequest, LoginChallengeRequest,
+LoginChallengeResponse, LoginCompleteRequest
+```
+
+Copy each struct verbatim from `main.rs`, adding `pub` to the struct keyword if not already present. Preserve all `#[derive(...)]`, `#[serde(...)]`, and doc comments exactly. Add any `use`/`serde` imports that the structs require at the top of `models.rs` (e.g., `use serde::{Serialize, Deserialize};` if derives use the short form).
+
+### 2. Update `main.rs`
+
+- Add `mod models;` to the existing `mod` block (lines 15–23, after the last existing `mod` line).
+- Add `use models::*;` immediately after the `mod` declarations so all handlers continue to resolve the DTO types without any other changes.
+- Delete the 24 struct definitions from `main.rs`. The structs are at lines: 58–165 (ticket DTOs), 166–192 (epic DTOs), 532 (CleanRequest), 760 (ListTicketsQuery), 1460–1653 (auth DTOs). Delete each block in place; do not touch surrounding handler code.
+
+### 3. Verify
+
+Run `cargo build` and `cargo test` in `apm-server/`. Fix any compile errors that arise from missing imports in `models.rs` (e.g., types from `webauthn_rs`, `uuid`, etc. referenced inside the structs). No logic changes are needed — this is a pure mechanical extraction.
+
+### Known constraints
+
+- Some auth DTO fields reference types from `webauthn_rs` or `base64` crates. Ensure those `use` statements are present in `models.rs` or that the types are fully qualified.
+- `serde` derives in `main.rs` use the path form `#[derive(serde::Serialize)]` — copy them as-is; no need to add a `use serde` import for derives in that form.
+- The target branch for this ticket is `epic/1e706443-refactor-apm-server-code-organization`, so the PR should target that branch, not `main`.
 
 ### Open questions
 
