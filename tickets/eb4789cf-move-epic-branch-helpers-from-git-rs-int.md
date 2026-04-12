@@ -47,7 +47,64 @@ This ticket covers only the epic-helpers move. The broader `git.rs` reorganisati
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/` unless otherwise noted. "Source file" means `git.rs` or `git_util.rs` — use whichever name is present in the branch (b28fe914 renames it).
+
+**1. Add a local `run()` helper to `epic.rs`**
+
+The three discovery functions (`find_epic_branch`, `find_epic_branches`, `epic_branches`) call the private `run()` in `git.rs`. Rather than making that function `pub(crate)`, add an identical private helper at the top of `epic.rs` (right after the existing imports):
+
+```rust
+fn run(dir: &std::path::Path, args: &[&str]) -> anyhow::Result<String> {
+    use std::process::Command;
+    let out = Command::new("git").current_dir(dir).args(args).output()
+        .context("git not found")?;
+    if !out.status.success() {
+        anyhow::bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    Ok(String::from_utf8(out.stdout)?.trim().to_string())
+}
+```
+
+Add `use anyhow::Context;` to `epic.rs` if not already present.
+
+**2. Cut the four functions from the source file**
+
+From the source file, remove:
+- `find_epic_branch` (currently lines 55–71)
+- `find_epic_branches` (currently lines 76–102)
+- `epic_branches` (currently lines 105–131)
+- `create_epic_branch` (currently lines 848–859)
+
+Remove the doc-comment blocks that precede each function.
+
+**3. Paste the four functions into `epic.rs`**
+
+Append them after the existing `create()` function. The functions call the following — all already `pub` in the source file, so no visibility changes are needed:
+- `gen_hex_id()` — call as `crate::git::gen_hex_id()`
+- `commit_to_branch()` — call as `crate::git::commit_to_branch()`
+- `push_branch()` — call as `crate::git::push_branch()`
+- `crate::ticket::slugify()` — already accessible, no change needed
+
+`create_epic_branch` currently calls the bare names `gen_hex_id`, `commit_to_branch`, `push_branch` (they were in scope within `git.rs`). Update each to their fully-qualified crate paths: `crate::git::gen_hex_id()`, `crate::git::commit_to_branch()`, `crate::git::push_branch()`.
+
+**4. Update call sites — 3 files**
+
+`apm/src/cmd/epic.rs` (lines 9, 64, 159, 236):
+- `apm_core::git::epic_branches` → `apm_core::epic::epic_branches`
+- `apm_core::git::find_epic_branches` → `apm_core::epic::find_epic_branches`
+
+`apm/src/cmd/new.rs` (line 40):
+- `git::find_epic_branch` → `epic::find_epic_branch`
+- Update the use-import to bring `apm_core::epic` into scope, or switch to the fully-qualified path.
+
+`apm-server/src/main.rs` (lines 162, 288, 311, 341):
+- `apm_core::git::find_epic_branch` → `apm_core::epic::find_epic_branch`
+- `apm_core::git::epic_branches` → `apm_core::epic::epic_branches`
+- `apm_core::git::create_epic_branch` → `apm_core::epic::create_epic_branch`
+
+**5. Verify**
+
+Run `cargo build --workspace` then `cargo test --workspace`. Fix any remaining compilation errors (missed call sites, stale imports).
 
 ### Open questions
 
