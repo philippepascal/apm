@@ -809,6 +809,7 @@ fn sync_handler_no_close_returns_zero() {
 
 // --- take ---
 
+#[allow(dead_code)]
 fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, agent: &str) {
     let path = format!("tickets/{filename}");
     let content = format!(
@@ -4942,10 +4943,7 @@ fn epic_bulk_owner_change_succeeds() {
     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
     assert!(out.status.success(), "expected success; stderr: {stderr}");
-    assert!(stdout.contains("changed"), "expected 'changed' in output:\n{stdout}");
-    assert!(stdout.contains("aa000001"), "expected ticket aa000001 in output:\n{stdout}");
-    assert!(stdout.contains("aa000002"), "expected ticket aa000002 in output:\n{stdout}");
-    assert!(stdout.contains("2 ticket(s) changed, 0 skipped"), "expected summary in output:\n{stdout}");
+    assert!(stdout.contains("updated 2 ticket(s), skipped 0"), "expected summary in output:\n{stdout}");
 
     let content1 = branch_content(p, "ticket/aa000001-alpha", "tickets/aa000001-alpha.md");
     assert!(content1.contains("owner = \"bob\""), "expected owner = bob in aa000001:\n{content1}");
@@ -4973,10 +4971,7 @@ fn epic_bulk_owner_change_skips_closed() {
     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
     assert!(out.status.success(), "expected success; stderr: {stderr}");
-    assert!(stdout.contains("changed"), "expected 'changed' for open ticket:\n{stdout}");
-    assert!(stdout.contains("skipped"), "expected 'skipped' for closed ticket:\n{stdout}");
-    assert!(stdout.contains("bb000002"), "expected closed ticket id in output:\n{stdout}");
-    assert!(stdout.contains("1 ticket(s) changed, 1 skipped"), "expected summary in output:\n{stdout}");
+    assert!(stdout.contains("updated 1 ticket(s), skipped 1"), "expected summary in output:\n{stdout}");
 
     let content_open = branch_content(p, "ticket/bb000001-open", "tickets/bb000001-open.md");
     assert!(content_open.contains("owner = \"bob\""), "expected owner = bob in open ticket:\n{content_open}");

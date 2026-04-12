@@ -727,7 +727,7 @@ fn rand_u16() -> u16 {
 #[cfg(test)]
 mod tests {
     use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params};
-    use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy, SatisfiesDeps};
+    use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
     fn make_transition(profile: Option<&str>) -> TransitionConfig {

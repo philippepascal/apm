@@ -1,6 +1,6 @@
 use std::path::Path;
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket::Ticket};
+use apm_core::{config::Config, ticket::Ticket};
 
 pub struct CmdContext {
     pub config: Config,
@@ -12,11 +12,7 @@ impl CmdContext {
     pub fn load(root: &Path, no_aggressive: bool) -> Result<Self> {
         let config = Config::load(root)?;
         let aggressive = config.sync.aggressive && !no_aggressive;
-        if aggressive {
-            if let Err(e) = git::fetch_all(root) {
-                eprintln!("warning: fetch failed: {e:#}");
-            }
-        }
+        crate::util::fetch_if_aggressive(root, aggressive);
         let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
         Ok(Self { config, tickets, aggressive })
     }

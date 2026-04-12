@@ -183,24 +183,6 @@ struct CreateEpicRequest {
     title: Option<String>,
 }
 
-fn parse_epic_branch(branch: &str) -> Option<(String, String)> {
-    let rest = branch.strip_prefix("epic/")?;
-    let dash = rest.find('-')?;
-    let id = rest[..dash].to_string();
-    let slug = &rest[dash + 1..];
-    let title = slug
-        .split('-')
-        .map(|w| {
-            let mut c = w.chars();
-            match c.next() {
-                None => String::new(),
-                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
-    Some((id, title))
-}
 
 fn derive_epic_state(
     tickets: &[&apm_core::ticket::Ticket],
@@ -253,7 +235,8 @@ fn build_epic_summary(
     all_tickets: &[apm_core::ticket::Ticket],
     states: &[apm_core::config::StateConfig],
 ) -> Option<EpicSummary> {
-    let (id, title) = parse_epic_branch(branch)?;
+    let id = apm_core::epic::epic_id_from_branch(branch).to_string();
+    let title = apm_core::epic::branch_to_title(branch);
     let epic_tickets: Vec<&apm_core::ticket::Ticket> = all_tickets
         .iter()
         .filter(|t| t.frontmatter.epic.as_deref() == Some(id.as_str()))

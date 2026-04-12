@@ -522,15 +522,7 @@ mod tests {
         )
     }
 
-    fn minimal_ticket_sections() -> Vec<crate::config::TicketSection> {
-        use crate::config::{SectionType, TicketSection};
-        vec![
-            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Acceptance criteria".into(), type_: SectionType::Tasks, required: true, placeholder: None },
-            TicketSection { name: "Out of scope".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Approach".into(), type_: SectionType::Free, required: true, placeholder: None },
-        ]
-    }
+
 
     #[test]
     fn document_toggle_criterion() {

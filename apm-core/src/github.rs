@@ -55,7 +55,7 @@ pub fn fetch_repo_collaborators(token: &str, repo: &str) -> Result<Vec<String>> 
     Ok(logins)
 }
 
-pub fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str, messages: &mut Vec<String>) -> Result<()> {
+pub fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str, body: &str, messages: &mut Vec<String>) -> Result<()> {
     let existing = std::process::Command::new("gh")
         .args(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--jq", ".[0].number"])
         .current_dir(root)
@@ -68,10 +68,9 @@ pub fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, i
     }
 
     let title_str = pr_title(id, title);
-    let body = format!("Closes #{id}");
     let out = std::process::Command::new("gh")
         .args(["pr", "create", "--base", default_branch, "--head", branch,
-               "--title", &title_str, "--body", &body])
+               "--title", &title_str, "--body", body])
         .current_dir(root)
         .output()?;
 
