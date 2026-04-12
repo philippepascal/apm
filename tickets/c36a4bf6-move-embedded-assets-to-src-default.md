@@ -26,7 +26,7 @@ The `apm-core/src/` directory mixes Rust source files with five embedded templat
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the content of any asset file\n- Adding new default assets\n- Other sections of any broader refactor plan (module restructuring, etc.)\n- Moving or changing `Cargo.toml` or build configuration
 
 ### Approach
 
