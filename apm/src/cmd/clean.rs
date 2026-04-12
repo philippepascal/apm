@@ -1,6 +1,6 @@
 use anyhow::Result;
 use apm_core::{clean, git};
-use std::io::{IsTerminal, Write};
+use std::io::IsTerminal;
 use std::path::Path;
 use crate::ctx::CmdContext;
 
@@ -78,10 +78,7 @@ pub fn run(
                 "warning: force-removing {} — branch may not be merged",
                 candidate.branch
             );
-            eprint!("Force-remove {}? [y/N] ", candidate.branch);
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            if input.trim().eq_ignore_ascii_case("y") {
+            if crate::util::prompt_yes_no(&format!("Force-remove {}? [y/N] ", candidate.branch))? {
                 if let Some(ref path) = candidate.worktree {
                     println!("removed worktree {}", path.display());
                 }
@@ -133,14 +130,11 @@ pub fn run(
             let should_delete = if yes {
                 true
             } else if std::io::stdout().is_terminal() {
-                eprint!(
+                crate::util::prompt_yes_no(&format!(
                     "Delete remote branch {} (last commit: {})? [y/N] ",
                     rc.branch,
                     rc.last_commit.format("%Y-%m-%d")
-                );
-                let mut input = String::new();
-                std::io::stdin().read_line(&mut input)?;
-                input.trim().eq_ignore_ascii_case("y")
+                ))?
             } else {
                 eprintln!(
                     "skipping {} — non-interactive (use --yes to auto-confirm)",
@@ -228,11 +222,7 @@ fn run_epic_clean(
     // Confirmation gate.
     if !yes {
         if std::io::stdout().is_terminal() {
-            eprint!("Delete {} epic(s)? [y/N] ", candidates.len());
-            let _ = std::io::stderr().flush();
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            if !input.trim().eq_ignore_ascii_case("y") {
+            if !crate::util::prompt_yes_no(&format!("Delete {} epic(s)? [y/N] ", candidates.len()))? {
                 println!("Aborted.");
                 return Ok(());
             }
