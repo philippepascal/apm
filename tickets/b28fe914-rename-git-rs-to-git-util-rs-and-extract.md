@@ -42,7 +42,12 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 2 for the full plan.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Behaviour changes to any moved function — this is a pure code relocation
+- Creating `ticket_fmt.rs` — that is done by ticket 4660b156 (a listed prerequisite)
+- Epic business-logic work beyond receiving the four epic functions — handled by ticket eb4789cf
+- Further decomposition of `git_util.rs` beyond the functions listed here
+- Updating `REFACTOR-CORE.md` or any other documentation
+- Changing public API signatures or return types of any moved function
 
 ### Approach
 
