@@ -41,7 +41,64 @@ Because the shared helper lives as a private function in `workers.rs`, `worktree
 
 ### Approach
 
-How the implementation will work.
+**Create `apm/src/util.rs`**
+
+Add a new file with the following function, taken directly from the existing private function in `workers.rs`:
+
+```rust
+use anyhow::Result;
+use apm_core::{config::Config, ticket, ticket_fmt, worktree};
+use std::path::{Path, PathBuf};
+
+/// Resolve a ticket ID argument to its worktree path and canonical ticket ID.
+/// Loads config and tickets from git internally.
+pub fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String)> {
+    let config = Config::load(root)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+    let t = tickets
+        .iter()
+        .find(|t| t.frontmatter.id == id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {id:?} not found"))?;
+    let branch = t
+        .frontmatter
+        .branch
+        .clone()
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id}"));
+    let wt = worktree::find_worktree_for_branch(root, &branch)
+        .ok_or_else(|| anyhow::anyhow!("no worktree for ticket {id:?}"))?;
+    Ok((wt, id))
+}
+```
+
+**Register the module in `apm/src/lib.rs`**
+
+Add `pub mod util;` alongside the existing module declarations.
+
+**Update `apm/src/cmd/workers.rs`**
+
+- Remove the private `fn worktree_for_ticket(...)` definition (lines ~196–213).
+- Add `use crate::util::worktree_for_ticket;` to the imports at the top of the file (or call it as `crate::util::worktree_for_ticket` at the call sites — either is fine).
+- No changes needed to `tail_log()` or `kill()` call sites; the function signature is unchanged.
+
+**Update `apm/src/cmd/worktrees.rs`**
+
+- In `remove(root, config, id_arg)`, replace the inline block that loads tickets, resolves the ID, derives the branch, and calls `find_worktree_for_branch` with:
+  ```rust
+  let (wt_path, _id) = crate::util::worktree_for_ticket(root, id_arg)?;
+  ```
+- The `config` parameter may still be needed by other parts of `remove()` (e.g., for the tickets dir), but the inline ticket-loading block is replaced entirely.
+- Remove any imports from `worktrees.rs` that are now only used by the deleted block (`ticket`, `ticket_fmt` imports if no longer referenced elsewhere in the file).
+
+**Order of changes**
+
+1. Create `apm/src/util.rs`
+2. Add `pub mod util;` to `apm/src/lib.rs`
+3. Update `workers.rs` (remove private fn, add import)
+4. Update `worktrees.rs` (replace inline block, clean up imports)
+5. `cargo build -p apm` to confirm compilation
+6. `cargo test -p apm` to confirm no regressions
 
 ### Open questions
 
