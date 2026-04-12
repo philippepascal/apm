@@ -1,7 +1,7 @@
 +++
 id = "de5c5a31"
 title = "Deduplicate init.rs settings manipulation functions"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de5c5a31-deduplicate-init-rs-settings-manipulatio"
 created_at = "2026-04-12T09:02:35.167384Z"
-updated_at = "2026-04-12T09:14:33.379097Z"
+updated_at = "2026-04-12T09:14:40.003876Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
@@ -191,3 +191,4 @@ Run `cargo build` (no `--release` needed) from the repo root and confirm zero ne
 | 2026-04-12T09:02Z | — | new | philippepascal |
 | 2026-04-12T09:08Z | new | groomed | apm |
 | 2026-04-12T09:12Z | groomed | in_design | philippepascal |
+| 2026-04-12T09:14Z | in_design | specd | claude-0412-0912-e6a8 |
