@@ -4,12 +4,12 @@ title = "Move branch_to_title and epic ID parsing to apm_core::epic"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/aeacd066-move-branch-to-title-and-epic-id-parsing"
 created_at = "2026-04-12T09:02:36.908517Z"
-updated_at = "2026-04-12T09:17:52.920734Z"
+updated_at = "2026-04-12T09:18:00.473197Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
