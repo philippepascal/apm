@@ -278,15 +278,12 @@ fn try_worktree_commit(
     content: &str,
     message: &str,
 ) -> Result<()> {
-    // Use nanosecond timestamp for uniqueness across parallel calls and sequential reuse.
-    let unique = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.subsec_nanos())
-        .unwrap_or(0);
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let wt_path = std::env::temp_dir().join(format!(
         "apm-{}-{}-{}",
         std::process::id(),
-        unique,
+        seq,
         branch.replace('/', "-"),
     ));
 
