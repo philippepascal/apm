@@ -1,8 +1,7 @@
-use crate::{config::Config, git, ticket, ticket_fmt, worktree};
+use crate::{config::Config, git, git_util, ticket, ticket_fmt, worktree};
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, Utc};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 const KNOWN_TEMP_FILES: &[&str] = &[
     "pr-body.md",
@@ -46,10 +45,7 @@ pub fn diagnose_worktree(
     local_branch_exists: bool,
     agent_dirs: &[String],
 ) -> Result<DirtyWorktree> {
-    let out = Command::new("git")
-        .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
-        .output()?;
-    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stdout = git_util::run(path, &["status", "--porcelain"])?;
 
     let mut known_temp = Vec::new();
     let mut other_untracked = Vec::new();
@@ -153,13 +149,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
         // Check worktree cleanliness before the tip-divergence guard so that
         // a clean worktree on a closed ticket is not blocked by stale refs.
         let wt_clean = if let Some(ref path) = wt_path {
-            let out = Command::new("git")
-                .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
-                .output();
-            match out {
-                Ok(ref o) => o.stdout.is_empty(),
-                Err(_) => false,
-            }
+            !git_util::is_worktree_dirty(path)
         } else {
             true
         };
@@ -178,17 +168,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
 
         if let Some(ref path) = wt_path {
             if !wt_clean {
-                let lbe = Command::new("git")
-                    .args([
-                        "-C",
-                        &root.to_string_lossy(),
-                        "rev-parse",
-                        "--verify",
-                        &format!("refs/heads/{branch}"),
-                    ])
-                    .output()
-                    .map(|o| o.status.success())
-                    .unwrap_or(false);
+                let lbe = git_util::local_branch_exists(root, &branch);
                 let diagnosis =
                     diagnose_worktree(path, &id, &t.frontmatter.title, &branch, lbe, &config.worktrees.agent_dirs)?;
                 if diagnosis.modified_tracked.is_empty() {
@@ -231,17 +211,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
             }
         }
 
-        let local_branch_exists = Command::new("git")
-            .args([
-                "-C",
-                &root.to_string_lossy(),
-                "rev-parse",
-                "--verify",
-                &format!("refs/heads/{branch}"),
-            ])
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false);
+        let local_branch_exists = git_util::local_branch_exists(root, &branch);
 
         if wt_path.is_none() && !local_branch_exists {
             continue;
@@ -269,43 +239,10 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
     }
 
     if remove_branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
-        let result = Command::new("git")
-            .args([
-                "-C",
-                &root.to_string_lossy(),
-                "branch",
-                "-D",
-                &candidate.branch,
-            ])
-            .output();
-        match result {
-            Ok(o) if o.status.success() => {}
-            Ok(o) => {
-                let msg = String::from_utf8_lossy(&o.stderr);
-                warnings.push(format!(
-                    "warning: could not delete branch {}: {}",
-                    candidate.branch,
-                    msg.trim()
-                ));
-            }
-            Err(e) => {
-                warnings.push(format!(
-                    "warning: could not delete branch {}: {e}",
-                    candidate.branch
-                ));
-            }
-        }
+        git_util::delete_local_branch(root, &candidate.branch, &mut warnings);
         // Prune the remote tracking ref so sync_local_ticket_refs does not
         // recreate the local branch on the next apm sync.
-        let _ = Command::new("git")
-            .args([
-                "-C",
-                &root.to_string_lossy(),
-                "branch",
-                "-dr",
-                &format!("origin/{}", candidate.branch),
-            ])
-            .output();
+        git_util::prune_remote_tracking(root, &candidate.branch);
     }
 
     Ok(RemoveOutput { warnings })
