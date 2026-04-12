@@ -11,11 +11,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result
     match branch_result {
         Ok(branch) => {
             let aggressive = config.sync.aggressive && !no_aggressive;
-            if aggressive {
-                if let Err(e) = git::fetch_branch(root, &branch) {
-                    eprintln!("warning: fetch failed: {e:#}");
-                }
-            }
+            crate::util::fetch_branch_if_aggressive(root, &branch, aggressive);
 
             let suffix = branch.trim_start_matches("ticket/");
             let filename = format!("{suffix}.md");

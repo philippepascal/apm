@@ -1,16 +1,12 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, ticket};
 use std::path::Path;
 
 pub fn run(root: &Path, json: bool, no_aggressive: bool) -> Result<()> {
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
-    if aggressive {
-        if let Err(e) = git::fetch_all(root) {
-            eprintln!("warning: fetch failed: {e:#}");
-        }
-    }
+    crate::util::fetch_if_aggressive(root, aggressive);
 
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let actionable_owned = config.actionable_states_for("agent");
