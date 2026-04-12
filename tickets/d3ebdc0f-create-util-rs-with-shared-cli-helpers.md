@@ -18,22 +18,15 @@ target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 
 ### Problem
 
-Several boilerplate patterns are duplicated across 7+ command files in `apm/src/cmd/`:
+Several boilerplate patterns are copy-pasted across the `apm/src/cmd/` command files with no shared home:
 
-1. **Aggressive fetch check** (7 files: assign.rs, show.rs, next.rs, close.rs, spec.rs, sync.rs, new.rs):
-   ```rust
-   let aggressive = config.sync.aggressive && !no_aggressive;
-   if aggressive { git::fetch_all(root).unwrap_or_else(|e| eprintln!("warning: fetch failed: {e:#}")); }
-   ```
+1. **Aggressive fetch check** – 6 command files (`assign.rs`, `show.rs`, `next.rs`, `close.rs`, `spec.rs`, `sync.rs`) each inline the same two-line block: compute `aggressive`, call `git::fetch_all` or `git::fetch_branch`, and emit a warning on failure. `ctx.rs` already encapsulates the `fetch_all` variant for commands that use `CmdContext::load()`, but the `fetch_branch` variant (used when a specific branch is known) is still duplicated across four files.
 
-2. **Fetch error warning** (6 files): `eprintln!("warning: fetch failed: {e:#}")` — identical string in every file.
+2. **Fetch/push warning strings** – The string `"warning: fetch failed: {e:#}"` appears verbatim in 5 files; a one-character typo fix would require touching all five. (`sync.rs` has a slightly different message with an extra hint, which is an accidental divergence.)
 
-3. **Confirmation prompt** (3+ files: assign.rs, clean.rs):
-   ```rust
-   print!("..."); io::stdout().flush()?; let mut input = String::new(); io::stdin().read_line(&mut input)?;
-   ```
+3. **Confirmation prompt** – `assign.rs`, `sync.rs`, and `clean.rs` each re-implement the same `print! / flush / read_line / trim / eq_ignore_ascii_case("y")` sequence. `clean.rs` uses it three times internally.
 
-There is no shared utility module. Each command file reimplements these patterns, making them inconsistent and hard to update. Creating `apm/src/util.rs` with `fetch_if_aggressive()`, `log_fetch_warning()`, and `prompt_yes_no()` would eliminate this duplication.
+There is no `util.rs` module today. Creating one with `fetch_if_aggressive`, `fetch_branch_if_aggressive`, and `prompt_yes_no` would eliminate all three duplication classes and give future commands a single place to reach for these primitives.
 
 ### Acceptance criteria
 
