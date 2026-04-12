@@ -43,7 +43,11 @@ There is no `util.rs` module today. Creating one with `fetch_if_aggressive`, `fe
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Push-warning deduplication (`"warning: push failed: {e:#}"` in `assign.rs` and `spec.rs`) — separate concern, low frequency
+- Changing any user-visible behaviour or output beyond normalising the one divergent fetch warning in `sync.rs`
+- Adding terminal-detection logic to `prompt_yes_no` — `clean.rs` has an `is_terminal()` guard in one call site; that guard stays inline in `clean.rs`
+- Restructuring `CmdContext` beyond the single fetch-block swap
+- Extracting other helpers not listed in the Approach (e.g. root detection, config loading)
 
 ### Approach
 
