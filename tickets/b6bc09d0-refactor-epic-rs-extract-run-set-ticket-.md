@@ -31,7 +31,15 @@ Once the prerequisite tickets land, two additional call-sites need updating in t
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] \`apm_core::epic::set_epic_owner(root, epic_id, new_owner, config)\` exists as a public function and returns \`(usize, usize)\` (changed, skipped counts)
+- [ ] \`set_epic_owner\` loads all tickets, filters to those belonging to the given epic, skips terminal-state tickets, and bulk-updates the \`owner\` field by committing to each ticket's branch
+- [ ] \`run_set()\` in \`epic.rs\` delegates the owner-cascade work entirely to \`set_epic_owner()\`; all ownership-iteration code is removed from the CLI layer
+- [ ] \`apm_core::github::gh_pr_create_or_update\` accepts a \`body: &str\` parameter; the existing caller in \`state.rs\` passes \`&format!("Closes #{id}")\` explicitly
+- [ ] \`run_close()\` calls \`apm_core::github::gh_pr_create_or_update()\` with the epic-appropriate body (\`"Epic: {epic_branch}"\`) and removes its inline \`gh pr list\` idempotency check and inline \`gh pr create\` block
+- [ ] \`run_close()\` calls \`apm_core::epic::epic_id_from_branch()\` instead of the inline trim/split expression (dep \`aeacd066\` must be merged first)
+- [ ] The local \`branch_to_title()\` definition is absent from \`epic.rs\` (removed by dep \`aeacd066\`); \`run_close()\` calls \`apm_core::epic::branch_to_title()\`
+- [ ] \`set_epic_owner\` has unit tests covering: happy path (owner updated on non-terminal tickets), skipping terminal tickets
+- [ ] \`cargo test\` passes across all crates
 
 ### Out of scope
 
