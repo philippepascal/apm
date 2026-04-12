@@ -3,13 +3,13 @@ id = "de5c5a31"
 title = "Deduplicate init.rs settings manipulation functions"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de5c5a31-deduplicate-init-rs-settings-manipulatio"
 created_at = "2026-04-12T09:02:35.167384Z"
-updated_at = "2026-04-12T09:12:19.118254Z"
+updated_at = "2026-04-12T09:14:26.803236Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
