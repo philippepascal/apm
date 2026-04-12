@@ -24,7 +24,14 @@ Moving these assets to `apm-core/src/default/` groups all embedded defaults in o
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/apm.agents.md` exists with identical content to the pre-move `apm-core/src/apm.agents.md`\n- [ ] `apm-core/src/default/apm.spec-writer.md` exists with identical content to the pre-move `apm-core/src/apm.spec-writer.md`\n- [ ] `apm-core/src/default/apm.worker.md` exists with identical content to the pre-move `apm-core/src/apm.worker.md`\n- [ ] `apm-core/src/default/ticket.toml` exists with identical content to the pre-move `apm-core/src/ticket.toml`\n- [ ] `apm-core/src/default/workflow.toml` exists with identical content to the pre-move `apm-core/src/workflow.toml`\n- [ ] None of the five asset files remain at `apm-core/src/` (top level)\n- [ ] `cargo build -p apm-core` succeeds after the move\n- [ ] `cargo test -p apm-core` passes with no regressions
+- [ ] `apm-core/src/default/apm.agents.md` exists with identical content to the pre-move `apm-core/src/apm.agents.md`
+- [ ] `apm-core/src/default/apm.spec-writer.md` exists with identical content to the pre-move `apm-core/src/apm.spec-writer.md`
+- [ ] `apm-core/src/default/apm.worker.md` exists with identical content to the pre-move `apm-core/src/apm.worker.md`
+- [ ] `apm-core/src/default/ticket.toml` exists with identical content to the pre-move `apm-core/src/ticket.toml`
+- [ ] `apm-core/src/default/workflow.toml` exists with identical content to the pre-move `apm-core/src/workflow.toml`
+- [ ] None of the five asset files remain at `apm-core/src/` (top level)
+- [ ] `cargo build -p apm-core` succeeds after the move
+- [ ] `cargo test -p apm-core` passes with no regressions
 
 ### Out of scope
 
