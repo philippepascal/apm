@@ -18,16 +18,13 @@ target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 
 ### Problem
 
-Config loading in `apm-server` uses 4 different patterns across files, with 19+ occurrences total:
+Config loading in `apm-server` is inconsistent across async handlers. The same operation — wrapping `Config::load` (a synchronous, filesystem-heavy function) in `tokio::task::spawn_blocking` — is written four different ways across `main.rs`, `agents.rs`, `work.rs`, and `queue.rs`. Some handlers use a named `root_clone` variable, some use a block-capture closure, and at least one handler calls `Config::load` directly in an async context without `spawn_blocking` at all.
 
-1. `tokio::task::spawn_blocking(move || Config::load(&root))` with `.await??` (work.rs, some main.rs handlers)
-2. `let Ok(config) = Config::load(root) else { return ... }` (some main.rs handlers)
-3. `Config::load(root)?` direct call (workers.rs, queue.rs)
-4. `spawn_blocking` with inline closure and `?` (other main.rs handlers)
+The double-`?` await idiom (`.await??`) also appears 37+ times for all kinds of blocking work, not just config loading. This noise obscures what the code is actually doing and makes it easy to accidentally call a blocking function from the async executor.
 
-The inconsistency makes error handling unpredictable. A shared utility function — e.g., `async fn load_config(root: &Path) -> Result<Config>` that always uses `spawn_blocking` (since `Config::load` does filesystem I/O) — would standardize this across all handlers and reduce boilerplate.
-
-Similarly, the `tokio::task::spawn_blocking` wrapper pattern appears 27+ times for various blocking operations beyond config loading. A generic helper like `async fn blocking<F, T>(f: F) -> Result<T>` would reduce noise.
+A shared `util.rs` module with two helpers removes both problems:
+1. `async fn load_config(root: PathBuf) -> Result<Config, AppError>` — a single, correctly-wrapped call site for config loading in async handlers.
+2. `async fn blocking<F, T>(f: F) -> Result<T, AppError>` — a generic wrapper that absorbs `JoinError`, flattens the double-`?`, and gives every `spawn_blocking` call a consistent shape.
 
 ### Acceptance criteria
 
