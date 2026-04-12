@@ -17,10 +17,13 @@ mod tls;
 mod auth;
 mod credential_store;
 mod log;
+mod models;
 mod queue;
 mod webauthn_state;
 mod work;
 mod workers;
+
+use models::*;
 
 #[allow(dead_code)] // InMemory is constructed in tests but matched in shared code
 enum TicketSource {
@@ -54,31 +57,6 @@ impl AppState {
     }
 }
 
-#[derive(serde::Serialize)]
-struct TransitionOption {
-    to: String,
-    label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    warning: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct TicketResponse {
-    #[serde(flatten)]
-    frontmatter: apm_core::ticket::Frontmatter,
-    body: String,
-    has_open_questions: bool,
-    has_pending_amendments: bool,
-    blocking_deps: Vec<BlockingDep>,
-    owner: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct TicketsEnvelope {
-    tickets: Vec<TicketResponse>,
-    supervisor_states: Vec<String>,
-}
-
 fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
     let marker = format!("### {heading}");
     let Some(start) = body.find(&marker) else {
@@ -91,96 +69,8 @@ fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
     }
 }
 
-#[derive(serde::Serialize)]
-struct BlockingDep {
-    id: String,
-    state: String,
-}
-
-#[derive(serde::Serialize)]
-struct TicketDetailResponse {
-    #[serde(flatten)]
-    frontmatter: apm_core::ticket::Frontmatter,
-    body: String,
-    raw: String,
-    valid_transitions: Vec<TransitionOption>,
-    blocking_deps: Vec<BlockingDep>,
-    owner: Option<String>,
-}
-
-#[derive(serde::Deserialize)]
-struct TransitionRequest {
-    to: String,
-}
-
-#[derive(serde::Deserialize)]
-struct BatchTransitionRequest {
-    ids: Vec<String>,
-    to: String,
-}
-
-#[derive(serde::Deserialize)]
-struct BatchPriorityRequest {
-    ids: Vec<String>,
-    priority: u8,
-}
-
-#[derive(serde::Serialize)]
-struct BatchFailure {
-    id: String,
-    error: String,
-}
-
-#[derive(serde::Serialize)]
-struct BatchResult {
-    succeeded: Vec<String>,
-    failed: Vec<BatchFailure>,
-}
-
-#[derive(serde::Deserialize)]
-struct PutBodyRequest {
-    content: String,
-}
-
-#[derive(serde::Deserialize)]
-struct PatchTicketRequest {
-    effort: Option<u8>,
-    risk: Option<u8>,
-    priority: Option<u8>,
-    owner: Option<String>,
-}
-
-#[derive(serde::Deserialize)]
-struct CreateTicketRequest {
-    title: Option<String>,
-    sections: Option<std::collections::HashMap<String, String>>,
-    epic: Option<String>,
-    depends_on: Option<Vec<String>>,
-}
-
 fn find_epic_branch(root: &std::path::Path, short_id: &str) -> Option<String> {
     apm_core::epic::find_epic_branch(root, short_id)
-}
-
-#[derive(serde::Serialize)]
-struct EpicSummary {
-    id: String,
-    title: String,
-    branch: String,
-    state: String,
-    ticket_counts: std::collections::HashMap<String, usize>,
-}
-
-#[derive(serde::Serialize)]
-struct EpicDetailResponse {
-    #[serde(flatten)]
-    summary: EpicSummary,
-    tickets: Vec<TicketResponse>,
-}
-
-#[derive(serde::Deserialize)]
-struct CreateEpicRequest {
-    title: Option<String>,
 }
 
 fn parse_epic_branch(branch: &str) -> Option<(String, String)> {
@@ -528,17 +418,6 @@ async fn sync_handler(
     Ok(Json(resp).into_response())
 }
 
-#[derive(serde::Deserialize, Default)]
-struct CleanRequest {
-    dry_run:    Option<bool>,
-    force:      Option<bool>,
-    branches:   Option<bool>,
-    remote:     Option<bool>,
-    older_than: Option<String>,
-    untracked:  Option<bool>,
-    epics:      Option<bool>,
-}
-
 async fn clean_handler(
     State(state): State<Arc<AppState>>,
     body: Option<Json<CleanRequest>>,
@@ -754,13 +633,6 @@ async fn clean_handler(
     .await??;
 
     Ok(Json(serde_json::json!({ "log": log.join("\n"), "removed": removed })).into_response())
-}
-
-#[derive(serde::Deserialize, Default)]
-struct ListTicketsQuery {
-    include_closed: Option<bool>,
-    author: Option<String>,
-    owner: Option<String>,
 }
 
 async fn list_tickets(
@@ -1456,19 +1328,6 @@ async fn register_page_handler() -> Response {
         .into_response()
 }
 
-#[derive(serde::Deserialize)]
-struct RegisterChallengeRequest {
-    username: String,
-    otp: String,
-}
-
-#[derive(serde::Serialize)]
-struct RegisterChallengeResponse {
-    reg_id: String,
-    #[serde(rename = "publicKey")]
-    public_key: serde_json::Value,
-}
-
 async fn register_challenge_handler(
     State(state): State<Arc<AppState>>,
     body: axum::body::Bytes,
@@ -1534,12 +1393,6 @@ async fn register_challenge_handler(
     Json(RegisterChallengeResponse { reg_id, public_key }).into_response()
 }
 
-#[derive(serde::Deserialize)]
-struct RegisterCompleteRequest {
-    reg_id: String,
-    response: webauthn_rs::prelude::RegisterPublicKeyCredential,
-}
-
 async fn register_complete_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterCompleteRequest>,
@@ -1581,18 +1434,6 @@ async fn login_page_handler() -> Response {
         include_str!("login.html"),
     )
         .into_response()
-}
-
-#[derive(serde::Deserialize)]
-struct LoginChallengeRequest {
-    username: String,
-}
-
-#[derive(serde::Serialize)]
-struct LoginChallengeResponse {
-    login_id: String,
-    #[serde(rename = "publicKey")]
-    public_key: serde_json::Value,
 }
 
 async fn login_challenge_handler(
@@ -1647,12 +1488,6 @@ async fn login_challenge_handler(
         }
     };
     Json(LoginChallengeResponse { login_id, public_key }).into_response()
-}
-
-#[derive(serde::Deserialize)]
-struct LoginCompleteRequest {
-    login_id: String,
-    response: webauthn_rs::prelude::PublicKeyCredential,
 }
 
 async fn login_complete_handler(
