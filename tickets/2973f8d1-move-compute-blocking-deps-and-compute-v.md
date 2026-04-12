@@ -29,7 +29,7 @@ Both functions are called from ticket/epic handlers. Moving them to `apm_core` m
 ### Acceptance criteria
 
 - [x] `apm_core` exports a `compute_blocking_deps(ticket, all_tickets, config) -> Vec<BlockingDep>` function
-- [ ] `apm_core` exports a `compute_valid_transitions(state, config) -> Vec<TransitionOption>` function
+- [x] `apm_core` exports a `compute_valid_transitions(state, config) -> Vec<TransitionOption>` function
 - [ ] `apm_core` exports the `BlockingDep` struct with fields `id: String` and `state: String`
 - [ ] `apm_core` exports the `TransitionOption` struct with fields `to: String`, `label: String`, and `warning: Option<String>`
 - [ ] Both functions are no longer defined in `apm-server/src/main.rs`
