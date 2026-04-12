@@ -18,11 +18,7 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Problem
 
-`ticket.rs` is a large file mixing two distinct concerns: (1) file format parsing/serialization (TOML frontmatter, markdown body, checklist parsing, slugification, ID normalization) and (2) ticket manipulation logic (scoring, priority calculation, dependency graphs, filtering, creation, closing). This makes the module hard to navigate and creates unnecessary coupling.
-
-The split into `ticket_fmt.rs` (format) and `ticket_util.rs` (logic) gives each module a clear responsibility. A thin `ticket.rs` re-export hub preserves downstream imports in `apm` and `apm-server`.
-
-See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 4 for the full plan.
+`ticket.rs` is a 1965-line file in `apm-core/src/` that conflates two unrelated concerns:\n\n1. **File format**: TOML frontmatter parsing and serialization, markdown body parsing (`TicketDocument`), checklist parsing, ID normalization (`normalize_id_arg`, `slugify`, etc.), and body validation.\n2. **Ticket logic**: scoring (`score`, `effective_priority`), dependency graph construction (`build_reverse_index`), ticket selection (`pick_next`, `sorted_actionable`), lifecycle operations (`create`, `close`), and git-native loading (`load_all_from_git`).\n\nHaving both concerns in one file makes it hard to find the right function quickly, and it creates unnecessary coupling — a caller that only needs ID normalization still compiles the full dependency-graph logic. The fix is a mechanical split into two new files with clear responsibilities, plus a thin `ticket.rs` re-export hub that keeps every downstream `use apm_core::ticket::…` path working unchanged.
 
 ### Acceptance criteria
 
