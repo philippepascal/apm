@@ -39,7 +39,10 @@ This ticket must land after 061d0ac1 is merged into the epic branch, because it 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding new git_util helpers (covered by ticket 061d0ac1)
+- Changing the behaviour or public API of any clean.rs function
+- Refactoring the `DirtyWorktree` struct or the categorisation logic inside `diagnose_worktree`
+- Raw git calls in any file other than clean.rs
 
 ### Approach
 
