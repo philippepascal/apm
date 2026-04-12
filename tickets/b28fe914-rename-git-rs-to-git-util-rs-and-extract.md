@@ -28,7 +28,7 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 2 for the full plan.
 ### Acceptance criteria
 
 - [x] `apm-core/src/git.rs` no longer exists; `apm-core/src/git_util.rs` exists in its place containing only genuine git plumbing
-- [ ] `apm-core/src/lib.rs` declares `pub mod git_util` (replacing `pub mod git`) and re-exports it as `pub use git_util as git` so `apm_core::git::` paths in external crates continue to resolve without change
+- [x] `apm-core/src/lib.rs` declares `pub mod git_util` (replacing `pub mod git`) and re-exports it as `pub use git_util as git` so `apm_core::git::` paths in external crates continue to resolve without change
 - [ ] `gen_hex_id`, `resolve_ticket_branch`, and `branch_name_from_path` are defined in `ticket_fmt.rs` and absent from `git_util.rs`
 - [ ] `merge_into_default` and `pull_default` are defined as `pub fn` in `git_util.rs` and absent from `state.rs`
 - [ ] The private `run()` helper in `git_util.rs` is declared `pub(crate)` so downstream modules (`worktree.rs`, `epic.rs`) can call it without duplication
