@@ -18,7 +18,11 @@ target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm-server/src/main.rs` (4,176 lines) defines 30+ request/response structs inline alongside handler logic. Examples include `TicketPatch`, `BatchUpdateRequest`, `ListTicketsQuery`, `EpicResponse`, `QueueResponse`, `LoginRequest`, `OtpVerifyRequest`, `WebAuthnRegisterStart`, and many more.
+
+These DTOs are scattered throughout the file, interleaved with handler functions, making it hard to find or reuse them. They should be extracted into a dedicated `models.rs` (or `models/requests.rs` + `models/responses.rs`) module.
+
+This is foundational work — subsequent tickets that extract handlers from main.rs will need the DTOs to already be in a shared location so multiple handler modules can import them.
 
 ### Acceptance criteria
 
@@ -35,13 +39,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
