@@ -40,7 +40,13 @@ Note on `parse_epic_branch`: this function duplicates the slug-to-title logic in
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Extracting non-epic handlers (auth, agents, workers, tickets) — tickets are covered by 7bb8eacb
+- Renaming any function, struct, or route path
+- Changing any handler's logic or behaviour
+- Moving `AppError` or `AppState` out of `main.rs`
+- Replacing `parse_epic_branch` / `derive_epic_state` with shared `apm_core::epic` helpers — that requires a separate refactor once those helpers exist in apm_core
+- Adding new epic endpoints or response fields
+- Writing tests that do not already exist
 
 ### Approach
 
