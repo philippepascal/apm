@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, ticket, ticket_fmt};
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, reason: Option<String>, no_aggressive: bool) -> Result<()> {
@@ -8,7 +8,7 @@ pub fn run(root: &Path, id_arg: &str, reason: Option<String>, no_aggressive: boo
     let agent = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
 
     let branches = git::ticket_branches(root).unwrap_or_default();
-    let branch = git::resolve_ticket_branch(&branches, id_arg).ok();
+    let branch = ticket_fmt::resolve_ticket_branch(&branches, id_arg).ok();
 
     if aggressive {
         if let Some(ref b) = branch {
