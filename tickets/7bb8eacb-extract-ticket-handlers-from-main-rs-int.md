@@ -51,73 +51,56 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 
 1. **Create `apm-server/src/handlers/` directory** with two new files:
    - `handlers/mod.rs` — declares `pub mod tickets`
-   - `handlers/tickets.rs` — all moved code (start empty)
+   - `handlers/tickets.rs` — start empty
 
 2. **Add `mod handlers;` to `main.rs`** near the top, alongside the existing module declarations.
 
-3. **Move structs to `handlers/tickets.rs`** — cut from main.rs (with their `#[derive]` and `#[serde]` attributes), paste into tickets.rs. Items to move:
-   - `TransitionOption` (lines ~57–63)
-   - `TicketResponse` (lines ~65–74)
-   - `TicketsEnvelope` (lines ~76–80)
-   - `BlockingDep` (lines ~94–98)
-   - `TicketDetailResponse` (lines ~100–109)
-   - `TransitionRequest` (lines ~111–114)
-   - `BatchTransitionRequest` (lines ~116–120)
-   - `BatchPriorityRequest` (lines ~122–126)
-   - `BatchFailure` (lines ~128–131)
-   - `BatchResult` (lines ~134–138)
-   - `PutBodyRequest` (lines ~140–143)
-   - `PatchTicketRequest` (lines ~145–151)
-   - `CreateTicketRequest` (lines ~153–159)
-   - `ListTicketsQuery` (lines ~760–764)
+3. **Move handler-private helpers to `handlers/tickets.rs`** — cut from main.rs, paste into tickets.rs. Only these four helpers remain to move (business-logic helpers were already moved by prerequisite 2973f8d1):
+   - `extract_section`
+   - `extract_frontmatter_raw`
+   - `extract_history_raw`
+   - `load_tickets`
 
-4. **Move helper functions to `handlers/tickets.rs`** — cut from main.rs, paste into tickets.rs:
-   - `extract_section` (lines ~82–91)
-   - `extract_frontmatter_raw` (lines ~383–387)
-   - `extract_history_raw` (lines ~389–394)
-   - `compute_blocking_deps` (lines ~416–443)
-   - `compute_valid_transitions` (lines ~445–469)
-   - `load_tickets` (lines ~471–483)
+4. **Move handler functions to `handlers/tickets.rs`** — cut from main.rs, paste into tickets.rs:
+   - `list_tickets`
+   - `get_ticket`
+   - `transition_ticket`
+   - `put_body`
+   - `patch_ticket`
+   - `batch_transition`
+   - `batch_priority`
+   - `create_ticket`
 
-5. **Move handler functions to `handlers/tickets.rs`** — cut from main.rs, paste into tickets.rs:
-   - `list_tickets` (lines ~766–854)
-   - `get_ticket` (lines ~856–901)
-   - `transition_ticket` (lines ~903–973)
-   - `put_body` (lines ~975–1078)
-   - `patch_ticket` (lines ~1080–1180)
-   - `batch_transition` (lines ~1182–1206)
-   - `batch_priority` (lines ~1208–1273)
-   - `create_ticket` (lines ~1275–1357)
-
-6. **Add imports to `handlers/tickets.rs`**. The module needs:
-   - `use crate::{AppError, AppState};` — for the shared error type and app state
-   - All `use apm_core::...` statements currently used by the moved functions (ticket, state, config, git, epic modules)
+5. **Add imports to `handlers/tickets.rs`**. The module needs:
+   - `use crate::{AppError, AppState};` — shared error type and app state
+   - `use crate::models::*;` — all ticket DTOs moved by prerequisite a6bc1326
+   - All `use apm_core::...` paths needed by the moved functions — including the paths for `compute_blocking_deps` and `compute_valid_transitions` established by prerequisite 2973f8d1
    - `use axum::{extract::{Path, Query, State}, http::StatusCode, response::{IntoResponse, Response}, Json};`
-   - `use serde::{Deserialize, Serialize};`
    - `use std::collections::{HashMap, HashSet};`
    - `use tokio::task::spawn_blocking;`
-   - `use anyhow::Context;` / `use anyhow::anyhow;` as needed
+   - `use anyhow::{anyhow, Context};` as needed
 
-7. **Update `build_app()` in `main.rs`**. Replace bare handler names with `handlers::tickets::` prefixed names, e.g.:
+6. **Update `build_app()` in `main.rs`** to reference handlers by qualified path:
    - `.route("/api/tickets", get(handlers::tickets::list_tickets).post(handlers::tickets::create_ticket))`
-   - etc.
-   Alternatively add `use crate::handlers::tickets::*;` at the top of the `build_app` function or at the module level.
+   - etc. for all ticket routes
+   - Alternatively, add `use crate::handlers::tickets::*;` at module level in main.rs.
 
-8. **Remove now-unused imports from `main.rs`** — any `use apm_core::...` or `use axum::extract::...` items that were only needed by the moved code should be removed to avoid dead-code warnings.
+7. **Remove now-unused imports from `main.rs`** — any `use apm_core::...` or `use axum::extract::...` items that were only needed by the moved code, to avoid dead-code warnings.
 
-9. **Compile and fix** — run `cargo build -p apm-server`; resolve any visibility, import, or type-reference errors. Common issues:
-   - `AppError` referenced in tickets.rs: import via `use crate::AppError;`
-   - `AppState` referenced in tickets.rs: import via `use crate::AppState;`
-   - Private helpers referenced across modules: make them `pub(crate)` or `pub` as needed
-   - Any `use` of `TicketSource` or other AppState-adjacent types: import from `crate`
+8. **Compile and fix** — run `cargo build -p apm-server`; resolve any visibility or import errors. Common issues:
+   - `AppError` / `AppState` in tickets.rs: import via `use crate::{AppError, AppState};`
+   - Private helpers crossing the module boundary: make them `pub(crate)` as needed
+   - Missing `crate::models` re-exports: ensure models.rs has `pub use` for all DTOs the handlers need
 
-10. **Run tests** — `cargo test -p apm-server` to confirm nothing is broken.
+9. **Run tests** — `cargo test -p apm-server` to confirm nothing is broken.
 
 **Constraints:**
 - Do not rename any function or struct — only move them
 - Do not change any function signatures or route paths
-- `AppError` and `AppState` stay in main.rs (they are used by non-ticket routes too)
-- Line numbers above are approximate; verify against the actual file before cutting
+- `AppError` and `AppState` stay in main.rs
+- DTOs live in `crate::models` (established by prerequisite a6bc1326) — do not re-define them in tickets.rs
+- Business-logic functions (`compute_blocking_deps`, `compute_valid_transitions`) live in `apm_core` (established by prerequisite 2973f8d1) — do not re-define them in tickets.rs
+- Line numbers in main.rs will have shifted after the prerequisite refactors; verify against the actual file before cutting
 
 ### Open questions
 
