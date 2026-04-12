@@ -159,7 +159,7 @@ struct CreateTicketRequest {
 }
 
 fn find_epic_branch(root: &std::path::Path, short_id: &str) -> Option<String> {
-    apm_core::git::find_epic_branch(root, short_id)
+    apm_core::epic::find_epic_branch(root, short_id)
 }
 
 #[derive(serde::Serialize)]
@@ -285,7 +285,7 @@ async fn list_epics(
         move || apm_core::config::Config::load(&root)
     })
     .await??;
-    let branches = tokio::task::spawn_blocking(move || apm_core::git::epic_branches(&root))
+    let branches = tokio::task::spawn_blocking(move || apm_core::epic::epic_branches(&root))
         .await??;
     let summaries: Vec<EpicSummary> = branches
         .iter()
@@ -308,7 +308,7 @@ async fn create_epic(
     };
     let title_clone = title.clone();
     let (id, branch) = tokio::task::spawn_blocking(move || {
-        apm_core::git::create_epic_branch(&root, &title_clone)
+        apm_core::epic::create_epic_branch(&root, &title_clone)
     })
     .await??;
     Ok((
@@ -338,7 +338,7 @@ async fn get_epic(
         move || apm_core::config::Config::load(&root)
     })
     .await??;
-    let branches = tokio::task::spawn_blocking(move || apm_core::git::epic_branches(&root))
+    let branches = tokio::task::spawn_blocking(move || apm_core::epic::epic_branches(&root))
         .await??;
     let branch = match branches.iter().find(|b| {
         b.strip_prefix("epic/")

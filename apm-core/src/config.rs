@@ -425,6 +425,22 @@ pub fn resolve_identity(repo_root: &Path) -> String {
     "unassigned".to_string()
 }
 
+/// Returns the caller identity for this process.
+///
+/// This value is used in two places:
+/// - Recorded as the acting party in ticket history entries.
+/// - Compared against a ticket's `owner` field when filtering candidates
+///   in `pick_next()` / `sorted_actionable()`. Tickets owned by another
+///   identity are excluded from the pick set.
+///
+/// Resolution order: `APM_AGENT_NAME` env var → `USER` → `USERNAME` → `"apm"`.
+pub fn resolve_caller_name() -> String {
+    std::env::var("APM_AGENT_NAME")
+        .or_else(|_| std::env::var("USER"))
+        .or_else(|_| std::env::var("USERNAME"))
+        .unwrap_or_else(|_| "apm".to_string())
+}
+
 pub fn try_github_username(git_host: &GitHostConfig) -> Option<String> {
     if git_host.provider.as_deref() != Some("github") {
         return None;
@@ -592,6 +608,9 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn ticket_section_full_parse() {
@@ -1124,5 +1143,32 @@ dir = "tickets"
         std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\n").unwrap();
         let config = Config::load(root).unwrap();
         assert_eq!(config.epic_max_workers("ab12cd34"), None);
+    }
+
+    #[test]
+    fn prefers_apm_agent_name() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::set_var("APM_AGENT_NAME", "explicit-agent");
+        assert_eq!(resolve_caller_name(), "explicit-agent");
+        std::env::remove_var("APM_AGENT_NAME");
+    }
+
+    #[test]
+    fn falls_back_to_user() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::set_var("USER", "unix-user");
+        std::env::remove_var("USERNAME");
+        assert_eq!(resolve_caller_name(), "unix-user");
+        std::env::remove_var("USER");
+    }
+
+    #[test]
+    fn defaults_to_apm() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::remove_var("USER");
+        std::env::remove_var("USERNAME");
+        assert_eq!(resolve_caller_name(), "apm");
     }
 }
