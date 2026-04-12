@@ -19,19 +19,14 @@ depends_on = ["1ace7d42"]
 
 ### Problem
 
-`apm-server/src/main.rs` contains a `clean_handler()` function spanning lines ~542-757 (216 lines) that is the single largest handler in the file. It mixes:
+`apm-server/src/main.rs` is a ~4 000-line file that mixes HTTP handler logic, data structures, server bootstrap, and worker-queue code. Two maintenance-related handlers are currently defined inline in `main.rs`:
 
-- Parameter parsing (lines 551-557)
-- Blocking worktree candidate detection via apm_core (lines 568-592)
-- Dry-run response building (lines 594-646)
-- Remote branch cleanup (lines 648-667)
-- Epic branch cleanup with TOML file manipulation (lines 669-750)
+- `sync_handler` (lines 489–529, 41 lines): fetches git refs, syncs local ticket branches, applies sync rules to close tickets, and returns branch/closed counts.
+- `CleanRequest` struct + `clean_handler` (lines 531–757, 227 lines combined): the single largest handler in the file. It mixes parameter parsing, blocking worktree candidate detection via `apm_core::clean`, dry-run response building, remote branch cleanup, and epic branch cleanup with TOML file manipulation.
 
-There is also a `sync_handler()` with similar complexity.
+The desired state: both handlers and their supporting struct live in `apm-server/src/handlers/maintenance.rs`, and `main.rs` retains only route registrations that reference the moved symbols by path. This mirrors the extraction pattern established for ticket and epic handlers (tickets 7bb8eacb and 1ace7d42) and reduces `main.rs` by ~270 lines.
 
-Both should be extracted into `handlers/maintenance.rs` (or `handlers/clean.rs` + `handlers/sync.rs`). The epic cleanup portion of `clean_handler` duplicates logic from `apm/src/cmd/clean.rs::run_epic_clean()` — if the apm CLI epic moves that to `apm_core`, the server handler should reuse it.
-
-This ticket depends on epic handlers being extracted first to avoid main.rs merge conflicts.
+This ticket depends on 1ace7d42 (epic handler extraction) being merged first. By that point `handlers/mod.rs` and `handlers/epics.rs` already exist, so this ticket only needs to add `pub mod maintenance;` to `handlers/mod.rs` and create the new file.
 
 ### Acceptance criteria
 
