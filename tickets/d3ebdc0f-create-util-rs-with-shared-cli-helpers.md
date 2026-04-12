@@ -1,7 +1,7 @@
 +++
 id = "d3ebdc0f"
 title = "Create util.rs with shared CLI helpers"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d3ebdc0f-create-util-rs-with-shared-cli-helpers"
 created_at = "2026-04-12T09:02:33.251574Z"
-updated_at = "2026-04-12T10:36:02.874767Z"
+updated_at = "2026-04-12T17:11:41.899673Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
@@ -154,3 +154,4 @@ crate::util::prompt_yes_no("...prompt text...")?
 | 2026-04-12T10:24Z | specd | ready | apm |
 | 2026-04-12T10:27Z | ready | in_progress | philippepascal |
 | 2026-04-12T10:36Z | in_progress | implemented | claude-0412-1027-85e0 |
+| 2026-04-12T17:11Z | implemented | closed | philippepascal |
