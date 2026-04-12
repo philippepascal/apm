@@ -98,7 +98,7 @@ Run `cargo build --workspace` then `cargo test --workspace`. No files outside `a
 
 ### Amendment requests
 
-- [ ] Fix `\n` formatting in Problem and Acceptance criteria sections — literal backslash-n characters appear instead of real newlines. Rewrite with actual newlines.
+- [x] Fix `\n` formatting in Problem and Acceptance criteria sections — literal backslash-n characters appear instead of real newlines. Rewrite with actual newlines.
 - [ ] Move `Ticket::score()` from `ticket_fmt.rs` to `ticket_util.rs` in the spec — scoring uses prioritization weights and is logic, not format/parsing.
 - [ ] Move `set_field()` from `ticket_fmt.rs` to `ticket_util.rs` — it's a mutation operation (modifying frontmatter fields), not parsing/serialization.
 - [ ] Move `TicketDocument::unchecked_tasks` and `toggle_criterion` from `ticket_fmt.rs` to `ticket_util.rs` — these are checklist manipulation (logic), not format.
