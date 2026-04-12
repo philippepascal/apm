@@ -27,7 +27,18 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 5 for the full plan.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `gh_pr_create_or_update` is defined as `pub fn` in `github.rs` and absent from `state.rs`
+- [ ] `merge_into_default` is defined as `pub fn` in `git_util.rs` and absent from `state.rs`
+- [ ] `pull_default` is defined as `pub fn` in `git_util.rs` and absent from `state.rs`
+- [ ] `ensure_amendment_section` is defined as `pub fn` in `spec.rs` and absent from `state.rs`
+- [ ] `state.rs` exports only `TransitionOutput`, `transition`, `available_transitions`, and `append_history`
+- [ ] `transition()` calls `crate::github::gh_pr_create_or_update` in place of the former local private function
+- [ ] `transition()` calls `crate::git::merge_into_default` in place of the former local private function
+- [ ] `transition()` calls `crate::git::pull_default` in place of the former local private function
+- [ ] `transition()` calls `crate::spec::ensure_amendment_section` in place of the former local private function
+- [ ] The three PR title tests previously in `state.rs`'s test block are present in `github.rs`'s test block
+- [ ] `cargo build --workspace` succeeds with zero errors
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
