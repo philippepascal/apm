@@ -31,7 +31,7 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 
 ### Acceptance criteria
 
-- [ ] `run_epic_clean()` no longer exists in `apm/src/cmd/clean.rs`
+- [x] `run_epic_clean()` no longer exists in `apm/src/cmd/clean.rs`
 - [ ] `apm/src/cmd/epic.rs` contains a `pub(crate) fn run_epic_clean()` with the same signature as the removed function
 - [ ] `apm/src/cmd/clean.rs::run()` delegates to `crate::cmd::epic::run_epic_clean()` when the epics flag is set
 - [ ] All calls to `crate::cmd::epic::branch_to_title()` inside the moved function are replaced with `apm_core::epic::branch_to_title()`
