@@ -1,7 +1,7 @@
 +++
 id = "b6bc09d0"
 title = "Refactor epic.rs: extract run_set ticket logic and apply shared helpers"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b6bc09d0-refactor-epic-rs-extract-run-set-ticket-"
 created_at = "2026-04-12T09:02:48.936896Z"
-updated_at = "2026-04-12T09:33:34.350196Z"
+updated_at = "2026-04-12T09:33:42.109404Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f", "aeacd066"]
@@ -152,3 +152,4 @@ After deps merge, confirm \`epic.rs\` already uses:
 | 2026-04-12T09:02Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
 | 2026-04-12T09:28Z | groomed | in_design | philippepascal |
+| 2026-04-12T09:33Z | in_design | specd | claude-0412-0928-8388 |
