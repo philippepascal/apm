@@ -122,7 +122,7 @@ This ticket runs after 1ace7d42 (epic handler extraction) is merged into the epi
 
 - [x] Remove CleanRequest from scope. Prerequisite a6bc1326 already moves it to `models.rs` — it will not be in `main.rs` when this ticket runs. The handler should import it from `crate::models`.
 - [x] Update acceptance criteria: change "handlers/maintenance.rs exists and contains the CleanRequest struct" to "handlers/maintenance.rs imports CleanRequest from crate::models".
-- [ ] Update the approach: remove step 3 (move CleanRequest) and add CleanRequest to the imports in step 7.
+- [x] Update the approach: remove step 3 (move CleanRequest) and add CleanRequest to the imports in step 7.
 
 ### Code review
 
