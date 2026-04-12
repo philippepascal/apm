@@ -21,3 +21,5 @@ pub mod work;
 pub mod worker;
 pub mod validate;
 pub mod verify;
+pub use state::{TransitionOption, compute_valid_transitions};
+pub use ticket::{BlockingDep, compute_blocking_deps};
