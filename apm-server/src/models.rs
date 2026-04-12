@@ -1,11 +1,5 @@
 // Ticket DTOs
-#[derive(serde::Serialize)]
-pub struct TransitionOption {
-    pub to: String,
-    pub label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub warning: Option<String>,
-}
+pub use apm_core::{BlockingDep, TransitionOption};
 
 #[derive(serde::Serialize)]
 pub struct TicketResponse {
@@ -22,12 +16,6 @@ pub struct TicketResponse {
 pub struct TicketsEnvelope {
     pub tickets: Vec<TicketResponse>,
     pub supervisor_states: Vec<String>,
-}
-
-#[derive(serde::Serialize)]
-pub struct BlockingDep {
-    pub id: String,
-    pub state: String,
 }
 
 #[derive(serde::Serialize)]
