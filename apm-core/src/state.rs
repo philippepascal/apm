@@ -146,7 +146,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             git::push_branch_tracking(root, &branch)?;
             let pr_base = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
-            crate::github::gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &mut messages)?;
+            crate::github::gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &format!("Closes #{id}"), &mut messages)?;
         }
         CompletionStrategy::Merge => {
             let merge_target = t.frontmatter.target_branch.as_deref()
@@ -162,7 +162,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             if let Some(ref target) = t.frontmatter.target_branch {
                 git::merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
             } else {
-                crate::github::gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
+                crate::github::gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &format!("Closes #{id}"), &mut messages)?;
             }
         }
         CompletionStrategy::Pull => {
