@@ -46,6 +46,7 @@ This ticket depends on 1ace7d42 (epic handler extraction) being merged first. By
 ### Out of scope
 
 - Extracting non-maintenance handlers (auth, agents, workers, tickets, epics) — covered by sibling tickets 7bb8eacb and 1ace7d42
+- Moving `CleanRequest` — handled by prerequisite a6bc1326 (moved to `apm-server/src/models.rs`)
 - Renaming any function, struct, or route path
 - Changing any handler logic or behaviour
 - Moving `AppError` or `AppState` out of `main.rs`
