@@ -4,12 +4,12 @@ title = "Create util.rs with shared CLI helpers"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d3ebdc0f-create-util-rs-with-shared-cli-helpers"
 created_at = "2026-04-12T09:02:33.251574Z"
-updated_at = "2026-04-12T09:11:47.711145Z"
+updated_at = "2026-04-12T09:11:54.022629Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
