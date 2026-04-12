@@ -3,13 +3,13 @@ id = "061d0ac1"
 title = "Add missing git helpers to git_util.rs"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/061d0ac1-add-missing-git-helpers-to-git-util-rs"
 created_at = "2026-04-12T17:29:22.472769Z"
-updated_at = "2026-04-12T17:31:57.684129Z"
+updated_at = "2026-04-12T17:36:11.061489Z"
 epic = "6062f74f"
 target_branch = "epic/6062f74f-consolidate-git-operations-into-git-util"
 +++
