@@ -23,7 +23,16 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo build -p apm-server` succeeds after the extraction with no compiler errors or warnings
+- [ ] `cargo test -p apm-server` passes (all existing tests continue to pass)
+- [ ] `apm-server/src/handlers/tickets.rs` exists and contains all eight handler functions: `list_tickets`, `get_ticket`, `transition_ticket`, `put_body`, `patch_ticket`, `create_ticket`, `batch_transition`, `batch_priority`
+- [ ] `apm-server/src/handlers/tickets.rs` contains the helper functions: `extract_section`, `extract_frontmatter_raw`, `extract_history_raw`, `compute_blocking_deps`, `compute_valid_transitions`, `load_tickets`
+- [ ] `apm-server/src/handlers/tickets.rs` contains all ticket-scoped request/response structs: `TransitionOption`, `TicketResponse`, `TicketsEnvelope`, `BlockingDep`, `TicketDetailResponse`, `TransitionRequest`, `BatchTransitionRequest`, `BatchPriorityRequest`, `PutBodyRequest`, `PatchTicketRequest`, `CreateTicketRequest`, `ListTicketsQuery`, `BatchFailure`, `BatchResult`
+- [ ] `apm-server/src/handlers/mod.rs` exists and declares `pub mod tickets`
+- [ ] `main.rs` imports handlers via `mod handlers` and references ticket handlers from `handlers::tickets`
+- [ ] `main.rs` no longer directly defines any of the moved functions or structs (grep for their definition sites yields zero results in main.rs)
+- [ ] `AppError` and `AppState` remain defined in `main.rs`; `handlers/tickets.rs` imports them from `super` or `crate`
+- [ ] The HTTP routes registered in `build_app()` are unchanged — same verbs, same paths, same handler function bindings
 
 ### Out of scope
 
