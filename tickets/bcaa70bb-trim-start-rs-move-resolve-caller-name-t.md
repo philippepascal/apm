@@ -4,12 +4,12 @@ title = "Trim start.rs: move resolve_caller_name to config.rs"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bcaa70bb-trim-start-rs-move-resolve-caller-name-t"
 created_at = "2026-04-12T06:04:15.262188Z"
-updated_at = "2026-04-12T06:16:46.472764Z"
+updated_at = "2026-04-12T06:16:53.750390Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
