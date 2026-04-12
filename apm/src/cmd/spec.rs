@@ -13,11 +13,7 @@ pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<Strin
     let id = branch.strip_prefix("ticket/").and_then(|s| s.split('-').next()).unwrap_or(id_arg).to_string();
     let rel_path = format!("{}/{}.md", config.tickets.dir.to_string_lossy(), branch.trim_start_matches("ticket/"));
 
-    if aggressive {
-        if let Err(e) = git::fetch_branch(root, &branch) {
-            eprintln!("warning: fetch failed: {e:#}");
-        }
-    }
+    crate::util::fetch_branch_if_aggressive(root, &branch, aggressive);
 
     let content = git::read_from_branch(root, &branch, &rel_path)?;
     if let (Some(ref name), Some(ref item)) = (&section, &mark) {

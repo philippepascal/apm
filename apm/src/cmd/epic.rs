@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::process::Command;
 use crate::ctx::CmdContext;
+use apm_core::epic::{branch_to_title, epic_id_from_branch};
 
 pub fn run_list(root: &Path) -> Result<()> {
     let ctx = CmdContext::load(root, false)?;
@@ -14,9 +15,7 @@ pub fn run_list(root: &Path) -> Result<()> {
     let tickets = ctx.tickets;
 
     for branch in &epic_branches {
-        // branch = "epic/<8-char-id>-<slug>"
-        let after_prefix = branch.trim_start_matches("epic/");
-        let id = &after_prefix[..after_prefix.find('-').unwrap_or(after_prefix.len()).min(8)];
+        let id = epic_id_from_branch(branch);
         let title = branch_to_title(branch);
 
         // Find tickets belonging to this epic.
@@ -73,8 +72,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     };
 
     // 2. Parse the 8-char epic ID from the branch name: epic/<id>-<slug>
-    let after_prefix = epic_branch.trim_start_matches("epic/");
-    let epic_id = after_prefix.split('-').next().unwrap_or("");
+    let epic_id = epic_id_from_branch(&epic_branch);
 
     // 3. Load all tickets and find those belonging to this epic.
     let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -166,9 +164,7 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
         ),
     };
 
-    // Parse the 8-char epic ID from the branch: epic/<id>-<slug>
-    let after_prefix = branch.trim_start_matches("epic/");
-    let epic_id = after_prefix.split('-').next().unwrap_or("");
+    let epic_id = epic_id_from_branch(&branch);
     let title = branch_to_title(&branch);
 
     let epic_tickets: Vec<_> = ctx.tickets
@@ -246,8 +242,7 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
         );
     }
     let branch = &matches[0];
-    let after_prefix = branch.trim_start_matches("epic/");
-    let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
+    let epic_id = epic_id_from_branch(branch).to_string();
 
     if field == "owner" {
         let config = apm_core::config::Config::load(root)?;
@@ -339,53 +334,10 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     Ok(())
 }
 
-/// Convert an epic branch name to a human-readable PR title.
-/// `epic/ab12cd34-user-authentication` → `"User Authentication"`
-pub fn branch_to_title(branch: &str) -> String {
-    // Strip "epic/" prefix
-    let rest = branch.trim_start_matches("epic/");
-    // Strip the "<8-char-id>-" segment (first hyphen-separated token)
-    let slug = match rest.find('-') {
-        Some(pos) => &rest[pos + 1..],
-        None => rest,
-    };
-    // Replace hyphens with spaces and title-case each word
-    slug.split('-')
-        .map(|word| {
-            let mut chars = word.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(c) => c.to_uppercase().to_string() + chars.as_str(),
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn branch_to_title_basic() {
-        assert_eq!(branch_to_title("epic/ab12cd34-user-authentication"), "User Authentication");
-    }
-
-    #[test]
-    fn branch_to_title_single_word() {
-        assert_eq!(branch_to_title("epic/ab12cd34-dashboard"), "Dashboard");
-    }
-
-    #[test]
-    fn branch_to_title_many_words() {
-        assert_eq!(branch_to_title("epic/ab12cd34-add-oauth-login-flow"), "Add Oauth Login Flow");
-    }
-
-    #[test]
-    fn branch_to_title_no_slug() {
-        // Degenerate: no hyphen after id — returns empty string (id treated as slug)
-        assert_eq!(branch_to_title("epic/ab12cd34"), "Ab12cd34");
-    }
 
     // Gate check logic tests
     #[test]

@@ -1,5 +1,5 @@
-use anyhow::{bail, Result};
-use apm_core::{config::Config, ticket, ticket_fmt, worktree};
+use anyhow::Result;
+use apm_core::{config::Config, worktree};
 use std::path::Path;
 
 pub fn run(root: &Path, remove_id: Option<&str>) -> Result<()> {
@@ -37,21 +37,8 @@ fn list(root: &Path, config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn remove(root: &Path, config: &Config, id_arg: &str) -> Result<()> {
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
-    let Some(t) = tickets.iter().find(|t| t.frontmatter.id == id) else {
-        bail!("ticket {id:?} not found");
-    };
-
-    let branch = t.frontmatter.branch.clone()
-        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id}"));
-
-    let Some(wt_path) = worktree::find_worktree_for_branch(root, &branch) else {
-        bail!("no worktree found for ticket {id:?} (branch: {branch})");
-    };
-
+fn remove(root: &Path, _config: &Config, id_arg: &str) -> Result<()> {
+    let (wt_path, _id) = crate::util::worktree_for_ticket(root, id_arg)?;
     worktree::remove_worktree(root, &wt_path, false)?;
     println!("Removed worktree: {}", wt_path.display());
     Ok(())

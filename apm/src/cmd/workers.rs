@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use apm_core::{config::Config, ticket, ticket_fmt, worker, worktree};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use crate::util::worktree_for_ticket;
 
 pub fn run(root: &Path, log_id: Option<&str>, kill_id: Option<&str>) -> Result<()> {
     if let Some(id_arg) = kill_id {
@@ -191,23 +192,4 @@ mod tests {
         assert_eq!(dead_worker_state("ready", &ended), "crashed");
         assert_eq!(dead_worker_state("", &ended), "crashed");
     }
-}
-
-fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String)> {
-    let config = Config::load(root)?;
-    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
-    let t = tickets
-        .iter()
-        .find(|t| t.frontmatter.id == id)
-        .ok_or_else(|| anyhow::anyhow!("ticket {id:?} not found"))?;
-    let branch = t
-        .frontmatter
-        .branch
-        .clone()
-        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id}"));
-    let wt = worktree::find_worktree_for_branch(root, &branch)
-        .ok_or_else(|| anyhow::anyhow!("no worktree for ticket {id:?}"))?;
-    Ok((wt, id))
 }
