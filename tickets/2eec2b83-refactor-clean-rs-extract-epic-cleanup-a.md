@@ -37,7 +37,7 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 - [x] All calls to `crate::cmd::epic::branch_to_title()` inside the moved function are replaced with `apm_core::epic::branch_to_title()`
 - [x] All inline prompt sequences inside the moved function use `crate::util::prompt_yes_no()` instead of the raw print/flush/read_line pattern
 - [x] Imports in `clean.rs` that were only needed by `run_epic_clean()` are removed
-- [ ] `apm clean --epics` lists done epic branches and prompts for each deletion, unchanged from before
+- [x] `apm clean --epics` lists done epic branches and prompts for each deletion, unchanged from before
 - [ ] `apm clean --epics --dry-run` prints what would be deleted without making any changes
 - [ ] `apm clean --epics --yes` skips all prompts and deletes without asking
 - [ ] `cargo test` passes across all crates
