@@ -1,7 +1,7 @@
 +++
 id = "eb4789cf"
 title = "Move epic branch helpers from git.rs into epic.rs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/eb4789cf-move-epic-branch-helpers-from-git-rs-int"
 created_at = "2026-04-12T06:04:33.586819Z"
-updated_at = "2026-04-12T06:12:21.554536Z"
+updated_at = "2026-04-12T06:32:39.867887Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["b28fe914"]
@@ -50,3 +50,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T06:04Z | — | new | philippepascal |
 | 2026-04-12T06:12Z | new | groomed | apm |
+| 2026-04-12T06:32Z | groomed | in_design | philippepascal |
