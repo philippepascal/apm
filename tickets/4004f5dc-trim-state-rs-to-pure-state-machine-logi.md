@@ -42,7 +42,7 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 5 for the full plan.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Moving provision_worktree out of state.rs — done by ticket 4f67992b\n- Renaming git.rs to git_util.rs — done by ticket b28fe914\n- Moving worktree primitives from git.rs to worktree.rs — done by ticket 4f67992b\n- Moving epic branch helpers out of git.rs — done by ticket eb4789cf\n- Any behaviour changes to the moved functions\n- Adding new functionality to any module\n- Updating REFACTOR-CORE.md or other documentation
 
 ### Approach
 
