@@ -35,7 +35,7 @@ Both functions are called from ticket/epic handlers. Moving them to `apm_core` m
 - [x] Both functions are no longer defined in `apm-server/src/main.rs`
 - [x] `apm-server` call sites import and call the functions from `apm_core` with identical observable behaviour
 - [x] `apm-server` compiles without warnings after the move
-- [ ] `apm-core` compiles without warnings after the addition
+- [x] `apm-core` compiles without warnings after the addition
 - [ ] `compute_blocking_deps` and `compute_valid_transitions` each have at least one unit test in `apm-core`
 
 ### Out of scope
