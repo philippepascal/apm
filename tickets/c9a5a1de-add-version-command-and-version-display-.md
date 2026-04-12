@@ -22,7 +22,7 @@ The version should be available both from the CLI (`apm version` or `apm -v`) an
 
 ### Acceptance criteria
 
-- [ ] `apm version` prints the version string to stdout and exits 0
+- [x] `apm version` prints the version string to stdout and exits 0
 - [ ] The version string includes the semver version matching `apm/Cargo.toml` (e.g. `apm 0.1.3`)
 - [ ] The version string includes a build type label: `dev` for debug builds, `release` for release builds
 - [ ] `apm --version` (Clap built-in `-V`) also prints the version
