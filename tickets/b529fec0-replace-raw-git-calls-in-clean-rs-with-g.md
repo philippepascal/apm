@@ -19,18 +19,11 @@ depends_on = ["061d0ac1"]
 
 ### Problem
 
-clean.rs has 6 raw `Command::new("git")` calls that should use git_util helpers:
+clean.rs contains 6 raw `Command::new("git")` calls, making it the last file in apm-core that bypasses the `git_util` abstraction layer. The goal is zero raw git invocations in clean.rs — all git interaction goes through git_util so error handling, path quoting, and command construction are consistent across the codebase.
 
-1. `git -C <path> status --porcelain` (line ~49) — check worktree dirtiness → `git_util::is_worktree_dirty()`
-2. `git -C <path> status --porcelain` (line ~156) — same check, different call site → `git_util::is_worktree_dirty()`
-3. `git rev-parse --verify refs/heads/{branch}` (line ~181) — check local branch exists → `git_util::local_branch_exists()`
-4. `git rev-parse --verify refs/heads/{branch}` (line ~234) — same pattern → `git_util::local_branch_exists()`
-5. `git branch -D {branch}` (line ~272) — delete local branch → `git_util::delete_local_branch()`
-6. `git branch -dr origin/{branch}` (line ~300) — prune remote tracking ref → `git_util::prune_remote_tracking()`
+Five of the six calls map directly to helpers that ticket 061d0ac1 adds to git_util: `is_worktree_dirty`, `local_branch_exists`, `delete_local_branch`, and `prune_remote_tracking`. The sixth call — in `diagnose_worktree` — runs `git status --porcelain` and parses the full output line-by-line to categorise files into three buckets (known temp files, other untracked, modified tracked). It cannot be replaced by `is_worktree_dirty()` (which only returns a bool), but it can use the crate-internal `git_util::run()` helper, which handles spawning, exit-code checking, and stdout decoding. Since clean.rs and git_util.rs are in the same crate (`apm-core`), `pub(crate) fn run()` is accessible.
 
-After this ticket, clean.rs should have zero `Command::new("git")` or `use std::process::Command` — all git interaction goes through git_util.
-
-Depends on the git_util helpers ticket landing first.
+This ticket must land after 061d0ac1 is merged into the epic branch, because it consumes the helpers that ticket adds.
 
 ### Acceptance criteria
 
