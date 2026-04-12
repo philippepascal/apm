@@ -34,7 +34,7 @@ This ticket depends on 1ace7d42 (epic handler extraction) being merged first. By
 
 - [ ] `apm-server/src/handlers/maintenance.rs` exists and contains `sync_handler`
 - [ ] `apm-server/src/handlers/maintenance.rs` exists and contains `clean_handler`
-- [ ] `apm-server/src/handlers/maintenance.rs` exists and contains the `CleanRequest` struct
+- [ ] `apm-server/src/handlers/maintenance.rs` imports `CleanRequest` from `crate::models`
 - [ ] `handlers/mod.rs` declares `pub mod maintenance;`
 - [ ] `main.rs` references both handlers via `handlers::maintenance::` (directly or via a use import)
 - [ ] `main.rs` no longer directly defines `sync_handler`, `clean_handler`, or `CleanRequest` (grep for each yields zero results in main.rs)
