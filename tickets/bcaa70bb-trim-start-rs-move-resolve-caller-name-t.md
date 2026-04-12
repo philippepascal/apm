@@ -18,9 +18,9 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Problem
 
-`start.rs` contains `resolve_caller_name()` which resolves the current user/agent identity. This is a configuration/identity concern, not a worker-spawning concern. It belongs in `config.rs` alongside `resolve_identity()` and `try_github_username()`.
+`start.rs` currently defines `resolve_caller_name()`, a function that resolves the acting identity for the current process by reading `APM_AGENT_NAME` → `USER` → `USERNAME` → `"apm"`. This is a pure identity/configuration concern: the same kind of look-up that `resolve_identity()` and `try_github_username()` perform, both of which already live in `config.rs`.
 
-See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 7 for the full plan.
+Having `resolve_caller_name()` in `start.rs` means callers in `apm/src/cmd/next.rs` and `apm/src/main.rs` import it as `apm_core::start::resolve_caller_name()`, coupling a CLI concern to the worker-spawning module. Moving it to `config.rs` groups all identity resolution in one place and removes that coupling.
 
 ### Acceptance criteria
 
