@@ -1,1 +1,1 @@
-# Refactor apm-server code organization
+# Consolidate git operations into git_util.rs

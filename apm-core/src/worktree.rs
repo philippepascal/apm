@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use crate::config::Config;
 use crate::git_util::run;
 use crate::ticket::{Ticket, load_all_from_git};
@@ -120,14 +119,7 @@ fn clean_agent_dirs(root: &Path, wt_path: &Path) {
 }
 
 fn is_tracked(root: &Path, path: &str) -> bool {
-    Command::new("git")
-        .args(["ls-files", "--error-unmatch", path])
-        .current_dir(root)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    crate::git_util::is_file_tracked(root, path)
 }
 
 fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
