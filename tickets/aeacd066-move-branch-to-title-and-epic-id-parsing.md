@@ -45,7 +45,102 @@ Moving these to `apm_core` eliminates duplication between `apm` and `apm-server`
 
 ### Approach
 
-How the implementation will work.
+**Step 1 — Add helpers to `apm-core/src/epic.rs`**
+
+Add two public functions (after `create_epic_branch` is a good location):
+
+```rust
+/// Convert an epic branch name to a display title.
+/// `epic/57bce963-refactor-apm-core` -> `"Refactor Apm Core"`
+pub fn branch_to_title(branch: &str) -> String {
+    let rest = branch.trim_start_matches("epic/");
+    let slug = match rest.find('-') {
+        Some(pos) => &rest[pos + 1..],
+        None => rest,
+    };
+    slug.split('-')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Extract the ID segment from an epic branch name.
+/// `epic/57bce963-refactor-apm-core` -> `"57bce963"`
+/// Strips the `epic/` prefix if present, then returns everything before the first `-`.
+/// Returns the whole string if there is no `-`.
+pub fn epic_id_from_branch(branch: &str) -> &str {
+    let rest = branch.trim_start_matches("epic/");
+    match rest.find('-') {
+        Some(pos) => &rest[..pos],
+        None => rest,
+    }
+}
+```
+
+Move the existing `branch_to_title` unit-test block from `apm/src/cmd/epic.rs` (lines 365-388) into `apm-core/src/epic.rs` under `#[cfg(test)]`. Add new tests for `epic_id_from_branch`:
+
+- happy path: `"epic/57bce963-refactor-apm-core"` -> `"57bce963"`
+- no `epic/` prefix: `"57bce963-refactor"` -> `"57bce963"`
+- no dash at all: `"nodash"` -> `"nodash"`
+
+**Step 2 — Update `apm/src/cmd/epic.rs`**
+
+- Delete the `branch_to_title` fn definition (lines 342-363) and its test block (lines 365-388).
+- Add `use apm_core::epic::{branch_to_title, epic_id_from_branch};` or use fully qualified paths.
+- Replace every inline ID-parsing occurrence (found in `run_close`, `run_show`, `run_set`, lines ~75-77 and similar):
+
+  Before:
+  ```
+  let after_prefix = epic_branch.trim_start_matches("epic/");
+  let epic_id = after_prefix.split('-').next().unwrap_or("");
+  ```
+  After:
+  ```
+  let epic_id = epic_id_from_branch(&epic_branch);
+  ```
+
+**Step 3 — Update `apm/src/cmd/clean.rs`**
+
+Replace all three inline ID-parsing blocks (lines ~189-191, ~216-218, ~248-250):
+
+Before:
+```
+let after_prefix = branch.trim_start_matches("epic/");
+let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
+let id = &after_prefix[..id_end];
+```
+After:
+```
+let id = apm_core::epic::epic_id_from_branch(branch);
+```
+Note: the `.min(8)` cap is redundant because epic IDs are always exactly 8 hex chars; the new helper is equivalent for all valid branch names.
+
+Also replace the `crate::cmd::epic::branch_to_title(branch)` call (~line 219) with `apm_core::epic::branch_to_title(branch)`.
+
+**Step 4 — Update `apm-server/src/main.rs`**
+
+Delete `parse_epic_branch()` (lines 186-203). At each call site, replace the tuple return with two separate calls:
+
+Before:
+```
+let (id, title) = parse_epic_branch(&branch).unwrap_or_default();
+```
+After:
+```
+let id    = apm_core::epic::epic_id_from_branch(&branch).to_string();
+let title = apm_core::epic::branch_to_title(&branch);
+```
+Adjust error handling as needed based on how the None case was previously handled.
+
+**Step 5 — Verify**
+
+Run `cargo test` in the workspace root. The relocated tests in `apm-core` cover `branch_to_title`; new tests cover `epic_id_from_branch`. All three crates must compile and their tests must pass.
 
 ### Open questions
 
