@@ -1,7 +1,7 @@
 +++
 id = "6c25c06a"
 title = "Apply util.rs helpers across command files"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6c25c06a-apply-util-rs-helpers-across-command-fil"
 created_at = "2026-04-12T09:02:44.386660Z"
-updated_at = "2026-04-12T09:24:22.487832Z"
+updated_at = "2026-04-12T09:24:30.822608Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f"]
@@ -49,3 +49,4 @@ All changes are in `apm/src/`. The prerequisite ticket (d3ebdc0f) must be merged
 | 2026-04-12T09:02Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
 | 2026-04-12T09:21Z | groomed | in_design | philippepascal |
+| 2026-04-12T09:24Z | in_design | specd | claude-0412-0921-7230 |
