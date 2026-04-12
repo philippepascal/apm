@@ -1,7 +1,7 @@
 +++
 id = "6c25c06a"
 title = "Apply util.rs helpers across command files"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6c25c06a-apply-util-rs-helpers-across-command-fil"
 created_at = "2026-04-12T09:02:44.386660Z"
-updated_at = "2026-04-12T09:09:10.981315Z"
+updated_at = "2026-04-12T09:21:22.655145Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f"]
@@ -60,3 +60,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T09:02Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
+| 2026-04-12T09:21Z | groomed | in_design | philippepascal |
