@@ -18,7 +18,9 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`start.rs` contains `resolve_caller_name()` which resolves the current user/agent identity. This is a configuration/identity concern, not a worker-spawning concern. It belongs in `config.rs` alongside `resolve_identity()` and `try_github_username()`.
+
+See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 7 for the full plan.
 
 ### Acceptance criteria
 
@@ -35,13 +37,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
