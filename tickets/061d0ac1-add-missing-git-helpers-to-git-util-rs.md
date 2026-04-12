@@ -18,23 +18,23 @@ target_branch = "epic/6062f74f-consolidate-git-operations-into-git-util"
 
 ### Problem
 
-21 raw `Command::new("git")` calls exist across clean.rs, epic.rs, init.rs, start.rs, and worktree.rs — bypassing git_util.rs entirely. These modules construct git commands directly, duplicating patterns and leaking git implementation details.
+21 raw `Command::new("git")` calls are scattered across `clean.rs`, `epic.rs`, `init.rs`, `start.rs`, and `worktree.rs`, bypassing `git_util.rs` entirely. These modules construct git commands directly, duplicating argument patterns and spreading git implementation details throughout the codebase.
 
-git_util.rs should be the only module that knows how to talk to git. Several helpers are missing from its public API:
+`git_util.rs` already defines a `run()` helper that centralises command construction, error formatting, and stdout capture — but nine behaviours are absent from its public API:
 
-- `is_worktree_dirty(path) -> bool` (used in clean.rs ×2)
-- `local_branch_exists(root, branch) -> bool` (used in clean.rs ×2, worktree.rs ×1)
-- `delete_local_branch(root, branch)` (used in clean.rs)
-- `prune_remote_tracking(root, branch)` (used in clean.rs)
-- `stage_files(root, files)` (used in init.rs, epic.rs)
-- `commit(root, message)` (used in init.rs, epic.rs)
-- `git_config_get(root, key) -> Option<String>` (used in start.rs)
-- `merge_ref(root, refname)` (used in start.rs — existing merge helpers are coupled to the "merge + push" workflow)
-- `is_file_tracked(root, path) -> bool` (used in worktree.rs)
+- detecting whether a worktree has uncommitted changes
+- checking whether a local branch ref exists
+- deleting a local branch (non-fatal)
+- pruning a remote-tracking ref (silent)
+- staging a list of files
+- creating a commit from the working tree
+- reading a git config key
+- merging an arbitrary ref with output reporting
+- checking whether a path is tracked by git
 
-Additionally, some callers duplicate helpers that already exist: init.rs reimplements `has_commits`, epic.rs reimplements `fetch_branch` and `remove_worktree`.
+Because these helpers are missing, callers must either inline the git command or (in the case of `has_commits` and `fetch_branch`) re-implement helpers that already exist in `git_util.rs`.
 
-This ticket adds the missing helpers. Subsequent tickets update each caller module.
+This ticket adds the nine missing helpers. A separate ticket will update each caller to use them.
 
 ### Acceptance criteria
 
