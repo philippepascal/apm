@@ -1,7 +1,7 @@
 +++
 id = "aeacd066"
 title = "Move branch_to_title and epic ID parsing to apm_core::epic"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/aeacd066-move-branch-to-title-and-epic-id-parsing"
 created_at = "2026-04-12T09:02:36.908517Z"
-updated_at = "2026-04-12T10:24:17.696434Z"
+updated_at = "2026-04-12T10:39:36.237399Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
@@ -160,3 +160,4 @@ Run `cargo test` in the workspace root. The relocated tests in `apm-core` cover 
 | 2026-04-12T09:14Z | groomed | in_design | philippepascal |
 | 2026-04-12T09:18Z | in_design | specd | claude-0412-0915-2aa0 |
 | 2026-04-12T10:24Z | specd | ready | apm |
+| 2026-04-12T10:39Z | ready | in_progress | philippepascal |
