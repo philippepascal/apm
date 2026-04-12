@@ -45,7 +45,12 @@ The desired state is a single `auth.rs` that owns all auth concerns: session man
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing any auth handler behaviour (request/response shapes, route paths, cookie names, TTLs)
+- Adding new auth functionality (e.g. new login methods, rate limiting)
+- Moving `AppState` to a separate module
+- Splitting `auth.rs` into submodules (e.g. `auth/webauthn.rs`)
+- Any changes to the WebAuthn or credential logic itself
+- Updating integration tests or end-to-end tests beyond what is needed to keep them compiling
 
 ### Approach
 
