@@ -1,7 +1,6 @@
 use anyhow::{bail, Result};
 use apm_core::{config::{Config, LocalConfig}, git, ticket, ticket_fmt};
 use chrono::Utc;
-use std::io::{self, Write, BufRead};
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, username: &str, no_aggressive: bool, force: bool) -> Result<()> {
@@ -24,9 +23,7 @@ pub fn run_inner(root: &Path, id_arg: &str, username: &str, no_aggressive: bool,
                 .map(|bid| bid == id.as_str())
                 .unwrap_or(false)
         }) {
-            if let Err(e) = git::fetch_branch(root, b) {
-                eprintln!("warning: fetch failed: {e:#}");
-            }
+            crate::util::fetch_branch_if_aggressive(root, b, aggressive);
         }
     }
 
@@ -45,13 +42,9 @@ pub fn run_inner(root: &Path, id_arg: &str, username: &str, no_aggressive: bool,
         if let Some(current_owner) = &t.frontmatter.owner.clone() {
             let confirmed = match confirm_override {
                 Some(b) => b,
-                None => {
-                    print!("Ticket {id} is currently owned by {current_owner}. Reassign to {username}? [y/N] ");
-                    io::stdout().flush()?;
-                    let mut line = String::new();
-                    io::stdin().lock().read_line(&mut line)?;
-                    line.trim().eq_ignore_ascii_case("y")
-                }
+                None => crate::util::prompt_yes_no(&format!(
+                    "Ticket {id} is currently owned by {current_owner}. Reassign to {username}? [y/N] "
+                ))?
             };
             if !confirmed {
                 println!("aborted");

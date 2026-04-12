@@ -1,6 +1,5 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, sync};
-use std::io::{self, BufRead, Write};
 use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool) -> Result<()> {
@@ -9,14 +8,8 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
 
     if !offline {
         let mut sync_warnings: Vec<String> = Vec::new();
-        match git::fetch_all(root) {
-            Ok(_) => {
-                git::sync_local_ticket_refs(root, &mut sync_warnings);
-            }
-            Err(e) => {
-                eprintln!("warning: fetch failed (no remote configured?): {e:#}");
-            }
-        }
+        crate::util::fetch_if_aggressive(root, true);
+        git::sync_local_ticket_refs(root, &mut sync_warnings);
         if let Err(e) = git::push_default_branch(root, &config.project.default_branch) {
             eprintln!("warning: push {branch} failed: {e:#}", branch = config.project.default_branch);
         }
@@ -57,9 +50,5 @@ fn prompt_close(candidates: &[sync::CloseCandidate]) -> Result<bool> {
     for c in candidates {
         println!("  #{}  {}  ({})", c.ticket.frontmatter.id, c.ticket.frontmatter.title, c.reason);
     }
-    print!("\nClose all? [y/N] ");
-    io::stdout().flush()?;
-    let mut line = String::new();
-    io::stdin().lock().read_line(&mut line)?;
-    Ok(line.trim().eq_ignore_ascii_case("y"))
+    Ok(crate::util::prompt_yes_no("\nClose all? [y/N] ")?)
 }

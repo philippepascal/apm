@@ -155,41 +155,39 @@ const APM_USER_ALLOW_ENTRIES: &[&str] = &[
     "Bash(apm worktrees*)",
 ];
 
-fn update_claude_settings(root: &Path, skip: bool) -> Result<()> {
-    if skip {
-        return Ok(());
-    }
-    let settings_path = root.join(".claude/settings.json");
-    if !settings_path.exists() {
-        return Ok(());
-    }
-
-    let raw = std::fs::read_to_string(&settings_path)?;
-    let mut val: Value = serde_json::from_str(&raw)?;
-
-    let allow = val
-        .pointer_mut("/permissions/allow")
-        .and_then(|v| v.as_array_mut());
-
-    let missing: Vec<&str> = if let Some(arr) = allow {
-        APM_ALLOW_ENTRIES
-            .iter()
-            .filter(|&&e| !arr.iter().any(|v| v.as_str() == Some(e)))
-            .copied()
-            .collect()
+fn update_settings_json(
+    path: &Path,
+    entries: &[&str],
+    prompt_header: &str,
+    prompt_confirm: &str,
+    updated_msg: &str,
+    create_if_missing: bool,
+) -> Result<()> {
+    let mut val: Value = if path.exists() {
+        let raw = std::fs::read_to_string(path)?;
+        serde_json::from_str(&raw).unwrap_or(Value::Object(Default::default()))
+    } else if create_if_missing {
+        Value::Object(Default::default())
     } else {
-        APM_ALLOW_ENTRIES.to_vec()
+        return Ok(());
+    };
+
+    let allow = val.pointer_mut("/permissions/allow").and_then(|v| v.as_array_mut());
+    let missing: Vec<&str> = if let Some(arr) = allow {
+        entries.iter().filter(|&&e| !arr.iter().any(|v| v.as_str() == Some(e))).copied().collect()
+    } else {
+        entries.to_vec()
     };
 
     if missing.is_empty() {
         return Ok(());
     }
 
-    println!("The following entries will be added to .claude/settings.json permissions.allow:");
+    println!("{prompt_header}");
     for e in &missing {
         println!("  {e}");
     }
-    print!("Add apm commands to Claude allow list? [y/N] ");
+    print!("{prompt_confirm} [y/N] ");
     io::stdout().flush()?;
 
     let mut line = String::new();
@@ -199,32 +197,45 @@ fn update_claude_settings(root: &Path, skip: bool) -> Result<()> {
         return Ok(());
     }
 
-    // Ensure permissions.allow array exists
     if val.pointer("/permissions/allow").is_none() {
         let perms = val
             .as_object_mut()
             .ok_or_else(|| anyhow::anyhow!("settings.json root is not an object"))?
             .entry("permissions")
             .or_insert_with(|| Value::Object(Default::default()));
-        perms
-            .as_object_mut()
-            .unwrap()
+        perms.as_object_mut().unwrap()
             .entry("allow")
             .or_insert_with(|| Value::Array(vec![]));
     }
 
-    let arr = val
-        .pointer_mut("/permissions/allow")
+    let arr = val.pointer_mut("/permissions/allow")
         .and_then(|v| v.as_array_mut())
         .unwrap();
     for e in missing {
         arr.push(Value::String(e.to_string()));
     }
 
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
     let updated = serde_json::to_string_pretty(&val)?;
-    std::fs::write(&settings_path, updated + "\n")?;
-    println!("Updated .claude/settings.json");
+    std::fs::write(path, updated + "\n")?;
+    println!("{updated_msg}");
     Ok(())
+}
+
+fn update_claude_settings(root: &Path, skip: bool) -> Result<()> {
+    if skip {
+        return Ok(());
+    }
+    update_settings_json(
+        &root.join(".claude/settings.json"),
+        APM_ALLOW_ENTRIES,
+        "The following entries will be added to .claude/settings.json permissions.allow:",
+        "Add apm commands to Claude allow list?",
+        "Updated .claude/settings.json",
+        false,
+    )
 }
 
 fn update_user_claude_settings() -> Result<()> {
@@ -232,74 +243,12 @@ fn update_user_claude_settings() -> Result<()> {
         Ok(h) if !h.is_empty() => h,
         _ => return Ok(()),
     };
-    let settings_path = PathBuf::from(&home).join(".claude/settings.json");
-
-    let mut val: Value = if settings_path.exists() {
-        let raw = std::fs::read_to_string(&settings_path)?;
-        serde_json::from_str(&raw).unwrap_or(Value::Object(Default::default()))
-    } else {
-        Value::Object(Default::default())
-    };
-
-    let allow = val
-        .pointer_mut("/permissions/allow")
-        .and_then(|v| v.as_array_mut());
-
-    let missing: Vec<&str> = if let Some(arr) = allow {
-        APM_USER_ALLOW_ENTRIES
-            .iter()
-            .filter(|&&e| !arr.iter().any(|v| v.as_str() == Some(e)))
-            .copied()
-            .collect()
-    } else {
-        APM_USER_ALLOW_ENTRIES.to_vec()
-    };
-
-    if missing.is_empty() {
-        return Ok(());
-    }
-
-    println!("The following entries will be added to ~/.claude/settings.json (user-level,");
-    println!("required so apm subagents in isolated worktrees can run git and apm commands):");
-    for e in &missing {
-        println!("  {e}");
-    }
-    print!("Add to ~/.claude/settings.json? [y/N] ");
-    io::stdout().flush()?;
-
-    let mut line = String::new();
-    io::stdin().lock().read_line(&mut line)?;
-    if !line.trim().eq_ignore_ascii_case("y") {
-        println!("Skipped.");
-        return Ok(());
-    }
-
-    if val.pointer("/permissions/allow").is_none() {
-        let perms = val
-            .as_object_mut()
-            .ok_or_else(|| anyhow::anyhow!("~/.claude/settings.json root is not an object"))?
-            .entry("permissions")
-            .or_insert_with(|| Value::Object(Default::default()));
-        perms
-            .as_object_mut()
-            .unwrap()
-            .entry("allow")
-            .or_insert_with(|| Value::Array(vec![]));
-    }
-
-    let arr = val
-        .pointer_mut("/permissions/allow")
-        .and_then(|v| v.as_array_mut())
-        .unwrap();
-    for e in missing {
-        arr.push(Value::String(e.to_string()));
-    }
-
-    if let Some(parent) = settings_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let updated = serde_json::to_string_pretty(&val)?;
-    std::fs::write(&settings_path, updated + "\n")?;
-    println!("Updated ~/.claude/settings.json");
-    Ok(())
+    update_settings_json(
+        &PathBuf::from(&home).join(".claude/settings.json"),
+        APM_USER_ALLOW_ENTRIES,
+        "The following entries will be added to ~/.claude/settings.json (user-level,\nrequired so apm subagents in isolated worktrees can run git and apm commands):",
+        "Add to ~/.claude/settings.json?",
+        "Updated ~/.claude/settings.json",
+        true,
+    )
 }
