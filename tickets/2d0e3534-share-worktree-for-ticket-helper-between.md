@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2d0e3534-share-worktree-for-ticket-helper-between"
 created_at = "2026-04-12T09:02:38.703504Z"
-updated_at = "2026-04-12T09:21:05.023634Z"
+updated_at = "2026-04-12T10:10:43.101372Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
+depends_on = ["d3ebdc0f"]
 +++
 
 ## Spec
