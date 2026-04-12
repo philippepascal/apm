@@ -1,7 +1,7 @@
 +++
 id = "124bad5a"
 title = "Standardize config loading with shared async utility"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/124bad5a-standardize-config-loading-with-shared-a"
 created_at = "2026-04-12T09:03:01.972783Z"
-updated_at = "2026-04-12T09:09:42.979067Z"
+updated_at = "2026-04-12T09:40:12.987669Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 +++
@@ -56,3 +56,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T09:03Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
+| 2026-04-12T09:40Z | groomed | in_design | philippepascal |
