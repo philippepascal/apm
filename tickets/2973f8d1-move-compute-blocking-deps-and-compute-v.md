@@ -33,7 +33,7 @@ Both functions are called from ticket/epic handlers. Moving them to `apm_core` m
 - [x] `apm_core` exports the `BlockingDep` struct with fields `id: String` and `state: String`
 - [x] `apm_core` exports the `TransitionOption` struct with fields `to: String`, `label: String`, and `warning: Option<String>`
 - [x] Both functions are no longer defined in `apm-server/src/main.rs`
-- [ ] `apm-server` call sites import and call the functions from `apm_core` with identical observable behaviour
+- [x] `apm-server` call sites import and call the functions from `apm_core` with identical observable behaviour
 - [ ] `apm-server` compiles without warnings after the move
 - [ ] `apm-core` compiles without warnings after the addition
 - [ ] `compute_blocking_deps` and `compute_valid_transitions` each have at least one unit test in `apm-core`
