@@ -52,7 +52,89 @@ Once the prerequisite tickets land, two additional call-sites need updating in t
 
 ### Approach
 
-How the implementation will work.
+This ticket has three independent changes plus a verify step. Deps \`d3ebdc0f\` and \`aeacd066\` must be merged to the target branch before starting.
+
+**1. Add \`set_epic_owner\` to \`apm_core/src/epic.rs\`**
+
+Signature:
+\`\`\`rust
+pub fn set_epic_owner(
+    root: &Path,
+    epic_id: &str,      // 8-char ID parsed from the epic branch
+    new_owner: &str,    // already-validated owner string
+    config: &Config,
+) -> Result<(usize, usize)>  // (changed, skipped)
+\`\`\`
+
+Logic (mirrors the existing \`run_set()\` owner block):
+- \`ticket::load_all_from_git(root, &config.tickets.dir)\`
+- Filter to tickets whose branch contains \`epic_id\`
+- Partition: terminal-state tickets go to \`skipped\`, the rest to \`to_change\`
+- Pre-flight: for each ticket in \`to_change\`, call \`ticket::check_owner(root, &t)?\`
+- For each ticket in \`to_change\`:
+  - \`ticket::set_field(&mut t.frontmatter, "owner", new_owner)?\`
+  - Serialise and call \`git::commit_to_branch(root, &branch, &rel_path, &content, &msg)\`
+- Return \`(to_change.len(), skipped.len())\`
+
+The owner validation (\`validate::validate_owner\`) stays in the CLI layer in \`run_set()\` because it needs the local git user and \`Config\`, which the CLI already has. Pass only the pre-validated string to the core function.
+
+Add unit tests in \`apm_core/src/epic.rs\`: happy path with a mix of terminal and non-terminal tickets, and a test that terminal tickets are skipped.
+
+**2. Update \`run_set()\` in \`apm/src/cmd/epic.rs\`**
+
+Replace the owner-cascade block (lines ~252–300) with:
+\`\`\`rust
+let (changed, skipped) = apm_core::epic::set_epic_owner(root, &epic_id, value, &config)?;
+println!("updated {changed} ticket(s), skipped {skipped} terminal ticket(s)");
+\`\`\`
+Keep the validation steps that currently precede the cascade (epic existence check, owner validation).
+
+**3. Add \`body: &str\` to \`gh_pr_create_or_update\` in \`apm_core/src/github.rs\`**
+
+Change the signature to:
+\`\`\`rust
+pub fn gh_pr_create_or_update(
+    root: &Path,
+    branch: &str,
+    default_branch: &str,
+    id: &str,
+    title: &str,
+    body: &str,           // new parameter
+    messages: &mut Vec<String>,
+) -> Result<()>
+\`\`\`
+Replace the hardcoded \`format!("Closes #{id}")\` body with the \`body\` parameter.
+
+Update the existing caller in \`apm_core/src/state.rs\` to pass \`&format!("Closes #{id}")\` explicitly.
+
+**4. Update \`run_close()\` in \`apm/src/cmd/epic.rs\`**
+
+Remove:
+- Lines ~108–127: the \`gh pr list\` idempotency check block
+- Lines ~133–152: the \`Command::new("gh").args(["pr", "create", ...])\` block
+
+Replace with a single call after \`git::push_branch_tracking(root, &epic_branch)?\`:
+\`\`\`rust
+let mut messages = vec![];
+apm_core::github::gh_pr_create_or_update(
+    root,
+    &epic_branch,
+    &default_branch,
+    &epic_id,
+    &pr_title,
+    &format!("Epic: {epic_branch}"),
+    &mut messages,
+)?;
+for m in &messages { println!("{m}"); }
+\`\`\`
+
+**5. Verify dep-introduced call-sites (no new work if deps landed correctly)**
+
+After deps merge, confirm \`epic.rs\` already uses:
+- \`apm_core::epic::branch_to_title()\` — should have been updated by \`aeacd066\`
+- \`apm_core::epic::epic_id_from_branch()\` — \`run_close()\` line ~76 inline pattern; update if dep didn't cover it
+
+**Order of changes:** steps 1→2 are independent of steps 3→4; both pairs can be done in parallel. Step 5 is last.
 
 ### Open questions
 
