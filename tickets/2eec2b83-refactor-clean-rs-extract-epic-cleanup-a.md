@@ -48,7 +48,28 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 
 ### Approach
 
-How the implementation will work.
+1. Prerequisites d3ebdc0f and aeacd066 are already merged into the target branch before this ticket starts. Their changes provide `crate::util::prompt_yes_no()`, `apm_core::epic::epic_id_from_branch()`, and `apm_core::epic::branch_to_title()`, and have already replaced the 3 inline epic-ID patterns in `clean.rs`.
+
+2. **In `apm/src/cmd/epic.rs`** — add a new function near the bottom, before the test block:
+   ```rust
+   pub(crate) fn run_epic_clean(
+       root: &Path,
+       config: &apm_core::config::Config,
+       dry_run: bool,
+       yes: bool,
+   ) -> anyhow::Result<()> { ... }
+   ```
+   Copy the body verbatim from `clean.rs::run_epic_clean()`. Within the copied body:
+   - Replace every `crate::cmd::epic::branch_to_title(...)` call with `apm_core::epic::branch_to_title(...)`.
+   - Replace the inline prompt block (print / flush / read_line / trim / eq_ignore_ascii_case) with `crate::util::prompt_yes_no(\"...\")? `.
+   - Adjust `use` imports as needed (remove items already in scope in `epic.rs`, add any missing ones).
+
+3. **In `apm/src/cmd/clean.rs`**:
+   - Delete the `run_epic_clean()` function (all ~130 lines, from its `fn` header to its closing `}`).
+   - In `run()`, change the call site from `run_epic_clean(root, &config, dry_run, yes)?` to `crate::cmd::epic::run_epic_clean(root, &config, dry_run, yes)?`.
+   - Remove `use` imports that were only consumed by the deleted function (e.g. any `apm_core::epic::*` items no longer referenced in `clean.rs`, and `crate::cmd::epic::branch_to_title` if present).
+
+4. Run `cargo build` and `cargo test --workspace` to confirm nothing is broken.
 
 ### Open questions
 
