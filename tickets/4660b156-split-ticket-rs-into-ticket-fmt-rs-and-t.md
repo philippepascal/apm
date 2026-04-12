@@ -18,7 +18,11 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`ticket.rs` is a large file mixing two distinct concerns: (1) file format parsing/serialization (TOML frontmatter, markdown body, checklist parsing, slugification, ID normalization) and (2) ticket manipulation logic (scoring, priority calculation, dependency graphs, filtering, creation, closing). This makes the module hard to navigate and creates unnecessary coupling.
+
+The split into `ticket_fmt.rs` (format) and `ticket_util.rs` (logic) gives each module a clear responsibility. A thin `ticket.rs` re-export hub preserves downstream imports in `apm` and `apm-server`.
+
+See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 4 for the full plan.
 
 ### Acceptance criteria
 
@@ -35,13 +39,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
