@@ -94,7 +94,7 @@ Run `cargo build --workspace` then `cargo test --workspace`. Fix any remaining c
 
 ### Amendment requests
 
-- [ ] Remove the duplicated `run()` helper from the Approach. Instead, import `crate::git_util::run()` — ticket b28fe914 will make `run()` `pub(crate)` in `git_util.rs`. Do not duplicate the git invocation wrapper.
+- [x] Remove the duplicated `run()` helper from the Approach. Instead, import `crate::git_util::run()` — ticket b28fe914 will make `run()` `pub(crate)` in `git_util.rs`. Do not duplicate the git invocation wrapper.
 - [ ] Fix `gen_hex_id` reference path — the Approach says `create_epic_branch` should call `crate::git::gen_hex_id()`, but by the time this ticket is worked, `gen_hex_id` will have moved to `ticket_fmt.rs` (done by b28fe914). Use `crate::ticket::gen_hex_id()` (via the re-export hub) instead.
 
 ### Code review
