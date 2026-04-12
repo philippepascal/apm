@@ -16,16 +16,13 @@ mod agents;
 mod handlers;
 mod tls;
 mod auth;
-mod credential_store;
 mod log;
 mod models;
 mod queue;
 mod util;
-mod webauthn_state;
 mod work;
 mod workers;
 
-use models::*;
 use handlers::tickets::{
     batch_priority, batch_transition, create_ticket, get_ticket, list_tickets,
     patch_ticket, put_body, transition_ticket,
@@ -46,11 +43,11 @@ pub(crate) struct AppState {
     max_concurrent_override: Arc<tokio::sync::Mutex<Option<usize>>>,
     otp_store: auth::OtpStore,
     session_store: auth::SessionStore,
-    webauthn_state: Arc<webauthn_state::WebauthnState>,
-    credential_store: credential_store::CredentialStore,
+    webauthn_state: Arc<auth::WebauthnState>,
+    credential_store: auth::CredentialStore,
 }
 
-fn is_localhost(connect_info: Option<ConnectInfo<SocketAddr>>) -> bool {
+pub(crate) fn is_localhost(connect_info: Option<ConnectInfo<SocketAddr>>) -> bool {
     connect_info
         .map(|ConnectInfo(addr)| addr.ip().is_loopback())
         .unwrap_or(false)
@@ -117,303 +114,9 @@ async fn me_handler(
         };
         return Json(serde_json::json!({"username": username}));
     }
-    let username = find_session_username(&headers, &state.session_store)
+    let username = auth::find_session_username(&headers, &state.session_store)
         .unwrap_or_else(|| "unassigned".to_string());
     Json(serde_json::json!({"username": username}))
-}
-
-fn find_session_username(
-    headers: &axum::http::HeaderMap,
-    session_store: &auth::SessionStore,
-) -> Option<String> {
-    let cookie_header = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
-    for part in cookie_header.split(';') {
-        if let Ok(c) = cookie::Cookie::parse(part.trim().to_owned()) {
-            if c.name() == "__Host-apm-session" {
-                return session_store.lookup(c.value());
-            }
-        }
-    }
-    None
-}
-
-async fn require_auth(
-    State(state): State<Arc<AppState>>,
-    req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> Response {
-    let connect_info = req.extensions().get::<ConnectInfo<SocketAddr>>().copied();
-    if connect_info.is_none() || is_localhost(connect_info) {
-        return next.run(req).await;
-    }
-    if find_session_username(req.headers(), &state.session_store).is_some() {
-        return next.run(req).await;
-    }
-    if req.uri().path().starts_with("/api/") {
-        (
-            StatusCode::UNAUTHORIZED,
-            Json(serde_json::json!({"error": "unauthorized"})),
-        )
-            .into_response()
-    } else {
-        axum::response::Redirect::temporary("/login").into_response()
-    }
-}
-
-async fn otp_handler(
-    State(state): State<Arc<AppState>>,
-    connect_info: Option<ConnectInfo<SocketAddr>>,
-    body: axum::body::Bytes,
-) -> Response {
-    if !is_localhost(connect_info) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    let parsed: serde_json::Value = match serde_json::from_slice(&body) {
-        Ok(v) => v,
-        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let username = match parsed.get("username").and_then(|v| v.as_str()) {
-        Some(u) if !u.is_empty() => u.to_string(),
-        _ => return StatusCode::BAD_REQUEST.into_response(),
-    };
-    let otp = auth::generate_otp();
-    state.otp_store.insert(&username, otp.clone());
-    Json(serde_json::json!({"otp": otp})).into_response()
-}
-
-async fn register_page_handler() -> Response {
-    (
-        StatusCode::OK,
-        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
-        include_str!("register.html"),
-    )
-        .into_response()
-}
-
-async fn register_challenge_handler(
-    State(state): State<Arc<AppState>>,
-    body: axum::body::Bytes,
-) -> Response {
-    let req: RegisterChallengeRequest = match serde_json::from_slice(&body) {
-        Ok(r) => r,
-        Err(_) => return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response(),
-    };
-    if req.username.is_empty() || req.otp.is_empty() {
-        return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response();
-    }
-    match state.otp_store.validate(&req.username, &req.otp) {
-        Ok(()) => {}
-        Err(auth::OtpError::NotFound) => {
-            return (StatusCode::BAD_REQUEST, "invalid OTP").into_response()
-        }
-        Err(auth::OtpError::Expired) => {
-            return (StatusCode::BAD_REQUEST, "OTP expired").into_response()
-        }
-        Err(auth::OtpError::Invalid) => {
-            return (StatusCode::BAD_REQUEST, "invalid OTP").into_response()
-        }
-    }
-    let user_id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID, req.username.as_bytes());
-    let (ccr, passkey_reg) = match state
-        .webauthn_state
-        .webauthn
-        .start_passkey_registration(user_id, &req.username, &req.username, None)
-    {
-        Ok(pair) => pair,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("webauthn error: {e:?}"),
-            )
-                .into_response()
-        }
-    };
-    let reg_id = {
-        let bytes: [u8; 16] = rand::Rng::gen(&mut rand::thread_rng());
-        bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()
-    };
-    {
-        let mut pending = state.webauthn_state.pending.lock().unwrap();
-        pending.insert(
-            reg_id.clone(),
-            webauthn_state::RegistrationSession {
-                username: req.username,
-                passkey_reg,
-            },
-        );
-    }
-    let public_key = match serde_json::to_value(&ccr.public_key) {
-        Ok(v) => v,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("serialization error: {e}"),
-            )
-                .into_response()
-        }
-    };
-    Json(RegisterChallengeResponse { reg_id, public_key }).into_response()
-}
-
-async fn register_complete_handler(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<RegisterCompleteRequest>,
-) -> Response {
-    let session = {
-        let mut pending = state.webauthn_state.pending.lock().unwrap();
-        pending.remove(&req.reg_id)
-    };
-    let session = match session {
-        Some(s) => s,
-        None => return (StatusCode::BAD_REQUEST, "unknown reg_id").into_response(),
-    };
-    let passkey = match state
-        .webauthn_state
-        .webauthn
-        .finish_passkey_registration(&req.response, &session.passkey_reg)
-    {
-        Ok(p) => p,
-        Err(_) => return (StatusCode::BAD_REQUEST, "invalid WebAuthn response").into_response(),
-    };
-    state.credential_store.insert(&session.username, passkey);
-    let token = auth::generate_token();
-    state.session_store.insert(token.clone(), session.username, None);
-    let cookie = format!(
-        "__Host-apm-session={token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
-    );
-    (
-        StatusCode::OK,
-        [(axum::http::header::SET_COOKIE, cookie)],
-        Json(serde_json::json!({"status": "ok"})),
-    )
-        .into_response()
-}
-
-async fn login_page_handler() -> Response {
-    (
-        StatusCode::OK,
-        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
-        include_str!("login.html"),
-    )
-        .into_response()
-}
-
-async fn login_challenge_handler(
-    State(state): State<Arc<AppState>>,
-    body: axum::body::Bytes,
-) -> Response {
-    let req: LoginChallengeRequest = match serde_json::from_slice(&body) {
-        Ok(r) => r,
-        Err(_) => return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response(),
-    };
-    if req.username.is_empty() {
-        return (StatusCode::BAD_REQUEST, "missing or invalid fields").into_response();
-    }
-    let credentials = match state.credential_store.get(&req.username) {
-        Some(c) => c,
-        None => return (StatusCode::BAD_REQUEST, "no credentials for user").into_response(),
-    };
-    let (rcr, passkey_auth) = match state
-        .webauthn_state
-        .webauthn
-        .start_passkey_authentication(&credentials)
-    {
-        Ok(pair) => pair,
-        Err(e) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                format!("webauthn error: {e:?}"),
-            )
-                .into_response()
-        }
-    };
-    let login_id = auth::generate_token();
-    {
-        let mut pending = state.webauthn_state.pending_auth.lock().unwrap();
-        pending.insert(
-            login_id.clone(),
-            webauthn_state::AuthenticationSession {
-                username: req.username,
-                passkey_auth,
-                created_at: std::time::Instant::now(),
-            },
-        );
-    }
-    let public_key = match serde_json::to_value(&rcr.public_key) {
-        Ok(v) => v,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("serialization error: {e}"),
-            )
-                .into_response()
-        }
-    };
-    Json(LoginChallengeResponse { login_id, public_key }).into_response()
-}
-
-async fn login_complete_handler(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<LoginCompleteRequest>,
-) -> Response {
-    let session = {
-        let mut pending = state.webauthn_state.pending_auth.lock().unwrap();
-        pending.remove(&req.login_id)
-    };
-    let session = match session {
-        Some(s) => s,
-        None => return (StatusCode::BAD_REQUEST, "unknown login_id").into_response(),
-    };
-    if session.created_at.elapsed() >= std::time::Duration::from_secs(300) {
-        return (StatusCode::BAD_REQUEST, "login session expired").into_response();
-    }
-    let credentials = match state.credential_store.get(&session.username) {
-        Some(c) => c,
-        None => return (StatusCode::BAD_REQUEST, "no credentials for user").into_response(),
-    };
-    let _ = credentials;
-    let auth_result = match state
-        .webauthn_state
-        .webauthn
-        .finish_passkey_authentication(&req.response, &session.passkey_auth)
-    {
-        Ok(r) => r,
-        Err(_) => return (StatusCode::BAD_REQUEST, "invalid WebAuthn response").into_response(),
-    };
-    state.credential_store.update_credential(&session.username, &auth_result);
-    let token = auth::generate_token();
-    state.session_store.insert(token.clone(), session.username, None);
-    let cookie = format!(
-        "__Host-apm-session={token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
-    );
-    (
-        StatusCode::OK,
-        [(axum::http::header::SET_COOKIE, cookie)],
-        Json(serde_json::json!({"status": "ok"})),
-    )
-        .into_response()
-}
-
-async fn list_sessions_handler(
-    State(state): State<Arc<AppState>>,
-    connect_info: Option<ConnectInfo<SocketAddr>>,
-) -> Response {
-    if !is_localhost(connect_info) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    Json(state.session_store.list_active()).into_response()
-}
-
-async fn revoke_sessions_handler(
-    State(state): State<Arc<AppState>>,
-    connect_info: Option<ConnectInfo<SocketAddr>>,
-    Json(req): Json<auth::RevokeRequest>,
-) -> Response {
-    if !is_localhost(connect_info) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    let revoked = state.session_store.revoke(&req);
-    Json(auth::RevokeResponse { revoked }).into_response()
 }
 
 async fn serve_ui(uri: axum::http::Uri) -> Response {
@@ -446,7 +149,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
     let origin = origin_override
         .map(String::from)
         .unwrap_or(config.server.origin);
-    let wa_state = webauthn_state::WebauthnState::new(&origin)
+    let wa_state = auth::WebauthnState::new(&origin)
         .expect("cannot initialise WebAuthn state");
     let state = Arc::new(AppState {
         source: TicketSource::Git(root, tickets_dir),
@@ -456,7 +159,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(sessions_path),
         webauthn_state: Arc::new(wa_state),
-        credential_store: credential_store::CredentialStore::load(credentials_path),
+        credential_store: auth::CredentialStore::load(credentials_path),
     });
     let protected = Router::new()
         .route("/api/sync", post(handlers::maintenance::sync_handler))
@@ -480,17 +183,17 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route("/api/epics/:id", get(handlers::epics::get_epic))
         .route("/api/me", get(me_handler))
         .route("/api/collaborators", get(collaborators_handler))
-        .route("/api/auth/otp", post(otp_handler))
-        .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
-        .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth));
+        .route("/api/auth/otp", post(auth::otp_handler))
+        .route("/api/auth/sessions", get(auth::list_sessions_handler).delete(auth::revoke_sessions_handler))
+        .route_layer(axum::middleware::from_fn_with_state(state.clone(), auth::require_auth));
     let open = Router::new()
         .route("/health", get(health_handler))
-        .route("/register", get(register_page_handler))
-        .route("/api/auth/register/challenge", post(register_challenge_handler))
-        .route("/api/auth/register/complete", post(register_complete_handler))
-        .route("/login", get(login_page_handler))
-        .route("/api/auth/login/challenge", post(login_challenge_handler))
-        .route("/api/auth/login/complete", post(login_complete_handler));
+        .route("/register", get(auth::register_page_handler))
+        .route("/api/auth/register/challenge", post(auth::register_challenge_handler))
+        .route("/api/auth/register/complete", post(auth::register_complete_handler))
+        .route("/login", get(auth::login_page_handler))
+        .route("/api/auth/login/challenge", post(auth::login_challenge_handler))
+        .route("/api/auth/login/complete", post(auth::login_complete_handler));
     let fallback_state = state.clone();
     Router::new()
         .merge(protected)
@@ -501,7 +204,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
                 let connect_info = req.extensions().get::<ConnectInfo<SocketAddr>>().copied();
                 if connect_info.is_none()
                     || is_localhost(connect_info)
-                    || find_session_username(req.headers(), &state.session_store).is_some()
+                    || auth::find_session_username(req.headers(), &state.session_store).is_some()
                 {
                     serve_ui(req.uri().clone()).await
                 } else {
@@ -513,9 +216,9 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
 }
 
 #[cfg(test)]
-fn default_webauthn_state() -> Arc<webauthn_state::WebauthnState> {
+fn default_webauthn_state() -> Arc<auth::WebauthnState> {
     Arc::new(
-        webauthn_state::WebauthnState::new("http://localhost:3000")
+        auth::WebauthnState::new("http://localhost:3000")
             .expect("test webauthn state"),
     )
 }
@@ -530,7 +233,7 @@ pub(crate) fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> 
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
         webauthn_state: default_webauthn_state(),
-        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+        credential_store: auth::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/sync", post(handlers::maintenance::sync_handler))
@@ -555,7 +258,7 @@ pub fn build_app_in_memory_with_workers(tickets: Vec<apm_core::ticket::Ticket>) 
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
         webauthn_state: default_webauthn_state(),
-        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+        credential_store: auth::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/workers", get(workers::workers_handler))
@@ -572,7 +275,7 @@ pub fn build_app_in_memory_with_queue(tickets: Vec<apm_core::ticket::Ticket>) ->
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
         webauthn_state: default_webauthn_state(),
-        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+        credential_store: auth::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/queue", get(queue::queue_handler))
@@ -589,7 +292,7 @@ pub fn build_app_in_memory_for_work() -> Router {
         otp_store: auth::OtpStore::new(),
         session_store: auth::SessionStore::load(PathBuf::new()),
         webauthn_state: default_webauthn_state(),
-        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+        credential_store: auth::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/work/status", get(work::get_work_status))
@@ -614,12 +317,12 @@ fn build_app_for_auth_tests(
         otp_store,
         session_store,
         webauthn_state: default_webauthn_state(),
-        credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+        credential_store: auth::CredentialStore::load(PathBuf::new()),
     });
     Router::new()
         .route("/api/me", get(me_handler))
-        .route("/api/auth/otp", post(otp_handler))
-        .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
+        .route("/api/auth/otp", post(auth::otp_handler))
+        .route("/api/auth/sessions", get(auth::list_sessions_handler).delete(auth::revoke_sessions_handler))
         .with_state(state)
 }
 
@@ -1969,16 +1672,16 @@ label = "In Progress"
             otp_store,
             session_store,
             webauthn_state: default_webauthn_state(),
-            credential_store: credential_store::CredentialStore::load(
+            credential_store: auth::CredentialStore::load(
                 dir.path().join("credentials.json"),
             ),
         });
         // keep dir alive by leaking (tests are short-lived)
         std::mem::forget(dir);
         Router::new()
-            .route("/register", get(register_page_handler))
-            .route("/api/auth/register/challenge", post(register_challenge_handler))
-            .route("/api/auth/register/complete", post(register_complete_handler))
+            .route("/register", get(auth::register_page_handler))
+            .route("/api/auth/register/challenge", post(auth::register_challenge_handler))
+            .route("/api/auth/register/complete", post(auth::register_complete_handler))
             .route("/api/me", get(me_handler))
             .with_state(state)
     }
@@ -2168,7 +1871,7 @@ label = "In Progress"
 
     fn build_app_for_login_tests(
         session_store: auth::SessionStore,
-        credential_store: credential_store::CredentialStore,
+        credential_store: auth::CredentialStore,
     ) -> Router {
         let state = Arc::new(AppState {
             source: TicketSource::InMemory(vec![]),
@@ -2181,9 +1884,9 @@ label = "In Progress"
             credential_store,
         });
         Router::new()
-            .route("/login", get(login_page_handler))
-            .route("/api/auth/login/challenge", post(login_challenge_handler))
-            .route("/api/auth/login/complete", post(login_complete_handler))
+            .route("/login", get(auth::login_page_handler))
+            .route("/api/auth/login/challenge", post(auth::login_challenge_handler))
+            .route("/api/auth/login/complete", post(auth::login_complete_handler))
             .route("/api/me", get(me_handler))
             .with_state(state)
     }
@@ -2192,7 +1895,7 @@ label = "In Progress"
     async fn login_page_returns_200_html() {
         let app = build_app_for_login_tests(
             auth::SessionStore::load(PathBuf::new()),
-            credential_store::CredentialStore::load(PathBuf::new()),
+            auth::CredentialStore::load(PathBuf::new()),
         );
         let response = app
             .oneshot(
@@ -2216,7 +1919,7 @@ label = "In Progress"
     async fn login_challenge_malformed_body_returns_400() {
         let app = build_app_for_login_tests(
             auth::SessionStore::load(PathBuf::new()),
-            credential_store::CredentialStore::load(PathBuf::new()),
+            auth::CredentialStore::load(PathBuf::new()),
         );
         let response = app
             .oneshot(
@@ -2236,7 +1939,7 @@ label = "In Progress"
     async fn login_challenge_unknown_user_returns_400() {
         let app = build_app_for_login_tests(
             auth::SessionStore::load(PathBuf::new()),
-            credential_store::CredentialStore::load(PathBuf::new()),
+            auth::CredentialStore::load(PathBuf::new()),
         );
         let body = serde_json::json!({"username": "nobody"});
         let response = app
@@ -2257,7 +1960,7 @@ label = "In Progress"
     async fn login_complete_unknown_login_id_returns_400() {
         let app = build_app_for_login_tests(
             auth::SessionStore::load(PathBuf::new()),
-            credential_store::CredentialStore::load(PathBuf::new()),
+            auth::CredentialStore::load(PathBuf::new()),
         );
         let body = serde_json::json!({
             "login_id": "nonexistent",
@@ -2508,17 +2211,17 @@ label = "In Progress"
             otp_store: auth::OtpStore::new(),
             session_store,
             webauthn_state: default_webauthn_state(),
-            credential_store: credential_store::CredentialStore::load(PathBuf::new()),
+            credential_store: auth::CredentialStore::load(PathBuf::new()),
         });
         let protected = Router::new()
             .route("/api/tickets", get(list_tickets).post(create_ticket))
-            .route("/api/auth/otp", post(otp_handler))
-            .route("/api/auth/sessions", get(list_sessions_handler).delete(revoke_sessions_handler))
-            .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth));
+            .route("/api/auth/otp", post(auth::otp_handler))
+            .route("/api/auth/sessions", get(auth::list_sessions_handler).delete(auth::revoke_sessions_handler))
+            .route_layer(axum::middleware::from_fn_with_state(state.clone(), auth::require_auth));
         let open = Router::new()
             .route("/health", get(health_handler))
-            .route("/api/auth/register/challenge", post(register_challenge_handler))
-            .route("/api/auth/login/challenge", post(login_challenge_handler));
+            .route("/api/auth/register/challenge", post(auth::register_challenge_handler))
+            .route("/api/auth/login/challenge", post(auth::login_challenge_handler));
         Router::new()
             .merge(protected)
             .merge(open)
