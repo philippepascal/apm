@@ -53,7 +53,87 @@ A shared `util.rs` module with two helpers removes both problems:
 
 ### Approach
 
-How the implementation will work.
+**1. Create `apm-server/src/util.rs`**
+
+```rust
+use std::path::PathBuf;
+use crate::AppError;
+
+/// Runs a blocking closure on the Tokio blocking thread pool.
+/// Flattens the JoinError and the inner anyhow::Error into AppError,
+/// so callers only need `.await?` instead of `.await??`.
+pub async fn blocking<F, T>(f: F) -> Result<T, AppError>
+where
+    F: FnOnce() -> anyhow::Result<T> + Send + 'static,
+    T: Send + 'static,
+{
+    tokio::task::spawn_blocking(f)
+        .await
+        .map_err(AppError::from)?
+        .map_err(AppError::from)
+}
+
+/// Loads the APM config for the given repo root on the blocking thread pool.
+/// Accepts PathBuf (owned) so the closure satisfies the 'static bound.
+pub async fn load_config(root: PathBuf) -> Result<apm_core::config::Config, AppError> {
+    blocking(move || apm_core::config::Config::load(&root)).await
+}
+```
+
+**2. Add `mod util;` in `main.rs`** (alongside the existing `mod agents;`, `mod work;`, etc.)
+
+**3. Replace patterns in `main.rs` async handlers**
+
+For every handler that contains:
+```rust
+tokio::task::spawn_blocking({ let root = root.clone(); move || apm_core::config::Config::load(&root) }).await??
+// or
+tokio::task::spawn_blocking(move || apm_core::config::Config::load(&root_clone)).await??
+```
+Replace with:
+```rust
+util::load_config(root.clone()).await?
+// (drop the intermediate root_clone variable if it was only used for this call)
+```
+
+For every other `tokio::task::spawn_blocking(move || { ... }).await??` in an async handler, replace with:
+```rust
+util::blocking(move || { ... }).await?
+```
+
+Handlers to touch in `main.rs` (identified by pattern, verify line numbers at time of implementation):
+- `list_epics` — Config::load via spawn_blocking
+- `get_epic` — Config::load via spawn_blocking
+- `get_ticket` / similar — any direct Config::load in async without spawn_blocking
+- All other async handlers using `spawn_blocking` for non-Config blocking work
+
+**4. Replace patterns in `agents.rs`**
+
+Both `get_agents_config` and `patch_agents_config` contain identical inline spawn_blocking+Config::load blocks. Replace each with `util::load_config(root.clone()).await?`. Remove the `use tokio::task::spawn_blocking` import if it becomes unused.
+
+**5. Replace patterns in `work.rs`**
+
+`post_work_start` (line ~117) and `get_work_dry_run` (line ~182): replace spawn_blocking+Config::load with `util::load_config(root.clone()).await?`. The second spawn_blocking in `post_work_start` (which runs `run_engine_loop`) should be converted to `util::blocking(move || { ... }).await?`.
+
+**6. Replace pattern in `queue.rs`**
+
+The outer `spawn_blocking` closure in `queue_handler` wraps Config::load plus ticket loading plus processing logic. Replace:
+```rust
+let entries = tokio::task::spawn_blocking(move || { ... }).await??;
+```
+with:
+```rust
+let entries = util::blocking(move || { ... }).await?;
+```
+The `Config::load` call inside the closure stays as-is (it is already in a sync context).
+
+**7. Replace pattern in `workers.rs`**
+
+`workers_handler` calls `spawn_blocking(move || collect_workers(&root, &tickets_dir)).await??`. Replace with `util::blocking(move || collect_workers(&root, &tickets_dir)).await?`. The `collect_workers` function itself is unchanged.
+
+**8. Verify**
+
+Run `cargo test -p apm-server` and confirm all tests pass. Grep for remaining `.await??` to confirm none survive in async handlers (only acceptable in test code or sync contexts, which shouldn't have `.await` at all).
 
 ### Open questions
 
