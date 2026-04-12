@@ -19,17 +19,11 @@ depends_on = ["7bb8eacb"]
 
 ### Problem
 
-`apm-server/src/main.rs` contains ~300 lines of epic handler functions that should be in their own module. These include:
+`apm-server/src/main.rs` is a ~4 000-line file that mixes HTTP handler logic, data structures, server bootstrap, and worker-queue code. Epic-related handler code — roughly 220 lines of production code plus ~185 lines of tests — is defined inline in main.rs alongside unrelated concerns.
 
-- `list_epics()` — lists all epic branches with derived state
-- `get_epic()` — loads epic details and associated tickets
-- `create_epic()` — creates new epic branch
-- `parse_epic_branch()` — extracts ID and title from branch name (utility helper)
-- Epic-related serialization logic
+The desired state mirrors the pattern established by the sibling ticket for ticket handlers (7bb8eacb): all epic HTTP handler code lives in `apm-server/src/handlers/epics.rs`, and `main.rs` retains only route registrations that reference the moved functions by path. After both extractions main.rs shrinks by ~700 lines total and is navigable by concern.
 
-These handlers also contain inline `branch_to_title`-style logic (parsing epic branch names into display titles) which duplicates what `apm/src/cmd/epic.rs` does. After the apm CLI refactoring epic moves `branch_to_title` and `epic_id_from_branch` into `apm_core::epic`, these handlers should use the shared helpers.
-
-Extracting into `handlers/epics.rs` will reduce main.rs by ~300 lines. This ticket depends on the ticket handlers being extracted first to avoid merge conflicts (both modify main.rs).
+Note on `parse_epic_branch`: this function duplicates the slug-to-title logic in `apm/src/cmd/epic.rs`. Moving it to `handlers/epics.rs` as-is is correct for this ticket. Replacing it with a shared `apm_core::epic` helper is explicitly out of scope and belongs to a separate refactor.
 
 ### Acceptance criteria
 
