@@ -18,9 +18,11 @@ target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 
 ### Problem
 
-`apm/src/cmd/workers.rs` defines a helper function `worktree_for_ticket()` (lines ~196-213) that resolves a ticket ID to its worktree path. `apm/src/cmd/worktrees.rs` contains similar inline logic (~lines 40-58) for the same purpose but without using the shared helper.
+`apm/src/cmd/workers.rs` defines a private helper `worktree_for_ticket(root, id_arg)` (lines ~196–213) that resolves a ticket ID argument to its worktree path and canonical ID. It loads config and tickets from git, resolves the ID, derives the branch name, and calls `worktree::find_worktree_for_branch`. The function is used by both `tail_log()` and `kill()` in that file.
 
-The helper should be moved to a shared location (either `apm/src/util.rs` or as a method on `CmdContext`) so both `workers.rs` and `worktrees.rs` can use it without duplication.
+`apm/src/cmd/worktrees.rs::remove()` (lines ~40–53) contains the same logic inlined: it loads tickets, resolves the ID, derives the branch name, and finds the worktree — all before calling `worktree::remove_worktree`. The two blocks are functionally identical (same crate imports, same call sequence, same fallback branch-name logic).
+
+Because the shared helper lives as a private function in `workers.rs`, `worktrees.rs` cannot call it and must duplicate it. The fix is to lift the function into `apm/src/util.rs` (a new module) so both command files can import it from a single source of truth.
 
 ### Acceptance criteria
 
