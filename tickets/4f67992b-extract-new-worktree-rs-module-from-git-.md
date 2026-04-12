@@ -51,7 +51,95 @@ Worktree lifecycle management is currently spread across three unrelated modules
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/` unless noted. Start from the state left by b28fe914: `git.rs` is already `git_util.rs` and `lib.rs` already has `pub use git_util as git`.
+
+**1. Create `apm-core/src/worktree.rs`**
+
+Add the following imports at the top (mirroring what the functions need from `git_util.rs`):
+```rust
+use anyhow::Result;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use crate::config::Config;
+use crate::logger;
+```
+
+**2. Move from `git_util.rs` into `worktree.rs`**
+
+Cut these nine items verbatim — do not change signatures or logic:
+- `pub fn find_worktree_for_branch(root: &Path, branch: &str) -> Option<PathBuf>`
+- `pub fn list_ticket_worktrees(root: &Path) -> Result<Vec<(PathBuf, String)>>`
+- `pub fn ensure_worktree(root: &Path, worktrees_base: &Path, branch: &str) -> Result<PathBuf>`
+- `pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()>`
+- `pub fn remove_worktree(root: &Path, wt_path: &Path, force: bool) -> Result<()>`
+- `pub fn sync_agent_dirs(root: &Path, wt_path: &Path, agent_dirs: &[String], warnings: &mut Vec<String>)`
+- `fn clean_agent_dirs(root: &Path, wt_path: &Path)` (private)
+- `fn is_tracked(root: &Path, path: &str) -> bool` (private)
+- `fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()>` (private)
+
+These functions call `run()` (the private git-invocation helper in `git_util.rs`). Since `run` is private, add a local thin wrapper in `worktree.rs`:
+```rust
+fn run(dir: &Path, args: &[&str]) -> Result<String> {
+    let out = Command::new("git").args(args).current_dir(dir).output()?;
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    } else {
+        anyhow::bail!("{}", String::from_utf8_lossy(&out.stderr).trim())
+    }
+}
+```
+Verify this matches the existing `run` signature in `git_util.rs` before finalising.
+
+**3. Move `provision_worktree` from `state.rs` into `worktree.rs`**
+
+Current implementation in `state.rs`:
+```rust
+pub fn provision_worktree(root: &Path, worktrees_base: &Path, branch: &str, agent_dirs: &[String], warnings: &mut Vec<String>) -> Result<PathBuf> {
+    let wt_path = crate::git::ensure_worktree(root, worktrees_base, branch)?;
+    crate::git::sync_agent_dirs(root, &wt_path, agent_dirs, warnings);
+    Ok(wt_path)
+}
+```
+Cut it into `worktree.rs`, updating the internal calls to use the local `ensure_worktree` and `sync_agent_dirs` (no module prefix needed within the same file).
+
+In `state.rs`, replace the removed function with a delegating call or update the single caller directly (whichever is cleaner — check with `grep -r provision_worktree` across `apm-core`, `apm`, and `apm-server`).
+
+**4. Move `list_worktrees_with_tickets` from `ticket.rs` into `worktree.rs`**
+
+Current implementation in `ticket.rs`:
+```rust
+pub fn list_worktrees_with_tickets(root: &Path) -> Result<Vec<(PathBuf, Ticket)>> {
+    let worktrees = crate::git::list_ticket_worktrees(root)?;
+    // ... loads all tickets, matches by branch
+}
+```
+This function imports `Ticket` and calls `load_all_from_git`. After moving to `worktree.rs`, add the necessary imports:
+```rust
+use crate::ticket::{Ticket, load_all_from_git};
+```
+Remove the function from `ticket.rs`. Check for circular imports: `worktree.rs` → `ticket.rs` is fine as long as `ticket.rs` does not import `worktree`. Confirm with a search.
+
+**5. Update `apm-core/src/lib.rs`**
+
+Add `pub mod worktree;` (b28fe914 may have added a stub — if so, replace it with the real declaration). The existing `pub use git_util as git` alias does NOT cover `worktree` — callers must use `worktree::` directly.
+
+**6. Update all call-sites**
+
+Search across `apm-core/`, `apm/`, and `apm-server/` for:
+- `git::find_worktree_for_branch` → `worktree::find_worktree_for_branch`
+- `git::list_ticket_worktrees` → `worktree::list_ticket_worktrees`
+- `git::ensure_worktree` → `worktree::ensure_worktree`
+- `git::add_worktree` → `worktree::add_worktree`
+- `git::remove_worktree` → `worktree::remove_worktree`
+- `git::sync_agent_dirs` → `worktree::sync_agent_dirs`
+- `state::provision_worktree` or `git::provision_worktree` → `worktree::provision_worktree`
+- `ticket::list_worktrees_with_tickets` → `worktree::list_worktrees_with_tickets`
+
+Add `use apm_core::worktree;` (or `use crate::worktree;`) to each file that gains new worktree references.
+
+**7. Verify**
+
+Run `cargo build` and `cargo test` from the repo root. Fix any compilation errors (typically missing imports or stray references). No logic changes are permitted during fixes.
 
 ### Open questions
 
