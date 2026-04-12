@@ -30,7 +30,16 @@ This ticket depends on 1ace7d42 (epic handler extraction) being merged first. By
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-server/src/handlers/maintenance.rs` exists and contains `sync_handler`
+- [ ] `apm-server/src/handlers/maintenance.rs` exists and contains `clean_handler`
+- [ ] `apm-server/src/handlers/maintenance.rs` exists and contains the `CleanRequest` struct
+- [ ] `handlers/mod.rs` declares `pub mod maintenance;`
+- [ ] `main.rs` references both handlers via `handlers::maintenance::` (directly or via a use import)
+- [ ] `main.rs` no longer directly defines `sync_handler`, `clean_handler`, or `CleanRequest` (grep for each yields zero results in main.rs)
+- [ ] `cargo build -p apm-server` succeeds with no compiler errors or warnings
+- [ ] `cargo test -p apm-server` passes with all existing tests green (including `sync_in_memory_returns_not_implemented`)
+- [ ] The HTTP routes registered in `build_app()` are unchanged — same verbs (`POST /api/sync`, `POST /api/clean`), same handler function bindings
+- [ ] `AppError` and `AppState` remain defined in `main.rs`; `handlers/maintenance.rs` imports them from `crate`
 
 ### Out of scope
 
