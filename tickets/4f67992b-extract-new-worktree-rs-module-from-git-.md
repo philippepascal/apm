@@ -41,7 +41,13 @@ Worktree lifecycle management is currently spread across three unrelated modules
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Renaming `git.rs` to `git_util.rs` — done by ticket b28fe914, which this ticket depends on
+- Moving `merge_into_default` and `pull_default` from `state.rs` — also handled by b28fe914
+- Creating `ticket_fmt.rs` or `epic.rs` — separate tickets in the same epic
+- Behaviour changes to any moved function — this is a pure code relocation
+- Changing public API signatures or return types
+- Updating `REFACTOR-CORE.md` or other documentation
+- Adding new worktree functionality beyond what already exists
 
 ### Approach
 
