@@ -19,16 +19,15 @@ depends_on = ["d3ebdc0f", "aeacd066"]
 
 ### Problem
 
-`apm/src/cmd/clean.rs` (296 lines) mixes two unrelated responsibilities:
+`apm/src/cmd/clean.rs` (296 lines) currently bundles two unrelated responsibilities:
 
-1. **Local worktree/branch cleanup** (`run()`, ~70 lines) — removes worktrees and branches for closed tickets. This is appropriate for `clean.rs`.
+1. **Local worktree/branch cleanup** (`run()`, ~70 lines) — identifies and removes worktrees and git branches for closed tickets. This logic belongs in `clean.rs`.
 
-2. **Epic cleanup** (`run_epic_clean()`, ~120 lines) — lists epic branches, prompts for deletion, removes branches, and cleans up `.apm/epics.toml`. This function:
-   - Duplicates epic ID parsing logic that exists in `epic.rs` (and should be in `apm_core::epic` after the prerequisite ticket)
-   - Mixes git branch operations with TOML file manipulation
-   - Contains its own user interaction prompts (should use shared `util::prompt_yes_no()` after the prerequisite ticket)
+2. **Epic cleanup** (`run_epic_clean()`, ~130 lines) — lists `epic/*` branches, derives each epic's state, prompts the user for confirmation, deletes local and remote branches, and removes the entry from `.apm/epics.toml`. Epic cleanup is epic-domain logic and belongs in `epic.rs`.
 
-`run_epic_clean()` should either move to `epic.rs` (since it's epic-domain logic) or become a function in `apm_core::clean`/`apm_core::epic` with the CLI command just handling user prompts. The confirmation prompts should use the shared utility from `util.rs`.
+The misplacement produces two concrete problems. First, `run_epic_clean()` calls `crate::cmd::epic::branch_to_title()` — creating a reverse dependency from `clean.rs` back into `epic.rs`. After ticket aeacd066 moves `branch_to_title()` and `epic_id_from_branch()` to `apm_core::epic`, that call becomes `apm_core::epic::branch_to_title()`, and the function that makes it should live alongside the other epic command handlers. Second, `run_epic_clean()` contains inline user-prompt sequences (print / flush / read_line / trim / eq_ignore_ascii_case) that ticket d3ebdc0f replaced with `util::prompt_yes_no()` everywhere — but the function is still in the wrong file.
+
+The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns `run_epic_clean()` as a peer of its other `run_*` helpers. The public `apm clean --epics` invocation and its observable behaviour do not change.
 
 ### Acceptance criteria
 
