@@ -19,19 +19,7 @@ depends_on = ["a6bc1326", "2973f8d1"]
 
 ### Problem
 
-`apm-server/src/main.rs` contains ~500 lines of ticket CRUD handler functions that should be in their own module. These include:
-
-- `list_tickets()` (~90 lines) — filtering, dependency computation, response building
-- `get_ticket()` (~45 lines) — load ticket, compute deps and transitions
-- `create_ticket()` — creates ticket via apm_core
-- `patch_ticket()` — updates ticket fields
-- `batch_update_tickets()` — bulk state/field updates
-- `get_ticket_spec()`, `update_ticket_spec()` — spec section CRUD
-- Various helper functions for ticket serialization
-
-These handlers depend on the DTOs extracted by the prerequisite ticket (models.rs) and the business logic moved to apm_core by the other prerequisite. Extracting them into `handlers/tickets.rs` will reduce main.rs by ~500 lines and group all ticket-related HTTP logic in one place.
-
-After extraction, main.rs should only reference the handler functions in its route definitions.
+main.rs in apm-server currently contains roughly 500 lines of ticket-related HTTP handler code — request/response structs, helper functions, and eight async handler functions — all mixed in with server bootstrap, auth routes, and worker-queue code. This makes the file very long (~4000+ lines) and hard to navigate.\n\nThe desired state is that all ticket CRUD logic lives in a dedicated handlers/tickets.rs module. After extraction, main.rs retains only route registration (referencing handlers by path) and the cross-cutting infrastructure types (AppState, AppError, server startup). This mirrors the existing pattern for other logical groupings in the codebase (agents.rs, auth.rs, workers.rs, etc.).\n\nThis ticket depends on two prerequisite refactors (a6bc1326 and 2973f8d1) that move DTOs and core business logic out of main.rs, so by the time this work runs, the ticket handler code is already relatively self-contained.
 
 ### Acceptance criteria
 
