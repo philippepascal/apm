@@ -30,7 +30,50 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Approach
 
-How the implementation will work.
+**1. Create `apm-core/src/ticket_fmt.rs`**
+
+Move these items verbatim from `ticket.rs`:
+- All `use` imports that the moved items depend on
+- `Frontmatter` struct and its `Deserialize`/`Serialize` impls (including the custom `deserialize_id` helper)
+- `Ticket` struct and its `impl` block (`load`, `parse`, `serialize`, `save`, `score`, `document`)
+- `ChecklistItem` struct
+- `ValidationError` enum
+- `TicketDocument` struct and its `impl` block (`parse`, `serialize`, `validate`, `unchecked_tasks`, `toggle_criterion`)
+- Free functions: `slugify`, `normalize_id_arg`, `id_arg_prefixes`, `resolve_id_in_slice`, `set_field`
+- All `#[cfg(test)]` blocks that test the above
+
+**2. Create `apm-core/src/ticket_util.rs`**
+
+Move these items verbatim from `ticket.rs`:
+- All `use` imports that the moved items depend on (will include imports from `ticket_fmt`)
+- Free functions: `build_reverse_index`, `effective_priority`, `dep_satisfied`, `sorted_actionable`, `pick_next`, `load_all_from_git`, `state_from_branch`, `list_worktrees_with_tickets`, `close`, `create`, `check_owner`, `list_filtered`
+- All `#[cfg(test)]` blocks that test the above
+
+**3. Replace `apm-core/src/ticket.rs` with a re-export hub**
+
+The new `ticket.rs` contains only:
+
+```rust
+mod ticket_fmt;
+mod ticket_util;
+
+pub use ticket_fmt::*;
+pub use ticket_util::*;
+```
+
+No type definitions, `impl` blocks, or function bodies remain here.
+
+**4. `apm-core/src/lib.rs` — no changes required**
+
+`lib.rs` already declares `pub mod ticket;`. The new submodules (`ticket_fmt`, `ticket_util`) are declared inside `ticket.rs` via `mod`, so they remain internal. All callers continue to import via `apm_core::ticket::…` unchanged.
+
+**5. Resolve cross-file `use` dependencies**
+
+`ticket_util.rs` uses types (`Ticket`, `Frontmatter`, `TicketDocument`, etc.) and functions (`slugify`, etc.) that now live in `ticket_fmt.rs`. Add `use super::ticket_fmt::*;` (or explicit named imports) at the top of `ticket_util.rs`.
+
+**6. Verify**
+
+Run `cargo build --workspace` then `cargo test --workspace`. No files outside `apm-core/src/ticket*.rs` should need edits. If the compiler reports missing items in any `use apm_core::ticket::…` path, check that the moved symbol is `pub` and re-exported via `ticket.rs`.
 
 ### Open questions
 
