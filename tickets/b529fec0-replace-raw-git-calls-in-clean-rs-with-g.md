@@ -46,7 +46,50 @@ This ticket must land after 061d0ac1 is merged into the epic branch, because it 
 
 ### Approach
 
-How the implementation will work.
+File to change: `apm-core/src/clean.rs`
+
+**Prerequisites:** ticket 061d0ac1 must be merged into the epic branch first.
+
+**Call 1 - diagnose_worktree (~line 49)**
+
+Replace the Command::new("git") .args(["-C", path, "status", "--porcelain"]).output()? and the String::from_utf8_lossy line with:
+  let stdout = git_util::run(path, &["status", "--porcelain"])?;
+
+run() returns Result<String> (trimmed stdout). The downstream for-loop over stdout.lines() is unchanged.
+
+**Call 2 - candidates wt_clean check (~line 156)**
+
+Replace the Command + match block that sets wt_clean with:
+  let wt_clean = !git_util::is_worktree_dirty(&path);
+
+is_worktree_dirty returns false on error (treats errors as dirty), matching current behaviour.
+
+**Calls 3 and 4 - candidates local-branch-exists (~lines 181, 234)**
+
+Replace each Command block with:
+  let lbe = git_util::local_branch_exists(&root, &branch);
+  // and:
+  let local_branch_exists = git_util::local_branch_exists(&root, &branch);
+
+Both helpers return false on error, matching current behaviour.
+
+**Call 5 - remove branch deletion (~line 272)**
+
+Replace the Command::new("git").args([..., "branch", "-D", ...]) block and its match with:
+  git_util::delete_local_branch(&root, &candidate.branch, &mut warnings);
+
+The helper pushes a warning into warnings on failure. Any success-path log messages outside the raw command call stay in place.
+
+**Call 6 - remove remote-tracking prune (~line 300)**
+
+Replace the let _ = Command::new("git") .args([..., "branch", "-dr", ...]).output() call with:
+  git_util::prune_remote_tracking(&root, &candidate.branch);
+
+Errors are silently ignored by the helper, matching the current let _ = behaviour.
+
+**Cleanup**
+
+Remove `use std::process::Command;` from clean.rs imports. Verify with cargo build and cargo test.
 
 ### Open questions
 
