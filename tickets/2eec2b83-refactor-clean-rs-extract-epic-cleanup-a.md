@@ -40,7 +40,7 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 - [x] `apm clean --epics` lists done epic branches and prompts for each deletion, unchanged from before
 - [x] `apm clean --epics --dry-run` prints what would be deleted without making any changes
 - [x] `apm clean --epics --yes` skips all prompts and deletes without asking
-- [ ] `cargo test` passes across all crates
+- [x] `cargo test` passes across all crates
 
 ### Out of scope
 
