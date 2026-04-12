@@ -30,7 +30,7 @@ The `apm-core/src/` directory mixes Rust source files with five embedded templat
 
 ### Approach
 
-How the implementation will work.
+All changes are confined to `apm-core/`.\n\n1. Create `apm-core/src/default/` and move the five asset files using `git mv` (preserves history):\n   - `apm-core/src/apm.agents.md` → `apm-core/src/default/apm.agents.md`\n   - `apm-core/src/apm.spec-writer.md` → `apm-core/src/default/apm.spec-writer.md`\n   - `apm-core/src/apm.worker.md` → `apm-core/src/default/apm.worker.md`\n   - `apm-core/src/ticket.toml` → `apm-core/src/default/ticket.toml`\n   - `apm-core/src/workflow.toml` → `apm-core/src/default/workflow.toml`\n\n2. Update the five `include_str!()` calls in `apm-core/src/init.rs`:\n   - Line 123: `include_str!("apm.spec-writer.md")` → `include_str!("default/apm.spec-writer.md")`\n   - Line 124: `include_str!("apm.worker.md")` → `include_str!("default/apm.worker.md")`\n   - Line 234: `include_str!("apm.agents.md")` → `include_str!("default/apm.agents.md")`\n   - Line 313: `include_str!("workflow.toml")` → `include_str!("default/workflow.toml")`\n   - Line 317: `include_str!("ticket.toml")` → `include_str!("default/ticket.toml")`\n\n3. Verify with `cargo test -p apm-core`. The compiler enforces correctness at build time — any missed path is a compile error. The existing test suite (`setup_creates_expected_files`, `default_workflow_toml_is_valid`, `default_ticket_toml_is_valid`, etc.) validates that the embedded content remains correct.\n\nNo other files reference these assets by source path. The `include_str!()` paths are relative to `init.rs`, so prefixing each with `default/` is the complete change.
 
 ### Open questions
 
