@@ -1,7 +1,7 @@
 +++
 id = "1ace7d42"
 title = "Extract epic handlers from main.rs into handlers/epics.rs"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1ace7d42-extract-epic-handlers-from-main-rs-into-"
 created_at = "2026-04-12T09:03:14.832182Z"
-updated_at = "2026-04-12T09:53:30.210578Z"
+updated_at = "2026-04-12T09:53:36.838471Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 depends_on = ["7bb8eacb"]
@@ -157,3 +157,4 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that p
 | 2026-04-12T09:03Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
 | 2026-04-12T09:49Z | groomed | in_design | philippepascal |
+| 2026-04-12T09:53Z | in_design | specd | claude-0412-0949-cb30 |
