@@ -28,7 +28,7 @@ A shared `util.rs` module with two helpers removes both problems:
 
 ### Acceptance criteria
 
-- [ ] `apm-server/src/util.rs` exists and is declared as `mod util` in `main.rs`
+- [x] `apm-server/src/util.rs` exists and is declared as `mod util` in `main.rs`
 - [ ] `util::blocking` accepts any `FnOnce() -> anyhow::Result<T>` that is `Send + 'static` and returns `Result<T, AppError>`
 - [ ] `util::blocking` does not require callers to double-`?` the result (`.await?` is sufficient)
 - [ ] `util::load_config` accepts a `PathBuf`, calls `Config::load` via `blocking`, and returns `Result<apm_core::config::Config, AppError>`
