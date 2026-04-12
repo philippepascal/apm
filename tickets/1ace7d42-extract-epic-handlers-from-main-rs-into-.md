@@ -144,7 +144,7 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) and a6bc1326 (models
 ### Amendment requests
 
 - [x] Remove EpicSummary, EpicDetailResponse, and CreateEpicRequest from scope. Prerequisite a6bc1326 already moves these to `models.rs` — they will not be in `main.rs` when this ticket runs. The handlers should import them from `crate::models`.
-- [ ] Update acceptance criteria: remove the line about handlers/epics.rs containing request/response structs. The file should only contain handler functions and helper functions.
+- [x] Update acceptance criteria: remove the line about handlers/epics.rs containing request/response structs. The file should only contain handler functions and helper functions.
 - [ ] Update the approach: remove step 3 (move structs) entirely, and update imports in step 7 to include `use crate::models::{EpicSummary, EpicDetailResponse, CreateEpicRequest};` instead of defining them locally.
 
 ### Code review
