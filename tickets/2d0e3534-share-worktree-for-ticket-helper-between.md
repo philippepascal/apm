@@ -1,7 +1,7 @@
 +++
 id = "2d0e3534"
 title = "Share worktree_for_ticket helper between workers.rs and worktrees.rs"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2d0e3534-share-worktree-for-ticket-helper-between"
 created_at = "2026-04-12T09:02:38.703504Z"
-updated_at = "2026-04-12T10:10:43.101372Z"
+updated_at = "2026-04-12T10:11:04.011784Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f"]
@@ -120,3 +120,4 @@ Add `pub mod util;` alongside the existing module declarations.
 | 2026-04-12T09:09Z | new | groomed | apm |
 | 2026-04-12T09:18Z | groomed | in_design | philippepascal |
 | 2026-04-12T09:21Z | in_design | specd | claude-0412-0918-aab0 |
+| 2026-04-12T10:11Z | specd | ammend | apm |
