@@ -1,7 +1,7 @@
 +++
 id = "a6bc1326"
 title = "Extract request/response DTOs from main.rs into models.rs"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a6bc1326-extract-request-response-dtos-from-main-"
 created_at = "2026-04-12T09:02:56.242957Z"
-updated_at = "2026-04-12T11:03:47.492948Z"
+updated_at = "2026-04-12T17:11:21.980650Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 +++
@@ -111,3 +111,4 @@ Run `cargo build` and `cargo test` in `apm-server/`. Fix any compile errors that
 | 2026-04-12T10:24Z | specd | ready | apm |
 | 2026-04-12T10:59Z | ready | in_progress | philippepascal |
 | 2026-04-12T11:03Z | in_progress | implemented | claude-0412-1059-69f0 |
+| 2026-04-12T17:11Z | implemented | closed | philippepascal |
