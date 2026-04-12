@@ -35,7 +35,7 @@ Depends on the git_util helpers ticket landing first.
 
 ### Acceptance criteria
 
-- [ ] `epic::create()` contains zero `Command::new("git")` calls in production code after the refactor\n- [ ] The fetch step calls `git_util::fetch_branch(root, "main")`\n- [ ] The worktree-add step calls `git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, "origin/main"])`\n- [ ] The stage step calls `git_util::stage_files(&wt_path, &["EPIC.md"])`\n- [ ] The commit step calls `git_util::commit(&wt_path, &commit_msg)`\n- [ ] The worktree-removal step calls `worktree::remove_worktree(root, &wt_path, true)` and its result is still ignored (non-fatal)\n- [ ] All existing `epic` integration tests pass with no changes to test helpers\n- [ ] `cargo clippy -p apm-core` reports no new warnings
+- [x] `epic::create()` contains zero `Command::new("git")` calls in production code after the refactor\n- [x] The fetch step calls `git_util::fetch_branch(root, "main")`\n- [x] The worktree-add step calls `git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, "origin/main"])`\n- [x] The stage step calls `git_util::stage_files(&wt_path, &["EPIC.md"])`\n- [x] The commit step calls `git_util::commit(&wt_path, &commit_msg)`\n- [x] The worktree-removal step calls `worktree::remove_worktree(root, &wt_path, true)` and its result is still ignored (non-fatal)\n- [x] All existing `epic` integration tests pass with no changes to test helpers\n- [x] `cargo clippy -p apm-core` reports no new warnings
 
 ### Out of scope
 
