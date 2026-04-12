@@ -146,7 +146,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             git::push_branch_tracking(root, &branch)?;
             let pr_base = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
-            gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &mut messages)?;
+            crate::github::gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &mut messages)?;
         }
         CompletionStrategy::Merge => {
             let merge_target = t.frontmatter.target_branch.as_deref()
@@ -162,7 +162,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             if let Some(ref target) = t.frontmatter.target_branch {
                 git::merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
             } else {
-                gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
+                crate::github::gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
             }
         }
         CompletionStrategy::Pull => {
@@ -191,40 +191,6 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         warnings,
         messages,
     })
-}
-
-fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str, messages: &mut Vec<String>) -> Result<()> {
-    let existing = std::process::Command::new("gh")
-        .args(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--jq", ".[0].number"])
-        .current_dir(root)
-        .output()?;
-
-    let pr_num = String::from_utf8_lossy(&existing.stdout).trim().to_string();
-    if !pr_num.is_empty() && pr_num != "null" {
-        messages.push(format!("PR #{pr_num} already open for {branch}"));
-        return Ok(());
-    }
-
-    let short_id = &id[..8.min(id.len())];
-    let pr_title = if title.is_empty() {
-        short_id.to_string()
-    } else {
-        format!("{short_id}: {title}")
-    };
-    let body = format!("Closes #{id}");
-    let out = std::process::Command::new("gh")
-        .args(["pr", "create", "--base", default_branch, "--head", branch,
-               "--title", &pr_title, "--body", &body])
-        .current_dir(root)
-        .output()?;
-
-    if out.status.success() {
-        let url = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        messages.push(format!("PR created: {url}"));
-    } else {
-        bail!("gh pr create failed: {}", String::from_utf8_lossy(&out.stderr).trim());
-    }
-    Ok(())
 }
 
 
@@ -286,32 +252,3 @@ pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &
     }
 }
 
-#[cfg(test)]
-mod tests {
-    fn pr_title(id: &str, title: &str) -> String {
-        let short_id = &id[..8.min(id.len())];
-        if title.is_empty() {
-            short_id.to_string()
-        } else {
-            format!("{short_id}: {title}")
-        }
-    }
-
-    #[test]
-    fn pr_title_includes_short_id_prefix() {
-        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
-        assert_eq!(pr_title(id, "Fix the thing"), "034ed345: Fix the thing");
-    }
-
-    #[test]
-    fn pr_title_empty_title_falls_back_to_short_id() {
-        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
-        assert_eq!(pr_title(id, ""), "034ed345");
-    }
-
-    #[test]
-    fn pr_title_short_id_exactly_8_chars() {
-        let id = "abcd1234efgh";
-        assert_eq!(pr_title(id, "My ticket"), "abcd1234: My ticket");
-    }
-}

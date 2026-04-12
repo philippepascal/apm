@@ -1,4 +1,5 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use std::path::Path;
 
 pub fn gh_username() -> Option<String> {
     std::process::Command::new("gh")
@@ -54,6 +55,43 @@ pub fn fetch_repo_collaborators(token: &str, repo: &str) -> Result<Vec<String>> 
     Ok(logins)
 }
 
+pub fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str, messages: &mut Vec<String>) -> Result<()> {
+    let existing = std::process::Command::new("gh")
+        .args(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--jq", ".[0].number"])
+        .current_dir(root)
+        .output()?;
+
+    let pr_num = String::from_utf8_lossy(&existing.stdout).trim().to_string();
+    if !pr_num.is_empty() && pr_num != "null" {
+        messages.push(format!("PR #{pr_num} already open for {branch}"));
+        return Ok(());
+    }
+
+    let title_str = pr_title(id, title);
+    let body = format!("Closes #{id}");
+    let out = std::process::Command::new("gh")
+        .args(["pr", "create", "--base", default_branch, "--head", branch,
+               "--title", &title_str, "--body", &body])
+        .current_dir(root)
+        .output()?;
+
+    if out.status.success() {
+        let url = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        messages.push(format!("PR created: {url}"));
+    } else {
+        bail!("gh pr create failed: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    Ok(())
+}
+
+fn pr_title(id: &str, title: &str) -> String {
+    let short_id = &id[..8.min(id.len())];
+    if title.is_empty() {
+        short_id.to_string()
+    } else {
+        format!("{short_id}: {title}")
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -67,4 +105,21 @@ mod tests {
         assert!(!login.is_empty());
     }
 
+    #[test]
+    fn pr_title_includes_short_id_prefix() {
+        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
+        assert_eq!(pr_title(id, "Fix the thing"), "034ed345: Fix the thing");
+    }
+
+    #[test]
+    fn pr_title_empty_title_falls_back_to_short_id() {
+        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
+        assert_eq!(pr_title(id, ""), "034ed345");
+    }
+
+    #[test]
+    fn pr_title_short_id_exactly_8_chars() {
+        let id = "abcd1234efgh";
+        assert_eq!(pr_title(id, "My ticket"), "abcd1234: My ticket");
+    }
 }
