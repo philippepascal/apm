@@ -45,7 +45,22 @@ Moving it completes the cleanup started in ticket 4004f5dc and satisfies section
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/src/`.
+
+**`review.rs`**
+- Copy `ensure_amendment_section` verbatim from `state.rs` and add it as a `pub fn` in `review.rs`. No new imports are needed — the function uses only `String` methods from std.
+- Add a `#[cfg(test)]` block (or extend the existing one) with four test cases:
+  - `already_has_section`: body contains `### Amendment requests` → function returns early, body unchanged
+  - `inserts_after_out_of_scope`: body has `### Out of scope\n\n- x\n\n## History` → amendment block inserted between the out-of-scope block and `## History`
+  - `inserts_before_history_no_out_of_scope`: body has `## History` but no `### Out of scope` → amendment block inserted immediately before `## History`
+  - `appends_when_no_anchor`: body has neither anchor → amendment block appended at end
+
+**`state.rs`**
+- Remove the `ensure_amendment_section` function definition (currently at lines 321–338 on the worktree branch).
+- Add `review` to the existing `use crate::` import group, or add `use crate::review;` as a separate line.
+- Change the call site in `transition()` from `ensure_amendment_section(&mut t.body)` to `review::ensure_amendment_section(&mut t.body)`.
+
+No other files change. The function is only called from within `state::transition()`; no external crate references it by path.
 
 ### Open questions
 
