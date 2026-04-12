@@ -37,7 +37,7 @@ fn setup_two_clones() -> (TempDir, TempDir, TempDir) {
     git(origin.path(), &["init", "--bare", "-q"]);
 
     // Clone A: init, add remote, push initial commit.
-    git(clone_a.path(), &["init", "-q"]);
+    git(clone_a.path(), &["init", "-q", "-b", "main"]);
     git(clone_a.path(), &["config", "user.email", "test@test.com"]);
     git(clone_a.path(), &["config", "user.name", "test"]);
     git(clone_a.path(), &["remote", "add", "origin", origin.path().to_str().unwrap()]);
@@ -47,7 +47,7 @@ fn setup_two_clones() -> (TempDir, TempDir, TempDir) {
     git(clone_a.path(), &["push", "origin", "HEAD:main"]);
 
     // Clone B: clone from origin.
-    git(clone_b.path(), &["init", "-q"]);
+    git(clone_b.path(), &["init", "-q", "-b", "main"]);
     git(clone_b.path(), &["config", "user.email", "test@test.com"]);
     git(clone_b.path(), &["config", "user.name", "test"]);
     git(clone_b.path(), &["remote", "add", "origin", origin.path().to_str().unwrap()]);

@@ -17,7 +17,7 @@ fn setup() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -180,7 +180,7 @@ fn write_valid_spec_to_branch(dir: &std::path::Path, branch: &str, path: &str) {
 fn init_creates_expected_files() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     apm_core::init::setup(p, None, None, None).unwrap();
@@ -197,7 +197,7 @@ fn init_creates_expected_files() {
 fn init_is_idempotent() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     apm_core::init::setup(p, None, None, None).unwrap();
@@ -211,7 +211,7 @@ fn init_is_idempotent() {
 fn init_generated_config_has_all_workflow_states() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     apm_core::init::setup(p, None, None, None).unwrap();
@@ -627,7 +627,7 @@ fn config_default_branch_defaults_to_main_when_absent() {
     // A config without default_branch should deserialize with "main" as default.
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     std::fs::write(p.join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
@@ -640,7 +640,7 @@ fn config_default_branch_defaults_to_main_when_absent() {
 fn setup_with_close_workflow() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     std::fs::write(p.join("apm.toml"), r#"[project]
@@ -1185,7 +1185,7 @@ fn setup_aggressive() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -1323,7 +1323,7 @@ fn setup_with_local_worktrees() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -1497,7 +1497,7 @@ fn start_next_claims_new_ticket_when_no_ready_tickets() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -1693,7 +1693,7 @@ fn setup_for_prompt_dispatch() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -1977,7 +1977,7 @@ fn context_section_unknown_section_is_error() {
 fn context_section_from_transition_config() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     std::fs::write(p.join("apm.toml"), r#"[project]
@@ -2313,7 +2313,7 @@ fn new_without_epic_flags_is_unchanged() {
 fn new_body_scaffold_from_ticket_sections_config() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     std::fs::write(p.join("apm.toml"), r#"[project]
@@ -2373,7 +2373,7 @@ fn validate_config_missing_instructions_and_bad_context_section() {
     let p = dir.path();
 
     // Init a minimal git repo.
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -2590,7 +2590,7 @@ fn clean_treats_closed_as_terminal_without_config_entry() {
     // Config has no "closed" state entry at all, but clean should still treat it as terminal.
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     // Config with no terminal states defined
@@ -3012,7 +3012,7 @@ fn setup_with_worktrees() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -3180,7 +3180,7 @@ fn workers_kill_stale_pid_errors() {
 fn setup_with_strict_transitions() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     std::fs::write(p.join("apm.toml"), r#"[project]
@@ -3503,7 +3503,7 @@ fn start_uses_target_branch_as_merge_source() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -3590,7 +3590,7 @@ fn setup_with_satisfies_deps() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -3745,7 +3745,7 @@ fn setup_epic_list() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -3865,7 +3865,7 @@ fn setup_epic_show() -> tempfile::TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
@@ -4248,7 +4248,7 @@ fn agents_prints_instructions_file() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 

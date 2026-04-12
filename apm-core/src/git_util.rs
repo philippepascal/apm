@@ -932,7 +932,7 @@ mod tests {
     fn git_init() -> TempDir {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        Cmd::new("git").args(["init", "-q"]).current_dir(p).status().unwrap();
+        Cmd::new("git").args(["init", "-q", "-b", "main"]).current_dir(p).status().unwrap();
         Cmd::new("git").args(["config", "user.email", "t@t.com"]).current_dir(p).status().unwrap();
         Cmd::new("git").args(["config", "user.name", "test"]).current_dir(p).status().unwrap();
         dir

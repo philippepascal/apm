@@ -19,7 +19,7 @@ fn setup() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
