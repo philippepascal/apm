@@ -1,7 +1,7 @@
 +++
 id = "db874c60"
 title = "Replace raw git calls in init.rs, start.rs, and worktree.rs with git_util helpers"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/db874c60-replace-raw-git-calls-in-init-rs-start-r"
 created_at = "2026-04-12T17:29:31.936764Z"
-updated_at = "2026-04-12T18:11:48.887212Z"
+updated_at = "2026-04-12T18:26:19.034441Z"
 epic = "6062f74f"
 target_branch = "epic/6062f74f-consolidate-git-operations-into-git-util"
 depends_on = ["061d0ac1"]
@@ -164,3 +164,4 @@ Run `cargo test -p apm-core`. The init integration tests exercise `maybe_initial
 | 2026-04-12T17:54Z | specd | ready | apm |
 | 2026-04-12T18:07Z | ready | in_progress | philippepascal |
 | 2026-04-12T18:11Z | in_progress | implemented | claude-0412-1807-b9e0 |
+| 2026-04-12T18:26Z | implemented | closed | philippepascal |
