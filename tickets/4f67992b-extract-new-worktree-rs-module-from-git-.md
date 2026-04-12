@@ -19,11 +19,7 @@ depends_on = ["b28fe914"]
 
 ### Problem
 
-Worktree lifecycle management is scattered across three modules: `git.rs` (find, list, ensure, add, remove, sync_agent_dirs, copy_dir_recursive), `state.rs` (`provision_worktree`), and `ticket.rs` (`list_worktrees_with_tickets`). There is no single place to understand or modify worktree behavior.
-
-This ticket creates a dedicated `worktree.rs` module that owns the full worktree lifecycle: discovery, creation, provisioning, agent directory syncing, and cleanup.
-
-See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 3 for the full plan.
+Worktree lifecycle management is currently spread across three unrelated modules. `git_util.rs` (formerly `git.rs`, renamed by ticket b28fe914) owns the low-level primitives: `find_worktree_for_branch`, `list_ticket_worktrees`, `ensure_worktree`, `add_worktree`, `remove_worktree`, `sync_agent_dirs`, and their private helpers `clean_agent_dirs`, `is_tracked`, and `copy_dir_recursive`. `state.rs` owns `provision_worktree`, the high-level orchestrator that calls `ensure_worktree` + `sync_agent_dirs`. `ticket.rs` owns `list_worktrees_with_tickets`, which pairs each worktree with its ticket record.\n\nThere is no single place to understand or modify worktree behaviour. A developer who wants to change how worktrees are provisioned must read `state.rs`; one who wants to change how they are discovered must read `git_util.rs`; one who wants to query which tickets have live worktrees must read `ticket.rs`.\n\nThis ticket creates `apm-core/src/worktree.rs` as the single owner of the full worktree lifecycle — discovery, creation, provisioning, agent-directory syncing, and cleanup — and updates all callers to reference it. It runs after b28fe914 (which renames `git.rs` → `git_util.rs` and installs the `pub use git_util as git` compatibility alias).
 
 ### Acceptance criteria
 
