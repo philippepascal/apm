@@ -48,43 +48,27 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 5 for the full plan.
 
 ### Approach
 
-The starting point is `state.rs` after ticket 4f67992b has landed: `provision_worktree` is already absent and `transition()` already calls `worktree::provision_worktree`. The four remaining non-state-machine functions are `gh_pr_create_or_update`, `merge_into_default`, `pull_default`, and `ensure_amendment_section`.
+The starting point is `state.rs` after tickets b28fe914, 4f67992b, and eb4789cf have all landed. At that point `provision_worktree`, `merge_into_default`, and `pull_default` are already absent from `state.rs`, and `transition()` already calls them via their new module paths. The only remaining non-state-machine function this ticket targets is `gh_pr_create_or_update`. (`ensure_amendment_section` remains in `state.rs` for ticket a6367b87 to handle.)
 
 **1. Move `gh_pr_create_or_update` to `github.rs`**
 
 - Cut the function verbatim from `state.rs`; paste into `apm-core/src/github.rs` as `pub fn`.
 - `github.rs` already uses `std::process::Command` and `anyhow` — add any missing imports.
 - Extract the inline PR-title logic into a private helper in `github.rs`:
-  `fn pr_title(id: &str, title: &str) -> String` — short_id is `&id[..8.min(id.len())]`, returns the short_id alone when title is empty, else `"short_id: title"`. This matches the test helper that already lives in `state.rs`'s test block.
+  `fn pr_title(id: &str, title: &str) -> String` — `short_id` is `&id[..8.min(id.len())]`, returns `short_id` alone when `title` is empty, else `"short_id: title"`. This matches the test helper that already lives in `state.rs`'s test block.
 - Update `gh_pr_create_or_update` to call `pr_title(id, title)`.
 - Move the three `pr_title_*` tests from `state.rs`'s `#[cfg(test)]` block to `github.rs`'s `#[cfg(test)]` block unchanged. They reference the now-local `pr_title` helper.
 
-**2. Move `merge_into_default` and `pull_default` to `git_util.rs`**
+**2. Update `transition()` in `state.rs`**
 
-- Cut both functions from `state.rs` and paste into `apm-core/src/git_util.rs` (the b28fe914-renamed `git.rs`) as `pub fn`.
-- Update internal references inside the moved functions:
-  - `merge_into_default`: `git::ensure_worktree(...)` becomes `crate::worktree::ensure_worktree(...)`; `git::push_branch(...)` becomes the local `push_branch(...)` (already in the same file).
-  - `pull_default`: `git::find_worktree_for_branch(...)` becomes `crate::worktree::find_worktree_for_branch(...)`.
-- `merge_into_default` takes `config: &Config` — verify `use crate::config::Config` is already in `git_util.rs`; add if missing.
-- No circular dependency: `worktree.rs` uses only its own local `run()` helper and does not import `git_util`, so `git_util -> worktree` is a one-way edge.
+Replace the private-function call:
+- `gh_pr_create_or_update(...)` → `crate::github::gh_pr_create_or_update(...)`
 
-**3. Move `ensure_amendment_section` to `spec.rs`**
+**3. Clean up `state.rs` imports**
 
-- Cut the function from `state.rs` and paste into `apm-core/src/spec.rs` as `pub fn`. No new imports needed — the function is pure `String` manipulation.
+Remove any `use` items that were only needed by `gh_pr_create_or_update`. Verify remaining imports (e.g. `use crate::{config::{CompletionStrategy, Config}, git, ticket};`) are still required by `transition()`, `available_transitions()`, and `append_history()`.
 
-**4. Update `transition()` in `state.rs`**
-
-Replace the four private-function calls with module-qualified equivalents:
-- `ensure_amendment_section(...)` -> `crate::spec::ensure_amendment_section(...)`
-- `gh_pr_create_or_update(...)` -> `crate::github::gh_pr_create_or_update(...)`
-- `merge_into_default(...)` -> `crate::git::merge_into_default(...)` (using the `pub use git_util as git` alias from b28fe914)
-- `pull_default(...)` -> `crate::git::pull_default(...)`
-
-**5. Clean up `state.rs` imports**
-
-Remove any `use` items that were only needed by the moved functions. Verify the existing `use crate::{config::{CompletionStrategy, Config}, git, ticket};` line remains intact.
-
-**6. Verify**
+**4. Verify**
 
 Run `cargo build --workspace` and fix any compilation errors (missing visibility, stale imports). Then run `cargo test --workspace`. No logic changes are permitted during fixes.
 
