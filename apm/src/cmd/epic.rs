@@ -395,12 +395,10 @@ pub(crate) fn run_epic_clean(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Gate check logic tests
     #[test]
     fn gate_check_all_passing() {
-        use apm_core::config::{StateConfig, WorkflowConfig};
+        use apm_core::config::{WorkflowConfig};
 
         let states = vec![
             make_state("implemented", true, false),
@@ -416,7 +414,7 @@ mod tests {
 
     #[test]
     fn gate_check_failing_state() {
-        use apm_core::config::{StateConfig, WorkflowConfig};
+        use apm_core::config::WorkflowConfig;
 
         let states = vec![
             make_state("in_progress", false, false),
