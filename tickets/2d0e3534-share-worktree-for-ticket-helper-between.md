@@ -26,7 +26,14 @@ Because the shared helper lives as a private function in `workers.rs`, `worktree
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm/src/util.rs` exists and is declared as `pub mod util;` in `apm/src/lib.rs`
+- [ ] `util::worktree_for_ticket(root, id_arg)` compiles and returns `Result<(PathBuf, String)>`
+- [ ] `apm/src/cmd/workers.rs` no longer defines its own `worktree_for_ticket` function
+- [ ] `apm/src/cmd/workers.rs` calls `crate::util::worktree_for_ticket` for both `tail_log` and `kill`
+- [ ] `apm/src/cmd/worktrees.rs::remove()` no longer contains the inline ticket-to-worktree resolution block
+- [ ] `apm/src/cmd/worktrees.rs::remove()` calls `crate::util::worktree_for_ticket` to obtain the worktree path
+- [ ] `cargo build -p apm` succeeds with no new warnings
+- [ ] `cargo test -p apm` passes (all existing tests continue to pass)
 
 ### Out of scope
 
