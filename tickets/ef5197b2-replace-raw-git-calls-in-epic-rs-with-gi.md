@@ -1,7 +1,7 @@
 +++
 id = "ef5197b2"
 title = "Replace raw git calls in epic.rs with git_util helpers"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ef5197b2-replace-raw-git-calls-in-epic-rs-with-gi"
 created_at = "2026-04-12T17:29:30.028375Z"
-updated_at = "2026-04-12T18:07:36.391448Z"
+updated_at = "2026-04-12T18:26:25.805795Z"
 epic = "6062f74f"
 target_branch = "epic/6062f74f-consolidate-git-operations-into-git-util"
 depends_on = ["061d0ac1"]
@@ -65,3 +65,4 @@ All five replacements are in `epic::create()` in `apm-core/src/epic.rs`. No othe
 | 2026-04-12T17:54Z | specd | ready | apm |
 | 2026-04-12T18:03Z | ready | in_progress | philippepascal |
 | 2026-04-12T18:07Z | in_progress | implemented | claude-0412-1803-dbf8 |
+| 2026-04-12T18:26Z | implemented | closed | philippepascal |
