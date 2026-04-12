@@ -18,14 +18,16 @@ target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 
 ### Problem
 
-`apm/src/cmd/init.rs` (305 lines) contains two near-identical functions for manipulating `.claude/settings.json`:
+`apm/src/cmd/init.rs` contains two near-identical private functions for patching `.claude/settings.json` files:
 
-- `update_claude_settings()` (lines ~158-227) — updates the project-level `.claude/settings.json`
-- `update_user_claude_settings()` (lines ~230-304) — updates the user-level `~/.claude/settings.json`
+- `update_claude_settings(root, skip)` — patches the project-level `.claude/settings.json` with `APM_ALLOW_ENTRIES`
+- `update_user_claude_settings()` — patches the user-level `~/.claude/settings.json` with `APM_USER_ALLOW_ENTRIES`
 
-Both functions perform the same operations: read JSON, navigate to `permissions.allow` array, check for existing entries, append new entries, write back. The only difference is the file path and the specific permission entries added.
+Both functions share ~60 lines of identical logic: read JSON (or create an empty object), navigate to `/permissions/allow`, diff against a target entry list, prompt the user, ensure the array path exists, append entries, and write back. The combined duplication spans ~140 lines across 305 total.
 
-This ~140 lines of duplicated logic should be a single parameterized function: `fn update_settings_json(path: &Path, entries: &[&str]) -> Result<()>`.
+The only differences between them are: the resolved file path, the entry list, the prompt/confirmation strings, and whether a missing file causes an early-return (project case) or bootstraps an empty object (user case). All four differences are straightforward to parameterise.
+
+The desired state is a single `fn update_settings_json(...)` helper that both callers delegate to, reducing the file by ~65 lines and making future changes (new allow entries, prompt wording, write logic) a single-site edit.
 
 ### Acceptance criteria
 
