@@ -18,7 +18,9 @@ target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm/src/cmd/workers.rs` defines a helper function `worktree_for_ticket()` (lines ~196-213) that resolves a ticket ID to its worktree path. `apm/src/cmd/worktrees.rs` contains similar inline logic (~lines 40-58) for the same purpose but without using the shared helper.
+
+The helper should be moved to a shared location (either `apm/src/util.rs` or as a method on `CmdContext`) so both `workers.rs` and `worktrees.rs` can use it without duplication.
 
 ### Acceptance criteria
 
@@ -35,13 +37,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
