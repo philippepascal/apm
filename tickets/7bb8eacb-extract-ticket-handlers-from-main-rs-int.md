@@ -40,7 +40,75 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 
 ### Approach
 
-How the implementation will work.
+1. **Create `apm-server/src/handlers/` directory** with two new files:
+   - `handlers/mod.rs` — declares `pub mod tickets`
+   - `handlers/tickets.rs` — all moved code (start empty)
+
+2. **Add `mod handlers;` to `main.rs`** near the top, alongside the existing module declarations.
+
+3. **Move structs to `handlers/tickets.rs`** — cut from main.rs (with their `#[derive]` and `#[serde]` attributes), paste into tickets.rs. Items to move:
+   - `TransitionOption` (lines ~57–63)
+   - `TicketResponse` (lines ~65–74)
+   - `TicketsEnvelope` (lines ~76–80)
+   - `BlockingDep` (lines ~94–98)
+   - `TicketDetailResponse` (lines ~100–109)
+   - `TransitionRequest` (lines ~111–114)
+   - `BatchTransitionRequest` (lines ~116–120)
+   - `BatchPriorityRequest` (lines ~122–126)
+   - `BatchFailure` (lines ~128–131)
+   - `BatchResult` (lines ~134–138)
+   - `PutBodyRequest` (lines ~140–143)
+   - `PatchTicketRequest` (lines ~145–151)
+   - `CreateTicketRequest` (lines ~153–159)
+   - `ListTicketsQuery` (lines ~760–764)
+
+4. **Move helper functions to `handlers/tickets.rs`** — cut from main.rs, paste into tickets.rs:
+   - `extract_section` (lines ~82–91)
+   - `extract_frontmatter_raw` (lines ~383–387)
+   - `extract_history_raw` (lines ~389–394)
+   - `compute_blocking_deps` (lines ~416–443)
+   - `compute_valid_transitions` (lines ~445–469)
+   - `load_tickets` (lines ~471–483)
+
+5. **Move handler functions to `handlers/tickets.rs`** — cut from main.rs, paste into tickets.rs:
+   - `list_tickets` (lines ~766–854)
+   - `get_ticket` (lines ~856–901)
+   - `transition_ticket` (lines ~903–973)
+   - `put_body` (lines ~975–1078)
+   - `patch_ticket` (lines ~1080–1180)
+   - `batch_transition` (lines ~1182–1206)
+   - `batch_priority` (lines ~1208–1273)
+   - `create_ticket` (lines ~1275–1357)
+
+6. **Add imports to `handlers/tickets.rs`**. The module needs:
+   - `use crate::{AppError, AppState};` — for the shared error type and app state
+   - All `use apm_core::...` statements currently used by the moved functions (ticket, state, config, git, epic modules)
+   - `use axum::{extract::{Path, Query, State}, http::StatusCode, response::{IntoResponse, Response}, Json};`
+   - `use serde::{Deserialize, Serialize};`
+   - `use std::collections::{HashMap, HashSet};`
+   - `use tokio::task::spawn_blocking;`
+   - `use anyhow::Context;` / `use anyhow::anyhow;` as needed
+
+7. **Update `build_app()` in `main.rs`**. Replace bare handler names with `handlers::tickets::` prefixed names, e.g.:
+   - `.route("/api/tickets", get(handlers::tickets::list_tickets).post(handlers::tickets::create_ticket))`
+   - etc.
+   Alternatively add `use crate::handlers::tickets::*;` at the top of the `build_app` function or at the module level.
+
+8. **Remove now-unused imports from `main.rs`** — any `use apm_core::...` or `use axum::extract::...` items that were only needed by the moved code should be removed to avoid dead-code warnings.
+
+9. **Compile and fix** — run `cargo build -p apm-server`; resolve any visibility, import, or type-reference errors. Common issues:
+   - `AppError` referenced in tickets.rs: import via `use crate::AppError;`
+   - `AppState` referenced in tickets.rs: import via `use crate::AppState;`
+   - Private helpers referenced across modules: make them `pub(crate)` or `pub` as needed
+   - Any `use` of `TicketSource` or other AppState-adjacent types: import from `crate`
+
+10. **Run tests** — `cargo test -p apm-server` to confirm nothing is broken.
+
+**Constraints:**
+- Do not rename any function or struct — only move them
+- Do not change any function signatures or route paths
+- `AppError` and `AppState` stay in main.rs (they are used by non-ticket routes too)
+- Line numbers above are approximate; verify against the actual file before cutting
 
 ### Open questions
 
