@@ -32,7 +32,7 @@ Having both concerns in one file makes it hard to find the right function quickl
 - [x] `apm-core/src/ticket.rs` contains only `pub use` re-exports from `ticket_fmt` and `ticket_util`; no type definitions or function bodies remain in it
 - [x] `cargo build --workspace` succeeds with no errors after the split
 - [x] `cargo test --workspace` passes with the same number of passing tests as before the split
-- [ ] No file outside `apm-core/src/ticket*.rs` requires any `use` path changes — all existing `use apm_core::ticket::*` imports continue to resolve
+- [x] No file outside `apm-core/src/ticket*.rs` requires any `use` path changes — all existing `use apm_core::ticket::*` imports continue to resolve
 
 ### Out of scope
 
