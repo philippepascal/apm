@@ -42,7 +42,75 @@ The version should be available both from the CLI (`apm version` or `apm -v`) an
 
 ### Approach
 
-How the implementation will work.
+### 1. CLI — `apm version` subcommand (`apm/src/`)
+
+**`apm/src/cmd/version.rs`** — new file:
+```rust
+pub fn run() {
+    let version = env!("CARGO_PKG_VERSION");
+    let build = if cfg!(debug_assertions) { "dev" } else { "release" };
+    println!("apm {} ({})", version, build);
+}
+```
+
+**`apm/src/main.rs`** — three changes:
+1. Add `Version` variant to the `Command` enum (no arguments needed).
+2. Add `Version` to the help template's command listing (Maintenance section is a good fit, or a dedicated line).
+3. Add dispatch arm in `main()`: `Command::Version => cmd::version::run()`.
+
+**Clap `--version` / `-V`:** Add `#[command(version)]` to the top-level `Cli` struct. Clap will auto-generate `--version`/`-V` flags that print the version from `CARGO_PKG_VERSION`. This is independent of the `apm version` subcommand.
+
+---
+
+### 2. Server — `/api/version` endpoint (`apm-server/src/`)
+
+**`apm-server/src/main.rs`** (or whichever file registers Axum routes):
+- Add a `GET /api/version` route pointing to a handler `version_handler`.
+- The handler returns JSON: `{"version": env!("CARGO_PKG_VERSION"), "build": "dev"|"release"}`.
+- No auth required (public endpoint, same as health-check style routes).
+
+```rust
+async fn version_handler() -> impl IntoResponse {
+    let build = if cfg!(debug_assertions) { "dev" } else { "release" };
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "build": build,
+    }))
+}
+```
+
+---
+
+### 3. UI — version display (`apm-ui/src/`)
+
+**`apm-ui/src/lib/api.ts`** (or equivalent API module):
+- Add `getVersion()` function: `GET /api/version` → `{ version: string; build: string }`.
+
+**`apm-ui/src/components/supervisor/SupervisorView.tsx`** — two changes:
+1. Add a `useQuery` call for `getVersion()` (with `staleTime: Infinity` — version won't change while server is running).
+2. Add local `showVersion` boolean state (default `false`).
+3. Replace the static `<span>Supervisor</span>` at line 144 with a clickable span:
+   ```tsx
+   <span
+     className="cursor-pointer select-none"
+     onClick={() => setShowVersion(v => !v)}
+     title="Click to toggle version"
+   >
+     Supervisor{showVersion && versionData ? ` · v${versionData.version} (${versionData.build})` : ''}
+   </span>
+   ```
+
+No new Zustand store slice is needed — `showVersion` is purely local UI state.
+
+---
+
+### Order of changes
+
+1. `apm/src/cmd/version.rs` + wire into `main.rs` (CLI subcommand + `--version` flag)
+2. `apm-server` route + handler (`/api/version`)
+3. `apm-ui` API helper + SupervisorView click toggle
+
+Each step is independently testable and has no dependency on the others.
 
 ### Open questions
 
