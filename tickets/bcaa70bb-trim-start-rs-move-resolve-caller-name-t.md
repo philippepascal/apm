@@ -25,7 +25,7 @@ Having `resolve_caller_name()` in `start.rs` means callers in `apm/src/cmd/next.
 ### Acceptance criteria
 
 - [x] `apm_core::config::resolve_caller_name()` exists and is publicly exported from `config.rs`
-- [ ] `apm_core::start::resolve_caller_name()` no longer exists (removed from `start.rs`)
+- [x] `apm_core::start::resolve_caller_name()` no longer exists (removed from `start.rs`)
 - [ ] `apm/src/cmd/next.rs` calls `apm_core::config::resolve_caller_name()` instead of `apm_core::start::resolve_caller_name()`
 - [ ] `apm/src/main.rs` calls `apm_core::config::resolve_caller_name()` instead of `apm_core::start::resolve_caller_name()`
 - [ ] Internal callers in `start.rs` use `crate::config::resolve_caller_name()` instead of the local function
