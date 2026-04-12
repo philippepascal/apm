@@ -56,7 +56,7 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 - [x] `git_util::merge_ref` returns `None` without a warning when the result is already up to date
 - [x] `git_util::is_file_tracked(root: &Path, path: &str) -> bool` returns `true` when `git ls-files --error-unmatch` exits zero for the given path
 - [x] `git_util::is_file_tracked` returns `false` when the path is not tracked
-- [ ] All nine functions are exported as `pub fn` from `git_util.rs`
+- [x] All nine functions are exported as `pub fn` from `git_util.rs`
 
 ### Out of scope
 
