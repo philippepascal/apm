@@ -36,7 +36,7 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Extracting non-ticket handlers (auth, agents, workers, login) — those are separate refactor tickets\n- Renaming any handler function, struct, or route path\n- Changing any handler's logic or behavior\n- Moving AppError or AppState out of main.rs\n- Adding new ticket endpoints or fields\n- Extracting spec-section handlers (get_ticket_spec, update_ticket_spec) if they were already moved by a prerequisite ticket — verify first and skip if already gone\n- Writing tests that do not already exist
 
 ### Approach
 
