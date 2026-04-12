@@ -34,7 +34,11 @@ The version should be available both from the CLI (`apm version` or `apm -v`) an
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automatic version bumping (already handled by `scripts/release.sh`)
+- Embedding git commit SHA or dirty-tree status in the version string
+- Version compatibility checks between CLI and server
+- Changelog or release notes display
+- Versioning the `apm-ui` package.json (it tracks `0.0.0` by convention)
 
 ### Approach
 
