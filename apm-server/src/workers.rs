@@ -27,7 +27,7 @@ pub async fn workers_handler(
         TicketSource::Git(root, tickets_dir) => (root.clone(), tickets_dir.clone()),
         TicketSource::InMemory(_) => return Ok(Json(vec![])),
     };
-    let results = tokio::task::spawn_blocking(move || collect_workers(&root, &tickets_dir)).await??;
+    let results = crate::util::blocking(move || collect_workers(&root, &tickets_dir)).await?;
     Ok(Json(results))
 }
 

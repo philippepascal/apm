@@ -17,10 +17,14 @@ mod tls;
 mod auth;
 mod credential_store;
 mod log;
+mod models;
 mod queue;
+mod util;
 mod webauthn_state;
 mod work;
 mod workers;
+
+use models::*;
 
 #[allow(dead_code)] // InMemory is constructed in tests but matched in shared code
 enum TicketSource {
@@ -54,31 +58,6 @@ impl AppState {
     }
 }
 
-#[derive(serde::Serialize)]
-struct TransitionOption {
-    to: String,
-    label: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    warning: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct TicketResponse {
-    #[serde(flatten)]
-    frontmatter: apm_core::ticket::Frontmatter,
-    body: String,
-    has_open_questions: bool,
-    has_pending_amendments: bool,
-    blocking_deps: Vec<BlockingDep>,
-    owner: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct TicketsEnvelope {
-    tickets: Vec<TicketResponse>,
-    supervisor_states: Vec<String>,
-}
-
 fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
     let marker = format!("### {heading}");
     let Some(start) = body.find(&marker) else {
@@ -91,96 +70,8 @@ fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
     }
 }
 
-#[derive(serde::Serialize)]
-struct BlockingDep {
-    id: String,
-    state: String,
-}
-
-#[derive(serde::Serialize)]
-struct TicketDetailResponse {
-    #[serde(flatten)]
-    frontmatter: apm_core::ticket::Frontmatter,
-    body: String,
-    raw: String,
-    valid_transitions: Vec<TransitionOption>,
-    blocking_deps: Vec<BlockingDep>,
-    owner: Option<String>,
-}
-
-#[derive(serde::Deserialize)]
-struct TransitionRequest {
-    to: String,
-}
-
-#[derive(serde::Deserialize)]
-struct BatchTransitionRequest {
-    ids: Vec<String>,
-    to: String,
-}
-
-#[derive(serde::Deserialize)]
-struct BatchPriorityRequest {
-    ids: Vec<String>,
-    priority: u8,
-}
-
-#[derive(serde::Serialize)]
-struct BatchFailure {
-    id: String,
-    error: String,
-}
-
-#[derive(serde::Serialize)]
-struct BatchResult {
-    succeeded: Vec<String>,
-    failed: Vec<BatchFailure>,
-}
-
-#[derive(serde::Deserialize)]
-struct PutBodyRequest {
-    content: String,
-}
-
-#[derive(serde::Deserialize)]
-struct PatchTicketRequest {
-    effort: Option<u8>,
-    risk: Option<u8>,
-    priority: Option<u8>,
-    owner: Option<String>,
-}
-
-#[derive(serde::Deserialize)]
-struct CreateTicketRequest {
-    title: Option<String>,
-    sections: Option<std::collections::HashMap<String, String>>,
-    epic: Option<String>,
-    depends_on: Option<Vec<String>>,
-}
-
 fn find_epic_branch(root: &std::path::Path, short_id: &str) -> Option<String> {
     apm_core::epic::find_epic_branch(root, short_id)
-}
-
-#[derive(serde::Serialize)]
-struct EpicSummary {
-    id: String,
-    title: String,
-    branch: String,
-    state: String,
-    ticket_counts: std::collections::HashMap<String, usize>,
-}
-
-#[derive(serde::Serialize)]
-struct EpicDetailResponse {
-    #[serde(flatten)]
-    summary: EpicSummary,
-    tickets: Vec<TicketResponse>,
-}
-
-#[derive(serde::Deserialize)]
-struct CreateEpicRequest {
-    title: Option<String>,
 }
 
 fn parse_epic_branch(branch: &str) -> Option<(String, String)> {
@@ -280,13 +171,8 @@ async fn list_epics(
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
     let tickets = load_tickets(&state).await?;
-    let config = tokio::task::spawn_blocking({
-        let root = root.clone();
-        move || apm_core::config::Config::load(&root)
-    })
-    .await??;
-    let branches = tokio::task::spawn_blocking(move || apm_core::epic::epic_branches(&root))
-        .await??;
+    let config = util::load_config(root.clone()).await?;
+    let branches = util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
     let summaries: Vec<EpicSummary> = branches
         .iter()
         .filter_map(|b| build_epic_summary(b, &tickets, &config.workflow.states))
@@ -307,10 +193,9 @@ async fn create_epic(
         _ => return Ok((StatusCode::BAD_REQUEST, "title is required").into_response()),
     };
     let title_clone = title.clone();
-    let (id, branch) = tokio::task::spawn_blocking(move || {
+    let (id, branch) = util::blocking(move || {
         apm_core::epic::create_epic_branch(&root, &title_clone)
-    })
-    .await??;
+    }).await?;
     Ok((
         StatusCode::CREATED,
         Json(EpicSummary {
@@ -333,13 +218,8 @@ async fn get_epic(
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
     let tickets = load_tickets(&state).await?;
-    let config = tokio::task::spawn_blocking({
-        let root = root.clone();
-        move || apm_core::config::Config::load(&root)
-    })
-    .await??;
-    let branches = tokio::task::spawn_blocking(move || apm_core::epic::epic_branches(&root))
-        .await??;
+    let config = util::load_config(root.clone()).await?;
+    let branches = util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
     let branch = match branches.iter().find(|b| {
         b.strip_prefix("epic/")
             .and_then(|s| s.split('-').next())
@@ -413,70 +293,15 @@ impl From<tokio::task::JoinError> for AppError {
     }
 }
 
-fn compute_blocking_deps(
-    ticket: &apm_core::ticket::Ticket,
-    all_tickets: &[apm_core::ticket::Ticket],
-    root: &PathBuf,
-) -> Vec<BlockingDep> {
-    let deps = match &ticket.frontmatter.depends_on {
-        Some(d) if !d.is_empty() => d,
-        _ => return vec![],
-    };
-    let Ok(config) = apm_core::config::Config::load(root) else {
-        return vec![];
-    };
-    let state_map: std::collections::HashMap<&str, &str> = all_tickets
-        .iter()
-        .map(|t| (t.frontmatter.id.as_str(), t.frontmatter.state.as_str()))
-        .collect();
-    deps.iter()
-        .filter_map(|dep_id| {
-            state_map.get(dep_id.as_str()).and_then(|&s| {
-                if apm_core::ticket::dep_satisfied(s, None, &config) {
-                    None
-                } else {
-                    Some(BlockingDep { id: dep_id.clone(), state: s.to_string() })
-                }
-            })
-        })
-        .collect()
-}
-
-fn compute_valid_transitions(root: &PathBuf, state: &str) -> Vec<TransitionOption> {
-    let Ok(config) = apm_core::config::Config::load(root) else {
-        return vec![];
-    };
-    config
-        .workflow
-        .states
-        .iter()
-        .find(|s| s.id == state)
-        .map(|s| {
-            s.transitions
-                .iter()
-                .map(|tr| TransitionOption {
-                    to: tr.to.clone(),
-                    label: if tr.label.is_empty() {
-                        format!("-> {}", tr.to)
-                    } else {
-                        tr.label.clone()
-                    },
-                    warning: tr.warning.clone(),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
 
 async fn load_tickets(state: &AppState) -> Result<Vec<apm_core::ticket::Ticket>, AppError> {
     match &state.source {
         TicketSource::Git(root, tickets_dir) => {
             let root = root.clone();
             let tickets_dir = tickets_dir.clone();
-            Ok(tokio::task::spawn_blocking(move || {
+            Ok(util::blocking(move || {
                 apm_core::ticket::load_all_from_git(&root, &tickets_dir)
-            })
-            .await??)
+            }).await?)
         }
         TicketSource::InMemory(tickets) => Ok(tickets.clone()),
     }
@@ -528,17 +353,6 @@ async fn sync_handler(
     Ok(Json(resp).into_response())
 }
 
-#[derive(serde::Deserialize, Default)]
-struct CleanRequest {
-    dry_run:    Option<bool>,
-    force:      Option<bool>,
-    branches:   Option<bool>,
-    remote:     Option<bool>,
-    older_than: Option<String>,
-    untracked:  Option<bool>,
-    epics:      Option<bool>,
-}
-
 async fn clean_handler(
     State(state): State<Arc<AppState>>,
     body: Option<Json<CleanRequest>>,
@@ -560,7 +374,7 @@ async fn clean_handler(
         return Ok((StatusCode::BAD_REQUEST, "remote requires older_than").into_response());
     }
 
-    let (log, removed) = tokio::task::spawn_blocking(move || -> anyhow::Result<(Vec<String>, usize)> {
+    let (log, removed) = util::blocking(move || -> anyhow::Result<(Vec<String>, usize)> {
         let mut log: Vec<String> = Vec::new();
         let mut count = 0usize;
 
@@ -750,17 +564,9 @@ async fn clean_handler(
         }
 
         Ok((log, count))
-    })
-    .await??;
+    }).await?;
 
     Ok(Json(serde_json::json!({ "log": log.join("\n"), "removed": removed })).into_response())
-}
-
-#[derive(serde::Deserialize, Default)]
-struct ListTicketsQuery {
-    include_closed: Option<bool>,
-    author: Option<String>,
-    owner: Option<String>,
 }
 
 async fn list_tickets(
@@ -875,9 +681,18 @@ async fn get_ticket(
                 Some(root) => {
                     let root = root.clone();
                     let ticket_ref = tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap();
-                    let deps = compute_blocking_deps(ticket_ref, &tickets, &root);
+                    let deps = match apm_core::config::Config::load(&root) {
+                        Ok(config) => apm_core::compute_blocking_deps(ticket_ref, &tickets, &config),
+                        Err(_) => vec![],
+                    };
                     let state_str = ticket_ref.frontmatter.state.clone();
-                    let transitions = tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
+                    let transitions = tokio::task::spawn_blocking(move || {
+                        let config = match apm_core::config::Config::load(&root) {
+                            Ok(c) => c,
+                            Err(_) => return vec![],
+                        };
+                        apm_core::compute_valid_transitions(&state_str, &config)
+                    }).await?;
                     (deps, transitions)
                 }
             };
@@ -940,17 +755,24 @@ async fn transition_ticket(
             match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
                 Err(e) => Err(AppError(e)),
                 Ok(full_id) => {
-                    let blocking_deps = compute_blocking_deps(
-                        tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
-                        &tickets,
-                        &root,
-                    );
+                    let blocking_deps = match apm_core::config::Config::load(&root) {
+                        Ok(config) => apm_core::compute_blocking_deps(
+                            tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
+                            &tickets,
+                            &config,
+                        ),
+                        Err(_) => vec![],
+                    };
                     let ticket =
                         tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
                     let state_str = ticket.frontmatter.state.clone();
                     let root2 = root.clone();
                     let valid_transitions = tokio::task::spawn_blocking(move || {
-                        compute_valid_transitions(&root2, &state_str)
+                        let config = match apm_core::config::Config::load(&root2) {
+                            Ok(c) => c,
+                            Err(_) => return vec![],
+                        };
+                        apm_core::compute_valid_transitions(&state_str, &config)
                     })
                     .await?;
                     let raw = ticket.serialize().unwrap_or_default();
@@ -1016,10 +838,9 @@ async fn put_body(
     let root_clone = root.clone();
     let branch_clone = branch.clone();
     let rel_path_clone = rel_path.clone();
-    let current_content = tokio::task::spawn_blocking(move || {
+    let current_content = util::blocking(move || {
         apm_core::git::read_from_branch(&root_clone, &branch_clone, &rel_path_clone)
-    })
-    .await??;
+    }).await?;
 
     let current_fm = match extract_frontmatter_raw(&current_content) {
         Some(fm) => fm.to_owned(),
@@ -1069,10 +890,9 @@ async fn put_body(
     }
 
     let content = req.content.clone();
-    tokio::task::spawn_blocking(move || {
+    util::blocking(move || {
         apm_core::git::commit_to_branch(&root, &branch, &rel_path, &content, "ui: edit ticket body")
-    })
-    .await??;
+    }).await?;
 
     Ok(Json(serde_json::json!({"ok": true})).into_response())
 }
@@ -1100,11 +920,14 @@ async fn patch_ticket(
         }
         Ok(id) => id,
     };
-    let blocking_deps = compute_blocking_deps(
-        tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
-        &tickets,
-        &root,
-    );
+    let blocking_deps = match apm_core::config::Config::load(&root) {
+        Ok(config) => apm_core::compute_blocking_deps(
+            tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
+            &tickets,
+            &config,
+        ),
+        Err(_) => vec![],
+    };
     let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
     let branch = match ticket.frontmatter.branch.clone() {
         Some(b) => b,
@@ -1150,7 +973,7 @@ async fn patch_ticket(
         .map_err(|e| AppError(anyhow::anyhow!("cannot serialize ticket: {e}")))?;
 
     let root_clone = root.clone();
-    tokio::task::spawn_blocking(move || {
+    util::blocking(move || {
         apm_core::git::commit_to_branch(
             &root_clone,
             &branch,
@@ -1158,12 +981,17 @@ async fn patch_ticket(
             &content,
             "ui: update ticket fields",
         )
-    })
-    .await??;
+    }).await?;
 
     let state_str = updated.frontmatter.state.clone();
-    let valid_transitions =
-        tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
+    let valid_transitions = tokio::task::spawn_blocking(move || {
+        let config = match apm_core::config::Config::load(&root) {
+            Ok(c) => c,
+            Err(_) => return vec![],
+        };
+        apm_core::compute_valid_transitions(&state_str, &config)
+    })
+    .await?;
     let raw = updated.serialize().unwrap_or_default();
     let owner = updated.frontmatter.owner.clone();
     let mut fm = updated.frontmatter;
@@ -1456,19 +1284,6 @@ async fn register_page_handler() -> Response {
         .into_response()
 }
 
-#[derive(serde::Deserialize)]
-struct RegisterChallengeRequest {
-    username: String,
-    otp: String,
-}
-
-#[derive(serde::Serialize)]
-struct RegisterChallengeResponse {
-    reg_id: String,
-    #[serde(rename = "publicKey")]
-    public_key: serde_json::Value,
-}
-
 async fn register_challenge_handler(
     State(state): State<Arc<AppState>>,
     body: axum::body::Bytes,
@@ -1534,12 +1349,6 @@ async fn register_challenge_handler(
     Json(RegisterChallengeResponse { reg_id, public_key }).into_response()
 }
 
-#[derive(serde::Deserialize)]
-struct RegisterCompleteRequest {
-    reg_id: String,
-    response: webauthn_rs::prelude::RegisterPublicKeyCredential,
-}
-
 async fn register_complete_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterCompleteRequest>,
@@ -1581,18 +1390,6 @@ async fn login_page_handler() -> Response {
         include_str!("login.html"),
     )
         .into_response()
-}
-
-#[derive(serde::Deserialize)]
-struct LoginChallengeRequest {
-    username: String,
-}
-
-#[derive(serde::Serialize)]
-struct LoginChallengeResponse {
-    login_id: String,
-    #[serde(rename = "publicKey")]
-    public_key: serde_json::Value,
 }
 
 async fn login_challenge_handler(
@@ -1647,12 +1444,6 @@ async fn login_challenge_handler(
         }
     };
     Json(LoginChallengeResponse { login_id, public_key }).into_response()
-}
-
-#[derive(serde::Deserialize)]
-struct LoginCompleteRequest {
-    login_id: String,
-    response: webauthn_rs::prelude::PublicKeyCredential,
 }
 
 async fn login_complete_handler(
