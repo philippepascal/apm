@@ -28,7 +28,19 @@ A shared `util.rs` module with two helpers removes both problems:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-server/src/util.rs` exists and is declared as `mod util` in `main.rs`
+- [ ] `util::blocking` accepts any `FnOnce() -> anyhow::Result<T>` that is `Send + 'static` and returns `Result<T, AppError>`
+- [ ] `util::blocking` does not require callers to double-`?` the result (`.await?` is sufficient)
+- [ ] `util::load_config` accepts a `PathBuf`, calls `Config::load` via `blocking`, and returns `Result<apm_core::config::Config, AppError>`
+- [ ] All async handlers in `main.rs` that previously called `Config::load` via inline `spawn_blocking` now use `util::load_config`
+- [ ] All async handlers in `agents.rs` (`get_agents_config`, `patch_agents_config`) use `util::load_config`
+- [ ] All async handlers in `work.rs` (`post_work_start`, `get_work_dry_run`) use `util::load_config`
+- [ ] `queue.rs` `queue_handler` uses `util::blocking` for its outer blocking closure (direct `Config::load` inside the closure is acceptable since it is already in a sync context)
+- [ ] `workers.rs` `workers_handler` uses `util::blocking` instead of bare `spawn_blocking`
+- [ ] No remaining `.await??` patterns appear in async handlers (all have been replaced by `.await?`)
+- [ ] Synchronous helper functions (`compute_blocking_deps`, `compute_valid_transitions`, `collect_workers`) are unchanged — they call `Config::load` directly as they run in a sync context
+- [ ] Startup initialization code (`build_app`, `setup_cors`) and test code are unchanged
+- [ ] `cargo test` passes with no regressions
 
 ### Out of scope
 
