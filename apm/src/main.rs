@@ -781,7 +781,7 @@ fn main() -> Result<()> {
                 (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
                 (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
                 (false, Some(id)) => {
-                    let agent_name = apm_core::start::resolve_caller_name();
+                    let agent_name = apm_core::config::resolve_caller_name();
                     cmd::start::run(&root, &id, no_aggressive, spawn, skip_permissions, &agent_name)
                 }
                 (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
