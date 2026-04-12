@@ -69,7 +69,42 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 
 ### Approach
 
-How the implementation will work.
+All changes are additions to `apm-core/src/git_util.rs`. No existing functions are modified. Each new function is `pub fn` and follows the existing convention: use `run()` where a `Result<String>` return is acceptable; use `Command::new("git")` directly (via `std::process::Command`) only when the caller needs bool/silent/non-fatal semantics that `run()` does not support.
+
+**1. `pub fn is_worktree_dirty(path: &Path) -> bool`**
+Run `git -C <path> status --porcelain`. Return `true` if stdout is non-empty. Use `Command::new("git").args(["-C", ..., "status", "--porcelain"]).output()`; treat any error as clean (return `false`).
+
+**2. `pub fn local_branch_exists(root: &Path, branch: &str) -> bool`**
+Run `git -C <root> rev-parse --verify refs/heads/<branch>`. Return `output.status.success()`. Treat command failure as `false`.
+
+**3. `pub fn delete_local_branch(root: &Path, branch: &str, warnings: &mut Vec<String>)`**
+Run `git -C <root> branch -D <branch>`. On non-zero exit, push `format!("warning: could not delete branch {branch}: {stderr}")` to warnings. Never return `Err`.
+
+**4. `pub fn prune_remote_tracking(root: &Path, branch: &str)`**
+Run `git -C <root> branch -dr origin/<branch>`. Ignore all errors (use `let _ = ...`).
+
+**5. `pub fn stage_files(root: &Path, files: &[&str]) -> Result<()>`**
+Build args `["add"] ++ files` and call `run(root, &args)`. Discard the stdout string, return `Ok(())` on success. The `run()` helper already formats stderr into the error on failure.
+
+**6. `pub fn commit(root: &Path, message: &str) -> Result<()>`**
+Call `run(root, &["commit", "-m", message])`. Discard stdout, return `Ok(())`.
+
+**7. `pub fn git_config_get(root: &Path, key: &str) -> Option<String>`**
+Run `git -C <root> config <key>` via `Command::new("git")`. On success, return `Some(stdout.trim().to_string())`, filtering empty strings. Return `None` on non-zero exit or command error. (Cannot use `run()` because a missing key exits non-zero and should not be an error.)
+
+**8. `pub fn merge_ref(root: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String>`**
+- First verify the ref exists: `git -C <root> rev-parse --verify <refname>`. If that fails, fall back — but the caller in start.rs already picks between `remote_ref` and `merge_base`, so this helper receives only a pre-validated refname. Simply run `git -C <wt_path> merge <refname> --no-edit`.
+- On success: if stdout contains "Already up to date", return `None`. Otherwise return `Some(format!("Merged {refname} into branch."))`.
+- On non-zero exit: push `format!("warning: merge {refname} failed: {stderr}")` to warnings, return `None`.
+- On command error: push a warning, return `None`.
+- Note: the caller (start.rs) currently passes a `wt_display` path as the working directory, not `root`. The helper signature therefore takes `dir: &Path` (not `root`) to match this usage. Name it accordingly: `pub fn merge_ref(dir: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String>`.
+
+**9. `pub fn is_file_tracked(root: &Path, path: &str) -> bool`**
+Run `git ls-files --error-unmatch <path>` with `current_dir(root)`, suppressing stdout and stderr. Return `status.success()`. Treat command error as `false`.
+
+**Placement**: append all nine functions after the existing `pull_default` function at the bottom of `git_util.rs`, before the `#[cfg(test)]` block if one exists.
+
+**No new dependencies** are required; all git invocations use `std::process::Command` which is already imported.
 
 ### Open questions
 
