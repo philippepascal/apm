@@ -85,6 +85,25 @@ pub fn apply_review(new_spec: &str, history_section: &str) -> String {
     format!("{}{}", new_spec.trim_end(), history_section)
 }
 
+pub fn ensure_amendment_section(body: &mut String) {
+    if body.contains("### Amendment requests") {
+        return;
+    }
+    let placeholder = "\n### Amendment requests\n\n<!-- Add amendment requests below -->\n";
+    if let Some(pos) = body.find("### Out of scope") {
+        let after = &body[pos..];
+        let block_end = after[1..]
+            .find("\n##")
+            .map(|p| pos + 1 + p)
+            .unwrap_or(body.len());
+        body.insert_str(block_end, placeholder);
+    } else if let Some(pos) = body.find("## History") {
+        body.insert_str(pos, &format!("{}\n", placeholder));
+    } else {
+        body.push_str(placeholder);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,5 +239,44 @@ terminal = true
     fn apply_review_trims_trailing_whitespace() {
         let result = apply_review("spec content   \n\n", "\n## History\n| row |");
         assert_eq!(result, "spec content\n## History\n| row |");
+    }
+
+    #[test]
+    fn already_has_section() {
+        let original = "## Spec\n\n### Amendment requests\n\n- item\n\n## History\n".to_string();
+        let mut body = original.clone();
+        ensure_amendment_section(&mut body);
+        assert_eq!(body, original);
+    }
+
+    #[test]
+    fn inserts_after_out_of_scope() {
+        let mut body = "### Out of scope\n\n- x\n\n## History\n".to_string();
+        ensure_amendment_section(&mut body);
+        assert!(body.contains("### Out of scope"));
+        assert!(body.contains("### Amendment requests"));
+        let oos_pos = body.find("### Out of scope").unwrap();
+        let amend_pos = body.find("### Amendment requests").unwrap();
+        let hist_pos = body.find("## History").unwrap();
+        assert!(oos_pos < amend_pos);
+        assert!(amend_pos < hist_pos);
+    }
+
+    #[test]
+    fn inserts_before_history_no_out_of_scope() {
+        let mut body = "## Spec\n\nsome content\n\n## History\n".to_string();
+        ensure_amendment_section(&mut body);
+        assert!(body.contains("### Amendment requests"));
+        let amend_pos = body.find("### Amendment requests").unwrap();
+        let hist_pos = body.find("## History").unwrap();
+        assert!(amend_pos < hist_pos);
+    }
+
+    #[test]
+    fn appends_when_no_anchor() {
+        let mut body = "## Spec\n\nsome content".to_string();
+        ensure_amendment_section(&mut body);
+        assert!(body.contains("### Amendment requests"));
+        assert!(body.ends_with("<!-- Add amendment requests below -->\n"));
     }
 }
