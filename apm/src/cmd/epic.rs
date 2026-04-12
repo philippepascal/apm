@@ -6,7 +6,7 @@ use crate::ctx::CmdContext;
 pub fn run_list(root: &Path) -> Result<()> {
     let ctx = CmdContext::load(root, false)?;
 
-    let epic_branches = apm_core::git::epic_branches(root)?;
+    let epic_branches = apm_core::epic::epic_branches(root)?;
     if epic_branches.is_empty() {
         return Ok(());
     }
@@ -61,7 +61,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
     // 1. Resolve the epic branch from the id prefix.
-    let matches = apm_core::git::find_epic_branches(root, id_arg);
+    let matches = apm_core::epic::find_epic_branches(root, id_arg);
     let epic_branch = match matches.len() {
         0 => anyhow::bail!("no epic branch found matching '{id_arg}'"),
         1 => matches.into_iter().next().unwrap(),
@@ -156,7 +156,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
 pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> anyhow::Result<()> {
     let ctx = CmdContext::load(root, no_aggressive)?;
 
-    let matches = apm_core::git::find_epic_branches(root, id_arg);
+    let matches = apm_core::epic::find_epic_branches(root, id_arg);
     let branch = match matches.len() {
         0 => anyhow::bail!("no epic matching '{id_arg}'"),
         1 => matches.into_iter().next().unwrap(),
@@ -233,7 +233,7 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     }
 
     // Validate the epic exists.
-    let matches = apm_core::git::find_epic_branches(root, id_arg);
+    let matches = apm_core::epic::find_epic_branches(root, id_arg);
     if matches.is_empty() {
         eprintln!("error: no epic branch found matching '{id_arg}'");
         std::process::exit(1);
