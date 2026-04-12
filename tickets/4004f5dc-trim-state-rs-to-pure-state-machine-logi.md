@@ -27,12 +27,12 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 5 for the full plan.
 
 ### Acceptance criteria
 
-- [ ] `gh_pr_create_or_update` is defined as `pub fn` in `github.rs` and absent from `state.rs`
-- [ ] `transition()` calls `crate::github::gh_pr_create_or_update` in place of the former local private function
-- [ ] The three PR title tests previously in `state.rs`'s test block are present in `github.rs`'s test block
-- [ ] `state.rs` imports that were only needed by `gh_pr_create_or_update` are removed
-- [ ] `cargo build --workspace` succeeds with zero errors
-- [ ] `cargo test --workspace` passes
+- [x] `gh_pr_create_or_update` is defined as `pub fn` in `github.rs` and absent from `state.rs`
+- [x] `transition()` calls `crate::github::gh_pr_create_or_update` in place of the former local private function
+- [x] The three PR title tests previously in `state.rs`'s test block are present in `github.rs`'s test block
+- [x] `state.rs` imports that were only needed by `gh_pr_create_or_update` are removed
+- [x] `cargo build --workspace` succeeds with zero errors
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
