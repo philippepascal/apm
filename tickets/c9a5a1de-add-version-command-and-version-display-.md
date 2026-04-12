@@ -1,7 +1,7 @@
 +++
 id = "c9a5a1de"
 title = "Add version command and version display in UI"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c9a5a1de-add-version-command-and-version-display-"
 created_at = "2026-04-12T08:46:45.537269Z"
-updated_at = "2026-04-12T08:54:02.841491Z"
+updated_at = "2026-04-12T08:54:36.107977Z"
 +++
 
 ## Spec
@@ -191,3 +191,4 @@ Each step is independently testable and has no dependency on the others.
 | 2026-04-12T08:46Z | — | new | philippepascal |
 | 2026-04-12T08:49Z | new | groomed | apm |
 | 2026-04-12T08:50Z | groomed | in_design | philippepascal |
+| 2026-04-12T08:54Z | in_design | specd | claude-0412-0850-ea48 |
