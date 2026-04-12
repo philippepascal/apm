@@ -38,6 +38,7 @@ All changes are in `apm/src/`. The prerequisite ticket (d3ebdc0f) must be merged
 
 ### Amendment requests
 
+- [ ] This ticket is entirely redundant with d3ebdc0f. The d3ebdc0f spec already includes all the replacements listed here in its acceptance criteria: fetch blocks in next.rs, sync.rs, assign.rs, show.rs, close.rs, spec.rs, ctx.rs, and confirmation prompts in assign.rs, sync.rs, clean.rs. There is no work remaining for this ticket. Recommend closing it.
 
 ### Code review
 
