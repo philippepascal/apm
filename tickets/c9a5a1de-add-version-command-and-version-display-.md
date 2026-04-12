@@ -42,6 +42,69 @@ The version should be available both from the CLI (`apm version` or `apm -v`) an
 
 ### Approach
 
+#### 1. CLI — `apm version` subcommand (`apm/src/`)
+
+**`apm/src/cmd/version.rs`** — new file:
+```rust
+pub fn run() {
+    let version = env!("CARGO_PKG_VERSION");
+    let build = if cfg!(debug_assertions) { "dev" } else { "release" };
+    println!("apm {} ({})", version, build);
+}
+```
+
+**`apm/src/main.rs`** — three changes:
+1. Add `Version` variant to the `Command` enum (no arguments needed).
+2. Add `Version` to the help template command listing (Maintenance section).
+3. Add dispatch arm: `Command::Version => cmd::version::run()`.
+
+**Clap `--version` / `-V`:** Add `#[command(version)]` to the top-level `Cli` struct. Clap auto-generates `--version`/`-V` flags from `CARGO_PKG_VERSION`. This is separate from the `apm version` subcommand.
+
+---
+
+#### 2. Server — `/api/version` endpoint (`apm-server/src/`)
+
+Add a `GET /api/version` route in `apm-server/src/main.rs` (wherever other routes are registered). No auth required.
+
+```rust
+async fn version_handler() -> impl IntoResponse {
+    let build = if cfg!(debug_assertions) { "dev" } else { "release" };
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "build": build,
+    }))
+}
+```
+
+---
+
+#### 3. UI — version display (`apm-ui/src/`)
+
+**`apm-ui/src/lib/api.ts`** (or equivalent): add `getVersion()` fetching `GET /api/version` → `{ version: string; build: string }`.
+
+**`apm-ui/src/components/supervisor/SupervisorView.tsx`** (line 144 area):
+1. Add `useQuery` for `getVersion()` with `staleTime: Infinity`.
+2. Add `const [showVersion, setShowVersion] = useState(false)`.
+3. Replace `<span>Supervisor</span>` with:
+   ```tsx
+   <span
+     className="cursor-pointer select-none"
+     onClick={() => setShowVersion(v => !v)}
+     title="Click to toggle version"
+   >
+     Supervisor{showVersion && versionData ? ` · v${versionData.version} (${versionData.build})` : ''}
+   </span>
+   ```
+
+No new Zustand store slice needed — `showVersion` is local component state.
+
+---
+
+**Order of changes** (each independently testable):
+1. `apm/src/cmd/version.rs` + wire in `main.rs`
+2. `apm-server` route + handler
+3. `apm-ui` API helper + SupervisorView click toggle
+
 ### 1. CLI — `apm version` subcommand (`apm/src/`)
 
 **`apm/src/cmd/version.rs`** — new file:
