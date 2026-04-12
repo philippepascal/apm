@@ -19,9 +19,11 @@ depends_on = ["b28fe914"]
 
 ### Problem
 
-`epic.rs` currently contains `derive_epic_state()` and `create()` but the epic branch discovery functions (`find_epic_branch`, `find_epic_branches`, `epic_branches`, `create_epic_branch`) live in `git.rs`. These are epic-domain operations that happen to call git commands, not general git utilities. They should live alongside the rest of the epic logic.
+`epic.rs` currently holds `derive_epic_state()` and `create()`, but the four epic branch discovery and creation functions — `find_epic_branch`, `find_epic_branches`, `epic_branches`, and `create_epic_branch` — live in `git.rs`. These functions are epic-domain operations that happen to call git commands; they are not general-purpose git utilities. Keeping them in `git.rs` obscures where epic logic lives and makes `git.rs` a catch-all rather than a focused module.
 
-See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 8 for the full plan.
+The desired state is that all public API touching epic concepts lives in `epic.rs`, while `git.rs` retains only general-purpose git plumbing. Every caller of the four moved functions should be updated to use the `epic::` path. No behaviour changes are permitted.
+
+This ticket covers only the epic-helpers move. The broader `git.rs` reorganisation (rename to `git_util.rs`, extraction of worktree functions, ticket-format helpers, etc.) is handled by sibling tickets in epic 57bce963. Because this ticket depends_on b28fe914, the source file at implementation time may already be named `git_util.rs`; the implementer should use whichever name is present.
 
 ### Acceptance criteria
 
