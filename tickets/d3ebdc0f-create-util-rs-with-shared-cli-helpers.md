@@ -51,7 +51,88 @@ There is no `util.rs` module today. Creating one with `fetch_if_aggressive`, `fe
 
 ### Approach
 
-How the implementation will work.
+**1. Create `apm/src/util.rs`**
+
+Add the following three public functions:
+
+```rust
+use std::io::{self, BufRead, Write};
+use std::path::Path;
+use apm_core::git;
+
+/// Run `git fetch --all` when `aggressive` is true; emit a warning on failure.
+pub fn fetch_if_aggressive(root: &Path, aggressive: bool) {
+    if aggressive {
+        if let Err(e) = git::fetch_all(root) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
+}
+
+/// Run `git fetch <branch>` when `aggressive` is true; emit a warning on failure.
+pub fn fetch_branch_if_aggressive(root: &Path, branch: &str, aggressive: bool) {
+    if aggressive {
+        if let Err(e) = git::fetch_branch(root, branch) {
+            eprintln!("warning: fetch failed: {e:#}");
+        }
+    }
+}
+
+/// Print `prompt`, flush stdout, read one line, return true iff the answer is "y".
+pub fn prompt_yes_no(prompt: &str) -> io::Result<bool> {
+    print!("{prompt}");
+    io::stdout().flush()?;
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    Ok(line.trim().eq_ignore_ascii_case("y"))
+}
+```
+
+**2. Declare the module in `apm/src/lib.rs`**
+
+Add `pub mod util;` alongside the existing module declarations.
+
+**3. Update `ctx.rs`**
+
+In `CmdContext::load`, replace:
+```rust
+if aggressive {
+    if let Err(e) = git::fetch_all(root) {
+        eprintln!("warning: fetch failed: {e:#}");
+    }
+}
+```
+with:
+```rust
+crate::util::fetch_if_aggressive(root, aggressive);
+```
+Remove the now-unused `git` import if it is only referenced there.
+
+**4. Update fetch-all callers: `next.rs`, `sync.rs`**
+
+Replace the inline block in each file with:
+```rust
+crate::util::fetch_if_aggressive(root, aggressive);
+```
+`sync.rs`'s slightly different warning string (`"warning: fetch failed (no remote configured?): {e:#}"`) is normalised to the standard string. Remove any `use` imports that become unused.
+
+**5. Update fetch-branch callers: `assign.rs`, `show.rs`, `close.rs`, `spec.rs`**
+
+Each of these computes `aggressive` then calls `git::fetch_branch`. Replace with:
+```rust
+crate::util::fetch_branch_if_aggressive(root, &branch, aggressive);
+```
+`spec.rs` calls this pattern twice (once per sub-command that does a fetch); replace both.
+
+**6. Update confirmation-prompt callers: `assign.rs`, `sync.rs`, `clean.rs`**
+
+Replace each `print! / flush / read_line / trim / eq_ignore_ascii_case` block with:
+```rust
+crate::util::prompt_yes_no("...prompt text...")?
+```
+`clean.rs` has three such blocks. One of them is guarded by an `is_terminal()` check — leave that guard in place; only replace the inner prompt sequence. Remove unused `use std::io` items if they become unnecessary after the swap.
+
+**Order**: create util.rs → update lib.rs → ctx.rs → next.rs / sync.rs → assign.rs / show.rs / close.rs / spec.rs → clean.rs. Run `cargo build` after each file to catch import issues early.
 
 ### Open questions
 
