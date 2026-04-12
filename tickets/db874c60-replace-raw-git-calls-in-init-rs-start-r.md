@@ -57,7 +57,11 @@ Depends on the git_util helpers ticket landing first.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding new helpers to `git_util.rs` — covered by the dependency ticket 061d0ac1
+- Replacing the `git init` / `git config user.*` calls inside `init.rs` test helpers — explicitly exempt per the problem statement
+- Replacing raw `Command` calls that already live inside `git_util.rs` itself
+- Any raw git calls in files other than `init.rs`, `start.rs`, and `worktree.rs`
+- Behavioural changes — this is a pure refactor; observable outputs must stay identical
 
 ### Approach
 
