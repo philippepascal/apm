@@ -38,7 +38,25 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `git_util::is_worktree_dirty(path: &Path) -> bool` returns `true` when `git status --porcelain` produces any output for the given path
+- [ ] `git_util::is_worktree_dirty` returns `false` when the working tree is clean
+- [ ] `git_util::local_branch_exists(root: &Path, branch: &str) -> bool` returns `true` when `refs/heads/<branch>` resolves
+- [ ] `git_util::local_branch_exists` returns `false` when the branch does not exist locally
+- [ ] `git_util::delete_local_branch(root: &Path, branch: &str, warnings: &mut Vec<String>)` deletes the branch and does not push to warnings on success
+- [ ] `git_util::delete_local_branch` pushes a warning message (not a hard error) when deletion fails
+- [ ] `git_util::prune_remote_tracking(root: &Path, branch: &str)` runs `git branch -dr origin/<branch>` and silently ignores any failure
+- [ ] `git_util::stage_files(root: &Path, files: &[&str]) -> Result<()>` stages exactly the listed paths and returns `Ok(())` on success
+- [ ] `git_util::stage_files` returns an error when `git add` fails (e.g. path does not exist)
+- [ ] `git_util::commit(root: &Path, message: &str) -> Result<()>` creates a commit with the given message and returns `Ok(())` on success
+- [ ] `git_util::commit` returns an error when `git commit` fails (e.g. nothing staged)
+- [ ] `git_util::git_config_get(root: &Path, key: &str) -> Option<String>` returns `Some(value)` trimmed of whitespace when the key exists
+- [ ] `git_util::git_config_get` returns `None` when the key is absent or git exits non-zero
+- [ ] `git_util::merge_ref(root: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String>` returns `Some(message)` describing the merge when the ref exists and the merge succeeds
+- [ ] `git_util::merge_ref` returns `None` and pushes a warning when the merge fails
+- [ ] `git_util::merge_ref` returns `None` without a warning when the result is already up to date
+- [ ] `git_util::is_file_tracked(root: &Path, path: &str) -> bool` returns `true` when `git ls-files --error-unmatch` exits zero for the given path
+- [ ] `git_util::is_file_tracked` returns `false` when the path is not tracked
+- [ ] All nine functions are exported as `pub fn` from `git_util.rs`
 
 ### Out of scope
 
