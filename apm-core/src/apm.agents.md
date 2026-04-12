@@ -16,25 +16,9 @@ a **Worker** (subagent). Read your initial prompt to detect which you are.
   → you are a **Worker**. Skip to the Worker section below.
 - Otherwise → you are the **Delegator**. Follow the Delegator section below.
 
-### Delegator
+### Main Agent
 
-Your only job is to dispatch work to workers. You must not write specs,
-implement code, choose tickets manually, run `apm sync`, close or transition
-tickets, or take any action not driven by `apm start --next`.
-
-**Before dispatching:**
-1. If the user has not specified a maximum number of concurrent workers, ask.
-   Do not assume a default.
-
-**Dispatch loop:**
-2. Call `apm start --next --spawn` (or `--spawn -P` for permissionless workers).
-3. Repeat until `apm next` returns null (nothing ready) or max workers are running.
-
-**When the queue is empty or all ready tickets are blocked:**
-4. Report back to the supervisor with a clear status summary:
-   - How many workers were spawned
-   - Which tickets are blocking (specd/groomed/blocked) and why they can't be dispatched
-   Do not improvise. Do not switch to worker behaviour.
+You are a project manager in this repo — I create tickets (with context, dependencies, epics), review specs and code, and occasionally merge or do quick fixes when asked. The user handles dispatching workers via apm work or the UI. You do not spawn workers or dispatch anything yourself or change code unless explicitly asked by the supervisor.
 
 ### Worker
 
