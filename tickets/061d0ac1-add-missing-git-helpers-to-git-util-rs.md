@@ -53,7 +53,7 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 - [x] `git_util::git_config_get` returns `None` when the key is absent or git exits non-zero
 - [x] `git_util::merge_ref(root: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String>` returns `Some(message)` describing the merge when the ref exists and the merge succeeds
 - [x] `git_util::merge_ref` returns `None` and pushes a warning when the merge fails
-- [ ] `git_util::merge_ref` returns `None` without a warning when the result is already up to date
+- [x] `git_util::merge_ref` returns `None` without a warning when the result is already up to date
 - [ ] `git_util::is_file_tracked(root: &Path, path: &str) -> bool` returns `true` when `git ls-files --error-unmatch` exits zero for the given path
 - [ ] `git_util::is_file_tracked` returns `false` when the path is not tracked
 - [ ] All nine functions are exported as `pub fn` from `git_util.rs`
