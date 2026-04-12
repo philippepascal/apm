@@ -108,7 +108,7 @@ Consolidate any `use` statements with what d3ebdc0f already added at the top of 
 ### Amendment requests
 
 - [x] Add d3ebdc0f as a dependency — both tickets independently create `apm/src/util.rs` and add `pub mod util;` to `lib.rs`. Without this dependency, whichever lands second will hit a merge conflict or silently overwrite the first ticket's content.
-- [ ] Update the spec to note that `util.rs` already exists (created by d3ebdc0f) when this ticket starts. The `worktree_for_ticket` function should be appended to the existing file, not written as a standalone new file. Remove the "Create apm/src/util.rs" step and replace with "Add to existing apm/src/util.rs". Remove the "Add pub mod util; to lib.rs" step (already done by d3ebdc0f).
+- [x] Update the spec to note that `util.rs` already exists (created by d3ebdc0f) when this ticket starts. The `worktree_for_ticket` function should be appended to the existing file, not written as a standalone new file. Remove the "Create apm/src/util.rs" step and replace with "Add to existing apm/src/util.rs". Remove the "Add pub mod util; to lib.rs" step (already done by d3ebdc0f).
 
 ### Code review
 
