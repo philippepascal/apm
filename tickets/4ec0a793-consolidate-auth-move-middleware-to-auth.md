@@ -1,7 +1,7 @@
 +++
 id = "4ec0a793"
 title = "Consolidate auth: move middleware to auth.rs, merge webauthn_state and credential_store"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4ec0a793-consolidate-auth-move-middleware-to-auth"
 created_at = "2026-04-12T09:03:28.810627Z"
-updated_at = "2026-04-12T11:55:41.869499Z"
+updated_at = "2026-04-12T17:11:03.600378Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 depends_on = ["9698c4c6"]
@@ -107,3 +107,4 @@ This is a pure code-movement refactor -- no behaviour changes. Work in the workt
 | 2026-04-12T10:25Z | specd | ready | apm |
 | 2026-04-12T11:47Z | ready | in_progress | philippepascal |
 | 2026-04-12T11:55Z | in_progress | implemented | claude-0412-1148-8630 |
+| 2026-04-12T17:11Z | implemented | closed | philippepascal |
