@@ -36,7 +36,15 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 5 for the full plan.
 
 ### Out of scope
 
-- Moving provision_worktree out of state.rs — done by ticket 4f67992b\n- Renaming git.rs to git_util.rs — done by ticket b28fe914\n- Moving worktree primitives from git.rs to worktree.rs — done by ticket 4f67992b\n- Moving epic branch helpers out of git.rs — done by ticket eb4789cf\n- Any behaviour changes to the moved functions\n- Adding new functionality to any module\n- Updating REFACTOR-CORE.md or other documentation
+- Moving provision_worktree out of state.rs — done by ticket 4f67992b
+- Renaming git.rs to git_util.rs — done by ticket b28fe914
+- Moving worktree primitives from git.rs to worktree.rs — done by ticket 4f67992b
+- Moving epic branch helpers out of git.rs — done by ticket eb4789cf
+- Moving merge_into_default and pull_default — done by ticket b28fe914
+- Moving ensure_amendment_section — owned by ticket a6367b87
+- Any behaviour changes to the moved functions
+- Adding new functionality to any module
+- Updating REFACTOR-CORE.md or other documentation
 
 ### Approach
 
