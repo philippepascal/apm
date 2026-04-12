@@ -1,7 +1,7 @@
 +++
 id = "bcaa70bb"
 title = "Trim start.rs: move resolve_caller_name to config.rs"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bcaa70bb-trim-start-rs-move-resolve-caller-name-t"
 created_at = "2026-04-12T06:04:15.262188Z"
-updated_at = "2026-04-12T06:04:15.262188Z"
+updated_at = "2026-04-12T06:12:01.126168Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
@@ -48,3 +48,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-12T06:04Z | — | new | philippepascal |
+| 2026-04-12T06:12Z | new | groomed | apm |
