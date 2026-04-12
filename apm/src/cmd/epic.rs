@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use std::io::IsTerminal;
 use std::path::Path;
-use std::process::Command;
 use crate::ctx::CmdContext;
 use apm_core::epic::{branch_to_title, epic_id_from_branch};
 
@@ -104,51 +103,25 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
         );
     }
 
-    // 5. Check for an existing open PR (idempotency).
-    let pr_check = Command::new("gh")
-        .args([
-            "pr", "list",
-            "--head", &epic_branch,
-            "--state", "open",
-            "--json", "number",
-            "--jq", ".[0].number",
-        ])
-        .current_dir(root)
-        .output();
-    if let Ok(out) = pr_check {
-        let number_str = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if !number_str.is_empty() {
-            if let Ok(n) = number_str.parse::<u64>() {
-                println!("PR #{n} already open for {epic_branch}");
-                return Ok(());
-            }
-        }
-    }
-
-    // 6. Derive a human-readable title from the branch name.
+    // 5. Derive a human-readable title from the branch name.
     let pr_title = branch_to_title(&epic_branch);
 
-    // 7. Create the PR.
+    // 6. Push the epic branch and create or reuse an open PR.
     let default_branch = &config.project.default_branch;
-    let pr_body = format!("Epic: {epic_branch}");
-    let create_out = Command::new("gh")
-        .args([
-            "pr", "create",
-            "--base", default_branch,
-            "--head", &epic_branch,
-            "--title", &pr_title,
-            "--body", &pr_body,
-        ])
-        .current_dir(root)
-        .output()
-        .map_err(|e| anyhow::anyhow!("gh not found: {e}"))?;
-
-    if !create_out.status.success() {
-        anyhow::bail!("{}", String::from_utf8_lossy(&create_out.stderr).trim());
+    apm_core::git::push_branch_tracking(root, &epic_branch)?;
+    let mut messages = vec![];
+    apm_core::github::gh_pr_create_or_update(
+        root,
+        &epic_branch,
+        default_branch,
+        epic_id,
+        &pr_title,
+        &format!("Epic: {epic_branch}"),
+        &mut messages,
+    )?;
+    for m in &messages {
+        println!("{m}");
     }
-
-    let url = String::from_utf8_lossy(&create_out.stdout).trim().to_string();
-    println!("{url}");
     Ok(())
 }
 
@@ -247,52 +220,13 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
 
     if field == "owner" {
         let config = apm_core::config::Config::load(root)?;
-        let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
-        let terminal = config.terminal_state_ids();
-
-        let (mut to_change, skipped): (Vec<_>, Vec<_>) = all_tickets
-            .into_iter()
-            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
-            .partition(|t| !terminal.contains(&t.frontmatter.state));
-
-        // Pre-flight: ownership check (abort before any writes if any fail)
-        for t in &to_change {
-            apm_core::ticket::check_owner(root, t)?;
-        }
 
         // Pre-flight: validate the new owner
         let local = apm_core::config::LocalConfig::load(root);
         apm_core::validate::validate_owner(&config, &local, value)?;
 
-        // Apply changes
-        for t in &mut to_change {
-            apm_core::ticket::set_field(&mut t.frontmatter, "owner", value)?;
-            let content = t.serialize()?;
-            let rel_path = format!(
-                "{}/{}",
-                config.tickets.dir.to_string_lossy(),
-                t.path.file_name().unwrap().to_string_lossy()
-            );
-            let ticket_branch = t.frontmatter.branch.clone()
-                .or_else(|| apm_core::ticket_fmt::branch_name_from_path(&t.path))
-                .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
-            apm_core::git::commit_to_branch(
-                root,
-                &ticket_branch,
-                &rel_path,
-                &content,
-                &format!("ticket({}): bulk set owner = {}", t.frontmatter.id, value),
-            )?;
-        }
-
-        // Output
-        for t in &to_change {
-            println!("changed  {}  {}", t.frontmatter.id, t.frontmatter.title);
-        }
-        for t in &skipped {
-            println!("skipped  {}  {}  (state: {})", t.frontmatter.id, t.frontmatter.title, t.frontmatter.state);
-        }
-        println!("{} ticket(s) changed, {} skipped.", to_change.len(), skipped.len());
+        let (changed, skipped) = apm_core::epic::set_epic_owner(root, &epic_id, value, &config)?;
+        println!("updated {changed} ticket(s), skipped {skipped} terminal ticket(s)");
         return Ok(());
     }
 
