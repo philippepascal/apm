@@ -19,7 +19,24 @@ depends_on = ["9698c4c6"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Auth-related code in `apm-server` is split across main.rs and three small modules, with some logic in the wrong place:
+
+1. **In main.rs (should be in auth.rs):**
+   - `require_auth()` middleware (~20 lines, line ~1406) — checks session cookie, returns 401 if invalid
+   - `find_session_username()` (~15 lines, line ~1391) — looks up username from session cookie
+   - OTP login/verify handlers (~100 lines)
+   - WebAuthn registration/login handlers (~200 lines)
+   - Session management handlers (~50 lines)
+
+2. **Already in auth.rs (361 lines):** OTP generation, session store, token verification
+
+3. **Tiny standalone modules:**
+   - `webauthn_state.rs` (66 lines) — just a `WebAuthnState` struct holding pending registration/auth state
+   - `credential_store.rs` (134 lines) — passkey credential persistence
+
+The middleware and session helpers in main.rs should move to auth.rs. The two tiny modules (`webauthn_state.rs`, `credential_store.rs`) should be consolidated into auth.rs since they're tightly coupled and too small to justify separate files.
+
+This ticket depends on the previous handler extractions to avoid main.rs merge conflicts.
 
 ### Acceptance criteria
 
@@ -36,13 +53,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
