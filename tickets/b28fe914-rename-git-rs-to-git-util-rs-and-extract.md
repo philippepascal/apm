@@ -1,7 +1,7 @@
 +++
 id = "b28fe914"
 title = "Rename git.rs to git_util.rs and extract non-git functions"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b28fe914-rename-git-rs-to-git-util-rs-and-extract"
 created_at = "2026-04-12T06:04:25.779848Z"
-updated_at = "2026-04-12T07:43:37.259414Z"
+updated_at = "2026-04-12T08:48:54.173104Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["4660b156"]
@@ -117,3 +117,4 @@ Run `cargo build --workspace` then `cargo test --workspace`. Fix any remaining c
 | 2026-04-12T07:13Z | specd | ready | apm |
 | 2026-04-12T07:33Z | ready | in_progress | philippepascal |
 | 2026-04-12T07:43Z | in_progress | implemented | claude-0412-0733-f948 |
+| 2026-04-12T08:48Z | implemented | closed | philippepascal |
