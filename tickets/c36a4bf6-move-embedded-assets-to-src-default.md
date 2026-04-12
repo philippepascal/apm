@@ -24,7 +24,7 @@ Moving these assets to `apm-core/src/default/` groups all embedded defaults in o
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/apm.agents.md` exists with identical content to the pre-move `apm-core/src/apm.agents.md`
+- [x] `apm-core/src/default/apm.agents.md` exists with identical content to the pre-move `apm-core/src/apm.agents.md`
 - [ ] `apm-core/src/default/apm.spec-writer.md` exists with identical content to the pre-move `apm-core/src/apm.spec-writer.md`
 - [ ] `apm-core/src/default/apm.worker.md` exists with identical content to the pre-move `apm-core/src/apm.worker.md`
 - [ ] `apm-core/src/default/ticket.toml` exists with identical content to the pre-move `apm-core/src/ticket.toml`
