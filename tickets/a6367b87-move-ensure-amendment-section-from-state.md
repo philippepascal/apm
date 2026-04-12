@@ -19,11 +19,11 @@ depends_on = ["4004f5dc"]
 
 ### Problem
 
-`ensure_amendment_section()` lives in `state.rs` but it manipulates the spec document (adding/formatting the amendment request section). It belongs in `review.rs` alongside `split_body`, `extract_spec`, `normalize_amendments`, and `apply_review` — the module that owns all spec-document-level operations.
+`ensure_amendment_section()` is currently defined in `apm-core/src/state.rs` as a `pub fn`. Its sole job is to insert a `### Amendment requests` section into a ticket body string when one is not already present — a pure document-formatting operation with no knowledge of state machine logic.
 
-This is the final cleanup after trimming `state.rs` (4004f5dc).
+This placement is wrong. `state.rs` owns state machine transitions; `review.rs` owns spec-document-level operations (`split_body`, `extract_spec`, `normalize_amendments`, `apply_review`). The function is called once inside `transition()` when the new state is `"ammend"`, but it does not depend on any state module internals — it only needs a `&mut String`.
 
-See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 6 for the full plan.
+Moving it completes the cleanup started in ticket 4004f5dc and satisfies section 6 of REFACTOR-CORE.md: `review.rs` becomes the single home for all spec-document manipulation.
 
 ### Acceptance criteria
 
