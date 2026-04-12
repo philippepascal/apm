@@ -34,7 +34,10 @@ Having `resolve_caller_name()` in `start.rs` means callers in `apm/src/cmd/next.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Merging `resolve_caller_name()` with `resolve_identity()` — they serve distinct purposes and remain separate functions
+- Changing the resolution logic (env var order, fallback value) — behaviour is preserved exactly
+- Moving any other functions out of `start.rs` — covered by sibling tickets in the epic
+- Updating integration tests beyond fixing import paths
 
 ### Approach
 
