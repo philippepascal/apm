@@ -61,7 +61,8 @@ This ticket runs after 1ace7d42 (epic handler extraction) is merged into the epi
 **Assumed state from prior tickets:**
 - `handlers/mod.rs` exists with at least `pub mod tickets;` and `pub mod epics;`
 - `main.rs` declares `mod handlers;` and routes ticket/epic handlers via `handlers::`
-- `sync_handler` is at lines ~489–529, `CleanRequest` at ~531–540, `clean_handler` at ~542–757
+- `sync_handler` is at lines ~489–529, `clean_handler` follows immediately after (CleanRequest is already in `models.rs` via a6bc1326)
+- `CleanRequest` is imported from `crate::models` inside `clean_handler`'s existing code
 
 ---
 
@@ -69,15 +70,13 @@ This ticket runs after 1ace7d42 (epic handler extraction) is merged into the epi
 
 2. **Add `pub mod maintenance;` to `handlers/mod.rs`** alongside existing `pub mod` lines.
 
-3. **Move `CleanRequest` to `handlers/maintenance.rs`** — cut from `main.rs` with its `#[derive(serde::Deserialize, Default)]` attribute, paste into `maintenance.rs` as `pub struct CleanRequest { ... }`.
+3. **Move `sync_handler` to `handlers/maintenance.rs`** — cut from `main.rs`, paste as `pub async fn sync_handler(...)`.
 
-4. **Move `sync_handler` to `handlers/maintenance.rs`** — cut from `main.rs`, paste as `pub async fn sync_handler(...)`.
+4. **Move `clean_handler` to `handlers/maintenance.rs`** — cut from `main.rs`, paste as `pub async fn clean_handler(...)`. The function body is unchanged; no refactoring of the epic cleanup block.
 
-5. **Move `clean_handler` to `handlers/maintenance.rs`** — cut from `main.rs`, paste as `pub async fn clean_handler(...)`. The function body is unchanged; no refactoring of the epic cleanup block.
+5. **Move the test to `handlers/maintenance.rs`** — cut `sync_in_memory_returns_not_implemented` from the `#[cfg(test)]` block in `main.rs` and place it in a `#[cfg(test)] mod tests { ... }` block inside `maintenance.rs`. The test helpers `build_app_with_tickets` and `test_tickets` remain in `main.rs`; import them via `crate::tests::build_app_with_tickets` and `crate::tests::test_tickets` (or whatever visibility the prior tickets established).
 
-6. **Move the test to `handlers/maintenance.rs`** — cut `sync_in_memory_returns_not_implemented` from the `#[cfg(test)]` block in `main.rs` and place it in a `#[cfg(test)] mod tests { ... }` block inside `maintenance.rs`. The test helpers `build_app_with_tickets` and `test_tickets` remain in `main.rs`; import them via `crate::tests::build_app_with_tickets` and `crate::tests::test_tickets` (or whatever visibility the prior tickets established).
-
-7. **Add imports to `handlers/maintenance.rs`**:
+6. **Add imports to `handlers/maintenance.rs`**:
    ```rust
    use std::sync::Arc;
    use axum::{
@@ -87,24 +86,25 @@ This ticket runs after 1ace7d42 (epic handler extraction) is merged into the epi
        Json,
    };
    use crate::{AppError, AppState};
+   use crate::models::CleanRequest;
    ```
    The handler bodies reference `apm_core::*`, `serde_json`, `toml`, and `std::process::Command` — all are already in `Cargo.toml`; no new dependencies needed.
 
-8. **Update route registrations in `main.rs`** — both occurrences (authenticated and unauthenticated app builders, lines ~1765–1766 and ~1839–1840) change from bare names to qualified paths:
+7. **Update route registrations in `main.rs`** — both occurrences (authenticated and unauthenticated app builders, lines ~1765–1766 and ~1839–1840) change from bare names to qualified paths:
    ```rust
    .route("/api/sync",  post(handlers::maintenance::sync_handler))
    .route("/api/clean", post(handlers::maintenance::clean_handler))
    ```
 
-9. **Remove now-unused imports from `main.rs`** — any `use` items only needed by the moved handlers (e.g. `apm_core::clean::*`, `apm_core::sync::*` if nothing else uses them) should be removed to avoid dead-code warnings. Verify with `cargo build`.
+8. **Remove now-unused imports from `main.rs`** — any `use` items only needed by the moved handlers (e.g. `apm_core::clean::*`, `apm_core::sync::*` if nothing else uses them) should be removed to avoid dead-code warnings. Verify with `cargo build`.
 
-10. **Compile and fix**:
-    ```
-    cargo build -p apm-server
-    ```
-    Likely issue: test helpers in `main.rs`'s `#[cfg(test)]` block may need to be `pub(crate)` for `maintenance.rs` tests to call them. Check visibility of `build_app_with_tickets`, `test_tickets`, `build_app`.
+9. **Compile and fix**:
+   ```
+   cargo build -p apm-server
+   ```
+   Likely issue: test helpers in `main.rs`'s `#[cfg(test)]` block may need to be `pub(crate)` for `maintenance.rs` tests to call them. Check visibility of `build_app_with_tickets`, `test_tickets`, `build_app`.
 
-11. **Run tests**:
+10. **Run tests**:
     ```
     cargo test -p apm-server
     ```
