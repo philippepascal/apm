@@ -44,7 +44,7 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Moving any TOML or git-operation logic into apm_core (the core logic stays; only the CLI wrapper moves)\n- Changing the signature or behaviour of run_epic_clean() — this is a pure relocation\n- Replacing inline fetch patterns in clean.rs (covered by ticket d3ebdc0f)\n- Replacing the 3 inline epic-ID patterns in clean.rs (covered by ticket aeacd066)\n- Adding a new apm epic clean subcommand — the apm clean --epics flag and its wiring are untouched\n- Modifying apm-server
 
 ### Approach
 
