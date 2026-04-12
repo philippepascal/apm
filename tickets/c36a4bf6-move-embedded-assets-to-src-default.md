@@ -4,12 +4,12 @@ title = "Move embedded assets to src/default/"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c36a4bf6-move-embedded-assets-to-src-default"
 created_at = "2026-04-12T06:04:13.294338Z"
-updated_at = "2026-04-12T06:14:25.112001Z"
+updated_at = "2026-04-12T06:14:30.002504Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
