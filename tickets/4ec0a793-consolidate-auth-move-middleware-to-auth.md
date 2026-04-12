@@ -29,19 +29,19 @@ The desired state is a single `auth.rs` that owns all auth concerns: session man
 
 ### Acceptance criteria
 
-- [ ] `webauthn_state.rs` no longer exists as a source file
-- [ ] `credential_store.rs` no longer exists as a source file
-- [ ] `auth.rs` contains `WebauthnState` with `RegistrationSession`, `AuthenticationSession` structs (previously in `webauthn_state.rs`)
-- [ ] `auth.rs` contains `CredentialStore` with all passkey persistence methods (previously in `credential_store.rs`)
-- [ ] `auth.rs` exports a public `require_auth` middleware function (previously in `main.rs`)
-- [ ] `auth.rs` exports a public `find_session_username` helper function (previously in `main.rs`)
-- [ ] `auth.rs` exports public handler functions: `otp_handler`, `register_page_handler`, `register_challenge_handler`, `register_complete_handler`, `login_page_handler`, `login_challenge_handler`, `login_complete_handler`, `list_sessions_handler`, `revoke_sessions_handler`
-- [ ] `main.rs` contains no `mod webauthn_state;` or `mod credential_store;` declarations
-- [ ] `main.rs` contains none of the handler functions or middleware listed above
-- [ ] `AppState` in `main.rs` references `auth::WebauthnState` and `auth::CredentialStore` (instead of `webauthn_state::WebauthnState` and `credential_store::CredentialStore`)
-- [ ] The router in `main.rs` calls all auth handlers via the `auth::` namespace
-- [ ] `cargo build` succeeds with no errors or warnings
-- [ ] `cargo test` passes, including unit tests migrated from `webauthn_state.rs` and `credential_store.rs`
+- [x] `webauthn_state.rs` no longer exists as a source file
+- [x] `credential_store.rs` no longer exists as a source file
+- [x] `auth.rs` contains `WebauthnState` with `RegistrationSession`, `AuthenticationSession` structs (previously in `webauthn_state.rs`)
+- [x] `auth.rs` contains `CredentialStore` with all passkey persistence methods (previously in `credential_store.rs`)
+- [x] `auth.rs` exports a public `require_auth` middleware function (previously in `main.rs`)
+- [x] `auth.rs` exports a public `find_session_username` helper function (previously in `main.rs`)
+- [x] `auth.rs` exports public handler functions: `otp_handler`, `register_page_handler`, `register_challenge_handler`, `register_complete_handler`, `login_page_handler`, `login_challenge_handler`, `login_complete_handler`, `list_sessions_handler`, `revoke_sessions_handler`
+- [x] `main.rs` contains no `mod webauthn_state;` or `mod credential_store;` declarations
+- [x] `main.rs` contains none of the handler functions or middleware listed above
+- [x] `AppState` in `main.rs` references `auth::WebauthnState` and `auth::CredentialStore` (instead of `webauthn_state::WebauthnState` and `credential_store::CredentialStore`)
+- [x] The router in `main.rs` calls all auth handlers via the `auth::` namespace
+- [x] `cargo build` succeeds with no errors or warnings
+- [x] `cargo test` passes, including unit tests migrated from `webauthn_state.rs` and `credential_store.rs`
 
 ### Out of scope
 
