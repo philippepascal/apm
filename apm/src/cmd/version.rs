@@ -1,5 +1,3 @@
 pub fn run() {
-    let version = env!("CARGO_PKG_VERSION");
-    let build = if cfg!(debug_assertions) { "dev" } else { "release" };
-    println!("apm {} ({})", version, build);
+    println!("apm {} ({})", env!("CARGO_PKG_VERSION"), env!("APM_GIT_DESCRIBE"));
 }

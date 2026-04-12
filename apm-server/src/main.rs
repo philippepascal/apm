@@ -87,6 +87,10 @@ async fn health_handler() -> Json<serde_json::Value> {
     Json(serde_json::json!({"ok": true}))
 }
 
+async fn version_handler() -> Json<serde_json::Value> {
+    Json(serde_json::json!({"version": env!("CARGO_PKG_VERSION"), "build": env!("APM_GIT_DESCRIBE")}))
+}
+
 async fn collaborators_handler(
     State(state): State<Arc<AppState>>,
 ) -> Response {
@@ -187,6 +191,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route("/api/auth/sessions", get(auth::list_sessions_handler).delete(auth::revoke_sessions_handler))
         .route_layer(axum::middleware::from_fn_with_state(state.clone(), auth::require_auth));
     let open = Router::new()
+        .route("/api/version", get(version_handler))
         .route("/health", get(health_handler))
         .route("/register", get(auth::register_page_handler))
         .route("/api/auth/register/challenge", post(auth::register_challenge_handler))
