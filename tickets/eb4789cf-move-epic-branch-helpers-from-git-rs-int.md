@@ -38,7 +38,12 @@ This ticket covers only the epic-helpers move. The broader `git.rs` reorganisati
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Renaming `git.rs` to `git_util.rs` — that is done by b28fe914
+- Moving any functions other than the four epic-branch helpers out of `git.rs`
+- Changing function signatures, return types, or runtime behaviour of the moved functions
+- Adding `pub use git_util as git` or any other re-export alias — b28fe914's responsibility
+- Extracting worktree or ticket-format helpers from `git.rs` — separate tickets in epic 57bce963
+- Updating `REFACTOR-CORE.md` or any other documentation
 
 ### Approach
 
