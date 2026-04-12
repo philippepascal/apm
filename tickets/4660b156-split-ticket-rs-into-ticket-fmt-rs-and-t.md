@@ -1,7 +1,7 @@
 +++
 id = "4660b156"
 title = "Split ticket.rs into ticket_fmt.rs and ticket_util.rs"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4660b156-split-ticket-rs-into-ticket-fmt-rs-and-t"
 created_at = "2026-04-12T06:04:17.196705Z"
-updated_at = "2026-04-12T07:19:40.722158Z"
+updated_at = "2026-04-12T07:32:55.765449Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 +++
@@ -119,3 +119,4 @@ Run `cargo build --workspace` then `cargo test --workspace`. No files outside `a
 | 2026-04-12T07:02Z | in_design | specd | claude-0412-0700-3d28 |
 | 2026-04-12T07:13Z | specd | ready | apm |
 | 2026-04-12T07:19Z | ready | in_progress | philippepascal |
+| 2026-04-12T07:32Z | in_progress | implemented | claude-0412-0719-8708 |
