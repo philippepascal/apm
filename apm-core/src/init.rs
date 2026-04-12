@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::path::Path;
-use std::process::Command;
 
 pub struct SetupOutput {
     pub messages: Vec<String>,
@@ -175,14 +174,8 @@ pub fn migrate(root: &Path) -> Result<Vec<String>> {
 }
 
 pub fn detect_default_branch(root: &Path) -> String {
-    Command::new("git")
-        .args(["symbolic-ref", "--short", "HEAD"])
-        .current_dir(root)
-        .output()
+    crate::git_util::current_branch(root)
         .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "main".to_string())
 }
@@ -318,28 +311,15 @@ fn default_ticket_toml() -> &'static str {
 }
 
 fn maybe_initial_commit(root: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let has_commits = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(root)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
-    if has_commits {
+    if crate::git_util::has_commits(root) {
         return Ok(());
     }
 
-    Command::new("git")
-        .args(["add", ".apm/config.toml", ".apm/workflow.toml", ".apm/ticket.toml", ".gitignore"])
-        .current_dir(root)
-        .status()?;
+    crate::git_util::stage_files(root, &[
+        ".apm/config.toml", ".apm/workflow.toml", ".apm/ticket.toml", ".gitignore",
+    ])?;
 
-    let out = Command::new("git")
-        .args(["commit", "-m", "apm: initialize project"])
-        .current_dir(root)
-        .output()?;
-
-    if out.status.success() {
+    if crate::git_util::commit(root, "apm: initialize project").is_ok() {
         messages.push("Created initial commit.".to_string());
     }
     Ok(())

@@ -60,15 +60,7 @@ pub struct RunNextOutput {
 }
 
 fn git_config_value(root: &Path, key: &str) -> Option<String> {
-    std::process::Command::new("git")
-        .args(["config", key])
-        .current_dir(root)
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
+    crate::git_util::git_config_get(root, key)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -260,44 +252,12 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let wt_display = crate::worktree::provision_worktree(root, &config, &branch, &mut warnings)?;
 
-    let remote_ref = format!("origin/{merge_base}");
-    let merge_ref = if std::process::Command::new("git")
-        .args(["rev-parse", "--verify", &remote_ref])
-        .current_dir(&wt_display)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-    {
-        remote_ref.as_str()
+    let ref_to_merge = if crate::git_util::remote_branch_tip(&wt_display, &merge_base).is_some() {
+        format!("origin/{merge_base}")
     } else {
-        merge_base.as_str()
+        merge_base.to_string()
     };
-    let merge_message = match std::process::Command::new("git")
-        .args(["merge", merge_ref, "--no-edit"])
-        .current_dir(&wt_display)
-        .output()
-    {
-        Ok(out) if out.status.success() => {
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            if !stdout.contains("Already up to date") {
-                Some(format!("Merged {merge_ref} into branch."))
-            } else {
-                None
-            }
-        }
-        Ok(out) => {
-            warnings.push(format!(
-                "warning: merge {} failed: {}",
-                merge_ref,
-                String::from_utf8_lossy(&out.stderr).trim()
-            ));
-            None
-        }
-        Err(e) => {
-            warnings.push(format!("warning: merge failed: {e}"));
-            None
-        }
-    };
+    let merge_message = crate::git_util::merge_ref(&wt_display, &ref_to_merge, &mut warnings);
 
     if !spawn {
         return Ok(StartOutput {
