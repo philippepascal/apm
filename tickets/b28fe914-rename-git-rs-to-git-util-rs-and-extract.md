@@ -30,13 +30,10 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 2 for the full plan.
 - [ ] `apm-core/src/git.rs` no longer exists; `apm-core/src/git_util.rs` exists in its place containing only genuine git plumbing
 - [ ] `apm-core/src/lib.rs` declares `pub mod git_util` (replacing `pub mod git`) and re-exports it as `pub use git_util as git` so `apm_core::git::` paths in external crates continue to resolve without change
 - [ ] `gen_hex_id`, `resolve_ticket_branch`, and `branch_name_from_path` are defined in `ticket_fmt.rs` and absent from `git_util.rs`
-- [ ] `find_worktree_for_branch`, `list_ticket_worktrees`, `ensure_worktree`, `add_worktree`, `remove_worktree`, and `sync_agent_dirs` — plus their private helpers `clean_agent_dirs`, `is_tracked`, and `copy_dir_recursive` — are defined in `worktree.rs` and absent from `git_util.rs`
-- [ ] `find_epic_branch`, `find_epic_branches`, `epic_branches`, and `create_epic_branch` are defined in `epic.rs` and absent from `git_util.rs`
 - [ ] `merge_into_default` and `pull_default` are defined as `pub fn` in `git_util.rs` and absent from `state.rs`
+- [ ] The private `run()` helper in `git_util.rs` is declared `pub(crate)` so downstream modules (`worktree.rs`, `epic.rs`) can call it without duplication
 - [ ] `state.rs` calls `git::merge_into_default` and `git::pull_default` (resolved through the `git_util as git` alias)
 - [ ] Every caller of the moved ticket-format functions (`gen_hex_id`, `resolve_ticket_branch`, `branch_name_from_path`) is updated to reference `ticket_fmt::` instead of `git::`
-- [ ] Every caller of the moved worktree functions is updated to reference `worktree::` instead of `git::`
-- [ ] Every caller of the moved epic functions is updated to reference `epic::` instead of `git::`
 - [ ] `cargo build` succeeds with zero errors across `apm-core`, `apm`, and `apm-server`
 - [ ] `cargo test` passes (integration suite included)
 
