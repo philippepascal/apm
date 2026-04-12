@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket, ticket_fmt, worker};
+use apm_core::{config::Config, ticket, ticket_fmt, worker, worktree};
 use std::path::{Path, PathBuf};
 
 pub fn run(root: &Path, log_id: Option<&str>, kill_id: Option<&str>) -> Result<()> {
@@ -21,7 +21,7 @@ fn list(root: &Path) -> Result<()> {
         .filter(|s| s.terminal || s.worker_end)
         .map(|s| s.id.as_str())
         .collect();
-    let worktrees = git::list_ticket_worktrees(root)?;
+    let worktrees = worktree::list_ticket_worktrees(root)?;
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir).unwrap_or_default();
 
     struct Row {
@@ -207,7 +207,7 @@ fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String)> {
         .clone()
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
-    let wt = git::find_worktree_for_branch(root, &branch)
+    let wt = worktree::find_worktree_for_branch(root, &branch)
         .ok_or_else(|| anyhow::anyhow!("no worktree for ticket {id:?}"))?;
     Ok((wt, id))
 }

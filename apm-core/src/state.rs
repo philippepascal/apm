@@ -178,7 +178,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     }
 
     let worktree_path = if new_state == "in_design" {
-        Some(provision_worktree(root, &config, &branch, &mut warnings)?)
+        Some(crate::worktree::provision_worktree(root, &config, &branch, &mut warnings)?)
     } else {
         None
     };
@@ -245,13 +245,6 @@ pub fn ensure_amendment_section(body: &mut String) {
     } else {
         body.push_str(placeholder);
     }
-}
-
-pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: &mut Vec<String>) -> Result<PathBuf> {
-    let worktrees_base = root.join(&config.worktrees.dir);
-    let wt = git::ensure_worktree(root, &worktrees_base, branch)?;
-    git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs, warnings);
-    Ok(wt)
 }
 
 pub fn available_transitions(config: &crate::config::Config, current_state: &str) -> Vec<(String, String, String)> {
