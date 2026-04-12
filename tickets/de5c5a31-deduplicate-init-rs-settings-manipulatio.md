@@ -18,7 +18,14 @@ target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm/src/cmd/init.rs` (305 lines) contains two near-identical functions for manipulating `.claude/settings.json`:
+
+- `update_claude_settings()` (lines ~158-227) — updates the project-level `.claude/settings.json`
+- `update_user_claude_settings()` (lines ~230-304) — updates the user-level `~/.claude/settings.json`
+
+Both functions perform the same operations: read JSON, navigate to `permissions.allow` array, check for existing entries, append new entries, write back. The only difference is the file path and the specific permission entries added.
+
+This ~140 lines of duplicated logic should be a single parameterized function: `fn update_settings_json(path: &Path, entries: &[&str]) -> Result<()>`.
 
 ### Acceptance criteria
 
@@ -35,13 +42,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
