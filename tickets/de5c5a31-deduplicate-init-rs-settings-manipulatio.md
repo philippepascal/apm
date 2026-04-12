@@ -31,7 +31,15 @@ The desired state is a single `fn update_settings_json(...)` helper that both ca
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm init` still adds all `APM_ALLOW_ENTRIES` to `.claude/settings.json` when the user answers `y`
+- [ ] `apm init` still adds all `APM_USER_ALLOW_ENTRIES` to `~/.claude/settings.json` when the user answers `y`
+- [ ] `apm init` still skips patching `.claude/settings.json` when the file does not exist
+- [ ] `apm init` still creates `~/.claude/settings.json` (including parent dir) when the file does not exist and the user answers `y`
+- [ ] `apm init` still skips patching when all target entries are already present (no prompt shown)
+- [ ] `apm init` still skips patching when the user answers `n` or presses enter at the `[y/N]` prompt
+- [ ] `init.rs` contains no duplicate `permissions/allow` manipulation logic — there is exactly one function that reads, diffs, prompts, and writes a settings file
+- [ ] The `update_settings_json` helper is `fn update_settings_json(path: &Path, entries: &[&str], prompt_header: &str, prompt_confirm: &str, updated_msg: &str, create_if_missing: bool) -> Result<()>`
+- [ ] `cargo build` succeeds with no new warnings
 
 ### Out of scope
 
