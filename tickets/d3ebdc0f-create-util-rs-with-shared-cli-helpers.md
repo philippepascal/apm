@@ -18,7 +18,22 @@ target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Several boilerplate patterns are duplicated across 7+ command files in `apm/src/cmd/`:
+
+1. **Aggressive fetch check** (7 files: assign.rs, show.rs, next.rs, close.rs, spec.rs, sync.rs, new.rs):
+   ```rust
+   let aggressive = config.sync.aggressive && !no_aggressive;
+   if aggressive { git::fetch_all(root).unwrap_or_else(|e| eprintln!("warning: fetch failed: {e:#}")); }
+   ```
+
+2. **Fetch error warning** (6 files): `eprintln!("warning: fetch failed: {e:#}")` — identical string in every file.
+
+3. **Confirmation prompt** (3+ files: assign.rs, clean.rs):
+   ```rust
+   print!("..."); io::stdout().flush()?; let mut input = String::new(); io::stdin().read_line(&mut input)?;
+   ```
+
+There is no shared utility module. Each command file reimplements these patterns, making them inconsistent and hard to update. Creating `apm/src/util.rs` with `fetch_if_aggressive()`, `log_fetch_warning()`, and `prompt_yes_no()` would eliminate this duplication.
 
 ### Acceptance criteria
 
@@ -35,13 +50,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
