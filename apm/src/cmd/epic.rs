@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::io::IsTerminal;
 use std::path::Path;
 use std::process::Command;
 use crate::ctx::CmdContext;
@@ -334,6 +335,129 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     Ok(())
 }
 
+
+pub(crate) fn run_epic_clean(
+    root: &Path,
+    config: &apm_core::config::Config,
+    dry_run: bool,
+    yes: bool,
+) -> Result<()> {
+    // Get local epic branches.
+    let local_output = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["branch", "--list", "epic/*"])
+        .output()?;
+
+    let local_branches: Vec<String> = String::from_utf8_lossy(&local_output.stdout)
+        .lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
+
+    // Load all tickets.
+    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+
+    // Find epic branches whose derived state is "done".
+    let mut candidates: Vec<String> = Vec::new();
+    for branch in &local_branches {
+        let id = apm_core::epic::epic_id_from_branch(branch);
+
+        let epic_tickets: Vec<_> = tickets
+            .iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+            .collect();
+
+        let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
+            .iter()
+            .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+            .collect();
+
+        if apm_core::epic::derive_epic_state(&state_configs) == "done" {
+            candidates.push(branch.clone());
+        }
+    }
+
+    if candidates.is_empty() {
+        println!("Nothing to clean.");
+        return Ok(());
+    }
+
+    // Print candidate list.
+    println!("Would delete {} epic(s):", candidates.len());
+    for branch in &candidates {
+        let id = apm_core::epic::epic_id_from_branch(branch);
+        let title = apm_core::epic::branch_to_title(branch);
+        println!("  {id}  {title}");
+    }
+
+    if dry_run {
+        println!("Dry run — no changes made.");
+        return Ok(());
+    }
+
+    // Confirmation gate.
+    if !yes {
+        if std::io::stdout().is_terminal() {
+            if !crate::util::prompt_yes_no(&format!("Delete {} epic(s)? [y/N] ", candidates.len()))? {
+                println!("Aborted.");
+                return Ok(());
+            }
+        } else {
+            println!("Skipping — non-interactive terminal. Use --yes to confirm.");
+            return Ok(());
+        }
+    }
+
+    // Delete each candidate.
+    let epics_path = root.join(".apm").join("epics.toml");
+    for branch in &candidates {
+        let id = apm_core::epic::epic_id_from_branch(branch).to_string();
+
+        // Delete local branch.
+        let del_local = std::process::Command::new("git")
+            .current_dir(root)
+            .args(["branch", "-d", branch])
+            .output()?;
+        if !del_local.status.success() {
+            eprintln!(
+                "error: failed to delete local branch {branch}: {}",
+                String::from_utf8_lossy(&del_local.stderr).trim()
+            );
+            continue;
+        }
+
+        // Delete remote branch; suppress "remote ref does not exist".
+        let del_remote = std::process::Command::new("git")
+            .current_dir(root)
+            .args(["push", "origin", "--delete", branch])
+            .output()?;
+        if !del_remote.status.success() {
+            let stderr = String::from_utf8_lossy(&del_remote.stderr);
+            if !stderr.contains("remote ref does not exist")
+                && !stderr.contains("error: unable to delete")
+            {
+                eprintln!(
+                    "warning: failed to delete remote {branch}: {}",
+                    stderr.trim()
+                );
+            }
+        }
+
+        println!("deleted {branch}");
+
+        // Remove the epic's entry from .apm/epics.toml.
+        if epics_path.exists() {
+            let raw = std::fs::read_to_string(&epics_path)?;
+            let mut doc: toml_edit::DocumentMut = raw.parse()?;
+            if doc.contains_key(&id) {
+                doc.remove(&id);
+                std::fs::write(&epics_path, doc.to_string())?;
+            }
+        }
+    }
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
