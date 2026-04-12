@@ -19,7 +19,17 @@ depends_on = ["7bb8eacb"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm-server/src/main.rs` contains ~300 lines of epic handler functions that should be in their own module. These include:
+
+- `list_epics()` — lists all epic branches with derived state
+- `get_epic()` — loads epic details and associated tickets
+- `create_epic()` — creates new epic branch
+- `parse_epic_branch()` — extracts ID and title from branch name (utility helper)
+- Epic-related serialization logic
+
+These handlers also contain inline `branch_to_title`-style logic (parsing epic branch names into display titles) which duplicates what `apm/src/cmd/epic.rs` does. After the apm CLI refactoring epic moves `branch_to_title` and `epic_id_from_branch` into `apm_core::epic`, these handlers should use the shared helpers.
+
+Extracting into `handlers/epics.rs` will reduce main.rs by ~300 lines. This ticket depends on the ticket handlers being extracted first to avoid merge conflicts (both modify main.rs).
 
 ### Acceptance criteria
 
@@ -36,13 +46,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
