@@ -4,12 +4,12 @@ title = "Share worktree_for_ticket helper between workers.rs and worktrees.rs"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2d0e3534-share-worktree-for-ticket-helper-between"
 created_at = "2026-04-12T09:02:38.703504Z"
-updated_at = "2026-04-12T09:20:52.314671Z"
+updated_at = "2026-04-12T09:20:57.239387Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
