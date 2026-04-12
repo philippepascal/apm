@@ -105,7 +105,6 @@ pub async fn queue_handler(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use apm_core::ticket::{Frontmatter, Ticket};
     use axum::body::Body;
     use axum::http::{Request, StatusCode};

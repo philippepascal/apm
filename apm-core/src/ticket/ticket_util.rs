@@ -554,16 +554,6 @@ mod tests {
         )
     }
 
-    fn minimal_ticket_sections() -> Vec<crate::config::TicketSection> {
-        use crate::config::{SectionType, TicketSection};
-        vec![
-            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Acceptance criteria".into(), type_: SectionType::Tasks, required: true, placeholder: None },
-            TicketSection { name: "Out of scope".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Approach".into(), type_: SectionType::Free, required: true, placeholder: None },
-        ]
-    }
-
     // ── compute_blocking_deps ─────────────────────────────────────────────
 
     fn make_simple_ticket(id: &str, state: &str, depends_on: Option<Vec<&str>>) -> Ticket {

@@ -809,6 +809,7 @@ fn sync_handler_no_close_returns_zero() {
 
 // --- take ---
 
+#[allow(dead_code)]
 fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, agent: &str) {
     let path = format!("tickets/{filename}");
     let content = format!(
