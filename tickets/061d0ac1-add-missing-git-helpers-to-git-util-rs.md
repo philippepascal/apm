@@ -60,7 +60,12 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating callers (clean.rs, epic.rs, init.rs, start.rs, worktree.rs) to use the new helpers — covered by subsequent tickets in the same epic
+- Removing or replacing existing git_util helpers that are already present
+- Adding worktree management helpers (add/remove worktree) — worktree.rs already uses `run()` for these
+- Adding push or fetch helpers beyond what already exists
+- Handling the `diagnose_worktree()` deep status parsing in clean.rs (categorising known_temp / other_untracked / modified_tracked) — that logic belongs in clean.rs
+- Test helpers (git_init, git_cmd) in test modules — those are intentionally local
 
 ### Approach
 
