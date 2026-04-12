@@ -42,18 +42,18 @@ Depends on the git_util helpers ticket landing first.
 
 ### Acceptance criteria
 
-- [ ] `init.rs::detect_default_branch` calls `git_util::current_branch()` instead of `git symbolic-ref --short HEAD`
-- [ ] `init.rs::maybe_initial_commit` calls `git_util::has_commits()` instead of `git rev-parse HEAD`
-- [ ] `init.rs::maybe_initial_commit` calls `git_util::stage_files()` instead of `git add`
-- [ ] `init.rs::maybe_initial_commit` calls `git_util::commit()` instead of `git commit -m`
-- [ ] `start.rs::git_config_value` delegates to `git_util::git_config_get()` (or is removed and call sites call `git_util::git_config_get` directly)
-- [ ] The inline `rev-parse --verify origin/<merge_base>` check in `start.rs` is replaced by a call to an existing `git_util` helper (e.g. `remote_branch_tip`)
-- [ ] The inline `git merge <ref> --no-edit` block in `start.rs` is replaced by `git_util::merge_ref()`
-- [ ] `worktree.rs::is_tracked` delegates to `git_util::is_file_tracked()` instead of running `git ls-files --error-unmatch` directly
-- [ ] `use std::process::Command` is absent from `worktree.rs` (no remaining usages in that file)
-- [ ] `use std::process::Command` is absent from the non-test portion of `init.rs`; if the test helpers still require it the import is scoped to `#[cfg(test)]`
-- [ ] `std::process::Command` is not used in `start.rs` for git operations
-- [ ] All existing unit and integration tests pass
+- [x] `init.rs::detect_default_branch` calls `git_util::current_branch()` instead of `git symbolic-ref --short HEAD`
+- [x] `init.rs::maybe_initial_commit` calls `git_util::has_commits()` instead of `git rev-parse HEAD`
+- [x] `init.rs::maybe_initial_commit` calls `git_util::stage_files()` instead of `git add`
+- [x] `init.rs::maybe_initial_commit` calls `git_util::commit()` instead of `git commit -m`
+- [x] `start.rs::git_config_value` delegates to `git_util::git_config_get()` (or is removed and call sites call `git_util::git_config_get` directly)
+- [x] The inline `rev-parse --verify origin/<merge_base>` check in `start.rs` is replaced by a call to an existing `git_util` helper (e.g. `remote_branch_tip`)
+- [x] The inline `git merge <ref> --no-edit` block in `start.rs` is replaced by `git_util::merge_ref()`
+- [x] `worktree.rs::is_tracked` delegates to `git_util::is_file_tracked()` instead of running `git ls-files --error-unmatch` directly
+- [x] `use std::process::Command` is absent from `worktree.rs` (no remaining usages in that file)
+- [x] `use std::process::Command` is absent from the non-test portion of `init.rs`; if the test helpers still require it the import is scoped to `#[cfg(test)]`
+- [x] `std::process::Command` is not used in `start.rs` for git operations
+- [x] All existing unit and integration tests pass
 
 ### Out of scope
 
