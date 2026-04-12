@@ -283,7 +283,7 @@ pub fn close(
         t.path.file_name().unwrap().to_string_lossy()
     );
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| crate::git::branch_name_from_path(&t.path))
+        .or_else(|| crate::ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
@@ -324,7 +324,7 @@ pub fn create(
     let tickets_dir = root.join(&config.tickets.dir);
     std::fs::create_dir_all(&tickets_dir)?;
 
-    let id = crate::git::gen_hex_id();
+    let id = crate::ticket_fmt::gen_hex_id();
     let slug = slugify(&title);
     let filename = format!("{id}-{slug}.md");
     let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
@@ -516,7 +516,7 @@ pub fn list_worktrees_with_tickets(
     let result = worktrees.into_iter().map(|(wt_path, branch)| {
         let ticket = tickets.iter().find(|t| {
             t.frontmatter.branch.as_deref() == Some(branch.as_str())
-                || crate::git::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
+                || crate::ticket_fmt::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
         }).cloned();
         (wt_path, branch, ticket)
     }).collect();

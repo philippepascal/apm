@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, ticket, ticket_fmt};
 use std::path::Path;
 
 pub fn run(root: &Path, remove_id: Option<&str>) -> Result<()> {
@@ -45,7 +45,7 @@ fn remove(root: &Path, config: &Config, id_arg: &str) -> Result<()> {
     };
 
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     let Some(wt_path) = git::find_worktree_for_branch(root, &branch) else {

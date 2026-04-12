@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::{config::{Config, WorkerProfileConfig, WorkersConfig}, git, ticket};
+use crate::{config::{Config, WorkerProfileConfig, WorkersConfig}, git, ticket, ticket_fmt};
 use chrono::Utc;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -240,7 +240,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .frontmatter
         .branch
         .clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     let default_branch = &config.project.default_branch;
@@ -437,7 +437,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             t.path.file_name().unwrap().to_string_lossy()
         );
         let branch = t.frontmatter.branch.clone()
-            .or_else(|| git::branch_name_from_path(&t.path))
+            .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
             .unwrap_or_else(|| format!("ticket/{id}"));
         let mut t_mut = t.clone();
         t_mut.frontmatter.focus_section = None;
@@ -480,7 +480,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let params = effective_spawn_params(profile2, &config.workers);
 
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
@@ -608,7 +608,7 @@ pub fn spawn_next_worker(
             t.path.file_name().unwrap().to_string_lossy()
         );
         let branch = t.frontmatter.branch.clone()
-            .or_else(|| git::branch_name_from_path(&t.path))
+            .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
             .unwrap_or_else(|| format!("ticket/{id}"));
         let mut t_mut = t.clone();
         t_mut.frontmatter.focus_section = None;
@@ -645,7 +645,7 @@ pub fn spawn_next_worker(
     let ticket_content = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
     let params = effective_spawn_params(profile2, &config.workers);
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
