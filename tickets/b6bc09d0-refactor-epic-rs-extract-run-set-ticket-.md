@@ -43,7 +43,12 @@ Once the prerequisite tickets land, two additional call-sites need updating in t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Extracting \`run_list()\`, \`run_show()\`, or \`run_new()\` logic from \`epic.rs\`
+- Moving the \`max_workers\` branch of \`run_set()\` (TOML editing) out of the CLI layer
+- Changing the PR body format used for epic PRs
+- Refactoring any other command files in \`apm/src/cmd/\`
+- Moving \`branch_to_title()\` or \`epic_id_from_branch()\` to core (covered by dep \`aeacd066\`)
+- Creating \`apm::util\` or its helpers (covered by dep \`d3ebdc0f\`)
 
 ### Approach
 
