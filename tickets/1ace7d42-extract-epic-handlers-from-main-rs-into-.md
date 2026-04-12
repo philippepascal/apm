@@ -1,7 +1,7 @@
 +++
 id = "1ace7d42"
 title = "Extract epic handlers from main.rs into handlers/epics.rs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1ace7d42-extract-epic-handlers-from-main-rs-into-"
 created_at = "2026-04-12T09:03:14.832182Z"
-updated_at = "2026-04-12T09:09:53.592173Z"
+updated_at = "2026-04-12T09:49:07.015419Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 depends_on = ["7bb8eacb"]
@@ -58,3 +58,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T09:03Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
+| 2026-04-12T09:49Z | groomed | in_design | philippepascal |
