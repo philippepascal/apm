@@ -50,11 +50,11 @@ Having both concerns in one file makes it hard to find the right function quickl
 Move these items verbatim from `ticket.rs`:
 - All `use` imports that the moved items depend on
 - `Frontmatter` struct and its `Deserialize`/`Serialize` impls (including the custom `deserialize_id` helper)
-- `Ticket` struct and its `impl` block (`load`, `parse`, `serialize`, `save`, `score`, `document`)
+- `Ticket` struct and its `impl` block (`load`, `parse`, `serialize`, `save`, `document`) — note: `score` moves to `ticket_util.rs`
 - `ChecklistItem` struct
 - `ValidationError` enum
-- `TicketDocument` struct and its `impl` block (`parse`, `serialize`, `validate`, `unchecked_tasks`, `toggle_criterion`)
-- Free functions: `slugify`, `normalize_id_arg`, `id_arg_prefixes`, `resolve_id_in_slice`, `set_field`
+- `TicketDocument` struct and its `impl` block (`parse`, `serialize`, `validate`) — note: `unchecked_tasks` and `toggle_criterion` move to `ticket_util.rs`
+- Free functions: `slugify`, `normalize_id_arg`, `id_arg_prefixes`, `resolve_id_in_slice`
 - All `#[cfg(test)]` blocks that test the above
 
 **2. Create `apm-core/src/ticket_util.rs`**
@@ -62,6 +62,9 @@ Move these items verbatim from `ticket.rs`:
 Move these items verbatim from `ticket.rs`:
 - All `use` imports that the moved items depend on (will include imports from `ticket_fmt`)
 - Free functions: `build_reverse_index`, `effective_priority`, `dep_satisfied`, `sorted_actionable`, `pick_next`, `load_all_from_git`, `state_from_branch`, `list_worktrees_with_tickets`, `close`, `create`, `check_owner`, `list_filtered`
+- `score` (currently `Ticket::score` — extracted as a free function or kept as an inherent method via `use super::ticket_fmt::Ticket` — whichever compiles cleanly)
+- `set_field` free function
+- `TicketDocument::unchecked_tasks` and `TicketDocument::toggle_criterion` — add an `impl TicketDocument` block in `ticket_util.rs` with just these two methods
 - All `#[cfg(test)]` blocks that test the above
 
 **3. Replace `apm-core/src/ticket.rs` with a re-export hub**
