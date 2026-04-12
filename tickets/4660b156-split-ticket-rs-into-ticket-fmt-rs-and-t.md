@@ -28,7 +28,7 @@ Having both concerns in one file makes it hard to find the right function quickl
 ### Acceptance criteria
 
 - [x] `apm-core/src/ticket_fmt.rs` exists and contains: `Frontmatter`, `Ticket` (struct + `load`/`parse`/`serialize`/`save`/`document`), `TicketDocument` (struct + `parse`/`serialize`/`validate`), `ChecklistItem`, `ValidationError`, `slugify`, `normalize_id_arg`, `id_arg_prefixes`, and `resolve_id_in_slice`
-- [ ] `apm-core/src/ticket_util.rs` exists and contains: `build_reverse_index`, `effective_priority`, `dep_satisfied`, `sorted_actionable`, `pick_next`, `load_all_from_git`, `state_from_branch`, `list_worktrees_with_tickets`, `close`, `create`, `check_owner`, `list_filtered`, `score`, `set_field`, `unchecked_tasks`, and `toggle_criterion`
+- [x] `apm-core/src/ticket_util.rs` exists and contains: `build_reverse_index`, `effective_priority`, `dep_satisfied`, `sorted_actionable`, `pick_next`, `load_all_from_git`, `state_from_branch`, `list_worktrees_with_tickets`, `close`, `create`, `check_owner`, `list_filtered`, `score`, `set_field`, `unchecked_tasks`, and `toggle_criterion`
 - [ ] `apm-core/src/ticket.rs` contains only `pub use` re-exports from `ticket_fmt` and `ticket_util`; no type definitions or function bodies remain in it
 - [ ] `cargo build --workspace` succeeds with no errors after the split
 - [ ] `cargo test --workspace` passes with the same number of passing tests as before the split
