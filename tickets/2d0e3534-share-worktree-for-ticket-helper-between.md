@@ -37,7 +37,7 @@ Because the shared helper lives as a private function in `workers.rs`, `worktree
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Refactoring workers.rs or worktrees.rs to use CmdContext for config/ticket loading\n- Moving any other helpers into util.rs beyond worktree_for_ticket\n- Adding new functionality to the helper (e.g. creating worktrees that don't exist)\n- Changes to apm-core crates
 
 ### Approach
 
