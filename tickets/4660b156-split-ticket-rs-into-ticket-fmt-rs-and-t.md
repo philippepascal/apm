@@ -31,7 +31,7 @@ Having both concerns in one file makes it hard to find the right function quickl
 - [x] `apm-core/src/ticket_util.rs` exists and contains: `build_reverse_index`, `effective_priority`, `dep_satisfied`, `sorted_actionable`, `pick_next`, `load_all_from_git`, `state_from_branch`, `list_worktrees_with_tickets`, `close`, `create`, `check_owner`, `list_filtered`, `score`, `set_field`, `unchecked_tasks`, and `toggle_criterion`
 - [x] `apm-core/src/ticket.rs` contains only `pub use` re-exports from `ticket_fmt` and `ticket_util`; no type definitions or function bodies remain in it
 - [x] `cargo build --workspace` succeeds with no errors after the split
-- [ ] `cargo test --workspace` passes with the same number of passing tests as before the split
+- [x] `cargo test --workspace` passes with the same number of passing tests as before the split
 - [ ] No file outside `apm-core/src/ticket*.rs` requires any `use` path changes — all existing `use apm_core::ticket::*` imports continue to resolve
 
 ### Out of scope
