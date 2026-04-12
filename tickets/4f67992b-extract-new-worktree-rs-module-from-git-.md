@@ -1,7 +1,7 @@
 +++
 id = "4f67992b"
 title = "Extract new worktree.rs module from git.rs, state.rs, and ticket.rs"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4f67992b-extract-new-worktree-rs-module-from-git-"
 created_at = "2026-04-12T06:04:31.633559Z"
-updated_at = "2026-04-12T07:13:17.536435Z"
+updated_at = "2026-04-12T07:49:46.744238Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["b28fe914"]
@@ -160,3 +160,4 @@ Run `cargo build` then `cargo test` from the repo root. Fix any compilation erro
 | 2026-04-12T07:04Z | ammend | in_design | philippepascal |
 | 2026-04-12T07:06Z | in_design | specd | claude-0412-0704-b558 |
 | 2026-04-12T07:13Z | specd | ready | apm |
+| 2026-04-12T07:49Z | ready | in_progress | philippepascal |
