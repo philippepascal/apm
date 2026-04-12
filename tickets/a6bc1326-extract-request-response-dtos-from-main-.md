@@ -38,7 +38,12 @@ This is foundational work. Subsequent tickets that split handlers out of `main.r
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Splitting into `models/requests.rs` + `models/responses.rs` subdirectory layout — a flat `models.rs` is sufficient for now
+- Moving `AppState`, `TicketSource`, or `AppError` — those are infrastructure, not DTOs
+- Extracting handler functions from `main.rs` — covered by subsequent tickets in this epic
+- Adding, removing, or renaming any DTO fields or derives
+- Adding new DTOs beyond those already in `main.rs`
+- Re-exporting models from a crate-level `lib.rs` — `apm-server` is a binary crate
 
 ### Approach
 
