@@ -22,7 +22,7 @@ The `apm-core/src/` directory mixes Rust source files with five embedded templat
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core/src/default/apm.agents.md` exists with identical content to the pre-move `apm-core/src/apm.agents.md`\n- [ ] `apm-core/src/default/apm.spec-writer.md` exists with identical content to the pre-move `apm-core/src/apm.spec-writer.md`\n- [ ] `apm-core/src/default/apm.worker.md` exists with identical content to the pre-move `apm-core/src/apm.worker.md`\n- [ ] `apm-core/src/default/ticket.toml` exists with identical content to the pre-move `apm-core/src/ticket.toml`\n- [ ] `apm-core/src/default/workflow.toml` exists with identical content to the pre-move `apm-core/src/workflow.toml`\n- [ ] None of the five asset files remain at `apm-core/src/` (top level)\n- [ ] `cargo build -p apm-core` succeeds after the move\n- [ ] `cargo test -p apm-core` passes with no regressions
 
 ### Out of scope
 
