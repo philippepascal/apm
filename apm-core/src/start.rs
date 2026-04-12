@@ -443,7 +443,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
-    let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
+    let main_root = crate::git_util::main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+    let wt_path = main_root.join(&config.worktrees.dir).join(&wt_name);
     let wt_display = crate::worktree::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
@@ -608,7 +609,8 @@ pub fn spawn_next_worker(
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
-    let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
+    let main_root = crate::git_util::main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+    let wt_path = main_root.join(&config.worktrees.dir).join(&wt_name);
     let wt_display = crate::worktree::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");

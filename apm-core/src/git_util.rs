@@ -1,7 +1,7 @@
 use anyhow::{bail, Context, Result};
 use crate::config::Config;
 use crate::worktree::{find_worktree_for_branch, ensure_worktree};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub(crate) fn run(dir: &Path, args: &[&str]) -> Result<String> {
@@ -916,6 +916,14 @@ pub fn is_file_tracked(root: &Path, path: &str) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+pub fn main_worktree_root(root: &Path) -> Option<PathBuf> {
+    let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
+    out.lines()
+        .next()
+        .and_then(|line| line.strip_prefix("worktree "))
+        .map(PathBuf::from)
 }
 
 #[cfg(test)]

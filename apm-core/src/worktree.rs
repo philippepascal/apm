@@ -141,7 +141,8 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
 }
 
 pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: &mut Vec<String>) -> Result<PathBuf> {
-    let worktrees_base = root.join(&config.worktrees.dir);
+    let main_root = crate::git_util::main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+    let worktrees_base = main_root.join(&config.worktrees.dir);
     let wt = ensure_worktree(root, &worktrees_base, branch)?;
     sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs, warnings);
     Ok(wt)
