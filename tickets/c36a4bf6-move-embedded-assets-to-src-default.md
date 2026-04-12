@@ -27,7 +27,7 @@ Moving these assets to `apm-core/src/default/` groups all embedded defaults in o
 - [x] `apm-core/src/default/apm.agents.md` exists with identical content to the pre-move `apm-core/src/apm.agents.md`
 - [x] `apm-core/src/default/apm.spec-writer.md` exists with identical content to the pre-move `apm-core/src/apm.spec-writer.md`
 - [x] `apm-core/src/default/apm.worker.md` exists with identical content to the pre-move `apm-core/src/apm.worker.md`
-- [ ] `apm-core/src/default/ticket.toml` exists with identical content to the pre-move `apm-core/src/ticket.toml`
+- [x] `apm-core/src/default/ticket.toml` exists with identical content to the pre-move `apm-core/src/ticket.toml`
 - [ ] `apm-core/src/default/workflow.toml` exists with identical content to the pre-move `apm-core/src/workflow.toml`
 - [ ] None of the five asset files remain at `apm-core/src/` (top level)
 - [ ] `cargo build -p apm-core` succeeds after the move
