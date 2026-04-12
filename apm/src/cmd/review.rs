@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{git, review as core_review, ticket};
+use apm_core::{git, review as core_review, ticket, ticket_fmt};
 use chrono::Utc;
 use std::io::{self, BufRead, Write};
 use std::path::Path;
@@ -82,7 +82,7 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
         t.path.file_name().unwrap().to_string_lossy()
     );
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     // Commit the spec edit if the body changed.

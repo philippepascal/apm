@@ -1,8 +1,10 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use crate::config::Config;
+use crate::worktree::{find_worktree_for_branch, ensure_worktree};
 use std::path::Path;
 use std::process::Command;
 
-fn run(dir: &Path, args: &[&str]) -> Result<String> {
+pub(crate) fn run(dir: &Path, args: &[&str]) -> Result<String> {
     let out = Command::new("git")
         .current_dir(dir)
         .args(args)
@@ -48,86 +50,6 @@ pub fn push_default_branch(root: &Path, default_branch: &str) -> Result<()> {
 pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<String> {
     run(root, &["show", &format!("{branch}:{rel_path}")])
         .or_else(|_| run(root, &["show", &format!("origin/{branch}:{rel_path}")]))
-}
-
-/// Find a branch named `epic/<short_id>-*` locally or remotely.
-/// Returns the branch name (without `origin/` prefix) if found.
-pub fn find_epic_branch(root: &Path, short_id: &str) -> Option<String> {
-    let pattern = format!("epic/{short_id}-*");
-    let local = run(root, &["branch", "--list", &pattern]).ok()?;
-    for b in local.lines().map(|l| l.trim().trim_start_matches(['*', '+']).trim()) {
-        if !b.is_empty() {
-            return Some(b.to_string());
-        }
-    }
-    let remote_pattern = format!("origin/epic/{short_id}-*");
-    let remote = run(root, &["branch", "-r", "--list", &remote_pattern]).ok()?;
-    for b in remote.lines().map(|l| l.trim()) {
-        if !b.is_empty() {
-            return Some(b.trim_start_matches("origin/").to_string());
-        }
-    }
-    None
-}
-
-/// Return all epic branches (local + remote, deduplicated) whose 8-char ID
-/// segment starts with `id_prefix`.  The returned names are short
-/// (`epic/<id>-<slug>`, no `origin/` prefix).
-pub fn find_epic_branches(root: &Path, id_prefix: &str) -> Vec<String> {
-    let mut seen = std::collections::HashSet::new();
-    let mut result = Vec::new();
-
-    let local = run(root, &["branch", "--list", "epic/*"]).unwrap_or_default();
-    for b in local.lines()
-        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
-        .filter(|l| !l.is_empty())
-    {
-        // branch format: epic/<8-char-id>-<slug>
-        let id_part = b.trim_start_matches("epic/").split('-').next().unwrap_or("");
-        if id_part.starts_with(id_prefix) && seen.insert(b.to_string()) {
-            result.push(b.to_string());
-        }
-    }
-
-    let remote = run(root, &["branch", "-r", "--list", "origin/epic/*"]).unwrap_or_default();
-    for b in remote.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
-        let short = b.trim_start_matches("origin/");
-        let id_part = short.trim_start_matches("epic/").split('-').next().unwrap_or("");
-        if id_part.starts_with(id_prefix) && seen.insert(short.to_string()) {
-            result.push(short.to_string());
-        }
-    }
-
-    result
-}
-
-/// All epic/* branch names visible locally or remotely (deduplicated), sorted.
-pub fn epic_branches(root: &Path) -> Result<Vec<String>> {
-    let mut seen = std::collections::HashSet::new();
-    let mut branches = Vec::new();
-
-    let local = run(root, &["branch", "--list", "epic/*"]).unwrap_or_default();
-    for b in local.lines()
-        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
-        .filter(|l| !l.is_empty())
-    {
-        if seen.insert(b.to_string()) {
-            branches.push(b.to_string());
-        }
-    }
-
-    let remote = run(root, &["branch", "-r", "--list", "origin/epic/*"]).unwrap_or_default();
-    for b in remote.lines()
-        .map(|l| l.trim().trim_start_matches("origin/").to_string())
-        .filter(|l| !l.is_empty())
-    {
-        if seen.insert(b.clone()) {
-            branches.push(b);
-        }
-    }
-
-    branches.sort();
-    Ok(branches)
 }
 
 /// All ticket/* branch names visible locally or remotely (deduplicated).
@@ -289,149 +211,6 @@ fn squash_merged(root: &Path, main_ref: &str, candidates: Vec<String>) -> Result
     Ok(result)
 }
 
-/// Find the directory of an existing permanent worktree for the given branch.
-/// Returns None if no such worktree is registered.
-pub fn find_worktree_for_branch(root: &Path, branch: &str) -> Option<std::path::PathBuf> {
-    let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
-    let mut current_path: Option<std::path::PathBuf> = None;
-    for line in out.lines() {
-        if let Some(p) = line.strip_prefix("worktree ") {
-            current_path = Some(std::path::PathBuf::from(p));
-        } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
-            if b == branch {
-                return current_path;
-            }
-        }
-    }
-    None
-}
-
-/// List all permanent worktrees for ticket/* branches.
-/// Returns (worktree_path, branch_name) pairs, skipping the main worktree.
-pub fn list_ticket_worktrees(root: &Path) -> Result<Vec<(std::path::PathBuf, String)>> {
-    let out = run(root, &["worktree", "list", "--porcelain"])?;
-    let main = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-
-    let mut result = Vec::new();
-    let mut current_path: Option<std::path::PathBuf> = None;
-    for line in out.lines() {
-        if let Some(p) = line.strip_prefix("worktree ") {
-            current_path = Some(std::path::PathBuf::from(p));
-        } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
-            if b.starts_with("ticket/") {
-                if let Some(p) = &current_path {
-                    if p.canonicalize().unwrap_or_else(|_| p.clone()) != main {
-                        result.push((p.clone(), b.to_string()));
-                    }
-                }
-            }
-        }
-    }
-    Ok(result)
-}
-
-/// Find the worktree for `branch` or create one under `worktrees_base`.
-/// Returns the canonical worktree path. Idempotent.
-pub fn ensure_worktree(root: &Path, worktrees_base: &Path, branch: &str) -> Result<std::path::PathBuf> {
-    if let Some(existing) = find_worktree_for_branch(root, branch) {
-        return Ok(existing);
-    }
-    let wt_name = branch.replace('/', "-");
-    std::fs::create_dir_all(worktrees_base)?;
-    let wt_path = worktrees_base.join(&wt_name);
-    add_worktree(root, &wt_path, branch)?;
-    Ok(find_worktree_for_branch(root, branch).unwrap_or(wt_path))
-}
-
-/// Add a permanent worktree for the given branch at wt_path.
-/// Fetches the branch locally first if needed.
-pub fn add_worktree(root: &Path, wt_path: &Path, branch: &str) -> Result<()> {
-    let has_local = run(root, &["rev-parse", "--verify", &format!("refs/heads/{branch}")]).is_ok();
-    if !has_local {
-        let _ = run(root, &["fetch", "origin", branch]);
-    }
-    run(root, &["worktree", "add", &wt_path.to_string_lossy(), branch])?;
-    crate::logger::log("add_worktree", &format!("{}", wt_path.display()));
-    Ok(())
-}
-
-/// Remove a permanent worktree.
-pub fn remove_worktree(root: &Path, wt_path: &Path, force: bool) -> Result<()> {
-    clean_agent_dirs(root, wt_path);
-    let path_str = wt_path.to_string_lossy();
-    if force {
-        run(root, &["worktree", "remove", "--force", &path_str]).map(|_| ())
-    } else {
-        run(root, &["worktree", "remove", &path_str]).map(|_| ())
-    }
-}
-
-/// Copy agent config directories from the main repo into a worktree.
-/// Only copies directories that are NOT tracked by git (untracked/gitignored).
-pub fn sync_agent_dirs(root: &Path, wt_path: &Path, agent_dirs: &[String], warnings: &mut Vec<String>) {
-    for dir_name in agent_dirs {
-        let src = root.join(dir_name);
-        if !src.is_dir() {
-            continue;
-        }
-        if is_tracked(root, dir_name) {
-            continue;
-        }
-        let dst = wt_path.join(dir_name);
-        if let Err(e) = copy_dir_recursive(&src, &dst) {
-            warnings.push(format!("warning: could not copy {dir_name} to worktree: {e}"));
-        }
-    }
-}
-
-/// Remove agent config directories from a worktree before cleanup.
-/// Only removes directories that are NOT tracked by git.
-fn clean_agent_dirs(root: &Path, wt_path: &Path) {
-    let config = match crate::config::Config::load(root) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-    for dir_name in &config.worktrees.agent_dirs {
-        let dir = wt_path.join(dir_name);
-        if !dir.is_dir() {
-            continue;
-        }
-        if is_tracked(root, dir_name) {
-            continue;
-        }
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-}
-
-fn is_tracked(root: &Path, path: &str) -> bool {
-    Command::new("git")
-        .args(["ls-files", "--error-unmatch", path])
-        .current_dir(root)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
-}
-
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
-    if dst.exists() {
-        std::fs::remove_dir_all(dst)?;
-    }
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-        if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
-        } else {
-            std::fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    Ok(())
-}
-
 /// Commit a file to a specific branch without disturbing the current working tree.
 ///
 /// If a permanent worktree exists for the branch, commits there directly.
@@ -543,51 +322,6 @@ fn try_worktree_commit(
     result
 }
 
-/// Generate an 8-character hex ticket ID from local entropy (timestamp + PID).
-/// No network access or shared state is required. Birthday collision probability
-/// at N=1000 tickets: N²/2³² ≈ 0.023% — acceptable at this scale.
-pub fn gen_hex_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let dur = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
-    let secs = dur.as_secs();
-    let nanos = dur.subsec_nanos() as u64;
-    let pid = std::process::id() as u64;
-    // splitmix64-style mixing for good bit avalanche
-    let a = secs.wrapping_mul(0x9e3779b97f4a7c15).wrapping_add(nanos);
-    let b = (a ^ (a >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-    let c = (b ^ (b >> 27)).wrapping_mul(0x94d049bb133111eb);
-    let result = (c ^ (c >> 31)) ^ pid.wrapping_mul(0x6c62272e07bb0142);
-    format!("{:016x}", result)[..8].to_string()
-}
-
-/// Find a ticket branch matching a user-supplied ID argument (prefix or full hex).
-/// Normalizes plain integers (e.g. 35 → 0035) via `ticket::normalize_id_arg`.
-pub fn resolve_ticket_branch(branches: &[String], arg: &str) -> Result<String> {
-    let prefixes = crate::ticket::id_arg_prefixes(arg)?;
-    let mut seen = std::collections::HashSet::new();
-    let matches: Vec<&String> = branches.iter()
-        .filter(|b| {
-            let id = b.strip_prefix("ticket/")
-                .and_then(|s| s.split('-').next())
-                .unwrap_or("");
-            prefixes.iter().any(|p| id.starts_with(p.as_str())) && seen.insert(id.to_string())
-        })
-        .collect();
-    match matches.len() {
-        0 => anyhow::bail!("no ticket matches '{arg}'"),
-        1 => Ok(matches[0].clone()),
-        _ => {
-            let mut msg = format!("error: prefix '{arg}' is ambiguous");
-            for b in &matches {
-                let id = b.strip_prefix("ticket/")
-                    .and_then(|s| s.split('-').next())
-                    .unwrap_or(b.as_str());
-                msg.push_str(&format!("\n  {id}  ({})", b));
-            }
-            anyhow::bail!("{msg}")
-        }
-    }
-}
 
 /// Push all local ticket/* branches that have commits not yet on origin.
 /// Non-fatal: logs warnings on push failure. No-op when no origin is configured.
@@ -658,13 +392,6 @@ pub fn sync_local_ticket_refs(root: &Path, warnings: &mut Vec<String>) {
             warnings.push(format!("warning: could not update local ref {branch}: {e:#}"));
         }
     }
-}
-
-/// Derive the ticket branch name from the ticket file path.
-/// e.g. tickets/0001-my-ticket.md → ticket/0001-my-ticket
-pub fn branch_name_from_path(path: &Path) -> Option<String> {
-    let stem = path.file_stem()?.to_str()?;
-    Some(format!("ticket/{stem}"))
 }
 
 /// List all files in a directory on a branch (non-recursive).
@@ -842,22 +569,6 @@ pub fn has_remote(root: &Path) -> bool {
     run(root, &["remote", "get-url", "origin"]).is_ok()
 }
 
-/// Create a new epic branch at origin/main (or local main as fallback),
-/// seed it with a minimal EPIC.md, and push it.
-/// Returns `(id, branch_name)` where branch_name is `epic/<id>-<slug>`.
-pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)> {
-    let id = gen_hex_id();
-    let slug = crate::ticket::slugify(title);
-    let branch = format!("epic/{id}-{slug}");
-    let _ = run(root, &["fetch", "origin", "main"]);
-    if run(root, &["branch", &branch, "origin/main"]).is_err() {
-        run(root, &["branch", &branch, "main"])?;
-    }
-    commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")?;
-    let _ = push_branch(root, &branch);
-    Ok((id, branch))
-}
-
 /// Merge `branch` into `default_branch` (fast-forward or merge commit).
 /// Pushes `default_branch` to origin when a remote exists.
 /// List remote ticket/* branches with their last commit date.
@@ -1017,5 +728,96 @@ pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str
             warnings.push(format!("warning: push {default_branch} failed: {e:#}"));
         }
     }
+    Ok(())
+}
+
+pub fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool, messages: &mut Vec<String>, _warnings: &mut Vec<String>) -> Result<()> {
+    let _ = std::process::Command::new("git")
+        .args(["fetch", "origin", default_branch])
+        .current_dir(root)
+        .status();
+
+    let current = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()?;
+    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
+
+    let merge_dir = if current_branch == default_branch {
+        root.to_path_buf()
+    } else {
+        let worktrees_base = root.join(&config.worktrees.dir);
+        ensure_worktree(root, &worktrees_base, default_branch)?
+    };
+
+    let out = std::process::Command::new("git")
+        .args(["merge", "--no-ff", branch, "--no-edit"])
+        .current_dir(&merge_dir)
+        .output()?;
+
+    if !out.status.success() {
+        let _ = std::process::Command::new("git")
+            .args(["merge", "--abort"])
+            .current_dir(&merge_dir)
+            .status();
+        bail!(
+            "merge conflict — resolve manually and push: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+
+    if skip_push {
+        messages.push(format!("Merged {branch} into {default_branch} (local only)."));
+    } else {
+        push_branch(&merge_dir, default_branch)?;
+        messages.push(format!("Merged {branch} into {default_branch} and pushed to origin."));
+    }
+    Ok(())
+}
+
+pub fn pull_default(root: &Path, default_branch: &str, warnings: &mut Vec<String>) -> Result<()> {
+    let fetch = std::process::Command::new("git")
+        .args(["fetch", "origin", default_branch])
+        .current_dir(root)
+        .output();
+
+    match fetch {
+        Err(e) => {
+            warnings.push(format!("warning: fetch failed: {e:#}"));
+            return Ok(());
+        }
+        Ok(out) if !out.status.success() => {
+            warnings.push(format!(
+                "warning: fetch failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ));
+            return Ok(());
+        }
+        _ => {}
+    }
+
+    let current = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()?;
+    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
+
+    let merge_dir = if current_branch == default_branch {
+        root.to_path_buf()
+    } else {
+        find_worktree_for_branch(root, default_branch)
+            .unwrap_or_else(|| root.to_path_buf())
+    };
+
+    let remote_ref = format!("origin/{default_branch}");
+    let out = std::process::Command::new("git")
+        .args(["merge", "--ff-only", &remote_ref])
+        .current_dir(&merge_dir)
+        .output()?;
+
+    if !out.status.success() {
+        warnings.push(format!("warning: could not fast-forward {default_branch} — pull manually"));
+    }
+
     Ok(())
 }

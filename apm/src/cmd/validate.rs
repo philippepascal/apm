@@ -1,7 +1,7 @@
 use anyhow::Result;
 pub use apm_core::validate::validate_config;
 pub use apm_core::validate::validate_warnings;
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, ticket, ticket_fmt};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::path::Path;
@@ -56,7 +56,7 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
             }
 
             if let Some(branch) = &fm.branch {
-                let canonical = git::branch_name_from_path(&t.path);
+                let canonical = ticket_fmt::branch_name_from_path(&t.path);
                 if let Some(expected) = canonical {
                     if branch != &expected {
                         ticket_issues.push(Issue {

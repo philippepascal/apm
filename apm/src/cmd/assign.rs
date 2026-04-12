@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::{Config, LocalConfig}, git, ticket};
+use apm_core::{config::{Config, LocalConfig}, git, ticket, ticket_fmt};
 use chrono::Utc;
 use std::io::{self, Write, BufRead};
 use std::path::Path;
@@ -75,7 +75,7 @@ pub fn run_inner(root: &Path, id_arg: &str, username: &str, no_aggressive: bool,
         .frontmatter
         .branch
         .clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     let commit_msg = if username == "-" {

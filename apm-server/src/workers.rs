@@ -115,7 +115,7 @@ enum StopError {
 }
 
 fn stop_worker_by_pid(root: &FsPath, target_pid: u32) -> Result<(), StopError> {
-    let worktrees = apm_core::git::list_ticket_worktrees(root)
+    let worktrees = apm_core::worktree::list_ticket_worktrees(root)
         .map_err(|e| StopError::Other(e.to_string()))?;
     for (wt_path, _branch) in &worktrees {
         let pid_path = wt_path.join(".apm-worker.pid");

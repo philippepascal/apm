@@ -1,12 +1,12 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket};
+use apm_core::{config::Config, git, ticket, ticket_fmt};
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result<()> {
     let config = Config::load(root)?;
 
     let branches = git::ticket_branches(root)?;
-    let branch_result = git::resolve_ticket_branch(&branches, id_arg);
+    let branch_result = ticket_fmt::resolve_ticket_branch(&branches, id_arg);
 
     match branch_result {
         Ok(branch) => {
