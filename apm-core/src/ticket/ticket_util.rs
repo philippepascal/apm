@@ -1,6 +1,6 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::ticket_fmt::{parse_checklist, serialize_checklist, id_arg_prefixes, slugify, Frontmatter, Ticket, TicketDocument};
 
@@ -505,22 +505,6 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         other => anyhow::bail!("unknown field: {other}"),
     }
     Ok(())
-}
-
-pub fn list_worktrees_with_tickets(
-    root: &Path,
-    tickets_dir: &Path,
-) -> Result<Vec<(std::path::PathBuf, String, Option<Ticket>)>> {
-    let worktrees = crate::git::list_ticket_worktrees(root)?;
-    let tickets = load_all_from_git(root, tickets_dir).unwrap_or_default();
-    let result = worktrees.into_iter().map(|(wt_path, branch)| {
-        let ticket = tickets.iter().find(|t| {
-            t.frontmatter.branch.as_deref() == Some(branch.as_str())
-                || crate::ticket_fmt::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
-        }).cloned();
-        (wt_path, branch, ticket)
-    }).collect();
-    Ok(result)
 }
 
 #[cfg(test)]

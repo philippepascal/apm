@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket, ticket_fmt};
+use apm_core::{config::Config, ticket, ticket_fmt, worktree};
 use std::path::Path;
 
 pub fn run(root: &Path, remove_id: Option<&str>) -> Result<()> {
@@ -13,7 +13,7 @@ pub fn run(root: &Path, remove_id: Option<&str>) -> Result<()> {
 }
 
 fn list(root: &Path, config: &Config) -> Result<()> {
-    let wt_tickets = ticket::list_worktrees_with_tickets(root, &config.tickets.dir)?;
+    let wt_tickets = worktree::list_worktrees_with_tickets(root, &config.tickets.dir)?;
     if wt_tickets.is_empty() {
         println!("No ticket worktrees provisioned.");
         return Ok(());
@@ -48,11 +48,11 @@ fn remove(root: &Path, config: &Config, id_arg: &str) -> Result<()> {
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
-    let Some(wt_path) = git::find_worktree_for_branch(root, &branch) else {
+    let Some(wt_path) = worktree::find_worktree_for_branch(root, &branch) else {
         bail!("no worktree found for ticket {id:?} (branch: {branch})");
     };
 
-    git::remove_worktree(root, &wt_path, false)?;
+    worktree::remove_worktree(root, &wt_path, false)?;
     println!("Removed worktree: {}", wt_path.display());
     Ok(())
 }

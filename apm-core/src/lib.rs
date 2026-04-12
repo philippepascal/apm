@@ -7,6 +7,7 @@ pub mod credentials;
 pub mod epic;
 pub mod git_util;
 pub use git_util as git;
+pub mod worktree;
 pub use ticket::ticket_fmt;
 pub mod init;
 pub mod logger;

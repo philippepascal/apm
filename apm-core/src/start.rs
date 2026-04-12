@@ -258,7 +258,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
 
-    let wt_display = crate::state::provision_worktree(root, &config, &branch, &mut warnings)?;
+    let wt_display = crate::worktree::provision_worktree(root, &config, &branch, &mut warnings)?;
 
     let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")
@@ -484,7 +484,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
-    let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
+    let wt_display = crate::worktree::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
 
@@ -649,7 +649,7 @@ pub fn spawn_next_worker(
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
-    let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
+    let wt_display = crate::worktree::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
 

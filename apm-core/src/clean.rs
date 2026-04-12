@@ -1,4 +1,4 @@
-use crate::{config::Config, git, ticket, ticket_fmt};
+use crate::{config::Config, git, ticket, ticket_fmt, worktree};
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, Utc};
 use std::path::{Path, PathBuf};
@@ -148,7 +148,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
         // states above. If the branch says the ticket is done, clean proceeds
         // regardless of what main says (or whether the ticket exists on main).
 
-        let wt_path = git::find_worktree_for_branch(root, &branch);
+        let wt_path = worktree::find_worktree_for_branch(root, &branch);
 
         // Check worktree cleanliness before the tip-divergence guard so that
         // a clean worktree on a closed ticket is not blocked by stale refs.
@@ -265,7 +265,7 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
     let mut warnings: Vec<String> = Vec::new();
 
     if let Some(ref path) = candidate.worktree {
-        git::remove_worktree(root, path, force)?;
+        worktree::remove_worktree(root, path, force)?;
     }
 
     if remove_branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
