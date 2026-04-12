@@ -3095,7 +3095,7 @@ fn workers_kill_no_pid_file_errors() {
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
 
     // Provision a worktree without writing a pid file.
-    apm_core::git::ensure_worktree(p, &p.join("worktrees"), &find_ticket_branch(p, "kill-test-ticket")).unwrap();
+    apm_core::worktree::ensure_worktree(p, &p.join("worktrees"), &find_ticket_branch(p, "kill-test-ticket")).unwrap();
 
     // --kill should return an error since there is no pid file.
     let result = apm::cmd::workers::run(p, None, Some(&id));
@@ -3117,7 +3117,7 @@ fn workers_stale_pid_file_detected() {
     let id = find_ticket_id(p, "stale-pid-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
     let branch = find_ticket_branch(p, "stale-pid-ticket");
-    apm_core::git::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
+    apm_core::worktree::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
     let wt_name = branch.replace('/', "-");
     let wt_path = p.join("worktrees").join(&wt_name);
     std::fs::create_dir_all(&wt_path).unwrap();
@@ -3144,7 +3144,7 @@ fn workers_kill_stale_pid_errors() {
     let id = find_ticket_id(p, "kill-stale-ticket");
     apm::cmd::state::run(p, &id, "ready".into(), true, false).unwrap();
     let branch = find_ticket_branch(p, "kill-stale-ticket");
-    apm_core::git::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
+    apm_core::worktree::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
     let wt_name = branch.replace('/', "-");
     let wt_dir = p.join("worktrees").join(&wt_name);
     std::fs::create_dir_all(&wt_dir).unwrap();
@@ -3168,7 +3168,7 @@ fn workers_kill_stale_pid_errors() {
     );
     // The stale pid file should be cleaned up.  Check via git's recorded path
     // to handle macOS symlink resolution (/var -> /private/var).
-    let real_wt = apm_core::git::find_worktree_for_branch(p, &branch)
+    let real_wt = apm_core::worktree::find_worktree_for_branch(p, &branch)
         .expect("worktree must still be registered");
     assert!(
         !real_wt.join(".apm-worker.pid").exists(),

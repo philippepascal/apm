@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::{config::{Config, WorkerProfileConfig, WorkersConfig}, git, ticket};
+use crate::{config::{Config, WorkerProfileConfig, WorkersConfig}, git, ticket, ticket_fmt};
 use chrono::Utc;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -57,22 +57,6 @@ pub struct RunNextOutput {
     pub warnings: Vec<String>,
     pub worker_pid: Option<u32>,
     pub log_path: Option<PathBuf>,
-}
-
-/// Returns the caller identity for this process.
-///
-/// This value is used in two places:
-/// - Recorded as the acting party in ticket history entries.
-/// - Compared against a ticket's `owner` field when filtering candidates
-///   in `pick_next()` / `sorted_actionable()`. Tickets owned by another
-///   identity are excluded from the pick set.
-///
-/// Resolution order: `APM_AGENT_NAME` env var → `USER` → `USERNAME` → `"apm"`.
-pub fn resolve_caller_name() -> String {
-    std::env::var("APM_AGENT_NAME")
-        .or_else(|_| std::env::var("USER"))
-        .or_else(|_| std::env::var("USERNAME"))
-        .unwrap_or_else(|_| "apm".to_string())
 }
 
 fn git_config_value(root: &Path, key: &str) -> Option<String> {
@@ -256,7 +240,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .frontmatter
         .branch
         .clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     let default_branch = &config.project.default_branch;
@@ -274,7 +258,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
 
-    let wt_display = crate::state::provision_worktree(root, &config, &branch, &mut warnings)?;
+    let wt_display = crate::worktree::provision_worktree(root, &config, &branch, &mut warnings)?;
 
     let remote_ref = format!("origin/{merge_base}");
     let merge_ref = if std::process::Command::new("git")
@@ -397,7 +381,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let agent_name = resolve_caller_name();
+    let agent_name = crate::config::resolve_caller_name();
     let current_user = crate::config::resolve_identity(root);
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
@@ -453,7 +437,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
             t.path.file_name().unwrap().to_string_lossy()
         );
         let branch = t.frontmatter.branch.clone()
-            .or_else(|| git::branch_name_from_path(&t.path))
+            .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
             .unwrap_or_else(|| format!("ticket/{id}"));
         let mut t_mut = t.clone();
         t_mut.frontmatter.focus_section = None;
@@ -496,11 +480,11 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let params = effective_spawn_params(profile2, &config.workers);
 
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
-    let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
+    let wt_display = crate::worktree::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
 
@@ -568,7 +552,7 @@ pub fn spawn_next_worker(
             })
             .collect()
     };
-    let agent_name = resolve_caller_name();
+    let agent_name = crate::config::resolve_caller_name();
     let current_user = crate::config::resolve_identity(root);
 
     let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
@@ -624,7 +608,7 @@ pub fn spawn_next_worker(
             t.path.file_name().unwrap().to_string_lossy()
         );
         let branch = t.frontmatter.branch.clone()
-            .or_else(|| git::branch_name_from_path(&t.path))
+            .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
             .unwrap_or_else(|| format!("ticket/{id}"));
         let mut t_mut = t.clone();
         t_mut.frontmatter.focus_section = None;
@@ -661,11 +645,11 @@ pub fn spawn_next_worker(
     let ticket_content = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
     let params = effective_spawn_params(profile2, &config.workers);
     let branch = t.frontmatter.branch.clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
     let wt_name = branch.replace('/', "-");
     let wt_path = root.join(&config.worktrees.dir).join(&wt_name);
-    let wt_display = git::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
+    let wt_display = crate::worktree::find_worktree_for_branch(root, &branch).unwrap_or(wt_path);
 
     let log_path = wt_display.join(".apm-worker.log");
 
@@ -742,12 +726,9 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_caller_name, resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params};
+    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy, SatisfiesDeps};
-    use std::sync::Mutex;
     use std::collections::HashMap;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn make_transition(profile: Option<&str>) -> TransitionConfig {
         TransitionConfig {
@@ -992,32 +973,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn prefers_apm_agent_name() {
-        let _g = ENV_LOCK.lock().unwrap();
-        std::env::set_var("APM_AGENT_NAME", "explicit-agent");
-        assert_eq!(resolve_caller_name(), "explicit-agent");
-        std::env::remove_var("APM_AGENT_NAME");
-    }
-
-    #[test]
-    fn falls_back_to_user() {
-        let _g = ENV_LOCK.lock().unwrap();
-        std::env::remove_var("APM_AGENT_NAME");
-        std::env::set_var("USER", "unix-user");
-        std::env::remove_var("USERNAME");
-        assert_eq!(resolve_caller_name(), "unix-user");
-        std::env::remove_var("USER");
-    }
-
-    #[test]
-    fn falls_back_to_apm_literal() {
-        let _g = ENV_LOCK.lock().unwrap();
-        std::env::remove_var("APM_AGENT_NAME");
-        std::env::remove_var("USER");
-        std::env::remove_var("USERNAME");
-        assert_eq!(resolve_caller_name(), "apm");
-    }
 
     #[test]
     fn epic_filter_keeps_only_matching_tickets() {

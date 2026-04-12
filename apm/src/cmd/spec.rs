@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, spec, ticket};
+use apm_core::{config::Config, git, spec, ticket, ticket_fmt};
 use std::{io::Read, path::Path};
 
 pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<String>, set_file: Option<String>, check: bool, mark: Option<String>, no_aggressive: bool) -> Result<()> {
@@ -9,7 +9,7 @@ pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<Strin
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
     let branches = git::ticket_branches(root)?;
-    let branch = git::resolve_ticket_branch(&branches, id_arg)?;
+    let branch = ticket_fmt::resolve_ticket_branch(&branches, id_arg)?;
     let id = branch.strip_prefix("ticket/").and_then(|s| s.split('-').next()).unwrap_or(id_arg).to_string();
     let rel_path = format!("{}/{}.md", config.tickets.dir.to_string_lossy(), branch.trim_start_matches("ticket/"));
 

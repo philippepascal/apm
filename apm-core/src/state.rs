@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::{config::{CompletionStrategy, Config}, git, ticket};
+use crate::{config::{CompletionStrategy, Config}, git, review, ticket, ticket_fmt};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
@@ -115,7 +115,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     if new_state == "ammend" {
-        ensure_amendment_section(&mut t.body);
+        review::ensure_amendment_section(&mut t.body);
     }
     append_history(&mut t.body, &old_state, &new_state, &now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
 
@@ -129,7 +129,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         .frontmatter
         .branch
         .clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(
@@ -146,7 +146,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             git::push_branch_tracking(root, &branch)?;
             let pr_base = t.frontmatter.target_branch.as_deref()
                 .unwrap_or(&config.project.default_branch);
-            gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &mut messages)?;
+            crate::github::gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &mut messages)?;
         }
         CompletionStrategy::Merge => {
             let merge_target = t.frontmatter.target_branch.as_deref()
@@ -155,18 +155,18 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             if let Err(e) = git::push_branch_tracking(root, &branch) {
                 warnings.push(format!("warning: could not push {branch}: {e}"));
             }
-            merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)?;
+            git::merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch_tracking(root, &branch)?;
             if let Some(ref target) = t.frontmatter.target_branch {
-                merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
+                git::merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
             } else {
-                gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
+                crate::github::gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
             }
         }
         CompletionStrategy::Pull => {
-            pull_default(root, &config.project.default_branch, &mut warnings)?;
+            git::pull_default(root, &config.project.default_branch, &mut warnings)?;
         }
         CompletionStrategy::None => {
             if aggressive {
@@ -178,7 +178,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     }
 
     let worktree_path = if new_state == "in_design" {
-        Some(provision_worktree(root, &config, &branch, &mut warnings)?)
+        Some(crate::worktree::provision_worktree(root, &config, &branch, &mut warnings)?)
     } else {
         None
     };
@@ -193,156 +193,6 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     })
 }
 
-fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &str, title: &str, messages: &mut Vec<String>) -> Result<()> {
-    let existing = std::process::Command::new("gh")
-        .args(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--jq", ".[0].number"])
-        .current_dir(root)
-        .output()?;
-
-    let pr_num = String::from_utf8_lossy(&existing.stdout).trim().to_string();
-    if !pr_num.is_empty() && pr_num != "null" {
-        messages.push(format!("PR #{pr_num} already open for {branch}"));
-        return Ok(());
-    }
-
-    let short_id = &id[..8.min(id.len())];
-    let pr_title = if title.is_empty() {
-        short_id.to_string()
-    } else {
-        format!("{short_id}: {title}")
-    };
-    let body = format!("Closes #{id}");
-    let out = std::process::Command::new("gh")
-        .args(["pr", "create", "--base", default_branch, "--head", branch,
-               "--title", &pr_title, "--body", &body])
-        .current_dir(root)
-        .output()?;
-
-    if out.status.success() {
-        let url = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        messages.push(format!("PR created: {url}"));
-    } else {
-        bail!("gh pr create failed: {}", String::from_utf8_lossy(&out.stderr).trim());
-    }
-    Ok(())
-}
-
-fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool, messages: &mut Vec<String>, _warnings: &mut Vec<String>) -> Result<()> {
-    let _ = std::process::Command::new("git")
-        .args(["fetch", "origin", default_branch])
-        .current_dir(root)
-        .status();
-
-    let current = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .current_dir(root)
-        .output()?;
-    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
-
-    let merge_dir = if current_branch == default_branch {
-        root.to_path_buf()
-    } else {
-        let worktrees_base = root.join(&config.worktrees.dir);
-        git::ensure_worktree(root, &worktrees_base, default_branch)?
-    };
-
-    let out = std::process::Command::new("git")
-        .args(["merge", "--no-ff", branch, "--no-edit"])
-        .current_dir(&merge_dir)
-        .output()?;
-
-    if !out.status.success() {
-        let _ = std::process::Command::new("git")
-            .args(["merge", "--abort"])
-            .current_dir(&merge_dir)
-            .status();
-        bail!(
-            "merge conflict — resolve manually and push: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-
-    if skip_push {
-        messages.push(format!("Merged {branch} into {default_branch} (local only)."));
-    } else {
-        git::push_branch(&merge_dir, default_branch)?;
-        messages.push(format!("Merged {branch} into {default_branch} and pushed to origin."));
-    }
-    Ok(())
-}
-
-fn pull_default(root: &Path, default_branch: &str, warnings: &mut Vec<String>) -> Result<()> {
-    let fetch = std::process::Command::new("git")
-        .args(["fetch", "origin", default_branch])
-        .current_dir(root)
-        .output();
-
-    match fetch {
-        Err(e) => {
-            warnings.push(format!("warning: fetch failed: {e:#}"));
-            return Ok(());
-        }
-        Ok(out) if !out.status.success() => {
-            warnings.push(format!(
-                "warning: fetch failed: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            ));
-            return Ok(());
-        }
-        _ => {}
-    }
-
-    let current = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .current_dir(root)
-        .output()?;
-    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
-
-    let merge_dir = if current_branch == default_branch {
-        root.to_path_buf()
-    } else {
-        git::find_worktree_for_branch(root, default_branch)
-            .unwrap_or_else(|| root.to_path_buf())
-    };
-
-    let remote_ref = format!("origin/{default_branch}");
-    let out = std::process::Command::new("git")
-        .args(["merge", "--ff-only", &remote_ref])
-        .current_dir(&merge_dir)
-        .output()?;
-
-    if !out.status.success() {
-        warnings.push(format!("warning: could not fast-forward {default_branch} — pull manually"));
-    }
-
-    Ok(())
-}
-
-pub fn ensure_amendment_section(body: &mut String) {
-    if body.contains("### Amendment requests") {
-        return;
-    }
-    let placeholder = "\n### Amendment requests\n\n<!-- Add amendment requests below -->\n";
-    if let Some(pos) = body.find("### Out of scope") {
-        let after = &body[pos..];
-        let block_end = after[1..]
-            .find("\n##")
-            .map(|p| pos + 1 + p)
-            .unwrap_or(body.len());
-        body.insert_str(block_end, placeholder);
-    } else if let Some(pos) = body.find("## History") {
-        body.insert_str(pos, &format!("{}\n", placeholder));
-    } else {
-        body.push_str(placeholder);
-    }
-}
-
-pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: &mut Vec<String>) -> Result<PathBuf> {
-    let worktrees_base = root.join(&config.worktrees.dir);
-    let wt = git::ensure_worktree(root, &worktrees_base, branch)?;
-    git::sync_agent_dirs(root, &wt, &config.worktrees.agent_dirs, warnings);
-    Ok(wt)
-}
 
 pub fn available_transitions(config: &crate::config::Config, current_state: &str) -> Vec<(String, String, String)> {
     let terminal_ids: Vec<&str> = config.workflow.states.iter()
@@ -383,32 +233,3 @@ pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &
     }
 }
 
-#[cfg(test)]
-mod tests {
-    fn pr_title(id: &str, title: &str) -> String {
-        let short_id = &id[..8.min(id.len())];
-        if title.is_empty() {
-            short_id.to_string()
-        } else {
-            format!("{short_id}: {title}")
-        }
-    }
-
-    #[test]
-    fn pr_title_includes_short_id_prefix() {
-        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
-        assert_eq!(pr_title(id, "Fix the thing"), "034ed345: Fix the thing");
-    }
-
-    #[test]
-    fn pr_title_empty_title_falls_back_to_short_id() {
-        let id = "034ed345-apm-state-include-ticket-id-in-github-pr";
-        assert_eq!(pr_title(id, ""), "034ed345");
-    }
-
-    #[test]
-    fn pr_title_short_id_exactly_8_chars() {
-        let id = "abcd1234efgh";
-        assert_eq!(pr_title(id, "My ticket"), "abcd1234: My ticket");
-    }
-}
