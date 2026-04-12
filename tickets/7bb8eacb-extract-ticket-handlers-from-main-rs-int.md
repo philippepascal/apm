@@ -23,17 +23,17 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 
 ### Acceptance criteria
 
-- [ ] `cargo build -p apm-server` succeeds after the extraction with no compiler errors or warnings
-- [ ] `cargo test -p apm-server` passes (all existing tests continue to pass)
-- [ ] `apm-server/src/handlers/tickets.rs` exists and contains all eight handler functions: `list_tickets`, `get_ticket`, `transition_ticket`, `put_body`, `patch_ticket`, `create_ticket`, `batch_transition`, `batch_priority`
-- [ ] `apm-server/src/handlers/tickets.rs` contains the handler-private helper functions: `extract_section`, `extract_frontmatter_raw`, `extract_history_raw`, `load_tickets`
-- [ ] `apm-server/src/handlers/mod.rs` exists and declares `pub mod tickets`
-- [ ] `main.rs` imports handlers via `mod handlers` and references ticket handlers from `handlers::tickets`
-- [ ] `main.rs` no longer directly defines any of the moved functions (grep for their definition sites yields zero results in main.rs)
-- [ ] `AppError` and `AppState` remain defined in `main.rs`; `handlers/tickets.rs` imports them from `crate`
-- [ ] `handlers/tickets.rs` imports ticket DTOs via `use crate::models::*` (not re-defining them)
-- [ ] `handlers/tickets.rs` calls `compute_blocking_deps` and `compute_valid_transitions` from `apm_core` (not defining them locally)
-- [ ] The HTTP routes registered in `build_app()` are unchanged — same verbs, same paths, same handler function bindings
+- [x] `cargo build -p apm-server` succeeds after the extraction with no compiler errors or warnings
+- [x] `cargo test -p apm-server` passes (all existing tests continue to pass)
+- [x] `apm-server/src/handlers/tickets.rs` exists and contains all eight handler functions: `list_tickets`, `get_ticket`, `transition_ticket`, `put_body`, `patch_ticket`, `create_ticket`, `batch_transition`, `batch_priority`
+- [x] `apm-server/src/handlers/tickets.rs` contains the handler-private helper functions: `extract_section`, `extract_frontmatter_raw`, `extract_history_raw`, `load_tickets`
+- [x] `apm-server/src/handlers/mod.rs` exists and declares `pub mod tickets`
+- [x] `main.rs` imports handlers via `mod handlers` and references ticket handlers from `handlers::tickets`
+- [x] `main.rs` no longer directly defines any of the moved functions (grep for their definition sites yields zero results in main.rs)
+- [x] `AppError` and `AppState` remain defined in `main.rs`; `handlers/tickets.rs` imports them from `crate`
+- [x] `handlers/tickets.rs` imports ticket DTOs via `use crate::models::*` (not re-defining them)
+- [x] `handlers/tickets.rs` calls `compute_blocking_deps` and `compute_valid_transitions` from `apm_core` (not defining them locally)
+- [x] The HTTP routes registered in `build_app()` are unchanged — same verbs, same paths, same handler function bindings
 
 ### Out of scope
 
