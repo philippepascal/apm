@@ -46,7 +46,7 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 - [x] `git_util::delete_local_branch` pushes a warning message (not a hard error) when deletion fails
 - [x] `git_util::prune_remote_tracking(root: &Path, branch: &str)` runs `git branch -dr origin/<branch>` and silently ignores any failure
 - [x] `git_util::stage_files(root: &Path, files: &[&str]) -> Result<()>` stages exactly the listed paths and returns `Ok(())` on success
-- [ ] `git_util::stage_files` returns an error when `git add` fails (e.g. path does not exist)
+- [x] `git_util::stage_files` returns an error when `git add` fails (e.g. path does not exist)
 - [ ] `git_util::commit(root: &Path, message: &str) -> Result<()>` creates a commit with the given message and returns `Ok(())` on success
 - [ ] `git_util::commit` returns an error when `git commit` fails (e.g. nothing staged)
 - [ ] `git_util::git_config_get(root: &Path, key: &str) -> Option<String>` returns `Some(value)` trimmed of whitespace when the key exists
