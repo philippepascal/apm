@@ -49,25 +49,7 @@ This ticket covers only the epic-helpers move. The broader `git.rs` reorganisati
 
 All changes are in `apm-core/` unless otherwise noted. "Source file" means `git.rs` or `git_util.rs` — use whichever name is present in the branch (b28fe914 renames it).
 
-**1. Add a local `run()` helper to `epic.rs`**
-
-The three discovery functions (`find_epic_branch`, `find_epic_branches`, `epic_branches`) call the private `run()` in `git.rs`. Rather than making that function `pub(crate)`, add an identical private helper at the top of `epic.rs` (right after the existing imports):
-
-```rust
-fn run(dir: &std::path::Path, args: &[&str]) -> anyhow::Result<String> {
-    use std::process::Command;
-    let out = Command::new("git").current_dir(dir).args(args).output()
-        .context("git not found")?;
-    if !out.status.success() {
-        anyhow::bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
-    }
-    Ok(String::from_utf8(out.stdout)?.trim().to_string())
-}
-```
-
-Add `use anyhow::Context;` to `epic.rs` if not already present.
-
-**2. Cut the four functions from the source file**
+**1. Cut the four functions from the source file**
 
 From the source file, remove:
 - `find_epic_branch` (currently lines 55–71)
@@ -77,17 +59,18 @@ From the source file, remove:
 
 Remove the doc-comment blocks that precede each function.
 
-**3. Paste the four functions into `epic.rs`**
+**2. Paste the four functions into `epic.rs`**
 
-Append them after the existing `create()` function. The functions call the following — all already `pub` in the source file, so no visibility changes are needed:
-- `gen_hex_id()` — call as `crate::git::gen_hex_id()`
-- `commit_to_branch()` — call as `crate::git::commit_to_branch()`
-- `push_branch()` — call as `crate::git::push_branch()`
-- `crate::ticket::slugify()` — already accessible, no change needed
+Append them after the existing `create()` function.
 
-`create_epic_branch` currently calls the bare names `gen_hex_id`, `commit_to_branch`, `push_branch` (they were in scope within `git.rs`). Update each to their fully-qualified crate paths: `crate::git::gen_hex_id()`, `crate::git::commit_to_branch()`, `crate::git::push_branch()`.
+`find_epic_branch`, `find_epic_branches`, and `epic_branches` call the private `run()` helper. Because b28fe914 makes `run()` `pub(crate)` in `git_util.rs`, call it as `crate::git_util::run()` — do **not** duplicate the helper in `epic.rs`. Add `use anyhow::Context;` to `epic.rs` if not already present (needed transitively by `run`).
 
-**4. Update call sites — 3 files**
+`create_epic_branch` calls `gen_hex_id`, `commit_to_branch`, and `push_branch`. Update each to its fully-qualified crate path:
+- `gen_hex_id` → `crate::ticket::gen_hex_id()` (moved to `ticket_fmt.rs` and re-exported through `crate::ticket` by b28fe914)
+- `commit_to_branch` → `crate::git_util::commit_to_branch()`
+- `push_branch` → `crate::git_util::push_branch()`
+
+**3. Update call sites — 3 files**
 
 `apm/src/cmd/epic.rs` (lines 9, 64, 159, 236):
 - `apm_core::git::epic_branches` → `apm_core::epic::epic_branches`
@@ -102,7 +85,7 @@ Append them after the existing `create()` function. The functions call the follo
 - `apm_core::git::epic_branches` → `apm_core::epic::epic_branches`
 - `apm_core::git::create_epic_branch` → `apm_core::epic::create_epic_branch`
 
-**5. Verify**
+**4. Verify**
 
 Run `cargo build --workspace` then `cargo test --workspace`. Fix any remaining compilation errors (missed call sites, stale imports).
 
