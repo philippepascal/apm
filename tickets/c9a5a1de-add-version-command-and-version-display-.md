@@ -29,7 +29,7 @@ The version should be available both from the CLI (`apm version` or `apm -v`) an
 - [x] `GET /api/version` returns `{"version":"<semver>","build":"<dev|release>"}` with HTTP 200
 - [x] The "Supervisor" title span in the UI is clickable (cursor changes to pointer)
 - [x] Clicking the title toggles a version badge inline next to the title (e.g. `Supervisor · v0.1.3 (release)`)
-- [ ] The version displayed in the UI matches what `GET /api/version` returns
+- [x] The version displayed in the UI matches what `GET /api/version` returns
 - [ ] Clicking the title again hides the badge (toggle behaviour)
 
 ### Out of scope
