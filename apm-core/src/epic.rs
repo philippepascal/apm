@@ -81,7 +81,7 @@ mod tests {
 }
 
 pub fn create(root: &Path, title: &str) -> Result<String> {
-    let id = crate::git::gen_hex_id();
+    let id = crate::ticket_fmt::gen_hex_id();
     let slug = crate::ticket::slugify(title);
     let branch = format!("epic/{id}-{slug}");
 
@@ -162,4 +162,90 @@ pub fn create(root: &Path, title: &str) -> Result<String> {
     crate::git::push_branch_tracking(root, &branch)?;
 
     Ok(branch)
+}
+
+pub fn find_epic_branch(root: &Path, short_id: &str) -> Option<String> {
+    let pattern = format!("epic/{short_id}-*");
+    let local = crate::git_util::run(root, &["branch", "--list", &pattern]).ok()?;
+    for b in local.lines().map(|l| l.trim().trim_start_matches(['*', '+']).trim()) {
+        if !b.is_empty() {
+            return Some(b.to_string());
+        }
+    }
+    let remote_pattern = format!("origin/epic/{short_id}-*");
+    let remote = crate::git_util::run(root, &["branch", "-r", "--list", &remote_pattern]).ok()?;
+    for b in remote.lines().map(|l| l.trim()) {
+        if !b.is_empty() {
+            return Some(b.trim_start_matches("origin/").to_string());
+        }
+    }
+    None
+}
+
+pub fn find_epic_branches(root: &Path, id_prefix: &str) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+
+    let local = crate::git_util::run(root, &["branch", "--list", "epic/*"]).unwrap_or_default();
+    for b in local.lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
+        .filter(|l| !l.is_empty())
+    {
+        let id_part = b.trim_start_matches("epic/").split('-').next().unwrap_or("");
+        if id_part.starts_with(id_prefix) && seen.insert(b.to_string()) {
+            result.push(b.to_string());
+        }
+    }
+
+    let remote = crate::git_util::run(root, &["branch", "-r", "--list", "origin/epic/*"]).unwrap_or_default();
+    for b in remote.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        let short = b.trim_start_matches("origin/");
+        let id_part = short.trim_start_matches("epic/").split('-').next().unwrap_or("");
+        if id_part.starts_with(id_prefix) && seen.insert(short.to_string()) {
+            result.push(short.to_string());
+        }
+    }
+
+    result
+}
+
+pub fn epic_branches(root: &Path) -> Result<Vec<String>> {
+    let mut seen = std::collections::HashSet::new();
+    let mut branches = Vec::new();
+
+    let local = crate::git_util::run(root, &["branch", "--list", "epic/*"]).unwrap_or_default();
+    for b in local.lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim())
+        .filter(|l| !l.is_empty())
+    {
+        if seen.insert(b.to_string()) {
+            branches.push(b.to_string());
+        }
+    }
+
+    let remote = crate::git_util::run(root, &["branch", "-r", "--list", "origin/epic/*"]).unwrap_or_default();
+    for b in remote.lines()
+        .map(|l| l.trim().trim_start_matches("origin/").to_string())
+        .filter(|l| !l.is_empty())
+    {
+        if seen.insert(b.clone()) {
+            branches.push(b);
+        }
+    }
+
+    branches.sort();
+    Ok(branches)
+}
+
+pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)> {
+    let id = crate::ticket_fmt::gen_hex_id();
+    let slug = crate::ticket::slugify(title);
+    let branch = format!("epic/{id}-{slug}");
+    let _ = crate::git_util::run(root, &["fetch", "origin", "main"]);
+    if crate::git_util::run(root, &["branch", &branch, "origin/main"]).is_err() {
+        crate::git_util::run(root, &["branch", &branch, "main"])?;
+    }
+    crate::git_util::commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")?;
+    let _ = crate::git_util::push_branch(root, &branch);
+    Ok((id, branch))
 }
