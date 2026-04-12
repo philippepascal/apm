@@ -32,16 +32,16 @@ This ticket depends on 1ace7d42 (epic handler extraction) being merged first. By
 
 ### Acceptance criteria
 
-- [ ] `apm-server/src/handlers/maintenance.rs` exists and contains `sync_handler`
-- [ ] `apm-server/src/handlers/maintenance.rs` exists and contains `clean_handler`
-- [ ] `apm-server/src/handlers/maintenance.rs` imports `CleanRequest` from `crate::models`
-- [ ] `handlers/mod.rs` declares `pub mod maintenance;`
-- [ ] `main.rs` references both handlers via `handlers::maintenance::` (directly or via a use import)
-- [ ] `main.rs` no longer directly defines `sync_handler`, `clean_handler`, or `CleanRequest` (grep for each yields zero results in main.rs)
-- [ ] `cargo build -p apm-server` succeeds with no compiler errors or warnings
-- [ ] `cargo test -p apm-server` passes with all existing tests green (including `sync_in_memory_returns_not_implemented`)
-- [ ] The HTTP routes registered in `build_app()` are unchanged — same verbs (`POST /api/sync`, `POST /api/clean`), same handler function bindings
-- [ ] `AppError` and `AppState` remain defined in `main.rs`; `handlers/maintenance.rs` imports them from `crate`
+- [x] `apm-server/src/handlers/maintenance.rs` exists and contains `sync_handler`
+- [x] `apm-server/src/handlers/maintenance.rs` exists and contains `clean_handler`
+- [x] `apm-server/src/handlers/maintenance.rs` imports `CleanRequest` from `crate::models`
+- [x] `handlers/mod.rs` declares `pub mod maintenance;`
+- [x] `main.rs` references both handlers via `handlers::maintenance::` (directly or via a use import)
+- [x] `main.rs` no longer directly defines `sync_handler`, `clean_handler`, or `CleanRequest` (grep for each yields zero results in main.rs)
+- [x] `cargo build -p apm-server` succeeds with no compiler errors or warnings
+- [x] `cargo test -p apm-server` passes with all existing tests green (including `sync_in_memory_returns_not_implemented`)
+- [x] The HTTP routes registered in `build_app()` are unchanged — same verbs (`POST /api/sync`, `POST /api/clean`), same handler function bindings
+- [x] `AppError` and `AppState` remain defined in `main.rs`; `handlers/maintenance.rs` imports them from `crate`
 
 ### Out of scope
 
