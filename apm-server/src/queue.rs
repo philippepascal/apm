@@ -54,7 +54,7 @@ pub async fn queue_handler(
         TicketSource::Git(root, tickets_dir) => (root.clone(), tickets_dir.clone()),
         TicketSource::InMemory(_) => return Ok(Json(vec![])),
     };
-    let entries = tokio::task::spawn_blocking(move || {
+    let entries = crate::util::blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         let tickets = apm_core::ticket::load_all_from_git(&root, &tickets_dir)?;
         let actionable_owned = config.actionable_states_for("agent");
@@ -99,8 +99,7 @@ pub async fn queue_handler(
             })
             .collect();
         Ok::<_, anyhow::Error>(result)
-    })
-    .await??;
+    }).await?;
     Ok(Json(entries))
 }
 

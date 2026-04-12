@@ -218,6 +218,37 @@ pub fn available_transitions(config: &crate::config::Config, current_state: &str
         .collect()
 }
 
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct TransitionOption {
+    pub to: String,
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
+}
+
+pub fn compute_valid_transitions(state: &str, config: &crate::config::Config) -> Vec<TransitionOption> {
+    config
+        .workflow
+        .states
+        .iter()
+        .find(|s| s.id == state)
+        .map(|s| {
+            s.transitions
+                .iter()
+                .map(|tr| TransitionOption {
+                    to: tr.to.clone(),
+                    label: if tr.label.is_empty() {
+                        format!("-> {}", tr.to)
+                    } else {
+                        tr.label.clone()
+                    },
+                    warning: tr.warning.clone(),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &str) {
     let row = format!("| {when} | {from} | {to} | {by} |");
     if body.contains("## History") {
@@ -233,3 +264,46 @@ pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config_with_transitions() -> crate::config::Config {
+        let toml = concat!(
+            "[project]\nname = \"test\"\n",
+            "[tickets]\ndir = \"tickets\"\n",
+            "[[workflow.states]]\n",
+            "id = \"new\"\nlabel = \"New\"\n",
+            "[[workflow.states.transitions]]\n",
+            "to = \"ready\"\nlabel = \"Mark ready\"\n",
+            "[[workflow.states.transitions]]\n",
+            "to = \"closed\"\nlabel = \"\"\n",
+            "warning = \"This will close the ticket\"\n",
+            "[[workflow.states]]\n",
+            "id = \"ready\"\nlabel = \"Ready\"\n",
+            "[[workflow.states]]\n",
+            "id = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
+        );
+        toml::from_str(toml).unwrap()
+    }
+
+    #[test]
+    fn compute_valid_transitions_returns_expected_options() {
+        let config = config_with_transitions();
+        let opts = compute_valid_transitions("new", &config);
+        assert_eq!(opts.len(), 2);
+        assert_eq!(opts[0].to, "ready");
+        assert_eq!(opts[0].label, "Mark ready");
+        assert!(opts[0].warning.is_none());
+        assert_eq!(opts[1].to, "closed");
+        assert_eq!(opts[1].label, "-> closed");
+        assert_eq!(opts[1].warning.as_deref(), Some("This will close the ticket"));
+    }
+
+    #[test]
+    fn compute_valid_transitions_unknown_state_returns_empty() {
+        let config = config_with_transitions();
+        let opts = compute_valid_transitions("nonexistent", &config);
+        assert!(opts.is_empty());
+    }
+}

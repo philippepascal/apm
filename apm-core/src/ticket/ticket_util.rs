@@ -507,6 +507,38 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
     Ok(())
 }
 
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct BlockingDep {
+    pub id: String,
+    pub state: String,
+}
+
+pub fn compute_blocking_deps(
+    ticket: &Ticket,
+    all_tickets: &[Ticket],
+    config: &crate::config::Config,
+) -> Vec<BlockingDep> {
+    let deps = match &ticket.frontmatter.depends_on {
+        Some(d) if !d.is_empty() => d,
+        _ => return vec![],
+    };
+    let state_map: std::collections::HashMap<&str, &str> = all_tickets
+        .iter()
+        .map(|t| (t.frontmatter.id.as_str(), t.frontmatter.state.as_str()))
+        .collect();
+    deps.iter()
+        .filter_map(|dep_id| {
+            state_map.get(dep_id.as_str()).and_then(|&s| {
+                if dep_satisfied(s, None, config) {
+                    None
+                } else {
+                    Some(BlockingDep { id: dep_id.clone(), state: s.to_string() })
+                }
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -522,7 +554,52 @@ mod tests {
         )
     }
 
+    // ── compute_blocking_deps ─────────────────────────────────────────────
 
+    fn make_simple_ticket(id: &str, state: &str, depends_on: Option<Vec<&str>>) -> Ticket {
+        let deps_line = match &depends_on {
+            None => String::new(),
+            Some(ids) => {
+                let items: Vec<String> = ids.iter().map(|i| format!("\"{}\"", i)).collect();
+                format!("depends_on = [{}]\n", items.join(", "))
+            }
+        };
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"{state}\"\n{deps_line}+++\n\nbody\n"
+        );
+        Ticket::parse(Path::new("test.md"), &raw).unwrap()
+    }
+
+    #[test]
+    fn compute_blocking_deps_no_depends_on_returns_empty() {
+        let config = test_config_with_states(&["closed"]);
+        let ticket = make_simple_ticket("aaaa0001", "new", None);
+        let all = vec![ticket.clone()];
+        let result = compute_blocking_deps(&ticket, &all, &config);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn compute_blocking_deps_dep_in_non_terminal_state_returns_it() {
+        let config = test_config_with_states(&["closed"]);
+        let dep = make_simple_ticket("bbbb0001", "new", None);
+        let ticket = make_simple_ticket("aaaa0001", "new", Some(vec!["bbbb0001"]));
+        let all = vec![dep.clone(), ticket.clone()];
+        let result = compute_blocking_deps(&ticket, &all, &config);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "bbbb0001");
+        assert_eq!(result[0].state, "new");
+    }
+
+    #[test]
+    fn compute_blocking_deps_all_deps_satisfied_returns_empty() {
+        let config = test_config_with_states(&["closed"]);
+        let dep = make_simple_ticket("bbbb0001", "closed", None);
+        let ticket = make_simple_ticket("aaaa0001", "new", Some(vec!["bbbb0001"]));
+        let all = vec![dep.clone(), ticket.clone()];
+        let result = compute_blocking_deps(&ticket, &all, &config);
+        assert!(result.is_empty());
+    }
 
     #[test]
     fn document_toggle_criterion() {

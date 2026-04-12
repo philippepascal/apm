@@ -21,10 +21,7 @@ pub async fn get_agents_config(
 ) -> Result<Json<AgentsConfigResponse>, AppError> {
     let max_concurrent = match state.git_root() {
         Some(root) => {
-            let root = root.clone();
-            let config = tokio::task::spawn_blocking(move || {
-                apm_core::config::Config::load(&root)
-            }).await??;
+            let config = crate::util::load_config(root.clone()).await?;
             config.agents.max_concurrent.max(1)
         }
         None => 3,
@@ -43,10 +40,7 @@ pub async fn patch_agents_config(
     *state.max_concurrent_override.lock().await = Some(req.override_val);
     let max_concurrent = match state.git_root() {
         Some(root) => {
-            let root = root.clone();
-            let config = tokio::task::spawn_blocking(move || {
-                apm_core::config::Config::load(&root)
-            }).await??;
+            let config = crate::util::load_config(root.clone()).await?;
             config.agents.max_concurrent.max(1)
         }
         None => 3,

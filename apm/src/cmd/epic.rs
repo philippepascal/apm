@@ -398,7 +398,7 @@ mod tests {
     // Gate check logic tests
     #[test]
     fn gate_check_all_passing() {
-        use apm_core::config::{WorkflowConfig};
+        use apm_core::config::WorkflowConfig;
 
         let states = vec![
             make_state("implemented", true, false),
