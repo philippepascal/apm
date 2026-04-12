@@ -19,7 +19,11 @@ depends_on = ["4004f5dc"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`ensure_amendment_section()` lives in `state.rs` but it manipulates the spec document (adding/formatting the amendment request section). It belongs in `review.rs` alongside `split_body`, `extract_spec`, `normalize_amendments`, and `apply_review` — the module that owns all spec-document-level operations.
+
+This is the final cleanup after trimming `state.rs` (4004f5dc).
+
+See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 6 for the full plan.
 
 ### Acceptance criteria
 
@@ -36,13 +40,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
