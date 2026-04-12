@@ -33,7 +33,7 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 2 for the full plan.
 - [x] `merge_into_default` and `pull_default` are defined as `pub fn` in `git_util.rs` and absent from `state.rs`
 - [x] The private `run()` helper in `git_util.rs` is declared `pub(crate)` so downstream modules (`worktree.rs`, `epic.rs`) can call it without duplication
 - [x] `state.rs` calls `git::merge_into_default` and `git::pull_default` (resolved through the `git_util as git` alias)
-- [ ] Every caller of the moved ticket-format functions (`gen_hex_id`, `resolve_ticket_branch`, `branch_name_from_path`) is updated to reference `ticket_fmt::` instead of `git::`
+- [x] Every caller of the moved ticket-format functions (`gen_hex_id`, `resolve_ticket_branch`, `branch_name_from_path`) is updated to reference `ticket_fmt::` instead of `git::`
 - [ ] `cargo build` succeeds with zero errors across `apm-core`, `apm`, and `apm-server`
 - [ ] `cargo test` passes (integration suite included)
 
