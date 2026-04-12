@@ -1,7 +1,7 @@
 +++
 id = "2eec2b83"
 title = "Refactor clean.rs: extract epic cleanup and apply shared helpers"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2eec2b83-refactor-clean-rs-extract-epic-cleanup-a"
 created_at = "2026-04-12T09:02:46.720913Z"
-updated_at = "2026-04-12T10:46:39.872016Z"
+updated_at = "2026-04-12T10:50:40.210293Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f", "aeacd066"]
@@ -90,3 +90,4 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 | 2026-04-12T09:28Z | in_design | specd | claude-0412-0924-ca90 |
 | 2026-04-12T10:24Z | specd | ready | apm |
 | 2026-04-12T10:46Z | ready | in_progress | philippepascal |
+| 2026-04-12T10:50Z | in_progress | implemented | claude-0412-1046-0fc8 |
