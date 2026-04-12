@@ -1,1 +1,1 @@
-# Refactor apm-core module structure
+# Refactor apm-server code organization
