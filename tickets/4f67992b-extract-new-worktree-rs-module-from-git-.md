@@ -19,7 +19,11 @@ depends_on = ["b28fe914"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Worktree lifecycle management is scattered across three modules: `git.rs` (find, list, ensure, add, remove, sync_agent_dirs, copy_dir_recursive), `state.rs` (`provision_worktree`), and `ticket.rs` (`list_worktrees_with_tickets`). There is no single place to understand or modify worktree behavior.
+
+This ticket creates a dedicated `worktree.rs` module that owns the full worktree lifecycle: discovery, creation, provisioning, agent directory syncing, and cleanup.
+
+See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 3 for the full plan.
 
 ### Acceptance criteria
 
@@ -36,13 +40,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
