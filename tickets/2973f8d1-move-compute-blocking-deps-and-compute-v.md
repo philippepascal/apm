@@ -1,7 +1,7 @@
 +++
 id = "2973f8d1"
 title = "Move compute_blocking_deps and compute_valid_transitions to apm_core"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2973f8d1-move-compute-blocking-deps-and-compute-v"
 created_at = "2026-04-12T09:02:59.113894Z"
-updated_at = "2026-04-12T10:24:44.668740Z"
+updated_at = "2026-04-12T11:04:03.581712Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 +++
@@ -99,3 +99,4 @@ Both functions are called from ticket/epic handlers. Moving them to `apm_core` m
 | 2026-04-12T09:36Z | groomed | in_design | philippepascal |
 | 2026-04-12T09:39Z | in_design | specd | claude-0412-0936-6a40 |
 | 2026-04-12T10:24Z | specd | ready | apm |
+| 2026-04-12T11:04Z | ready | in_progress | philippepascal |
