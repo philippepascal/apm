@@ -18,7 +18,16 @@ target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Config loading in `apm-server` uses 4 different patterns across files, with 19+ occurrences total:
+
+1. `tokio::task::spawn_blocking(move || Config::load(&root))` with `.await??` (work.rs, some main.rs handlers)
+2. `let Ok(config) = Config::load(root) else { return ... }` (some main.rs handlers)
+3. `Config::load(root)?` direct call (workers.rs, queue.rs)
+4. `spawn_blocking` with inline closure and `?` (other main.rs handlers)
+
+The inconsistency makes error handling unpredictable. A shared utility function — e.g., `async fn load_config(root: &Path) -> Result<Config>` that always uses `spawn_blocking` (since `Config::load` does filesystem I/O) — would standardize this across all handlers and reduce boilerplate.
+
+Similarly, the `tokio::task::spawn_blocking` wrapper pattern appears 27+ times for various blocking operations beyond config loading. A generic helper like `async fn blocking<F, T>(f: F) -> Result<T>` would reduce noise.
 
 ### Acceptance criteria
 
@@ -35,13 +44,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
