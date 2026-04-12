@@ -143,7 +143,7 @@ Run `cargo build` then `cargo test` from the repo root. Fix any compilation erro
 ### Amendment requests
 
 - [x] Remove the duplicated `run()` helper from the Approach. Instead, import `crate::git_util::run()` — ticket b28fe914 will make `run()` `pub(crate)` in `git_util.rs`. Do not duplicate the git invocation wrapper.
-- [ ] Fix `provision_worktree` signature in the Approach — the spec shows `(root, worktrees_base, branch, agent_dirs, warnings)` but the actual signature is `pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: &mut Vec<String>) -> Result<PathBuf>`. Use the real signature.
+- [x] Fix `provision_worktree` signature in the Approach — the spec shows `(root, worktrees_base, branch, agent_dirs, warnings)` but the actual signature is `pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: &mut Vec<String>) -> Result<PathBuf>`. Use the real signature.
 
 ### Code review
 
