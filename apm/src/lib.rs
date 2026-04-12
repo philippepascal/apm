@@ -1,5 +1,6 @@
 pub mod ctx;
 pub mod editor;
+pub mod util;
 
 pub mod cmd {
     pub mod archive;
