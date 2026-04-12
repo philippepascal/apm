@@ -18,7 +18,9 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The `apm-core/src/` directory mixes Rust source files with embedded template/config assets (`ticket.toml`, `workflow.toml`, `apm.worker.md`, `apm.spec-writer.md`, `apm.agents.md`). These files are included via `include_str!()` in `init.rs` but sit at the same level as code modules, making the source tree harder to scan.
+
+See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 1 for the full plan.
 
 ### Acceptance criteria
 
@@ -35,13 +37,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
