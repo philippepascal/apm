@@ -27,7 +27,14 @@ This ticket covers only the epic-helpers move. The broader `git.rs` reorganisati
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `find_epic_branch`, `find_epic_branches`, `epic_branches`, and `create_epic_branch` are defined in `apm-core/src/epic.rs`
+- [ ] The four functions are absent from `apm-core/src/git.rs` (or `git_util.rs` if b28fe914 has already landed)
+- [ ] `apm/src/cmd/epic.rs` calls `apm_core::epic::epic_branches` instead of `apm_core::git::epic_branches`
+- [ ] `apm/src/cmd/epic.rs` calls `apm_core::epic::find_epic_branches` instead of `apm_core::git::find_epic_branches`
+- [ ] `apm/src/cmd/new.rs` calls `epic::find_epic_branch` (or equivalent `apm_core::epic::find_epic_branch`) instead of `git::find_epic_branch`
+- [ ] `apm-server/src/main.rs` calls `apm_core::epic::find_epic_branch`, `apm_core::epic::epic_branches`, and `apm_core::epic::create_epic_branch` instead of the `apm_core::git::` equivalents
+- [ ] `cargo build --workspace` succeeds with zero errors
+- [ ] `cargo test --workspace` passes (integration suite included)
 
 ### Out of scope
 
