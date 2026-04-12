@@ -50,7 +50,7 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 - [x] `git_util::commit(root: &Path, message: &str) -> Result<()>` creates a commit with the given message and returns `Ok(())` on success
 - [x] `git_util::commit` returns an error when `git commit` fails (e.g. nothing staged)
 - [x] `git_util::git_config_get(root: &Path, key: &str) -> Option<String>` returns `Some(value)` trimmed of whitespace when the key exists
-- [ ] `git_util::git_config_get` returns `None` when the key is absent or git exits non-zero
+- [x] `git_util::git_config_get` returns `None` when the key is absent or git exits non-zero
 - [ ] `git_util::merge_ref(root: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String>` returns `Some(message)` describing the merge when the ref exists and the merge succeeds
 - [ ] `git_util::merge_ref` returns `None` and pushes a warning when the merge fails
 - [ ] `git_util::merge_ref` returns `None` without a warning when the result is already up to date
