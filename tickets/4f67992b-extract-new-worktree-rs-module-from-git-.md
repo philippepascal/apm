@@ -23,7 +23,21 @@ Worktree lifecycle management is currently spread across three unrelated modules
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core/src/worktree.rs` exists and is declared as `pub mod worktree` in `apm-core/src/lib.rs`
+- [ ] `find_worktree_for_branch` is defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] `list_ticket_worktrees` is defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] `ensure_worktree` is defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] `add_worktree` is defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] `remove_worktree` is defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] `sync_agent_dirs` is defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] Private helpers `clean_agent_dirs`, `is_tracked`, and `copy_dir_recursive` are defined in `worktree.rs` and absent from `git_util.rs`
+- [ ] `provision_worktree` is defined as `pub fn` in `worktree.rs` and absent from `state.rs`
+- [ ] `list_worktrees_with_tickets` is defined as `pub fn` in `worktree.rs` and absent from `ticket.rs`
+- [ ] Every call-site that previously referenced `git::find_worktree_for_branch`, `git::list_ticket_worktrees`, `git::ensure_worktree`, `git::add_worktree`, `git::remove_worktree`, or `git::sync_agent_dirs` is updated to `worktree::`
+- [ ] Every call-site that previously referenced `git::provision_worktree` or `state::provision_worktree` is updated to `worktree::provision_worktree`
+- [ ] Every call-site that previously referenced `ticket::list_worktrees_with_tickets` or `git::list_worktrees_with_tickets` is updated to `worktree::list_worktrees_with_tickets`
+- [ ] `cargo build` succeeds with zero errors across `apm-core`, `apm`, and `apm-server`
+- [ ] `cargo test` passes (integration suite included)
 
 ### Out of scope
 
