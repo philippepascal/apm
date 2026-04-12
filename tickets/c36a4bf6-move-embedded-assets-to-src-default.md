@@ -67,7 +67,7 @@ No other files reference these assets by source path. The `include_str!()` paths
 
 ### Amendment requests
 
-- [ ] Fix `\n` formatting throughout all sections — literal backslash-n characters appear instead of real newlines in Problem, Acceptance criteria, Out of scope, and Approach. Rewrite all sections with actual newlines.
+- [x] Fix `\n` formatting throughout all sections — literal backslash-n characters appear instead of real newlines in Problem, Acceptance criteria, Out of scope, and Approach. Rewrite all sections with actual newlines.
 - [ ] Remove specific line number references (123, 124, 234, 313, 317) from the Approach section. Replace with "all `include_str!()` calls in `init.rs`" — there are exactly 5 and they're easy to grep for. Line numbers drift as other tickets land.
 
 ### Code review
