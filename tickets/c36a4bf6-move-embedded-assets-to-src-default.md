@@ -37,6 +37,8 @@ All changes are confined to `apm-core/`.\n\n1. Create `apm-core/src/default/` an
 
 ### Amendment requests
 
+- [ ] Fix `\n` formatting throughout all sections — literal backslash-n characters appear instead of real newlines in Problem, Acceptance criteria, Out of scope, and Approach. Rewrite all sections with actual newlines.
+- [ ] Remove specific line number references (123, 124, 234, 313, 317) from the Approach section. Replace with "all `include_str!()` calls in `init.rs`" — there are exactly 5 and they're easy to grep for. Line numbers drift as other tickets land.
 
 ### Code review
 
