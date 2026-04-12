@@ -1,7 +1,7 @@
 +++
 id = "2eec2b83"
 title = "Refactor clean.rs: extract epic cleanup and apply shared helpers"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2eec2b83-refactor-clean-rs-extract-epic-cleanup-a"
 created_at = "2026-04-12T09:02:46.720913Z"
-updated_at = "2026-04-12T09:09:16.219948Z"
+updated_at = "2026-04-12T09:24:49.082419Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 depends_on = ["d3ebdc0f", "aeacd066"]
@@ -57,3 +57,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T09:02Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
+| 2026-04-12T09:24Z | groomed | in_design | philippepascal |
