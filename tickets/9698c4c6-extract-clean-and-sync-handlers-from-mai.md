@@ -1,7 +1,7 @@
 +++
 id = "9698c4c6"
 title = "Extract clean and sync handlers from main.rs"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9698c4c6-extract-clean-and-sync-handlers-from-mai"
 created_at = "2026-04-12T09:03:22.310905Z"
-updated_at = "2026-04-12T10:22:34.132093Z"
+updated_at = "2026-04-12T10:25:06.089035Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 depends_on = ["1ace7d42"]
@@ -138,3 +138,4 @@ This ticket runs after 1ace7d42 (epic handler extraction) is merged into the epi
 | 2026-04-12T10:11Z | specd | ammend | apm |
 | 2026-04-12T10:19Z | ammend | in_design | philippepascal |
 | 2026-04-12T10:22Z | in_design | specd | claude-0412-1019-3ce8 |
+| 2026-04-12T10:25Z | specd | ready | apm |
