@@ -37,7 +37,11 @@ Moving it completes the cleanup started in ticket 4004f5dc and satisfies section
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- No behavioral changes to `ensure_amendment_section` — the function logic is moved verbatim
+- No changes to any other function in `state.rs` or `review.rs`
+- No changes to the public API surface of `apm_core::state` beyond removing `ensure_amendment_section` from that namespace
+- No changes to `apm/src/cmd/state.rs` or any CLI layer (the call stays inside `apm_core::state::transition`)
+- Adding tests for other existing `review.rs` functions is out of scope
 
 ### Approach
 
