@@ -31,7 +31,7 @@ This ticket must land after 061d0ac1 is merged into the epic branch, because it 
 - [x] clean.rs has no `use std::process::Command` import
 - [x] `diagnose_worktree` produces identical categorisation output to before (same three-bucket logic, same error propagation via `?`)
 - [x] The `wt_clean` check in `candidates` uses `git_util::is_worktree_dirty()`
-- [ ] Both local-branch-exists checks in `candidates` use `git_util::local_branch_exists()`
+- [x] Both local-branch-exists checks in `candidates` use `git_util::local_branch_exists()`
 - [ ] The branch deletion in `remove` uses `git_util::delete_local_branch()`
 - [ ] The remote-tracking prune in `remove` uses `git_util::prune_remote_tracking()`
 - [ ] `cargo build` succeeds with no new warnings
