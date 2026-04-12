@@ -19,6 +19,7 @@ mod credential_store;
 mod log;
 mod models;
 mod queue;
+mod util;
 mod webauthn_state;
 mod work;
 mod workers;
@@ -170,13 +171,8 @@ async fn list_epics(
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
     let tickets = load_tickets(&state).await?;
-    let config = tokio::task::spawn_blocking({
-        let root = root.clone();
-        move || apm_core::config::Config::load(&root)
-    })
-    .await??;
-    let branches = tokio::task::spawn_blocking(move || apm_core::epic::epic_branches(&root))
-        .await??;
+    let config = util::load_config(root.clone()).await?;
+    let branches = util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
     let summaries: Vec<EpicSummary> = branches
         .iter()
         .filter_map(|b| build_epic_summary(b, &tickets, &config.workflow.states))
@@ -197,10 +193,9 @@ async fn create_epic(
         _ => return Ok((StatusCode::BAD_REQUEST, "title is required").into_response()),
     };
     let title_clone = title.clone();
-    let (id, branch) = tokio::task::spawn_blocking(move || {
+    let (id, branch) = util::blocking(move || {
         apm_core::epic::create_epic_branch(&root, &title_clone)
-    })
-    .await??;
+    }).await?;
     Ok((
         StatusCode::CREATED,
         Json(EpicSummary {
@@ -223,13 +218,8 @@ async fn get_epic(
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
     let tickets = load_tickets(&state).await?;
-    let config = tokio::task::spawn_blocking({
-        let root = root.clone();
-        move || apm_core::config::Config::load(&root)
-    })
-    .await??;
-    let branches = tokio::task::spawn_blocking(move || apm_core::epic::epic_branches(&root))
-        .await??;
+    let config = util::load_config(root.clone()).await?;
+    let branches = util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
     let branch = match branches.iter().find(|b| {
         b.strip_prefix("epic/")
             .and_then(|s| s.split('-').next())
@@ -309,10 +299,9 @@ async fn load_tickets(state: &AppState) -> Result<Vec<apm_core::ticket::Ticket>,
         TicketSource::Git(root, tickets_dir) => {
             let root = root.clone();
             let tickets_dir = tickets_dir.clone();
-            Ok(tokio::task::spawn_blocking(move || {
+            Ok(util::blocking(move || {
                 apm_core::ticket::load_all_from_git(&root, &tickets_dir)
-            })
-            .await??)
+            }).await?)
         }
         TicketSource::InMemory(tickets) => Ok(tickets.clone()),
     }
@@ -385,7 +374,7 @@ async fn clean_handler(
         return Ok((StatusCode::BAD_REQUEST, "remote requires older_than").into_response());
     }
 
-    let (log, removed) = tokio::task::spawn_blocking(move || -> anyhow::Result<(Vec<String>, usize)> {
+    let (log, removed) = util::blocking(move || -> anyhow::Result<(Vec<String>, usize)> {
         let mut log: Vec<String> = Vec::new();
         let mut count = 0usize;
 
@@ -575,8 +564,7 @@ async fn clean_handler(
         }
 
         Ok((log, count))
-    })
-    .await??;
+    }).await?;
 
     Ok(Json(serde_json::json!({ "log": log.join("\n"), "removed": removed })).into_response())
 }
@@ -850,10 +838,9 @@ async fn put_body(
     let root_clone = root.clone();
     let branch_clone = branch.clone();
     let rel_path_clone = rel_path.clone();
-    let current_content = tokio::task::spawn_blocking(move || {
+    let current_content = util::blocking(move || {
         apm_core::git::read_from_branch(&root_clone, &branch_clone, &rel_path_clone)
-    })
-    .await??;
+    }).await?;
 
     let current_fm = match extract_frontmatter_raw(&current_content) {
         Some(fm) => fm.to_owned(),
@@ -903,10 +890,9 @@ async fn put_body(
     }
 
     let content = req.content.clone();
-    tokio::task::spawn_blocking(move || {
+    util::blocking(move || {
         apm_core::git::commit_to_branch(&root, &branch, &rel_path, &content, "ui: edit ticket body")
-    })
-    .await??;
+    }).await?;
 
     Ok(Json(serde_json::json!({"ok": true})).into_response())
 }
@@ -987,7 +973,7 @@ async fn patch_ticket(
         .map_err(|e| AppError(anyhow::anyhow!("cannot serialize ticket: {e}")))?;
 
     let root_clone = root.clone();
-    tokio::task::spawn_blocking(move || {
+    util::blocking(move || {
         apm_core::git::commit_to_branch(
             &root_clone,
             &branch,
@@ -995,8 +981,7 @@ async fn patch_ticket(
             &content,
             "ui: update ticket fields",
         )
-    })
-    .await??;
+    }).await?;
 
     let state_str = updated.frontmatter.state.clone();
     let valid_transitions = tokio::task::spawn_blocking(move || {
