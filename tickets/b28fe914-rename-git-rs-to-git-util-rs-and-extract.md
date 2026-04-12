@@ -1,7 +1,7 @@
 +++
 id = "b28fe914"
 title = "Rename git.rs to git_util.rs and extract non-git functions"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b28fe914-rename-git-rs-to-git-util-rs-and-extract"
 created_at = "2026-04-12T06:04:25.779848Z"
-updated_at = "2026-04-12T06:27:08.286541Z"
+updated_at = "2026-04-12T06:27:17.220762Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["4660b156"]
@@ -138,3 +138,4 @@ Fix any remaining compilation errors (missed call sites, stale imports). The int
 | 2026-04-12T06:04Z | — | new | philippepascal |
 | 2026-04-12T06:12Z | new | groomed | apm |
 | 2026-04-12T06:21Z | groomed | in_design | philippepascal |
+| 2026-04-12T06:27Z | in_design | specd | claude-0412-0621-6f10 |
