@@ -41,7 +41,7 @@ Moving these to `apm_core` eliminates duplication between `apm` and `apm-server`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Renaming or restructuring any other functions in apm_core::epic beyond the two new helpers\n- Moving any apm-server logic other than parse_epic_branch (e.g. EpicSummary, find_epic_branch wrappers)\n- Changing the behaviour of branch_to_title or epic_id_from_branch (pure refactor, no logic changes)\n- Adding branch_to_title or epic_id_from_branch to the public re-export of apm-core if it is not already done for other epic helpers\n- Fixing the apm-server Option handling beyond the minimal substitution needed to remove parse_epic_branch
 
 ### Approach
 
