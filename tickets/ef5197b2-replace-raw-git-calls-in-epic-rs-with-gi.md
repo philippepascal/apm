@@ -19,7 +19,19 @@ depends_on = ["061d0ac1"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+epic.rs has 5 raw `Command::new("git")` calls (excluding test helpers) that should use git_util or worktree helpers:
+
+1. `git fetch origin main` (line ~207) — `git_util::fetch_branch()` already exists, should use it
+2. `git worktree add -b {branch} {path} origin/main` (line ~230) — `worktree::add_worktree()` already exists but with a different signature; either reuse or add a variant to git_util
+3. `git add EPIC.md` (line ~253) — `git_util::stage_files()`
+4. `git commit -m {msg}` (line ~262) — `git_util::commit()`
+5. `git worktree remove --force {path}` (line ~272) — `worktree::remove_worktree()` already exists
+
+Two of these (fetch_branch, remove_worktree) are direct replacements with existing helpers. The remaining three need the new helpers from the prerequisite ticket.
+
+After this ticket, epic.rs should have zero raw git commands in production code (test helpers with `git init` etc. are acceptable).
+
+Depends on the git_util helpers ticket landing first.
 
 ### Acceptance criteria
 
@@ -36,13 +48,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
