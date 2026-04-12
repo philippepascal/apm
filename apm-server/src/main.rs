@@ -486,6 +486,14 @@ async fn health_handler() -> Json<serde_json::Value> {
     Json(serde_json::json!({"ok": true}))
 }
 
+async fn version_handler() -> Json<serde_json::Value> {
+    let build = if cfg!(debug_assertions) { "dev" } else { "release" };
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "build": build,
+    }))
+}
+
 async fn sync_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Response, AppError> {
@@ -1788,6 +1796,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route_layer(axum::middleware::from_fn_with_state(state.clone(), require_auth));
     let open = Router::new()
         .route("/health", get(health_handler))
+        .route("/api/version", get(version_handler))
         .route("/register", get(register_page_handler))
         .route("/api/auth/register/challenge", post(register_challenge_handler))
         .route("/api/auth/register/complete", post(register_complete_handler))
