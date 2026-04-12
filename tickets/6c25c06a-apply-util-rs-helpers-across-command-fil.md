@@ -27,7 +27,7 @@ After `apm/src/util.rs` is introduced by the prerequisite ticket (d3ebdc0f), six
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Push-after-write patterns (`git::push_branch` blocks in `assign.rs` and `spec.rs`) — these are not fetch helpers and are not covered by `util.rs`\n- `clean.rs` and `epic.rs` — handled by separate tickets in this epic to avoid conflicts\n- `new.rs` — the aggressive flag is forwarded to `ticket::create()` in apm-core; there is no inline fetch block to remove\n- Adding new util helpers beyond the three already defined in d3ebdc0f\n- Changing the behaviour of aggressive fetch or the prompt (the wording in `sync.rs` currently reads "no remote configured?" — normalising it to the standard wording is an acceptable side-effect, not a goal)\n- Unit tests for the util helpers themselves (covered by d3ebdc0f)
 
 ### Approach
 
