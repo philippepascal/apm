@@ -80,7 +80,7 @@ Run `cargo build --workspace` and fix any compilation errors (missing visibility
 - [x] Remove `ensure_amendment_section` from this ticket's scope entirely. Ticket a6367b87 (which depends on this one) owns moving it from `state.rs` to `review.rs`. Do not move it to `spec.rs` or anywhere else — leave it in `state.rs` for a6367b87 to handle.
 - [x] Remove `merge_into_default` and `pull_default` from this ticket's scope. Ticket b28fe914 owns absorbing these into `git_util.rs`. By the time this ticket is worked (it depends on 4f67992b and eb4789cf, which depend on b28fe914), these functions will already be in `git_util.rs`.
 - [x] Update acceptance criteria to reflect the reduced scope: this ticket only moves `gh_pr_create_or_update` from `state.rs` to `github.rs` and updates `transition()` to call the moved functions via their new module paths. State.rs should also be cleaned of any imports that were only needed by the already-moved functions.
-- [ ] Fix `\n` formatting in Out of scope section — literal backslash-n characters appear instead of real newlines.
+- [x] Fix `\n` formatting in Out of scope section — literal backslash-n characters appear instead of real newlines.
 
 ### Code review
 
