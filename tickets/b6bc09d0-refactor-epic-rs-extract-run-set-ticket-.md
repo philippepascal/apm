@@ -19,7 +19,15 @@ depends_on = ["d3ebdc0f", "aeacd066"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm/src/cmd/epic.rs` (438 lines) is the largest command file and contains misplaced logic:
+
+1. **`run_set()` for owner** (lines ~252-300) — when setting an epic's owner, this function iterates over all tickets in the epic and bulk-updates their `owner` field. This is ticket mutation logic that doesn't belong in the epic command module. It should be extracted to `apm_core::epic` as a function like `set_epic_owner(root, epic_id, owner)` that handles the cascading update.
+
+2. **`run_close()` PR creation** (lines ~108-152) — contains inline `gh pr create` logic that's similar to `apm_core::state::gh_pr_create_or_update` (which was moved to `github.rs` in the apm-core refactoring epic). This should reuse the core function rather than reimplementing PR creation.
+
+3. After the prerequisite ticket moves `branch_to_title()` and epic ID parsing to `apm_core::epic`, update this file to use the shared helpers instead of local definitions.
+
+4. Apply shared `util.rs` helpers (from the prerequisite ticket) for any confirmation prompts or fetch patterns in this file.
 
 ### Acceptance criteria
 
@@ -36,13 +44,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
