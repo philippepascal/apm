@@ -1,7 +1,7 @@
 +++
 id = "b28fe914"
 title = "Rename git.rs to git_util.rs and extract non-git functions"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b28fe914-rename-git-rs-to-git-util-rs-and-extract"
 created_at = "2026-04-12T06:04:25.779848Z"
-updated_at = "2026-04-12T06:12:11.203442Z"
+updated_at = "2026-04-12T06:21:50.078736Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["4660b156"]
@@ -52,3 +52,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T06:04Z | — | new | philippepascal |
 | 2026-04-12T06:12Z | new | groomed | apm |
+| 2026-04-12T06:21Z | groomed | in_design | philippepascal |
