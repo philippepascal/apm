@@ -40,7 +40,7 @@ Both functions are called from ticket/epic handlers. Moving them to `apm_core` m
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Merging or replacing the existing `apm_core::state::available_transitions()` function — `compute_valid_transitions` will coexist alongside it\n- Extracting HTTP handlers from `apm-server/src/main.rs` (covered by a separate ticket)\n- Changing the JSON shape of any HTTP response\n- Adding the CLI to call these functions\n- Moving any other functions from `main.rs` to `apm-core`
 
 ### Approach
 
