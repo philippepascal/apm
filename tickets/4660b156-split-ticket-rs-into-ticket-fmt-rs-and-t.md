@@ -18,7 +18,12 @@ target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 
 ### Problem
 
-`ticket.rs` is a 1965-line file in `apm-core/src/` that conflates two unrelated concerns:\n\n1. **File format**: TOML frontmatter parsing and serialization, markdown body parsing (`TicketDocument`), checklist parsing, ID normalization (`normalize_id_arg`, `slugify`, etc.), and body validation.\n2. **Ticket logic**: scoring (`score`, `effective_priority`), dependency graph construction (`build_reverse_index`), ticket selection (`pick_next`, `sorted_actionable`), lifecycle operations (`create`, `close`), and git-native loading (`load_all_from_git`).\n\nHaving both concerns in one file makes it hard to find the right function quickly, and it creates unnecessary coupling — a caller that only needs ID normalization still compiles the full dependency-graph logic. The fix is a mechanical split into two new files with clear responsibilities, plus a thin `ticket.rs` re-export hub that keeps every downstream `use apm_core::ticket::…` path working unchanged.
+`ticket.rs` is a 1965-line file in `apm-core/src/` that conflates two unrelated concerns:
+
+1. **File format**: TOML frontmatter parsing and serialization, markdown body parsing (`TicketDocument`), checklist parsing, ID normalization (`normalize_id_arg`, `slugify`, etc.), and body validation.
+2. **Ticket logic**: scoring (`score`, `effective_priority`), dependency graph construction (`build_reverse_index`), ticket selection (`pick_next`, `sorted_actionable`), lifecycle operations (`create`, `close`), and git-native loading (`load_all_from_git`).
+
+Having both concerns in one file makes it hard to find the right function quickly, and it creates unnecessary coupling — a caller that only needs ID normalization still compiles the full dependency-graph logic. The fix is a mechanical split into two new files with clear responsibilities, plus a thin `ticket.rs` re-export hub that keeps every downstream `use apm_core::ticket::…` path working unchanged.
 
 ### Acceptance criteria
 
