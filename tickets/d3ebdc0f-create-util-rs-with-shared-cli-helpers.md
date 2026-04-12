@@ -30,16 +30,16 @@ There is no `util.rs` module today. Creating one with `fetch_if_aggressive`, `fe
 
 ### Acceptance criteria
 
-- [ ] `apm/src/util.rs` exists and is declared as `pub mod util;` in `apm/src/lib.rs`
-- [ ] `util::fetch_if_aggressive(root: &Path, aggressive: bool)` calls `git::fetch_all(root)` when `aggressive` is true and emits `"warning: fetch failed: {e:#}"` on error
-- [ ] `util::fetch_branch_if_aggressive(root: &Path, branch: &str, aggressive: bool)` calls `git::fetch_branch(root, branch)` when `aggressive` is true and emits `"warning: fetch failed: {e:#}"` on error
-- [ ] `util::prompt_yes_no(prompt: &str) -> io::Result<bool>` prints the prompt to stdout, flushes, reads one line from stdin, and returns `true` if and only if the trimmed input equals `"y"` (case-insensitive)
-- [ ] `next.rs` and `sync.rs` (fetch-all users) replace their inline fetch block with a call to `util::fetch_if_aggressive`
-- [ ] `assign.rs`, `show.rs`, `close.rs`, and `spec.rs` (fetch-branch users) replace their inline fetch block with a call to `util::fetch_branch_if_aggressive`
-- [ ] `ctx.rs`'s `CmdContext::load` replaces its inline fetch block with `util::fetch_if_aggressive`
-- [ ] `assign.rs`, `sync.rs`, and `clean.rs` replace their inline confirmation sequences with calls to `util::prompt_yes_no`
-- [ ] The literal string `"warning: fetch failed: {e:#}"` appears in exactly one place in the codebase (`util.rs`)
-- [ ] `cargo test` passes with no regressions after all replacements
+- [x] `apm/src/util.rs` exists and is declared as `pub mod util;` in `apm/src/lib.rs`
+- [x] `util::fetch_if_aggressive(root: &Path, aggressive: bool)` calls `git::fetch_all(root)` when `aggressive` is true and emits `"warning: fetch failed: {e:#}"` on error
+- [x] `util::fetch_branch_if_aggressive(root: &Path, branch: &str, aggressive: bool)` calls `git::fetch_branch(root, branch)` when `aggressive` is true and emits `"warning: fetch failed: {e:#}"` on error
+- [x] `util::prompt_yes_no(prompt: &str) -> io::Result<bool>` prints the prompt to stdout, flushes, reads one line from stdin, and returns `true` if and only if the trimmed input equals `"y"` (case-insensitive)
+- [x] `next.rs` and `sync.rs` (fetch-all users) replace their inline fetch block with a call to `util::fetch_if_aggressive`
+- [x] `assign.rs`, `show.rs`, `close.rs`, and `spec.rs` (fetch-branch users) replace their inline fetch block with a call to `util::fetch_branch_if_aggressive`
+- [x] `ctx.rs`'s `CmdContext::load` replaces its inline fetch block with `util::fetch_if_aggressive`
+- [x] `assign.rs`, `sync.rs`, and `clean.rs` replace their inline confirmation sequences with calls to `util::prompt_yes_no`
+- [x] The literal string `"warning: fetch failed: {e:#}"` appears in exactly one place in the codebase (`util.rs`)
+- [x] `cargo test` passes with no regressions after all replacements
 
 ### Out of scope
 
