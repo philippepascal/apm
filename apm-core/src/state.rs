@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::{config::{CompletionStrategy, Config}, git, ticket, ticket_fmt};
+use crate::{config::{CompletionStrategy, Config}, git, review, ticket, ticket_fmt};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
@@ -115,7 +115,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     if new_state == "ammend" {
-        ensure_amendment_section(&mut t.body);
+        review::ensure_amendment_section(&mut t.body);
     }
     append_history(&mut t.body, &old_state, &new_state, &now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
 
@@ -193,25 +193,6 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     })
 }
 
-
-pub fn ensure_amendment_section(body: &mut String) {
-    if body.contains("### Amendment requests") {
-        return;
-    }
-    let placeholder = "\n### Amendment requests\n\n<!-- Add amendment requests below -->\n";
-    if let Some(pos) = body.find("### Out of scope") {
-        let after = &body[pos..];
-        let block_end = after[1..]
-            .find("\n##")
-            .map(|p| pos + 1 + p)
-            .unwrap_or(body.len());
-        body.insert_str(block_end, placeholder);
-    } else if let Some(pos) = body.find("## History") {
-        body.insert_str(pos, &format!("{}\n", placeholder));
-    } else {
-        body.push_str(placeholder);
-    }
-}
 
 pub fn available_transitions(config: &crate::config::Config, current_state: &str) -> Vec<(String, String, String)> {
     let terminal_ids: Vec<&str> = config.workflow.states.iter()
