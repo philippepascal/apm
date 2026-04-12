@@ -26,7 +26,7 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 4 for the full plan.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core/src/ticket_fmt.rs` exists and contains: `Frontmatter`, `Ticket` (struct + `load`/`parse`/`serialize`/`save`/`score`/`document`), `TicketDocument` (struct + `parse`/`serialize`/`validate`/`unchecked_tasks`/`toggle_criterion`), `ChecklistItem`, `ValidationError`, `slugify`, `normalize_id_arg`, `id_arg_prefixes`, `resolve_id_in_slice`, and `set_field`\n- [ ] `apm-core/src/ticket_util.rs` exists and contains: `build_reverse_index`, `effective_priority`, `dep_satisfied`, `sorted_actionable`, `pick_next`, `load_all_from_git`, `state_from_branch`, `list_worktrees_with_tickets`, `close`, `create`, `check_owner`, and `list_filtered`\n- [ ] `apm-core/src/ticket.rs` contains only `pub use` re-exports from `ticket_fmt` and `ticket_util`; no type definitions or function bodies remain in it\n- [ ] `cargo build --workspace` succeeds with no errors after the split\n- [ ] `cargo test --workspace` passes with the same number of passing tests as before the split\n- [ ] No file outside `apm-core/src/ticket*.rs` requires any `use` path changes — all existing `use apm_core::ticket::*` imports continue to resolve
 
 ### Out of scope
 
