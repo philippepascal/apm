@@ -44,7 +44,42 @@ Both functions are called from ticket/epic handlers. Moving them to `apm_core` m
 
 ### Approach
 
-How the implementation will work.
+**Target modules:** place both functions and their return-type structs in existing `apm-core` modules that already own the related logic.
+
+- `compute_blocking_deps` + `BlockingDep` → `apm-core/src/ticket/ticket_util.rs` (alongside `dep_satisfied`, which it calls)
+- `compute_valid_transitions` + `TransitionOption` → `apm-core/src/state.rs` (alongside `available_transitions`, which covers similar ground)
+
+**Signature changes:** The current server-side signatures accept `root: &PathBuf` and call `Config::load(root)` internally. In `apm-core` the config is already loaded by callers; pass `config: &Config` directly instead. Update all call sites in `apm-server` to load config before calling (they already have access to `root`).
+
+**Steps:**
+
+1. **`apm-core/src/ticket/ticket_util.rs`**
+   - Add `#[derive(serde::Serialize, Clone, Debug)]` struct `BlockingDep { pub id: String, pub state: String }`.
+   - Add `pub fn compute_blocking_deps(ticket: &Ticket, all_tickets: &[Ticket], config: &Config) -> Vec<BlockingDep>` — body is identical to the server version minus the `Config::load` call (caller supplies `config`).
+   - Add unit tests: one where all deps are satisfied (returns empty), one where a dep is in a non-terminal state (returns it), one where `depends_on` is absent (returns empty).
+
+2. **`apm-core/src/state.rs`**
+   - Add `#[derive(serde::Serialize, Clone, Debug)]` struct `TransitionOption { pub to: String, pub label: String, pub warning: Option<String> }`.
+   - Add `pub fn compute_valid_transitions(state: &str, config: &Config) -> Vec<TransitionOption>` — body is identical to the server version minus the `Config::load` call.
+   - Add unit tests: one for a state with transitions (returns expected options, default label applied when `tr.label` is empty), one for an unknown state (returns empty vec).
+
+3. **`apm-core/src/lib.rs`**
+   - Re-export `BlockingDep` and `compute_blocking_deps` via `pub use ticket::...` (or whatever the existing re-export path is).
+   - Re-export `TransitionOption` and `compute_valid_transitions` from `state`.
+
+4. **`apm-server/src/main.rs`**
+   - Delete the local `BlockingDep`, `TransitionOption` struct definitions (lines ~57-98).
+   - Delete the local `compute_blocking_deps` and `compute_valid_transitions` fn definitions (lines ~416-469).
+   - At each of the 6 call sites (handlers: GET /tickets/{id}, PUT /transition/{id}, PUT /update-fields/{id}):
+     - Load `config` with `Config::load(&root)` if not already available in scope.
+     - Replace `compute_blocking_deps(ticket, &tickets, &root)` → `apm_core::compute_blocking_deps(ticket, &tickets, &config)`.
+     - Replace `compute_valid_transitions(&root, &state_str)` → `apm_core::compute_valid_transitions(&state_str, &config)`.
+   - Adjust any `use` imports accordingly.
+
+**Constraints:**
+- `serde` is already a dependency of `apm-core`, so deriving `Serialize` on the new structs requires no new dependencies.
+- The server currently calls `compute_valid_transitions` inside `tokio::task::spawn_blocking`; after the move the function is still synchronous (no I/O), but callers will now need to load config outside the closure and pass it in — or load config inside the closure if the closure needs it. Keep the spawn_blocking wrapping unchanged; move the `Config::load` call inside the closure.
+- Do not change the JSON shape of any HTTP response — `BlockingDep` and `TransitionOption` must serialize identically to before (field names, optionality of `warning`).
 
 ### Open questions
 
