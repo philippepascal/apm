@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{git, ticket};
+use apm_core::{git, ticket, ticket_fmt};
 use chrono::Utc;
 use std::path::Path;
 use crate::ctx::CmdContext;
@@ -30,7 +30,7 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String, no_aggressiv
         .frontmatter
         .branch
         .clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(

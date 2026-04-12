@@ -1,4 +1,4 @@
-use crate::{config::Config, git, ticket};
+use crate::{config::Config, git, ticket, ticket_fmt};
 use anyhow::Result;
 use chrono::{DateTime, NaiveDate, Utc};
 use std::path::{Path, PathBuf};
@@ -129,7 +129,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
             .frontmatter
             .branch
             .clone()
-            .or_else(|| git::branch_name_from_path(&t.path))
+            .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
             .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
 
         let id = t.frontmatter.id.clone();

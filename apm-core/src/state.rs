@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::{config::{CompletionStrategy, Config}, git, ticket};
+use crate::{config::{CompletionStrategy, Config}, git, ticket, ticket_fmt};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
@@ -129,7 +129,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         .frontmatter
         .branch
         .clone()
-        .or_else(|| git::branch_name_from_path(&t.path))
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
         .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(
@@ -155,18 +155,18 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             if let Err(e) = git::push_branch_tracking(root, &branch) {
                 warnings.push(format!("warning: could not push {branch}: {e}"));
             }
-            merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)?;
+            git::merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch_tracking(root, &branch)?;
             if let Some(ref target) = t.frontmatter.target_branch {
-                merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
+                git::merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
             } else {
                 gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &mut messages)?;
             }
         }
         CompletionStrategy::Pull => {
-            pull_default(root, &config.project.default_branch, &mut warnings)?;
+            git::pull_default(root, &config.project.default_branch, &mut warnings)?;
         }
         CompletionStrategy::None => {
             if aggressive {
@@ -227,96 +227,6 @@ fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, id: &
     Ok(())
 }
 
-fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool, messages: &mut Vec<String>, _warnings: &mut Vec<String>) -> Result<()> {
-    let _ = std::process::Command::new("git")
-        .args(["fetch", "origin", default_branch])
-        .current_dir(root)
-        .status();
-
-    let current = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .current_dir(root)
-        .output()?;
-    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
-
-    let merge_dir = if current_branch == default_branch {
-        root.to_path_buf()
-    } else {
-        let worktrees_base = root.join(&config.worktrees.dir);
-        git::ensure_worktree(root, &worktrees_base, default_branch)?
-    };
-
-    let out = std::process::Command::new("git")
-        .args(["merge", "--no-ff", branch, "--no-edit"])
-        .current_dir(&merge_dir)
-        .output()?;
-
-    if !out.status.success() {
-        let _ = std::process::Command::new("git")
-            .args(["merge", "--abort"])
-            .current_dir(&merge_dir)
-            .status();
-        bail!(
-            "merge conflict — resolve manually and push: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-
-    if skip_push {
-        messages.push(format!("Merged {branch} into {default_branch} (local only)."));
-    } else {
-        git::push_branch(&merge_dir, default_branch)?;
-        messages.push(format!("Merged {branch} into {default_branch} and pushed to origin."));
-    }
-    Ok(())
-}
-
-fn pull_default(root: &Path, default_branch: &str, warnings: &mut Vec<String>) -> Result<()> {
-    let fetch = std::process::Command::new("git")
-        .args(["fetch", "origin", default_branch])
-        .current_dir(root)
-        .output();
-
-    match fetch {
-        Err(e) => {
-            warnings.push(format!("warning: fetch failed: {e:#}"));
-            return Ok(());
-        }
-        Ok(out) if !out.status.success() => {
-            warnings.push(format!(
-                "warning: fetch failed: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            ));
-            return Ok(());
-        }
-        _ => {}
-    }
-
-    let current = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .current_dir(root)
-        .output()?;
-    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
-
-    let merge_dir = if current_branch == default_branch {
-        root.to_path_buf()
-    } else {
-        git::find_worktree_for_branch(root, default_branch)
-            .unwrap_or_else(|| root.to_path_buf())
-    };
-
-    let remote_ref = format!("origin/{default_branch}");
-    let out = std::process::Command::new("git")
-        .args(["merge", "--ff-only", &remote_ref])
-        .current_dir(&merge_dir)
-        .output()?;
-
-    if !out.status.success() {
-        warnings.push(format!("warning: could not fast-forward {default_branch} — pull manually"));
-    }
-
-    Ok(())
-}
 
 pub fn ensure_amendment_section(body: &mut String) {
     if body.contains("### Amendment requests") {

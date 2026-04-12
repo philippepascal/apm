@@ -1,4 +1,4 @@
-mod ticket_fmt;
+pub mod ticket_fmt;
 mod ticket_util;
 
 pub use ticket_fmt::*;

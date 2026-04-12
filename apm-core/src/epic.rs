@@ -81,7 +81,7 @@ mod tests {
 }
 
 pub fn create(root: &Path, title: &str) -> Result<String> {
-    let id = crate::git::gen_hex_id();
+    let id = crate::ticket_fmt::gen_hex_id();
     let slug = crate::ticket::slugify(title);
     let branch = format!("epic/{id}-{slug}");
 

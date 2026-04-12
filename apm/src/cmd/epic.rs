@@ -278,7 +278,7 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
                 t.path.file_name().unwrap().to_string_lossy()
             );
             let ticket_branch = t.frontmatter.branch.clone()
-                .or_else(|| apm_core::git::branch_name_from_path(&t.path))
+                .or_else(|| apm_core::ticket_fmt::branch_name_from_path(&t.path))
                 .unwrap_or_else(|| format!("ticket/{}", t.frontmatter.id));
             apm_core::git::commit_to_branch(
                 root,
