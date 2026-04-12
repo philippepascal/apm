@@ -303,60 +303,6 @@ impl From<tokio::task::JoinError> for AppError {
     }
 }
 
-fn compute_blocking_deps(
-    ticket: &apm_core::ticket::Ticket,
-    all_tickets: &[apm_core::ticket::Ticket],
-    root: &PathBuf,
-) -> Vec<BlockingDep> {
-    let deps = match &ticket.frontmatter.depends_on {
-        Some(d) if !d.is_empty() => d,
-        _ => return vec![],
-    };
-    let Ok(config) = apm_core::config::Config::load(root) else {
-        return vec![];
-    };
-    let state_map: std::collections::HashMap<&str, &str> = all_tickets
-        .iter()
-        .map(|t| (t.frontmatter.id.as_str(), t.frontmatter.state.as_str()))
-        .collect();
-    deps.iter()
-        .filter_map(|dep_id| {
-            state_map.get(dep_id.as_str()).and_then(|&s| {
-                if apm_core::ticket::dep_satisfied(s, None, &config) {
-                    None
-                } else {
-                    Some(BlockingDep { id: dep_id.clone(), state: s.to_string() })
-                }
-            })
-        })
-        .collect()
-}
-
-fn compute_valid_transitions(root: &PathBuf, state: &str) -> Vec<TransitionOption> {
-    let Ok(config) = apm_core::config::Config::load(root) else {
-        return vec![];
-    };
-    config
-        .workflow
-        .states
-        .iter()
-        .find(|s| s.id == state)
-        .map(|s| {
-            s.transitions
-                .iter()
-                .map(|tr| TransitionOption {
-                    to: tr.to.clone(),
-                    label: if tr.label.is_empty() {
-                        format!("-> {}", tr.to)
-                    } else {
-                        tr.label.clone()
-                    },
-                    warning: tr.warning.clone(),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
 
 async fn load_tickets(state: &AppState) -> Result<Vec<apm_core::ticket::Ticket>, AppError> {
     match &state.source {
@@ -747,9 +693,18 @@ async fn get_ticket(
                 Some(root) => {
                     let root = root.clone();
                     let ticket_ref = tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap();
-                    let deps = compute_blocking_deps(ticket_ref, &tickets, &root);
+                    let deps = match apm_core::config::Config::load(&root) {
+                        Ok(config) => apm_core::compute_blocking_deps(ticket_ref, &tickets, &config),
+                        Err(_) => vec![],
+                    };
                     let state_str = ticket_ref.frontmatter.state.clone();
-                    let transitions = tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
+                    let transitions = tokio::task::spawn_blocking(move || {
+                        let config = match apm_core::config::Config::load(&root) {
+                            Ok(c) => c,
+                            Err(_) => return vec![],
+                        };
+                        apm_core::compute_valid_transitions(&state_str, &config)
+                    }).await?;
                     (deps, transitions)
                 }
             };
@@ -812,17 +767,24 @@ async fn transition_ticket(
             match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
                 Err(e) => Err(AppError(e)),
                 Ok(full_id) => {
-                    let blocking_deps = compute_blocking_deps(
-                        tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
-                        &tickets,
-                        &root,
-                    );
+                    let blocking_deps = match apm_core::config::Config::load(&root) {
+                        Ok(config) => apm_core::compute_blocking_deps(
+                            tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
+                            &tickets,
+                            &config,
+                        ),
+                        Err(_) => vec![],
+                    };
                     let ticket =
                         tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
                     let state_str = ticket.frontmatter.state.clone();
                     let root2 = root.clone();
                     let valid_transitions = tokio::task::spawn_blocking(move || {
-                        compute_valid_transitions(&root2, &state_str)
+                        let config = match apm_core::config::Config::load(&root2) {
+                            Ok(c) => c,
+                            Err(_) => return vec![],
+                        };
+                        apm_core::compute_valid_transitions(&state_str, &config)
                     })
                     .await?;
                     let raw = ticket.serialize().unwrap_or_default();
@@ -972,11 +934,14 @@ async fn patch_ticket(
         }
         Ok(id) => id,
     };
-    let blocking_deps = compute_blocking_deps(
-        tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
-        &tickets,
-        &root,
-    );
+    let blocking_deps = match apm_core::config::Config::load(&root) {
+        Ok(config) => apm_core::compute_blocking_deps(
+            tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap(),
+            &tickets,
+            &config,
+        ),
+        Err(_) => vec![],
+    };
     let ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
     let branch = match ticket.frontmatter.branch.clone() {
         Some(b) => b,
@@ -1034,8 +999,14 @@ async fn patch_ticket(
     .await??;
 
     let state_str = updated.frontmatter.state.clone();
-    let valid_transitions =
-        tokio::task::spawn_blocking(move || compute_valid_transitions(&root, &state_str)).await?;
+    let valid_transitions = tokio::task::spawn_blocking(move || {
+        let config = match apm_core::config::Config::load(&root) {
+            Ok(c) => c,
+            Err(_) => return vec![],
+        };
+        apm_core::compute_valid_transitions(&state_str, &config)
+    })
+    .await?;
     let raw = updated.serialize().unwrap_or_default();
     let owner = updated.frontmatter.owner.clone();
     let mut fm = updated.frontmatter;
