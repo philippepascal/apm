@@ -40,6 +40,7 @@ Note on `parse_epic_branch`: this function duplicates the slug-to-title logic in
 ### Out of scope
 
 - Extracting non-epic handlers (auth, agents, workers, tickets) — tickets are covered by 7bb8eacb
+- Moving `EpicSummary`, `EpicDetailResponse`, or `CreateEpicRequest` — these are already moved to `models.rs` by prerequisite a6bc1326 and are imported from `crate::models` here
 - Renaming any function, struct, or route path
 - Changing any handler's logic or behaviour
 - Moving `AppError` or `AppState` out of `main.rs`
