@@ -43,7 +43,11 @@ The desired state is a single `fn update_settings_json(...)` helper that both ca
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing which entries are in `APM_ALLOW_ENTRIES` or `APM_USER_ALLOW_ENTRIES`
+- Moving `update_settings_json` out of `init.rs` into a shared module (separate refactor ticket)
+- Adding tests for the settings-patching logic (no tests exist today; adding them is a separate concern)
+- Changing the interactive prompt UX (confirm vs. auto-apply, etc.)
+- Any changes to `apm init` behaviour other than the internal deduplication
 
 ### Approach
 
