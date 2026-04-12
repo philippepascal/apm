@@ -41,7 +41,7 @@ This ticket adds the nine missing helpers. A separate ticket will update each ca
 - [x] `git_util::is_worktree_dirty(path: &Path) -> bool` returns `true` when `git status --porcelain` produces any output for the given path
 - [x] `git_util::is_worktree_dirty` returns `false` when the working tree is clean
 - [x] `git_util::local_branch_exists(root: &Path, branch: &str) -> bool` returns `true` when `refs/heads/<branch>` resolves
-- [ ] `git_util::local_branch_exists` returns `false` when the branch does not exist locally
+- [x] `git_util::local_branch_exists` returns `false` when the branch does not exist locally
 - [ ] `git_util::delete_local_branch(root: &Path, branch: &str, warnings: &mut Vec<String>)` deletes the branch and does not push to warnings on success
 - [ ] `git_util::delete_local_branch` pushes a warning message (not a hard error) when deletion fails
 - [ ] `git_util::prune_remote_tracking(root: &Path, branch: &str)` runs `git branch -dr origin/<branch>` and silently ignores any failure
