@@ -1,7 +1,7 @@
 +++
 id = "de5c5a31"
 title = "Deduplicate init.rs settings manipulation functions"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de5c5a31-deduplicate-init-rs-settings-manipulatio"
 created_at = "2026-04-12T09:02:35.167384Z"
-updated_at = "2026-04-12T09:08:55.488094Z"
+updated_at = "2026-04-12T09:12:19.118254Z"
 epic = "1b029f52"
 target_branch = "epic/1b029f52-refactor-apm-cli-code-organization"
 +++
@@ -54,3 +54,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T09:02Z | — | new | philippepascal |
 | 2026-04-12T09:08Z | new | groomed | apm |
+| 2026-04-12T09:12Z | groomed | in_design | philippepascal |
