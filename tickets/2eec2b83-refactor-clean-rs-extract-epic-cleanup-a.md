@@ -39,7 +39,7 @@ The desired end-state: `clean.rs` owns only ticket-level cleanup; `epic.rs` owns
 - [x] Imports in `clean.rs` that were only needed by `run_epic_clean()` are removed
 - [x] `apm clean --epics` lists done epic branches and prompts for each deletion, unchanged from before
 - [x] `apm clean --epics --dry-run` prints what would be deleted without making any changes
-- [ ] `apm clean --epics --yes` skips all prompts and deletes without asking
+- [x] `apm clean --epics --yes` skips all prompts and deletes without asking
 - [ ] `cargo test` passes across all crates
 
 ### Out of scope
