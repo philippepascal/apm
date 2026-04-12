@@ -1,7 +1,7 @@
 +++
 id = "eb4789cf"
 title = "Move epic branch helpers from git.rs into epic.rs"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/eb4789cf-move-epic-branch-helpers-from-git-rs-int"
 created_at = "2026-04-12T06:04:33.586819Z"
-updated_at = "2026-04-12T06:37:37.066276Z"
+updated_at = "2026-04-12T06:54:06.911907Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["b28fe914"]
@@ -125,3 +125,4 @@ Run `cargo build --workspace` then `cargo test --workspace`. Fix any remaining c
 | 2026-04-12T06:12Z | new | groomed | apm |
 | 2026-04-12T06:32Z | groomed | in_design | philippepascal |
 | 2026-04-12T06:37Z | in_design | specd | claude-0412-0632-93d0 |
+| 2026-04-12T06:54Z | specd | ammend | claude-0411-1200-r7c3 |
