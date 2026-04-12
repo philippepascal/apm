@@ -26,7 +26,7 @@ Having `resolve_caller_name()` in `start.rs` means callers in `apm/src/cmd/next.
 
 - [x] `apm_core::config::resolve_caller_name()` exists and is publicly exported from `config.rs`
 - [x] `apm_core::start::resolve_caller_name()` no longer exists (removed from `start.rs`)
-- [ ] `apm/src/cmd/next.rs` calls `apm_core::config::resolve_caller_name()` instead of `apm_core::start::resolve_caller_name()`
+- [x] `apm/src/cmd/next.rs` calls `apm_core::config::resolve_caller_name()` instead of `apm_core::start::resolve_caller_name()`
 - [ ] `apm/src/main.rs` calls `apm_core::config::resolve_caller_name()` instead of `apm_core::start::resolve_caller_name()`
 - [ ] Internal callers in `start.rs` use `crate::config::resolve_caller_name()` instead of the local function
 - [ ] The three unit tests for `resolve_caller_name()` (`prefers_apm_agent_name`, `falls_back_to_user`, `defaults_to_apm`) are present in `config.rs` and pass
