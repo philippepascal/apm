@@ -41,7 +41,8 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 2 for the full plan.
 
 - Behaviour changes to any moved function — this is a pure code relocation
 - Creating `ticket_fmt.rs` — that is done by ticket 4660b156 (a listed prerequisite)
-- Epic business-logic work beyond receiving the four epic functions — handled by ticket eb4789cf
+- Creating `worktree.rs` and moving worktree functions (`find_worktree_for_branch`, `list_ticket_worktrees`, `ensure_worktree`, `add_worktree`, `remove_worktree`, `sync_agent_dirs`, and their private helpers `clean_agent_dirs`, `is_tracked`, `copy_dir_recursive`) — owned by ticket 4f67992b, which depends on this one
+- Moving epic helpers (`find_epic_branch`, `find_epic_branches`, `epic_branches`, `create_epic_branch`) to `epic.rs` — owned by ticket eb4789cf, which depends on this one
 - Further decomposition of `git_util.rs` beyond the functions listed here
 - Updating `REFACTOR-CORE.md` or any other documentation
 - Changing public API signatures or return types of any moved function
