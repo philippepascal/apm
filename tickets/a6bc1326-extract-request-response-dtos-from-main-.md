@@ -26,15 +26,15 @@ This is foundational work. Subsequent tickets that split handlers out of `main.r
 
 ### Acceptance criteria
 
-- [ ] `apm-server/src/models.rs` exists and contains all 24 DTOs: `TransitionOption`, `TicketResponse`, `TicketsEnvelope`, `BlockingDep`, `TicketDetailResponse`, `BatchFailure`, `BatchResult`, `EpicSummary`, `EpicDetailResponse`, `RegisterChallengeResponse`, `LoginChallengeResponse`, `TransitionRequest`, `BatchTransitionRequest`, `BatchPriorityRequest`, `PutBodyRequest`, `PatchTicketRequest`, `CreateTicketRequest`, `CreateEpicRequest`, `CleanRequest`, `ListTicketsQuery`, `RegisterChallengeRequest`, `RegisterCompleteRequest`, `LoginChallengeRequest`, `LoginCompleteRequest`
-- [ ] Every struct in `models.rs` is declared `pub`
-- [ ] All original `#[derive(...)]` attributes on each struct are preserved exactly
-- [ ] `main.rs` declares `mod models;` in its module block
-- [ ] `main.rs` imports the DTOs via `use models::*;` (or equivalent explicit imports) so all existing handler code compiles without changes
-- [ ] None of the 24 DTO struct definitions remain in `main.rs`
-- [ ] `AppState`, `TicketSource`, and `AppError` remain in `main.rs` (not moved)
-- [ ] `cargo build` in `apm-server/` succeeds with no errors
-- [ ] `cargo test` in `apm-server/` passes (no regressions)
+- [x] `apm-server/src/models.rs` exists and contains all 24 DTOs: `TransitionOption`, `TicketResponse`, `TicketsEnvelope`, `BlockingDep`, `TicketDetailResponse`, `BatchFailure`, `BatchResult`, `EpicSummary`, `EpicDetailResponse`, `RegisterChallengeResponse`, `LoginChallengeResponse`, `TransitionRequest`, `BatchTransitionRequest`, `BatchPriorityRequest`, `PutBodyRequest`, `PatchTicketRequest`, `CreateTicketRequest`, `CreateEpicRequest`, `CleanRequest`, `ListTicketsQuery`, `RegisterChallengeRequest`, `RegisterCompleteRequest`, `LoginChallengeRequest`, `LoginCompleteRequest`
+- [x] Every struct in `models.rs` is declared `pub`
+- [x] All original `#[derive(...)]` attributes on each struct are preserved exactly
+- [x] `main.rs` declares `mod models;` in its module block
+- [x] `main.rs` imports the DTOs via `use models::*;` (or equivalent explicit imports) so all existing handler code compiles without changes
+- [x] None of the 24 DTO struct definitions remain in `main.rs`
+- [x] `AppState`, `TicketSource`, and `AppError` remain in `main.rs` (not moved)
+- [x] `cargo build` in `apm-server/` succeeds with no errors
+- [x] `cargo test` in `apm-server/` passes (no regressions)
 
 ### Out of scope
 
