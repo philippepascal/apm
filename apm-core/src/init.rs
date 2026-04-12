@@ -120,8 +120,8 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
     write_default(&apm_dir.join("workflow.toml"), default_workflow_toml(), ".apm/workflow.toml", &mut messages)?;
     write_default(&apm_dir.join("ticket.toml"), default_ticket_toml(), ".apm/ticket.toml", &mut messages)?;
     write_default(&apm_dir.join("agents.md"), default_agents_md(), ".apm/agents.md", &mut messages)?;
-    write_default(&apm_dir.join("apm.spec-writer.md"), include_str!("apm.spec-writer.md"), ".apm/apm.spec-writer.md", &mut messages)?;
-    write_default(&apm_dir.join("apm.worker.md"), include_str!("apm.worker.md"), ".apm/apm.worker.md", &mut messages)?;
+    write_default(&apm_dir.join("apm.spec-writer.md"), include_str!("default/apm.spec-writer.md"), ".apm/apm.spec-writer.md", &mut messages)?;
+    write_default(&apm_dir.join("apm.worker.md"), include_str!("default/apm.worker.md"), ".apm/apm.worker.md", &mut messages)?;
     ensure_claude_md(root, ".apm/agents.md", &mut messages)?;
     let gitignore = root.join(".gitignore");
     ensure_gitignore(&gitignore, &mut messages)?;
@@ -231,7 +231,7 @@ fn ensure_claude_md(root: &Path, agents_path: &str, messages: &mut Vec<String>) 
 }
 
 fn default_agents_md() -> &'static str {
-    include_str!("apm.agents.md")
+    include_str!("default/apm.agents.md")
 }
 
 #[cfg(target_os = "macos")]
@@ -310,11 +310,11 @@ fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()> {
 }
 
 fn default_workflow_toml() -> &'static str {
-    include_str!("workflow.toml")
+    include_str!("default/workflow.toml")
 }
 
 fn default_ticket_toml() -> &'static str {
-    include_str!("ticket.toml")
+    include_str!("default/ticket.toml")
 }
 
 fn maybe_initial_commit(root: &Path, messages: &mut Vec<String>) -> Result<()> {
