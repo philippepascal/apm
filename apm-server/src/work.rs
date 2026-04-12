@@ -112,9 +112,7 @@ pub async fn post_work_start(
         None => return Ok(Json(serde_json::json!({"status": "stopped"}))),
     };
 
-    let root_clone = root.clone();
-    let config =
-        tokio::task::spawn_blocking(move || apm_core::config::Config::load(&root_clone)).await??;
+    let config = crate::util::load_config(root.clone()).await?;
 
     let max_concurrent = {
         let ov = state.max_concurrent_override.lock().await;
@@ -178,7 +176,7 @@ pub async fn get_work_dry_run(
         }
     };
     let override_val = *state.max_concurrent_override.lock().await;
-    let candidates = tokio::task::spawn_blocking(move || {
+    let candidates = crate::util::blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         let pw = config.workflow.prioritization.priority_weight;
         let ew = config.workflow.prioritization.effort_weight;
@@ -229,8 +227,7 @@ pub async fn get_work_dry_run(
             })
             .collect();
         Ok::<_, anyhow::Error>(result)
-    })
-    .await??;
+    }).await?;
     Ok(Json(DryRunResponse { candidates }))
 }
 
