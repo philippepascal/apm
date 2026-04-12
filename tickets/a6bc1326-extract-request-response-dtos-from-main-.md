@@ -18,11 +18,11 @@ target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 
 ### Problem
 
-`apm-server/src/main.rs` (4,176 lines) defines 30+ request/response structs inline alongside handler logic. Examples include `TicketPatch`, `BatchUpdateRequest`, `ListTicketsQuery`, `EpicResponse`, `QueueResponse`, `LoginRequest`, `OtpVerifyRequest`, `WebAuthnRegisterStart`, and many more.
+`apm-server/src/main.rs` (4,176 lines) defines 24 request/response structs inline, interleaved with handler logic and infrastructure code. These DTOs span multiple domains — tickets, epics, auth/WebAuthn — but are all colocated in a single file, making them hard to locate and impossible to import from future handler modules.
 
-These DTOs are scattered throughout the file, interleaved with handler functions, making it hard to find or reuse them. They should be extracted into a dedicated `models.rs` (or `models/requests.rs` + `models/responses.rs`) module.
+The desired state is a dedicated `models.rs` sibling module containing all 24 DTOs, with `main.rs` declaring the module and importing from it. No other source files currently reference these structs, so the extraction is self-contained.
 
-This is foundational work — subsequent tickets that extract handlers from main.rs will need the DTOs to already be in a shared location so multiple handler modules can import them.
+This is foundational work. Subsequent tickets that split handlers out of `main.rs` into their own modules will need to `use crate::models::*` (or specific imports). If the DTOs remain in `main.rs` when those tickets land, handler modules will be unable to reference them without a circular dependency.
 
 ### Acceptance criteria
 
