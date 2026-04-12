@@ -41,7 +41,29 @@ Having `resolve_caller_name()` in `start.rs` means callers in `apm/src/cmd/next.
 
 ### Approach
 
-How the implementation will work.
+**Files that change:**
+
+- `apm-core/src/start.rs` — source of the move
+- `apm-core/src/config.rs` — destination of the move
+- `apm/src/cmd/next.rs` — external caller, update import path
+- `apm/src/main.rs` — external caller, update import path
+
+**Steps:**
+
+1. **`apm-core/src/config.rs`** — Append `resolve_caller_name()` near the end of the file, after `try_github_username()`. Copy the full doc comment and function body verbatim from `start.rs` lines 62–76. Add three unit tests (`prefers_apm_agent_name`, `falls_back_to_user`, `defaults_to_apm`) to the existing `#[cfg(test)]` block, copied from `start.rs` tests.
+
+2. **`apm-core/src/start.rs`** — Delete the `resolve_caller_name()` function (lines 62–76). Update the two call sites:
+   - Line ~400 in `run_next()`: `resolve_caller_name()` → `crate::config::resolve_caller_name()`
+   - Line ~571 in `spawn_next_worker()`: same substitution
+   - In the test module `use super::{resolve_caller_name, ...}` — remove `resolve_caller_name` from the import; update the three test functions to call `crate::config::resolve_caller_name()` or remove them entirely (they now live in `config.rs`).
+
+3. **`apm/src/cmd/next.rs` line ~19** — Change `apm_core::start::resolve_caller_name()` to `apm_core::config::resolve_caller_name()`.
+
+4. **`apm/src/main.rs` line ~784** — Change `apm_core::start::resolve_caller_name()` to `apm_core::config::resolve_caller_name()`.
+
+5. Run `cargo test --workspace` to confirm no regressions.
+
+**Constraints:** No behaviour change — function signature, doc comment, and resolution order must be preserved exactly.
 
 ### Open questions
 
