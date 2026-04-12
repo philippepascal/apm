@@ -50,13 +50,14 @@ Note on `parse_epic_branch`: this function duplicates the slug-to-title logic in
 
 ### Approach
 
-This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that point `apm-server/src/handlers/mod.rs` and `apm-server/src/handlers/tickets.rs` already exist. The following steps extend that structure.
+This ticket runs after 7bb8eacb (ticket-handler extraction) and a6bc1326 (models extraction) are merged. By that point `apm-server/src/handlers/mod.rs` and `apm-server/src/handlers/tickets.rs` already exist, and `EpicSummary`, `EpicDetailResponse`, `CreateEpicRequest` live in `apm-server/src/models.rs`.
 
-**Prerequisite state assumed from 7bb8eacb:**
+**Prerequisite state assumed:**
 - `handlers/mod.rs` exists with at least `pub mod tickets;`
 - `handlers/tickets.rs` contains `TicketResponse`, `extract_section`, and `load_tickets` as `pub(crate)` items
 - `main.rs` declares `mod handlers;` and calls ticket handlers via `handlers::tickets::`
-- `find_epic_branch` is still in `main.rs` (it was left there as a `crate`-visible helper for `create_ticket`, which lives in `handlers/tickets.rs` and calls it as `crate::find_epic_branch`)
+- `models.rs` defines `EpicSummary`, `EpicDetailResponse`, `CreateEpicRequest`
+- `find_epic_branch` is still in `main.rs` (left there as a `crate`-visible helper for `create_ticket` in `handlers/tickets.rs`)
 
 ---
 
@@ -64,23 +65,18 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that p
 
 2. **Add `pub mod epics;` to `handlers/mod.rs`** alongside the existing `pub mod tickets;` line.
 
-3. **Move structs to `handlers/epics.rs`** — cut from `main.rs` with all `#[derive]` / `#[serde]` attributes, paste into `epics.rs`:
-   - `EpicSummary` (lines ~165–172)
-   - `EpicDetailResponse` (lines ~174–179)
-   - `CreateEpicRequest` (lines ~181–184)
-
-4. **Move helper functions to `handlers/epics.rs`** — cut from `main.rs`, paste into `epics.rs`:
-   - `find_epic_branch` (lines ~161–163) — make it `pub(crate)` so `handlers/tickets.rs` can continue to call it (see step 8)
+3. **Move helper functions to `handlers/epics.rs`** — cut from `main.rs`, paste into `epics.rs`:
+   - `find_epic_branch` (lines ~161–163) — make it `pub(crate)` so `handlers/tickets.rs` can continue to call it (see step 7)
    - `parse_epic_branch` (lines ~186–203)
    - `derive_epic_state` (lines ~205–249)
    - `build_epic_summary` (lines ~251–273)
 
-5. **Move handler functions to `handlers/epics.rs`**:
+4. **Move handler functions to `handlers/epics.rs`**:
    - `list_epics` (lines ~275–295)
    - `create_epic` (lines ~297–325)
    - `get_epic` (lines ~327–381)
 
-6. **Move epic tests to `handlers/epics.rs`** — cut the following test functions from the `#[cfg(test)]` block in `main.rs` and place them in a `#[cfg(test)] mod tests { ... }` block inside `epics.rs`. Tests to move:
+5. **Move epic tests to `handlers/epics.rs`** — cut the following test functions from the `#[cfg(test)]` block in `main.rs` and place them in a `#[cfg(test)] mod tests { ... }` block inside `epics.rs`. Tests to move:
    - `list_epics_in_memory_returns_501` (line ~2999)
    - `create_epic_missing_title_returns_400` (line ~3014)
    - `create_epic_empty_title_returns_400` (line ~3034)
@@ -92,7 +88,7 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that p
 
    The test helpers `build_app`, `build_app_with_tickets`, `test_tickets`, `git_setup` remain in `main.rs`; import them via `crate::tests::*` or equivalent.
 
-7. **Add imports to `handlers/epics.rs`**:
+6. **Add imports to `handlers/epics.rs`**:
    ```rust
    use std::collections::HashMap;
    use std::sync::Arc;
@@ -104,11 +100,12 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that p
    };
    use crate::{AppError, AppState};
    use crate::handlers::tickets::{extract_section, load_tickets, TicketResponse};
+   use crate::models::{EpicSummary, EpicDetailResponse, CreateEpicRequest};
    ```
 
-8. **Update `handlers/tickets.rs`** — `create_ticket` currently calls `crate::find_epic_branch`. After step 4 above moves that function, change the call site to `crate::handlers::epics::find_epic_branch` (or add `use crate::handlers::epics::find_epic_branch;` at the top of tickets.rs).
+7. **Update `handlers/tickets.rs`** — `create_ticket` currently calls `crate::find_epic_branch`. After step 3 above moves that function, change the call site to `crate::handlers::epics::find_epic_branch` (or add `use crate::handlers::epics::find_epic_branch;` at the top of tickets.rs).
 
-9. **Update route registrations in `main.rs`** — replace bare handler names with fully-qualified paths (or add a use import). Both occurrences at lines ~1782–1783 and ~1845–1846 change from:
+8. **Update route registrations in `main.rs`** — replace bare handler names with fully-qualified paths (or add a use import). Both occurrences change from:
    ```rust
    .route("/api/epics", get(list_epics).post(create_epic))
    .route("/api/epics/:id", get(get_epic))
@@ -119,18 +116,18 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that p
    .route("/api/epics/:id", get(handlers::epics::get_epic))
    ```
 
-10. **Remove now-unused imports from `main.rs`** — any `use` items that were only needed by the moved code (e.g. `apm_core::epic::epic_branches`, `apm_core::epic::create_epic_branch`) should be removed to avoid dead-code warnings. Keep any that are still used by remaining code.
+9. **Remove now-unused imports from `main.rs`** — any `use` items that were only needed by the moved code (e.g. `apm_core::epic::epic_branches`, `apm_core::epic::create_epic_branch`) should be removed to avoid dead-code warnings. Keep any that are still used by remaining code.
 
-11. **Compile and fix**:
+10. **Compile and fix**:
     ```
     cargo build -p apm-server
     ```
     Common issues to watch for:
     - `TicketResponse`, `extract_section`, `load_tickets` visibility — they must be `pub(crate)` in `handlers/tickets.rs`
-    - `EpicDetailResponse` references `TicketResponse` from a sibling module — the import in step 7 covers this
+    - `EpicDetailResponse` references `TicketResponse` from a sibling module — the import in step 6 covers this
     - Test helpers in `main.rs` tests block may need to be `pub(crate)` for `handlers/epics.rs` tests to access them
 
-12. **Run tests**:
+11. **Run tests**:
     ```
     cargo test -p apm-server
     ```
@@ -139,7 +136,7 @@ This ticket runs after 7bb8eacb (ticket-handler extraction) is merged. By that p
 - Do not rename any function, struct, or route path
 - Do not change any function signatures or handler logic
 - `AppError` and `AppState` stay in `main.rs`
-- Line numbers are approximate against the pre-7bb8eacb state; verify against the actual file after the dependency is merged
+- Line numbers are approximate against the pre-a6bc1326 / pre-7bb8eacb state; verify against the actual file after both dependencies are merged
 
 ### Open questions
 
