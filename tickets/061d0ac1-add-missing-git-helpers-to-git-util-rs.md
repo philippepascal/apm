@@ -1,7 +1,7 @@
 +++
 id = "061d0ac1"
 title = "Add missing git helpers to git_util.rs"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/061d0ac1-add-missing-git-helpers-to-git-util-rs"
 created_at = "2026-04-12T17:29:22.472769Z"
-updated_at = "2026-04-12T17:36:18.564167Z"
+updated_at = "2026-04-12T17:36:25.643188Z"
 epic = "6062f74f"
 target_branch = "epic/6062f74f-consolidate-git-operations-into-git-util"
 +++
@@ -122,3 +122,4 @@ Run `git ls-files --error-unmatch <path>` with `current_dir(root)`, suppressing 
 | 2026-04-12T17:29Z | — | new | philippepascal |
 | 2026-04-12T17:30Z | new | groomed | apm |
 | 2026-04-12T17:31Z | groomed | in_design | philippepascal |
+| 2026-04-12T17:36Z | in_design | specd | claude-0412-1732-b9f8 |
