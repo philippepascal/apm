@@ -1,7 +1,7 @@
 +++
 id = "b529fec0"
 title = "Replace raw git calls in clean.rs with git_util helpers"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b529fec0-replace-raw-git-calls-in-clean-rs-with-g"
 created_at = "2026-04-12T17:29:27.980274Z"
-updated_at = "2026-04-12T17:54:36.372626Z"
+updated_at = "2026-04-12T17:59:56.981564Z"
 epic = "6062f74f"
 target_branch = "epic/6062f74f-consolidate-git-operations-into-git-util"
 depends_on = ["061d0ac1"]
@@ -109,3 +109,4 @@ Remove `use std::process::Command;` from clean.rs imports. Verify with cargo bui
 | 2026-04-12T17:36Z | groomed | in_design | philippepascal |
 | 2026-04-12T17:41Z | in_design | specd | claude-0412-1736-a938 |
 | 2026-04-12T17:54Z | specd | ready | apm |
+| 2026-04-12T17:59Z | ready | in_progress | philippepascal |
