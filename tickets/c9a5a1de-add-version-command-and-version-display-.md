@@ -25,7 +25,7 @@ The version should be available both from the CLI (`apm version` or `apm -v`) an
 - [x] `apm version` prints the version string to stdout and exits 0
 - [x] The version string includes the semver version matching `apm/Cargo.toml` (e.g. `apm 0.1.3`)
 - [x] The version string includes a build type label: `dev` for debug builds, `release` for release builds
-- [ ] `apm --version` (Clap built-in `-V`) also prints the version
+- [x] `apm --version` (Clap built-in `-V`) also prints the version
 - [ ] `GET /api/version` returns `{"version":"<semver>","build":"<dev|release>"}` with HTTP 200
 - [ ] The "Supervisor" title span in the UI is clickable (cursor changes to pointer)
 - [ ] Clicking the title toggles a version badge inline next to the title (e.g. `Supervisor · v0.1.3 (release)`)
