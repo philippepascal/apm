@@ -1,5 +1,5 @@
 use axum::{
-    extract::{ConnectInfo, Path, State},
+    extract::{ConnectInfo, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post, put},
@@ -27,9 +27,10 @@ mod workers;
 
 use models::*;
 use handlers::tickets::{
-    batch_priority, batch_transition, create_ticket, get_ticket, list_tickets, load_tickets,
+    batch_priority, batch_transition, create_ticket, get_ticket, list_tickets,
     patch_ticket, put_body, transition_ticket,
 };
+#[cfg(test)]
 use handlers::tickets::extract_section;
 
 #[allow(dead_code)] // InMemory is constructed in tests but matched in shared code
@@ -62,192 +63,6 @@ impl AppState {
             TicketSource::InMemory(_) => None,
         }
     }
-}
-
-fn parse_epic_branch(branch: &str) -> Option<(String, String)> {
-    let rest = branch.strip_prefix("epic/")?;
-    let dash = rest.find('-')?;
-    let id = rest[..dash].to_string();
-    let slug = &rest[dash + 1..];
-    let title = slug
-        .split('-')
-        .map(|w| {
-            let mut c = w.chars();
-            match c.next() {
-                None => String::new(),
-                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
-    Some((id, title))
-}
-
-fn derive_epic_state(
-    tickets: &[&apm_core::ticket::Ticket],
-    states: &[apm_core::config::StateConfig],
-) -> String {
-    if tickets.is_empty() {
-        return "empty".to_string();
-    }
-    let state_map: std::collections::HashMap<&str, &apm_core::config::StateConfig> =
-        states.iter().map(|s| (s.id.as_str(), s)).collect();
-    if tickets.iter().any(|t| {
-        state_map
-            .get(t.frontmatter.state.as_str())
-            .map(|s| s.actionable.iter().any(|a| a == "agent"))
-            .unwrap_or(false)
-    }) {
-        return "active".to_string();
-    }
-    let all_satisfies_or_terminal = tickets.iter().all(|t| {
-        state_map
-            .get(t.frontmatter.state.as_str())
-            .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)) || s.terminal)
-            .unwrap_or(false)
-    });
-    if all_satisfies_or_terminal {
-        let any_satisfies = tickets.iter().any(|t| {
-            state_map
-                .get(t.frontmatter.state.as_str())
-                .map(|s| matches!(s.satisfies_deps, apm_core::config::SatisfiesDeps::Bool(true)))
-                .unwrap_or(false)
-        });
-        let all_terminal = tickets.iter().all(|t| {
-            state_map
-                .get(t.frontmatter.state.as_str())
-                .map(|s| s.terminal)
-                .unwrap_or(false)
-        });
-        if all_terminal {
-            return "done".to_string();
-        }
-        if any_satisfies {
-            return "complete".to_string();
-        }
-    }
-    "active".to_string()
-}
-
-fn build_epic_summary(
-    branch: &str,
-    all_tickets: &[apm_core::ticket::Ticket],
-    states: &[apm_core::config::StateConfig],
-) -> Option<EpicSummary> {
-    let (id, title) = parse_epic_branch(branch)?;
-    let epic_tickets: Vec<&apm_core::ticket::Ticket> = all_tickets
-        .iter()
-        .filter(|t| t.frontmatter.epic.as_deref() == Some(id.as_str()))
-        .collect();
-    let mut ticket_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-    for t in &epic_tickets {
-        *ticket_counts.entry(t.frontmatter.state.clone()).or_insert(0) += 1;
-    }
-    let state = derive_epic_state(&epic_tickets, states);
-    Some(EpicSummary {
-        id,
-        title,
-        branch: branch.to_string(),
-        state,
-        ticket_counts,
-    })
-}
-
-async fn list_epics(
-    State(state): State<Arc<AppState>>,
-) -> Result<Response, AppError> {
-    let root = match state.git_root() {
-        Some(r) => r.clone(),
-        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
-    };
-    let tickets = load_tickets(&state).await?;
-    let config = util::load_config(root.clone()).await?;
-    let branches = util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
-    let summaries: Vec<EpicSummary> = branches
-        .iter()
-        .filter_map(|b| build_epic_summary(b, &tickets, &config.workflow.states))
-        .collect();
-    Ok(Json(summaries).into_response())
-}
-
-async fn create_epic(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<CreateEpicRequest>,
-) -> Result<Response, AppError> {
-    let root = match state.git_root() {
-        Some(r) => r.clone(),
-        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
-    };
-    let title = match req.title {
-        Some(t) if !t.trim().is_empty() => t,
-        _ => return Ok((StatusCode::BAD_REQUEST, "title is required").into_response()),
-    };
-    let title_clone = title.clone();
-    let (id, branch) = util::blocking(move || {
-        apm_core::epic::create_epic_branch(&root, &title_clone)
-    }).await?;
-    Ok((
-        StatusCode::CREATED,
-        Json(EpicSummary {
-            id,
-            title,
-            branch,
-            state: "empty".to_string(),
-            ticket_counts: std::collections::HashMap::new(),
-        }),
-    )
-        .into_response())
-}
-
-async fn get_epic(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<String>,
-) -> Result<Response, AppError> {
-    let root = match state.git_root() {
-        Some(r) => r.clone(),
-        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
-    };
-    let tickets = load_tickets(&state).await?;
-    let config = util::load_config(root.clone()).await?;
-    let branches = util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
-    let branch = match branches.iter().find(|b| {
-        b.strip_prefix("epic/")
-            .and_then(|s| s.split('-').next())
-            .map(|seg| seg == id)
-            .unwrap_or(false)
-    }) {
-        Some(b) => b.clone(),
-        None => return Ok((StatusCode::NOT_FOUND, "epic not found").into_response()),
-    };
-    let summary = match build_epic_summary(&branch, &tickets, &config.workflow.states) {
-        Some(s) => s,
-        None => return Ok((StatusCode::NOT_FOUND, "epic not found").into_response()),
-    };
-    let epic_id = summary.id.clone();
-    let epic_tickets: Vec<TicketResponse> = tickets
-        .into_iter()
-        .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id.as_str()))
-        .map(|t| {
-            let has_open_questions = !extract_section(&t.body, "Open questions").trim().is_empty();
-            let has_pending_amendments =
-                extract_section(&t.body, "Amendment requests").contains("- [ ]");
-            let mut fm = t.frontmatter;
-            let owner = fm.owner.take();
-            TicketResponse {
-                frontmatter: fm,
-                body: t.body,
-                has_open_questions,
-                has_pending_amendments,
-                blocking_deps: vec![],
-                owner,
-            }
-        })
-        .collect();
-    Ok(Json(EpicDetailResponse {
-        summary,
-        tickets: epic_tickets,
-    })
-    .into_response())
 }
 
 struct AppError(anyhow::Error);
@@ -919,8 +734,8 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route("/api/work/dry-run", get(work::get_work_dry_run))
         .route("/api/agents/config", get(agents::get_agents_config).patch(agents::patch_agents_config))
         .route("/api/log/stream", get(log::stream_handler))
-        .route("/api/epics", get(list_epics).post(create_epic))
-        .route("/api/epics/:id", get(get_epic))
+        .route("/api/epics", get(handlers::epics::list_epics).post(handlers::epics::create_epic))
+        .route("/api/epics/:id", get(handlers::epics::get_epic))
         .route("/api/me", get(me_handler))
         .route("/api/collaborators", get(collaborators_handler))
         .route("/api/auth/otp", post(otp_handler))
@@ -982,8 +797,8 @@ fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> Router {
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
         .route("/api/tickets/:id/transition", post(transition_ticket))
-        .route("/api/epics", get(list_epics).post(create_epic))
-        .route("/api/epics/:id", get(get_epic))
+        .route("/api/epics", get(handlers::epics::list_epics).post(handlers::epics::create_epic))
+        .route("/api/epics/:id", get(handlers::epics::get_epic))
         .route("/api/me", get(me_handler))
         .with_state(state)
 }
@@ -1170,7 +985,7 @@ async fn main() {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::handlers::tickets::{extract_frontmatter_raw, extract_history_raw};
     use apm_core::ticket::{Frontmatter, Ticket};
@@ -1226,7 +1041,7 @@ mod tests {
         }
     }
 
-    fn test_tickets() -> Vec<Ticket> {
+    pub(crate) fn test_tickets() -> Vec<Ticket> {
         vec![
             fake_ticket("aaaabbbb-fake-ticket-one", "Fake ticket one"),
             fake_ticket("ccccdddd-fake-ticket-two", "Fake ticket two"),
@@ -1751,7 +1566,7 @@ satisfies_deps = true
         assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     }
 
-    fn git_setup(p: &std::path::Path) {
+    pub(crate) fn git_setup(p: &std::path::Path) {
         for args in [
             vec!["init", "-q", "-b", "main"],
             vec!["config", "user.email", "test@test.com"],
@@ -2134,193 +1949,6 @@ label = "In Progress"
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["epic"], "ab12cd34");
         assert_eq!(json["target_branch"], "epic/ab12cd34-foo");
-    }
-
-    #[tokio::test]
-    async fn list_epics_in_memory_returns_501() {
-        let app = build_app_with_tickets(test_tickets());
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/api/epics")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
-    }
-
-    #[tokio::test]
-    async fn create_epic_missing_title_returns_400() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path().to_path_buf();
-        git_setup(&p);
-        let app = build_app(p.clone(), None);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/api/epics")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    }
-
-    #[tokio::test]
-    async fn create_epic_empty_title_returns_400() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path().to_path_buf();
-        git_setup(&p);
-        let app = build_app(p.clone(), None);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/api/epics")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"title":""}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    }
-
-    #[tokio::test]
-    async fn create_epic_in_memory_returns_501() {
-        let app = build_app_with_tickets(test_tickets());
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/api/epics")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"title":"My Epic"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
-    }
-
-    #[tokio::test]
-    async fn get_epic_in_memory_returns_501() {
-        let app = build_app_with_tickets(test_tickets());
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/api/epics/ab12cd34")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
-    }
-
-    #[tokio::test]
-    async fn get_epic_not_found_returns_404() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path().to_path_buf();
-        git_setup(&p);
-        let app = build_app(p.clone(), None);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/api/epics/deadbeef")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    }
-
-    #[tokio::test]
-    async fn list_epics_empty_returns_empty_array() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path().to_path_buf();
-        git_setup(&p);
-        let app = build_app(p.clone(), None);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/api/epics")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(json, serde_json::json!([]));
-    }
-
-    #[tokio::test]
-    async fn create_epic_round_trip() {
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path().to_path_buf();
-        git_setup(&p);
-
-        let app = build_app(p.clone(), None);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/api/epics")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"title":"My Epic"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::CREATED);
-        let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(json["state"], "empty");
-        assert_eq!(json["title"], "My Epic");
-        assert!(json["ticket_counts"].as_object().unwrap().is_empty());
-        let epic_id = json["id"].as_str().unwrap().to_string();
-
-        // list should include the new epic
-        let app2 = build_app(p.clone(), None);
-        let response2 = app2
-            .oneshot(
-                Request::builder()
-                    .uri("/api/epics")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response2.status(), StatusCode::OK);
-        let bytes2 = response2.into_body().collect().await.unwrap().to_bytes();
-        let list: serde_json::Value = serde_json::from_slice(&bytes2).unwrap();
-        assert_eq!(list.as_array().unwrap().len(), 1);
-        assert_eq!(list[0]["id"], epic_id);
-
-        // get by id
-        let app3 = build_app(p.clone(), None);
-        let response3 = app3
-            .oneshot(
-                Request::builder()
-                    .uri(format!("/api/epics/{epic_id}"))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(response3.status(), StatusCode::OK);
-        let bytes3 = response3.into_body().collect().await.unwrap().to_bytes();
-        let detail: serde_json::Value = serde_json::from_slice(&bytes3).unwrap();
-        assert_eq!(detail["id"], epic_id);
-        assert!(detail["tickets"].as_array().unwrap().is_empty());
     }
 
     #[tokio::test]
