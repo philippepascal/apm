@@ -39,12 +39,21 @@ async function postSync(): Promise<void> {
   if (!res.ok) throw new Error('Sync failed')
 }
 
+async function fetchVersion(): Promise<{ version: string; build: string }> {
+  const res = await fetch('/api/version')
+  if (!res.ok) throw new Error('Failed to fetch version')
+  return res.json()
+}
+
 export default function SupervisorView({ onMinimize }: { onMinimize?: () => void }) {
   const queryClient = useQueryClient()
   const [syncError, setSyncError] = useState<string | null>(null)
   const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
   const setNewEpicOpen = useLayoutStore((s) => s.setNewEpicOpen)
   const setCleanOpen = useLayoutStore((s) => s.setCleanOpen)
+
+  const [showVersion, setShowVersion] = useState(false)
+  const { data: versionData } = useQuery({ queryKey: ['version'], queryFn: fetchVersion, staleTime: Infinity })
 
   const [searchText, setSearchText] = useState('')
   const [stateFilter, setStateFilter] = useState<string | null>(null)
@@ -141,7 +150,13 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   return (
     <div tabIndex={0} className="h-full flex flex-col bg-gray-900 text-gray-100 outline-none">
       <div className="px-3 py-2 text-sm font-medium border-b border-gray-700 shrink-0 flex items-center justify-between">
-        <span>Supervisor</span>
+        <span
+          className="cursor-pointer select-none"
+          onClick={() => setShowVersion(v => !v)}
+          title="Click to toggle version"
+        >
+          Supervisor{showVersion && versionData ? ` · v${versionData.version} (${versionData.build})` : ''}
+        </span>
         <div className="flex items-center gap-2">
           {syncError && (
             <span className="text-xs text-red-500">{syncError}</span>

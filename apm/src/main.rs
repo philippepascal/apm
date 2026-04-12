@@ -6,6 +6,7 @@ use std::path::PathBuf;
 #[command(
     name = "apm",
     about = "Agent Project Manager",
+    version,
     help_template = "\
 Agent Project Manager — a git-native ticket system for human+AI teams.
 
@@ -42,6 +43,7 @@ Maintenance:
   verify         Check ticket and worktree integrity
   validate       Validate config and ticket integrity
   archive        Move closed ticket files to the archive directory
+  version        Print version and build type
 
 Server:
   register       Generate a one-time password for device registration
@@ -737,6 +739,8 @@ the given substring:
         #[arg(long, conflicts_with = "device")]
         all: bool,
     },
+    /// Print version and build type
+    Version,
 }
 
 pub fn repo_root() -> Result<PathBuf> {
@@ -823,6 +827,7 @@ fn main() -> Result<()> {
             }
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
+        Command::Version => { cmd::version::run(); Ok(()) }
     }
 }
 
