@@ -35,7 +35,7 @@ See [REFACTOR-CORE.md](../../REFACTOR-CORE.md) section 2 for the full plan.
 - [x] `state.rs` calls `git::merge_into_default` and `git::pull_default` (resolved through the `git_util as git` alias)
 - [x] Every caller of the moved ticket-format functions (`gen_hex_id`, `resolve_ticket_branch`, `branch_name_from_path`) is updated to reference `ticket_fmt::` instead of `git::`
 - [x] `cargo build` succeeds with zero errors across `apm-core`, `apm`, and `apm-server`
-- [ ] `cargo test` passes (integration suite included)
+- [x] `cargo test` passes (integration suite included)
 
 ### Out of scope
 
