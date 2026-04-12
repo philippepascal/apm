@@ -4,12 +4,12 @@ title = "Extract request/response DTOs from main.rs into models.rs"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a6bc1326-extract-request-response-dtos-from-main-"
 created_at = "2026-04-12T09:02:56.242957Z"
-updated_at = "2026-04-12T09:36:21.359085Z"
+updated_at = "2026-04-12T09:36:28.034701Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 +++
