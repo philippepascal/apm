@@ -42,9 +42,13 @@ Because the shared helper lives as a private function in `workers.rs`, `worktree
 
 ### Approach
 
-**Create `apm/src/util.rs`**
+**Prerequisites**
 
-Add a new file with the following function, taken directly from the existing private function in `workers.rs`:
+This ticket depends on d3ebdc0f, which creates `apm/src/util.rs` and registers it with `pub mod util;` in `apm/src/lib.rs`. When this ticket starts, both of those already exist. The `worktree_for_ticket` function is appended to the existing `util.rs`; there is no need to create the file or touch `lib.rs`.
+
+**Add `worktree_for_ticket` to existing `apm/src/util.rs`**
+
+Append the following function to `apm/src/util.rs` (the file was created by d3ebdc0f and already has at least one item in it):
 
 ```rust
 use anyhow::Result;
@@ -73,9 +77,7 @@ pub fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String
 }
 ```
 
-**Register the module in `apm/src/lib.rs`**
-
-Add `pub mod util;` alongside the existing module declarations.
+Consolidate any `use` statements with what d3ebdc0f already added at the top of the file to avoid duplicate imports.
 
 **Update `apm/src/cmd/workers.rs`**
 
@@ -94,12 +96,11 @@ Add `pub mod util;` alongside the existing module declarations.
 
 **Order of changes**
 
-1. Create `apm/src/util.rs`
-2. Add `pub mod util;` to `apm/src/lib.rs`
-3. Update `workers.rs` (remove private fn, add import)
-4. Update `worktrees.rs` (replace inline block, clean up imports)
-5. `cargo build -p apm` to confirm compilation
-6. `cargo test -p apm` to confirm no regressions
+1. Append `worktree_for_ticket` to existing `apm/src/util.rs` (no new file, no lib.rs change)
+2. Update `workers.rs` (remove private fn, add import)
+3. Update `worktrees.rs` (replace inline block, clean up imports)
+4. `cargo build -p apm` to confirm compilation
+5. `cargo test -p apm` to confirm no regressions
 
 ### Open questions
 
