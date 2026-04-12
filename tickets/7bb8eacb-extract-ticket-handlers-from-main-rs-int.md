@@ -1,7 +1,7 @@
 +++
 id = "7bb8eacb"
 title = "Extract ticket handlers from main.rs into handlers/tickets.rs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7bb8eacb-extract-ticket-handlers-from-main-rs-int"
 created_at = "2026-04-12T09:03:09.497239Z"
-updated_at = "2026-04-12T09:09:48.166733Z"
+updated_at = "2026-04-12T09:45:34.376132Z"
 epic = "1e706443"
 target_branch = "epic/1e706443-refactor-apm-server-code-organization"
 depends_on = ["a6bc1326", "2973f8d1"]
@@ -60,3 +60,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-12T09:03Z | — | new | philippepascal |
 | 2026-04-12T09:09Z | new | groomed | apm |
+| 2026-04-12T09:45Z | groomed | in_design | philippepascal |
