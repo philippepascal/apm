@@ -35,7 +35,10 @@ Moving these assets to `apm-core/src/default/` groups all embedded defaults in o
 
 ### Out of scope
 
-- Changing the content of any asset file\n- Adding new default assets\n- Other sections of any broader refactor plan (module restructuring, etc.)\n- Moving or changing `Cargo.toml` or build configuration
+- Changing the content of any asset file
+- Adding new default assets
+- Other sections of any broader refactor plan (module restructuring, etc.)
+- Moving or changing `Cargo.toml` or build configuration
 
 ### Approach
 
