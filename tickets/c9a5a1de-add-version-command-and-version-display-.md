@@ -3,13 +3,13 @@ id = "c9a5a1de"
 title = "Add version command and version display in UI"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c9a5a1de-add-version-command-and-version-display-"
 created_at = "2026-04-12T08:46:45.537269Z"
-updated_at = "2026-04-12T08:50:06.063491Z"
+updated_at = "2026-04-12T08:53:56.304032Z"
 +++
 
 ## Spec
