@@ -97,7 +97,7 @@ Run `cargo build --workspace` then `cargo test --workspace`. Fix any remaining c
 - [x] Remove worktree extraction from this ticket's scope — creating `worktree.rs` and moving worktree functions (`find_worktree_for_branch`, `list_ticket_worktrees`, `ensure_worktree`, `add_worktree`, `remove_worktree`, `sync_agent_dirs`, `clean_agent_dirs`, `is_tracked`, `copy_dir_recursive`) is owned by ticket 4f67992b, which depends on this one. Remove worktree-related acceptance criteria and approach steps.
 - [x] Remove epic helper extraction from this ticket's scope — moving `find_epic_branch`, `find_epic_branches`, `epic_branches`, `create_epic_branch` to `epic.rs` is owned by ticket eb4789cf, which depends on this one. Remove epic-related acceptance criteria and approach steps.
 - [x] This ticket's scope should be: (1) rename git.rs → git_util.rs, (2) add `pub use git_util as git` alias in lib.rs, (3) move `gen_hex_id`, `resolve_ticket_branch`, `branch_name_from_path` to `ticket_fmt.rs`, (4) absorb `merge_into_default` and `pull_default` from `state.rs`. Nothing else.
-- [ ] Remove specific line number citations from the Approach — use function names as anchors instead, since line numbers drift as other tickets land.
+- [x] Remove specific line number citations from the Approach — use function names as anchors instead, since line numbers drift as other tickets land.
 - [ ] Make the private `run()` helper `pub(crate)` in `git_util.rs` so that downstream modules (`worktree.rs`, `epic.rs`) can import it rather than duplicating it.
 
 ### Code review
