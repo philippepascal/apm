@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::path::Path;
-use std::process::Command;
 
 use crate::config::StateConfig;
+use crate::{git_util, worktree};
 
 /// Derive the display state of an epic from the `StateConfig`s of its tickets.
 ///
@@ -204,17 +204,7 @@ pub fn create(root: &Path, title: &str) -> Result<String> {
     let branch = format!("epic/{id}-{slug}");
 
     // Fetch origin/main; propagate error if it doesn't exist.
-    let fetch_out = Command::new("git")
-        .current_dir(root)
-        .args(["fetch", "origin", "main"])
-        .output()
-        .map_err(|e| anyhow::anyhow!("git not found: {e}"))?;
-    if !fetch_out.status.success() {
-        anyhow::bail!(
-            "{}",
-            String::from_utf8_lossy(&fetch_out.stderr).trim()
-        );
-    }
+    git_util::fetch_branch(root, "main")?;
 
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -227,52 +217,21 @@ pub fn create(root: &Path, title: &str) -> Result<String> {
         branch.replace('/', "-"),
     ));
 
-    let add_out = Command::new("git")
-        .current_dir(root)
-        .args([
-            "worktree",
-            "add",
-            "-b",
-            &branch,
-            &wt_path.to_string_lossy(),
-            "origin/main",
-        ])
-        .output()
-        .map_err(|e| anyhow::anyhow!("git not found: {e}"))?;
-    if !add_out.status.success() {
-        anyhow::bail!(
-            "{}",
-            String::from_utf8_lossy(&add_out.stderr).trim()
-        );
-    }
+    let wt_path_str = wt_path.to_string_lossy();
+    git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, "origin/main"])?;
 
     let result = (|| -> Result<()> {
         let epic_md = wt_path.join("EPIC.md");
         std::fs::write(&epic_md, format!("# {title}\n"))?;
 
-        let stage_out = Command::new("git")
-            .current_dir(&wt_path)
-            .args(["add", "EPIC.md"])
-            .output()?;
-        if !stage_out.status.success() {
-            anyhow::bail!("{}", String::from_utf8_lossy(&stage_out.stderr).trim());
-        }
+        git_util::stage_files(&wt_path, &["EPIC.md"])?;
 
         let commit_msg = format!("epic({id}): create {title}");
-        let commit_out = Command::new("git")
-            .current_dir(&wt_path)
-            .args(["commit", "-m", &commit_msg])
-            .output()?;
-        if !commit_out.status.success() {
-            anyhow::bail!("{}", String::from_utf8_lossy(&commit_out.stderr).trim());
-        }
+        git_util::commit(&wt_path, &commit_msg)?;
         Ok(())
     })();
 
-    let _ = Command::new("git")
-        .current_dir(root)
-        .args(["worktree", "remove", "--force", &wt_path.to_string_lossy()])
-        .output();
+    let _ = worktree::remove_worktree(root, &wt_path, true);
     let _ = std::fs::remove_dir_all(&wt_path);
 
     result?;
