@@ -180,9 +180,7 @@ fn run_epic_clean(
     // Find epic branches whose derived state is "done".
     let mut candidates: Vec<String> = Vec::new();
     for branch in &local_branches {
-        let after_prefix = branch.trim_start_matches("epic/");
-        let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
-        let id = &after_prefix[..id_end];
+        let id = apm_core::epic::epic_id_from_branch(branch);
 
         let epic_tickets: Vec<_> = tickets
             .iter()
@@ -207,10 +205,8 @@ fn run_epic_clean(
     // Print candidate list.
     println!("Would delete {} epic(s):", candidates.len());
     for branch in &candidates {
-        let after_prefix = branch.trim_start_matches("epic/");
-        let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
-        let id = &after_prefix[..id_end];
-        let title = crate::cmd::epic::branch_to_title(branch);
+        let id = apm_core::epic::epic_id_from_branch(branch);
+        let title = apm_core::epic::branch_to_title(branch);
         println!("  {id}  {title}");
     }
 
@@ -235,9 +231,7 @@ fn run_epic_clean(
     // Delete each candidate.
     let epics_path = root.join(".apm").join("epics.toml");
     for branch in &candidates {
-        let after_prefix = branch.trim_start_matches("epic/");
-        let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
-        let id = after_prefix[..id_end].to_string();
+        let id = apm_core::epic::epic_id_from_branch(branch).to_string();
 
         // Delete local branch.
         let del_local = std::process::Command::new("git")
