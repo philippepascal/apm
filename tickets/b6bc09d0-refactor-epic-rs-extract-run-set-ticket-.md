@@ -19,15 +19,15 @@ depends_on = ["d3ebdc0f", "aeacd066"]
 
 ### Problem
 
-`apm/src/cmd/epic.rs` (438 lines) is the largest command file and contains misplaced logic:
+\`apm/src/cmd/epic.rs\` (439 lines) is the largest command file and contains two pieces of domain logic that belong in \`apm_core\` rather than the CLI layer:
 
-1. **`run_set()` for owner** (lines ~252-300) — when setting an epic's owner, this function iterates over all tickets in the epic and bulk-updates their `owner` field. This is ticket mutation logic that doesn't belong in the epic command module. It should be extracted to `apm_core::epic` as a function like `set_epic_owner(root, epic_id, owner)` that handles the cascading update.
+**Owner cascade in \`run_set()\`** (lines ~252–300): When setting an epic's owner, the function loads all tickets across the epic, pre-flight checks ownership on each, bulk-updates the \`owner\` field, and commits to each ticket's branch. This is a domain operation — mutating a collection of tickets — that should live in \`apm_core::epic\` as \`set_epic_owner()\` so other callers (e.g. a future server endpoint) can reuse it without going through the CLI.
 
-2. **`run_close()` PR creation** (lines ~108-152) — contains inline `gh pr create` logic that's similar to `apm_core::state::gh_pr_create_or_update` (which was moved to `github.rs` in the apm-core refactoring epic). This should reuse the core function rather than reimplementing PR creation.
+**PR creation in \`run_close()\`** (lines ~108–152): The function re-implements both the idempotency check (\`gh pr list\`) and the \`gh pr create\` invocation inline, duplicating logic already extracted to \`apm_core::github::gh_pr_create_or_update()\`. It should delegate to the shared function. The only difference is the PR body (epics use \`"Epic: {branch}"\` instead of \`"Closes #{id}"\`), which is resolved by adding a \`body: &str\` parameter to the shared function.
 
-3. After the prerequisite ticket moves `branch_to_title()` and epic ID parsing to `apm_core::epic`, update this file to use the shared helpers instead of local definitions.
-
-4. Apply shared `util.rs` helpers (from the prerequisite ticket) for any confirmation prompts or fetch patterns in this file.
+Once the prerequisite tickets land, two additional call-sites need updating in this file:
+- dep \`aeacd066\` moves \`branch_to_title()\` and epic-ID parsing to \`apm_core::epic\`; \`run_close()\` still has one inline ID-parsing expression that should be replaced with \`epic_id_from_branch()\`.
+- dep \`d3ebdc0f\` adds \`apm::util\` helpers; \`epic.rs\` currently has no matching patterns (no confirmation prompts, no aggressive-fetch blocks), so this is a verify-only step.
 
 ### Acceptance criteria
 
