@@ -1,7 +1,7 @@
 +++
 id = "4004f5dc"
 title = "Trim state.rs to pure state machine logic"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4004f5dc-trim-state-rs-to-pure-state-machine-logi"
 created_at = "2026-04-12T06:04:38.471678Z"
-updated_at = "2026-04-12T06:54:11.801025Z"
+updated_at = "2026-04-12T07:02:32.840831Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["4f67992b", "eb4789cf"]
@@ -108,3 +108,4 @@ Run `cargo build --workspace` and fix any compilation errors (missing visibility
 | 2026-04-12T06:37Z | groomed | in_design | philippepascal |
 | 2026-04-12T06:44Z | in_design | specd | claude-0412-0638-0d80 |
 | 2026-04-12T06:54Z | specd | ammend | claude-0411-1200-r7c3 |
+| 2026-04-12T07:02Z | ammend | in_design | philippepascal |
