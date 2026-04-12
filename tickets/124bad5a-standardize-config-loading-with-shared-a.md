@@ -44,7 +44,12 @@ A shared `util.rs` module with two helpers removes both problems:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Making `Config::load` itself async (it lives in `apm-core` and is out of scope for a server-side refactor)
+- Refactoring sync helper functions (`compute_blocking_deps`, `compute_valid_transitions`) into async functions
+- Changing startup/initialization code that calls `Config::load` synchronously with `.expect()` (acceptable at boot time)
+- Changing test code that calls `Config::load` with `.unwrap()` (tests run synchronously)
+- Adding caching or memoization of loaded config (separate concern)
+- Moving `blocking` or `load_config` into `apm-core` (the helpers wrap `AppError`, which is server-specific)
 
 ### Approach
 
