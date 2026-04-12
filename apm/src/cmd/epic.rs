@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
+use std::io::IsTerminal;
 use std::path::Path;
 use std::process::Command;
 use crate::ctx::CmdContext;
+use apm_core::epic::{branch_to_title, epic_id_from_branch};
 
 pub fn run_list(root: &Path) -> Result<()> {
     let ctx = CmdContext::load(root, false)?;
@@ -14,9 +16,7 @@ pub fn run_list(root: &Path) -> Result<()> {
     let tickets = ctx.tickets;
 
     for branch in &epic_branches {
-        // branch = "epic/<8-char-id>-<slug>"
-        let after_prefix = branch.trim_start_matches("epic/");
-        let id = &after_prefix[..after_prefix.find('-').unwrap_or(after_prefix.len()).min(8)];
+        let id = epic_id_from_branch(branch);
         let title = branch_to_title(branch);
 
         // Find tickets belonging to this epic.
@@ -73,8 +73,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     };
 
     // 2. Parse the 8-char epic ID from the branch name: epic/<id>-<slug>
-    let after_prefix = epic_branch.trim_start_matches("epic/");
-    let epic_id = after_prefix.split('-').next().unwrap_or("");
+    let epic_id = epic_id_from_branch(&epic_branch);
 
     // 3. Load all tickets and find those belonging to this epic.
     let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -166,9 +165,7 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
         ),
     };
 
-    // Parse the 8-char epic ID from the branch: epic/<id>-<slug>
-    let after_prefix = branch.trim_start_matches("epic/");
-    let epic_id = after_prefix.split('-').next().unwrap_or("");
+    let epic_id = epic_id_from_branch(&branch);
     let title = branch_to_title(&branch);
 
     let epic_tickets: Vec<_> = ctx.tickets
@@ -246,8 +243,7 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
         );
     }
     let branch = &matches[0];
-    let after_prefix = branch.trim_start_matches("epic/");
-    let epic_id = after_prefix.split('-').next().unwrap_or("").to_string();
+    let epic_id = epic_id_from_branch(branch).to_string();
 
     if field == "owner" {
         let config = apm_core::config::Config::load(root)?;
@@ -339,53 +335,133 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     Ok(())
 }
 
-/// Convert an epic branch name to a human-readable PR title.
-/// `epic/ab12cd34-user-authentication` → `"User Authentication"`
-pub fn branch_to_title(branch: &str) -> String {
-    // Strip "epic/" prefix
-    let rest = branch.trim_start_matches("epic/");
-    // Strip the "<8-char-id>-" segment (first hyphen-separated token)
-    let slug = match rest.find('-') {
-        Some(pos) => &rest[pos + 1..],
-        None => rest,
-    };
-    // Replace hyphens with spaces and title-case each word
-    slug.split('-')
-        .map(|word| {
-            let mut chars = word.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+
+pub(crate) fn run_epic_clean(
+    root: &Path,
+    config: &apm_core::config::Config,
+    dry_run: bool,
+    yes: bool,
+) -> Result<()> {
+    // Get local epic branches.
+    let local_output = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["branch", "--list", "epic/*"])
+        .output()?;
+
+    let local_branches: Vec<String> = String::from_utf8_lossy(&local_output.stdout)
+        .lines()
+        .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
+
+    // Load all tickets.
+    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+
+    // Find epic branches whose derived state is "done".
+    let mut candidates: Vec<String> = Vec::new();
+    for branch in &local_branches {
+        let id = apm_core::epic::epic_id_from_branch(branch);
+
+        let epic_tickets: Vec<_> = tickets
+            .iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+            .collect();
+
+        let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
+            .iter()
+            .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+            .collect();
+
+        if apm_core::epic::derive_epic_state(&state_configs) == "done" {
+            candidates.push(branch.clone());
+        }
+    }
+
+    if candidates.is_empty() {
+        println!("Nothing to clean.");
+        return Ok(());
+    }
+
+    // Print candidate list.
+    println!("Would delete {} epic(s):", candidates.len());
+    for branch in &candidates {
+        let id = apm_core::epic::epic_id_from_branch(branch);
+        let title = apm_core::epic::branch_to_title(branch);
+        println!("  {id}  {title}");
+    }
+
+    if dry_run {
+        println!("Dry run — no changes made.");
+        return Ok(());
+    }
+
+    // Confirmation gate.
+    if !yes {
+        if std::io::stdout().is_terminal() {
+            if !crate::util::prompt_yes_no(&format!("Delete {} epic(s)? [y/N] ", candidates.len()))? {
+                println!("Aborted.");
+                return Ok(());
             }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+        } else {
+            println!("Skipping — non-interactive terminal. Use --yes to confirm.");
+            return Ok(());
+        }
+    }
+
+    // Delete each candidate.
+    let epics_path = root.join(".apm").join("epics.toml");
+    for branch in &candidates {
+        let id = apm_core::epic::epic_id_from_branch(branch).to_string();
+
+        // Delete local branch.
+        let del_local = std::process::Command::new("git")
+            .current_dir(root)
+            .args(["branch", "-d", branch])
+            .output()?;
+        if !del_local.status.success() {
+            eprintln!(
+                "error: failed to delete local branch {branch}: {}",
+                String::from_utf8_lossy(&del_local.stderr).trim()
+            );
+            continue;
+        }
+
+        // Delete remote branch; suppress "remote ref does not exist".
+        let del_remote = std::process::Command::new("git")
+            .current_dir(root)
+            .args(["push", "origin", "--delete", branch])
+            .output()?;
+        if !del_remote.status.success() {
+            let stderr = String::from_utf8_lossy(&del_remote.stderr);
+            if !stderr.contains("remote ref does not exist")
+                && !stderr.contains("error: unable to delete")
+            {
+                eprintln!(
+                    "warning: failed to delete remote {branch}: {}",
+                    stderr.trim()
+                );
+            }
+        }
+
+        println!("deleted {branch}");
+
+        // Remove the epic's entry from .apm/epics.toml.
+        if epics_path.exists() {
+            let raw = std::fs::read_to_string(&epics_path)?;
+            let mut doc: toml_edit::DocumentMut = raw.parse()?;
+            if doc.contains_key(&id) {
+                doc.remove(&id);
+                std::fs::write(&epics_path, doc.to_string())?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn branch_to_title_basic() {
-        assert_eq!(branch_to_title("epic/ab12cd34-user-authentication"), "User Authentication");
-    }
-
-    #[test]
-    fn branch_to_title_single_word() {
-        assert_eq!(branch_to_title("epic/ab12cd34-dashboard"), "Dashboard");
-    }
-
-    #[test]
-    fn branch_to_title_many_words() {
-        assert_eq!(branch_to_title("epic/ab12cd34-add-oauth-login-flow"), "Add Oauth Login Flow");
-    }
-
-    #[test]
-    fn branch_to_title_no_slug() {
-        // Degenerate: no hyphen after id — returns empty string (id treated as slug)
-        assert_eq!(branch_to_title("epic/ab12cd34"), "Ab12cd34");
-    }
 
     // Gate check logic tests
     #[test]

@@ -10,12 +10,8 @@ pub fn run(root: &Path, id_arg: &str, reason: Option<String>, no_aggressive: boo
     let branches = git::ticket_branches(root).unwrap_or_default();
     let branch = ticket_fmt::resolve_ticket_branch(&branches, id_arg).ok();
 
-    if aggressive {
-        if let Some(ref b) = branch {
-            if let Err(e) = git::fetch_branch(root, b) {
-                eprintln!("warning: fetch failed: {e:#}");
-            }
-        }
+    if let Some(ref b) = branch {
+        crate::util::fetch_branch_if_aggressive(root, b, aggressive);
     }
 
     let msgs = ticket::close(root, &config, id_arg, reason.as_deref(), &agent, aggressive)?;

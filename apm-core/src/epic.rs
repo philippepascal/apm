@@ -31,6 +31,41 @@ mod tests {
     use super::*;
     use crate::config::StateConfig;
 
+    #[test]
+    fn branch_to_title_basic() {
+        assert_eq!(branch_to_title("epic/ab12cd34-user-authentication"), "User Authentication");
+    }
+
+    #[test]
+    fn branch_to_title_single_word() {
+        assert_eq!(branch_to_title("epic/ab12cd34-dashboard"), "Dashboard");
+    }
+
+    #[test]
+    fn branch_to_title_many_words() {
+        assert_eq!(branch_to_title("epic/ab12cd34-add-oauth-login-flow"), "Add Oauth Login Flow");
+    }
+
+    #[test]
+    fn branch_to_title_no_slug() {
+        assert_eq!(branch_to_title("epic/ab12cd34"), "Ab12cd34");
+    }
+
+    #[test]
+    fn epic_id_from_branch_happy_path() {
+        assert_eq!(epic_id_from_branch("epic/57bce963-refactor-apm-core"), "57bce963");
+    }
+
+    #[test]
+    fn epic_id_from_branch_no_epic_prefix() {
+        assert_eq!(epic_id_from_branch("57bce963-refactor"), "57bce963");
+    }
+
+    #[test]
+    fn epic_id_from_branch_no_dash() {
+        assert_eq!(epic_id_from_branch("nodash"), "nodash");
+    }
+
     fn make_state(terminal: bool, satisfies_deps: bool, actionable: Vec<&str>) -> StateConfig {
         StateConfig {
             id: "x".to_string(),
@@ -235,6 +270,32 @@ pub fn epic_branches(root: &Path) -> Result<Vec<String>> {
 
     branches.sort();
     Ok(branches)
+}
+
+pub fn branch_to_title(branch: &str) -> String {
+    let rest = branch.trim_start_matches("epic/");
+    let slug = match rest.find('-') {
+        Some(pos) => &rest[pos + 1..],
+        None => rest,
+    };
+    slug.split('-')
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(c) => c.to_uppercase().to_string() + chars.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn epic_id_from_branch(branch: &str) -> &str {
+    let rest = branch.trim_start_matches("epic/");
+    match rest.find('-') {
+        Some(pos) => &rest[..pos],
+        None => rest,
+    }
 }
 
 pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)> {
