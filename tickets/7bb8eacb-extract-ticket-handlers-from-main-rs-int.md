@@ -109,7 +109,7 @@ main.rs in apm-server currently contains roughly 500 lines of ticket-related HTT
 
 - [x] Remove all 14 ticket DTOs from scope (TransitionOption, TicketResponse, TicketsEnvelope, BlockingDep, TicketDetailResponse, TransitionRequest, BatchTransitionRequest, BatchPriorityRequest, PutBodyRequest, PatchTicketRequest, CreateTicketRequest, ListTicketsQuery, BatchFailure, BatchResult). Prerequisite a6bc1326 already moves these to `models.rs` — they will not be in `main.rs` when this ticket runs. The handlers should import them from `crate::models`.
 - [x] Remove `compute_blocking_deps` and `compute_valid_transitions` from scope. Prerequisite 2973f8d1 already moves these to `apm_core`. The handlers should call them from `apm_core` directly.
-- [ ] Update acceptance criteria to only list: the 8 handler functions (list_tickets, get_ticket, transition_ticket, put_body, patch_ticket, create_ticket, batch_transition, batch_priority) and the handler-private helpers (extract_section, extract_frontmatter_raw, extract_history_raw, load_tickets).
+- [x] Update acceptance criteria to only list: the 8 handler functions (list_tickets, get_ticket, transition_ticket, put_body, patch_ticket, create_ticket, batch_transition, batch_priority) and the handler-private helpers (extract_section, extract_frontmatter_raw, extract_history_raw, load_tickets).
 - [ ] Update the approach section to reflect that DTOs are imported from `crate::models::*` and business logic from `apm_core`, not moved into handlers/tickets.rs.
 
 ### Code review
