@@ -1,7 +1,7 @@
 +++
 id = "a6367b87"
 title = "Move ensure_amendment_section from state.rs to review.rs"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a6367b87-move-ensure-amendment-section-from-state"
 created_at = "2026-04-12T06:04:43.474175Z"
-updated_at = "2026-04-12T06:48:07.612621Z"
+updated_at = "2026-04-12T07:13:32.751064Z"
 epic = "57bce963"
 target_branch = "epic/57bce963-refactor-apm-core-module-structure"
 depends_on = ["4004f5dc"]
@@ -79,3 +79,4 @@ No other files change. The function is only called from within `state::transitio
 | 2026-04-12T06:12Z | new | groomed | apm |
 | 2026-04-12T06:45Z | groomed | in_design | philippepascal |
 | 2026-04-12T06:48Z | in_design | specd | claude-0412-0645-ef88 |
+| 2026-04-12T07:13Z | specd | ready | apm |
