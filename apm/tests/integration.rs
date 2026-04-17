@@ -5284,3 +5284,185 @@ fn sync_bails_on_mid_merge_state() {
     // Verify the MERGE_HEAD file is still intact (sync did not touch git state).
     assert!(p.join(".git/MERGE_HEAD").exists(), "MERGE_HEAD should still exist after bailing");
 }
+
+// --- sync_default_branch: main-branch state-machine tests ---
+//
+// Each test exercises one row of the Equal/Behind/Ahead/Diverged/NoRemote matrix
+// described in sync_default_branch's block comment.
+//
+// Setup pattern: bare origin + local clone (created by setup_sync_repo).
+// "shared.txt" is included in the initial commit so tests can dirty it without
+// touching apm.toml (which Config::load reads on every sync call).
+
+/// Create a bare origin repo and a local clone bootstrapped with apm.toml
+/// (via setup()) plus "shared.txt".  Both TempDirs must stay alive for the
+/// duration of each test.
+fn setup_sync_repo() -> (TempDir, TempDir) {
+    // Bare repo acts as the network-free origin.
+    let origin = tempfile::tempdir().unwrap();
+    std::process::Command::new("git")
+        .args(["init", "--bare", "-q", "-b", "main"])
+        .current_dir(origin.path())
+        .status()
+        .unwrap();
+
+    // Local repo via the shared setup() helper (writes apm.toml + initial commit).
+    let local = setup();
+    let l = local.path();
+
+    // A plain text file that tests can dirty without affecting Config::load.
+    std::fs::write(l.join("shared.txt"), "version-1").unwrap();
+    git(l, &["add", "shared.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "add shared.txt"]);
+
+    // Wire up origin and push so local and origin start in sync.
+    git(l, &["remote", "add", "origin", &origin.path().to_string_lossy()]);
+    git(l, &["push", "-u", "origin", "main"]);
+
+    (origin, local)
+}
+
+/// Push a new commit to origin via a disposable temp clone.
+/// Modifies `file` to `content` and pushes main.
+fn push_to_origin(origin_path: &std::path::Path, file: &str, content: &str) {
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &origin_path.to_string_lossy(), "."])
+        .current_dir(t)
+        .status()
+        .unwrap();
+    git(t, &["config", "user.email", "test@test.com"]);
+    git(t, &["config", "user.name", "test"]);
+    std::fs::write(t.join(file), content).unwrap();
+    git(t, &["add", file]);
+    git(t, &["-c", "commit.gpgsign=false", "commit", "-m", "origin-commit"]);
+    git(t, &["push", "origin", "main"]);
+    // tmp drops here; origin already has the push.
+}
+
+/// Read a ref's SHA from a repository (works on bare and non-bare).
+fn rev_parse(dir: &std::path::Path, refname: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", refname])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    String::from_utf8(out.stdout).unwrap().trim().to_string()
+}
+
+// Equal → no-op: local and origin are at the same commit.
+#[test]
+fn sync_main_equal_noop() {
+    let (_origin, local) = setup_sync_repo();
+    let l = local.path();
+
+    let sha_before = rev_parse(l, "main");
+    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+    let sha_after = rev_parse(l, "main");
+
+    assert_eq!(sha_before, sha_after, "equal: main SHA must not change");
+}
+
+// Behind + clean working tree → fast-forward: local main advances to origin/main.
+#[test]
+fn sync_main_behind_ff_clean() {
+    let (origin, local) = setup_sync_repo();
+    let l = local.path();
+
+    // Origin gets a new commit; local is now behind.
+    push_to_origin(origin.path(), "shared.txt", "version-2");
+
+    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+
+    let local_sha = rev_parse(l, "main");
+    let origin_sha = rev_parse(origin.path(), "main");
+    assert_eq!(
+        local_sha, origin_sha,
+        "behind FF clean: local main must match origin/main after fast-forward"
+    );
+}
+
+// Behind + dirty overlap → guidance printed, working tree left untouched.
+#[test]
+fn sync_main_behind_ff_blocked_by_dirty_overlap() {
+    let (origin, local) = setup_sync_repo();
+    let l = local.path();
+
+    // Origin modifies shared.txt (making local behind).
+    push_to_origin(origin.path(), "shared.txt", "version-2");
+
+    let sha_before = rev_parse(l, "main");
+
+    // Local also modifies shared.txt without staging — creates dirty overlap.
+    std::fs::write(l.join("shared.txt"), "local-dirty").unwrap();
+
+    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+
+    // main SHA must be unchanged — FF was blocked.
+    let sha_after = rev_parse(l, "main");
+    assert_eq!(sha_before, sha_after, "behind FF blocked: local main SHA must be unchanged");
+
+    // The local modification must still be present in the working tree.
+    let content = std::fs::read_to_string(l.join("shared.txt")).unwrap();
+    assert_eq!(content, "local-dirty", "behind FF blocked: working tree must be untouched");
+}
+
+// Ahead → info line printed, origin NOT pushed.
+#[test]
+fn sync_main_ahead_prints_info_no_push() {
+    let (origin, local) = setup_sync_repo();
+    let l = local.path();
+
+    let origin_sha_before = rev_parse(origin.path(), "main");
+
+    // Local-only commit — not pushed to origin.
+    std::fs::write(l.join("local-only.txt"), "local").unwrap();
+    git(l, &["add", "local-only.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local-ahead commit"]);
+
+    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+
+    // Origin must be unchanged — sync must never push.
+    let origin_sha_after = rev_parse(origin.path(), "main");
+    assert_eq!(
+        origin_sha_before, origin_sha_after,
+        "ahead: sync must not push to origin"
+    );
+}
+
+// Diverged → guidance printed, local main SHA left unchanged.
+#[test]
+fn sync_main_diverged_prints_guidance() {
+    let (origin, local) = setup_sync_repo();
+    let l = local.path();
+
+    // Origin gets a commit that local won't have.
+    push_to_origin(origin.path(), "shared.txt", "version-origin");
+
+    // Local also gets its own commit on top of the old base → diverged.
+    std::fs::write(l.join("local-only.txt"), "local").unwrap();
+    git(l, &["add", "local-only.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local-diverge commit"]);
+
+    let local_sha_before = rev_parse(l, "main");
+
+    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+
+    let local_sha_after = rev_parse(l, "main");
+    assert_eq!(
+        local_sha_before, local_sha_after,
+        "diverged: local main SHA must be unchanged"
+    );
+}
+
+// NoRemote → sync completes without error; no crash, no output about main.
+#[test]
+fn sync_main_no_remote_skips() {
+    // setup() produces a repo with no origin configured.
+    // fetch_if_aggressive: git fetch --all returns 0 with no remotes (no-op).
+    // sync_default_branch: classify_branch can't resolve origin/main → NoRemote → silent skip.
+    let local = setup();
+    let result = apm::cmd::sync::run(local.path(), false, true, true, true);
+    assert!(result.is_ok(), "no remote: sync must return Ok, got: {result:?}");
+}
