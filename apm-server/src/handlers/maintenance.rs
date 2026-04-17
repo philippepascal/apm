@@ -18,7 +18,7 @@ pub async fn sync_handler(
     let (fetch_error, branches, closed) = tokio::task::spawn_blocking(move || {
         let fetch_error = apm_core::git::fetch_all(&root).err().map(|e| e.to_string());
         let mut _sync_warnings: Vec<String> = Vec::new();
-        apm_core::git::sync_local_ticket_refs(&root, &mut _sync_warnings);
+        apm_core::git::sync_non_checked_out_refs(&root, &mut _sync_warnings);
         let branches = apm_core::git::ticket_branches(&root)
             .map(|b| b.len())
             .unwrap_or(0);
