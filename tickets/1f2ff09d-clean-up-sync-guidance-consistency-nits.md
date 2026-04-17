@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1f2ff09d-clean-up-sync-guidance-consistency-nits"
 created_at = "2026-04-17T20:07:27.286560Z"
-updated_at = "2026-04-17T20:07:27.286560Z"
+updated_at = "2026-04-17T20:07:45.184124Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
+depends_on = ["a087593c", "1339c81d", "5cf54181"]
 +++
 
 ## Spec
