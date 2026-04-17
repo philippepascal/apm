@@ -46,7 +46,45 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 
 ### Approach
 
-How the implementation will work.
+### Backend — apm-server/src/handlers/maintenance.rs
+
+Update `sync_handler` to build a `Vec<String>` log instead of returning a bare `fetch_error` field:
+
+- If `fetch_all` fails: push `"warning: git fetch failed: <error>"`
+- After `sync_non_checked_out_refs`: push `"synced non-checked-out refs"`
+- After `push_default_branch`: push `"pushed default branch"` (or omit silently)
+- After `detect`+`apply`: push `"closed N ticket(s)"` — if n==0 push `"no tickets to close"`
+- At end: push `"N ticket branch(es) visible"`
+
+Return `{ "log": log.join("\n"), "branches": branches, "closed": closed }` — drop the top-level `fetch_error` field (it now lives in the log string). The existing test `sync_in_memory_returns_not_implemented` continues to pass unchanged.
+
+### Store — apm-ui/src/store/useLayoutStore.ts
+
+Add `syncOpen: boolean` (initial: false) and `setSyncOpen: (v: boolean) => void` alongside the existing `cleanOpen`/`setCleanOpen` pair.
+
+### New component — apm-ui/src/components/SyncModal.tsx
+
+Mirror `CleanModal.tsx` exactly, with these differences:
+- No options section — sync takes no parameters
+- `SyncResponse` type: `{ log: string; branches: number; closed: number }`
+- `mutationFn`: `POST /api/sync` with no body, returns `SyncResponse`
+- `onSuccess`: `setLog(data.log)`, invalidate `['tickets']` and `['ticket']` query keys
+- `onError`: `setLog(err.message)`
+- Footer: "Close" button (following ticket 5473a0e6 convention) + "Run" button with spinner while pending
+- Reset `log` state and call `mutation.reset()` when `open` transitions to false
+- Escape key handler identical to `CleanModal`
+
+### SupervisorView — apm-ui/src/components/supervisor/SupervisorView.tsx
+
+- Add `setSyncOpen` from `useLayoutStore`
+- Remove: `syncError` state, `postSync` function, `syncMutation`
+- Sync button `onClick`: `setSyncOpen(true)` — remove `disabled` and spinner JSX
+- Keyboard handler (Shift+S): call `setSyncOpen(true)` instead of `syncMutation.mutate()`
+- Remove the `syncError` error `<span>` from the header
+
+### WorkScreen — apm-ui/src/components/WorkScreen.tsx
+
+Import `SyncModal` and `syncOpen`/`setSyncOpen` from the store. Mount `<SyncModal open={syncOpen} onOpenChange={setSyncOpen} />` in both render paths where `CleanModal` is currently mounted (lines ~171 and ~189).
 
 ### Open questions
 
