@@ -33,7 +33,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 - [x] `apm sync` never calls `git push` on the default branch (default push path removed entirely)
 - [x] When local `main` equals `origin/main`: sync prints nothing about main and makes no ref changes
 - [x] When local `main` is strictly behind `origin/main` and the working tree does not conflict: local `main` is fast-forwarded via `git merge --ff-only origin/<default>` on the main worktree
-- [ ] When local `main` is behind but the FF would overwrite uncommitted local changes: sync prints the "main behind, FF blocked" guidance block and leaves the working tree untouched
+- [x] When local `main` is behind but the FF would overwrite uncommitted local changes: sync prints the "main behind, FF blocked" guidance block and leaves the working tree untouched
 - [ ] When local `main` is strictly ahead of `origin/main`: sync prints a single info line ("main is ahead of origin/<default> by N commits — run `git push` when ready") and makes no network call
 - [ ] When local `main` and `origin/main` have diverged: sync prints the divergence guidance (rebase/merge choice) and does not modify local main or the working tree
 - [ ] When `origin/main` cannot be resolved (no remote, unreachable, fetch failed): main is skipped silently; any fetch failure surfaces as a single warning line from the existing fetch path
