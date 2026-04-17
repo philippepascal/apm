@@ -38,7 +38,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 - [x] When local `main` and `origin/main` have diverged: sync prints the divergence guidance (rebase/merge choice) and does not modify local main or the working tree
 - [x] When `origin/main` cannot be resolved (no remote, unreachable, fetch failed): main is skipped silently; any fetch failure surfaces as a single warning line from the existing fetch path
 - [x] The sync module has block comments documenting the Equal/Ahead/Behind/Diverged/NoRemote classification and why each maps to its action
-- [ ] Integration tests in `apm/tests/integration.rs` using temp git repos cover: equal, behind-FF-clean, behind-FF-blocked-by-dirty, ahead, diverged, and no-remote cases
+- [x] Integration tests in `apm/tests/integration.rs` using temp git repos cover: equal, behind-FF-clean, behind-FF-blocked-by-dirty, ahead, diverged, and no-remote cases
 - [ ] `cargo test --workspace` passes
 
 ### Out of scope
