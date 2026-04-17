@@ -1,7 +1,7 @@
 +++
 id = "b21d5f33"
 title = "ticket cards in supervisor view need to show epic"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b21d5f33-ticket-cards-in-supervisor-view-need-to-"
 created_at = "2026-04-17T20:17:28.548094Z"
-updated_at = "2026-04-17T20:17:28.548094Z"
+updated_at = "2026-04-17T20:23:46.363064Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-17T20:17Z | — | new | philippepascal |
+| 2026-04-17T20:23Z | new | groomed | apm |
