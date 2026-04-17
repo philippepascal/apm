@@ -11,6 +11,7 @@ import ReviewEditor from './ReviewEditor'
 import NewTicketModal from './NewTicketModal'
 import NewEpicModal from './NewEpicModal'
 import CleanModal from './CleanModal'
+import SyncModal from './SyncModal'
 import LogPanel from './LogPanel'
 import { groupBySupervisorState } from '../lib/supervisorUtils'
 import type { Ticket } from './supervisor/types'
@@ -33,7 +34,7 @@ const CONTENT: Record<ColumnKey, (onMinimize: () => void) => React.ReactNode> = 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen, cleanOpen, setCleanOpen } =
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen, cleanOpen, setCleanOpen, syncOpen, setSyncOpen } =
     useLayoutStore()
   const queryClient = useQueryClient()
 
@@ -169,6 +170,7 @@ export default function WorkScreen() {
         <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
         <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
         <CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />
+        <SyncModal open={syncOpen} onOpenChange={setSyncOpen} />
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel defaultSize={25} minSize={10}>
             <WorkerView />
@@ -187,6 +189,7 @@ export default function WorkScreen() {
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
       <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
       <CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />
+      <SyncModal open={syncOpen} onOpenChange={setSyncOpen} />
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup orientation="horizontal">
           {COLS.map(({ key, defaultSize, Icon }, i) => (

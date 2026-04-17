@@ -15,10 +15,14 @@ pub async fn sync_handler(
         Some(r) => r.clone(),
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
-    let (fetch_error, branches, closed) = tokio::task::spawn_blocking(move || {
-        let fetch_error = apm_core::git::fetch_all(&root).err().map(|e| e.to_string());
+    let (log, branches, closed) = tokio::task::spawn_blocking(move || {
+        let mut log: Vec<String> = Vec::new();
+        if let Err(e) = apm_core::git::fetch_all(&root) {
+            log.push(format!("warning: git fetch failed: {e}"));
+        }
         let mut _sync_warnings: Vec<String> = Vec::new();
         apm_core::git::sync_non_checked_out_refs(&root, &mut _sync_warnings);
+        log.push("synced non-checked-out refs".to_string());
         let branches = apm_core::git::ticket_branches(&root)
             .map(|b| b.len())
             .unwrap_or(0);
@@ -44,14 +48,16 @@ pub async fn sync_handler(
             }
             Err(_) => 0,
         };
-        (fetch_error, branches, closed)
+        if closed > 0 {
+            log.push(format!("closed {closed} ticket(s)"));
+        } else {
+            log.push("no tickets to close".to_string());
+        }
+        log.push(format!("{branches} ticket branch(es) visible"));
+        (log, branches, closed)
     })
     .await?;
-    let mut resp = serde_json::json!({ "branches": branches, "closed": closed });
-    if let Some(err) = fetch_error {
-        resp["fetch_error"] = serde_json::Value::String(err);
-    }
-    Ok(Json(resp).into_response())
+    Ok(Json(serde_json::json!({ "log": log.join("\n"), "branches": branches, "closed": closed })).into_response())
 }
 
 pub async fn clean_handler(
