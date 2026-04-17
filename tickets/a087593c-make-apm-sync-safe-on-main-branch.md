@@ -30,7 +30,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 
 ### Acceptance criteria
 
-- [ ] `apm sync` never calls `git push` on the default branch (default push path removed entirely)
+- [x] `apm sync` never calls `git push` on the default branch (default push path removed entirely)
 - [ ] When local `main` equals `origin/main`: sync prints nothing about main and makes no ref changes
 - [ ] When local `main` is strictly behind `origin/main` and the working tree does not conflict: local `main` is fast-forwarded via `git merge --ff-only origin/<default>` on the main worktree
 - [ ] When local `main` is behind but the FF would overwrite uncommitted local changes: sync prints the "main behind, FF blocked" guidance block and leaves the working tree untouched
