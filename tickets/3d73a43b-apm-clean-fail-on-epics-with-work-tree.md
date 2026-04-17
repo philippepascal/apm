@@ -28,11 +28,11 @@ The result is a partially-completed clean: some epics are deleted while others f
 
 ### Acceptance criteria
 
-- [ ] `apm clean --epics` successfully deletes an epic whose branch has an active worktree (worktree is removed first, then branch is deleted)
-- [ ] `apm clean --epics` removes the worktree directory from disk before attempting branch deletion
-- [ ] `apm clean --epics` succeeds for all eligible epics in a single run when some have worktrees and some do not
-- [ ] If a worktree removal fails, the error is reported and that epic is skipped (branch deletion is not attempted), leaving `.apm/epics.toml` intact for that entry
-- [ ] Epics without an associated worktree continue to be cleaned without any change in behaviour
+- [x] `apm clean --epics` successfully deletes an epic whose branch has an active worktree (worktree is removed first, then branch is deleted)
+- [x] `apm clean --epics` removes the worktree directory from disk before attempting branch deletion
+- [x] `apm clean --epics` succeeds for all eligible epics in a single run when some have worktrees and some do not
+- [x] If a worktree removal fails, the error is reported and that epic is skipped (branch deletion is not attempted), leaving `.apm/epics.toml` intact for that entry
+- [x] Epics without an associated worktree continue to be cleaned without any change in behaviour
 
 ### Out of scope
 
