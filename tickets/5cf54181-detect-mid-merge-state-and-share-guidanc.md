@@ -3,13 +3,13 @@ id = "5cf54181"
 title = "Detect mid-merge state and share guidance strings"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5cf54181-detect-mid-merge-state-and-share-guidanc"
 created_at = "2026-04-17T18:32:40.602264Z"
-updated_at = "2026-04-17T18:34:29.146331Z"
+updated_at = "2026-04-17T18:42:21.691744Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 +++
