@@ -20,7 +20,7 @@ The Clean worktrees modal has two minor UI issues in CleanModal.tsx. First, the 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The dismiss button in the Clean worktrees modal displays the label Close\n- [ ] Clicking Close dismisses the modal without performing any clean action\n- [ ] The Untracked checkbox is checked by default when the modal opens\n- [ ] The Untracked checkbox can still be unchecked by the user before running the clean
 
 ### Out of scope
 
