@@ -22,7 +22,7 @@ When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`
 
 ### Acceptance criteria
 
-- [ ] When a spec worker is spawned on a ticket that belongs to an epic, APM generates an epic context bundle (markdown) and prepends it to the worker's prompt.
+- [x] When a spec worker is spawned on a ticket that belongs to an epic, APM generates an epic context bundle (markdown) and prepends it to the worker's prompt.
 - [ ] The bundle contains: the epic's title, goal, and non-goals (from `EPIC.md` / the epic file); a list of sibling tickets grouped by state, each showing title, one-line Problem summary, and the full "Out of scope" section if present.
 - [ ] The bundle explicitly frames the purpose to the worker: "use this to scope your ticket — do not duplicate or overreach into sibling tickets' territory."
 - [ ] Tickets not in any epic spawn spec workers with no bundle (unchanged behaviour).
