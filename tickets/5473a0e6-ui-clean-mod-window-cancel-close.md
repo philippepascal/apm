@@ -4,12 +4,12 @@ title = "UI clean mod window cancel ->close"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5473a0e6-ui-clean-mod-window-cancel-close"
 created_at = "2026-04-17T20:18:54.917961Z"
-updated_at = "2026-04-17T20:31:33.703977Z"
+updated_at = "2026-04-17T20:31:40.579225Z"
 +++
 
 ## Spec
