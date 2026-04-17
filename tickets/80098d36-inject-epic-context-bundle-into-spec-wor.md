@@ -37,7 +37,9 @@ When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`
 
 ### Approach
 
-How the implementation will work.
+- Add `apm-core::context::build_epic_bundle(epic_id, current_ticket_id)` returning a `String`.
+- Hook into the spawn path used at `in_design` transitions (both `groomed → in_design` and `ammend → in_design`).
+- Data sources already exist in the ticket store; no new storage.
 
 ### Open questions
 
