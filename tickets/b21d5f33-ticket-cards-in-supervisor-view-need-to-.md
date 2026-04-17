@@ -24,7 +24,7 @@ Ticket cards in the supervisor board swimlanes do not display which epic a ticke
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Displaying the epic title (only the short 8-char ID is shown)\n- Changes to any other component (detail panel, priority queue panel, filter bar — all already handle epics)\n- Backend API or data model changes (epic is already returned by the tickets endpoint)\n- Epic badge in any non-supervisor view
 
 ### Approach
 
