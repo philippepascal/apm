@@ -16,8 +16,7 @@ updated_at = "2026-04-17T20:30:13.322446Z"
 
 ### Problem
 
-label on cancel button should be close
-untrack should be checked by default
+The Clean worktrees modal has two minor UI issues in CleanModal.tsx. First, the dismiss button is labelled Cancel, which implies the action was aborted; since closing without running a clean is a neutral action, the label should read Close. Second, the untracked checkbox defaults to false; removing untracked files is the common case, so it should be pre-checked to reduce unnecessary clicks.
 
 ### Acceptance criteria
 
