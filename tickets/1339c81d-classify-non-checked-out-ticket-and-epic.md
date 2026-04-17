@@ -1,7 +1,7 @@
 +++
 id = "1339c81d"
 title = "Classify non-checked-out ticket and epic refs"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 5
 risk = 6
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1339c81d-classify-non-checked-out-ticket-and-epic"
 created_at = "2026-04-17T18:32:35.787126Z"
-updated_at = "2026-04-17T19:23:24.273290Z"
+updated_at = "2026-04-17T20:22:54.561077Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 depends_on = ["a087593c", "5cf54181"]
@@ -124,3 +124,4 @@ Every non-trivial branch gets a brief comment explaining why; the `Ahead` arm in
 | 2026-04-17T18:48Z | specd | ready | apm |
 | 2026-04-17T19:13Z | ready | in_progress | philippepascal |
 | 2026-04-17T19:23Z | in_progress | implemented | claude-0417-1913-e428 |
+| 2026-04-17T20:22Z | implemented | closed | apm-sync |
