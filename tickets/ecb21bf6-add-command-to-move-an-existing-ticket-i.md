@@ -25,7 +25,7 @@ APM has no first-class command to associate an already-created ticket with an ep
 - [x] Commits that existed on the original ticket branch and are not part of the old base are replayed on the new branch in the same order
 - [x] After `apm move <ticket_id> <epic_id>`, `apm epic show <epic_id>` lists the ticket
 - [x] After `apm move <ticket_id> <epic_id>`, the ticket's `## History` section contains a new row recording the move (from-epic or from-main, to-epic)
-- [ ] `apm move <ticket_id> -` clears the `epic` and `target_branch` fields in the ticket's frontmatter and rebases the branch onto `main`
+- [x] `apm move <ticket_id> -` clears the `epic` and `target_branch` fields in the ticket's frontmatter and rebases the branch onto `main`
 - [ ] After `apm move <ticket_id> -`, `apm epic show <old_epic_id>` no longer lists the ticket
 - [ ] `apm move <ticket_id> <epic_id_2>` when the ticket is already in `<epic_id_1>` moves it to `<epic_id_2>` (both frontmatter and branch topology)
 - [ ] `apm move <ticket_id> <epic_id>` when the ticket is already in `<epic_id>` exits with an informative message and makes no changes
