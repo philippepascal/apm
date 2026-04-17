@@ -4,12 +4,12 @@ title = "Make apm sync safe on main branch"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 5
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a087593c-make-apm-sync-safe-on-main-branch"
 created_at = "2026-04-17T18:32:29.530485Z"
-updated_at = "2026-04-17T18:41:25.290243Z"
+updated_at = "2026-04-17T18:41:33.896670Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 +++
