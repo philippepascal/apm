@@ -28,7 +28,7 @@ Ticket cards in the supervisor board swimlanes do not display which epic a ticke
 
 ### Approach
 
-How the implementation will work.
+Single file change: `apm-ui/src/components/supervisor/TicketCard.tsx`.\n\n1. Destructure `epicFilter` and `setEpicFilter` from the `useLayoutStore` call on line 12 (alongside the existing destructured values).\n\n2. In the footer row `div` (currently at line 98, which renders the short ticket ID and owner), insert a conditional epic badge between the ticket-ID `span` and the owner `span`:\n\n```tsx\n{ticket.epic && (\n  <button\n    onClick={e => { e.stopPropagation(); setEpicFilter(epicFilter === ticket.epic ? null : ticket.epic!) }}\n    title={`Epic: ${ticket.epic}`}\n    className={\n      'text-[10px] font-mono px-1 rounded border ' +\n      (epicFilter === ticket.epic\n        ? 'border-blue-500 text-blue-300 bg-blue-900/30'\n        : 'border-gray-600 text-gray-500 hover:text-gray-300')\n    }\n  >\n    {ticket.epic.slice(0, 8)}\n  </button>\n)}\n```\n\nNo other files require changes. The `Ticket` type in `types.ts` already declares `epic?: string`, and the API already returns the field.
 
 ### Open questions
 
