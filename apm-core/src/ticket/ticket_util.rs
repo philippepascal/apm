@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 
@@ -537,6 +537,181 @@ pub fn compute_blocking_deps(
             })
         })
         .collect()
+}
+
+/// Move a ticket into (or out of) an epic by rebasing its branch onto the new base.
+///
+/// `target` values:
+/// - `Some(epic_id_prefix)` — move into the named epic; resolves by prefix match
+/// - `None` or `Some("-")` — remove from any epic, rebase onto main
+///
+/// Returns an informational message on success (including no-op cases).
+pub fn move_to_epic(
+    root: &Path,
+    config: &crate::config::Config,
+    ticket_id_arg: &str,
+    target: Option<&str>,
+) -> Result<String> {
+    // 1. Load tickets and resolve the ticket by prefix.
+    let tickets = load_all_from_git(root, &config.tickets.dir)?;
+    let id = super::ticket_fmt::resolve_id_in_slice(&tickets, ticket_id_arg)?;
+    let ticket = tickets.iter().find(|t| t.frontmatter.id == id).unwrap();
+
+    // 2. Reject terminal tickets.
+    let terminal = config.terminal_state_ids();
+    if terminal.contains(&ticket.frontmatter.state) {
+        bail!(
+            "cannot move ticket {}: it is in a terminal state ({})",
+            id,
+            ticket.frontmatter.state
+        );
+    }
+
+    // 3. Resolve the ticket's git branch name.
+    let ticket_branch = ticket
+        .frontmatter
+        .branch
+        .clone()
+        .or_else(|| super::ticket_fmt::branch_name_from_path(&ticket.path))
+        .unwrap_or_else(|| format!("ticket/{id}"));
+
+    // 4. Determine the old base ref (where the ticket currently branches from).
+    let old_base_ref = ticket
+        .frontmatter
+        .target_branch
+        .as_deref()
+        .unwrap_or("main")
+        .to_string();
+
+    // 5. Determine new base ref and updated frontmatter fields.
+    let target_is_clear = target.is_none() || target == Some("-");
+
+    let (new_base_ref, new_epic, new_target_branch) = if target_is_clear {
+        if ticket.frontmatter.epic.is_none() {
+            return Ok(format!("ticket {id} is not in any epic; nothing to do"));
+        }
+        ("main".to_string(), None::<String>, None::<String>)
+    } else {
+        let epic_id_arg = target.unwrap();
+        let matches = crate::epic::find_epic_branches(root, epic_id_arg);
+        let epic_branch = match matches.len() {
+            0 => bail!("no epic found matching '{epic_id_arg}'"),
+            1 => matches.into_iter().next().unwrap(),
+            _ => bail!(
+                "ambiguous epic prefix '{}': matches {}",
+                epic_id_arg,
+                matches.join(", ")
+            ),
+        };
+        let epic_id = crate::epic::epic_id_from_branch(&epic_branch).to_string();
+
+        if ticket.frontmatter.epic.as_deref() == Some(&epic_id) {
+            return Ok(format!(
+                "ticket {id} is already in epic {epic_id}; nothing to do"
+            ));
+        }
+
+        (epic_branch.clone(), Some(epic_id), Some(epic_branch))
+    };
+
+    // 6. Reject if branch is checked out in a worktree.
+    if crate::worktree::find_worktree_for_branch(root, &ticket_branch).is_some() {
+        bail!(
+            "branch {} is checked out in a worktree; close the worktree first",
+            ticket_branch
+        );
+    }
+
+    // 7. Find old divergence point: git merge-base <ticket_branch> <old_base_ref>.
+    let old_base_sha = crate::git_util::resolve_branch_sha(root, &old_base_ref)
+        .with_context(|| format!("cannot resolve old base '{old_base_ref}'"))?;
+    let old_upstream_sha =
+        crate::git_util::merge_base(root, &ticket_branch, &old_base_sha)
+            .with_context(|| {
+                format!(
+                    "cannot find merge-base of {ticket_branch} and {old_base_ref}"
+                )
+            })?;
+
+    // 8. Resolve the new base to a SHA.
+    let new_base_sha = crate::git_util::resolve_branch_sha(root, &new_base_ref)
+        .with_context(|| format!("cannot resolve new base '{new_base_ref}'"))?;
+
+    // 9. Rebase: replay (old_upstream..ticket_branch] onto new_base.
+    let rebase_result = crate::git_util::run(
+        root,
+        &[
+            "rebase",
+            "--onto",
+            &new_base_sha,
+            &old_upstream_sha,
+            &ticket_branch,
+        ],
+    );
+
+    if let Err(e) = rebase_result {
+        let _ = crate::git_util::run(root, &["rebase", "--abort"]);
+        let err_str = e.to_string();
+        if err_str.contains("checked out") || err_str.contains("worktree") {
+            bail!(
+                "branch {} is checked out in a worktree; close the worktree first",
+                ticket_branch
+            );
+        }
+        bail!(
+            "rebase onto {new_base_ref} failed (conflicts or other error); \
+             resolve manually or create a new ticket with `apm new --epic`\n{e:#}"
+        );
+    }
+
+    // 10. Read the ticket file from the rebased branch tip, update frontmatter, commit.
+    let rel_path = format!(
+        "{}/{}",
+        config.tickets.dir.to_string_lossy(),
+        ticket.path.file_name().unwrap().to_string_lossy()
+    );
+
+    let updated_content =
+        crate::git_util::read_from_branch(root, &ticket_branch, &rel_path)
+            .with_context(|| {
+                format!("cannot read ticket file from {ticket_branch} after rebase")
+            })?;
+    let mut updated_ticket = Ticket::parse(&ticket.path, &updated_content)?;
+
+    let now = chrono::Utc::now();
+    updated_ticket.frontmatter.epic = new_epic.clone();
+    updated_ticket.frontmatter.target_branch = new_target_branch;
+    updated_ticket.frontmatter.updated_at = Some(now);
+
+    let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
+    let history_note = format!("move: {old_base_ref} \u{2192} {new_base_ref}");
+    crate::state::append_history(
+        &mut updated_ticket.body,
+        "\u{2014}",
+        "\u{2014}",
+        &when,
+        &history_note,
+    );
+
+    let content = updated_ticket.serialize()?;
+    crate::git_util::commit_to_branch(
+        root,
+        &ticket_branch,
+        &rel_path,
+        &content,
+        &format!("ticket({id}): move to {new_base_ref}"),
+    )?;
+
+    let msg = if target_is_clear {
+        format!("{id}: moved out of epic, rebased onto main")
+    } else {
+        format!(
+            "{id}: moved into epic {}",
+            new_epic.as_deref().unwrap_or("")
+        )
+    };
+
+    Ok(msg)
 }
 
 #[cfg(test)]
