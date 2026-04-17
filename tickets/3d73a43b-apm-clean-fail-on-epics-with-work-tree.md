@@ -3,13 +3,13 @@ id = "3d73a43b"
 title = "apm clean fail on epics with work tree"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3d73a43b-apm-clean-fail-on-epics-with-work-tree"
 created_at = "2026-04-17T18:28:11.666627Z"
-updated_at = "2026-04-17T18:31:37.086826Z"
+updated_at = "2026-04-17T18:33:47.644788Z"
 +++
 
 ## Spec
