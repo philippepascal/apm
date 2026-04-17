@@ -57,7 +57,29 @@ None of these affect behavior or test outcomes. They are code-hygiene fixes that
 
 ### Approach
 
-How the implementation will work.
+Two files change: `apm-core/src/sync_guidance.rs` (add two constants) and `apm-core/src/git_util.rs` (wire the constants, remove dead TODOs, add one comment).
+
+**`apm-core/src/sync_guidance.rs`**
+
+1. Update the module-level doc comment Placeholders list to include `<count>` (number of commits) and `<commits>` (the word "commit" or "commits", caller supplies).
+
+2. Add `MAIN_AHEAD` after the existing `MAIN_DIVERGED_DIRTY` constant. Wording matches the existing inline message; the only change is extracting it to a named constant. Placeholders: `<default>`, `<remote>`, `<count>`, `<commits>`.
+
+3. Add `TICKET_OR_EPIC_AHEAD` after `TICKET_OR_EPIC_DIVERGED`. Wording mirrors the existing inline string in the Ahead arm of `sync_non_checked_out_refs`. Placeholder: `<slug>`.
+
+**`apm-core/src/git_util.rs`**
+
+4. `sync_default_branch` Behind arm: delete the stale `// TODO(5cf54181): move to sync_guidance` comment. Add in its place a one-liner: `// Assumption: overlap is the only realistic failure mode for a strictly-behind FF merge; MAIN_BEHIND_DIRTY_OVERLAP covers any --ff-only error here.`
+
+5. `sync_default_branch` Ahead arm: replace the inline `format!(...)` with chained `.replace()` calls on `crate::sync_guidance::MAIN_AHEAD`, substituting `<default>`, `<remote>`, `<count>` (count as string), and `<commits>` ("commit" when count == 1, "commits" otherwise).
+
+6. `sync_default_branch` Diverged arm: delete the stale `// TODO(5cf54181): move to sync_guidance` comment.
+
+7. `sync_non_checked_out_refs` Ahead arm: delete the `// TODO(5cf54181): move to sync_guidance` comment. Replace the inline `format!(...)` with `crate::sync_guidance::TICKET_OR_EPIC_AHEAD.replace("<slug>", &branch)`.
+
+8. `sync_non_checked_out_refs` Diverged arm: delete the stale `// TODO(5cf54181): move to sync_guidance` comment.
+
+No test changes needed. All changes are purely textual restructuring; no observable behaviour differs.
 
 ### Open questions
 
