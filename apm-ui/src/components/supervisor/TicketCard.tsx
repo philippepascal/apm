@@ -9,7 +9,7 @@ interface TicketCardProps {
 }
 
 export default function TicketCard({ ticket, columnTicketIds, showAuthor }: TicketCardProps) {
-  const { selectedTicketId, selectedTicketIds, lastClickedTicketId, setSelectedTicketId, selectTicketRange } = useLayoutStore()
+  const { selectedTicketId, selectedTicketIds, lastClickedTicketId, setSelectedTicketId, selectTicketRange, epicFilter, setEpicFilter } = useLayoutStore()
   const isSelected = ticket.id === selectedTicketId
   const isMultiSelected = selectedTicketIds.includes(ticket.id)
   const isDepBlocked = !!ticket.blocking_deps?.length
@@ -99,6 +99,20 @@ export default function TicketCard({ ticket, columnTicketIds, showAuthor }: Tick
         <span className="text-[10px] text-gray-400 font-mono">
           {ticket.id.slice(0, 8)}
         </span>
+        {ticket.epic && (
+          <button
+            onClick={e => { e.stopPropagation(); setEpicFilter(epicFilter === ticket.epic ? null : ticket.epic!) }}
+            title={`Epic: ${ticket.epic}`}
+            className={
+              'text-[10px] font-mono px-1 rounded border ' +
+              (epicFilter === ticket.epic
+                ? 'border-blue-500 text-blue-300 bg-blue-900/30'
+                : 'border-gray-600 text-gray-500 hover:text-gray-300')
+            }
+          >
+            {ticket.epic.slice(0, 8)}
+          </button>
+        )}
         {ticket.owner && (
           <span className="text-[10px] text-gray-400 truncate">
             {ticket.owner}
