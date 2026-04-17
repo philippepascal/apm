@@ -44,7 +44,11 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` — particularly
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Actually consuming the guidance strings from tickets A and B — each of those tickets wires its own call sites; this ticket only provides the module
+- Any form of automatic resolution of a mid-merge / mid-rebase state
+- Detecting other "incomplete" states like un-applied stash, bisect in progress, submodule-related mid-states — scope is limited to merge/rebase/cherry-pick
+- Runtime translation / i18n of guidance strings — plain ASCII, English only
+- Emitting the mid-merge guidance from commands other than `apm sync` (if desired later, separate ticket)
 
 ### Approach
 
