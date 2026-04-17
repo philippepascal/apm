@@ -18,7 +18,14 @@ target_branch = "epic/47375a6a-safer-apm-sync"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm sync` currently mishandles the default branch (`main`) in two ways:
+
+1. **Blind push on inequality.** `push_default_branch` (`apm-core/src/git_util.rs:33`) pushes whenever local and `origin/<default>` SHAs differ — with no regard for direction. When origin is ahead (e.g. after the user merged an epic PR on GitHub), the push is rejected non-fast-forward and surfaces as a `warning: push main failed: …` line.
+2. **No fast-forward.** After the fetch step, `origin/main` ref is updated locally, but the local `main` branch and main worktree are never fast-forwarded. Users have to run `git pull` manually before `apm sync` does anything useful post-merge.
+
+Additionally, per the review decision captured in the design doc, **apm sync must not push anything automatically** — explicit pushes happen via `apm state <id> implemented` and equivalents. Sync's job on `main` is to (a) fetch, (b) fast-forward local when possible, (c) inform the user when local is ahead/diverged, and (d) never block on a push attempt that cannot succeed.
+
+See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full scenario matrix, algorithm, and guidance strings. Implementers must add comments in the sync module explaining the local/remote classification states and why each maps to its action — the logic is not intuitive at a glance.
 
 ### Acceptance criteria
 
@@ -35,13 +42,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
