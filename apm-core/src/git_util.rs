@@ -1184,6 +1184,11 @@ pub fn detect_mid_merge_state(root: &Path) -> Option<MidMergeState> {
     None
 }
 
+/// Run `git merge-base ref1 ref2` and return the common ancestor SHA.
+pub fn merge_base(root: &Path, ref1: &str, ref2: &str) -> Result<String> {
+    run(root, &["merge-base", ref1, ref2])
+}
+
 pub fn main_worktree_root(root: &Path) -> Option<PathBuf> {
     let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
     out.lines()
