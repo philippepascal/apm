@@ -24,7 +24,13 @@ The desired behaviour is for the maintenance handler to follow the same safe-syn
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The maintenance handler no longer calls `push_default_branch` anywhere
+- [ ] The maintenance handler calls `git::sync_default_branch` in place of the removed push call
+- [ ] Warnings produced by `sync_default_branch` are logged (not silently dropped) in the handler
+- [ ] `push_default_branch` is deleted from `apm-core/src/git_util.rs`
+- [ ] The project compiles with no warnings after the deletion
+- [ ] Running the maintenance endpoint against a repo whose local main is behind origin fast-forwards main (same behaviour as `apm sync`)
+- [ ] Running the maintenance endpoint against a repo whose local main is ahead of origin logs a warning and does not push
 
 ### Out of scope
 
