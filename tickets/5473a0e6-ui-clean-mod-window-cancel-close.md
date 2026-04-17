@@ -28,7 +28,7 @@ The Clean worktrees modal has two minor UI issues in CleanModal.tsx. First, the 
 
 ### Approach
 
-How the implementation will work.
+Both changes are in apm-ui/src/components/CleanModal.tsx.\n\n1. Change the untracked initial state (line ~21) from useState(false) to useState(true).\n2. Change the button label text (line ~139) from Cancel to Close.\n\nNo other files require changes.
 
 ### Open questions
 
