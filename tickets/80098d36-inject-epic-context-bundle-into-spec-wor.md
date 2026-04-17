@@ -26,7 +26,7 @@ When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`
 - [x] The bundle contains: the epic's title, goal, and non-goals (from `EPIC.md` / the epic file); a list of sibling tickets grouped by state, each showing title, one-line Problem summary, and the full "Out of scope" section if present.
 - [x] The bundle explicitly frames the purpose to the worker: "use this to scope your ticket — do not duplicate or overreach into sibling tickets' territory."
 - [x] Tickets not in any epic spawn spec workers with no bundle (unchanged behaviour).
-- [ ] Bundle is capped at a configurable sibling count and byte size; older closed siblings are elided with a count when the cap is hit.
+- [x] Bundle is capped at a configurable sibling count and byte size; older closed siblings are elided with a count when the cap is hit.
 - [ ] Integration test assembles a bundle against a fixture epic with mixed-state siblings.
 
 ### Out of scope
