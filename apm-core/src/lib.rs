@@ -2,6 +2,7 @@
 pub mod archive;
 pub mod clean;
 pub mod config;
+pub mod context;
 pub mod github;
 pub mod credentials;
 pub mod epic;

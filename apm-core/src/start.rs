@@ -196,6 +196,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         bail!("ticket {id:?} not found");
     };
 
+    let ticket_epic_id = t.frontmatter.epic.clone();
     let fm = &t.frontmatter;
     if !startable.is_empty() && !startable.contains(&fm.state.as_str()) {
         bail!(
@@ -283,7 +284,13 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .find(|s| s.id == old_state)
         .and_then(|sc| sc.instructions.as_deref());
     let worker_system = resolve_system_prompt(root, profile, state_instructions);
-    let ticket_content = format!("{}\n\n{content}", agent_role_prefix(profile, &id));
+    let ticket_content = with_epic_bundle(
+        root,
+        ticket_epic_id.as_deref(),
+        &id,
+        &config,
+        format!("{}\n\n{content}", agent_role_prefix(profile, &id)),
+    );
     let params = effective_spawn_params(profile, &config.workers);
 
     let log_path = wt_display.join(".apm-worker.log");
@@ -436,7 +443,13 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let worker_system = resolve_system_prompt(root, profile2, state_instr2);
 
     let raw = t.serialize()?;
-    let ticket_content = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
+    let ticket_content = with_epic_bundle(
+        root,
+        t.frontmatter.epic.as_deref(),
+        &id,
+        &config,
+        format!("{}\n\n{raw}", agent_role_prefix(profile2, &id)),
+    );
     let params = effective_spawn_params(profile2, &config.workers);
 
     let branch = t.frontmatter.branch.clone()
@@ -603,7 +616,13 @@ pub fn spawn_next_worker(
     let worker_system = resolve_system_prompt(root, profile2, state_instr2);
 
     let raw = t.serialize()?;
-    let ticket_content = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
+    let ticket_content = with_epic_bundle(
+        root,
+        t.frontmatter.epic.as_deref(),
+        &id,
+        &config,
+        format!("{}\n\n{raw}", agent_role_prefix(profile2, &id)),
+    );
     let params = effective_spawn_params(profile2, &config.workers);
     let branch = t.frontmatter.branch.clone()
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
@@ -640,6 +659,18 @@ pub fn spawn_next_worker(
     messages.push(format!("Agent name: {worker_name}"));
 
     Ok(Some((id, epic_id, child, pid_path)))
+}
+
+/// If the ticket belongs to an epic, prepend an epic context bundle to the
+/// worker prompt content.  Tickets without an epic are unchanged.
+fn with_epic_bundle(root: &Path, epic_id: Option<&str>, ticket_id: &str, config: &Config, content: String) -> String {
+    match epic_id {
+        Some(eid) => {
+            let bundle = crate::context::build_epic_bundle(root, eid, ticket_id, config);
+            format!("{bundle}\n{content}")
+        }
+        None => content,
+    }
 }
 
 fn resolve_system_prompt(root: &Path, profile: Option<&WorkerProfileConfig>, state_instructions: Option<&str>) -> String {
@@ -749,6 +780,7 @@ mod tests {
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
             epics: Default::default(),
+            context: Default::default(),
             load_warnings: vec![],
         };
         let profile = make_profile(Some(".apm/spec.md"), Some("Spec-Writer for #<id>"));
@@ -781,6 +813,7 @@ mod tests {
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
             epics: Default::default(),
+            context: Default::default(),
             load_warnings: vec![],
         };
         let tr = make_transition(Some("nonexistent_profile"));
@@ -810,6 +843,7 @@ mod tests {
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
             epics: Default::default(),
+            context: Default::default(),
             load_warnings: vec![],
         };
         let tr = make_transition(None);
