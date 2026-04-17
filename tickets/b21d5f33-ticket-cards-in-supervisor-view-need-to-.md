@@ -4,12 +4,12 @@ title = "ticket cards in supervisor view need to show epic"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b21d5f33-ticket-cards-in-supervisor-view-need-to-"
 created_at = "2026-04-17T20:17:28.548094Z"
-updated_at = "2026-04-17T20:29:43.138447Z"
+updated_at = "2026-04-17T20:29:48.522899Z"
 +++
 
 ## Spec
