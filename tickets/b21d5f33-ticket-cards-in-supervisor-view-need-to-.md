@@ -1,7 +1,7 @@
 +++
 id = "b21d5f33"
 title = "ticket cards in supervisor view need to show epic"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b21d5f33-ticket-cards-in-supervisor-view-need-to-"
 created_at = "2026-04-17T20:17:28.548094Z"
-updated_at = "2026-04-17T21:45:30.835034Z"
+updated_at = "2026-04-17T21:48:21.635826Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ Single file change: `apm-ui/src/components/supervisor/TicketCard.tsx`.\n\n1. Des
 | 2026-04-17T20:26Z | groomed | in_design | philippepascal |
 | 2026-04-17T20:29Z | in_design | specd | claude-0417-2026-d5d0 |
 | 2026-04-17T21:45Z | specd | ready | apm |
+| 2026-04-17T21:48Z | ready | in_progress | philippepascal |
