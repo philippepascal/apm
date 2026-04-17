@@ -29,7 +29,7 @@ APM has no first-class command to associate an already-created ticket with an ep
 - [x] After `apm move <ticket_id> -`, `apm epic show <old_epic_id>` no longer lists the ticket
 - [x] `apm move <ticket_id> <epic_id_2>` when the ticket is already in `<epic_id_1>` moves it to `<epic_id_2>` (both frontmatter and branch topology)
 - [x] `apm move <ticket_id> <epic_id>` when the ticket is already in `<epic_id>` exits with an informative message and makes no changes
-- [ ] `apm move <ticket_id> -` when the ticket has no epic exits with an informative message and makes no changes
+- [x] `apm move <ticket_id> -` when the ticket has no epic exits with an informative message and makes no changes
 - [ ] `apm move <closed_ticket_id> <epic_id>` exits with a clear error (cannot move a terminal ticket)
 - [ ] `apm move <ticket_id> <nonexistent_epic>` exits with a clear error
 - [ ] When rebase conflicts occur, the command fails with a clear error message, runs `git rebase --abort`, and leaves the repository in a clean state with no partial branches or uncommitted changes
