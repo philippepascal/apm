@@ -45,7 +45,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 - [x] `epic/*` refs receive identical treatment to `ticket/*` refs; integration tests cover at least one `epic/*` scenario in each non-trivial case
 - [x] The module carries block comments documenting the classification states and explicit direction of ancestry checks
 - [x] Integration tests in `apm/tests/integration.rs` cover: equal, behind-FF, ahead-no-clobber, diverged-no-clobber, remote-only-create, local-only-untouched — for both `ticket/*` and at least one representative `epic/*` case
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
