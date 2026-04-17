@@ -1,7 +1,7 @@
 +++
 id = "1339c81d"
 title = "Classify non-checked-out ticket and epic refs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1339c81d-classify-non-checked-out-ticket-and-epic"
 created_at = "2026-04-17T18:32:35.787126Z"
-updated_at = "2026-04-17T18:33:47.121439Z"
+updated_at = "2026-04-17T18:34:19.027296Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 +++
@@ -50,3 +50,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-17T18:32Z | — | new | philippepascal |
 | 2026-04-17T18:33Z | new | groomed | claude-0417-1645-sync1 |
+| 2026-04-17T18:34Z | groomed | in_design | claude-0417-1645-sync1 |
