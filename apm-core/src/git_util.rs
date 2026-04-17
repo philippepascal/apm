@@ -344,11 +344,36 @@ pub fn push_ticket_branches(root: &Path, warnings: &mut Vec<String>) {
     }
 }
 
-/// Update local refs for all ticket/* branches to match origin after a fetch.
-/// Skips branches that are currently checked out in any worktree (main or permanent).
-/// All failures are handled as warnings — this function never panics or returns an error.
-pub fn sync_local_ticket_refs(root: &Path, warnings: &mut Vec<String>) {
+/// Sync non-checked-out `ticket/*` and `epic/*` local refs with their origin counterparts.
+///
+/// This replaces the old `sync_local_ticket_refs` which performed an unconditional
+/// `update-ref` that could silently rewind local refs with unpushed commits (data-loss bug).
+///
+/// State matrix — each case documents why the mapped action is correct:
+///
+///   Equal      → no-op. Local and origin are identical; nothing to do.
+///
+///   Behind     → fast-forward via `update-ref`. Safe because local is a strict ancestor
+///                of origin: the update only moves the ref forward, losing no local commits.
+///
+///   Ahead      → info line only, NO `update-ref`, NO push.
+///                CRITICAL: the old code performed an unconditional `update-ref` in this
+///                case, silently rewriting the local ref to the origin SHA and orphaning
+///                any unpushed local commits. That was the data-loss bug this function fixes.
+///                apm sync never pushes; ahead refs wait for explicit user action.
+///
+///   Diverged   → warning line, no ref change, no push. Neither side is an ancestor of
+///                the other; manual resolution is required. Clobbering either side would
+///                lose commits.
+///
+///   RemoteOnly → create local ref at origin SHA. Safe: no local commits exist to lose.
+///                Makes the branch visible locally without a checkout.
+///
+///   NoRemote   → local-only branch, leave untouched. No auto-push, no warning spam.
+///                Publishing local-only branches requires an explicit user action.
+pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) {
     // Collect all branches currently checked out across all worktrees.
+    // These are never touched — they must be managed via the worktree's own git operations.
     let checked_out: std::collections::HashSet<String> = {
         let mut set = std::collections::HashSet::new();
         if let Ok(out) = run(root, &["worktree", "list", "--porcelain"]) {
@@ -361,32 +386,85 @@ pub fn sync_local_ticket_refs(root: &Path, warnings: &mut Vec<String>) {
         set
     };
 
-    // Enumerate all origin ticket branches.
-    let remote_refs = match run(root, &["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/ticket/"]) {
-        Ok(o) => o,
-        Err(_) => return,
-    };
+    // Two ref namespaces this sync cares about. Both get identical classification-based
+    // treatment — ticket/* and epic/* branches are managed the same way.
+    const MANAGED_NAMESPACES: &[&str] = &["ticket", "epic"];
 
-    for remote_name in remote_refs.lines().filter(|l| !l.is_empty()) {
-        // remote_name is like "origin/ticket/<slug>"; strip the "origin/" prefix.
+    // Collect all origin refs across both namespaces.
+    let mut remote_refs: Vec<String> = Vec::new();
+    for ns in MANAGED_NAMESPACES {
+        let pattern = format!("refs/remotes/origin/{ns}/");
+        if let Ok(out) = run(root, &["for-each-ref", "--format=%(refname:short)", &pattern]) {
+            for line in out.lines().filter(|l| !l.is_empty()) {
+                remote_refs.push(line.to_string());
+            }
+        }
+    }
+
+    for remote_name in remote_refs {
+        // remote_name is like "origin/ticket/<slug>" or "origin/epic/<slug>".
+        // Strip the "origin/" prefix to get the local branch name.
         let branch = match remote_name.strip_prefix("origin/") {
             Some(b) => b.to_string(),
             None => continue,
         };
 
+        // Never touch a branch currently checked out in any worktree.
         if checked_out.contains(&branch) {
             continue;
         }
 
-        // Resolve the origin SHA.
-        let sha = match run(root, &["rev-parse", &format!("refs/remotes/{remote_name}")]) {
-            Ok(s) => s,
-            Err(_) => continue,
-        };
+        let local_ref = format!("refs/heads/{branch}");
+        // Use the short remote name (e.g. "origin/ticket/abc") as classify_branch resolves it.
+        let remote_ref_full = format!("refs/remotes/{remote_name}");
 
-        // Create or update the local ref unconditionally.
-        if let Err(e) = run(root, &["update-ref", &format!("refs/heads/{branch}"), &sha]) {
-            warnings.push(format!("warning: could not update local ref {branch}: {e:#}"));
+        // Classification drives the action. Nothing in this function pushes —
+        // ahead refs wait for explicit action via apm state transitions.
+        match classify_branch(root, &local_ref, &remote_name) {
+            BranchClass::RemoteOnly => {
+                // No local ref exists yet; create it pointing at the origin SHA.
+                // Safe: there are no local commits to clobber.
+                let sha = match run(root, &["rev-parse", &remote_ref_full]) {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+                if let Err(e) = run(root, &["update-ref", &local_ref, &sha]) {
+                    warnings.push(format!("warning: could not create local ref {branch}: {e:#}"));
+                }
+            }
+            BranchClass::Equal => {
+                // Local and origin are identical; nothing to do.
+            }
+            BranchClass::Behind => {
+                // Local is a strict ancestor of origin — fast-forward is safe.
+                // `update-ref` moves the ref forward; no local commits are lost.
+                let sha = match run(root, &["rev-parse", &remote_ref_full]) {
+                    Ok(s) => s,
+                    Err(_) => continue,
+                };
+                if let Err(e) = run(root, &["update-ref", &local_ref, &sha]) {
+                    warnings.push(format!("warning: could not fast-forward {branch}: {e:#}"));
+                }
+            }
+            BranchClass::Ahead => {
+                // CRITICAL: do NOT update-ref here.
+                // The old sync_local_ticket_refs performed an unconditional update-ref that
+                // silently rewound this ref to the origin SHA, orphaning unpushed local commits.
+                // That was the data-loss bug. The correct action is an info line only —
+                // apm sync never pushes; the user must push explicitly when ready.
+                warnings.push(crate::sync_guidance::TICKET_OR_EPIC_AHEAD.replace("<slug>", &branch));
+            }
+            BranchClass::Diverged => {
+                // Neither side is an ancestor of the other. Manual resolution required.
+                // Clobbering either ref would silently discard commits on the other side.
+                let msg = crate::sync_guidance::TICKET_OR_EPIC_DIVERGED
+                    .replace("<slug>", &branch);
+                warnings.push(msg);
+            }
+            BranchClass::NoRemote => {
+                // Local-only branch: no origin counterpart. Leave it alone.
+                // No auto-push, no warning — publishing requires an explicit user action.
+            }
         }
     }
 }
@@ -536,12 +614,16 @@ pub fn is_ancestor(root: &Path, commit: &str, of_ref: &str) -> bool {
 ///   - local ancestor-of remote (not equal)   → Behind (FF possible: remote has new commits)
 ///   - remote ancestor-of local (not equal)   → Ahead  (local has unpushed commits)
 ///   - neither is an ancestor of the other    → Diverged (manual resolution required)
-///   - remote ref cannot be resolved          → NoRemote (no origin, or fetch not done)
+///   - local ref absent, remote ref present   → RemoteOnly (safe to create local ref)
+///   - remote ref cannot be resolved          → NoRemote (local-only or no origin)
 pub enum BranchClass {
     Equal,
     Behind,
     Ahead,
     Diverged,
+    /// Local ref does not exist; origin ref does. Safe to create the local ref.
+    RemoteOnly,
+    /// Remote ref cannot be resolved. Branch is local-only or origin is unreachable.
     NoRemote,
 }
 
@@ -555,7 +637,16 @@ pub enum BranchClass {
 pub fn classify_branch(root: &Path, local: &str, remote: &str) -> BranchClass {
     let local_sha = match run(root, &["rev-parse", local]) {
         Ok(s) => s,
-        Err(_) => return BranchClass::NoRemote,
+        Err(_) => {
+            // Local ref absent. Check whether the remote side exists.
+            // If origin has the branch, this is RemoteOnly (safe to create a local ref).
+            // If origin also can't be resolved, it is truly NoRemote (local-only or no origin).
+            return if run(root, &["rev-parse", remote]).is_ok() {
+                BranchClass::RemoteOnly
+            } else {
+                BranchClass::NoRemote
+            };
+        }
     };
     let remote_sha = match run(root, &["rev-parse", remote]) {
         Ok(s) => s,
@@ -620,7 +711,7 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
             if run(&wt, &["merge", "--ff-only", &remote]).is_err() {
                 // FF refused — uncommitted local changes overlap with incoming commits.
                 // Leave the working tree untouched and print recovery guidance.
-                // TODO(5cf54181): move to sync_guidance
+                // Assumption: overlap is the only realistic failure mode for a strictly-behind FF merge; MAIN_BEHIND_DIRTY_OVERLAP covers any --ff-only error here.
                 let msg = crate::sync_guidance::MAIN_BEHIND_DIRTY_OVERLAP
                     .replace("<default>", default);
                 warnings.push(msg);
@@ -634,16 +725,17 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
                 .ok()
                 .and_then(|s| s.trim().parse::<u64>().ok())
                 .unwrap_or(0);
-            warnings.push(format!(
-                "{default} is ahead of {remote} by {count} commit{} — run `git push` when ready",
-                if count == 1 { "" } else { "s" },
-            ));
+            let msg = crate::sync_guidance::MAIN_AHEAD
+                .replace("<default>", default)
+                .replace("<remote>", &remote)
+                .replace("<count>", &count.to_string())
+                .replace("<commits>", if count == 1 { "commit" } else { "commits" });
+            warnings.push(msg);
         }
 
         BranchClass::Diverged => {
             // Neither side is an ancestor of the other; manual resolution required.
             // Print the dirty-aware variant so the user gets actionable steps.
-            // TODO(5cf54181): move to sync_guidance
             let wt = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
             let guidance = if is_worktree_dirty(&wt) {
                 crate::sync_guidance::MAIN_DIVERGED_DIRTY.replace("<default>", default)
@@ -651,6 +743,12 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
                 crate::sync_guidance::MAIN_DIVERGED_CLEAN.replace("<default>", default)
             };
             warnings.push(guidance);
+        }
+
+        BranchClass::RemoteOnly => {
+            // The default branch always exists locally in any repo with commits.
+            // RemoteOnly here would mean local branch is absent, which cannot happen
+            // during a normal sync flow. Treat it as NoRemote (silent skip).
         }
 
         BranchClass::NoRemote => {

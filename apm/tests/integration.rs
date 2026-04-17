@@ -5466,3 +5466,451 @@ fn sync_main_no_remote_skips() {
     let result = apm::cmd::sync::run(local.path(), false, true, true, true);
     assert!(result.is_ok(), "no remote: sync must return Ok, got: {result:?}");
 }
+
+// ── sync_non_checked_out_refs integration tests ───────────────────────────────
+//
+// Each test uses a bare origin and a local clone. Tests call sync_non_checked_out_refs
+// directly (not via apm::cmd::sync::run) to avoid requiring apm.toml in all repos.
+// The helper functions from the main-branch sync tests above are reused where possible.
+
+/// Create a bare origin and a local clone; push one commit on the given branch to origin.
+/// Returns (origin_dir, local_dir, origin_sha).
+fn setup_branch_in_origin(branch: &str) -> (TempDir, TempDir, String) {
+    let origin = tempfile::tempdir().unwrap();
+    let local = tempfile::tempdir().unwrap();
+
+    // Init bare origin.
+    std::process::Command::new("git")
+        .args(["init", "--bare", "-q", "-b", "main"])
+        .current_dir(origin.path())
+        .status()
+        .unwrap();
+
+    // Init local, add remote, push an initial main commit.
+    git(local.path(), &["init", "-q", "-b", "main"]);
+    git(local.path(), &["config", "user.email", "test@test.com"]);
+    git(local.path(), &["config", "user.name", "test"]);
+    git(local.path(), &["remote", "add", "origin", &origin.path().to_string_lossy()]);
+    std::fs::write(local.path().join("README"), "init").unwrap();
+    git(local.path(), &["add", "README"]);
+    git(local.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    git(local.path(), &["push", "origin", "HEAD:main"]);
+
+    // Create the target branch on origin via a disposable clone.
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &origin.path().to_string_lossy(), "."])
+        .current_dir(t)
+        .status()
+        .unwrap();
+    git(t, &["config", "user.email", "test@test.com"]);
+    git(t, &["config", "user.name", "test"]);
+    git(t, &["checkout", "-b", branch]);
+    std::fs::write(t.join("branch.txt"), "v1").unwrap();
+    git(t, &["add", "branch.txt"]);
+    git(t, &["-c", "commit.gpgsign=false", "commit", "-m", "branch commit"]);
+    git(t, &["push", "origin", branch]);
+
+    let sha = rev_parse(origin.path(), branch);
+
+    // Local fetches so origin/* tracking refs are present.
+    apm_core::git::fetch_all(local.path()).unwrap();
+
+    (origin, local, sha)
+}
+
+// Equal → no ref change; local and origin are at the same SHA.
+#[test]
+fn sync_ticket_ref_equal_noop() {
+    let (origin, local, origin_sha) = setup_branch_in_origin("ticket/abc-equal");
+    let l = local.path();
+
+    // Create the local ref pointing at the same SHA as origin.
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-equal", &origin_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    let sha_before = rev_parse(l, "refs/heads/ticket/abc-equal");
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+    let sha_after = rev_parse(l, "refs/heads/ticket/abc-equal");
+
+    assert_eq!(sha_before, sha_after, "equal: local ref must be unchanged");
+    assert!(w.is_empty(), "equal: no warnings expected");
+    drop(origin);
+}
+
+// Behind → local ref fast-forwarded to match origin.
+#[test]
+fn sync_ticket_ref_behind_ff() {
+    let (origin, local, _sha_v1) = setup_branch_in_origin("ticket/abc-behind");
+    let l = local.path();
+    let o = origin.path();
+
+    // Local starts at the initial main commit (before the branch commit).
+    let main_sha = rev_parse(l, "main");
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-behind", &main_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    // Origin adds another commit on the branch → local is now two commits behind.
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &o.to_string_lossy(), "."])
+        .current_dir(t)
+        .status()
+        .unwrap();
+    git(t, &["config", "user.email", "test@test.com"]);
+    git(t, &["config", "user.name", "test"]);
+    git(t, &["checkout", "ticket/abc-behind"]);
+    std::fs::write(t.join("extra.txt"), "v2").unwrap();
+    git(t, &["add", "extra.txt"]);
+    git(t, &["-c", "commit.gpgsign=false", "commit", "-m", "second commit"]);
+    git(t, &["push", "origin", "ticket/abc-behind"]);
+
+    apm_core::git::fetch_all(l).unwrap();
+
+    let origin_sha = rev_parse(o, "ticket/abc-behind");
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    let local_sha = rev_parse(l, "refs/heads/ticket/abc-behind");
+    assert_eq!(local_sha, origin_sha, "behind: local ref must be fast-forwarded to origin SHA");
+}
+
+// Ahead → local ref is preserved (data-loss regression test for the old unconditional update-ref).
+#[test]
+fn sync_ticket_ref_ahead_preserves_local_commits() {
+    let (origin, local, origin_sha) = setup_branch_in_origin("ticket/abc-ahead");
+    let l = local.path();
+
+    // Create local ref at origin SHA, then add a local-only commit on top.
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-ahead", &origin_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    // Commit a file using a temp worktree checkout.
+    std::process::Command::new("git")
+        .args(["checkout", "-b", "__tmp_ahead", "ticket/abc-ahead"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::fs::write(l.join("local-only.txt"), "local").unwrap();
+    git(l, &["add", "local-only.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local-only commit"]);
+    // Move ticket/abc-ahead to point at the new commit; delete temp branch.
+    let local_sha = rev_parse(l, "__tmp_ahead");
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-ahead", &local_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["checkout", "main"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["branch", "-D", "__tmp_ahead"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    assert_ne!(local_sha, origin_sha, "pre-condition: local must have an extra commit");
+
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    // CRITICAL: local ref must NOT have been rewound to origin SHA.
+    let sha_after = rev_parse(l, "refs/heads/ticket/abc-ahead");
+    assert_eq!(
+        sha_after, local_sha,
+        "ahead: local ref must NOT be overwritten — data-loss regression"
+    );
+    assert!(!w.is_empty(), "ahead: an info line should be emitted");
+    drop(origin);
+}
+
+// Diverged → local ref preserved; warning emitted.
+#[test]
+fn sync_ticket_ref_diverged_preserves_local_commits() {
+    let (origin, local, origin_sha) = setup_branch_in_origin("ticket/abc-diverged");
+    let l = local.path();
+    let o = origin.path();
+
+    // Local branch starts at the origin SHA; then gets a local-only commit.
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-diverged", &origin_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["checkout", "-b", "__tmp_div", "ticket/abc-diverged"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::fs::write(l.join("local-div.txt"), "local").unwrap();
+    git(l, &["add", "local-div.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local diverge commit"]);
+    let local_sha = rev_parse(l, "__tmp_div");
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-diverged", &local_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["checkout", "main"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["branch", "-D", "__tmp_div"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    // Origin also gets a new commit on the branch (different from local).
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &o.to_string_lossy(), "."])
+        .current_dir(t)
+        .status()
+        .unwrap();
+    git(t, &["config", "user.email", "test@test.com"]);
+    git(t, &["config", "user.name", "test"]);
+    git(t, &["checkout", "ticket/abc-diverged"]);
+    std::fs::write(t.join("origin-div.txt"), "origin").unwrap();
+    git(t, &["add", "origin-div.txt"]);
+    git(t, &["-c", "commit.gpgsign=false", "commit", "-m", "origin diverge commit"]);
+    git(t, &["push", "origin", "ticket/abc-diverged"]);
+
+    apm_core::git::fetch_all(l).unwrap();
+
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    let sha_after = rev_parse(l, "refs/heads/ticket/abc-diverged");
+    assert_eq!(
+        sha_after, local_sha,
+        "diverged: local ref must be preserved — data-loss regression"
+    );
+    assert!(!w.is_empty(), "diverged: a warning must be emitted");
+}
+
+// RemoteOnly → local ref is created at origin SHA (no prior local ref).
+#[test]
+fn sync_ticket_ref_remote_only_creates_local() {
+    let (origin, local, origin_sha) = setup_branch_in_origin("ticket/abc-remote-only");
+    let l = local.path();
+
+    // Confirm no local ref exists yet.
+    let exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", "refs/heads/ticket/abc-remote-only"])
+        .current_dir(l)
+        .status()
+        .unwrap()
+        .success();
+    assert!(!exists, "pre-condition: local ref must not exist");
+
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    let local_sha = rev_parse(l, "refs/heads/ticket/abc-remote-only");
+    assert_eq!(local_sha, origin_sha, "remote-only: local ref must be created at origin SHA");
+    drop(origin);
+}
+
+// LocalOnly → local ref left untouched; no warning, no push.
+#[test]
+fn sync_ticket_ref_local_only_untouched() {
+    let (_origin, local, _) = setup_branch_in_origin("ticket/abc-seed");
+    let l = local.path();
+
+    // Create a local-only branch with no origin counterpart.
+    std::process::Command::new("git")
+        .args(["checkout", "-b", "ticket/local-only", "main"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::fs::write(l.join("local.txt"), "data").unwrap();
+    git(l, &["add", "local.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local-only commit"]);
+    let local_sha = rev_parse(l, "ticket/local-only");
+    std::process::Command::new("git")
+        .args(["checkout", "main"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    // Local ref must be unchanged; no warning about it.
+    let sha_after = rev_parse(l, "refs/heads/ticket/local-only");
+    assert_eq!(sha_after, local_sha, "local-only: local ref must not be changed");
+    // No warning about the local-only branch (no spam).
+    assert!(
+        w.iter().all(|m| !m.contains("ticket/local-only")),
+        "local-only: no warning message expected for local-only branch"
+    );
+}
+
+// epic/* behind → fast-forwarded (covers epic/* namespace).
+#[test]
+fn sync_epic_ref_behind_ff() {
+    let (origin, local, _sha_v1) = setup_branch_in_origin("epic/abcd1234-my-epic");
+    let l = local.path();
+    let o = origin.path();
+
+    // Local starts at main SHA (behind the epic branch).
+    let main_sha = rev_parse(l, "main");
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/epic/abcd1234-my-epic", &main_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    // Origin adds another commit on the epic branch.
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &o.to_string_lossy(), "."])
+        .current_dir(t)
+        .status()
+        .unwrap();
+    git(t, &["config", "user.email", "test@test.com"]);
+    git(t, &["config", "user.name", "test"]);
+    git(t, &["checkout", "epic/abcd1234-my-epic"]);
+    std::fs::write(t.join("extra.txt"), "v2").unwrap();
+    git(t, &["add", "extra.txt"]);
+    git(t, &["-c", "commit.gpgsign=false", "commit", "-m", "epic second commit"]);
+    git(t, &["push", "origin", "epic/abcd1234-my-epic"]);
+
+    apm_core::git::fetch_all(l).unwrap();
+
+    let origin_sha = rev_parse(o, "epic/abcd1234-my-epic");
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    let local_sha = rev_parse(l, "refs/heads/epic/abcd1234-my-epic");
+    assert_eq!(
+        local_sha, origin_sha,
+        "epic behind: local ref must be fast-forwarded to origin SHA"
+    );
+}
+
+// epic/* ahead → local ref preserved (data-loss regression for epic/* namespace).
+#[test]
+fn sync_epic_ref_ahead_preserves_local_commits() {
+    let (origin, local, origin_sha) = setup_branch_in_origin("epic/efgh5678-my-epic");
+    let l = local.path();
+
+    // Set local ref to origin SHA, then add a local-only commit.
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/epic/efgh5678-my-epic", &origin_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["checkout", "-b", "__tmp_epic_ahead", "epic/efgh5678-my-epic"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::fs::write(l.join("local-epic.txt"), "local").unwrap();
+    git(l, &["add", "local-epic.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local epic commit"]);
+    let local_sha = rev_parse(l, "__tmp_epic_ahead");
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/epic/efgh5678-my-epic", &local_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["checkout", "main"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["branch", "-D", "__tmp_epic_ahead"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    let sha_after = rev_parse(l, "refs/heads/epic/efgh5678-my-epic");
+    assert_eq!(
+        sha_after, local_sha,
+        "epic ahead: local ref must NOT be overwritten — data-loss regression"
+    );
+    assert!(!w.is_empty(), "epic ahead: an info line must be emitted");
+    drop(origin);
+}
+
+// Checked-out ticket branch is skipped.
+#[test]
+fn sync_checked_out_ticket_skipped() {
+    let (origin, local, origin_sha) = setup_branch_in_origin("ticket/abc-checked-out");
+    let l = local.path();
+    let o = origin.path();
+
+    // Create the local ref at origin SHA.
+    std::process::Command::new("git")
+        .args(["update-ref", "refs/heads/ticket/abc-checked-out", &origin_sha])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    // Add a new commit to origin so local would be behind (if sync were to run).
+    let tmp = tempfile::tempdir().unwrap();
+    let t = tmp.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &o.to_string_lossy(), "."])
+        .current_dir(t)
+        .status()
+        .unwrap();
+    git(t, &["config", "user.email", "test@test.com"]);
+    git(t, &["config", "user.name", "test"]);
+    git(t, &["checkout", "ticket/abc-checked-out"]);
+    std::fs::write(t.join("extra.txt"), "origin-extra").unwrap();
+    git(t, &["add", "extra.txt"]);
+    git(t, &["-c", "commit.gpgsign=false", "commit", "-m", "origin extra"]);
+    git(t, &["push", "origin", "ticket/abc-checked-out"]);
+
+    apm_core::git::fetch_all(l).unwrap();
+
+    // Check out the ticket branch in a worktree so it's in the checked-out set.
+    let wt = tempfile::tempdir().unwrap();
+    std::process::Command::new("git")
+        .args(["worktree", "add", wt.path().to_str().unwrap(), "ticket/abc-checked-out"])
+        .current_dir(l)
+        .status()
+        .unwrap();
+
+    let sha_before = rev_parse(l, "refs/heads/ticket/abc-checked-out");
+
+    let mut w = Vec::new();
+    apm_core::git::sync_non_checked_out_refs(l, &mut w);
+
+    let sha_after = rev_parse(l, "refs/heads/ticket/abc-checked-out");
+    assert_eq!(
+        sha_before, sha_after,
+        "checked-out: branch ref must not be updated while checked out in worktree"
+    );
+
+    // Clean up the worktree.
+    let _ = std::process::Command::new("git")
+        .args(["worktree", "remove", "--force", wt.path().to_str().unwrap()])
+        .current_dir(l)
+        .status();
+    drop(origin);
+}
