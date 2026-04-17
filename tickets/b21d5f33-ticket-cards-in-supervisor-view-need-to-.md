@@ -16,7 +16,7 @@ updated_at = "2026-04-17T20:26:52.407984Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Ticket cards in the supervisor board swimlanes do not display which epic a ticket belongs to. The `epic` field is already present in the API response and in the TypeScript `Ticket` type, but `TicketCard.tsx` never renders it. As a result, a supervisor scanning the board has no at-a-glance signal about epic membership — they must open each ticket's detail panel individually to find out.\n\nThe desired behaviour: when a ticket belongs to an epic, the card should show a small, clickable epic badge. Clicking the badge should toggle the board's epic filter to show only tickets in that epic, matching the interaction already implemented in the ticket detail panel.
 
 ### Acceptance criteria
 
@@ -33,13 +33,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
