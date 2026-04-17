@@ -452,15 +452,11 @@ pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) {
                 // silently rewound this ref to the origin SHA, orphaning unpushed local commits.
                 // That was the data-loss bug. The correct action is an info line only —
                 // apm sync never pushes; the user must push explicitly when ready.
-                // TODO(5cf54181): move to sync_guidance
-                warnings.push(format!(
-                    "info: {branch} is ahead of origin — push when ready: git push origin {branch}"
-                ));
+                warnings.push(crate::sync_guidance::TICKET_OR_EPIC_AHEAD.replace("<slug>", &branch));
             }
             BranchClass::Diverged => {
                 // Neither side is an ancestor of the other. Manual resolution required.
                 // Clobbering either ref would silently discard commits on the other side.
-                // TODO(5cf54181): move to sync_guidance
                 let msg = crate::sync_guidance::TICKET_OR_EPIC_DIVERGED
                     .replace("<slug>", &branch);
                 warnings.push(msg);
@@ -715,7 +711,7 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
             if run(&wt, &["merge", "--ff-only", &remote]).is_err() {
                 // FF refused — uncommitted local changes overlap with incoming commits.
                 // Leave the working tree untouched and print recovery guidance.
-                // TODO(5cf54181): move to sync_guidance
+                // Assumption: overlap is the only realistic failure mode for a strictly-behind FF merge; MAIN_BEHIND_DIRTY_OVERLAP covers any --ff-only error here.
                 let msg = crate::sync_guidance::MAIN_BEHIND_DIRTY_OVERLAP
                     .replace("<default>", default);
                 warnings.push(msg);
@@ -729,16 +725,17 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
                 .ok()
                 .and_then(|s| s.trim().parse::<u64>().ok())
                 .unwrap_or(0);
-            warnings.push(format!(
-                "{default} is ahead of {remote} by {count} commit{} — run `git push` when ready",
-                if count == 1 { "" } else { "s" },
-            ));
+            let msg = crate::sync_guidance::MAIN_AHEAD
+                .replace("<default>", default)
+                .replace("<remote>", &remote)
+                .replace("<count>", &count.to_string())
+                .replace("<commits>", if count == 1 { "commit" } else { "commits" });
+            warnings.push(msg);
         }
 
         BranchClass::Diverged => {
             // Neither side is an ancestor of the other; manual resolution required.
             // Print the dirty-aware variant so the user gets actionable steps.
-            // TODO(5cf54181): move to sync_guidance
             let wt = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
             let guidance = if is_worktree_dirty(&wt) {
                 crate::sync_guidance::MAIN_DIVERGED_DIRTY.replace("<default>", default)
