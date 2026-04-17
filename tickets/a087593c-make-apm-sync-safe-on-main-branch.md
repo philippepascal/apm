@@ -1,7 +1,7 @@
 +++
 id = "a087593c"
 title = "Make apm sync safe on main branch"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a087593c-make-apm-sync-safe-on-main-branch"
 created_at = "2026-04-17T18:32:29.530485Z"
-updated_at = "2026-04-17T18:33:37.566423Z"
+updated_at = "2026-04-17T18:34:07.974525Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 +++
@@ -50,3 +50,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-17T18:32Z | — | new | philippepascal |
 | 2026-04-17T18:33Z | new | groomed | claude-0417-1645-sync1 |
+| 2026-04-17T18:34Z | groomed | in_design | claude-0417-1645-sync1 |
