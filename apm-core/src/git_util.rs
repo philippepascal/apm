@@ -28,22 +28,6 @@ pub fn fetch_all(root: &Path) -> Result<()> {
     run(root, &["fetch", "--all", "--quiet"]).map(|_| ())
 }
 
-/// Push the default branch to origin if it is ahead.
-/// Silently succeeds if origin is unreachable or already up-to-date.
-pub fn push_default_branch(root: &Path, default_branch: &str) -> Result<()> {
-    let local = match run(root, &["rev-parse", default_branch]) {
-        Ok(s) => s.trim().to_string(),
-        Err(_) => return Ok(()),
-    };
-    let remote = run(root, &["rev-parse", &format!("origin/{default_branch}")])
-        .map(|s| s.trim().to_string())
-        .unwrap_or_default();
-    if local == remote {
-        return Ok(());
-    }
-    run(root, &["push", "origin", default_branch, "--quiet"]).map(|_| ())
-}
-
 /// Read a file's content from a branch ref without changing working tree.
 /// Prefers the local ref (reflects recent commits before push);
 /// falls back to origin when no local ref exists.

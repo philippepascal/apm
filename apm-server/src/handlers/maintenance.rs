@@ -24,7 +24,11 @@ pub async fn sync_handler(
             .unwrap_or(0);
         let closed = match apm_core::config::Config::load(&root) {
             Ok(config) => {
-                let _ = apm_core::git::push_default_branch(&root, &config.project.default_branch);
+                let mut sync_warnings: Vec<String> = Vec::new();
+                apm_core::git::sync_default_branch(&root, &config.project.default_branch, &mut sync_warnings);
+                for w in &sync_warnings {
+                    eprintln!("warning: {w}");
+                }
                 match apm_core::sync::detect(&root, &config) {
                     Ok(candidates) => {
                         let n = candidates.close.len();
