@@ -575,6 +575,32 @@ Example:
         #[arg(long, value_name = "EPIC_ID")]
         epic: Option<String>,
     },
+    /// Move a ticket into or out of an epic
+    #[command(long_about = "Move an existing ticket into (or out of) an epic.
+
+Rebases the ticket's branch onto the target epic's branch tip, then updates
+the ticket's `epic` and `target_branch` frontmatter fields in place. The
+ticket keeps its original ID and branch name; only the branch base changes.
+
+Move into an epic:
+  apm move <ticket> <epic_id>
+
+Move between epics:
+  apm move <ticket> <epic_id_2>
+
+Remove from epic (rebase onto main):
+  apm move <ticket> -
+
+Both <ticket> and <epic_id> accept 4–8 char hex prefixes. Use \"-\" as the
+second argument to detach from any current epic.")]
+    Move {
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+        #[arg(value_name = "TICKET")]
+        ticket: String,
+        /// Epic ID prefix, or \"-\" to remove from any epic (rebase onto main)
+        #[arg(value_name = "EPIC")]
+        target: String,
+    },
     /// Force-close a ticket from any state (supervisor only)
     #[command(long_about = "Force-close a ticket from any state (supervisor only).
 
@@ -800,6 +826,7 @@ fn main() -> Result<()> {
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),
         Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
+        Command::Move { ticket, target } => cmd::move_ticket::run(&root, &ticket, &target),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
         Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked, epics),
