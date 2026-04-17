@@ -41,7 +41,30 @@ The desired behaviour is for the maintenance handler to follow the same safe-syn
 
 ### Approach
 
-How the implementation will work.
+**1. `apm-server/src/handlers/maintenance.rs`**
+
+Replace the existing push call (line 27):
+```rust
+let _ = apm_core::git::push_default_branch(&root, &config.project.default_branch);
+```
+with:
+```rust
+let mut sync_warnings: Vec<String> = Vec::new();
+apm_core::git::sync_default_branch(&root, &config.project.default_branch, &mut sync_warnings);
+for w in &sync_warnings {
+    tracing::warn!("{w}");
+}
+```
+
+Use whatever logging macro is already in use in that file (`tracing::warn!` or `log::warn!`). Do not add a new dependency.
+
+**2. `apm-core/src/git_util.rs`**
+
+Delete the entire `push_default_branch` function (currently lines 31–45). Verify no other callers remain with a project-wide search for `push_default_branch` before deleting.
+
+**3. Compilation check**
+
+Run `cargo build --workspace` and confirm zero errors and zero new warnings.
 
 ### Open questions
 
