@@ -43,13 +43,13 @@ None of these affect behavior or test outcomes. They are code-hygiene fixes that
 
 ### Acceptance criteria
 
-- [ ] `sync_guidance.rs` exports a `MAIN_AHEAD` pub const whose text includes the `<default>`, `<remote>`, `<count>`, and `<commits>` placeholders
-- [ ] `sync_guidance.rs` exports a `TICKET_OR_EPIC_AHEAD` pub const whose text includes the `<slug>` placeholder
-- [ ] `sync_default_branch` Ahead arm emits its message by substituting into `sync_guidance::MAIN_AHEAD` rather than via an inline `format!(...)`
-- [ ] `sync_non_checked_out_refs` Ahead arm emits its message by substituting into `sync_guidance::TICKET_OR_EPIC_AHEAD` rather than via an inline `format!(...)`
-- [ ] All four `// TODO(5cf54181): move to sync_guidance` comments are absent from `git_util.rs`
-- [ ] `sync_default_branch` Behind arm carries a one-line comment documenting the assumption that any `git merge --ff-only` failure implies dirty overlap
-- [ ] `cargo test` passes with no new failures
+- [x] `sync_guidance.rs` exports a `MAIN_AHEAD` pub const whose text includes the `<default>`, `<remote>`, `<count>`, and `<commits>` placeholders
+- [x] `sync_guidance.rs` exports a `TICKET_OR_EPIC_AHEAD` pub const whose text includes the `<slug>` placeholder
+- [x] `sync_default_branch` Ahead arm emits its message by substituting into `sync_guidance::MAIN_AHEAD` rather than via an inline `format!(...)`
+- [x] `sync_non_checked_out_refs` Ahead arm emits its message by substituting into `sync_guidance::TICKET_OR_EPIC_AHEAD` rather than via an inline `format!(...)`
+- [x] All four `// TODO(5cf54181): move to sync_guidance` comments are absent from `git_util.rs`
+- [x] `sync_default_branch` Behind arm carries a one-line comment documenting the assumption that any `git merge --ff-only` failure implies dirty overlap
+- [x] `cargo test` passes with no new failures
 
 ### Out of scope
 
