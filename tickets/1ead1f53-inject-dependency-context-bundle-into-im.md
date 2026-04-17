@@ -32,7 +32,9 @@ When an implementation worker is spawned (at `in_progress`), it sees its ticket'
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Full diff inclusion (commit subjects are enough; the worker can read the code on demand).
+- Dependency ordering / scheduling changes (APM already gates ready on deps; this is purely context injection).
+- Epic-level sibling context — handled by the epic context bundle ticket.
 
 ### Approach
 
