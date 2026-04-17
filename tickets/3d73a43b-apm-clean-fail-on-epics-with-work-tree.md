@@ -1,7 +1,7 @@
 +++
 id = "3d73a43b"
 title = "apm clean fail on epics with work tree"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3d73a43b-apm-clean-fail-on-epics-with-work-tree"
 created_at = "2026-04-17T18:28:11.666627Z"
-updated_at = "2026-04-17T18:28:11.666627Z"
+updated_at = "2026-04-17T18:31:29.825161Z"
 +++
 
 ## Spec
@@ -62,3 +62,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-17T18:28Z | — | new | philippepascal |
+| 2026-04-17T18:31Z | new | groomed | apm |
