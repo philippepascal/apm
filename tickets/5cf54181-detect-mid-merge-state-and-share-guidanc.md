@@ -52,7 +52,82 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` — particularly
 
 ### Approach
 
-How the implementation will work.
+**1. New module `apm-core/src/sync_guidance.rs`.** Holds named `&'static str` constants for each guidance case. Keep them as plain multi-line string literals — no templating. Callers `println!` or `eprintln!` them directly.
+
+```rust
+// Guidance strings printed by `apm sync` when automatic handling is unsafe.
+// Each constant's doc comment describes the precise trigger condition so
+// callers can reference by name rather than guessing from wording.
+
+/// Printed when local <default> is behind origin/<default> (FF possible in principle)
+/// but `git merge --ff-only` refused because uncommitted local changes would be overwritten.
+pub const MAIN_BEHIND_DIRTY_OVERLAP: &str = "...";
+
+/// Printed when local <default> and origin/<default> have diverged and the working tree is clean.
+pub const MAIN_DIVERGED_CLEAN: &str = "...";
+
+/// Printed when local <default> and origin/<default> have diverged and the working tree is dirty.
+pub const MAIN_DIVERGED_DIRTY: &str = "...";
+
+/// Printed for a non-checked-out ticket/* or epic/* ref whose local tip and origin tip
+/// have diverged (local has unpushed commits AND origin has commits not on local).
+pub const TICKET_OR_EPIC_DIVERGED: &str = "...";
+
+/// Printed when `apm sync` detects the repo is mid-merge, mid-rebase, or mid-cherry-pick.
+pub const MID_MERGE_IN_PROGRESS: &str = "...";
+```
+
+Use the exact string bodies from the design doc's "Guidance copy" section (`/Users/philippepascal/Documents/apm/apm-sync-scenarios.md`), with `<default>`, `<id>`, `<slug>` left as literal placeholders inside the strings — each caller substitutes via `replace(...)` at print time. Keep the substitution logic at the call site, not inside this module (the module stays purely declarative).
+
+Export the module from `apm-core/src/lib.rs` as `pub mod sync_guidance;`.
+
+**2. Mid-merge detection helper.** In `apm-core/src/git_util.rs`:
+
+```rust
+// Detect whether the repo is in a mid-merge, mid-rebase, or mid-cherry-pick state.
+// Presence of any of the marker files/dirs is definitive — git creates them
+// for the duration of the operation and removes them on commit/abort.
+pub enum MidMergeState {
+    Merge,
+    RebaseMerge,
+    RebaseApply,
+    CherryPick,
+}
+
+pub fn detect_mid_merge_state(root: &Path) -> Option<MidMergeState> {
+    let git_dir = root.join(".git");
+    if git_dir.join("MERGE_HEAD").exists()        { return Some(MidMergeState::Merge); }
+    if git_dir.join("rebase-merge").is_dir()      { return Some(MidMergeState::RebaseMerge); }
+    if git_dir.join("rebase-apply").is_dir()      { return Some(MidMergeState::RebaseApply); }
+    if git_dir.join("CHERRY_PICK_HEAD").exists()  { return Some(MidMergeState::CherryPick); }
+    None
+}
+```
+
+Keep it path-based — no subprocess calls. Comment notes that worktrees use a different `.git` location (a file, not a directory), but `apm sync` runs at the repo root where `.git` is always a directory, so this is safe.
+
+**3. Wire into `apm/src/cmd/sync.rs`.** At the top of `run()`, before the fetch:
+
+```rust
+if let Some(state) = git::detect_mid_merge_state(root) {
+    // Any sync work done in this state would compound the mess.
+    // Bail cleanly; let the user resolve the pending operation first.
+    eprintln!("{}", apm_core::sync_guidance::MID_MERGE_IN_PROGRESS);
+    return Ok(());
+}
+```
+
+**4. Tests.** Unit tests in `apm-core/src/git_util.rs` (or `tests/` if the helper ends up there):
+- `detect_mid_merge_none_on_clean_repo`
+- `detect_mid_merge_on_merge_head` — touch `.git/MERGE_HEAD`, assert `Some(Merge)`
+- `detect_mid_merge_on_rebase_merge` — mkdir `.git/rebase-merge`
+- `detect_mid_merge_on_rebase_apply` — mkdir `.git/rebase-apply`
+- `detect_mid_merge_on_cherry_pick` — touch `.git/CHERRY_PICK_HEAD`
+
+Integration test in `apm/tests/integration.rs`:
+- `sync_bails_on_mid_merge_state` — put a temp repo into mid-merge, run sync, assert guidance printed and no fetch attempted (use a bare-repo origin and verify its refs untouched)
+
+**5. Comments.** This module is the "single source of guidance wording" — a short header comment at the top of `sync_guidance.rs` explaining that rule keeps future contributors from sprinkling literals back through the sync flow.
 
 ### Open questions
 
