@@ -16,7 +16,11 @@ updated_at = "2026-04-17T20:00:07.481920Z"
 
 ### Problem
 
-apm-server/src/handlers/maintenance.rs:27 calls apm_core::git::push_default_branch. The sync.rs push was removed by ticket a087593c, but this server-side handler was out of scope and still calls it. The function was kept in git_util.rs for this reason. A follow-up should decide whether the maintenance handler should also stop auto-pushing main, or be replaced with sync_default_branch semantics.
+Ticket a087593c established the principle that apm must never automatically push the default branch. It removed `push_default_branch` from the CLI sync command and replaced it with `sync_default_branch`, a safe state-machine alternative (Equal / Behind / Ahead / Diverged / NoRemote) that fast-forwards when behind but never pushes.
+
+The server-side maintenance handler (`apm-server/src/handlers/maintenance.rs`, line 27) was explicitly left out of that ticket's scope. It still calls `apm_core::git::push_default_branch`, making it the only remaining automatic pusher in the codebase. `push_default_branch` was retained in `git_util.rs` solely because this caller existed.
+
+The desired behaviour is for the maintenance handler to follow the same safe-sync semantics as the CLI: fast-forward when behind, log a warning when ahead or diverged, and never push. Once the handler is updated, `push_default_branch` has no remaining callers and should be removed.
 
 ### Acceptance criteria
 
