@@ -43,7 +43,22 @@ The result is a partially-completed clean: some epics are deleted while others f
 
 ### Approach
 
-How the implementation will work.
+**File to change**: `apm/src/cmd/epic.rs` — `run_epic_clean()` function (around lines 340–390).
+
+**Pattern to follow**: Mirror what `apm-core/src/clean.rs` `remove()` does — call `worktree::find_worktree_for_branch()` then `worktree::remove_worktree()` before branch deletion.
+
+**Steps**:
+
+1. In `run_epic_clean()`, for each epic branch scheduled for deletion, before the `git branch -d` call:
+   - Call `apm_core::worktree::find_worktree_for_branch(root, &branch_name)` to check for an active worktree.
+   - If a worktree path is returned, call `apm_core::worktree::remove_worktree(root, &worktree_path)`.
+   - If `remove_worktree` returns an error, print a clear message (e.g. `"skipping epic/<id>: could not remove worktree at <path>: <err>"`) and `continue` to the next epic — do **not** attempt the branch deletion or `.apm/epics.toml` removal for that entry.
+
+2. No changes needed to `git_util::delete_local_branch`, `worktree.rs`, or `apm-core/src/clean.rs`.
+
+3. The `worktree::find_worktree_for_branch` function parses `git worktree list --porcelain` output; it already works for epic branches since they follow the same `<worktrees_base>/epic-<id>-<slug>` path convention confirmed in the error output.
+
+**Key constraint**: The worktree must be removed *before* the branch deletion attempt; git will refuse the deletion otherwise. The existing `remove_worktree` implementation already passes `--force` to `git worktree remove`, which is sufficient.
 
 ### Open questions
 
