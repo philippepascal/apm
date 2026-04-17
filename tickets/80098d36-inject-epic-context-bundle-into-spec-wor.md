@@ -1,7 +1,7 @@
 +++
 id = "80098d36"
 title = "Inject epic context bundle into spec workers"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/80098d36-inject-epic-context-bundle-into-spec-wor"
 created_at = "2026-04-17T07:27:05.870212Z"
-updated_at = "2026-04-17T07:37:40.647565Z"
+updated_at = "2026-04-17T07:38:26.047357Z"
 epic = "35199c7f"
 target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 +++
@@ -59,3 +59,4 @@ When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`
 | 2026-04-17T07:33Z | groomed | in_design | claude-0417-1430-c7a2 |
 | 2026-04-17T07:35Z | in_design | specd | claude-0417-1430-c7a2 |
 | 2026-04-17T07:37Z | specd | ready | apm |
+| 2026-04-17T07:38Z | ready | in_progress | philippepascal |
