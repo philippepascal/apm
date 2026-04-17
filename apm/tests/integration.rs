@@ -5136,3 +5136,132 @@ fn epic_bulk_owner_change_blocked_non_owner() {
     let content2 = branch_content(p, "ticket/cc000002-theirs", "tickets/cc000002-theirs.md");
     assert!(content2.contains("owner = \"carol\""), "carol's ticket should be unchanged:\n{content2}");
 }
+
+// --- build_dependency_bundle ---
+
+#[test]
+fn build_dependency_bundle_with_direct_and_transitive_deps() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    // Transitive dependency (closed, no depends_on).
+    let trans_ticket = concat!(
+        "+++\nid = \"trans001\"\ntitle = \"Base Library\"\n",
+        "state = \"closed\"\n",
+        "branch = \"ticket/trans001-base-library\"\n",
+        "+++\n\n",
+        "## Spec\n\n### Problem\n\nProvide low-level helpers.\n\n",
+        "### Acceptance criteria\n\n- [x] Done\n\n",
+        "### Out of scope\n\nNothing.\n\n",
+        "### Approach\n\nWrite the helpers.\n\n",
+        "## History\n\n| When | From | To | By |\n|------|------|----|----|\n",
+    );
+    apm_core::git::commit_to_branch(
+        p,
+        "ticket/trans001-base-library",
+        "tickets/trans001-base-library.md",
+        trans_ticket,
+        "add transitive dep",
+    )
+    .unwrap();
+
+    // Direct dependency that is already closed.
+    let direct_closed = concat!(
+        "+++\nid = \"dir0001a\"\ntitle = \"Auth Module\"\n",
+        "state = \"closed\"\n",
+        "branch = \"ticket/dir0001a-auth-module\"\n",
+        "depends_on = [\"trans001\"]\n",
+        "+++\n\n",
+        "## Spec\n\n### Problem\n\nImplement authentication.\n\n",
+        "### Acceptance criteria\n\n- [x] Done\n\n",
+        "### Out of scope\n\nOAuth only later.\n\n",
+        "### Approach\n\nUse JWT tokens with a helper from Base Library.\n\n",
+        "## History\n\n| When | From | To | By |\n|------|------|----|----|\n",
+    );
+    apm_core::git::commit_to_branch(
+        p,
+        "ticket/dir0001a-auth-module",
+        "tickets/dir0001a-auth-module.md",
+        direct_closed,
+        "add auth module initial",
+    )
+    .unwrap();
+    // A second commit on the closed dep branch (different content) so the log range
+    // has at least one entry relative to main.
+    let direct_closed_v2 = concat!(
+        "+++\nid = \"dir0001a\"\ntitle = \"Auth Module\"\n",
+        "state = \"closed\"\n",
+        "branch = \"ticket/dir0001a-auth-module\"\n",
+        "depends_on = [\"trans001\"]\n",
+        "+++\n\n",
+        "## Spec\n\n### Problem\n\nImplement authentication.\n\n",
+        "### Acceptance criteria\n\n- [x] Done\n\n",
+        "### Out of scope\n\nOAuth only later.\n\n",
+        "### Approach\n\nUse JWT tokens with a helper from Base Library.\n\n",
+        "## History\n\n| When | From | To | By |\n|------|------|----|----|\n",
+        "| 2026-01-01T00:00Z | ready | closed | test |\n",
+    );
+    apm_core::git::commit_to_branch(
+        p,
+        "ticket/dir0001a-auth-module",
+        "tickets/dir0001a-auth-module.md",
+        direct_closed_v2,
+        "auth: implement JWT signing",
+    )
+    .unwrap();
+
+    // Direct dependency that is still open (in_progress).
+    let direct_open = concat!(
+        "+++\nid = \"dir0002b\"\ntitle = \"Session Store\"\n",
+        "state = \"in_progress\"\n",
+        "branch = \"ticket/dir0002b-session-store\"\n",
+        "+++\n\n",
+        "## Spec\n\n### Problem\n\nPersist user sessions.\n\n",
+        "### Acceptance criteria\n\n- [ ] Store sessions in Redis.\n\n",
+        "### Out of scope\n\nNothing.\n\n",
+        "### Approach\n\nRedis-backed session store with TTL.\n\n",
+        "## History\n\n| When | From | To | By |\n|------|------|----|----|\n",
+    );
+    apm_core::git::commit_to_branch(
+        p,
+        "ticket/dir0002b-session-store",
+        "tickets/dir0002b-session-store.md",
+        direct_open,
+        "add session store ticket",
+    )
+    .unwrap();
+
+    let dep_ids = vec!["dir0001a".to_string(), "dir0002b".to_string()];
+    let bundle = apm_core::context::build_dependency_bundle(p, &dep_ids, &config);
+
+    // Bundle header.
+    assert!(bundle.contains("Dependency Context Bundle"), "header missing:\n{bundle}");
+
+    // Direct closed dep: title, approach, no warning.
+    assert!(bundle.contains("Auth Module"), "closed dep title missing:\n{bundle}");
+    assert!(bundle.contains("JWT tokens"), "closed dep approach missing:\n{bundle}");
+    assert!(!bundle.contains("Auth Module\n**State:** closed ⚠️"), "closed dep must not have warning:\n{bundle}");
+
+    // Direct open dep: title, approach, warning.
+    assert!(bundle.contains("Session Store"), "open dep title missing:\n{bundle}");
+    assert!(bundle.contains("Redis-backed"), "open dep approach missing:\n{bundle}");
+    assert!(bundle.contains("may still change"), "open dep must have warning:\n{bundle}");
+
+    // Transitive dep listed under closed dep.
+    assert!(bundle.contains("Base Library"), "transitive dep title missing:\n{bundle}");
+    assert!(bundle.contains("low-level helpers"), "transitive dep problem one-liner missing:\n{bundle}");
+
+    // Bundle footer.
+    assert!(bundle.ends_with("---\n"), "bundle must end with separator:\n{bundle}");
+}
+
+#[test]
+fn build_dependency_bundle_empty_when_no_deps() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let bundle = apm_core::context::build_dependency_bundle(p, &[], &config);
+    assert!(bundle.is_empty(), "expected empty bundle for no deps, got:\n{bundle}");
+}
