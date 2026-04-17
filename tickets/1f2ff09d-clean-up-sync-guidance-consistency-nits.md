@@ -53,7 +53,7 @@ None of these affect behavior or test outcomes. They are code-hygiene fixes that
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Rewriting the Behind arm error handling to distinguish dirty-overlap from other FF failure causes\n- Changes to any existing guidance constant wording\n- New tests (the guidance strings are not exercised by the current unit test suite)
 
 ### Approach
 
