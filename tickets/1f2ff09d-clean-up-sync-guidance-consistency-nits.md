@@ -1,7 +1,7 @@
 +++
 id = "1f2ff09d"
 title = "Clean up sync_guidance consistency nits"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1f2ff09d-clean-up-sync-guidance-consistency-nits"
 created_at = "2026-04-17T20:07:27.286560Z"
-updated_at = "2026-04-17T20:12:40.293360Z"
+updated_at = "2026-04-17T20:17:00.668738Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 depends_on = ["a087593c", "1339c81d", "5cf54181"]
@@ -98,3 +98,4 @@ No test changes needed. All changes are purely textual restructuring; no observa
 | 2026-04-17T20:09Z | new | groomed | apm |
 | 2026-04-17T20:09Z | groomed | in_design | philippepascal |
 | 2026-04-17T20:12Z | in_design | specd | claude-0417-2009-ee80 |
+| 2026-04-17T20:17Z | specd | ready | apm |
