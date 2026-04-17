@@ -24,7 +24,7 @@ The Clean worktrees modal has two minor UI issues in CleanModal.tsx. First, the 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Any changes to the clean action logic itself\n- Renaming or restyling other buttons in the modal\n- Persisting the untracked checkbox state across modal sessions
 
 ### Approach
 
