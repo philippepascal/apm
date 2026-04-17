@@ -27,7 +27,7 @@ When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`
 - [x] The bundle explicitly frames the purpose to the worker: "use this to scope your ticket — do not duplicate or overreach into sibling tickets' territory."
 - [x] Tickets not in any epic spawn spec workers with no bundle (unchanged behaviour).
 - [x] Bundle is capped at a configurable sibling count and byte size; older closed siblings are elided with a count when the cap is hit.
-- [ ] Integration test assembles a bundle against a fixture epic with mixed-state siblings.
+- [x] Integration test assembles a bundle against a fixture epic with mixed-state siblings.
 
 ### Out of scope
 
