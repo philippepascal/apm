@@ -22,13 +22,13 @@ When an implementation worker is spawned (at `in_progress`), it sees its ticket'
 
 ### Acceptance criteria
 
-- [ ] When an implementation worker is spawned on a ticket with a `depends_on` set, APM generates a dependency context bundle (markdown) and prepends it to the worker's prompt.
-- [ ] For each direct dependency, the bundle includes: ticket id + title, the full Approach section, and a commit-subject list of what landed on that dependency's branch (capped, e.g. 20 commits).
-- [ ] Transitive dependencies are included one level deep with title + one-line summary only (to avoid bundle explosion).
-- [ ] If a dependency is not yet closed/merged, the bundle notes its current state and flags that the dependency may still change — the worker should tread carefully.
-- [ ] Tickets with no dependencies spawn with no bundle.
-- [ ] Spec workers also receive this bundle (so the Approach section they write can reference real upstream APIs), gated on whether dependencies exist at spec time.
-- [ ] Integration test covers bundle assembly with direct + transitive dependencies.
+- [x] When an implementation worker is spawned on a ticket with a `depends_on` set, APM generates a dependency context bundle (markdown) and prepends it to the worker's prompt.
+- [x] For each direct dependency, the bundle includes: ticket id + title, the full Approach section, and a commit-subject list of what landed on that dependency's branch (capped, e.g. 20 commits).
+- [x] Transitive dependencies are included one level deep with title + one-line summary only (to avoid bundle explosion).
+- [x] If a dependency is not yet closed/merged, the bundle notes its current state and flags that the dependency may still change — the worker should tread carefully.
+- [x] Tickets with no dependencies spawn with no bundle.
+- [x] Spec workers also receive this bundle (so the Approach section they write can reference real upstream APIs), gated on whether dependencies exist at spec time.
+- [x] Integration test covers bundle assembly with direct + transitive dependencies.
 
 ### Out of scope
 
