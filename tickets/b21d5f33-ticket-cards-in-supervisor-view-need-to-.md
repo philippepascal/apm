@@ -20,7 +20,7 @@ Ticket cards in the supervisor board swimlanes do not display which epic a ticke
 
 ### Acceptance criteria
 
-- [ ] A ticket card with a non-empty `epic` field shows the first 8 characters of the epic ID as a small monospace badge in the card footer row\n- [ ] A ticket card with no `epic` field shows no epic badge\n- [ ] Clicking the epic badge sets the supervisor board's epic filter to that epic ID\n- [ ] Clicking the epic badge when that epic is already the active filter clears the filter (toggles it off)\n- [ ] Clicking the epic badge does not select or open the ticket (click event is stopped from propagating)
+- [x] A ticket card with a non-empty `epic` field shows the first 8 characters of the epic ID as a small monospace badge in the card footer row\n- [x] A ticket card with no `epic` field shows no epic badge\n- [x] Clicking the epic badge sets the supervisor board's epic filter to that epic ID\n- [x] Clicking the epic badge when that epic is already the active filter clears the filter (toggles it off)\n- [x] Clicking the epic badge does not select or open the ticket (click event is stopped from propagating)
 
 ### Out of scope
 
