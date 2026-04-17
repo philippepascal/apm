@@ -35,7 +35,7 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 - [x] Pressing Escape dismisses the modal
 - [x] The Shift+S keyboard shortcut opens the sync modal instead of triggering sync directly
 - [x] The ticket list is refreshed automatically after a successful sync run
-- [ ] The inline `syncError` text and `syncMutation` in `SupervisorView` are removed
+- [x] The inline `syncError` text and `syncMutation` in `SupervisorView` are removed
 
 ### Out of scope
 
