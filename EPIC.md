@@ -1,1 +1,1 @@
-# Consolidate git operations into git_util.rs
+# Give workers cross-ticket context
