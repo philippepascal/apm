@@ -26,7 +26,7 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 ### Acceptance criteria
 
 - [x] Clicking the Sync button opens a modal dialog instead of immediately running sync
-- [ ] The modal contains a "Run" button that triggers the sync operation when clicked
+- [x] The modal contains a "Run" button that triggers the sync operation when clicked
 - [ ] After sync completes, the modal log pane shows how many ticket branches are visible
 - [ ] After sync completes, the modal log pane shows how many tickets were closed
 - [ ] If git fetch encountered an error, it is shown as a warning line in the log pane
