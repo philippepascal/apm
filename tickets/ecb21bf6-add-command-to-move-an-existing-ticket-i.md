@@ -21,7 +21,7 @@ APM has no first-class command to associate an already-created ticket with an ep
 ### Acceptance criteria
 
 - [x] `apm move <ticket_id> <epic_id>` moves a standalone ticket into the named epic: the ticket's `epic` frontmatter field is set to the target epic's ID and `target_branch` is set to the epic's branch name
-- [ ] After `apm move <ticket_id> <epic_id>`, the ticket's git branch is forked from the target epic's branch tip (i.e. `git merge-base <ticket-branch> <epic-branch>` equals the epic branch tip at the moment of the move)
+- [x] After `apm move <ticket_id> <epic_id>`, the ticket's git branch is forked from the target epic's branch tip (i.e. `git merge-base <ticket-branch> <epic-branch>` equals the epic branch tip at the moment of the move)
 - [ ] Commits that existed on the original ticket branch and are not part of the old base are replayed on the new branch in the same order
 - [ ] After `apm move <ticket_id> <epic_id>`, `apm epic show <epic_id>` lists the ticket
 - [ ] After `apm move <ticket_id> <epic_id>`, the ticket's `## History` section contains a new row recording the move (from-epic or from-main, to-epic)
