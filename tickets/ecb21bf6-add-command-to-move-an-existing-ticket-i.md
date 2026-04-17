@@ -1,7 +1,7 @@
 +++
 id = "ecb21bf6"
 title = "Add command to move an existing ticket into an epic"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ecb21bf6-add-command-to-move-an-existing-ticket-i"
 created_at = "2026-04-17T18:48:52.510757Z"
-updated_at = "2026-04-17T18:50:16.107010Z"
+updated_at = "2026-04-17T18:54:32.174962Z"
 +++
 
 ## Spec
@@ -55,3 +55,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-17T18:48Z | — | new | philippepascal |
 | 2026-04-17T18:50Z | new | groomed | apm |
+| 2026-04-17T18:54Z | groomed | in_design | philippepascal |
