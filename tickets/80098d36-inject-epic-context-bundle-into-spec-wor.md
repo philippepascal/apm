@@ -4,12 +4,12 @@ title = "Inject epic context bundle into spec workers"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/80098d36-inject-epic-context-bundle-into-spec-wor"
 created_at = "2026-04-17T07:27:05.870212Z"
-updated_at = "2026-04-17T07:34:58.671953Z"
+updated_at = "2026-04-17T07:35:08.211361Z"
 epic = "35199c7f"
 target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 +++
