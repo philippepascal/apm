@@ -52,7 +52,53 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 
 ### Approach
 
-How the implementation will work.
+**1. Remove existing push.** In `apm/src/cmd/sync.rs`, delete the `git::push_default_branch(...)` call and its warning block (currently lines 13-15). In `apm-core/src/git_util.rs`, delete `push_default_branch` entirely — no other caller uses it (verify with a grep before deleting).
+
+**2. Add classification helper.** In `apm-core/src/git_util.rs`, introduce:
+
+```rust
+// Classify a local branch relative to its origin counterpart.
+// Direction note: `merge-base --is-ancestor A B` returns 0 iff A is reachable from B.
+//   - local == remote       → Equal
+//   - local ancestor-of remote (and not equal) → Behind (FF possible)
+//   - remote ancestor-of local (and not equal) → Ahead
+//   - neither ancestor       → Diverged
+//   - remote ref missing     → NoRemote
+pub enum BranchClass { Equal, Behind, Ahead, Diverged, NoRemote }
+
+pub fn classify_branch(root: &Path, local: &str, remote: &str) -> BranchClass { ... }
+```
+
+Implemented with `git rev-parse` for SHA equality and `git merge-base --is-ancestor` for directed ancestry. Comments at every ancestor check spelling out which direction maps to which state.
+
+**3. Add `sync_default_branch`.** In `apm-core/src/git_util.rs`:
+
+```rust
+// Bring local <default_branch> into sync with origin without ever pushing.
+// Matrix:
+//   Equal     → no-op
+//   Behind    → git merge --ff-only origin/<default>; if it errors (dirty overlap), print guidance
+//   Ahead     → info line only (no push — apm sync never pushes; push happens via apm state)
+//   Diverged  → guidance
+//   NoRemote  → silent skip
+pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String>) { ... }
+```
+
+FF is executed against the main worktree by running `git merge --ff-only origin/<default>` with `root` as the working directory (main worktree is always on `main` per the project's hard rule). No checkout or ref surgery is needed.
+
+**4. Wire into sync.rs.** Replace the removed push block with a call to `sync_default_branch`. Order in sync.rs becomes: fetch → `sync_local_ticket_refs` (unchanged in this ticket) → `sync_default_branch`.
+
+**5. Guidance strings.** Ticket `5cf54181` defines the shared guidance module. For this ticket, consume the `main-behind-dirty-overlap` and `main-diverged-*` strings from that module (depends_on relationship is declared at the epic level). If ticket A lands before C is merged, inline the two strings temporarily with a `// TODO(5cf54181): move to sync_guidance` comment — prefer landing C first.
+
+**6. Tests.** Add integration tests in `apm/tests/integration.rs`:
+- `sync_main_equal_noop`
+- `sync_main_behind_ff_clean`
+- `sync_main_behind_ff_blocked_by_dirty_overlap` — stages a conflicting local change before sync, asserts guidance is printed and local `main` SHA is unchanged
+- `sync_main_ahead_prints_info_no_push` — asserts no `git push` hits origin (use a bare-repo origin and verify its tip)
+- `sync_main_diverged_prints_guidance` — creates divergent commits on both sides
+- `sync_main_no_remote_skips` — sync works on a repo with no origin configured
+
+**7. Comments.** Over and above inline comments in classify_branch, add a block comment at the top of `sync_default_branch` listing the matrix rows it covers. The user flagged this logic as "not intuitive" — err toward more comments, not fewer. Do not write comments explaining trivial code.
 
 ### Open questions
 
