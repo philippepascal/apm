@@ -17,7 +17,11 @@ depends_on = ["5473a0e6"]
 
 ### Problem
 
-sync action on UI should be similar to clean: popup mod window with logs and options
+The Sync button in the supervisor header currently fires `POST /api/sync` immediately, shows a spinner while it runs, and surfaces errors only as a small inline red string that disappears on the next success. Users cannot see what sync actually did: how many tickets were closed, which ones, whether the git fetch succeeded, or how many branches are now visible.
+
+The Clean button solves this for the clean operation by opening a modal with a log pane. Sync should follow the same pattern so that the outcome of every sync run is visible and the UI is consistent.
+
+The current `sync_handler` returns a small structured JSON (`branches`, `closed`, `fetch_error`) rather than a human-readable log. The handler must be updated to build and return a log string, and the UI must display it in a modal instead of running silently.
 
 ### Acceptance criteria
 
