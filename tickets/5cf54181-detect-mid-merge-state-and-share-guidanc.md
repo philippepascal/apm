@@ -38,7 +38,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` — particularly
 - [x] - `TICKET_OR_EPIC_DIVERGED` (for ticket B)
 - [x] - `MID_MERGE_IN_PROGRESS` (for this ticket)
 - [x] Each guidance string is exposed as a public constant or `const fn`; callers reference by name, not literal
-- [ ] The module has comments describing each string's trigger condition
+- [x] The module has comments describing each string's trigger condition
 - [ ] Unit tests cover mid-state detection for: clean repo (None), mid-merge (Some), mid-rebase-merge (Some), mid-rebase-apply (Some), mid-cherry-pick (Some)
 - [ ] `cargo test --workspace` passes
 
