@@ -3,16 +3,22 @@ use apm_core::{config::Config, git, sync};
 use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool) -> Result<()> {
+    // Bail early if the repo is mid-merge, mid-rebase, or mid-cherry-pick.
+    // Any sync work done in this state would compound the incomplete operation.
+    // Let the user resolve the pending operation first.
+    if git::detect_mid_merge_state(root).is_some() {
+        eprintln!("{}", apm_core::sync_guidance::MID_MERGE_IN_PROGRESS);
+        return Ok(());
+    }
+
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
     if !offline {
         let mut sync_warnings: Vec<String> = Vec::new();
         crate::util::fetch_if_aggressive(root, true);
-        git::sync_local_ticket_refs(root, &mut sync_warnings);
-        if let Err(e) = git::push_default_branch(root, &config.project.default_branch) {
-            eprintln!("warning: push {branch} failed: {e:#}", branch = config.project.default_branch);
-        }
+        git::sync_non_checked_out_refs(root, &mut sync_warnings);
+        git::sync_default_branch(root, &config.project.default_branch, &mut sync_warnings);
         for w in &sync_warnings {
             eprintln!("{w}");
         }

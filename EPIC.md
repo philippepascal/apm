@@ -1,1 +1,1 @@
-# Give workers cross-ticket context
+# Safer apm sync
