@@ -131,6 +131,26 @@ impl Default for ServerConfig {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ContextConfig {
+    #[serde(default = "default_epic_sibling_cap")]
+    pub epic_sibling_cap: usize,
+    #[serde(default = "default_epic_byte_cap")]
+    pub epic_byte_cap: usize,
+}
+
+fn default_epic_sibling_cap() -> usize { 20 }
+fn default_epic_byte_cap() -> usize { 8192 }
+
+impl Default for ContextConfig {
+    fn default() -> Self {
+        Self {
+            epic_sibling_cap: default_epic_sibling_cap(),
+            epic_byte_cap: default_epic_byte_cap(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Config {
     pub project: ProjectConfig,
     #[serde(default)]
@@ -159,6 +179,8 @@ pub struct Config {
     pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
     #[serde(default)]
     pub epics: std::collections::HashMap<String, EpicConfig>,
+    #[serde(default)]
+    pub context: ContextConfig,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,
