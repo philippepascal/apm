@@ -16,17 +16,7 @@ updated_at = "2026-04-17T18:54:32.174962Z"
 
 ### Problem
 
-APM has no first-class command to associate an already-created ticket with an epic. Epic membership can only be set at ticket creation via `apm new --epic <epic_id>` — there is no `apm set <id> epic <epic_id>` and no `apm ticket move --epic <epic_id>` equivalent.
-
-This matters because epic association is not just a metadata hint: when a ticket is created with `--epic`, its branch is forked from the epic's branch tip, so the ticket's code lands inside the epic's merge scope. A ticket created without `--epic` has its branch forked from `main`. Retroactively patching only the frontmatter would leave `apm epic show` and `apm list --epic <id>` claiming membership that the branch topology contradicts.
-
-The workaround today is manual: close the standalone ticket, create a replacement with `apm new --epic <epic_id>`, and copy the Problem / AC / OOS / Approach across. This is tedious, risks content drift on the copy, and loses the original ticket's branch (and any commits already on it).
-
-A proper move command should: (a) create a new branch forked from the epic tip, (b) cherry-pick or graft any commits from the original ticket branch onto the new branch, (c) move the spec content into a new ticket file with a fresh ID stamped with `epic = "<id>"`, (d) close/archive the old ticket cleanly, and (e) leave history pointers so the operation is auditable.
-
-Trigger: user hit this on 2026-04-17 after creating ticket `3d73a43b` in parallel with epic `47375a6a` and wanting to bring it in.
-
-This command should apply the same method to move a ticket to another epic, or out of an epic.
+APM has no first-class command to associate an already-created ticket with an epic. Epic membership can only be set at ticket creation via `apm new --epic <epic_id>` — there is no post-creation move command.\n\nThis matters because epic association is not just a metadata hint: when a ticket is created with `--epic`, its branch is forked from the epic's branch tip, so the ticket's code lands inside the epic's merge scope. A ticket created without `--epic` has its branch forked from `main`. Retroactively patching only the frontmatter would leave `apm epic show` and branch topology out of sync.\n\nThe workaround today is manual: close the standalone ticket, create a replacement with `apm new --epic <epic_id>`, and copy the spec content. This is tedious, risks content drift, and loses the original ticket's branch and any commits on it.\n\nA proper move command should: (a) fork a new branch base from the target epic (or `main` when removing from an epic), (b) replay any commits from the original ticket branch onto the new base via `git rebase --onto`, (c) update the ticket file's frontmatter in place (`epic`, `target_branch`, history row), and (d) leave the same ticket ID — keeping any `depends_on` references intact. This is consistent with how the rest of APM works: epic membership is read from the `epic` frontmatter field, so updating both the frontmatter and the branch topology in one atomic command fully re-seats the ticket.
 
 ### Acceptance criteria
 
