@@ -1,7 +1,7 @@
 +++
 id = "5cf54181"
 title = "Detect mid-merge state and share guidance strings"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5cf54181-detect-mid-merge-state-and-share-guidanc"
 created_at = "2026-04-17T18:32:40.602264Z"
-updated_at = "2026-04-17T18:48:36.204457Z"
+updated_at = "2026-04-17T18:48:49.765741Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 +++
@@ -147,3 +147,4 @@ Integration test in `apm/tests/integration.rs`:
 | 2026-04-17T18:34Z | groomed | in_design | claude-0417-1645-sync1 |
 | 2026-04-17T18:42Z | in_design | specd | claude-0417-1645-sync1 |
 | 2026-04-17T18:48Z | specd | ready | apm |
+| 2026-04-17T18:48Z | ready | in_progress | philippepascal |
