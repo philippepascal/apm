@@ -36,7 +36,15 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `sync_local_ticket_refs` is replaced with `sync_non_checked_out_refs` (or equivalent name) that operates on both `refs/remotes/origin/ticket/*` AND `refs/remotes/origin/epic/*`
+- [ ] No call path in sync ever rewinds a local ref backward or overwrites a diverged ref — the data-loss bug in the existing unconditional `update-ref` is eliminated
+- [ ] Branches currently checked out in any worktree are skipped, as today
+- [ ] For each eligible ref, the five cases are handled exactly: Equal (no-op), Behind (FF via `update-ref`), Ahead (info line only, no push, no ref change), Diverged (warning line, no ref change), RemoteOnly (create local ref at origin SHA)
+- [ ] Local-only branches (no origin counterpart) are left untouched (no ref change, no push, no warning spam)
+- [ ] `epic/*` refs receive identical treatment to `ticket/*` refs; integration tests cover at least one `epic/*` scenario in each non-trivial case
+- [ ] The module carries block comments documenting the classification states and explicit direction of ancestry checks
+- [ ] Integration tests in `apm/tests/integration.rs` cover: equal, behind-FF, ahead-no-clobber, diverged-no-clobber, remote-only-create, local-only-untouched — for both `ticket/*` and at least one representative `epic/*` case
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
