@@ -915,6 +915,45 @@ pub fn is_file_tracked(root: &Path, path: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Describes which incomplete git operation is in progress.
+/// Presence of the corresponding marker file/directory under `.git/` is definitive —
+/// git creates these for the duration of the operation and removes them on commit or abort.
+pub enum MidMergeState {
+    /// `.git/MERGE_HEAD` exists — a `git merge` was started but not committed.
+    Merge,
+    /// `.git/rebase-merge/` exists — a `git rebase -i` (or merge-based rebase) is in progress.
+    RebaseMerge,
+    /// `.git/rebase-apply/` exists — a `git rebase` (apply-based) or `git am` is in progress.
+    RebaseApply,
+    /// `.git/CHERRY_PICK_HEAD` exists — a `git cherry-pick` is in progress.
+    CherryPick,
+}
+
+/// Detect whether the repo is in a mid-merge, mid-rebase, or mid-cherry-pick state.
+///
+/// Returns `Some` when any of the well-known git marker files/directories exist.
+/// Uses path checks only — no subprocess calls.
+///
+/// Note: git worktrees store their state in a separate directory pointed to by
+/// `.git` (which becomes a file rather than a directory). This function is safe
+/// because `apm sync` always runs at the main repo root where `.git` is a directory.
+pub fn detect_mid_merge_state(root: &Path) -> Option<MidMergeState> {
+    let git_dir = root.join(".git");
+    if git_dir.join("MERGE_HEAD").exists() {
+        return Some(MidMergeState::Merge);
+    }
+    if git_dir.join("rebase-merge").is_dir() {
+        return Some(MidMergeState::RebaseMerge);
+    }
+    if git_dir.join("rebase-apply").is_dir() {
+        return Some(MidMergeState::RebaseApply);
+    }
+    if git_dir.join("CHERRY_PICK_HEAD").exists() {
+        return Some(MidMergeState::CherryPick);
+    }
+    None
+}
+
 pub fn main_worktree_root(root: &Path) -> Option<PathBuf> {
     let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
     out.lines()
@@ -1066,6 +1105,45 @@ mod tests {
         let result = merge_ref(dir.path(), "feature", &mut warnings);
         assert!(result.is_some());
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn detect_mid_merge_none_on_clean_repo() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        assert!(detect_mid_merge_state(dir.path()).is_none());
+    }
+
+    #[test]
+    fn detect_mid_merge_on_merge_head() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join(".git/MERGE_HEAD"), "abc").unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::Merge)));
+    }
+
+    #[test]
+    fn detect_mid_merge_on_rebase_merge() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::create_dir(dir.path().join(".git/rebase-merge")).unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::RebaseMerge)));
+    }
+
+    #[test]
+    fn detect_mid_merge_on_rebase_apply() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::create_dir(dir.path().join(".git/rebase-apply")).unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::RebaseApply)));
+    }
+
+    #[test]
+    fn detect_mid_merge_on_cherry_pick() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join(".git/CHERRY_PICK_HEAD"), "abc").unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::CherryPick)));
     }
 
     #[test]

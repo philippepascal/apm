@@ -5265,3 +5265,22 @@ fn build_dependency_bundle_empty_when_no_deps() {
     let bundle = apm_core::context::build_dependency_bundle(p, &[], &config);
     assert!(bundle.is_empty(), "expected empty bundle for no deps, got:\n{bundle}");
 }
+
+// --- sync mid-merge guard ---
+
+#[test]
+fn sync_bails_on_mid_merge_state() {
+    let dir = setup();
+    let p = dir.path();
+
+    // Simulate a mid-merge state by creating .git/MERGE_HEAD.
+    std::fs::write(p.join(".git/MERGE_HEAD"), "0000000000000000000000000000000000000000").unwrap();
+
+    // sync should return Ok(()) without performing any work.
+    // Use offline=true so no fetch is attempted regardless.
+    let result = apm::cmd::sync::run(p, true, true, true, true);
+    assert!(result.is_ok(), "sync should return Ok on mid-merge: {result:?}");
+
+    // Verify the MERGE_HEAD file is still intact (sync did not touch git state).
+    assert!(p.join(".git/MERGE_HEAD").exists(), "MERGE_HEAD should still exist after bailing");
+}

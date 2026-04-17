@@ -3,6 +3,14 @@ use apm_core::{config::Config, git, sync};
 use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool) -> Result<()> {
+    // Bail early if the repo is mid-merge, mid-rebase, or mid-cherry-pick.
+    // Any sync work done in this state would compound the incomplete operation.
+    // Let the user resolve the pending operation first.
+    if git::detect_mid_merge_state(root).is_some() {
+        eprintln!("{}", apm_core::sync_guidance::MID_MERGE_IN_PROGRESS);
+        return Ok(());
+    }
+
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
 
