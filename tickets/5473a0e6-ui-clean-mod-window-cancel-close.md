@@ -1,7 +1,7 @@
 +++
 id = "5473a0e6"
 title = "UI clean mod window cancel ->close"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5473a0e6-ui-clean-mod-window-cancel-close"
 created_at = "2026-04-17T20:18:54.917961Z"
-updated_at = "2026-04-17T20:31:40.579225Z"
+updated_at = "2026-04-17T20:31:48.433162Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ Both changes are in apm-ui/src/components/CleanModal.tsx.\n\n1. Change the untra
 | 2026-04-17T20:18Z | — | new | philippepascal |
 | 2026-04-17T20:23Z | new | groomed | apm |
 | 2026-04-17T20:30Z | groomed | in_design | philippepascal |
+| 2026-04-17T20:31Z | in_design | specd | claude-0417-2030-6728 |
