@@ -30,7 +30,7 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 - [x] After sync completes, the modal log pane shows how many ticket branches are visible
 - [x] After sync completes, the modal log pane shows how many tickets were closed
 - [x] If git fetch encountered an error, it is shown as a warning line in the log pane
-- [ ] The Run button shows a spinner and is disabled while sync is in progress
+- [x] The Run button shows a spinner and is disabled while sync is in progress
 - [ ] The modal has a "Close" button that dismisses it at any time
 - [ ] Pressing Escape dismisses the modal
 - [ ] The Shift+S keyboard shortcut opens the sync modal instead of triggering sync directly
