@@ -25,7 +25,7 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 
 ### Acceptance criteria
 
-- [ ] Clicking the Sync button opens a modal dialog instead of immediately running sync
+- [x] Clicking the Sync button opens a modal dialog instead of immediately running sync
 - [ ] The modal contains a "Run" button that triggers the sync operation when clicked
 - [ ] After sync completes, the modal log pane shows how many ticket branches are visible
 - [ ] After sync completes, the modal log pane shows how many tickets were closed
