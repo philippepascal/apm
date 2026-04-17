@@ -18,7 +18,7 @@ target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When an implementation worker is spawned (at `in_progress`), it sees its ticket's spec but not the substance of what its dependencies actually produced: helper names, type shapes, decisions recorded in amendment cycles, commits that landed. The worker either re-reads the full dependency branches (slow, lossy) or guesses. The common failure modes are duplicating a helper that already exists upstream and choosing an API shape that doesn't compose with what a dependency actually delivered.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
