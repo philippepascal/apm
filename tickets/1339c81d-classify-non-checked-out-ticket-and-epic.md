@@ -48,7 +48,13 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Main branch handling (ticket `a087593c`)
+- Mid-merge / mid-rebase detection (ticket `5cf54181`)
+- Any form of automatic `git push` from `apm sync`
+- Publishing local-only branches that have no origin counterpart — those require an explicit user action (or a future opt-in flag)
+- Touching branches currently checked out in any worktree (still skipped)
+- Rewriting history on diverged refs or offering auto-rebase
+- Changes to `apm state <id> implemented` push behavior
 
 ### Approach
 
