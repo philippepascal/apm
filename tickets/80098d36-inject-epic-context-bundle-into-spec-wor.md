@@ -1,7 +1,7 @@
 +++
 id = "80098d36"
 title = "Inject epic context bundle into spec workers"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/80098d36-inject-epic-context-bundle-into-spec-wor"
 created_at = "2026-04-17T07:27:05.870212Z"
-updated_at = "2026-04-17T07:27:05.870212Z"
+updated_at = "2026-04-17T07:33:17.280642Z"
 epic = "35199c7f"
 target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 +++
@@ -49,3 +49,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-17T07:27Z | — | new | philippepascal |
+| 2026-04-17T07:33Z | new | groomed | claude-0417-1430-c7a2 |
