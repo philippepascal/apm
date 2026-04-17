@@ -30,7 +30,17 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` — particularly
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] A helper `detect_mid_merge_state(root) -> Option<MidMergeState>` exists in `apm-core/src/git_util.rs` (or a new module) and returns `Some` when the repo is in any of: mid-merge, mid-rebase (merge or apply), mid-cherry-pick
+- [ ] `apm sync` calls this helper at the top of its flow. When a mid-state is detected, sync prints the "mid-merge" guidance and exits with a success status without performing fetch, ref updates, or close detection
+- [ ] A single module (e.g. `apm-core/src/sync_guidance.rs`) holds all copy-pasteable guidance strings used by the sync flow, keyed by case:
+- [ ] - `MAIN_BEHIND_DIRTY_OVERLAP` (for ticket A)
+- [ ] - `MAIN_DIVERGED_CLEAN` / `MAIN_DIVERGED_DIRTY` (for ticket A)
+- [ ] - `TICKET_OR_EPIC_DIVERGED` (for ticket B)
+- [ ] - `MID_MERGE_IN_PROGRESS` (for this ticket)
+- [ ] Each guidance string is exposed as a public constant or `const fn`; callers reference by name, not literal
+- [ ] The module has comments describing each string's trigger condition
+- [ ] Unit tests cover mid-state detection for: clean repo (None), mid-merge (Some), mid-rebase-merge (Some), mid-rebase-apply (Some), mid-cherry-pick (Some)
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
