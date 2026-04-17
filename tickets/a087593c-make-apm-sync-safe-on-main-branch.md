@@ -42,7 +42,13 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Non-checked-out `ticket/*` and `epic/*` ref handling (ticket `1339c81d`)
+- Mid-merge / mid-rebase / mid-cherry-pick detection and shared guidance strings module (ticket `5cf54181`)
+- Any form of automatic `git push` from `apm sync` for any branch
+- Changes to `apm state <id> implemented` or other state-transition push behavior
+- `--offline` flag semantics (unchanged)
+- Pre-emptively computing dirty-tree overlap — rely on `git merge --ff-only`'s native error and fall through to guidance
+- Renaming `default_branch` config or any other config shape changes
 
 ### Approach
 
