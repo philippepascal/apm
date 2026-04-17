@@ -31,7 +31,9 @@ When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Dependency information — handled by the sibling ticket for the dependency context bundle.
+- File overlap warnings — rejected at the epic level; not handled here.
+- Smart selection of *which* siblings are most relevant — include all, subject to the cap.
 
 ### Approach
 
