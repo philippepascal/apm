@@ -25,7 +25,17 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Clicking the Sync button opens a modal dialog instead of immediately running sync
+- [ ] The modal contains a "Run" button that triggers the sync operation when clicked
+- [ ] After sync completes, the modal log pane shows how many ticket branches are visible
+- [ ] After sync completes, the modal log pane shows how many tickets were closed
+- [ ] If git fetch encountered an error, it is shown as a warning line in the log pane
+- [ ] The Run button shows a spinner and is disabled while sync is in progress
+- [ ] The modal has a "Close" button that dismisses it at any time
+- [ ] Pressing Escape dismisses the modal
+- [ ] The Shift+S keyboard shortcut opens the sync modal instead of triggering sync directly
+- [ ] The ticket list is refreshed automatically after a successful sync run
+- [ ] The inline `syncError` text and `syncMutation` in `SupervisorView` are removed
 
 ### Out of scope
 
