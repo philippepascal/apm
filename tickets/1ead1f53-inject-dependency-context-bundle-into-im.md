@@ -1,7 +1,7 @@
 +++
 id = "1ead1f53"
 title = "Inject dependency context bundle into implementation workers"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1ead1f53-inject-dependency-context-bundle-into-im"
 created_at = "2026-04-17T07:27:10.664091Z"
-updated_at = "2026-04-17T07:36:50.420793Z"
+updated_at = "2026-04-17T07:37:46.358485Z"
 epic = "35199c7f"
 target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 +++
@@ -61,3 +61,4 @@ When an implementation worker is spawned (at `in_progress`), it sees its ticket'
 | 2026-04-17T07:35Z | new | groomed | claude-0417-1430-c7a2 |
 | 2026-04-17T07:36Z | groomed | in_design | claude-0417-1430-c7a2 |
 | 2026-04-17T07:36Z | in_design | specd | claude-0417-1430-c7a2 |
+| 2026-04-17T07:37Z | specd | ready | apm |
