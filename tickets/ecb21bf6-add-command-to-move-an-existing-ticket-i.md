@@ -4,12 +4,12 @@ title = "Add command to move an existing ticket into an epic"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ecb21bf6-add-command-to-move-an-existing-ticket-i"
 created_at = "2026-04-17T18:48:52.510757Z"
-updated_at = "2026-04-17T19:00:36.046291Z"
+updated_at = "2026-04-17T19:00:43.416209Z"
 +++
 
 ## Spec
