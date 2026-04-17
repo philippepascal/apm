@@ -38,7 +38,11 @@ When an implementation worker is spawned (at `in_progress`), it sees its ticket'
 
 ### Approach
 
-How the implementation will work.
+- Add `apm-core::context::build_dependency_bundle(ticket_id)` returning a `String`.
+- Hook into spawn paths for both `ready → in_progress` and `groomed/ammend → in_design` (so spec workers also get dependency context when their ticket has dependencies declared at spec time).
+- Commit list: `git log --pretty=%s <target>..<dep_branch_tip>`.
+- Direct dependencies include their ticket id, title, full Approach section, and capped commit list. Transitive dependencies (one level deep) include only title + one-line Problem summary.
+- For not-yet-merged dependencies, include current state and a warning that the dependency may still change.
 
 ### Open questions
 
