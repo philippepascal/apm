@@ -34,7 +34,10 @@ The desired behaviour is for the maintenance handler to follow the same safe-syn
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the `sync_default_branch` state-machine logic itself (covered by ticket a087593c)
+- Adding new integration tests for the `sync_default_branch` state-machine rows (those tests live with a087593c)
+- Any other maintenance handler behaviour (ticket-close detection, `sync::apply`, HTTP response shape)
+- Changing how warnings are surfaced to callers of the maintenance HTTP endpoint
 
 ### Approach
 
