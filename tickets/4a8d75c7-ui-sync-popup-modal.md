@@ -39,7 +39,10 @@ The current `sync_handler` returns a small structured JSON (`branches`, `closed`
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding options or parameters to the sync operation (no dry-run, no selective sync)
+- Changing the underlying logic of what sync does (fetch, ref sync, push, close detection)
+- Streaming log output in real time — log is returned as a single string after completion
+- Per-ticket close details beyond the count (ticket IDs, titles of closed tickets)
 
 ### Approach
 
