@@ -35,7 +35,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` for the full sce
 - [x] When local `main` is strictly behind `origin/main` and the working tree does not conflict: local `main` is fast-forwarded via `git merge --ff-only origin/<default>` on the main worktree
 - [x] When local `main` is behind but the FF would overwrite uncommitted local changes: sync prints the "main behind, FF blocked" guidance block and leaves the working tree untouched
 - [x] When local `main` is strictly ahead of `origin/main`: sync prints a single info line ("main is ahead of origin/<default> by N commits — run `git push` when ready") and makes no network call
-- [ ] When local `main` and `origin/main` have diverged: sync prints the divergence guidance (rebase/merge choice) and does not modify local main or the working tree
+- [x] When local `main` and `origin/main` have diverged: sync prints the divergence guidance (rebase/merge choice) and does not modify local main or the working tree
 - [ ] When `origin/main` cannot be resolved (no remote, unreachable, fetch failed): main is skipped silently; any fetch failure surfaces as a single warning line from the existing fetch path
 - [ ] The sync module has block comments documenting the Equal/Ahead/Behind/Diverged/NoRemote classification and why each maps to its action
 - [ ] Integration tests in `apm/tests/integration.rs` using temp git repos cover: equal, behind-FF-clean, behind-FF-blocked-by-dirty, ahead, diverged, and no-remote cases
