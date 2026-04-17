@@ -1,7 +1,7 @@
 +++
 id = "3d73a43b"
 title = "apm clean fail on epics with work tree"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3d73a43b-apm-clean-fail-on-epics-with-work-tree"
 created_at = "2026-04-17T18:28:11.666627Z"
-updated_at = "2026-04-17T18:34:04.417239Z"
+updated_at = "2026-04-17T20:23:21.658826Z"
 +++
 
 ## Spec
@@ -77,3 +77,4 @@ The result is a partially-completed clean: some epics are deleted while others f
 | 2026-04-17T18:31Z | new | groomed | apm |
 | 2026-04-17T18:31Z | groomed | in_design | philippepascal |
 | 2026-04-17T18:34Z | in_design | specd | claude-0417-1831-18d8 |
+| 2026-04-17T20:23Z | specd | ready | apm |
