@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Loader2, Plus, X, Minimize2, Trash2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { RefreshCw, Plus, X, Minimize2, Trash2 } from 'lucide-react'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
 import { useLayoutStore } from '../../store/useLayoutStore'
@@ -34,11 +34,6 @@ async function fetchEpics(): Promise<Epic[]> {
   return res.json()
 }
 
-async function postSync(): Promise<void> {
-  const res = await fetch('/api/sync', { method: 'POST' })
-  if (!res.ok) throw new Error('Sync failed')
-}
-
 async function fetchVersion(): Promise<{ version: string; build: string }> {
   const res = await fetch('/api/version')
   if (!res.ok) throw new Error('Failed to fetch version')
@@ -46,11 +41,10 @@ async function fetchVersion(): Promise<{ version: string; build: string }> {
 }
 
 export default function SupervisorView({ onMinimize }: { onMinimize?: () => void }) {
-  const queryClient = useQueryClient()
-  const [syncError, setSyncError] = useState<string | null>(null)
   const setNewTicketOpen = useLayoutStore((s) => s.setNewTicketOpen)
   const setNewEpicOpen = useLayoutStore((s) => s.setNewEpicOpen)
   const setCleanOpen = useLayoutStore((s) => s.setCleanOpen)
+  const setSyncOpen = useLayoutStore((s) => s.setSyncOpen)
 
   const [showVersion, setShowVersion] = useState(false)
   const { data: versionData } = useQuery({ queryKey: ['version'], queryFn: fetchVersion, staleTime: Infinity })
@@ -73,28 +67,16 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const tickets = data?.tickets ?? []
   const supervisorStates = data?.supervisor_states ?? ['new', 'question', 'specd', 'blocked', 'implemented']
 
-  const syncMutation = useMutation({
-    mutationFn: postSync,
-    onSuccess: () => {
-      setSyncError(null)
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      queryClient.invalidateQueries({ queryKey: ['ticket'] })
-    },
-    onError: (err: Error) => {
-      setSyncError(err.message)
-    },
-  })
-
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (!e.shiftKey || e.key !== 'S') return
       const target = e.target as Element | null
       if (target && target.matches('input, textarea, select, [contenteditable]')) return
-      syncMutation.mutate()
+      setSyncOpen(true)
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [syncMutation])
+  }, [setSyncOpen])
 
   const availableOwners = useMemo(() => {
     const owners = new Set<string>()
@@ -158,9 +140,6 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           Supervisor{showVersion && versionData ? ` · v${versionData.version} (${versionData.build})` : ''}
         </span>
         <div className="flex items-center gap-2">
-          {syncError && (
-            <span className="text-xs text-red-500">{syncError}</span>
-          )}
           <button
             onClick={() => setNewTicketOpen(true)}
             title="New ticket (n)"
@@ -178,16 +157,11 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
             New epic
           </button>
           <button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
+            onClick={() => setSyncOpen(true)}
             title="Sync (Shift+S)"
-            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700"
           >
-            {syncMutation.isPending ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3 h-3" />
-            )}
+            <RefreshCw className="w-3 h-3" />
             Sync
           </button>
           <button
