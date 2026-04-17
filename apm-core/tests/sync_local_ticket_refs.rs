@@ -77,7 +77,7 @@ fn new_origin_branch_gains_local_ref() {
     // Clone B has no local ref for ticket/abc-test yet.
     git::fetch_all(b).unwrap();
     let mut _w = Vec::new();
-    git::sync_local_ticket_refs(b, &mut _w);
+    git::sync_non_checked_out_refs(b, &mut _w);
 
     let local_sha = git_out(b, &["rev-parse", "refs/heads/ticket/abc-test"]);
     assert_eq!(local_sha, origin_sha, "local ref should match origin after sync");
@@ -102,7 +102,7 @@ fn existing_local_ref_equal_to_origin_unchanged() {
 
     let before = git_out(b, &["rev-parse", "refs/heads/ticket/eql-test"]);
     let mut _w = Vec::new();
-    git::sync_local_ticket_refs(b, &mut _w);
+    git::sync_non_checked_out_refs(b, &mut _w);
     let after = git_out(b, &["rev-parse", "refs/heads/ticket/eql-test"]);
 
     assert_eq!(before, after, "ref should be unchanged when already equal to origin");
@@ -124,7 +124,7 @@ fn origin_ahead_local_ref_is_advanced() {
     // Clone B gets the first commit.
     git::fetch_all(b).unwrap();
     let mut _w = Vec::new();
-    git::sync_local_ticket_refs(b, &mut _w);
+    git::sync_non_checked_out_refs(b, &mut _w);
     let sha_after_first = git_out(b, &["rev-parse", "refs/heads/ticket/adv-test"]);
 
     // Clone A pushes a second commit.
@@ -137,7 +137,7 @@ fn origin_ahead_local_ref_is_advanced() {
     // Clone B fetches and syncs again.
     git::fetch_all(b).unwrap();
     let mut _w = Vec::new();
-    git::sync_local_ticket_refs(b, &mut _w);
+    git::sync_non_checked_out_refs(b, &mut _w);
     let sha_after_second = git_out(b, &["rev-parse", "refs/heads/ticket/adv-test"]);
 
     assert_ne!(sha_after_first, sha_after_second, "ref should have advanced");
@@ -175,7 +175,7 @@ fn checked_out_in_worktree_is_skipped() {
     // Clone B fetches and calls sync — branch is checked out in worktree, must be skipped.
     git::fetch_all(b).unwrap();
     let mut _w = Vec::new();
-    git::sync_local_ticket_refs(b, &mut _w);
+    git::sync_non_checked_out_refs(b, &mut _w);
 
     let local_sha_after = git_out(b, &["rev-parse", "refs/heads/ticket/wt-test"]);
     assert_eq!(local_sha_before, local_sha_after, "checked-out branch ref must not be updated");
@@ -215,7 +215,7 @@ fn checked_out_in_main_worktree_is_skipped() {
 
     git::fetch_all(b).unwrap();
     let mut _w = Vec::new();
-    git::sync_local_ticket_refs(b, &mut _w);
+    git::sync_non_checked_out_refs(b, &mut _w);
 
     let local_sha_after = git_out(b, &["rev-parse", "refs/heads/ticket/main-co-test"]);
     assert_eq!(local_sha_before, local_sha_after, "main-worktree checked-out branch must not be updated");
