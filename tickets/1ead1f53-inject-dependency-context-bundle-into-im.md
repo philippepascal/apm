@@ -3,13 +3,13 @@ id = "1ead1f53"
 title = "Inject dependency context bundle into implementation workers"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1ead1f53-inject-dependency-context-bundle-into-im"
 created_at = "2026-04-17T07:27:10.664091Z"
-updated_at = "2026-04-17T07:36:01.455020Z"
+updated_at = "2026-04-17T07:36:32.056041Z"
 epic = "35199c7f"
 target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 +++
