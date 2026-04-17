@@ -347,6 +347,17 @@ pub(crate) fn run_epic_clean(
     for branch in &candidates {
         let id = apm_core::epic::epic_id_from_branch(branch).to_string();
 
+        // Remove active worktree before attempting branch deletion.
+        if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, branch) {
+            if let Err(e) = apm_core::worktree::remove_worktree(root, &wt_path, false) {
+                eprintln!(
+                    "skipping {branch}: could not remove worktree at {}: {e}",
+                    wt_path.display()
+                );
+                continue;
+            }
+        }
+
         // Delete local branch.
         let del_local = std::process::Command::new("git")
             .current_dir(root)

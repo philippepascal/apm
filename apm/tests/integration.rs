@@ -5914,3 +5914,517 @@ fn sync_checked_out_ticket_skipped() {
         .status();
     drop(origin);
 }
+
+// ── move_ticket ───────────────────────────────────────────────────────────────
+
+/// Add a file commit to a branch using a temporary git worktree, then remove the worktree.
+/// The branch is not checked out when the function returns.
+fn add_commit_to_branch_via_worktree(
+    dir: &std::path::Path,
+    branch: &str,
+    filename: &str,
+    content: &str,
+) {
+    let wt = tempfile::tempdir().unwrap();
+    std::process::Command::new("git")
+        .args(["worktree", "add", wt.path().to_str().unwrap(), branch])
+        .current_dir(dir)
+        .status()
+        .unwrap();
+    std::fs::write(wt.path().join(filename), content).unwrap();
+    git(wt.path(), &["add", filename]);
+    git(wt.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "extra commit"]);
+    std::process::Command::new("git")
+        .args(["worktree", "remove", wt.path().to_str().unwrap()])
+        .current_dir(dir)
+        .status()
+        .unwrap();
+}
+
+fn git_merge_base(dir: &std::path::Path, ref1: &str, ref2: &str) -> String {
+    let out = std::process::Command::new("git")
+        .args(["merge-base", ref1, ref2])
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    String::from_utf8(out.stdout).unwrap().trim().to_string()
+}
+
+#[test]
+fn move_standalone_ticket_into_epic() {
+    let dir = setup();
+    let p = dir.path();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    // Create an epic branch.
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "test epic").unwrap();
+
+    // Create a standalone ticket (no epic).
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "standalone ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    let ticket_id = ticket.frontmatter.id.clone();
+    let ticket_branch = ticket.frontmatter.branch.clone().unwrap();
+
+    // Add an extra commit to the ticket branch so there's something to replay.
+    add_commit_to_branch_via_worktree(p, &ticket_branch, "extra.txt", "extra");
+
+    // Record the epic branch tip before moving.
+    let epic_tip_before = rev_parse(p, &epic_branch);
+
+    // Move the ticket into the epic.
+    let msg = apm_core::ticket::move_to_epic(p, &config, &ticket_id, Some(&epic_id)).unwrap();
+    assert!(msg.contains(&ticket_id), "message should mention ticket id: {msg}");
+    assert!(msg.contains(&epic_id), "message should mention epic id: {msg}");
+
+    // Read the updated ticket from its branch.
+    let rel_path = format!("tickets/{}.md", ticket_branch.strip_prefix("ticket/").unwrap());
+    let content = branch_content(p, &ticket_branch, &rel_path);
+    let updated = apm_core::ticket::Ticket::parse(std::path::Path::new(&rel_path), &content).unwrap();
+
+    // AC #1: epic and target_branch frontmatter updated.
+    assert_eq!(
+        updated.frontmatter.epic.as_deref(),
+        Some(epic_id.as_str()),
+        "epic field should be set"
+    );
+    assert_eq!(
+        updated.frontmatter.target_branch.as_deref(),
+        Some(epic_branch.as_str()),
+        "target_branch should be set to epic branch"
+    );
+
+    // AC #2: ticket branch is now forked from the epic branch tip.
+    let merge_base = git_merge_base(p, &ticket_branch, &epic_branch);
+    assert_eq!(
+        merge_base, epic_tip_before,
+        "merge-base of ticket and epic should equal the epic tip at move time"
+    );
+
+    // AC #4: epic show lists the ticket.
+    let all_tickets = apm_core::ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let epic_tickets: Vec<_> = all_tickets
+        .iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(&epic_id))
+        .collect();
+    assert_eq!(epic_tickets.len(), 1, "epic should list the ticket");
+    assert_eq!(epic_tickets[0].frontmatter.id, ticket_id);
+
+    // AC #5: history row is present.
+    assert!(
+        updated.body.contains("move:"),
+        "history should contain move record"
+    );
+}
+
+#[test]
+fn move_commits_replayed_on_new_base() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "replay epic").unwrap();
+
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "replay ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    let ticket_branch = ticket.frontmatter.branch.clone().unwrap();
+
+    // Add TWO extra commits to verify replay order.
+    add_commit_to_branch_via_worktree(p, &ticket_branch, "first.txt", "first");
+    add_commit_to_branch_via_worktree(p, &ticket_branch, "second.txt", "second");
+
+    let epic_tip = rev_parse(p, &epic_branch);
+
+    apm_core::ticket::move_to_epic(p, &config, &ticket.frontmatter.id, Some(&epic_id)).unwrap();
+
+    // AC #3: commits replayed — both files should exist on the rebased ticket branch.
+    let first_content = branch_content(p, &ticket_branch, "first.txt");
+    assert_eq!(first_content.trim(), "first");
+    let second_content = branch_content(p, &ticket_branch, "second.txt");
+    assert_eq!(second_content.trim(), "second");
+
+    // Branch should sit on top of the epic.
+    let merge_base = git_merge_base(p, &ticket_branch, &epic_branch);
+    assert_eq!(merge_base, epic_tip, "replayed commits must sit on top of epic");
+}
+
+#[test]
+fn move_ticket_out_of_epic() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "out epic").unwrap();
+
+    // Create ticket directly in the epic.
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "epic ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        Some(epic_id.clone()),
+        Some(epic_branch.clone()),
+        None,
+        Some(epic_branch.clone()),
+        &mut warnings,
+    )
+    .unwrap();
+
+    let ticket_id = ticket.frontmatter.id.clone();
+    let ticket_branch = ticket.frontmatter.branch.clone().unwrap();
+
+    // Record main tip before the move.
+    let main_tip = rev_parse(p, "main");
+
+    // Move out: target = None (sentinel "-").
+    let msg =
+        apm_core::ticket::move_to_epic(p, &config, &ticket_id, None).unwrap();
+    assert!(msg.contains("out of epic") || msg.contains("main"), "message: {msg}");
+
+    // AC #6: epic and target_branch cleared.
+    let rel_path = format!("tickets/{}.md", ticket_branch.strip_prefix("ticket/").unwrap());
+    let content = branch_content(p, &ticket_branch, &rel_path);
+    let updated =
+        apm_core::ticket::Ticket::parse(std::path::Path::new(&rel_path), &content).unwrap();
+    assert!(updated.frontmatter.epic.is_none(), "epic should be cleared");
+    assert!(
+        updated.frontmatter.target_branch.is_none(),
+        "target_branch should be cleared"
+    );
+
+    // AC #7: epic show no longer lists the ticket.
+    let all_tickets = apm_core::ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let epic_tickets: Vec<_> = all_tickets
+        .iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(&epic_id))
+        .collect();
+    assert!(epic_tickets.is_empty(), "epic should no longer list the ticket");
+
+    // Ticket branch should be rebased onto main.
+    let merge_base = git_merge_base(p, &ticket_branch, "main");
+    assert_eq!(merge_base, main_tip, "ticket should be rebased onto main");
+}
+
+#[test]
+fn move_between_epics() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let (epic1_id, epic1_branch) =
+        apm_core::epic::create_epic_branch(p, "first epic").unwrap();
+    let (epic2_id, epic2_branch) =
+        apm_core::epic::create_epic_branch(p, "second epic").unwrap();
+
+    // Create ticket in epic1.
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "migrating ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        Some(epic1_id.clone()),
+        Some(epic1_branch.clone()),
+        None,
+        Some(epic1_branch.clone()),
+        &mut warnings,
+    )
+    .unwrap();
+
+    let ticket_id = ticket.frontmatter.id.clone();
+    let ticket_branch = ticket.frontmatter.branch.clone().unwrap();
+
+    let epic2_tip = rev_parse(p, &epic2_branch);
+
+    // AC #8: move from epic1 to epic2.
+    apm_core::ticket::move_to_epic(p, &config, &ticket_id, Some(&epic2_id)).unwrap();
+
+    let rel_path = format!("tickets/{}.md", ticket_branch.strip_prefix("ticket/").unwrap());
+    let content = branch_content(p, &ticket_branch, &rel_path);
+    let updated =
+        apm_core::ticket::Ticket::parse(std::path::Path::new(&rel_path), &content).unwrap();
+
+    assert_eq!(
+        updated.frontmatter.epic.as_deref(),
+        Some(epic2_id.as_str()),
+        "epic should now be epic2"
+    );
+    assert_eq!(
+        updated.frontmatter.target_branch.as_deref(),
+        Some(epic2_branch.as_str())
+    );
+
+    // No longer listed under epic1.
+    let all_tickets = apm_core::ticket::load_all_from_git(p, &config.tickets.dir).unwrap();
+    let in_epic1: Vec<_> = all_tickets
+        .iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(&epic1_id))
+        .collect();
+    assert!(in_epic1.is_empty(), "should not be in epic1 anymore");
+
+    // Listed under epic2.
+    let in_epic2: Vec<_> = all_tickets
+        .iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(&epic2_id))
+        .collect();
+    assert_eq!(in_epic2.len(), 1, "should be in epic2");
+
+    // Branch topology.
+    let merge_base = git_merge_base(p, &ticket_branch, &epic2_branch);
+    assert_eq!(merge_base, epic2_tip);
+}
+
+#[test]
+fn move_already_in_same_epic_is_noop() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "same epic").unwrap();
+
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "already here".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        Some(epic_id.clone()),
+        Some(epic_branch.clone()),
+        None,
+        Some(epic_branch.clone()),
+        &mut warnings,
+    )
+    .unwrap();
+
+    let tip_before = rev_parse(p, &ticket.frontmatter.branch.clone().unwrap());
+
+    // AC #9: moving into the same epic is a no-op.
+    let msg =
+        apm_core::ticket::move_to_epic(p, &config, &ticket.frontmatter.id, Some(&epic_id))
+            .unwrap();
+    assert!(
+        msg.contains("already") || msg.contains("nothing to do"),
+        "expected no-op message: {msg}"
+    );
+
+    let tip_after = rev_parse(p, &ticket.frontmatter.branch.clone().unwrap());
+    assert_eq!(tip_before, tip_after, "branch ref must not change on no-op");
+}
+
+#[test]
+fn move_ticket_not_in_epic_to_main_is_noop() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "no epic ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    let tip_before = rev_parse(p, &ticket.frontmatter.branch.clone().unwrap());
+
+    // AC #10: moving a ticket with no epic to main is a no-op.
+    let msg =
+        apm_core::ticket::move_to_epic(p, &config, &ticket.frontmatter.id, None).unwrap();
+    assert!(
+        msg.contains("not in any epic") || msg.contains("nothing to do"),
+        "expected no-op message: {msg}"
+    );
+
+    let tip_after = rev_parse(p, &ticket.frontmatter.branch.clone().unwrap());
+    assert_eq!(tip_before, tip_after, "branch ref must not change on no-op");
+}
+
+#[test]
+fn move_terminal_ticket_fails() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let (epic_id, _epic_branch) = apm_core::epic::create_epic_branch(p, "t epic").unwrap();
+
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "to close".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    // Close the ticket.
+    apm_core::ticket::close(p, &config, &ticket.frontmatter.id, None, "test", false).unwrap();
+
+    // AC #11: move of a closed ticket must fail.
+    let err =
+        apm_core::ticket::move_to_epic(p, &config, &ticket.frontmatter.id, Some(&epic_id))
+            .unwrap_err();
+    assert!(
+        err.to_string().contains("terminal"),
+        "error should mention terminal state: {err}"
+    );
+}
+
+#[test]
+fn move_nonexistent_epic_fails() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "nomatch ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+
+    // AC #12: nonexistent epic must fail with a clear error.
+    let err =
+        apm_core::ticket::move_to_epic(p, &config, &ticket.frontmatter.id, Some("deadbeef"))
+            .unwrap_err();
+    assert!(
+        err.to_string().contains("no epic"),
+        "error should mention epic not found: {err}"
+    );
+}
+
+#[test]
+fn move_rebase_conflict_fails_cleanly() {
+    let dir = setup();
+    let p = dir.path();
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    // Create an epic branch, then add a commit to it that conflicts with the ticket.
+    let (epic_id, epic_branch) =
+        apm_core::epic::create_epic_branch(p, "conflict epic").unwrap();
+
+    // Add a commit to the epic branch that modifies "shared.txt".
+    add_commit_to_branch_via_worktree(p, &epic_branch, "shared.txt", "from epic\n");
+
+    // Create a standalone ticket from main, then add a conflicting commit.
+    let mut warnings = vec![];
+    let ticket = apm_core::ticket::create(
+        p,
+        &config,
+        "conflict ticket".into(),
+        "test".into(),
+        None,
+        None,
+        false,
+        vec![],
+        None,
+        None,
+        None,
+        None,
+        &mut warnings,
+    )
+    .unwrap();
+    let ticket_branch = ticket.frontmatter.branch.clone().unwrap();
+
+    // Add "shared.txt" with different content on the ticket branch.
+    add_commit_to_branch_via_worktree(p, &ticket_branch, "shared.txt", "from ticket\n");
+
+    // Record ticket branch tip before attempted move.
+    let tip_before = rev_parse(p, &ticket_branch);
+
+    // AC #13: rebase conflict must fail with a clear error and leave repo clean.
+    let err =
+        apm_core::ticket::move_to_epic(p, &config, &ticket.frontmatter.id, Some(&epic_id))
+            .unwrap_err();
+    assert!(
+        err.to_string().contains("rebase") || err.to_string().contains("conflict"),
+        "error should describe the rebase failure: {err}"
+    );
+
+    // The branch ref must be restored to its pre-rebase state.
+    let tip_after = rev_parse(p, &ticket_branch);
+    assert_eq!(
+        tip_before, tip_after,
+        "branch ref must be restored after failed rebase"
+    );
+
+    // The repo must not be in a mid-rebase state.
+    assert!(
+        apm_core::git::detect_mid_merge_state(p).is_none(),
+        "repo should be clean after abort"
+    );
+}

@@ -25,6 +25,7 @@ pub mod cmd {
     pub mod spec;
     pub mod work;
     pub mod clean;
+    pub mod move_ticket;
     pub mod workers;
     pub mod register;
     pub mod sessions;
