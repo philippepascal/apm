@@ -36,7 +36,10 @@ The result is a partially-completed clean: some epics are deleted while others f
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Cleaning worktrees for regular ticket branches (already handled correctly in `apm-core/src/clean.rs`)
+- Remote branch deletion behaviour (unchanged)
+- Changing when an epic is considered eligible for cleaning (state-machine logic untouched)
+- Cleaning epics that are currently active / in-progress (not targeted by `apm clean --epics`)
 
 ### Approach
 
