@@ -112,23 +112,19 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the full ticket
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Write each spec section using `apm spec`:
+3. Write each spec section using `apm spec` (each `--set` auto-commits
+   to the ticket branch; no manual `git add`/`git commit` needed):
    ```bash
    apm spec <id> --section Problem --set "..."
    apm spec <id> --section "Acceptance criteria" --set "- [ ] ..."
    apm spec <id> --section "Out of scope" --set "..."
    apm spec <id> --section Approach --set "..."
    ```
-   Then commit via the worktree path printed in step 2:
-   ```bash
-   git -C <printed-path> add tickets/<id>-<slug>.md
-   git -C <printed-path> commit -m "ticket(<id>): write spec"
-   ```
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
 4. If blocked on an ambiguity: write the question in `### Open questions` with
-   `apm spec <id> --section "Open questions" --set "..."`, commit it to the
-   worktree, then `apm state <id> question`
+   `apm spec <id> --section "Open questions" --set "..."` (auto-commits),
+   then `apm state <id> question`
 5. `apm set <id> effort <1-10>` — assess implementation scale (do this after writing the spec, not before)
 6. `apm set <id> risk <1-10>` — assess technical risk
 7. `apm state <id> specd` — submit spec for supervisor review
@@ -139,11 +135,7 @@ The ticket's state determines what to do next:
    prints two lines: the state-change line, then the worktree path
 3. Address each item using `apm spec` to update sections, then mark each
    amendment checkbox off with `apm spec <id> --section "Amendment requests" --mark "..."`.
-   Commit via the worktree path printed in step 2:
-   ```bash
-   git -C <printed-path> add tickets/<id>-<slug>.md
-   git -C <printed-path> commit -m "ticket(<id>): address amendments"
-   ```
+   Both `--set` and `--mark` auto-commit to the ticket branch.
 4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
 
 **state = `in_design`** — spec is actively being written or revised:
@@ -175,7 +167,8 @@ taking it over with `apm take <id>`.
 4. Update `## Spec` if the approach evolves during implementation
 5. `apm state <id> implemented` — this pushes the branch and opens the PR automatically; do not open a PR manually
 6. If blocked mid-implementation (missing information, upstream decision needed):
-   write the question in `### Open questions`, commit it, then
+   write the question in `### Open questions` via `apm spec <id> --section
+   "Open questions" --set "..."` (auto-commits), then
    `apm state <id> blocked` — **do not use `apm state <id> ready`**, that
    transition no longer exists from `in_progress`
 
