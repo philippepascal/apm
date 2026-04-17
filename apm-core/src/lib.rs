@@ -15,6 +15,7 @@ pub mod logger;
 pub mod start;
 pub mod state;
 pub mod sync;
+pub mod sync_guidance;
 pub mod review;
 pub mod spec;
 pub mod ticket;
