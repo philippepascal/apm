@@ -36,7 +36,7 @@ APM has no first-class command to associate an already-created ticket with an ep
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automatic conflict resolution when replaying commits onto the new base (command fails cleanly; user must resolve by hand or create a fresh ticket with `apm new --epic`)\n- Updating remote branches or open pull requests to reflect the rebased branch\n- Bulk-moving multiple tickets into an epic in one invocation\n- Moving an epic itself (changing an epic's parent or merge target)\n- A frontmatter-only `apm set epic <id>` shortcut that skips the rebase — this would silently break branch topology\n- Moving a ticket that is already `in_progress` with code commits that conflict on the new base (same failure path as above)
 
 ### Approach
 
