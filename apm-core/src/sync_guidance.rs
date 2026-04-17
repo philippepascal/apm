@@ -9,6 +9,8 @@
 //   <default>  — the project's default branch name (e.g. "main")
 //   <id>       — ticket short id
 //   <slug>     — branch slug (e.g. "ticket/abc123-my-feature")
+//   <count>    — number of commits (numeric string, caller supplies)
+//   <commits>  — the word "commit" or "commits" (caller supplies)
 //
 // Callers substitute via `.replace("<default>", branch_name)` etc.
 // at the print site; this module stays purely declarative.
@@ -58,6 +60,18 @@ Stash your changes first, then resolve the divergence manually:
     git stash pop
 
 After resolving, re-run apm sync.";
+
+/// Printed when local `<default>` has commits not yet pushed to `origin/<default>`.
+/// Sync never pushes; the user must push explicitly.
+/// Placeholders: `<default>`, `<remote>`, `<count>`, `<commits>`.
+pub const MAIN_AHEAD: &str = "\
+<default> is ahead of <remote> by <count> <commits> — run `git push` when ready";
+
+/// Printed when a non-checked-out `ticket/*` or `epic/*` ref has local commits
+/// not yet pushed to `origin`.  Sync never pushes; the user must push explicitly.
+/// Placeholder: `<slug>`.
+pub const TICKET_OR_EPIC_AHEAD: &str = "\
+info: <slug> is ahead of origin — push when ready: git push origin <slug>";
 
 /// Printed for a non-checked-out `ticket/*` or `epic/*` ref whose local tip
 /// and `origin` tip have diverged (local has unpushed commits AND origin has
