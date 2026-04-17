@@ -1,7 +1,7 @@
 +++
 id = "a087593c"
 title = "Make apm sync safe on main branch"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 5
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a087593c-make-apm-sync-safe-on-main-branch"
 created_at = "2026-04-17T18:32:29.530485Z"
-updated_at = "2026-04-17T19:13:26.171789Z"
+updated_at = "2026-04-17T20:23:18.181684Z"
 epic = "47375a6a"
 target_branch = "epic/47375a6a-safer-apm-sync"
 depends_on = ["5cf54181"]
@@ -121,3 +121,4 @@ FF is executed against the main worktree by running `git merge --ff-only origin/
 | 2026-04-17T18:48Z | specd | ready | apm |
 | 2026-04-17T19:01Z | ready | in_progress | philippepascal |
 | 2026-04-17T19:13Z | in_progress | implemented | claude-0417-1901-70e8 |
+| 2026-04-17T20:23Z | implemented | closed | apm-sync |
