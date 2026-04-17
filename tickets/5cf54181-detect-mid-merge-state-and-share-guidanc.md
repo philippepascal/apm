@@ -33,7 +33,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` — particularly
 - [x] A helper `detect_mid_merge_state(root) -> Option<MidMergeState>` exists in `apm-core/src/git_util.rs` (or a new module) and returns `Some` when the repo is in any of: mid-merge, mid-rebase (merge or apply), mid-cherry-pick
 - [x] `apm sync` calls this helper at the top of its flow. When a mid-state is detected, sync prints the "mid-merge" guidance and exits with a success status without performing fetch, ref updates, or close detection
 - [x] A single module (e.g. `apm-core/src/sync_guidance.rs`) holds all copy-pasteable guidance strings used by the sync flow, keyed by case:
-- [ ] - `MAIN_BEHIND_DIRTY_OVERLAP` (for ticket A)
+- [x] - `MAIN_BEHIND_DIRTY_OVERLAP` (for ticket A)
 - [ ] - `MAIN_DIVERGED_CLEAN` / `MAIN_DIVERGED_DIRTY` (for ticket A)
 - [ ] - `TICKET_OR_EPIC_DIVERGED` (for ticket B)
 - [ ] - `MID_MERGE_IN_PROGRESS` (for this ticket)
