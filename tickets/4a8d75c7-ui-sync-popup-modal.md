@@ -1,7 +1,7 @@
 +++
 id = "4a8d75c7"
 title = "UI sync popup modal"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4a8d75c7-ui-sync-popup-modal"
 created_at = "2026-04-17T20:20:40.428309Z"
-updated_at = "2026-04-17T21:45:43.344174Z"
+updated_at = "2026-04-17T21:51:10.739932Z"
 depends_on = ["5473a0e6"]
 +++
 
@@ -144,3 +144,4 @@ Import `SyncModal` and `syncOpen`/`setSyncOpen` from the store. Mount `<SyncModa
 | 2026-04-17T20:32Z | groomed | in_design | philippepascal |
 | 2026-04-17T20:36Z | in_design | specd | claude-0417-2032-c010 |
 | 2026-04-17T21:45Z | specd | ready | apm |
+| 2026-04-17T21:51Z | ready | in_progress | philippepascal |
