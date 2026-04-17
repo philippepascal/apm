@@ -18,7 +18,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
   const [force, setForce] = useState(false)
   const [branches, setBranches] = useState(false)
   const [remote, setRemote] = useState(false)
-  const [untracked, setUntracked] = useState(false)
+  const [untracked, setUntracked] = useState(true)
   const [epics, setEpics] = useState(false)
   const [olderThan, setOlderThan] = useState('')
   const [log, setLog] = useState('')
@@ -29,7 +29,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
       setForce(false)
       setBranches(false)
       setRemote(false)
-      setUntracked(false)
+      setUntracked(true)
       setEpics(false)
       setOlderThan('')
       setLog('')
@@ -137,7 +137,7 @@ export default function CleanModal({ open, onOpenChange }: Props) {
             onClick={() => onOpenChange(false)}
             className="px-3 py-1 rounded border text-sm hover:bg-gray-100"
           >
-            Cancel
+            Close
           </button>
           <button
             type="button"
