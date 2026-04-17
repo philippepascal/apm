@@ -18,7 +18,7 @@ target_branch = "epic/35199c7f-give-workers-cross-ticket-context"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a spec worker is spawned (at `in_design`, from either `groomed` or `ammend`), it sees only its own ticket. It doesn't know what the broader epic is trying to accomplish or what sibling tickets are claiming. As a result, specs drift out of scope, duplicate work that a sibling will do, or miss acceptance criteria that are only obvious from the epic's shape. This is the dominant cause of amendment cycles during the spec phase.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
