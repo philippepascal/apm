@@ -1,7 +1,7 @@
 +++
 id = "e658a7df"
 title = "apm-server maintenance handler still calls push_default_branch"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e658a7df-apm-server-maintenance-handler-still-cal"
 created_at = "2026-04-17T19:12:05.718252Z"
-updated_at = "2026-04-17T19:12:05.718252Z"
+updated_at = "2026-04-17T19:59:45.150278Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-17T19:12Z | — | new | philippepascal |
+| 2026-04-17T19:59Z | new | groomed | apm |
