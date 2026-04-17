@@ -1,7 +1,7 @@
 +++
 id = "e658a7df"
 title = "apm-server maintenance handler still calls push_default_branch"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e658a7df-apm-server-maintenance-handler-still-cal"
 created_at = "2026-04-17T19:12:05.718252Z"
-updated_at = "2026-04-17T20:23:34.628513Z"
+updated_at = "2026-04-17T20:36:54.775221Z"
 +++
 
 ## Spec
@@ -84,3 +84,4 @@ Run `cargo build --workspace` and confirm zero errors and zero new warnings.
 | 2026-04-17T20:00Z | groomed | in_design | philippepascal |
 | 2026-04-17T20:02Z | in_design | specd | claude-0417-2000-b1a0 |
 | 2026-04-17T20:23Z | specd | ready | apm |
+| 2026-04-17T20:36Z | ready | in_progress | philippepascal |
