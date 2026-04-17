@@ -4,12 +4,12 @@ title = "apm clean fail on epics with work tree"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3d73a43b-apm-clean-fail-on-epics-with-work-tree"
 created_at = "2026-04-17T18:28:11.666627Z"
-updated_at = "2026-04-17T18:33:47.644788Z"
+updated_at = "2026-04-17T18:33:55.738150Z"
 +++
 
 ## Spec
