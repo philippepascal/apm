@@ -529,6 +529,138 @@ pub fn is_ancestor(root: &Path, commit: &str, of_ref: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Classification of a local branch relative to its origin counterpart.
+///
+/// Direction note: `merge-base --is-ancestor A B` returns 0 iff A is reachable from B.
+///   - local == remote                        → Equal
+///   - local ancestor-of remote (not equal)   → Behind (FF possible: remote has new commits)
+///   - remote ancestor-of local (not equal)   → Ahead  (local has unpushed commits)
+///   - neither is an ancestor of the other    → Diverged (manual resolution required)
+///   - remote ref cannot be resolved          → NoRemote (no origin, or fetch not done)
+pub enum BranchClass {
+    Equal,
+    Behind,
+    Ahead,
+    Diverged,
+    NoRemote,
+}
+
+/// Classify `local` branch relative to `remote` ref using SHA equality and directed ancestry.
+///
+/// `local`  — a local branch name, e.g. "main" (resolved via `refs/heads/<local>`).
+/// `remote` — a remote ref name,   e.g. "origin/main" (resolved as-is by git).
+///
+/// Every ancestry check includes a comment explaining which direction maps to which state
+/// because the mapping is not intuitive at a glance.
+pub fn classify_branch(root: &Path, local: &str, remote: &str) -> BranchClass {
+    let local_sha = match run(root, &["rev-parse", local]) {
+        Ok(s) => s,
+        Err(_) => return BranchClass::NoRemote,
+    };
+    let remote_sha = match run(root, &["rev-parse", remote]) {
+        Ok(s) => s,
+        Err(_) => return BranchClass::NoRemote,
+    };
+
+    if local_sha == remote_sha {
+        return BranchClass::Equal;
+    }
+
+    // `--is-ancestor local remote` succeeds iff local is reachable from remote.
+    // When true (and SHAs differ), remote has commits that local lacks → local is Behind.
+    let local_is_ancestor_of_remote = is_ancestor(root, local, remote);
+
+    // `--is-ancestor remote local` succeeds iff remote is reachable from local.
+    // When true (and SHAs differ), local has commits that remote lacks → local is Ahead.
+    let remote_is_ancestor_of_local = is_ancestor(root, remote, local);
+
+    match (local_is_ancestor_of_remote, remote_is_ancestor_of_local) {
+        (true, false)  => BranchClass::Behind,   // remote has new commits; FF is safe
+        (false, true)  => BranchClass::Ahead,    // local has unpushed commits
+        (false, false) => BranchClass::Diverged, // each side has commits the other lacks
+        (true, true)   => BranchClass::Equal,    // both ancestors → same commit (guard)
+    }
+}
+
+/// Bring local `default` branch into sync with `origin/<default>` without ever pushing.
+///
+/// State matrix — each row documents why the mapped action is correct:
+///
+///   Equal     → no-op.  Local and origin are identical; nothing to do.
+///
+///   Behind    → `git merge --ff-only origin/<default>` in the main worktree.
+///               The main worktree is always checked out on <default>, so running
+///               the merge there updates both HEAD and the working tree atomically.
+///               If the merge fails (uncommitted local changes overlap with the
+///               incoming commits), we print MAIN_BEHIND_DIRTY_OVERLAP guidance and
+///               leave the working tree untouched.  git's own error detection is used
+///               rather than pre-emptively computing overlap.
+///
+///   Ahead     → Print one info line so the user knows local has unpushed commits.
+///               No network call, no ref changes.  Explicit pushes happen via
+///               `apm state <id> implemented` — apm sync NEVER pushes anything.
+///
+///   Diverged  → Print guidance (rebase/merge/push steps).  No ref changes.
+///               The dirty-aware variant is printed when the main worktree is unclean.
+///
+///   NoRemote  → Silent skip.  No origin is configured, or `origin/<default>` could
+///               not be resolved (e.g. fetch hasn't run yet).  Fetch failures are
+///               already surfaced as a warning by the existing fetch path in sync.rs.
+pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String>) {
+    let remote = format!("origin/{default}");
+    match classify_branch(root, default, &remote) {
+        BranchClass::Equal => {
+            // local == origin/main: nothing to do, print nothing.
+        }
+
+        BranchClass::Behind => {
+            // origin has new commits local lacks; attempt a fast-forward.
+            // Run in the main worktree so the working tree is updated too.
+            let wt = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+            if run(&wt, &["merge", "--ff-only", &remote]).is_err() {
+                // FF refused — uncommitted local changes overlap with incoming commits.
+                // Leave the working tree untouched and print recovery guidance.
+                // TODO(5cf54181): move to sync_guidance
+                let msg = crate::sync_guidance::MAIN_BEHIND_DIRTY_OVERLAP
+                    .replace("<default>", default);
+                warnings.push(msg);
+            }
+        }
+
+        BranchClass::Ahead => {
+            // local has commits not on origin.  No push — apm sync never pushes.
+            // Count unpushed commits so the message is informative.
+            let count = run(root, &["rev-list", "--count", &format!("{remote}..{default}")])
+                .ok()
+                .and_then(|s| s.trim().parse::<u64>().ok())
+                .unwrap_or(0);
+            warnings.push(format!(
+                "{default} is ahead of {remote} by {count} commit{} — run `git push` when ready",
+                if count == 1 { "" } else { "s" },
+            ));
+        }
+
+        BranchClass::Diverged => {
+            // Neither side is an ancestor of the other; manual resolution required.
+            // Print the dirty-aware variant so the user gets actionable steps.
+            // TODO(5cf54181): move to sync_guidance
+            let wt = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+            let guidance = if is_worktree_dirty(&wt) {
+                crate::sync_guidance::MAIN_DIVERGED_DIRTY.replace("<default>", default)
+            } else {
+                crate::sync_guidance::MAIN_DIVERGED_CLEAN.replace("<default>", default)
+            };
+            warnings.push(guidance);
+        }
+
+        BranchClass::NoRemote => {
+            // origin/<default> not resolvable (no remote, or fetch hasn't run yet).
+            // The fetch path in sync.rs already emits a warning on fetch failure.
+            // Nothing more to do here.
+        }
+    }
+}
+
 pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
     let status = std::process::Command::new("git")
         .args(["fetch", "origin", branch])
@@ -915,6 +1047,45 @@ pub fn is_file_tracked(root: &Path, path: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Describes which incomplete git operation is in progress.
+/// Presence of the corresponding marker file/directory under `.git/` is definitive —
+/// git creates these for the duration of the operation and removes them on commit or abort.
+pub enum MidMergeState {
+    /// `.git/MERGE_HEAD` exists — a `git merge` was started but not committed.
+    Merge,
+    /// `.git/rebase-merge/` exists — a `git rebase -i` (or merge-based rebase) is in progress.
+    RebaseMerge,
+    /// `.git/rebase-apply/` exists — a `git rebase` (apply-based) or `git am` is in progress.
+    RebaseApply,
+    /// `.git/CHERRY_PICK_HEAD` exists — a `git cherry-pick` is in progress.
+    CherryPick,
+}
+
+/// Detect whether the repo is in a mid-merge, mid-rebase, or mid-cherry-pick state.
+///
+/// Returns `Some` when any of the well-known git marker files/directories exist.
+/// Uses path checks only — no subprocess calls.
+///
+/// Note: git worktrees store their state in a separate directory pointed to by
+/// `.git` (which becomes a file rather than a directory). This function is safe
+/// because `apm sync` always runs at the main repo root where `.git` is a directory.
+pub fn detect_mid_merge_state(root: &Path) -> Option<MidMergeState> {
+    let git_dir = root.join(".git");
+    if git_dir.join("MERGE_HEAD").exists() {
+        return Some(MidMergeState::Merge);
+    }
+    if git_dir.join("rebase-merge").is_dir() {
+        return Some(MidMergeState::RebaseMerge);
+    }
+    if git_dir.join("rebase-apply").is_dir() {
+        return Some(MidMergeState::RebaseApply);
+    }
+    if git_dir.join("CHERRY_PICK_HEAD").exists() {
+        return Some(MidMergeState::CherryPick);
+    }
+    None
+}
+
 pub fn main_worktree_root(root: &Path) -> Option<PathBuf> {
     let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
     out.lines()
@@ -1066,6 +1237,45 @@ mod tests {
         let result = merge_ref(dir.path(), "feature", &mut warnings);
         assert!(result.is_some());
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn detect_mid_merge_none_on_clean_repo() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        assert!(detect_mid_merge_state(dir.path()).is_none());
+    }
+
+    #[test]
+    fn detect_mid_merge_on_merge_head() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join(".git/MERGE_HEAD"), "abc").unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::Merge)));
+    }
+
+    #[test]
+    fn detect_mid_merge_on_rebase_merge() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::create_dir(dir.path().join(".git/rebase-merge")).unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::RebaseMerge)));
+    }
+
+    #[test]
+    fn detect_mid_merge_on_rebase_apply() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::create_dir(dir.path().join(".git/rebase-apply")).unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::RebaseApply)));
+    }
+
+    #[test]
+    fn detect_mid_merge_on_cherry_pick() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join(".git/CHERRY_PICK_HEAD"), "abc").unwrap();
+        assert!(matches!(detect_mid_merge_state(dir.path()), Some(MidMergeState::CherryPick)));
     }
 
     #[test]
