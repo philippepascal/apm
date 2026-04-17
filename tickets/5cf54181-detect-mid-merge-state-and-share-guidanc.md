@@ -34,7 +34,7 @@ See `/Users/philippepascal/Documents/apm/apm-sync-scenarios.md` — particularly
 - [x] `apm sync` calls this helper at the top of its flow. When a mid-state is detected, sync prints the "mid-merge" guidance and exits with a success status without performing fetch, ref updates, or close detection
 - [x] A single module (e.g. `apm-core/src/sync_guidance.rs`) holds all copy-pasteable guidance strings used by the sync flow, keyed by case:
 - [x] - `MAIN_BEHIND_DIRTY_OVERLAP` (for ticket A)
-- [ ] - `MAIN_DIVERGED_CLEAN` / `MAIN_DIVERGED_DIRTY` (for ticket A)
+- [x] - `MAIN_DIVERGED_CLEAN` / `MAIN_DIVERGED_DIRTY` (for ticket A)
 - [ ] - `TICKET_OR_EPIC_DIVERGED` (for ticket B)
 - [ ] - `MID_MERGE_IN_PROGRESS` (for this ticket)
 - [ ] Each guidance string is exposed as a public constant or `const fn`; callers reference by name, not literal
