@@ -17,7 +17,7 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
     if !offline {
         let mut sync_warnings: Vec<String> = Vec::new();
         crate::util::fetch_if_aggressive(root, true);
-        git::sync_local_ticket_refs(root, &mut sync_warnings);
+        git::sync_non_checked_out_refs(root, &mut sync_warnings);
         git::sync_default_branch(root, &config.project.default_branch, &mut sync_warnings);
         for w in &sync_warnings {
             eprintln!("{w}");
