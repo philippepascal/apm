@@ -1,7 +1,7 @@
 +++
 id = "29b495c7"
 title = "fix ticket history actors"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29b495c7-fix-ticket-history-actors"
 created_at = "2026-04-18T02:20:26.518634Z"
-updated_at = "2026-04-18T02:21:29.193504Z"
+updated_at = "2026-04-18T02:21:54.724243Z"
 +++
 
 ## Spec
@@ -62,3 +62,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-18T02:20Z | — | new | philippepascal |
 | 2026-04-18T02:21Z | new | groomed | apm |
+| 2026-04-18T02:21Z | groomed | in_design | philippepascal |
