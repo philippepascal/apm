@@ -844,7 +844,7 @@ fn sync_closes_implemented_ticket_on_merged_branch() {
     // Merge the branch into main so sync detects it.
     git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-my-ticket", "--no-edit"]);
 
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
     let content = branch_content(p, "main", "tickets/0001-my-ticket.md");
     assert!(content.contains("state = \"closed\""), "ticket should be closed on main: {content}");
@@ -863,7 +863,7 @@ fn sync_closes_implemented_ticket_with_no_branch() {
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add stale ticket"]);
     // No ticket branch exists
 
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
     let updated = std::fs::read_to_string(p.join(path)).unwrap();
     assert!(updated.contains("state = \"closed\""), "stale ticket should be closed: {updated}");
@@ -875,7 +875,7 @@ fn sync_no_close_when_nothing_to_close() {
     let p = dir.path();
     // No tickets at all
     let log_before = branch_content(p, "main", "apm.toml"); // just to get a ref point
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
     // main should have no new commits (same HEAD)
     let head = std::process::Command::new("git")
         .args(["log", "--oneline", "-1"])
@@ -897,7 +897,7 @@ fn sync_closes_multiple_tickets_on_merged_branches() {
     git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-alpha", "--no-edit"]);
     git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0002-beta", "--no-edit"]);
 
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
     let alpha = branch_content(p, "main", "tickets/0001-alpha.md");
     let beta = branch_content(p, "main", "tickets/0002-beta.md");
@@ -2007,7 +2007,7 @@ fn sync_closes_implemented_ticket_with_merged_branch_in_one_run() {
     git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-impl", "--no-edit"]);
 
     // Run sync with auto_close — ticket should be closed in a single run.
-    apm::cmd::sync::run(p, true, true, true, true).unwrap();
+    apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
     // The ticket branch should now have state = "closed".
     let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
@@ -5278,7 +5278,7 @@ fn sync_bails_on_mid_merge_state() {
 
     // sync should return Ok(()) without performing any work.
     // Use offline=true so no fetch is attempted regardless.
-    let result = apm::cmd::sync::run(p, true, true, true, true);
+    let result = apm::cmd::sync::run(p, true, true, true, true, false, false);
     assert!(result.is_ok(), "sync should return Ok on mid-merge: {result:?}");
 
     // Verify the MERGE_HEAD file is still intact (sync did not touch git state).
@@ -5358,7 +5358,7 @@ fn sync_main_equal_noop() {
     let l = local.path();
 
     let sha_before = rev_parse(l, "main");
-    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+    apm::cmd::sync::run(l, false, true, true, true, false, false).unwrap();
     let sha_after = rev_parse(l, "main");
 
     assert_eq!(sha_before, sha_after, "equal: main SHA must not change");
@@ -5373,7 +5373,7 @@ fn sync_main_behind_ff_clean() {
     // Origin gets a new commit; local is now behind.
     push_to_origin(origin.path(), "shared.txt", "version-2");
 
-    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+    apm::cmd::sync::run(l, false, true, true, true, false, false).unwrap();
 
     let local_sha = rev_parse(l, "main");
     let origin_sha = rev_parse(origin.path(), "main");
@@ -5397,7 +5397,7 @@ fn sync_main_behind_ff_blocked_by_dirty_overlap() {
     // Local also modifies shared.txt without staging — creates dirty overlap.
     std::fs::write(l.join("shared.txt"), "local-dirty").unwrap();
 
-    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+    apm::cmd::sync::run(l, false, true, true, true, false, false).unwrap();
 
     // main SHA must be unchanged — FF was blocked.
     let sha_after = rev_parse(l, "main");
@@ -5421,7 +5421,7 @@ fn sync_main_ahead_prints_info_no_push() {
     git(l, &["add", "local-only.txt"]);
     git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "local-ahead commit"]);
 
-    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+    apm::cmd::sync::run(l, false, true, true, true, false, false).unwrap();
 
     // Origin must be unchanged — sync must never push.
     let origin_sha_after = rev_parse(origin.path(), "main");
@@ -5447,7 +5447,7 @@ fn sync_main_diverged_prints_guidance() {
 
     let local_sha_before = rev_parse(l, "main");
 
-    apm::cmd::sync::run(l, false, true, true, true).unwrap();
+    apm::cmd::sync::run(l, false, true, true, true, false, false).unwrap();
 
     let local_sha_after = rev_parse(l, "main");
     assert_eq!(
@@ -5463,7 +5463,7 @@ fn sync_main_no_remote_skips() {
     // fetch_if_aggressive: git fetch --all returns 0 with no remotes (no-op).
     // sync_default_branch: classify_branch can't resolve origin/main → NoRemote → silent skip.
     let local = setup();
-    let result = apm::cmd::sync::run(local.path(), false, true, true, true);
+    let result = apm::cmd::sync::run(local.path(), false, true, true, true, false, false);
     assert!(result.is_ok(), "no remote: sync must return Ok, got: {result:?}");
 }
 

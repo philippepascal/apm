@@ -5,34 +5,81 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use serde::Deserialize;
 use crate::{AppError, AppState};
 use crate::models::CleanRequest;
 
+#[derive(Deserialize, Default)]
+pub(crate) struct SyncRequest {
+    push_default: Option<bool>,
+    push_refs: Option<bool>,
+}
+
 pub async fn sync_handler(
     State(state): State<Arc<AppState>>,
+    body: Option<Json<SyncRequest>>,
 ) -> Result<Response, AppError> {
     let root = match state.git_root() {
         Some(r) => r.clone(),
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
-    let (log, branches, closed) = tokio::task::spawn_blocking(move || {
+    let req = body.map(|Json(b)| b).unwrap_or_default();
+    let push_default = req.push_default.unwrap_or(false);
+    let push_refs = req.push_refs.unwrap_or(false);
+
+    let (log, branches, closed, ahead_branches, default_branch) = tokio::task::spawn_blocking(move || {
         let mut log: Vec<String> = Vec::new();
         if let Err(e) = apm_core::git::fetch_all(&root) {
             log.push(format!("warning: git fetch failed: {e}"));
         }
         let mut ref_warnings: Vec<String> = Vec::new();
-        apm_core::git::sync_non_checked_out_refs(&root, &mut ref_warnings);
+        let ahead_refs = apm_core::git::sync_non_checked_out_refs(&root, &mut ref_warnings);
         log.extend(ref_warnings);
         log.push("synced non-checked-out refs".to_string());
+
         let branches = apm_core::git::ticket_branches(&root)
             .map(|b| b.len())
             .unwrap_or(0);
-        let closed = match apm_core::config::Config::load(&root) {
+
+        let (closed, default_branch_name, remaining_ahead) = match apm_core::config::Config::load(&root) {
             Ok(config) => {
+                let default_branch = config.project.default_branch.clone();
                 let mut sync_warnings: Vec<String> = Vec::new();
-                apm_core::git::sync_default_branch(&root, &config.project.default_branch, &mut sync_warnings);
+                let default_is_ahead = apm_core::git::sync_default_branch(&root, &default_branch, &mut sync_warnings);
+
+                let mut default_still_ahead = default_is_ahead;
+
+                if push_default && default_is_ahead {
+                    match apm_core::git::push_branch(&root, &default_branch) {
+                        Ok(()) => {
+                            log.push(format!("pushed {default_branch} to origin"));
+                            default_still_ahead = false;
+                            sync_warnings.retain(|w| !w.contains(&default_branch) || !w.contains("ahead"));
+                        }
+                        Err(e) => {
+                            log.push(format!("warning: push {default_branch} failed: {e:#}"));
+                        }
+                    }
+                }
                 log.extend(sync_warnings);
-                match apm_core::sync::detect(&root, &config) {
+
+                let mut refs_still_ahead: Vec<String> = ahead_refs.clone();
+                if push_refs && !ahead_refs.is_empty() {
+                    refs_still_ahead = Vec::new();
+                    for branch in &ahead_refs {
+                        match apm_core::git::push_branch(&root, branch) {
+                            Ok(()) => {
+                                log.push(format!("pushed {branch} to origin"));
+                            }
+                            Err(e) => {
+                                log.push(format!("warning: push {branch} failed: {e:#}"));
+                                refs_still_ahead.push(branch.clone());
+                            }
+                        }
+                    }
+                }
+
+                let closed = match apm_core::sync::detect(&root, &config) {
                     Ok(candidates) => {
                         let n = candidates.close.len();
                         if n > 0 {
@@ -43,20 +90,34 @@ pub async fn sync_handler(
                         n
                     }
                     Err(_) => 0,
+                };
+
+                let mut remaining: Vec<String> = refs_still_ahead;
+                if default_still_ahead {
+                    remaining.push(default_branch.clone());
                 }
+
+                (closed, default_branch, remaining)
             }
-            Err(_) => 0,
+            Err(_) => (0, String::new(), ahead_refs),
         };
+
         if closed > 0 {
             log.push(format!("closed {closed} ticket(s)"));
         } else {
             log.push("no tickets to close".to_string());
         }
         log.push(format!("{branches} ticket branch(es) visible"));
-        (log, branches, closed)
+        (log, branches, closed, remaining_ahead, default_branch_name)
     })
     .await?;
-    Ok(Json(serde_json::json!({ "log": log.join("\n"), "branches": branches, "closed": closed })).into_response())
+    Ok(Json(serde_json::json!({
+        "log": log.join("\n"),
+        "branches": branches,
+        "closed": closed,
+        "ahead_branches": ahead_branches,
+        "default_branch": default_branch,
+    })).into_response())
 }
 
 pub async fn clean_handler(
