@@ -111,16 +111,20 @@ async fn me_handler(
     connect_info: Option<ConnectInfo<SocketAddr>>,
     headers: axum::http::HeaderMap,
 ) -> Json<serde_json::Value> {
+    let repo_name = state.git_root()
+        .and_then(|root| apm_core::config::Config::load(root).ok())
+        .map(|cfg| cfg.project.name)
+        .unwrap_or_default();
     if is_localhost(connect_info) {
         let username = match state.git_root() {
             Some(root) => apm_core::config::resolve_identity(root),
             None => "unassigned".to_string(),
         };
-        return Json(serde_json::json!({"username": username}));
+        return Json(serde_json::json!({"username": username, "repo_name": repo_name}));
     }
     let username = auth::find_session_username(&headers, &state.session_store)
         .unwrap_or_else(|| "unassigned".to_string());
-    Json(serde_json::json!({"username": username}))
+    Json(serde_json::json!({"username": username, "repo_name": repo_name}))
 }
 
 async fn serve_ui(uri: axum::http::Uri) -> Response {
