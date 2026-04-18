@@ -44,7 +44,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 
 - [x] **Server**
 
-- [ ] POST `/api/sync` with body `{ "push_default": true }` pushes `<default>` when it is ahead, appends a push confirmation line to the returned `log`, and includes newly closeable tickets in `closed`
+- [x] POST `/api/sync` with body `{ "push_default": true }` pushes `<default>` when it is ahead, appends a push confirmation line to the returned `log`, and includes newly closeable tickets in `closed`
 - [ ] POST `/api/sync` with body `{ "push_default": true }` when `<default>` is diverged does not push and returns the diverged warning in `log`
 - [ ] POST `/api/sync` with body `{ "push_refs": true }` pushes all ahead ticket/* and epic/* branches and appends per-branch confirmation lines to `log`
 - [ ] The sync response includes `ahead_branches: string[]` listing branch short names that are ahead of origin after the sync completes
