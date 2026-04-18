@@ -41,7 +41,29 @@ Trigger: user hit this on 2026-04-17 after merging `37323beb` locally; `apm sync
 
 ### Approach
 
-How the implementation will work.
+Two files change; no code changes.
+
+**1. `docs/commands.md` — `apm sync` Description (line ~583)**
+
+After the sentence "detects ticket branches that have been merged (including squash-merges) into the default branch, and closes those tickets", append a new paragraph:
+
+> **Merge detection is rooted at `origin/<default-branch>`, not at local `<default-branch>`.** A ticket branch is considered merged only when its merge commit is visible on the remote tracking ref. If you merge a ticket branch into `main` locally but have not yet pushed, `apm sync` will report that main is ahead of origin/main and will not offer to close the ticket. Run `git push` on the default branch first; the next `apm sync` will then detect the merge and offer closure. This is intentional: it prevents tickets from being closed before the team can see the merge.
+
+**2. `docs/commands.md` — `apm sync` Git internals table (line ~611)**
+
+Update the Why comment for the `git branch -r --merged origin/<default>` row from:
+
+> Find branches merged into the default branch via a regular merge
+
+to:
+
+> Find remote ticket branches merged into `origin/<default>` (intentional: local `<default>` is not checked — a merge must be pushed before it counts)
+
+**3. `.apm/agents.md` — Startup section (after step 1 "apm sync")**
+
+Add an indented note beneath step 1:
+
+> **Note:** `apm sync` detects merges via `origin/<default-branch>`. A ticket merged into your local default branch but not yet pushed will not appear as closeable. If you expect a ticket to be offered for closure after merging locally, run `git push` on the default branch first, then re-run `apm sync`.
 
 ### Open questions
 
