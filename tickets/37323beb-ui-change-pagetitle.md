@@ -24,11 +24,11 @@ The project name is available from `[project] name` in `.apm/config.toml` (loade
 
 ### Acceptance criteria
 
-- [ ] The browser tab title reads `apm: <reponame>-<username>` (e.g. `apm: apm-philippepascal`) once the page has loaded and the API response is available
-- [ ] `<reponame>` matches the `name` field under `[project]` in `.apm/config.toml`
-- [ ] `<username>` matches the value returned by `/api/me` for the current session
-- [ ] The static `<title>` fallback in `index.html` is updated to `apm` (shown briefly before JS hydrates)
-- [ ] If the `/api/me` fetch fails or is pending, the title falls back to the static `index.html` value (`apm`) rather than showing a broken or empty string
+- [x] The browser tab title reads `apm: <reponame>-<username>` (e.g. `apm: apm-philippepascal`) once the page has loaded and the API response is available
+- [x] `<reponame>` matches the `name` field under `[project]` in `.apm/config.toml`
+- [x] `<username>` matches the value returned by `/api/me` for the current session
+- [x] The static `<title>` fallback in `index.html` is updated to `apm` (shown briefly before JS hydrates)
+- [x] If the `/api/me` fetch fails or is pending, the title falls back to the static `index.html` value (`apm`) rather than showing a broken or empty string
 
 ### Out of scope
 
