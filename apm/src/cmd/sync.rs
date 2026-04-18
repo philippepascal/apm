@@ -38,7 +38,9 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
     if !candidates.close.is_empty() {
         let confirmed = auto_close || (!quiet && prompt_close(&candidates.close)?);
         if confirmed {
-            let apply_out = sync::apply(root, &config, &candidates, "apm-sync", aggressive)?;
+            let caller = apm_core::config::resolve_caller_name();
+            let actor = format!("{}(apm-sync)", caller);
+            let apply_out = sync::apply(root, &config, &candidates, &actor, aggressive)?;
             for (id, err) in &apply_out.failed {
                 eprintln!("warning: could not close {id:?}: {err}");
             }

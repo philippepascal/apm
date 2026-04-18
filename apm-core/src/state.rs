@@ -111,7 +111,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     }
 
     let now = Utc::now();
-    let actor = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
+    let actor = crate::config::resolve_caller_name();
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     if new_state == "ammend" {
