@@ -4,12 +4,12 @@ title = "Expand ahead message with close-detection context and surface in UI syn
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b15354a6-expand-ahead-message-with-close-detectio"
 created_at = "2026-04-18T02:21:44.835172Z"
-updated_at = "2026-04-18T02:32:59.110355Z"
+updated_at = "2026-04-18T02:33:05.080562Z"
 +++
 
 ## Spec
