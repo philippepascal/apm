@@ -41,6 +41,55 @@ The desired behaviour is that merge failure is a first-class outcome: the ticket
 
 ### Approach
 
+**1. Add `merge_failed` state to `apm-core/src/default/workflow.toml`**
+
+Add a new state entry (after `implemented`):
+
+```toml
+[states.merge_failed]
+actionable = ["supervisor"]
+label = "Merge failed"
+
+[[states.merge_failed.transitions]]
+to = "implemented"
+completion = "none"    # supervisor resolved the conflict manually; no auto-merge
+
+[[states.merge_failed.transitions]]
+to = "in_progress"
+completion = "none"    # worker will retry
+```
+
+`merge_failed` does **not** set `worker_end` or `satisfies_deps` — those only apply once the merge actually lands.
+
+**2. Catch merge errors in `apm-core/src/state.rs` `transition()`**
+
+In the `CompletionStrategy::Merge` arm (lines ~144–178), wrap the `merge_into_default()` call so that on error it:
+
+- Writes the failure reason (git stderr) to the ticket's `### Merge notes` section, creating it if absent, using the existing ticket-file mutation helpers.
+- Commits the updated ticket file to the current branch (same commit pattern used elsewhere in `transition()`).
+- Moves the ticket to `merge_failed` by invoking the state-write path with `completion = "none"` so no further merge is attempted.
+- Returns `Ok(())` so the outer caller sees a clean exit.
+
+If the fallback commit or state write themselves fail, return the original merge error so the ticket stays in `in_progress` (no silent data loss).
+
+**3. Render `### Merge notes` in `apm show`**
+
+In `apm/src/cmd/show.rs`, when the ticket is in `merge_failed` state, extract `### Merge notes` from the ticket body and display it prominently (error-style header or red colour if the terminal supports it). If `show` already renders all sections generically, this may be a no-op — confirm before adding code.
+
+**4. Verify supervisor workflows pick up the new state**
+
+`apm review` and `apm list` filter on `actionable = ["supervisor"]`. Confirm they pick up `merge_failed` automatically from the workflow config. No code change expected, but include a test or manual check.
+
+**Order of changes:**
+1. `workflow.toml` — add the state (immediately testable with `apm state` manually)
+2. `state.rs` — catch merge errors, write `### Merge notes`, transition to `merge_failed`
+3. `show.rs` — render merge notes prominently (may be a no-op)
+4. Integration test — trigger a merge conflict and assert ticket ends in `merge_failed` with error in `### Merge notes`
+
+**Constraints:**
+- `### Merge notes` must be written in the same commit that records `state = "merge_failed"` — do not split.
+- The existing `git merge --abort` cleanup in `merge_into_default()` (`git_util.rs` line ~976) stays in place; worktree is always left clean.
+
 ### 1. Add `merge_failed` state to `apm-core/src/default/workflow.toml`
 
 Add a new state entry after `implemented`:
