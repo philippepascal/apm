@@ -65,7 +65,7 @@ After resolving, re-run apm sync.";
 /// Sync never pushes; the user must push explicitly.
 /// Placeholders: `<default>`, `<remote>`, `<count>`, `<commits>`.
 pub const MAIN_AHEAD: &str = "\
-<default> is ahead of <remote> by <count> <commits> — run `git push` when ready";
+<default> is ahead of <remote> by <count> <commits>. Merged tickets will not be detected as closeable until you push — run `git push` when ready.";
 
 /// Printed when a non-checked-out `ticket/*` or `epic/*` ref has local commits
 /// not yet pushed to `origin`.  Sync never pushes; the user must push explicitly.
