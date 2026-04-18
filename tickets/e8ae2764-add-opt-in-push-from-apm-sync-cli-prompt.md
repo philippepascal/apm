@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e8ae2764-add-opt-in-push-from-apm-sync-cli-prompt"
 created_at = "2026-04-18T02:21:50.164931Z"
-updated_at = "2026-04-18T02:21:50.164931Z"
+updated_at = "2026-04-18T02:22:15.142532Z"
+depends_on = ["b15354a6"]
 +++
 
 ## Spec
