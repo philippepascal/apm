@@ -16,24 +16,21 @@ updated_at = "2026-04-18T02:21:54.724243Z"
 
 ### Problem
 
-In this example:
+Ticket history entries record the wrong actor in three distinct cases, all traceable to actor-resolution logic that is inconsistent across the codebase.
 
-History
+**Case 1 & 2 — `state::transition()` ignores the OS user.**
+`apm-core/src/state.rs` line 114 resolves the actor as:
+```rust
+let actor = std::env::var("APM_AGENT_NAME").unwrap_or_else(|_| "apm".into());
+```
+This only checks `APM_AGENT_NAME`. When a human user runs `apm state` or `apm review` in a shell where that variable is unset, the fallback fires and records `"apm"` — even though `USER`/`USERNAME` env vars identify the real user. The `apm start` command avoids this by using `resolve_caller_name()`, which chains `APM_AGENT_NAME → USER → USERNAME → "apm"`, but `state::transition()` was never updated to match.
 
-When	From	To	By
-2026-04-18T01:16Z	—	new	philippepascal
-2026-04-18T01:16Z	new	groomed	apm
-2026-04-18T01:16Z	groomed	in_design	philippepascal
-2026-04-18T01:19Z	in_design	specd	claude-0418-0116-80b8
-2026-04-18T02:03Z	specd	ready	apm
-2026-04-18T02:03Z	ready	in_progress	philippepascal
-2026-04-18T02:06Z	in_progress	implemented	claude-0418-0203-b318
-2026-04-18T02:10Z	implemented	closed	apm-sync
+Affected transitions: any state change driven by `apm state` or `apm review` (including automatic grooming and review-to-ready promotions).
 
+**Case 3 — `apm sync` hardcodes `"apm-sync"` as the actor.**
+`apm/src/cmd/sync.rs` line 41 passes the literal string `"apm-sync"` to `sync::apply()`. This loses the identity of the human who invoked the command. The desired format is `philippepascal(apm-sync)` — the real caller identity, annotated with `(apm-sync)` to signal that the close was automatic. The server-side sync handler in `apm-server/src/handlers/maintenance.rs` already does this correctly by calling `resolve_identity()` first and passing it through; the CLI path was not aligned with it.
 
-"new groomed apm" should be "new groomed philippepascal"
-"specd ready apm" should be "specd ready philippepascal"
-"implemented closed apm-sync" should be "implemented closed philippepascal(apm-sync)"
+`apm/src/cmd/close.rs` has the same `APM_AGENT_NAME`-only fallback as `state.rs` and should be updated for consistency, even though it is not directly implicated in the reported examples.
 
 ### Acceptance criteria
 
