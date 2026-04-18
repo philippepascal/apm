@@ -32,7 +32,11 @@ There is also a parity gap between the CLI and UI sync surfaces. The server hand
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automatically pushing to origin (sync still never pushes; the user must push explicitly)
+- Changing the JSON response shape — `log` stays as a newline-joined string, `branches` and `closed` stay as integers
+- Restructuring the sync modal UI beyond displaying the existing `log` field (no redesign)
+- Surfacing other existing warnings (diverged, dirty-overlap) that are also currently lost in the server path — those are a separate concern
+- Adding a `TICKET_OR_EPIC_AHEAD` close-detection note; ticket/epic branches being ahead of origin does not block close detection (only the default branch does), so the wording change there is out of scope
 
 ### Approach
 
