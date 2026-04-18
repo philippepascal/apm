@@ -74,7 +74,87 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 
 ### Approach
 
-How the implementation will work.
+Four files change. The dependency order is: core → CLI and server in parallel → UI.
+
+**1. `apm-core/src/git_util.rs`**
+
+Change `sync_default_branch(root, default_branch, warnings) -> ()` to return `bool`: `true` when local `<default>` is Ahead of origin (and was not pushed). All other code paths return `false`. The existing warning-push into `warnings` stays; the return value is an additional signal for the caller.
+
+Change `sync_non_checked_out_refs(root, warnings) -> ()` to return `Vec<String>`: the list of ahead branch short names (e.g. `["ticket/abc-feature", "epic/my-epic"]`). These are the branches that were in `Ahead` state during the scan. The existing warning messages continue to be appended to `warnings` for display.
+
+**2. `apm/src/cmd/sync.rs`**
+
+Add two new `bool` parameters to `run()`, wired from new CLI flags:
+- `push_default: bool` — flag `--push-default`
+- `push_refs: bool` — flag `--push-refs`
+
+TTY detection: `std::io::IsTerminal::is_terminal(&std::io::stdin())` (stable Rust ≥1.70; no new dependency).
+
+After calling `sync_default_branch` (inside the existing `if !offline` block):
+- If returned `true` (default is ahead):
+  - Resolve "should push": `push_default` flag is set, OR (is_tty AND not quiet AND user answers `y` to `"push <default> to origin now? [y/N]"`)
+  - If should push: call `apm_core::git::push_branch(root, default_branch)`. `git push` updates the local remote-tracking ref automatically, so no second fetch is needed. Then fall through to the close-candidate detection that already follows in `run()` — it will now see the updated remote state.
+  - If should not push: the MAIN_AHEAD warning was already appended to warnings by `sync_default_branch`; print it as today.
+
+After calling `sync_non_checked_out_refs` (inside the same `if !offline` block):
+- If returned non-empty `ahead_branches`:
+  - Resolve "should push": `push_refs` flag is set, OR (is_tty AND not quiet AND user answers `y` to `"push N ahead branch(es) to origin now? [y/N]"`)
+  - If should push: call `push_branch(root, branch)` for each branch in the returned list; print a summary line (unless quiet). Diverged branches are never in the ahead list, so no additional divergence check is needed here.
+
+The offline guard is implicit: both blocks are already inside `if !offline { … }`, so no additional check is needed.
+
+**3. `apm-server/src/handlers/maintenance.rs`**
+
+Add a request body struct (derive `Deserialize`, `Default`):
+```rust
+#[derive(Deserialize, Default)]
+struct SyncRequest {
+    push_default: Option<bool>,
+    push_refs: Option<bool>,
+}
+```
+Extract it from the Axum handler (optional JSON body; use `Option<Json<SyncRequest>>`).
+
+Extend the existing response struct with two fields:
+```rust
+ahead_branches: Vec<String>,
+default_branch: String,
+```
+Populate `default_branch` from `config.project.default_branch`.
+
+In `sync_handler`, after `sync_default_branch` returns:
+- Capture the `bool` return value.
+- If `push_default == Some(true)` and the branch is ahead: call `push_branch(root, default_branch)`, append `"pushed <default> to origin"` to `log`.
+- If `push_default == Some(true)` and the branch is diverged: do not push; the diverged warning is already in warnings/log.
+
+After `sync_non_checked_out_refs` returns:
+- Capture the `Vec<String>` of ahead branch names.
+- If `push_refs == Some(true)` and the list is non-empty: push each, append per-branch lines to `log`.
+
+After all sync and push: populate `ahead_branches` with any branches still ahead of origin (re-run `classify_branch` for the default branch and for each ticket/epic branch that was ahead but not pushed — i.e. when push was not requested or the push was not for that surface). If all were pushed, `ahead_branches` is empty.
+
+**4. `apm-ui/src/components/SyncModal.tsx`**
+
+Update the response type interface to add `ahead_branches: string[]` and `default_branch: string`.
+
+After a sync response, derive two display flags:
+- `defaultIsAhead = result.ahead_branches.includes(result.default_branch)`
+- `refAheadCount = result.ahead_branches.filter(b => b !== result.default_branch).length`
+
+Render conditionally below the log:
+- If `defaultIsAhead` and auto-push preference is off: `<button>Push {result.default_branch}</button>` — on click, POST `/api/sync` with `{ push_default: true }`, update state with new response, call `invalidateQueries`.
+- If `refAheadCount > 0`: `<button>Push {refAheadCount} ahead branch{refAheadCount > 1 ? 'es' : ''}</button>` — on click, POST `/api/sync` with `{ push_refs: true }`, same update.
+
+Add a settings row above the Run button:
+```tsx
+<label>
+  <input type="checkbox" checked={autoPush} onChange={…} />
+  Auto-push {defaultBranch ?? 'default'} when ahead
+</label>
+```
+Persist with `localStorage.getItem/setItem('apm:sync:auto-push-default')`. Initialize `autoPush` state from localStorage on mount. When `autoPush` is true, include `push_default: true` in every initial sync POST body — the buttons are not shown in this case since the push is already happening.
+
+The `defaultBranch` for the label can be read from the last sync result's `default_branch` field (or show a generic label before the first sync).
 
 ### Open questions
 
