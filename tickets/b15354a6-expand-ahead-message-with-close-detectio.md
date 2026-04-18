@@ -16,23 +16,9 @@ updated_at = "2026-04-18T02:29:02.208567Z"
 
 ### Problem
 
-When `apm sync` finds local `<default>` ahead of `origin/<default>`, it prints:
+When `apm sync` detects that local `<default>` is ahead of `origin/<default>`, it prints a message that is accurate but silent about the most important consequence: **close detection is gated on origin visibility**. `apm sync` detects merged tickets by inspecting commits reachable from `origin/<default>`; unpushed local commits are invisible to that check. Users have hit this as a mystery — sync reports "ahead by 16 commits" and shows "no tickets to close", then immediately offers to close tickets after a `git push`. The causal link is missing from the message.
 
-> `<default> is ahead of origin/<default> by N commits — run `git push` when ready`
-
-This is factually correct but omits the most important consequence: **merged tickets will not be offered for closing until the merge commits are visible on `origin/<default>`**. Users hit this as a mystery (`apm sync` said "ahead by 16 commits", didn't offer to close a merged ticket; after `git push`, sync immediately offered to close it).
-
-**Message improvement.** Expand the string to include the causal link, e.g.:
-
-> `<default> is ahead of origin/<default> by N commits. Merged tickets will not be detected as closeable until you push — run `git push` when ready.`
-
-Exact wording is for the implementer; the key is that the user learns from the message *why* pushing matters here, not just the bare fact that they're ahead. The `MAIN_AHEAD` constant already exists in `apm-core/src/sync_guidance.rs:67`; this ticket updates its body. `TICKET_OR_EPIC_AHEAD` (line 73) serves the analogous message for non-checked-out ticket/epic refs and should be considered alongside.
-
-**UI surface.** The same informational message is not currently shown by the UI sync flow. `apm-ui/src/components/...` (the Sync screen / modal) calls `POST /api/sync` (or equivalent) on the server and displays the structured result, but the "main is ahead" / "ticket is ahead" lines generated in `sync_default_branch` and `sync_non_checked_out_refs` pass through `sync_warnings` in the CLI path and are printed to stderr. The server handler needs to surface these same lines into its JSON response, and the UI sync screen needs to render them alongside "no tickets to close" / "N ticket branches visible".
-
-Users running the UI today get no signal that their local `main` is out of sync with origin, even when that exact gap is what's blocking close detection.
-
-Trigger: user ran `apm sync` and the UI sync at roughly the same moment; the UI showed "synced non-checked-out refs / no tickets to close / 285 ticket branch(es) visible" while the CLI reported "main is ahead of origin/main by 16 commits". Parity between the two surfaces is required for the UI to be usable as a full replacement for the CLI in this flow.
+There is also a parity gap between the CLI and UI sync surfaces. The server handler (`apm-server/src/handlers/maintenance.rs`) discards warnings from `sync_non_checked_out_refs` entirely (the accumulator is named `_sync_warnings` and never read), and routes warnings from `sync_default_branch` to `eprintln!` (server stderr) rather than into the JSON `log` field. As a result, the UI sync modal never shows "main is ahead" or any ahead-of-origin messages for non-checked-out ticket/epic refs, even when those gaps are precisely what is blocking close detection. Users running the UI today get no signal that their local main is out of sync with origin.
 
 ### Acceptance criteria
 
