@@ -35,7 +35,9 @@ Trigger: user hit this on 2026-04-17 after merging `37323beb` locally; `apm sync
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the behavior of `merged_into_main` or `apm sync` — detection logic stays as-is
+- Changing the CLI output messages produced by `apm sync` (e.g. the "N commits ahead" warning)
+- Adding automated tests for documentation content
 
 ### Approach
 
