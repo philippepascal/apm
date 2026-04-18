@@ -44,7 +44,33 @@ Additionally, `apm-core/src/default/apm.spec-writer.md` is missing the "How to s
 
 ### Approach
 
-How the implementation will work.
+All changes are text edits to two files only: `apm-core/src/default/apm.agents.md` and `apm-core/src/default/apm.spec-writer.md`.
+
+**`apm-core/src/default/apm.agents.md` — three fixes:**
+
+1. **groomed state, step 3** (lines 99–109): Remove the trailing `git -C <printed-path> add` / `git -C <printed-path> commit` block. Replace the comment above the `apm spec` examples with the parenthetical already used in `.apm/agents.md`: "each `--set` auto-commits to the ticket branch; no manual `git add`/`git commit` needed". Keep the `apm new --no-edit` note in step 3.
+
+2. **ammend state, step 3** (lines 125–130): Remove the trailing `git -C <printed-path> add` / `git -C <printed-path> commit` block. The `apm spec --mark` call already commits; no manual step needed.
+
+3. **`apm take` → `apm assign`** — two occurrences:
+   - in_design state description (line 136): change `apm take <id>` to `apm assign <id> <your-username>`
+   - "Taking over another agent's ticket", step 2 (line 175): change `apm take <id>` to `apm assign <id> <your-username>` and update the description from "sets agent = your name on the ticket branch" to "reassign ownership to yourself"
+
+**`apm-core/src/default/apm.spec-writer.md` — two fixes:**
+
+1. **Add "How to save spec sections" block** after the opening paragraph (before `## When you are done`). Copy verbatim from `.apm/apm.spec-writer.md` lines 9–24:
+   ```
+   ## How to save spec sections
+   
+   Use `apm spec` to write each section. For long content, write to a temp file
+   first with the Write tool, then reference it with `--set-file`:
+   ...
+   Do NOT write the ticket markdown file directly. Always use `apm spec`.
+   ```
+
+2. **"When you are done" section**: Add `Then: \`apm state <id> specd\`` as the final line of the section (after the `apm set <id> risk` line), matching `.apm/apm.spec-writer.md` line 37.
+
+No Rust code changes. No test changes needed (these are documentation-only files). The `.apm/` copies are already correct and must not be touched.
 
 ### Open questions
 
