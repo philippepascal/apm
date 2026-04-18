@@ -44,7 +44,7 @@ Affected transitions: any state change driven by `apm state` or `apm review` (in
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the history format itself (column names, table structure)\n- Backfilling history entries on existing tickets\n- Actor attribution for apm start (already correct via resolve_caller_name())\n- Actor attribution for ticket creation (already correct via resolve_identity())\n- Server-side sync handler (already correct)
 
 ### Approach
 
