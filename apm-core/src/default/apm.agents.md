@@ -96,17 +96,13 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the full ticket
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Write each spec section using `apm spec`:
+3. Write each spec section using `apm spec` (each `--set` auto-commits to the
+   ticket branch; no manual `git add`/`git commit` needed):
    ```bash
    apm spec <id> --section Problem --set "..."
    apm spec <id> --section "Acceptance criteria" --set "- [ ] ..."
    apm spec <id> --section "Out of scope" --set "..."
    apm spec <id> --section Approach --set "..."
-   ```
-   Then commit via the worktree path printed in step 2:
-   ```bash
-   git -C <printed-path> add tickets/<id>-<slug>.md
-   git -C <printed-path> commit -m "ticket(<id>): write spec"
    ```
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
@@ -123,17 +119,13 @@ The ticket's state determines what to do next:
    prints two lines: the state-change line, then the worktree path
 3. Address each item using `apm spec` to update sections, then mark each
    amendment checkbox off with `apm spec <id> --section "Amendment requests" --mark "..."`.
-   Commit via the worktree path printed in step 2:
-   ```bash
-   git -C <printed-path> add tickets/<id>-<slug>.md
-   git -C <printed-path> commit -m "ticket(<id>): address amendments"
-   ```
+   Each `apm spec` call auto-commits; no manual `git add`/`git commit` needed.
 4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
 
 **state = `in_design`** — spec is actively being written or revised:
 The ticket is claimed by an agent. This state mirrors `in_progress` for the
 implementation phase. Do not pick up an `in_design` ticket unless you are
-taking it over with `apm take <id>`.
+taking it over with `apm assign <id> <your-username>`.
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
@@ -172,7 +164,7 @@ taking it over with `apm take <id>`.
 ## Taking over another agent's ticket
 
 1. `apm show <id>` — read the full ticket including history
-2. `apm take <id>` — sets agent = your name on the ticket branch
+2. `apm assign <id> <your-username>` — reassign ownership to yourself
 3. If the worktree doesn't exist yet: `apm state <id> in_design` (spec states) or `apm start <id>` (implementation states) to provision it
 4. Continue from where the previous agent left off
 5. Do not discard or overwrite previous spec work or open questions
