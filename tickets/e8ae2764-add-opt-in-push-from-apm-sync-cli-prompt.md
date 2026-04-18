@@ -42,7 +42,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 - [x] `apm sync --push-refs` pushes all ahead ticket/* and epic/* branches without prompting
 - [x] `apm sync --push-refs --offline` does not attempt any push
 
-- [ ] **Server**
+- [x] **Server**
 
 - [ ] POST `/api/sync` with body `{ "push_default": true }` pushes `<default>` when it is ahead, appends a push confirmation line to the returned `log`, and includes newly closeable tickets in `closed`
 - [ ] POST `/api/sync` with body `{ "push_default": true }` when `<default>` is diverged does not push and returns the diverged warning in `log`
