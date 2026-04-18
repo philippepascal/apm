@@ -1,7 +1,7 @@
 +++
 id = "1f5af525"
 title = "update agents.md and apm.*.md"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1f5af525-update-agents-md-and-apm-md"
 created_at = "2026-04-18T18:42:11.878614Z"
-updated_at = "2026-04-18T18:42:11.878614Z"
+updated_at = "2026-04-18T18:42:33.787997Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-18T18:42Z | — | new | philippepascal |
+| 2026-04-18T18:42Z | new | groomed | philippepascal |
