@@ -3,13 +3,13 @@ id = "1f5af525"
 title = "update agents.md and apm.*.md"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1f5af525-update-agents-md-and-apm-md"
 created_at = "2026-04-18T18:42:11.878614Z"
-updated_at = "2026-04-18T18:48:08.660125Z"
+updated_at = "2026-04-18T18:51:55.239235Z"
 +++
 
 ## Spec
