@@ -33,7 +33,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 - [x] When stdin is not a TTY, `apm sync` does not prompt, does not push, and prints the MAIN_AHEAD guidance line
 - [x] `apm sync --push-default` pushes `<default>` when it is ahead without prompting, and re-evaluates close candidates after
 - [x] `apm sync --push-default` does not push and emits the existing MAIN_DIVERGED guidance when `<default>` has diverged from `origin/<default>`
-- [ ] `apm sync --push-default --offline` does not attempt any push
+- [x] `apm sync --push-default --offline` does not attempt any push
 
 - [ ] **CLI — ticket/epic branch push**
 
