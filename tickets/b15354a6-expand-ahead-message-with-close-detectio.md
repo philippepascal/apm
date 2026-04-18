@@ -27,7 +27,7 @@ There is also a parity gap between the CLI and UI sync surfaces. The server hand
 - [x] When `POST /api/sync` runs and local default branch is ahead of origin, the `log` field in the JSON response contains the expanded `MAIN_AHEAD` message
 - [x] When `POST /api/sync` runs and one or more non-checked-out ticket or epic refs are ahead of origin, those `TICKET_OR_EPIC_AHEAD` messages appear in the `log` field (currently the warnings vector is discarded)
 - [x] The UI sync modal displays the "ahead" message when local main is ahead of origin
-- [ ] The UI sync modal displays per-branch ahead warnings when non-checked-out ticket/epic refs are ahead of origin
+- [x] The UI sync modal displays per-branch ahead warnings when non-checked-out ticket/epic refs are ahead of origin
 - [ ] `apm sync` (CLI) behaviour for the happy path (no ahead condition) is unchanged
 
 ### Out of scope
