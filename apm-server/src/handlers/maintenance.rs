@@ -20,8 +20,9 @@ pub async fn sync_handler(
         if let Err(e) = apm_core::git::fetch_all(&root) {
             log.push(format!("warning: git fetch failed: {e}"));
         }
-        let mut _sync_warnings: Vec<String> = Vec::new();
-        apm_core::git::sync_non_checked_out_refs(&root, &mut _sync_warnings);
+        let mut ref_warnings: Vec<String> = Vec::new();
+        apm_core::git::sync_non_checked_out_refs(&root, &mut ref_warnings);
+        log.extend(ref_warnings);
         log.push("synced non-checked-out refs".to_string());
         let branches = apm_core::git::ticket_branches(&root)
             .map(|b| b.len())
@@ -30,9 +31,7 @@ pub async fn sync_handler(
             Ok(config) => {
                 let mut sync_warnings: Vec<String> = Vec::new();
                 apm_core::git::sync_default_branch(&root, &config.project.default_branch, &mut sync_warnings);
-                for w in &sync_warnings {
-                    eprintln!("warning: {w}");
-                }
+                log.extend(sync_warnings);
                 match apm_core::sync::detect(&root, &config) {
                     Ok(candidates) => {
                         let n = candidates.close.len();
