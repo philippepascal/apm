@@ -355,7 +355,7 @@ pub fn push_ticket_branches(root: &Path, warnings: &mut Vec<String>) {
 ///
 ///   NoRemote   → local-only branch, leave untouched. No auto-push, no warning spam.
 ///                Publishing local-only branches requires an explicit user action.
-pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) {
+pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) -> Vec<String> {
     // Collect all branches currently checked out across all worktrees.
     // These are never touched — they must be managed via the worktree's own git operations.
     let checked_out: std::collections::HashSet<String> = {
@@ -384,6 +384,8 @@ pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) {
             }
         }
     }
+
+    let mut ahead_branches: Vec<String> = Vec::new();
 
     for remote_name in remote_refs {
         // remote_name is like "origin/ticket/<slug>" or "origin/epic/<slug>".
@@ -437,6 +439,7 @@ pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) {
                 // That was the data-loss bug. The correct action is an info line only —
                 // apm sync never pushes; the user must push explicitly when ready.
                 warnings.push(crate::sync_guidance::TICKET_OR_EPIC_AHEAD.replace("<slug>", &branch));
+                ahead_branches.push(branch);
             }
             BranchClass::Diverged => {
                 // Neither side is an ancestor of the other. Manual resolution required.
@@ -451,6 +454,8 @@ pub fn sync_non_checked_out_refs(root: &Path, warnings: &mut Vec<String>) {
             }
         }
     }
+
+    ahead_branches
 }
 
 /// List all files in a directory on a branch (non-recursive).
@@ -681,7 +686,7 @@ pub fn classify_branch(root: &Path, local: &str, remote: &str) -> BranchClass {
 ///   NoRemote  → Silent skip.  No origin is configured, or `origin/<default>` could
 ///               not be resolved (e.g. fetch hasn't run yet).  Fetch failures are
 ///               already surfaced as a warning by the existing fetch path in sync.rs.
-pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String>) {
+pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String>) -> bool {
     let remote = format!("origin/{default}");
     match classify_branch(root, default, &remote) {
         BranchClass::Equal => {
@@ -715,6 +720,7 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
                 .replace("<count>", &count.to_string())
                 .replace("<commits>", if count == 1 { "commit" } else { "commits" });
             warnings.push(msg);
+            return true;
         }
 
         BranchClass::Diverged => {
@@ -741,6 +747,7 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
             // Nothing more to do here.
         }
     }
+    false
 }
 
 pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {

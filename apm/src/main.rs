@@ -397,6 +397,12 @@ Examples:
         /// Automatically close merged/stale tickets without prompting
         #[arg(long)]
         auto_close: bool,
+        /// Push the default branch to origin if it is ahead (no prompt)
+        #[arg(long)]
+        push_default: bool,
+        /// Push all ahead ticket/* and epic/* branches to origin (no prompt)
+        #[arg(long)]
+        push_refs: bool,
     },
     /// Assign a ticket to an owner
     #[command(long_about = "Set the owner field on any ticket, regardless of its current state.
@@ -817,7 +823,7 @@ fn main() -> Result<()> {
                 (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
             }
         }
-        Command::Sync { offline, quiet, no_aggressive, auto_close } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close),
+        Command::Sync { offline, quiet, no_aggressive, auto_close, push_default, push_refs } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close, push_default, push_refs),
         Command::Assign { id, username, no_aggressive, force } => cmd::assign::run(&root, &id, &username, no_aggressive, force),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
