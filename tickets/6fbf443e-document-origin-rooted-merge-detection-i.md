@@ -28,7 +28,10 @@ Trigger: user hit this on 2026-04-17 after merging `37323beb` locally; `apm sync
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `docs/commands.md` `apm sync` Description explicitly states that merge detection is rooted at `origin/<default>`, not local `<default>`
+- [ ] `docs/commands.md` `apm sync` Description states that a ticket merged locally but not yet pushed to origin will not be offered for closure until after `git push`
+- [ ] `docs/commands.md` `apm sync` Git internals table row for `git branch -r --merged origin/<default>` clarifies that the remote ref is used intentionally (not a local branch)
+- [ ] `.apm/agents.md` Startup section includes a note that `apm sync` closes tickets only once their merge is visible on `origin/<default>`, and that `git push` on the default branch is a prerequisite for closure detection
 
 ### Out of scope
 
