@@ -1,7 +1,7 @@
 +++
 id = "e8ae2764"
 title = "Add opt-in push from apm sync CLI prompt, flag, and UI button"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e8ae2764-add-opt-in-push-from-apm-sync-cli-prompt"
 created_at = "2026-04-18T02:21:50.164931Z"
-updated_at = "2026-04-18T02:22:15.142532Z"
+updated_at = "2026-04-18T02:23:39.719504Z"
 depends_on = ["b15354a6"]
 +++
 
@@ -65,3 +65,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-18T02:21Z | — | new | philippepascal |
+| 2026-04-18T02:23Z | new | groomed | apm |
