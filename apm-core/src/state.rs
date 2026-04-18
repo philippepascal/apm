@@ -149,13 +149,39 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             crate::github::gh_pr_create_or_update(root, &branch, pr_base, &id, &t.frontmatter.title, &format!("Closes #{id}"), &mut messages)?;
         }
         CompletionStrategy::Merge => {
-            let merge_target = t.frontmatter.target_branch.as_deref()
-                .unwrap_or(&config.project.default_branch);
-            let is_main = merge_target == config.project.default_branch;
-            if let Err(e) = git::push_branch_tracking(root, &branch) {
-                warnings.push(format!("warning: could not push {branch}: {e}"));
+            let merge_result = {
+                let merge_target = t.frontmatter.target_branch.as_deref()
+                    .unwrap_or(&config.project.default_branch);
+                let is_main = merge_target == config.project.default_branch;
+                if let Err(e) = git::push_branch_tracking(root, &branch) {
+                    warnings.push(format!("warning: could not push {branch}: {e}"));
+                }
+                git::merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)
+            };
+            if let Err(merge_err) = merge_result {
+                let merge_err_msg = format!("{merge_err:#}");
+                let fail_now = Utc::now();
+                t.frontmatter.state = "merge_failed".to_string();
+                t.frontmatter.updated_at = Some(fail_now);
+                set_merge_notes(&mut t.body, &merge_err_msg);
+                append_history(&mut t.body, &new_state, "merge_failed", &fail_now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
+                let fallback_content = match t.serialize() {
+                    Ok(c) => c,
+                    Err(_) => return Err(merge_err),
+                };
+                if git::commit_to_branch(root, &branch, &rel_path, &fallback_content, &format!("ticket({id}): {new_state} → merge_failed")).is_err() {
+                    return Err(merge_err);
+                }
+                crate::logger::log("state_transition", &format!("{id:?} {new_state} -> merge_failed"));
+                return Ok(TransitionOutput {
+                    id: id.clone(),
+                    old_state: old_state.clone(),
+                    new_state: "merge_failed".to_string(),
+                    worktree_path: None,
+                    warnings,
+                    messages,
+                });
             }
-            git::merge_into_default(root, &config, &branch, merge_target, is_main, &mut messages, &mut warnings)?;
         }
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch_tracking(root, &branch)?;
@@ -249,6 +275,33 @@ pub fn compute_valid_transitions(state: &str, config: &crate::config::Config) ->
         .unwrap_or_default()
 }
 
+fn set_merge_notes(body: &mut String, notes: &str) {
+    const SECTION: &str = "### Merge notes";
+
+    // Remove existing section if present.
+    if let Some(start) = body.find(SECTION) {
+        let actual_start = if start > 0 && body.as_bytes().get(start - 1) == Some(&b'\n') {
+            start - 1
+        } else {
+            start
+        };
+        let after_header = start + SECTION.len();
+        let end = body[after_header..]
+            .find("\n##")
+            .map(|i| after_header + i)
+            .unwrap_or(body.len());
+        body.replace_range(actual_start..end, "");
+    }
+
+    // Insert before ## History or append.
+    let block = format!("\n{SECTION}\n\n{notes}\n");
+    if let Some(pos) = body.find("\n## History") {
+        body.insert_str(pos, &block);
+    } else {
+        body.push_str(&block);
+    }
+}
+
 pub fn append_history(body: &mut String, from: &str, to: &str, when: &str, by: &str) {
     let row = format!("| {when} | {from} | {to} | {by} |");
     if body.contains("## History") {
@@ -285,6 +338,34 @@ mod tests {
             "id = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
         );
         toml::from_str(toml).unwrap()
+    }
+
+    #[test]
+    fn set_merge_notes_inserts_before_history() {
+        let mut body = "## Spec\n\ncontent\n\n## History\n\n| row |".to_string();
+        set_merge_notes(&mut body, "conflict error");
+        assert!(body.contains("### Merge notes\n\nconflict error\n"));
+        let notes_pos = body.find("### Merge notes").unwrap();
+        let hist_pos = body.find("## History").unwrap();
+        assert!(notes_pos < hist_pos);
+    }
+
+    #[test]
+    fn set_merge_notes_appends_when_no_history() {
+        let mut body = "## Spec\n\ncontent".to_string();
+        set_merge_notes(&mut body, "error msg");
+        assert!(body.contains("### Merge notes\n\nerror msg\n"));
+    }
+
+    #[test]
+    fn set_merge_notes_overwrites_existing_section() {
+        let mut body = "## Spec\n\n### Merge notes\n\nold error\n\n## History\n\n| row |".to_string();
+        set_merge_notes(&mut body, "new error");
+        assert!(body.contains("### Merge notes\n\nnew error\n"));
+        assert!(!body.contains("old error"));
+        let notes_pos = body.find("### Merge notes").unwrap();
+        let hist_pos = body.find("## History").unwrap();
+        assert!(notes_pos < hist_pos);
     }
 
     #[test]

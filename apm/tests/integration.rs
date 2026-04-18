@@ -217,7 +217,7 @@ fn init_generated_config_has_all_workflow_states() {
     apm_core::init::setup(p, None, None, None).unwrap();
 
     let toml = std::fs::read_to_string(p.join(".apm/workflow.toml")).unwrap();
-    for state in &["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "closed"] {
+    for state in &["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "merge_failed", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
     assert!(toml.contains("terminal"), "closed must be terminal");
@@ -6426,5 +6426,170 @@ fn move_rebase_conflict_fails_cleanly() {
     assert!(
         apm_core::git::detect_mid_merge_state(p).is_none(),
         "repo should be clean after abort"
+    );
+}
+
+// --- merge_failed ---
+
+fn setup_with_merge_workflow() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q", "-b", "main"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "merge"
+
+[[workflow.states]]
+id         = "implemented"
+label      = "Implemented"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+#[test]
+fn merge_failure_transitions_ticket_to_merge_failed() {
+    let dir = setup_with_merge_workflow();
+    let p = dir.path();
+
+    // Create a ticket (starts in "new" state).
+    apm::cmd::new::run(p, "Merge conflict".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "merge-conflict");
+    let id = find_ticket_id(p, "merge-conflict");
+    let rel = ticket_rel_path(&branch);
+
+    // Add a file to the ticket branch that will conflict with main.
+    git(p, &["checkout", &branch]);
+    std::fs::write(p.join("conflict.txt"), "branch content\n").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "conflict.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add file on branch"]);
+    git(p, &["checkout", "main"]);
+
+    // Add a conflicting file to main.
+    std::fs::write(p.join("conflict.txt"), "main content\n").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "conflict.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add conflicting file on main"]);
+
+    // Transition new → implemented triggers a merge that fails.
+    apm::cmd::state::run(p, &id, "implemented".into(), false, false).unwrap();
+
+    // Ticket on its branch must now be in merge_failed state.
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"merge_failed\""),
+        "expected merge_failed state:\n{content}"
+    );
+    assert!(
+        content.contains("### Merge notes"),
+        "expected Merge notes section:\n{content}"
+    );
+    assert!(
+        content.contains("| implemented | merge_failed |"),
+        "expected history row:\n{content}"
+    );
+}
+
+#[test]
+fn merge_failed_to_implemented_does_not_trigger_another_merge() {
+    let dir = setup_with_merge_workflow();
+    let p = dir.path();
+
+    // Create ticket and force it to merge_failed state directly.
+    apm::cmd::new::run(p, "Already failed".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "already-failed");
+    let id = find_ticket_id(p, "already-failed");
+    let rel = ticket_rel_path(&branch);
+
+    // Write merge_failed state directly to the branch.
+    let existing = branch_content(p, &branch, &rel);
+    let updated = existing.replace("state = \"new\"", "state = \"merge_failed\"");
+    git(p, &["checkout", &branch]);
+    std::fs::write(p.join(&rel), &updated).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "set merge_failed"]);
+    git(p, &["checkout", "main"]);
+
+    // Transition merge_failed → implemented must succeed without attempting a merge.
+    apm::cmd::state::run(p, &id, "implemented".into(), false, false).unwrap();
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"implemented\""),
+        "expected implemented state:\n{content}"
+    );
+}
+
+#[test]
+fn merge_failed_to_in_progress_succeeds() {
+    let dir = setup_with_merge_workflow();
+    let p = dir.path();
+
+    // Create ticket and force it to merge_failed state directly.
+    apm::cmd::new::run(p, "Retry merge".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "retry-merge");
+    let id = find_ticket_id(p, "retry-merge");
+    let rel = ticket_rel_path(&branch);
+
+    let existing = branch_content(p, &branch, &rel);
+    let updated = existing.replace("state = \"new\"", "state = \"merge_failed\"");
+    git(p, &["checkout", &branch]);
+    std::fs::write(p.join(&rel), &updated).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "set merge_failed"]);
+    git(p, &["checkout", "main"]);
+
+    apm::cmd::state::run(p, &id, "in_progress".into(), false, false).unwrap();
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"in_progress\""),
+        "expected in_progress state:\n{content}"
     );
 }
