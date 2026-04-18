@@ -1,7 +1,7 @@
 +++
 id = "29b495c7"
 title = "fix ticket history actors"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29b495c7-fix-ticket-history-actors"
 created_at = "2026-04-18T02:20:26.518634Z"
-updated_at = "2026-04-18T02:26:15.453386Z"
+updated_at = "2026-04-18T02:26:22.793122Z"
 +++
 
 ## Spec
@@ -114,3 +114,4 @@ let agent = apm_core::caller::resolve_caller_name();
 | 2026-04-18T02:20Z | — | new | philippepascal |
 | 2026-04-18T02:21Z | new | groomed | apm |
 | 2026-04-18T02:21Z | groomed | in_design | philippepascal |
+| 2026-04-18T02:26Z | in_design | specd | claude-0418-0221-5ad8 |
