@@ -5253,7 +5253,7 @@ fn build_dependency_bundle_with_direct_and_transitive_deps() {
     assert!(bundle.contains("low-level helpers"), "transitive dep problem one-liner missing:\n{bundle}");
 
     // Bundle footer.
-    assert!(bundle.ends_with("---\n"), "bundle must end with separator:\n{bundle}");
+    assert!(bundle.ends_with("***\n"), "bundle must end with separator:\n{bundle}");
 }
 
 #[test]

@@ -64,8 +64,7 @@ pub fn build_epic_bundle(
     let elided_count = closed.len().saturating_sub(closed_take);
 
     let mut out = String::new();
-    out.push_str("---\n");
-    out.push_str("**Epic Context Bundle**\n\n");
+    out.push_str("# Epic Context Bundle\n\n");
     out.push_str(&format!("**Epic:** {}\n", epic_title));
     if !epic_body.is_empty() {
         out.push('\n');
@@ -108,7 +107,7 @@ pub fn build_epic_bundle(
         }
     }
 
-    out.push_str("---\n");
+    out.push_str("***\n");
 
     // Apply byte cap: truncate at a safe character boundary.
     if byte_cap > 0 && out.len() > byte_cap {
@@ -117,7 +116,7 @@ pub fn build_epic_bundle(
             .find(|&i| out.is_char_boundary(i))
             .unwrap_or(0);
         let mut truncated = out[..truncate_at].to_string();
-        truncated.push_str("\n*[bundle truncated at byte limit]*\n---\n");
+        truncated.push_str("\n*[bundle truncated at byte limit]*\n***\n");
         truncated
     } else {
         out
@@ -201,8 +200,7 @@ pub fn build_dependency_bundle(root: &Path, depends_on: &[String], config: &Conf
     let default_branch = config.project.default_branch.clone();
 
     let mut out = String::new();
-    out.push_str("---\n");
-    out.push_str("**Dependency Context Bundle**\n\n");
+    out.push_str("# Dependency Context Bundle\n\n");
 
     let mut any = false;
 
@@ -290,7 +288,7 @@ pub fn build_dependency_bundle(root: &Path, depends_on: &[String], config: &Conf
         return String::new();
     }
 
-    out.push_str("---\n");
+    out.push_str("***\n");
     out
 }
 
