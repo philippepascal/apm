@@ -16,7 +16,9 @@ updated_at = "2026-04-18T18:42:54.148458Z"
 
 ### Problem
 
-currently the worker just transition to implemented, the supervisor is not aware of merge status, and if merge wasn't performed, why.
+When the worker transitions `in_progress → implemented`, the completion strategy runs `git merge --no-ff` into the default branch. If the merge fails (conflict, push error, etc.), the entire state transition fails with an error and the ticket remains in `in_progress`. The supervisor has no way to distinguish "worker is still implementing" from "worker finished but the merge blew up." The failure reason is only visible in the stderr of whoever ran `apm state`, which in an agent-driven workflow is ephemeral.
+
+The desired behaviour is that merge failure is a first-class outcome: the ticket moves to a dedicated state, the failure reason is persisted in the ticket file, and the supervisor can act on it directly from `apm review` or `apm list` without needing to re-run commands or inspect git logs.
 
 ### Acceptance criteria
 
