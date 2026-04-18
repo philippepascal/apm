@@ -52,7 +52,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 
 - [x] **UI**
 
-- [ ] When the sync response `ahead_branches` contains the value of `default_branch`, the Sync modal renders a `Push <default>` button below the log
+- [x] When the sync response `ahead_branches` contains the value of `default_branch`, the Sync modal renders a `Push <default>` button below the log
 - [ ] Clicking `Push <default>` sends POST `/api/sync` with `{ "push_default": true }`, replaces the log display with the new response, and invalidates ticket queries
 - [ ] When `ahead_branches` contains non-default branches, the Sync modal renders a `Push N ahead branch(es)` button
 - [ ] Clicking the ahead-branches button sends POST `/api/sync` with `{ "push_refs": true }` and updates the log display
