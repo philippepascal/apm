@@ -56,7 +56,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 - [x] Clicking `Push <default>` sends POST `/api/sync` with `{ "push_default": true }`, replaces the log display with the new response, and invalidates ticket queries
 - [x] When `ahead_branches` contains non-default branches, the Sync modal renders a `Push N ahead branch(es)` button
 - [x] Clicking the ahead-branches button sends POST `/api/sync` with `{ "push_refs": true }` and updates the log display
-- [ ] The Sync modal contains a checkbox labelled "Auto-push `<default>` when ahead"; it is unchecked by default
+- [x] The Sync modal contains a checkbox labelled "Auto-push `<default>` when ahead"; it is unchecked by default
 - [ ] When the auto-push checkbox is checked, the initial sync POST is sent with `{ "push_default": true }`, bypassing the button
 - [ ] The auto-push checkbox state persists across page reloads (stored in `localStorage`)
 
