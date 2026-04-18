@@ -22,7 +22,7 @@ There is also a parity gap between the CLI and UI sync surfaces. The server hand
 
 ### Acceptance criteria
 
-- [ ] `MAIN_AHEAD` in `apm-core/src/sync_guidance.rs` includes a sentence explaining that merged tickets will not be detected as closeable until the user pushes
+- [x] `MAIN_AHEAD` in `apm-core/src/sync_guidance.rs` includes a sentence explaining that merged tickets will not be detected as closeable until the user pushes
 - [ ] When `apm sync` (CLI) runs and local default branch is ahead of origin, the expanded message appears on stderr
 - [ ] When `POST /api/sync` runs and local default branch is ahead of origin, the `log` field in the JSON response contains the expanded `MAIN_AHEAD` message
 - [ ] When `POST /api/sync` runs and one or more non-checked-out ticket or epic refs are ahead of origin, those `TICKET_OR_EPIC_AHEAD` messages appear in the `log` field (currently the warnings vector is discarded)
