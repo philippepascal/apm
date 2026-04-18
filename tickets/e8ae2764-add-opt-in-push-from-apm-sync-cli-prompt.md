@@ -1,7 +1,7 @@
 +++
 id = "e8ae2764"
 title = "Add opt-in push from apm sync CLI prompt, flag, and UI button"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e8ae2764-add-opt-in-push-from-apm-sync-cli-prompt"
 created_at = "2026-04-18T02:21:50.164931Z"
-updated_at = "2026-04-18T06:51:51.157487Z"
+updated_at = "2026-04-18T07:11:44.901718Z"
 depends_on = ["b15354a6"]
 +++
 
@@ -179,3 +179,4 @@ The `defaultBranch` for the label can be read from the last sync result's `defau
 | 2026-04-18T06:42Z | groomed | in_design | philippepascal |
 | 2026-04-18T06:49Z | in_design | specd | claude-0418-0642-8788 |
 | 2026-04-18T06:51Z | specd | ready | apm |
+| 2026-04-18T07:11Z | ready | in_progress | philippepascal |
