@@ -3,13 +3,13 @@ id = "e8ae2764"
 title = "Add opt-in push from apm sync CLI prompt, flag, and UI button"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e8ae2764-add-opt-in-push-from-apm-sync-cli-prompt"
 created_at = "2026-04-18T02:21:50.164931Z"
-updated_at = "2026-04-18T06:42:41.556290Z"
+updated_at = "2026-04-18T06:48:55.590677Z"
 depends_on = ["b15354a6"]
 +++
 
