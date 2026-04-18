@@ -1,7 +1,7 @@
 +++
 id = "b15354a6"
 title = "Expand ahead message with close-detection context and surface in UI sync"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b15354a6-expand-ahead-message-with-close-detectio"
 created_at = "2026-04-18T02:21:44.835172Z"
-updated_at = "2026-04-18T02:33:12.955618Z"
+updated_at = "2026-04-18T06:51:45.538259Z"
 +++
 
 ## Spec
@@ -118,3 +118,4 @@ No changes are required to `apm-ui/src/components/SyncModal.tsx` — it already 
 | 2026-04-18T02:23Z | new | groomed | apm |
 | 2026-04-18T02:29Z | groomed | in_design | philippepascal |
 | 2026-04-18T02:33Z | in_design | specd | claude-0418-0229-b9e0 |
+| 2026-04-18T06:51Z | specd | ready | apm |
