@@ -23,7 +23,7 @@ The desired behaviour is that merge failure is a first-class outcome: the ticket
 ### Acceptance criteria
 
 - [x] When `git merge` fails during the `in_progress → implemented` transition, the ticket transitions to `merge_failed` instead of staying in `in_progress`
-- [ ] The merge error message (stderr from git) is written to a `### Merge notes` section in the ticket file before the state is committed
+- [x] The merge error message (stderr from git) is written to a `### Merge notes` section in the ticket file before the state is committed
 - [ ] `merge_failed` is supervisor-actionable: it appears in `apm review` output and `apm list` under the supervisor role
 - [ ] `apm show <id>` renders the `### Merge notes` section when the ticket is in `merge_failed` state
 - [ ] From `merge_failed`, the supervisor can transition to `implemented` without triggering another merge attempt
