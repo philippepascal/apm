@@ -582,6 +582,13 @@ The primary bookkeeping command. Fetches all remote refs, detects ticket branche
 merged (including squash-merges) into the default branch, and closes those tickets. Run `apm sync`
 at the start of each agent session to ensure local state reflects what has happened on the remote.
 
+**Merge detection is rooted at `origin/<default-branch>`, not at local `<default-branch>`.** A
+ticket branch is considered merged only when its merge commit is visible on the remote tracking ref.
+If you merge a ticket branch into `main` locally but have not yet pushed, `apm sync` will report
+that main is ahead of origin/main and will not offer to close the ticket. Run `git push` on the
+default branch first; the next `apm sync` will then detect the merge and offer closure. This is
+intentional: it prevents tickets from being closed before the team can see the merge.
+
 Without `--offline`, always performs a `git fetch --all` regardless of the `sync.aggressive`
 setting.
 
@@ -607,7 +614,7 @@ setting.
 |---------|-----|
 | `git fetch --all --quiet` | (unless `--offline`) Sync all remote refs including ticket and epic branches |
 | `git branch -r --list origin/ticket/*` | List remote ticket branches to detect merges |
-| `git branch -r --merged origin/<default>` | Find branches merged into the default branch via a regular merge |
+| `git branch -r --merged origin/<default>` | Find remote ticket branches merged into `origin/<default>` (intentional: local `<default>` is not checked — a merge must be pushed before it counts) |
 | `git merge-base` + `git diff --shortstat` | Detect squash-merged branches that `--merged` misses |
 | `git add <path>` + `git commit -m "ticket(<id>): closed (merged)"` | Close each merged ticket by writing the terminal state to its branch |
 | `git push origin <branch>` | (aggressive only) Publish the closure to the remote |

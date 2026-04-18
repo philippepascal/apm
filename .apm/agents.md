@@ -98,6 +98,12 @@ to run git commands there without leaving your current directory.
 ## Startup
 
 1. `apm sync` — refresh local cache from all `ticket/*` branches
+
+   **Note:** `apm sync` detects merges via `origin/<default-branch>`. A ticket merged into your
+   local default branch but not yet pushed will not appear as closeable. If you expect a ticket to
+   be offered for closure after merging locally, run `git push` on the default branch first, then
+   re-run `apm sync`.
+
 2. `apm next --json` — find the highest-priority ticket you can act on now
 3. `apm list --state in_progress` — check for in-progress tickets (resume if any match your agent name)
 
