@@ -38,7 +38,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 - [x] **CLI — ticket/epic branch push**
 
 - [x] When `sync_non_checked_out_refs` finds one or more ahead ticket/* or epic/* branches, stdin is a TTY, and `--quiet` is not set, `apm sync` prints a single bundled prompt: `push N ahead branch(es) to origin now? [y/N]`
-- [ ] Answering `y` at the bundled prompt causes `apm sync` to push each ahead branch and print a summary line
+- [x] Answering `y` at the bundled prompt causes `apm sync` to push each ahead branch and print a summary line
 - [ ] `apm sync --push-refs` pushes all ahead ticket/* and epic/* branches without prompting
 - [ ] `apm sync --push-refs --offline` does not attempt any push
 
