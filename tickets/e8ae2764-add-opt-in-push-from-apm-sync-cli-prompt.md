@@ -25,7 +25,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 
 ### Acceptance criteria
 
-- [ ] **CLI — default branch push**
+- [x] **CLI — default branch push**
 
 - [ ] When `<default>` is ahead of `origin/<default>`, stdin is a TTY, and `--quiet` is not set, `apm sync` prints a prompt: `push <default> to origin now? [y/N]`
 - [ ] Answering `y` at the prompt causes `apm sync` to run `git push origin <default>` and re-evaluate close candidates against the updated remote state
