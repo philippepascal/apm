@@ -1,7 +1,7 @@
 +++
 id = "1f5af525"
 title = "update agents.md and apm.*.md"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1f5af525-update-agents-md-and-apm-md"
 created_at = "2026-04-18T18:42:11.878614Z"
-updated_at = "2026-04-18T18:58:55.173915Z"
+updated_at = "2026-04-18T18:59:24.826555Z"
 +++
 
 ## Spec
@@ -90,3 +90,4 @@ No Rust code changes. No test changes needed (these are documentation-only files
 | 2026-04-18T18:48Z | groomed | in_design | philippepascal |
 | 2026-04-18T18:52Z | in_design | specd | claude-0418-1848-54d0 |
 | 2026-04-18T18:58Z | specd | ready | philippepascal |
+| 2026-04-18T18:59Z | ready | in_progress | philippepascal |
