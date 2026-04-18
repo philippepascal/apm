@@ -1,7 +1,7 @@
 +++
 id = "29b495c7"
 title = "fix ticket history actors"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29b495c7-fix-ticket-history-actors"
 created_at = "2026-04-18T02:20:26.518634Z"
-updated_at = "2026-04-18T07:11:27.721715Z"
+updated_at = "2026-04-18T07:38:38.789786Z"
 +++
 
 ## Spec
@@ -118,3 +118,4 @@ let agent = apm_core::caller::resolve_caller_name();
 | 2026-04-18T06:51Z | specd | ready | apm |
 | 2026-04-18T06:58Z | ready | in_progress | philippepascal |
 | 2026-04-18T07:11Z | in_progress | implemented | claude-0418-0658-4818 |
+| 2026-04-18T07:38Z | implemented | closed | apm-sync |
