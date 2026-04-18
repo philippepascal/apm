@@ -27,7 +27,7 @@ The desired behaviour is that merge failure is a first-class outcome: the ticket
 - [x] `merge_failed` is supervisor-actionable: it appears in `apm review` output and `apm list` under the supervisor role
 - [x] `apm show <id>` renders the `### Merge notes` section when the ticket is in `merge_failed` state
 - [x] From `merge_failed`, the supervisor can transition to `implemented` without triggering another merge attempt
-- [ ] From `merge_failed`, the supervisor can transition back to `in_progress` (to let the worker retry)
+- [x] From `merge_failed`, the supervisor can transition back to `in_progress` (to let the worker retry)
 - [ ] When the transition to `merge_failed` itself fails (e.g. cannot commit the ticket), the original merge error is still reported and the ticket is left in `in_progress` (no silent data loss)
 
 ### Out of scope
