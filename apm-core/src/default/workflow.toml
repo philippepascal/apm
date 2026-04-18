@@ -199,6 +199,19 @@ worker_end     = true
   trigger = "manual"
 
 [[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
 id             = "closed"
 label          = "Closed"
 terminal       = true
