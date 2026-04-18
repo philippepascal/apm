@@ -1,7 +1,7 @@
 +++
 id = "6fbf443e"
 title = "Document origin-rooted merge detection in apm sync"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6fbf443e-document-origin-rooted-merge-detection-i"
 created_at = "2026-04-18T02:21:39.386683Z"
-updated_at = "2026-04-18T06:52:34.131119Z"
+updated_at = "2026-04-18T06:53:56.142359Z"
 +++
 
 ## Spec
@@ -84,3 +84,4 @@ Add an indented note beneath step 1:
 | 2026-04-18T02:28Z | in_design | specd | claude-0418-0226-6a70 |
 | 2026-04-18T06:51Z | specd | ready | apm |
 | 2026-04-18T06:52Z | ready | in_progress | philippepascal |
+| 2026-04-18T06:53Z | in_progress | implemented | claude-0418-0652-abd0 |
