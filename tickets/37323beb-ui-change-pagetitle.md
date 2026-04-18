@@ -1,7 +1,7 @@
 +++
 id = "37323beb"
 title = "UI change pagetitle"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/37323beb-ui-change-pagetitle"
 created_at = "2026-04-18T01:16:01.610380Z"
-updated_at = "2026-04-18T01:19:33.356575Z"
+updated_at = "2026-04-18T02:03:11.663782Z"
 +++
 
 ## Spec
@@ -84,3 +84,4 @@ Change `<title>apm-ui</title>` to `<title>apm</title>`. This is what appears bef
 | 2026-04-18T01:16Z | new | groomed | apm |
 | 2026-04-18T01:16Z | groomed | in_design | philippepascal |
 | 2026-04-18T01:19Z | in_design | specd | claude-0418-0116-80b8 |
+| 2026-04-18T02:03Z | specd | ready | apm |
