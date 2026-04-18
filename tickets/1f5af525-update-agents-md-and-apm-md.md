@@ -31,7 +31,7 @@ Additionally, `apm-core/src/default/apm.spec-writer.md` is missing the "How to s
 ### Acceptance criteria
 
 - [x] `apm-core/src/default/apm.agents.md` groomed-state workflow contains no manual `git add` or `git commit` steps after `apm spec` calls
-- [ ] `apm-core/src/default/apm.agents.md` ammend-state workflow contains no manual `git add` or `git commit` steps after `apm spec` calls
+- [x] `apm-core/src/default/apm.agents.md` ammend-state workflow contains no manual `git add` or `git commit` steps after `apm spec` calls
 - [ ] `apm-core/src/default/apm.agents.md` uses `apm assign <id> <username>` (not `apm take`) for ticket takeover
 - [ ] `apm-core/src/default/apm.agents.md` "Taking over another agent's ticket" section uses `apm assign <id> <username>`
 - [ ] `apm-core/src/default/apm.agents.md` in_design state description uses `apm assign` instead of `apm take`
