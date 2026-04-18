@@ -3,13 +3,13 @@ id = "37323beb"
 title = "UI change pagetitle"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/37323beb-ui-change-pagetitle"
 created_at = "2026-04-18T01:16:01.610380Z"
-updated_at = "2026-04-18T01:16:40.590679Z"
+updated_at = "2026-04-18T01:19:19.128483Z"
 +++
 
 ## Spec
