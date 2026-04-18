@@ -34,7 +34,13 @@ Affected transitions: any state change driven by `apm state` or `apm review` (in
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm state <id> groomed` run by a user with `USER=alice` and no `APM_AGENT_NAME` set records `alice` in the history `By` column
+- [ ] `apm review` approval that triggers `specd → ready` records the invoking user's identity (not `"apm"`) in the history `By` column
+- [ ] `apm sync` auto-closing an `implemented` ticket records `<user>(apm-sync)` (e.g. `philippepascal(apm-sync)`) in the history `By` column
+- [ ] `apm sync` run by a Claude agent with `APM_AGENT_NAME=claude-xyz` records `claude-xyz(apm-sync)` in the history `By` column
+- [ ] `apm close <id>` run by a user with `USER=alice` and no `APM_AGENT_NAME` set records `alice` in the history `By` column
+- [ ] When `APM_AGENT_NAME` is set, `apm state` still records that agent name as the actor (existing agent behaviour is preserved)
+- [ ] Server-side sync handler behaviour is unchanged
 
 ### Out of scope
 
