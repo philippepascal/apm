@@ -62,7 +62,15 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automatic push without any user action (the no-auto-push default is never changed for users who haven't opted in)
+- Push from any command other than `apm sync` (start, close, state transitions, etc. are unaffected)
+- Changing the push remote target — always `origin`
+- Force-push or push with lease (plain `git push origin <branch>` only)
+- Per-branch UI push buttons for individual ticket/epic branches — the UI uses a single bundled "Push N ahead branches" button
+- User preference storage on the server / in `.apm/local.toml` — localStorage only
+- Scheduling or automating push+sync via `apm` cron facilities
+- Diverged-branch resolution — existing MAIN_DIVERGED and TICKET_OR_EPIC_DIVERGED guidance is unchanged
+- The MAIN_AHEAD message text update — that is ticket b15354a6
 
 ### Approach
 
