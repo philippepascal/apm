@@ -1,7 +1,7 @@
 +++
 id = "6fbf443e"
 title = "Document origin-rooted merge detection in apm sync"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6fbf443e-document-origin-rooted-merge-detection-i"
 created_at = "2026-04-18T02:21:39.386683Z"
-updated_at = "2026-04-18T02:23:27.551071Z"
+updated_at = "2026-04-18T02:26:42.225327Z"
 +++
 
 ## Spec
@@ -53,3 +53,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-18T02:21Z | — | new | philippepascal |
 | 2026-04-18T02:23Z | new | groomed | apm |
+| 2026-04-18T02:26Z | groomed | in_design | philippepascal |
