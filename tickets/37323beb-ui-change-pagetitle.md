@@ -16,7 +16,11 @@ updated_at = "2026-04-18T01:16:40.590679Z"
 
 ### Problem
 
-currently shows apm-ui. if should show apm: <reponame>-<username>
+The browser tab title for the APM UI is hardcoded to `apm-ui` in `apm-ui/index.html`. This static value gives users no contextual information about which project or account they are working in — a usability issue when multiple APM instances are open in the same browser.
+
+The title should instead read `apm: <reponame>-<username>`, e.g. `apm: apm-philippepascal`, so the tab immediately identifies both the project and the logged-in user.
+
+The project name is available from `[project] name` in `.apm/config.toml` (loaded via `apm_core::config::Config::load`); the username is already returned by the `/api/me` endpoint. Neither value is currently surfaced to the frontend.
 
 ### Acceptance criteria
 
