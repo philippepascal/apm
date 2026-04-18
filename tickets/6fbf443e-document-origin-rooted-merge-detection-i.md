@@ -3,13 +3,13 @@ id = "6fbf443e"
 title = "Document origin-rooted merge detection in apm sync"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6fbf443e-document-origin-rooted-merge-detection-i"
 created_at = "2026-04-18T02:21:39.386683Z"
-updated_at = "2026-04-18T02:26:42.225327Z"
+updated_at = "2026-04-18T02:28:32.122281Z"
 +++
 
 ## Spec
