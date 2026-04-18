@@ -50,7 +50,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 - [x] The sync response includes `ahead_branches: string[]` listing branch short names that are ahead of origin after the sync completes
 - [x] The sync response includes `default_branch: string` with the configured default branch name
 
-- [ ] **UI**
+- [x] **UI**
 
 - [ ] When the sync response `ahead_branches` contains the value of `default_branch`, the Sync modal renders a `Push <default>` button below the log
 - [ ] Clicking `Push <default>` sends POST `/api/sync` with `{ "push_default": true }`, replaces the log display with the new response, and invalidates ticket queries
