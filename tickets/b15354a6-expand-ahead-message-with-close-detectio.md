@@ -40,7 +40,66 @@ There is also a parity gap between the CLI and UI sync surfaces. The server hand
 
 ### Approach
 
-How the implementation will work.
+Two files change; order does not matter.
+
+**1. `apm-core/src/sync_guidance.rs` — expand `MAIN_AHEAD` wording**
+
+Update the constant body at line 67 from:
+
+```
+<default> is ahead of <remote> by <count> <commits> — run `git push` when ready
+```
+
+to something like:
+
+```
+<default> is ahead of <remote> by <count> <commits>. Merged tickets will not be detected as closeable until you push — run `git push` when ready.
+```
+
+Exact wording is the implementer's call; the requirement is that the user learns *why* pushing matters (close detection), not just the bare fact of being ahead. The placeholder substitution mechanism is unchanged (`<default>`, `<remote>`, `<count>`, `<commits>` are replaced by the caller at the print site in `git_util.rs`).
+
+`TICKET_OR_EPIC_AHEAD` (line 73) does not need a close-detection note — ticket/epic branches being ahead of origin does not block close detection.
+
+**2. `apm-server/src/handlers/maintenance.rs` — surface warnings in the JSON `log`**
+
+There are two separate bugs in `sync_handler` (lines 11-61):
+
+**Bug A — `sync_non_checked_out_refs` warnings discarded (lines 23-25):**
+
+Current:
+```rust
+let mut _sync_warnings: Vec<String> = Vec::new();
+apm_core::git::sync_non_checked_out_refs(&root, &mut _sync_warnings);
+log.push("synced non-checked-out refs".to_string());
+```
+
+Fix: use a real vector and extend `log` with it before the status line:
+```rust
+let mut ref_warnings: Vec<String> = Vec::new();
+apm_core::git::sync_non_checked_out_refs(&root, &mut ref_warnings);
+log.extend(ref_warnings);
+log.push("synced non-checked-out refs".to_string());
+```
+
+**Bug B — `sync_default_branch` warnings sent to stderr only (lines 31-35):**
+
+Current:
+```rust
+let mut sync_warnings: Vec<String> = Vec::new();
+apm_core::git::sync_default_branch(&root, &config.project.default_branch, &mut sync_warnings);
+for w in &sync_warnings {
+    eprintln!("warning: {w}");
+}
+```
+
+Fix: extend `log` with the warnings (keep or drop the `eprintln!` as preferred — dropping it avoids duplicate output):
+```rust
+let mut sync_warnings: Vec<String> = Vec::new();
+apm_core::git::sync_default_branch(&root, &config.project.default_branch, &mut sync_warnings);
+log.extend(sync_warnings);
+```
+
+No changes are required to `apm-ui/src/components/SyncModal.tsx` — it already renders the entire `log` string as pre-formatted text, so once the server includes the warnings in `log` they will appear automatically.
 
 ### Open questions
 
