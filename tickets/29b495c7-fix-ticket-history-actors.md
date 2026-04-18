@@ -3,13 +3,13 @@ id = "29b495c7"
 title = "fix ticket history actors"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29b495c7-fix-ticket-history-actors"
 created_at = "2026-04-18T02:20:26.518634Z"
-updated_at = "2026-04-18T02:21:54.724243Z"
+updated_at = "2026-04-18T02:26:08.104530Z"
 +++
 
 ## Spec
