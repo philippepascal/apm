@@ -1,7 +1,7 @@
 +++
 id = "81f4fa74"
 title = "propose better handling of merge failures by worker"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/81f4fa74-propose-better-handling-of-merge-failure"
 created_at = "2026-04-18T07:37:39.058963Z"
-updated_at = "2026-04-18T19:01:56.164442Z"
+updated_at = "2026-04-18T19:12:30.959340Z"
 +++
 
 ## Spec
@@ -160,3 +160,4 @@ Verify `apm review` and `apm list` pick up `actionable = ["supervisor"]` automat
 | 2026-04-18T18:47Z | in_design | specd | claude-0418-1842-f9a8 |
 | 2026-04-18T18:58Z | specd | ready | philippepascal |
 | 2026-04-18T19:01Z | ready | in_progress | philippepascal |
+| 2026-04-18T19:12Z | in_progress | implemented | claude-0418-1901-6f98 |
