@@ -32,7 +32,10 @@ The project name is available from `[project] name` in `.apm/config.toml` (loade
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating the title dynamically on route changes (single page; one title is sufficient)
+- Showing the full git host repo slug (e.g. `philippepascal/apm`) — the short project name from `[project] name` is used
+- Any change to the favicon or other browser-tab metadata
+- Multi-tenant / remote-auth scenarios where `repo_name` might differ per session
 
 ### Approach
 
