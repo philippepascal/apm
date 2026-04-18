@@ -1,7 +1,7 @@
 +++
 id = "ecb21bf6"
 title = "Add command to move an existing ticket into an epic"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ecb21bf6-add-command-to-move-an-existing-ticket-i"
 created_at = "2026-04-17T18:48:52.510757Z"
-updated_at = "2026-04-17T20:53:46.477421Z"
+updated_at = "2026-04-18T01:03:10.787253Z"
 +++
 
 ## Spec
@@ -121,3 +121,4 @@ The second positional arg is required. `-` means "no epic" (target = main). Use 
 | 2026-04-17T20:23Z | specd | ready | apm |
 | 2026-04-17T20:40Z | ready | in_progress | philippepascal |
 | 2026-04-17T20:53Z | in_progress | implemented | claude-0417-2040-08a8 |
+| 2026-04-18T01:03Z | implemented | closed | philippepascal |
