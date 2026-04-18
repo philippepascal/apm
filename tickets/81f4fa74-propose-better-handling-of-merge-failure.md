@@ -32,7 +32,12 @@ The desired behaviour is that merge failure is a first-class outcome: the ticket
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automatic merge conflict resolution or retry logic
+- Failures during `git push` (before the merge step) — only the merge step itself is covered
+- PR-based completion strategies (`completion = "pr"`, `completion = "pr_or_epic_merge"`)
+- Notifying the supervisor via push notification or any async channel — the state change in the ticket is the only signal
+- Reusing the existing `blocked` state for merge failures (a dedicated state is used instead)
+- UI changes in `apm-ui` beyond what `apm show` already renders from ticket sections
 
 ### Approach
 
