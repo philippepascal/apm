@@ -31,7 +31,7 @@ The desired behaviour is a user-authorized push path on both surfaces — CLI an
 - [x] Answering `y` at the prompt causes `apm sync` to run `git push origin <default>` and re-evaluate close candidates against the updated remote state
 - [x] Answering `N` (or pressing Enter) causes `apm sync` to proceed without pushing and print the MAIN_AHEAD guidance line
 - [x] When stdin is not a TTY, `apm sync` does not prompt, does not push, and prints the MAIN_AHEAD guidance line
-- [ ] `apm sync --push-default` pushes `<default>` when it is ahead without prompting, and re-evaluates close candidates after
+- [x] `apm sync --push-default` pushes `<default>` when it is ahead without prompting, and re-evaluates close candidates after
 - [ ] `apm sync --push-default` does not push and emits the existing MAIN_DIVERGED guidance when `<default>` has diverged from `origin/<default>`
 - [ ] `apm sync --push-default --offline` does not attempt any push
 
