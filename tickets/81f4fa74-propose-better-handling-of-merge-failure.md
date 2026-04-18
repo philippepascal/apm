@@ -1,7 +1,7 @@
 +++
 id = "81f4fa74"
 title = "propose better handling of merge failures by worker"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/81f4fa74-propose-better-handling-of-merge-failure"
 created_at = "2026-04-18T07:37:39.058963Z"
-updated_at = "2026-04-18T18:42:26.858808Z"
+updated_at = "2026-04-18T18:42:54.148458Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-18T07:37Z | — | new | philippepascal |
 | 2026-04-18T18:42Z | new | groomed | philippepascal |
+| 2026-04-18T18:42Z | groomed | in_design | philippepascal |
