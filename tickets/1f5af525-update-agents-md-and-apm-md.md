@@ -36,7 +36,7 @@ Additionally, `apm-core/src/default/apm.spec-writer.md` is missing the "How to s
 - [x] `apm-core/src/default/apm.agents.md` "Taking over another agent's ticket" section uses `apm assign <id> <username>`
 - [x] `apm-core/src/default/apm.agents.md` in_design state description uses `apm assign` instead of `apm take`
 - [x] `apm-core/src/default/apm.spec-writer.md` contains a "How to save spec sections" block explaining `--set` and `--set-file` usage
-- [ ] `apm-core/src/default/apm.spec-writer.md` "When you are done" section includes `apm state <id> specd` as the final step
+- [x] `apm-core/src/default/apm.spec-writer.md` "When you are done" section includes `apm state <id> specd` as the final step
 
 ### Out of scope
 
