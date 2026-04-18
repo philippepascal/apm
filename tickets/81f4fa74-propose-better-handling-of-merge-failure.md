@@ -4,12 +4,12 @@ title = "propose better handling of merge failures by worker"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/81f4fa74-propose-better-handling-of-merge-failure"
 created_at = "2026-04-18T07:37:39.058963Z"
-updated_at = "2026-04-18T18:47:01.656735Z"
+updated_at = "2026-04-18T18:47:09.408456Z"
 +++
 
 ## Spec
