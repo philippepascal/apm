@@ -40,7 +40,7 @@ Additionally, `apm-core/src/default/apm.spec-writer.md` is missing the "How to s
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to .apm/agents.md or .apm/apm.spec-writer.md (live project copies are already correct)\n- Changes to apm.worker.md (identical in both locations, no discrepancies)\n- Adding new documentation sections not already present in .apm/ versions\n- Changing the Delegator vs Main Agent role design in agents.md
 
 ### Approach
 
