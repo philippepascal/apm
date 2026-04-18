@@ -39,7 +39,33 @@ The project name is available from `[project] name` in `.apm/config.toml` (loade
 
 ### Approach
 
-How the implementation will work.
+**1. Extend `/api/me` to include `repo_name` — `apm-server/src/main.rs`**
+
+In `me_handler`, after resolving `username`, load the config via `apm_core::config::Config::load(root)` (same pattern as `collaborators_handler`) and read `config.project.name`. Return it alongside `username`:
+```json
+{ "username": "philippepascal", "repo_name": "apm" }
+```
+Handle the case where `git_root()` is `None` or config fails to load by defaulting `repo_name` to an empty string (or omit the field — the UI must tolerate absence).
+
+**2. Set `document.title` dynamically — `apm-ui/src/App.tsx`**
+
+Add a `useEffect` (or a custom `useMeta` hook) that fires after the existing `/api/me` fetch resolves. The query result already flows through React Query in `AssignPicker`; lift the `/api/me` query to `App.tsx` (or a layout-level component) so the title can be set once on mount:
+
+```ts
+useEffect(() => {
+  if (me?.repo_name && me?.username) {
+    document.title = `apm: ${me.repo_name}-${me.username}`;
+  }
+}, [me]);
+```
+
+If `me` is undefined / loading / error, leave `document.title` at its default (the static value from `index.html`).
+
+**3. Update the static fallback — `apm-ui/index.html` line 7**
+
+Change `<title>apm-ui</title>` to `<title>apm</title>`. This is what appears before JS loads and serves as the error/loading fallback.
+
+**Order of changes:** backend first (so the new field is present when testing), then UI effect, then `index.html` cleanup.
 
 ### Open questions
 
