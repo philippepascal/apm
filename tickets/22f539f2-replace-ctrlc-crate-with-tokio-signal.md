@@ -18,7 +18,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm` pulls in the `ctrlc` crate solely to register a Ctrl-C handler at `apm/src/cmd/work.rs:28` (`ctrlc::set_handler(...)`). That is the only call-site. `tokio` is already a first-class dependency in the workspace, and `tokio::signal::ctrl_c()` returns a future that resolves on SIGINT, which covers the same need without a second signal-handling crate. Replacing the one call-site removes `ctrlc` and roughly 11 transitive dependencies and consolidates signal handling onto the async runtime we already ship.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
