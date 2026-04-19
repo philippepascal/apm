@@ -14,6 +14,7 @@ static UI_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/../apm-ui/dist");
 
 mod agents;
 mod handlers;
+mod pem;
 mod tls;
 mod auth;
 mod log;
@@ -127,12 +128,26 @@ async fn me_handler(
     Json(serde_json::json!({"username": username, "repo_name": repo_name}))
 }
 
+fn mime_for_path(path: &str) -> &'static str {
+    match path.rsplit_once('.').map(|(_, ext)| ext) {
+        Some("html") | Some("htm") => "text/html; charset=utf-8",
+        Some("js") | Some("mjs") => "application/javascript",
+        Some("css") => "text/css",
+        Some("wasm") => "application/wasm",
+        Some("json") | Some("map") => "application/json",
+        Some("svg") => "image/svg+xml",
+        Some("png") => "image/png",
+        Some("ico") => "image/x-icon",
+        Some("txt") => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
+    }
+}
+
 async fn serve_ui(uri: axum::http::Uri) -> Response {
     let path = uri.path().trim_start_matches('/');
     if let Some(file) = UI_DIR.get_file(path) {
-        let mime = mime_guess::from_path(path).first_or_octet_stream();
         (
-            [(header::CONTENT_TYPE, mime.as_ref())],
+            [(header::CONTENT_TYPE, mime_for_path(path))],
             file.contents(),
         )
             .into_response()

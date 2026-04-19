@@ -356,15 +356,21 @@ impl CredentialStore {
 // Middleware and handlers (previously in main.rs)
 // ---------------------------------------------------------------------------
 
+fn cookie_pair(s: &str) -> Option<(&str, &str)> {
+    let s = s.trim();
+    let eq = s.find('=')?;
+    Some((s[..eq].trim(), s[eq + 1..].trim()))
+}
+
 pub fn find_session_username(
     headers: &axum::http::HeaderMap,
     session_store: &SessionStore,
 ) -> Option<String> {
     let cookie_header = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
     for part in cookie_header.split(';') {
-        if let Ok(c) = cookie::Cookie::parse(part.trim().to_owned()) {
-            if c.name() == "__Host-apm-session" {
-                return session_store.lookup(c.value());
+        if let Some((name, value)) = cookie_pair(part) {
+            if name == "__Host-apm-session" {
+                return session_store.lookup(value);
             }
         }
     }
@@ -855,5 +861,37 @@ mod tests {
 
         let store2 = CredentialStore::load(path);
         assert_eq!(store2.credential_count("alice"), 0);
+    }
+
+    #[test]
+    fn find_session_username_returns_value_when_present() {
+        use std::path::PathBuf;
+        let session_store = SessionStore::load(PathBuf::new());
+        session_store.insert("mytoken123".to_string(), "alice".to_string(), None);
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::COOKIE,
+            "other=val; __Host-apm-session=mytoken123; another=x"
+                .parse()
+                .unwrap(),
+        );
+        let result = find_session_username(&headers, &session_store);
+        assert_eq!(result, Some("alice".to_string()));
+    }
+
+    #[test]
+    fn find_session_username_returns_none_when_absent() {
+        use std::path::PathBuf;
+        let session_store = SessionStore::load(PathBuf::new());
+        session_store.insert("mytoken123".to_string(), "alice".to_string(), None);
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::COOKIE,
+            "other=val; unrelated=cookie".parse().unwrap(),
+        );
+        let result = find_session_username(&headers, &session_store);
+        assert_eq!(result, None);
     }
 }

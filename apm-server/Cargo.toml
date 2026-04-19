@@ -18,12 +18,10 @@ apm-core = { path = "../apm-core" }
 chrono = { workspace = true }
 tower-http = { workspace = true, features = ["set-header"] }
 include_dir = { workspace = true }
-mime_guess = { workspace = true }
 clap = { workspace = true }
 tokio-stream = { version = "0.1", features = ["net"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 rand = "0.8"
-cookie = "0.18"
 webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
 uuid = { version = "1", features = ["v4", "v5"] }
 tower = "0.5"
@@ -31,7 +29,6 @@ rustls-acme = { version = "0.15", features = ["tokio", "ring"] }
 rcgen = "0.13"
 tokio-rustls = "0.26"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
-rustls-pemfile = "2"
 hyper = { version = "1", features = ["http1", "http2", "server"] }
 hyper-util = { version = "0.1", features = ["tokio", "server", "server-auto", "http1", "http2"] }
 

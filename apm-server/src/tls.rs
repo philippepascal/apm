@@ -31,10 +31,11 @@ pub fn self_signed_config(domain: &str) -> Result<Arc<ServerConfig>> {
 pub fn custom_cert_config(cert_path: &Path, key_path: &Path) -> Result<Arc<ServerConfig>> {
     let cert_bytes = std::fs::read(cert_path).context("read cert file")?;
     let key_bytes = std::fs::read(key_path).context("read key file")?;
-    let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut cert_bytes.as_slice())
-        .collect::<Result<_, _>>()
-        .context("parse cert PEM")?;
-    let key = rustls_pemfile::private_key(&mut key_bytes.as_slice())
+    let certs = crate::pem::parse_certs(&cert_bytes).context("parse cert PEM")?;
+    if certs.is_empty() {
+        return Err(anyhow::anyhow!("no CERTIFICATE blocks found in cert file"));
+    }
+    let key = crate::pem::parse_private_key(&key_bytes)
         .context("parse key PEM")?
         .context("no private key found in file")?;
     let config = ServerConfig::builder()
@@ -122,6 +123,38 @@ mod tests {
         let dir = tempdir().expect("tempdir");
         let cert_path = dir.path().join("nonexistent.pem");
         let key_path = dir.path().join("nonexistent.key");
+        assert!(custom_cert_config(&cert_path, &key_path).is_err());
+    }
+
+    #[test]
+    fn custom_cert_config_no_certificate_blocks_errors() {
+        install_provider();
+        let certified = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
+            .expect("rcgen failed");
+        let key_pem = certified.key_pair.serialize_pem();
+
+        let dir = tempdir().expect("tempdir");
+        let cert_path = dir.path().join("empty.pem");
+        let key_path = dir.path().join("key.pem");
+        std::fs::write(&cert_path, "no certificate blocks here").expect("write cert");
+        std::fs::write(&key_path, &key_pem).expect("write key");
+
+        assert!(custom_cert_config(&cert_path, &key_path).is_err());
+    }
+
+    #[test]
+    fn custom_cert_config_no_private_key_block_errors() {
+        install_provider();
+        let certified = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
+            .expect("rcgen failed");
+        let cert_pem = certified.cert.pem();
+
+        let dir = tempdir().expect("tempdir");
+        let cert_path = dir.path().join("cert.pem");
+        let key_path = dir.path().join("empty.pem");
+        std::fs::write(&cert_path, &cert_pem).expect("write cert");
+        std::fs::write(&key_path, "no private key here").expect("write key");
+
         assert!(custom_cert_config(&cert_path, &key_path).is_err());
     }
 }
