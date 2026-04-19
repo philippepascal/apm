@@ -55,7 +55,78 @@ Each of these crates is small on its own, but together they add to the transitiv
 
 ### Approach
 
-How the implementation will work.
+Replace three crates in apm-server with small inline helpers.
+
+Files changed: apm-server/src/main.rs, apm-server/src/auth.rs, apm-server/src/queue.rs,
+apm-server/src/tls.rs (new: apm-server/src/pem.rs), apm-server/Cargo.toml, root Cargo.toml.
+
+mime_guess -> apm-server/src/main.rs
+
+Add private fn mime_for_path(path: &str) -> &static str above serve_ui. Match on
+path.rsplit_once(dot).map(|(_, ext)| ext): html/htm -> text/html; charset=utf-8,
+js/mjs -> application/javascript, css -> text/css, wasm -> application/wasm,
+json/map -> application/json, svg -> image/svg+xml, png -> image/png,
+ico -> image/x-icon, txt -> text/plain; charset=utf-8, _ -> application/octet-stream.
+
+In serve_ui replace mime_guess::from_path(path).first_or_octet_stream() with
+mime_for_path(path) and remove .as_ref() (already &static str).
+Remove mime_guess from apm-server/Cargo.toml and [workspace.dependencies] in root Cargo.toml.
+
+cookie -> apm-server/src/auth.rs and apm-server/src/queue.rs
+
+Add private fn cookie_pair(s: &str) -> Option<(&str, &str)> to each file:
+trim s; find first = with .find(=); return (s[..eq].trim(), s[eq+1..].trim()).
+Using .find rather than .split_once preserves = chars inside values.
+
+In find_session_username (auth.rs) replace:
+  if let Ok(c) = cookie::Cookie::parse(part.trim().to_owned()) {
+      if c.name() == "__Host-apm-session" { return session_store.lookup(c.value()); }
+  }
+with:
+  if let Some((name, value)) = cookie_pair(part) {
+      if name == "__Host-apm-session" { return session_store.lookup(value); }
+  }
+Apply identical replacement to queue.rs.
+Remove cookie imports and cookie from apm-server/Cargo.toml.
+
+rustls-pemfile -> new apm-server/src/pem.rs
+
+Create pem.rs; declare mod pem in main.rs.
+
+Public API:
+  pub fn parse_certs(bytes: &[u8]) -> Result<Vec<CertificateDer<static>>>
+  pub fn parse_private_key(bytes: &[u8]) -> Result<Option<PrivateKeyDer<static>>>
+Types from rustls::pki_types (already a dep via rustls).
+
+Private pem_blocks(bytes: &[u8]) -> Vec<(String, Vec<u8>)>:
+- UTF-8 decode bytes (lossy).
+- State machine over lines: BEGIN marker -> record label, clear body;
+  body line -> append stripped text; END marker -> base64_decode body, push (label, bytes).
+
+Private base64_decode(s: &str) -> Result<Vec<u8>>:
+- const [u8; 256] decode table from RFC 4648 standard alphabet (0xFF = invalid).
+- Skip whitespace during iteration.
+- Four base64 chars -> three output bytes; handle one or two trailing = padding chars.
+- Return error on any out-of-alphabet character.
+
+parse_certs: keep blocks labelled CERTIFICATE; wrap each Vec<u8> in CertificateDer::from.
+
+parse_private_key: first block matching:
+  PRIVATE KEY     -> PrivateKeyDer::Pkcs8(der.into())
+  RSA PRIVATE KEY -> PrivateKeyDer::Pkcs1(der.into())
+  EC PRIVATE KEY  -> PrivateKeyDer::Sec1(der.into())
+Return Ok(None) if none found.
+
+In tls.rs replace the two rustls_pemfile:: calls with crate::pem::parse_certs and
+crate::pem::parse_private_key. Error propagation and .context() calls stay identical.
+Remove use rustls_pemfile and rustls-pemfile from apm-server/Cargo.toml.
+
+Order:
+1. Create pem.rs with unit tests for base64_decode and pem_blocks; wire mod pem.
+2. Patch tls.rs; remove rustls-pemfile from Cargo.toml.
+3. Add mime_for_path to main.rs; remove mime_guess from apm-server and root Cargo.toml.
+4. Add cookie_pair to auth.rs and queue.rs; remove cookie from Cargo.toml.
+5. cargo build -p apm-server to confirm clean compile with no new warnings.
 
 ### Open questions
 
