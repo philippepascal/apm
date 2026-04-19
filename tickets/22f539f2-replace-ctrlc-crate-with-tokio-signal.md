@@ -33,7 +33,10 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Converting `run()` to a fully async function or restructuring the work command's event loop
+- Replacing or removing other tokio usages in the workspace
+- Signal handling on Windows (ctrlc had cross-platform support; tokio::signal::ctrl_c() also supports Windows — no behaviour change expected, but Windows-specific testing is out of scope)
+- Auditing other unused dependencies in `apm` (covered by sibling tickets in the epic)
 
 ### Approach
 
