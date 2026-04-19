@@ -1,7 +1,7 @@
 +++
 id = "f7225f77"
 title = "Inline small helpers for mime_guess, cookie, rustls-pemfile"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7225f77-inline-small-helpers-for-mime-guess-cook"
 created_at = "2026-04-19T01:24:07.721264Z"
-updated_at = "2026-04-19T02:03:24.324455Z"
+updated_at = "2026-04-19T02:03:34.036128Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
@@ -144,3 +144,4 @@ Order:
 | 2026-04-19T01:24Z | — | new | philippepascal |
 | 2026-04-19T01:47Z | new | groomed | philippepascal |
 | 2026-04-19T01:56Z | groomed | in_design | philippepascal |
+| 2026-04-19T02:03Z | in_design | specd | claude-0419-0156-9768 |
