@@ -24,7 +24,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 - [x] `cargo build -p apm` succeeds with no reference to `ctrlc` in the build graph
 - [x] `ctrlc` does not appear in `apm/Cargo.toml`
-- [ ] `tokio` appears as a dependency in `apm/Cargo.toml` (workspace = true)
+- [x] `tokio` appears as a dependency in `apm/Cargo.toml` (workspace = true)
 - [ ] Pressing Ctrl-C once during a normal (non-daemon) `apm work` run causes the process to exit the dispatch loop
 - [ ] Pressing Ctrl-C once during a daemon `apm work --daemon` run triggers graceful drain (same behaviour as before)
 - [ ] Pressing Ctrl-C twice during a daemon run triggers immediate forced exit
