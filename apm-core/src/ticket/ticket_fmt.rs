@@ -250,17 +250,16 @@ impl TicketDocument {
 /// Normalize a user-supplied ID argument to a canonical prefix string.
 /// Accepts: plain integer (zero-padded to 4 chars), or 4–8 hex char string.
 pub fn normalize_id_arg(arg: &str) -> Result<String> {
+    // 4–8 hex chars: treat as hex prefix and preserve leading zeros.
+    // (Digits are also hex, so "05544285" hits this branch and is not parsed as int.)
+    if (4..=8).contains(&arg.len()) && arg.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Ok(arg.to_lowercase());
+    }
     if !arg.is_empty() && arg.chars().all(|c| c.is_ascii_digit()) {
         let n: u64 = arg.parse().context("invalid integer ID")?;
         return Ok(format!("{n:04}"));
     }
-    if arg.len() < 4 || arg.len() > 8 {
-        bail!("invalid ticket ID {:?}: use 4–8 hex chars or a plain integer", arg);
-    }
-    if !arg.chars().all(|c| c.is_ascii_hexdigit()) {
-        bail!("invalid ticket ID {:?}: not a hex string", arg);
-    }
-    Ok(arg.to_lowercase())
+    bail!("invalid ticket ID {:?}: use 4–8 hex chars or a plain integer", arg);
 }
 
 /// Return all candidate prefix strings for a user-supplied ID argument.
