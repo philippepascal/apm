@@ -29,7 +29,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 - [x] Pressing Ctrl-C once during a daemon `apm work --daemon` run triggers graceful drain (same behaviour as before)
 - [x] Pressing Ctrl-C twice during a daemon run triggers immediate forced exit
 - [x] Existing unit test `sig_count_increments_correctly` passes unchanged
-- [ ] `cargo test -p apm` passes without modification to any test
+- [x] `cargo test -p apm` passes without modification to any test
 
 ### Out of scope
 
