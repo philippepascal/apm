@@ -18,15 +18,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Problem
 
-`reqwest` is one of the largest contributors to the workspace's transitive dependency footprint (pulling in `hyper`, `tokio-native-tls`, `mio`, and their chains — roughly 200 crates). Only five call-sites use it, and every one constructs a plain `reqwest::blocking::Client::new()` and issues a single HTTP request:
-
-- `apm/src/cmd/register.rs:11`
-- `apm/src/cmd/sessions.rs:15`
-- `apm/src/cmd/revoke.rs:17`
-- `apm-core/src/github.rs:17`
-- `apm-core/src/github.rs:36`
-
-No streaming, multipart, cookie-jar, or async features are in use. `ureq` covers the same blocking request/response shape with a minimal transitive graph. Swapping the five call-sites is the largest single dependency reduction available in this epic.
+reqwest is one of the largest contributors to the workspace's transitive dependency footprint (pulling in hyper, tokio-native-tls, mio, and their chains — roughly 200 crates). Only five call-sites use it, and every one constructs a plain reqwest::blocking::Client::new() and issues a single HTTP request: apm/src/cmd/register.rs, apm/src/cmd/sessions.rs, apm/src/cmd/revoke.rs, and apm-core/src/github.rs (two calls). No streaming, multipart, cookie-jar, or async features are in use. ureq covers the same blocking request/response shape with a minimal transitive graph. Swapping the five call-sites is the largest single dependency reduction available in this epic.
 
 ### Acceptance criteria
 
