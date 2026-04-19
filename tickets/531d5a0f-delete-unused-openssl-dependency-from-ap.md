@@ -26,7 +26,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing or replacing TLS libraries used by other crates (e.g. `rustls`, `tokio-rustls`, `rustls-acme`)\n- Auditing whether other workspace members (`apm`, `apm-core`) have unused dependencies\n- Changing how TLS is handled in `apm-server` (the server already uses rustls)\n- Vendoring or upgrading any remaining dependency
 
 ### Approach
 
