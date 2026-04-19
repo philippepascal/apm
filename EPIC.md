@@ -1,1 +1,1 @@
-# Safer apm sync
+# Trim dependency footprint
