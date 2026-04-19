@@ -1,7 +1,7 @@
 +++
 id = "22f539f2"
 title = "Replace ctrlc crate with tokio::signal"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/22f539f2-replace-ctrlc-crate-with-tokio-signal"
 created_at = "2026-04-19T01:23:58.653223Z"
-updated_at = "2026-04-19T01:52:01.192740Z"
+updated_at = "2026-04-19T02:32:46.038301Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
@@ -89,3 +89,4 @@ The rest of `work.rs` (the 500 ms polling loop, daemon-vs-normal logic, forced-e
 | 2026-04-19T01:47Z | new | groomed | philippepascal |
 | 2026-04-19T01:49Z | groomed | in_design | philippepascal |
 | 2026-04-19T01:52Z | in_design | specd | claude-0419-0149-0520 |
+| 2026-04-19T02:32Z | specd | ready | philippepascal |
