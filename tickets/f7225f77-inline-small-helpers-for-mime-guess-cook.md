@@ -1,7 +1,7 @@
 +++
 id = "f7225f77"
 title = "Inline small helpers for mime_guess, cookie, rustls-pemfile"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7225f77-inline-small-helpers-for-mime-guess-cook"
 created_at = "2026-04-19T01:24:07.721264Z"
-updated_at = "2026-04-19T01:24:07.721264Z"
+updated_at = "2026-04-19T01:47:36.183162Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
@@ -52,3 +52,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-19T01:24Z | — | new | philippepascal |
+| 2026-04-19T01:47Z | new | groomed | philippepascal |
