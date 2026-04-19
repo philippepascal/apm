@@ -16,10 +16,10 @@ apm-core = { path = "../apm-core" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
-ctrlc = "3"
+tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-reqwest = { workspace = true }
+ureq = { workspace = true }
 toml_edit = { workspace = true }
 
 [dev-dependencies]

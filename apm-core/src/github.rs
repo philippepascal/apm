@@ -14,17 +14,13 @@ pub fn gh_username() -> Option<String> {
 }
 
 pub fn fetch_authenticated_user(token: &str) -> Result<String> {
-    let client = reqwest::blocking::Client::new();
-    let resp: serde_json::Value = client
-        .get("https://api.github.com/user")
-        .header("Authorization", format!("Bearer {token}"))
-        .header("Accept", "application/vnd.github+json")
-        .header("User-Agent", "apm")
-        .send()
+    let resp: serde_json::Value = ureq::get("https://api.github.com/user")
+        .set("Authorization", &format!("Bearer {token}"))
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", "apm")
+        .call()
         .context("GitHub API request failed")?
-        .error_for_status()
-        .context("GitHub API returned error status")?
-        .json()
+        .into_json()
         .context("GitHub API response is not valid JSON")?;
     resp["login"]
         .as_str()
@@ -33,18 +29,14 @@ pub fn fetch_authenticated_user(token: &str) -> Result<String> {
 }
 
 pub fn fetch_repo_collaborators(token: &str, repo: &str) -> Result<Vec<String>> {
-    let client = reqwest::blocking::Client::new();
     let url = format!("https://api.github.com/repos/{repo}/collaborators");
-    let resp: serde_json::Value = client
-        .get(&url)
-        .header("Authorization", format!("Bearer {token}"))
-        .header("Accept", "application/vnd.github+json")
-        .header("User-Agent", "apm")
-        .send()
+    let resp: serde_json::Value = ureq::get(&url)
+        .set("Authorization", &format!("Bearer {token}"))
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", "apm")
+        .call()
         .context("GitHub API request failed")?
-        .error_for_status()
-        .context("GitHub API returned error status")?
-        .json()
+        .into_json()
         .context("GitHub API response is not valid JSON")?;
     let logins = resp
         .as_array()
