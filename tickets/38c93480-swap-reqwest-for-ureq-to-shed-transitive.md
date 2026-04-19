@@ -36,7 +36,7 @@ reqwest is one of the largest contributors to the workspace's transitive depende
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Replacing reqwest in apm-server (apm-server uses reqwest for different purposes and is covered by sibling tickets in the epic)\n- Connection pooling or agent reuse across requests (each existing call-site creates a fresh client; ureq free functions match this behaviour)\n- Async HTTP anywhere in the workspace\n- Timeout configuration or retry logic (neither exists today)\n- Windows-specific testing of the new signal handling (not related to this ticket)\n- Auditing other unused dependencies in the workspace (covered by sibling tickets)
 
 ### Approach
 
