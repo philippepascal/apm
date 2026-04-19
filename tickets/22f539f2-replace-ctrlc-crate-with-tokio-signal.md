@@ -4,12 +4,12 @@ title = "Replace ctrlc crate with tokio::signal"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/22f539f2-replace-ctrlc-crate-with-tokio-signal"
 created_at = "2026-04-19T01:23:58.653223Z"
-updated_at = "2026-04-19T01:51:45.883869Z"
+updated_at = "2026-04-19T01:51:53.840587Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
