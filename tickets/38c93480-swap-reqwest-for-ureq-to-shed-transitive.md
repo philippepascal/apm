@@ -1,7 +1,7 @@
 +++
 id = "38c93480"
 title = "Swap reqwest for ureq to shed transitive dependencies"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/38c93480-swap-reqwest-for-ureq-to-shed-transitive"
 created_at = "2026-04-19T01:24:03.141769Z"
-updated_at = "2026-04-19T01:24:03.141769Z"
+updated_at = "2026-04-19T01:47:30.723578Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
@@ -54,3 +54,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-19T01:24Z | — | new | philippepascal |
+| 2026-04-19T01:47Z | new | groomed | philippepascal |
