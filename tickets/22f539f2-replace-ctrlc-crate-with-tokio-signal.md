@@ -1,7 +1,7 @@
 +++
 id = "22f539f2"
 title = "Replace ctrlc crate with tokio::signal"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/22f539f2-replace-ctrlc-crate-with-tokio-signal"
 created_at = "2026-04-19T01:23:58.653223Z"
-updated_at = "2026-04-19T01:23:58.653223Z"
+updated_at = "2026-04-19T01:47:24.313356Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-19T01:23Z | — | new | philippepascal |
+| 2026-04-19T01:47Z | new | groomed | philippepascal |
