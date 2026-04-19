@@ -40,7 +40,37 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Approach
 
-How the implementation will work.
+**Files to change: 2**
+
+**`apm/Cargo.toml`**
+- Remove the line `ctrlc = "3"`
+- Add `tokio = { workspace = true }` (workspace root already declares `tokio = { version = "1", features = ["full"] }`, which includes the `signal` feature)
+
+**`apm/src/cmd/work.rs`**
+- Remove the `use ctrlc` import (or the extern crate reference if present)
+- Replace the `ctrlc::set_handler` block (lines 28-30) with a background thread that owns a minimal current-thread tokio runtime and loops on `tokio::signal::ctrl_c().await`, incrementing `sig_count` on each resolution:
+
+```rust
+let sig_count_clone = Arc::clone(&sig_count);
+std::thread::spawn(move || {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime for signal handling");
+    rt.block_on(async move {
+        loop {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to listen for ctrl-c");
+            sig_count_clone.fetch_add(1, Ordering::Relaxed);
+        }
+    });
+});
+```
+
+This keeps `run()` synchronous — no tokio::main, no restructuring of the blocking poll loop. The background thread is the only async boundary introduced.
+
+The rest of `work.rs` (the 500 ms polling loop, daemon-vs-normal logic, forced-exit path) is unchanged.
 
 ### Open questions
 
