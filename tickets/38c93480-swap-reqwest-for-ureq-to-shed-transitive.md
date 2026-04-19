@@ -27,7 +27,7 @@ reqwest is one of the largest contributors to the workspace's transitive depende
 - [x] `ureq` appears in `cargo tree -p apm` and `cargo tree -p apm-core`
 - [x] `apm register` issues a POST to apm-server and handles success and error responses correctly
 - [x] `apm sessions` issues a GET to apm-server and prints session list on success
-- [ ] `apm revoke` issues a DELETE to apm-server and handles success and error responses correctly
+- [x] `apm revoke` issues a DELETE to apm-server and handles success and error responses correctly
 - [ ] GitHub `fetch_authenticated_user()` issues a GET to `https://api.github.com/user` with `Authorization`, `Accept`, and `User-Agent` headers and returns parsed JSON on 200
 - [ ] GitHub `fetch_repo_collaborators()` issues a GET to the collaborators URL with the same three headers and returns parsed JSON on 200
 - [ ] A non-2xx response from apm-server in any of the three `apm/` commands surfaces a human-readable error (not a panic)
