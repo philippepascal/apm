@@ -30,7 +30,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Approach
 
-How the implementation will work.
+1. In `apm-server/Cargo.toml`, delete the line:\n   ```\n   openssl = { version = "0.10", features = ["vendored"] }\n   ```\n2. Run `cargo check -p apm-server` to confirm no source file imports or references `openssl`.\n3. Run `cargo build -p apm-server` to confirm a clean build.\n4. Verify `Cargo.lock` no longer lists `openssl`, `openssl-macros`, `openssl-src`, `openssl-sys` (these entries disappear automatically when the dependency is removed and no other crate pulls them in).\n\nNo other files need to change. The vendored feature was the only reason OpenSSL source was compiled during CI; its removal cuts that build step entirely.
 
 ### Open questions
 
