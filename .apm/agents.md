@@ -278,6 +278,31 @@ git -C "$wt" add <files>
 bash -c "cd $wt && cargo test --workspace 2>&1"
 ```
 
+## Creating tickets
+
+Every `apm new` invocation must seed the ticket's Problem section with
+enough context that a downstream worker can pick it up without having to
+re-derive the analysis. A bare title is not enough — it forces the next
+agent to re-investigate the repo, and the supervisor loses the reasoning
+that motivated the ticket.
+
+Always pass `--context` (and `--no-edit`, to skip the interactive editor):
+
+```bash
+apm new --no-edit --context "<problem statement with concrete usage sites, measurements, or constraints>" "<title>"
+```
+
+The `--context` string is written into `### Problem` verbatim. Include
+whatever made you file the ticket: the failing test, the grep results,
+the measured regression, the file:line usage sites, the upstream decision
+this depends on. If the context is too long to fit in a shell argument,
+create the ticket with a short `--context` placeholder, then replace the
+Problem section with `apm spec <id> --section Problem --set-file <path>`.
+
+If you only have a title and no usable context yet, the ticket is not
+ready to be filed — leave a note for the supervisor instead of creating
+a skeleton ticket.
+
 ## Side tickets
 
 When you notice an out-of-scope issue during implementation, capture it without interrupting your current work:
