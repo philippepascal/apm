@@ -3,13 +3,13 @@ id = "38c93480"
 title = "Swap reqwest for ureq to shed transitive dependencies"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/38c93480-swap-reqwest-for-ureq-to-shed-transitive"
 created_at = "2026-04-19T01:24:03.141769Z"
-updated_at = "2026-04-19T01:52:17.764037Z"
+updated_at = "2026-04-19T01:54:57.711494Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
