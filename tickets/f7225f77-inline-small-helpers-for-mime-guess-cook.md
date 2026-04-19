@@ -45,7 +45,13 @@ Each of these crates is small on its own, but together they add to the transitiv
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing or replacing TLS libraries that other crates already depend on (rustls, tokio-rustls, rustls-acme)
+- Auditing other unused dependencies in apm-server or any other workspace member (covered by sibling tickets)
+- Supporting PEM block types beyond CERTIFICATE, RSA PRIVATE KEY, EC PRIVATE KEY, and PRIVATE KEY (PKCS8)
+- Supporting MIME types not produced by the embedded UI assets (the match table covers the set actually served)
+- Cookie serialisation / Set-Cookie header building (the server only reads cookies, never writes them)
+- Quoted cookie values or encoded cookie names (the session token is a plain alphanumeric string)
+- Replacing reqwest, ctrlc, or openssl (covered by sibling tickets 38c93480, 22f539f2, 531d5a0f)
 
 ### Approach
 
