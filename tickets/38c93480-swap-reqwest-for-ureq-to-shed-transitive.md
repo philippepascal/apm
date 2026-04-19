@@ -24,7 +24,7 @@ reqwest is one of the largest contributors to the workspace's transitive depende
 
 - [x] `cargo build -p apm -p apm-core` succeeds with no errors after the swap
 - [x] `reqwest` no longer appears in `cargo tree -p apm` or `cargo tree -p apm-core`
-- [ ] `ureq` appears in `cargo tree -p apm` and `cargo tree -p apm-core`
+- [x] `ureq` appears in `cargo tree -p apm` and `cargo tree -p apm-core`
 - [ ] `apm register` issues a POST to apm-server and handles success and error responses correctly
 - [ ] `apm sessions` issues a GET to apm-server and prints session list on success
 - [ ] `apm revoke` issues a DELETE to apm-server and handles success and error responses correctly
