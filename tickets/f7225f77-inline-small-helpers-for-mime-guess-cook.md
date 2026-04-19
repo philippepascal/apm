@@ -28,20 +28,20 @@ Each of these crates is small on its own, but together they add to the transitiv
 
 ### Acceptance criteria
 
-- [ ] `apm-server/Cargo.toml` no longer declares `mime_guess`, `cookie`, or `rustls-pemfile` as dependencies
-- [ ] `mime_guess` is removed from the workspace `Cargo.toml` `[workspace.dependencies]` table (it is only used by `apm-server`)
-- [ ] `cargo build -p apm-server` succeeds with no compile errors after the removals
-- [ ] `cargo build -p apm-server` produces no new warnings introduced by the inlined code
-- [ ] The static-asset handler returns `text/html; charset=utf-8` for `.html` paths
-- [ ] The static-asset handler returns `application/javascript` for `.js` paths
-- [ ] The static-asset handler returns `text/css` for `.css` paths
-- [ ] The static-asset handler returns `application/wasm` for `.wasm` paths
-- [ ] The static-asset handler returns `application/octet-stream` for an unrecognised extension
-- [ ] The session-cookie extractor returns the correct value when a `Cookie` header contains `__Host-apm-session=<token>` among other cookies
-- [ ] The session-cookie extractor returns `None` when `__Host-apm-session` is absent from the header
-- [ ] `custom_cert_config` successfully loads a valid PEM certificate chain and PKCS#8 private key from disk and returns a `ServerConfig`
-- [ ] `custom_cert_config` returns an error when the cert file contains no `CERTIFICATE` PEM blocks
-- [ ] `custom_cert_config` returns an error when the key file contains no recognised private-key PEM block
+- [x] `apm-server/Cargo.toml` no longer declares `mime_guess`, `cookie`, or `rustls-pemfile` as dependencies
+- [x] `mime_guess` is removed from the workspace `Cargo.toml` `[workspace.dependencies]` table (it is only used by `apm-server`)
+- [x] `cargo build -p apm-server` succeeds with no compile errors after the removals
+- [x] `cargo build -p apm-server` produces no new warnings introduced by the inlined code
+- [x] The static-asset handler returns `text/html; charset=utf-8` for `.html` paths
+- [x] The static-asset handler returns `application/javascript` for `.js` paths
+- [x] The static-asset handler returns `text/css` for `.css` paths
+- [x] The static-asset handler returns `application/wasm` for `.wasm` paths
+- [x] The static-asset handler returns `application/octet-stream` for an unrecognised extension
+- [x] The session-cookie extractor returns the correct value when a `Cookie` header contains `__Host-apm-session=<token>` among other cookies
+- [x] The session-cookie extractor returns `None` when `__Host-apm-session` is absent from the header
+- [x] `custom_cert_config` successfully loads a valid PEM certificate chain and PKCS#8 private key from disk and returns a `ServerConfig`
+- [x] `custom_cert_config` returns an error when the cert file contains no `CERTIFICATE` PEM blocks
+- [x] `custom_cert_config` returns an error when the key file contains no recognised private-key PEM block
 
 ### Out of scope
 
