@@ -4,6 +4,12 @@ use axum::{
 };
 use std::{net::SocketAddr, sync::Arc};
 
+fn cookie_pair(s: &str) -> Option<(&str, &str)> {
+    let s = s.trim();
+    let eq = s.find('=')?;
+    Some((s[..eq].trim(), s[eq + 1..].trim()))
+}
+
 use crate::{AppError, AppState, TicketSource};
 
 #[derive(serde::Serialize)]
@@ -40,9 +46,9 @@ pub async fn queue_handler(
             .to_string();
         let mut found = None;
         for part in cookie_header.split(';') {
-            if let Ok(c) = cookie::Cookie::parse(part.trim().to_owned()) {
-                if c.name() == "__Host-apm-session" {
-                    found = state.session_store.lookup(c.value());
+            if let Some((name, value)) = cookie_pair(part) {
+                if name == "__Host-apm-session" {
+                    found = state.session_store.lookup(value);
                     break;
                 }
             }
