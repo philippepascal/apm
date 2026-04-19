@@ -22,7 +22,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Acceptance criteria
 
-- [ ] `apm-server/Cargo.toml` no longer contains an `openssl` entry\n- [ ] `cargo check -p apm-server` succeeds after the removal\n- [ ] `cargo build -p apm-server` succeeds after the removal\n- [ ] `cargo machete` no longer flags `openssl` as unused in `apm-server`\n- [ ] `Cargo.lock` no longer contains entries for `openssl`, `openssl-macros`, `openssl-src`, or `openssl-sys` (assuming no other workspace member pulls them in)
+- [x] `apm-server/Cargo.toml` no longer contains an `openssl` entry\n- [x] `cargo check -p apm-server` succeeds after the removal\n- [x] `cargo build -p apm-server` succeeds after the removal\n- [x] `cargo machete` no longer flags `openssl` as unused in `apm-server`\n- [x] `Cargo.lock` no longer contains entries for `openssl`, `openssl-macros`, `openssl-src`, or `openssl-sys` (assuming no other workspace member pulls them in)
 
 ### Out of scope
 
