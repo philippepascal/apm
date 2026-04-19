@@ -40,6 +40,70 @@ reqwest is one of the largest contributors to the workspace's transitive depende
 
 ### Approach
 
+Five call-sites across three files in `apm/` and one file in `apm-core/` are updated mechanically. All other callers are untouched.
+
+**Cargo.toml changes**
+
+- `Cargo.toml` (workspace root): remove `reqwest = { version = "0.12", ... }` from `[workspace.dependencies]`; add `ureq = { version = "2", features = ["json"] }`
+- `apm/Cargo.toml`: replace `reqwest = { workspace = true }` with `ureq = { workspace = true }`
+- `apm-core/Cargo.toml`: replace `reqwest = { workspace = true }` with `ureq = { workspace = true }`
+
+**API mapping**
+
+| reqwest | ureq |
+|---------|------|
+| `use reqwest::blocking::Client;` / `Client::new()` | removed — call ureq free functions directly |
+| `client.get(url)` | `ureq::get(url)` |
+| `client.post(url)` | `ureq::post(url)` |
+| `client.delete(url)` | `ureq::delete(url)` |
+| `.header("Key", "val")` | `.set("Key", "val")` |
+| `.json(&body).send()` | `.send_json(&body)` |
+| `.send()` (no body) | `.call()` |
+| `resp.json::<T>()` | `resp.into_json::<T>()` |
+| `.error_for_status()` | not needed — ureq errors on non-2xx automatically |
+| `resp.status().is_success()` | replace with match on Result (see per-file detail) |
+
+ureq returns `Err(ureq::Error::Status(code, response))` for non-2xx HTTP. The `is_success()` guard pattern used in the three `apm/` call-sites must be restructured into a three-arm match.
+
+**`apm/src/cmd/register.rs`**
+
+- Remove `use reqwest::blocking::Client;` and `let client = Client::new();`
+- Replace the send + status-check + json block with a match on `ureq::post(&url).send_json(&body)`:
+  - `Ok(resp)` branch: call `resp.into_json::<serde_json::Value>()` and continue existing success-path logic
+  - `Err(ureq::Error::Status(code, resp))` branch: surface the HTTP status code and body text as an error
+  - `Err(e)` branch: return `anyhow::anyhow!("error: cannot connect to apm-server: {e}")`
+
+**`apm/src/cmd/sessions.rs`**
+
+- Remove `use reqwest::blocking::Client;` and `let client = Client::new();`
+- Replace `client.get(&url).send()` with `ureq::get(&url).call()`
+- Same three-arm match: Ok calls `.into_json::<Vec<SessionInfo>>()`, status-error surfaces code, transport-error maps to connect message
+
+**`apm/src/cmd/revoke.rs`**
+
+- Remove `use reqwest::blocking::Client;` and `let client = Client::new();`
+- Replace `client.delete(&url).json(&body).send()` with `ureq::delete(&url).send_json(&body)`
+- Same three-arm match as register and sessions
+
+**`apm-core/src/github.rs` — both functions**
+
+Both `fetch_authenticated_user()` and `fetch_repo_collaborators()` follow the same pattern:
+
+- Remove `use reqwest::blocking::Client;` and `let client = Client::new();`
+- Replace `.header("Key", "val")` with `.set("Key", "val")` for all three headers
+- Replace `.send()` with `.call()`
+- Remove `.error_for_status().context(...)` — ureq already errors on non-2xx; the `.context("GitHub API request failed")?` on `.call()` covers it
+- Replace `.json().context(...)` with `.into_json().context("GitHub API response is not valid JSON")?`
+
+Resulting chain for each function: `ureq::get(&url).set("Authorization", ...).set("Accept", ...).set("User-Agent", "apm").call().context("GitHub API request failed")?.into_json().context("GitHub API response is not valid JSON")?`
+
+**Verification**
+
+1. `cargo build -p apm -p apm-core` — must compile clean
+2. `cargo tree -p apm | grep reqwest` — must produce no output
+3. `cargo tree -p apm | grep ureq` — must show ureq in the tree
+4. `cargo test --workspace` — must pass
+
 ### Cargo.toml changes
 
 **`Cargo.toml` (workspace root):**
