@@ -3,13 +3,13 @@ id = "531d5a0f"
 title = "Delete unused openssl dependency from apm-server"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/531d5a0f-delete-unused-openssl-dependency-from-ap"
 created_at = "2026-04-19T01:23:54.115820Z"
-updated_at = "2026-04-19T01:47:54.458575Z"
+updated_at = "2026-04-19T01:49:06.638093Z"
 epic = "7bc3561c"
 target_branch = "epic/7bc3561c-trim-dependency-footprint"
 +++
