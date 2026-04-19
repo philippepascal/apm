@@ -25,8 +25,19 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
 
     let sig_count = Arc::new(AtomicUsize::new(0));
     let sig_count_clone = Arc::clone(&sig_count);
-    let _ = ctrlc::set_handler(move || {
-        sig_count_clone.fetch_add(1, Ordering::Relaxed);
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime for signal handling");
+        rt.block_on(async move {
+            loop {
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("failed to listen for ctrl-c");
+                sig_count_clone.fetch_add(1, Ordering::Relaxed);
+            }
+        });
     });
 
     let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
