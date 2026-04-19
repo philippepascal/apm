@@ -18,7 +18,7 @@ target_branch = "epic/7bc3561c-trim-dependency-footprint"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm-server` declares `openssl` as a dependency but no source file uses it. `cargo-machete` flags it as unused, and grep for `use openssl` or `openssl::` across `apm-server/src/` returns zero hits. Removing the declaration drops roughly 17 transitive crates and eliminates the native OpenSSL build from CI on platforms that don't already link it.
 
 ### Acceptance criteria
 
@@ -35,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
