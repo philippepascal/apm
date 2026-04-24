@@ -29,7 +29,10 @@ The `default_branch` field already exists in `ProjectConfig` (loaded from `apm.t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the default value of `default_branch` (it remains `"main"`)
+- Auto-detecting the default branch from the git remote (e.g. `git remote show origin`)
+- Migrating or rebasing existing worktrees already created from the wrong base
+- UI or server changes
 
 ### Approach
 
