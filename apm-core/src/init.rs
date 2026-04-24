@@ -113,7 +113,18 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
                 .and_then(|p| p.get("default_branch"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("main");
-            write_default(&config_path, &default_config(n, d, b, &[]), ".apm/config.toml", &mut messages)?;
+            let collab_owned: Vec<String> = val
+                .get("project")
+                .and_then(|p| p.get("collaborators"))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_owned()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let collabs: Vec<&str> = collab_owned.iter().map(|s| s.as_str()).collect();
+            write_default(&config_path, &default_config(n, d, b, &collabs), ".apm/config.toml", &mut messages)?;
         }
     }
     write_default(&apm_dir.join("workflow.toml"), default_workflow_toml(), ".apm/workflow.toml", &mut messages)?;
@@ -704,6 +715,54 @@ mod tests {
         assert!(!init_content.contains("[custom]"));
         assert!(init_content.contains("[project]"));
         assert!(init_content.contains("[workers]"));
+        // .init should carry the same collaborators as the live config
+        assert!(init_content.contains("collaborators = []"));
+    }
+
+    #[test]
+    fn setup_no_false_diff_when_collaborators_present() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        // First run: create config with collaborators = ["alice"]
+        setup(tmp.path(), None, None, Some("alice")).unwrap();
+
+        // Re-run without username (simulates non-TTY subsequent call)
+        setup(tmp.path(), None, None, None).unwrap();
+
+        // Should NOT produce a false diff
+        assert!(!tmp.path().join(".apm/config.toml.init").exists());
+    }
+
+    #[test]
+    fn setup_config_init_collaborators_match_live() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path(), None, None, Some("alice")).unwrap();
+
+        // Manually edit config to add a custom section (to trigger a real diff)
+        let config_path = tmp.path().join(".apm/config.toml");
+        let mut content = std::fs::read_to_string(&config_path).unwrap();
+        content.push_str("\n[custom]\nfoo = \"bar\"\n");
+        std::fs::write(&config_path, &content).unwrap();
+
+        setup(tmp.path(), None, None, None).unwrap();
+
+        // .init must exist (real diff)
+        assert!(tmp.path().join(".apm/config.toml.init").exists());
+        // .init should contain alice's collaborators, not an empty array
+        let init_content = std::fs::read_to_string(tmp.path().join(".apm/config.toml.init")).unwrap();
+        assert!(init_content.contains("\"alice\""), ".init must carry alice's collaborator entry");
+    }
+
+    #[test]
+    fn setup_no_false_diff_empty_collaborators() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        // First run: no username → collaborators = []
+        setup(tmp.path(), None, None, None).unwrap();
+        // Re-run: should still be idempotent
+        setup(tmp.path(), None, None, None).unwrap();
+        assert!(!tmp.path().join(".apm/config.toml.init").exists());
     }
 
     #[test]
