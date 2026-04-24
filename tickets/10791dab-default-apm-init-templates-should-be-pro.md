@@ -16,7 +16,18 @@ updated_at = "2026-04-24T07:14:39.318393Z"
 
 ### Problem
 
-The default templates shipped by apm init (apm-core/src/default/apm.agents.md, apm.spec-writer.md, apm.worker.md) contain apm-specific references: apm-core/src/, apm/tests/integration.rs, cargo test --workspace. Users running apm init on other projects (e.g. ticker) must manually rewrite these. Expected: make the defaults generic — replace hardcoded apm-specific paths/commands with placeholders like "your project test command" or leave structure-section as "_Fill in your project structure here._" (already partially done). Reference rewrite available at /Users/philippepascal/repos/ticker/.apm/agents.md. While editing, also add a convention noting #### as an editing-subsection marker (supervisor preference used in ticker version for spec/approach edits). Related to the "supervisor-only transitions" ticket — do this one first; that one builds on top.
+The three default templates shipped by `apm init` — `apm.agents.md`, `apm.spec-writer.md`, and `apm.worker.md` — contain hardcoded references to the APM project's own codebase. Specifically:
+
+- `apm.worker.md` names `apm-core/src/` and `apm-core/tests/` as the locations for unit tests, and `apm/tests/integration.rs` as the integration test file. It also hard-codes `cargo test --workspace` as the test command.
+- `apm.agents.md` hard-codes `cargo test --workspace` in both the Development workflow list and the shell-discipline section's `bash -c` example.
+
+When a user runs `apm init` in a new project (e.g. a Python service, a Go CLI, or the `ticker` repo), these files land verbatim in `.apm/`. The agent that reads them gets wrong path references and a wrong test command. The user must manually rewrite three files every time.
+
+The desired behaviour: the defaults should be project-agnostic placeholders. Cargo- and APM-path-specific text should be replaced with phrasing like "Run your project's test suite" and "Write tests appropriate for your project's structure." The `## Repo structure` section of `apm.agents.md` is already generic (`_Fill in your project's structure here._`) and is the model for the rest.
+
+A second gap: the templates do not document the `####` subsection convention. Supervisors and spec-writers use `####` headings inside long sections (e.g. `### Approach`) as editing handles — targeted `apm spec --section` calls can update a named subsection without rewriting the whole section. This convention exists in the ticker fork but is absent from the defaults.
+
+Affected users: any developer who runs `apm init` on a non-APM project — the primary use case for `apm init`. The friction is immediate and requires manual cleanup of three files.
 
 ### Acceptance criteria
 
