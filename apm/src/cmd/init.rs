@@ -25,7 +25,8 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool) -> Re
     let local_toml = root.join(".apm/local.toml");
 
     let username = if !has_git_host && !local_toml.exists() && is_tty {
-        prompt_username()?
+        let gh_default = apm_core::github::gh_username();
+        prompt_username(gh_default.as_deref())?
     } else {
         String::new()
     };
@@ -63,14 +64,22 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool) -> Re
     Ok(())
 }
 
-fn prompt_username() -> Result<String> {
+fn prompt_username(default: Option<&str>) -> Result<String> {
     let mut stdout = std::io::stdout();
     let stdin = std::io::stdin();
-    print!("Username []: ");
+    match default {
+        Some(d) => print!("Username [{}]: ", d),
+        None => print!("Username []: "),
+    }
     stdout.flush()?;
     let mut input = String::new();
     stdin.lock().read_line(&mut input)?;
-    Ok(input.trim().to_string())
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        Ok(default.unwrap_or("").to_string())
+    } else {
+        Ok(trimmed.to_string())
+    }
 }
 
 fn prompt_project_info(default_name: &str) -> Result<(String, String)> {
