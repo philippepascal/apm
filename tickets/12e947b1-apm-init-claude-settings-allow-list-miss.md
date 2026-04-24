@@ -4,12 +4,12 @@ title = "apm init Claude settings allow-list missing commands"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/12e947b1-apm-init-claude-settings-allow-list-miss"
 created_at = "2026-04-24T06:28:47.480554Z"
-updated_at = "2026-04-24T07:19:41.175751Z"
+updated_at = "2026-04-24T07:19:47.957403Z"
 +++
 
 ## Spec
