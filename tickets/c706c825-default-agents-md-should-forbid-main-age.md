@@ -28,7 +28,7 @@ This ticket depends on ticket 10791dab ("Default apm init templates should be pr
 - [x] The paragraph explicitly forbids `new → groomed`
 - [x] The paragraph explicitly forbids `specd → ready` and `specd → ammend`
 - [x] The paragraph explicitly forbids `implemented → ready`, `implemented → ammend`, and `implemented → closed`
-- [ ] The paragraph explicitly forbids `blocked → ready`
+- [x] The paragraph explicitly forbids `blocked → ready`
 - [ ] The paragraph explicitly forbids `apm epic close`
 - [ ] The paragraph states which transitions the main agent *may* initiate: `new → closed` (cancel a ticket created in error) and any transition the workflow marks `actionable = ["agent"]` when the agent is the assignee
 
