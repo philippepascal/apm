@@ -1,7 +1,7 @@
 +++
 id = "777afa3f"
 title = "ticket branches need to be spawned from default branch"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/777afa3f-ticket-branches-need-to-be-spawned-from-"
 created_at = "2026-04-24T16:38:58.520269Z"
-updated_at = "2026-04-24T16:41:07.448932Z"
+updated_at = "2026-04-24T16:41:43.672003Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-24T16:38Z | — | new | philippepascal |
 | 2026-04-24T16:41Z | new | groomed | philippepascal |
+| 2026-04-24T16:41Z | groomed | in_design | philippepascal |
