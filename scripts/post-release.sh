@@ -28,8 +28,10 @@ APM_REPO="philippepascal/apm"
 # Pre-flight checks
 # ---------------------------------------------------------------------------
 
-command -v gh   >/dev/null || abort "gh CLI not found"
-command -v brew >/dev/null || abort "brew not found"
+command -v gh    >/dev/null || abort "gh CLI not found"
+command -v brew  >/dev/null || abort "brew not found"
+command -v cargo >/dev/null || abort "cargo not found"
+command -v curl  >/dev/null || abort "curl not found"
 
 # ---------------------------------------------------------------------------
 # Find the latest release
@@ -41,6 +43,74 @@ VERSION="${LATEST_TAG#v}"
 
 bold "Latest release: $LATEST_TAG (version $VERSION)"
 echo
+
+# ---------------------------------------------------------------------------
+# Publish crates to crates.io
+# ---------------------------------------------------------------------------
+
+is_published() {
+    local crate="$1"
+    local version="$2"
+    local status
+    status=$(curl -sIo /dev/null -w "%{http_code}" \
+        "https://crates.io/api/v1/crates/$crate/$version" 2>/dev/null || echo "000")
+    [[ "$status" == "200" ]]
+}
+
+wait_for_published() {
+    local crate="$1"
+    local version="$2"
+    local max_wait=90
+    local elapsed=0
+    printf 'Waiting for %s %s to appear on crates.io' "$crate" "$version"
+    while ! is_published "$crate" "$version"; do
+        if (( elapsed >= max_wait )); then
+            echo
+            abort "Timed out waiting for $crate $version on crates.io"
+        fi
+        printf '.'
+        sleep 3
+        elapsed=$((elapsed + 3))
+    done
+    echo ' ok'
+}
+
+publish_crate() {
+    local crate="$1"
+    if is_published "$crate" "$VERSION"; then
+        green "✓ $crate $VERSION already on crates.io — skipping"
+        return
+    fi
+    bold "Publishing $crate $VERSION..."
+    cargo publish -p "$crate" || abort "$crate publish failed"
+    green "✓ $crate $VERSION published"
+}
+
+printf 'Publish crates to crates.io? [y/N] '
+read -r answer
+if [[ "$answer" =~ ^[Yy]$ ]]; then
+    # cargo publish uses the local working tree — warn if HEAD isn't at the tag
+    HEAD_TAG=$(git describe --tags --exact-match HEAD 2>/dev/null || echo "")
+    if [[ "$HEAD_TAG" != "$LATEST_TAG" ]]; then
+        red "Warning: HEAD is not at $LATEST_TAG (currently at: ${HEAD_TAG:-<no tag>})"
+        confirm "Continue anyway? cargo publish will use the current working tree."
+    fi
+
+    # apm-core must be live on crates.io before apm-cli and apm-server publish
+    publish_crate apm-core
+    if ! is_published apm-cli "$VERSION" || ! is_published apm-server "$VERSION"; then
+        wait_for_published apm-core "$VERSION"
+    fi
+    publish_crate apm-cli
+    publish_crate apm-server
+
+    echo
+    green "All crates published or already live on crates.io"
+    echo
+else
+    bold "Skipping crates.io publish"
+    echo
+fi
 
 # Check release assets exist
 ASSETS=$(gh release view "$LATEST_TAG" --repo "$APM_REPO" --json assets -q '.assets[].name')
@@ -177,5 +247,17 @@ bold "Running brew test..."
 brew test philippepascal/tap/apm && green "✓ brew test passed" || red "✗ brew test failed"
 
 echo
-green "Done. Release $LATEST_TAG is live on Homebrew."
-echo "  brew install philippepascal/tap/apm"
+green "Done. Release $LATEST_TAG is live."
+echo
+bold "Links:"
+echo "  GitHub release: https://github.com/$APM_REPO/releases/tag/$LATEST_TAG"
+echo "  Homebrew:       brew install philippepascal/tap/apm"
+if is_published apm-core "$VERSION"; then
+    echo "  apm-core:       https://crates.io/crates/apm-core/$VERSION"
+fi
+if is_published apm-cli "$VERSION"; then
+    echo "  apm-cli:        https://crates.io/crates/apm-cli/$VERSION"
+fi
+if is_published apm-server "$VERSION"; then
+    echo "  apm-server:     https://crates.io/crates/apm-server/$VERSION"
+fi
