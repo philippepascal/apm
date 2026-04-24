@@ -38,7 +38,40 @@ The affected users are anyone whose collaborators list was populated during init
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-core/src/init.rs`
+
+**Change (lines 103–116):** In the `else` branch of `setup()` (where `config.toml` already exists), extract `project.collaborators` from the parsed TOML alongside `name`, `description`, and `default_branch`, then pass those collaborators to `default_config()` instead of the hardcoded `&[]`.
+
+```rust
+// Existing extractions (unchanged):
+let n = val.get("project")…unwrap_or("project");
+let d = val.get("project")…unwrap_or("");
+let b = val.get("project")…unwrap_or("main");
+
+// New: extract collaborators from the live config
+let collab_owned: Vec<String> = val
+    .get("project")
+    .and_then(|p| p.get("collaborators"))
+    .and_then(|v| v.as_array())
+    .map(|arr| {
+        arr.iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_owned()))
+            .collect()
+    })
+    .unwrap_or_default();
+let collabs: Vec<&str> = collab_owned.iter().map(|s| s.as_str()).collect();
+
+write_default(&config_path, &default_config(n, d, b, &collabs), ".apm/config.toml", &mut messages)?;
+```
+
+**Test:** Add a new test `setup_no_false_diff_when_collaborators_present` in the existing `#[cfg(test)]` block:
+- Call `setup(tmp.path(), None, None, Some("alice"))` — creates config with `collaborators = ["alice"]`
+- Call `setup(tmp.path(), None, None, None)` — re-run without username (simulates non-TTY)
+- Assert `.apm/config.toml.init` does NOT exist
+
+The existing test `setup_writes_config_init_when_modified` continues to pass unchanged (it relies on the `[custom]` section being the diff trigger, which is unaffected by this change).
+
+No other files change. No public API changes. Fully backward-compatible.
 
 ### Open questions
 
