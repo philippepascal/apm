@@ -1,7 +1,7 @@
 +++
 id = "20eeacce"
 title = "Epic worktrees nested under worktrees_base twice"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/20eeacce-epic-worktrees-nested-under-worktrees-ba"
 created_at = "2026-04-24T06:29:13.730768Z"
-updated_at = "2026-04-24T07:13:23.747829Z"
+updated_at = "2026-04-24T07:18:42.739393Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-24T06:29Z | — | new | philippepascal |
 | 2026-04-24T07:13Z | new | groomed | philippepascal |
+| 2026-04-24T07:18Z | groomed | in_design | philippepascal |
