@@ -37,7 +37,7 @@ Every missing command has been observed to trigger a mid-session prompt during n
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the apm init command behaviour or flags\n- Adding non-apm entries to the allow-lists (git commands are out of scope)\n- Dynamic generation of allow-list entries from the binary's clap command registry\n- Adding apm init itself to either allow-list (it is a destructive setup command that should remain user-prompted)\n- Auditing or modifying allow-lists in any project that has already run apm init (existing settings.json files are not updated retroactively)
 
 ### Approach
 
