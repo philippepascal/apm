@@ -43,7 +43,11 @@ Affected users: any developer who runs `apm init` on a non-APM project — the p
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating `.apm/agents.md` files already written to existing projects — `apm init` only writes defaults to new projects
+- Adding a project-specific test-command placeholder to the generated config — that is a separate feature
+- The supervisor-only transitions feature for `apm.agents.md` — handled by a related downstream ticket
+- Any changes to `workflow.toml` or `ticket.toml` defaults
+- Changes to how `apm init` generates the config file dynamically
 
 ### Approach
 
