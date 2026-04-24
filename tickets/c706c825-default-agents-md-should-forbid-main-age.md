@@ -24,7 +24,7 @@ This ticket depends on ticket 10791dab ("Default apm init templates should be pr
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/apm.agents.md` contains a `**Supervisor-only transitions.**` paragraph under `### Main Agent`
+- [x] `apm-core/src/default/apm.agents.md` contains a `**Supervisor-only transitions.**` paragraph under `### Main Agent`
 - [ ] The paragraph explicitly forbids `new → groomed`
 - [ ] The paragraph explicitly forbids `specd → ready` and `specd → ammend`
 - [ ] The paragraph explicitly forbids `implemented → ready`, `implemented → ammend`, and `implemented → closed`
