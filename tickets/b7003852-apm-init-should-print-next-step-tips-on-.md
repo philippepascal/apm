@@ -31,7 +31,11 @@ The desired behaviour is to print a short tips block immediately after `"apm ini
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Coloured or styled terminal output (no colour library is in use; plain text only)
+- Tips after `apm init --migrate` (migration is a distinct workflow, not initial setup)
+- Any flag beyond `--quiet` (e.g. `--no-tips`, `--verbose`)
+- Changes to the messages printed before `"apm initialized."` (the setup log lines)
+- Changes to `apm-core`
 
 ### Approach
 
