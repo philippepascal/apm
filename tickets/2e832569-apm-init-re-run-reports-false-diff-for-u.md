@@ -24,7 +24,10 @@ The affected users are anyone whose collaborators list was populated during init
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Re-running `apm init` on a project whose `.apm/config.toml` was created with a non-empty collaborators list (e.g. `collaborators = ["alice"]`) and has not been modified since does NOT produce `.apm/config.toml.init`
+- [ ] Re-running `apm init` on a project whose `.apm/config.toml` has been manually edited (e.g. a `[custom]` section added) DOES produce `.apm/config.toml.init`
+- [ ] The `.apm/config.toml.init` produced in the case above contains the same `collaborators` value as the live config (not an empty array)
+- [ ] Re-running `apm init` on a project whose `.apm/config.toml` has `collaborators = []` does not produce `.apm/config.toml.init` when no other changes exist
 
 ### Out of scope
 
