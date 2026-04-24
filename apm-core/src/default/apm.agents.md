@@ -60,7 +60,7 @@ Body sections (`## Spec` required):
 1. Read the relevant spec files before implementing anything
 2. Make the minimal change that satisfies the acceptance criteria
 3. Add or update tests — all acceptance criteria should be covered
-4. Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
+4. Run your project's test suite — all tests must pass before calling `apm state <id> implemented`
 
 ## Identity
 
@@ -190,6 +190,13 @@ Every spec must have all four required subsections before moving to `specd`:
 
 Do not check acceptance criteria boxes until the implementation is verified.
 
+#### Subsection markers
+
+Within long sections such as `### Approach` or `### Acceptance criteria`,
+use `####` headings as named editing handles. This lets `apm spec <id>
+--section "Approach > Phase 2"` target a subsection without overwriting the
+whole section.
+
 ## Spec discipline
 
 - Set `effort` and `risk` after writing the spec, before transitioning to `specd` — you only have enough context once the spec is complete
@@ -262,7 +269,7 @@ git -C "$wt" add <files>
 **Use `bash -c` for multi-step commands that must share a directory:**
 ```bash
 # Right — single bash call, matches Bash(bash *)
-bash -c "cd $wt && cargo test --workspace 2>&1"
+bash -c "cd $wt && <your-test-command> 2>&1"
 ```
 
 ## Side tickets
