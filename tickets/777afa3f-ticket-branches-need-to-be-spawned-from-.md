@@ -1,7 +1,7 @@
 +++
 id = "777afa3f"
 title = "ticket branches need to be spawned from default branch"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/777afa3f-ticket-branches-need-to-be-spawned-from-"
 created_at = "2026-04-24T16:38:58.520269Z"
-updated_at = "2026-04-24T16:44:43.862629Z"
+updated_at = "2026-04-24T16:52:25.688671Z"
 +++
 
 ## Spec
@@ -76,3 +76,4 @@ specify how default branch is inferred if it's not specified in .apm/config.toml
 | 2026-04-24T16:41Z | new | groomed | philippepascal |
 | 2026-04-24T16:41Z | groomed | in_design | philippepascal |
 | 2026-04-24T16:44Z | in_design | specd | claude-0424-1641-e800 |
+| 2026-04-24T16:52Z | specd | ammend | philippepascal |
