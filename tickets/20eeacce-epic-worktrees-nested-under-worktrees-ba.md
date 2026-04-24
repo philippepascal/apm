@@ -16,7 +16,11 @@ updated_at = "2026-04-24T07:18:42.739393Z"
 
 ### Problem
 
-Epic worktrees land at <worktrees_base>/<worktrees_base>/epic-<id>-<slug>/ instead of <worktrees_base>/epic-<id>-<slug>/. Example in ticker: /Users/philippepascal/repos/ticker--worktrees/ticker--worktrees/epic-ad871030-ticker-wasm-crate and /Users/philippepascal/repos/ticker--worktrees/ticker--worktrees/epic-b28eec87-wasm-prep-refactors. Ticket (non-epic) worktrees land correctly at /Users/philippepascal/repos/ticker--worktrees/ticket-<id>-<slug>/. Root cause: apm-core/src/git_util.rs:967-968 uses worktrees_base = root.join(config.worktrees.dir), but root can be a worktree path so .join("../ticker--worktrees") resolves to <worktree>/../ticker--worktrees = <worktrees_base>/ticker--worktrees. Compare apm-core/src/start.rs:453-454 which computes main_root = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf()) first — the correct pattern. Expected: audit every callsite joining config.worktrees.dir (worktree.rs:145, git_util.rs:967, init.rs:330, start.rs:454, start.rs:623) and normalize to always go via main_worktree_root. Manual cleanup of existing nested directories needed after fix.
+Epic worktrees are created at `<worktrees_base>/<worktrees_base>/epic-<id>-<slug>/` instead of `<worktrees_base>/epic-<id>-<slug>/`. Two examples observed in the ticker repo: `ticker--worktrees/ticker--worktrees/epic-ad871030-ticker-wasm-crate` and `ticker--worktrees/ticker--worktrees/epic-b28eec87-wasm-prep-refactors`. Ticket (non-epic) worktrees land correctly.
+
+The double-nesting happens when `config.worktrees.dir` is a relative path such as `../ticker--worktrees` and the caller is already inside a linked worktree. In that case `root.join("../ticker--worktrees")` resolves to `<worktrees_base>/<project>--worktrees` — one level too deep.
+
+Two callsites still use `root.join(&config.worktrees.dir)` directly without first resolving the main worktree root: `git_util.rs:967` (inside `merge_into_default`) and `init.rs:330` (inside `ensure_worktrees_dir`). The correct pattern — already used by `worktree.rs:144`, `start.rs:453`, and `start.rs:622` — calls `main_worktree_root(root)` first and joins against that result.
 
 ### Acceptance criteria
 
