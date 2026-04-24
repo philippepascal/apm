@@ -26,14 +26,14 @@ Every missing command has been observed to trigger a mid-session prompt during n
 
 ### Acceptance criteria
 
-- [ ] `APM_ALLOW_ENTRIES` contains a glob entry for every subcommand the binary exposes: `apm help*`, `apm review*`, `apm close*`, `apm assign*`, `apm validate*`, `apm work*`, `apm move*`, `apm archive*`, `apm clean*`, `apm workers*`, `apm epic*`, `apm register*`, `apm sessions*`, `apm revoke*`, `apm version*`
-- [ ] `APM_USER_ALLOW_ENTRIES` contains `"Bash(apm spec*)"` (currently absent from the user-level list)
-- [ ] `APM_USER_ALLOW_ENTRIES` contains the same 15 new subcommand globs listed above
-- [ ] The ghost entry `"Bash(apm take*)"` is removed from `APM_ALLOW_ENTRIES`
-- [ ] The ghost entry `"Bash(apm take*)"` is removed from `APM_USER_ALLOW_ENTRIES`
-- [ ] `apm init` is not added to either allow-list
-- [ ] Running `apm init` in a fresh directory and inspecting the generated `.claude/settings.json` shows all newly added entries present under `permissions.allow`
-- [ ] Running `apm init --user` and inspecting `~/.claude/settings.json` shows all newly added entries present under `permissions.allow`
+- [x] `APM_ALLOW_ENTRIES` contains a glob entry for every subcommand the binary exposes: `apm help*`, `apm review*`, `apm close*`, `apm assign*`, `apm validate*`, `apm work*`, `apm move*`, `apm archive*`, `apm clean*`, `apm workers*`, `apm epic*`, `apm register*`, `apm sessions*`, `apm revoke*`, `apm version*`
+- [x] `APM_USER_ALLOW_ENTRIES` contains `"Bash(apm spec*)"` (currently absent from the user-level list)
+- [x] `APM_USER_ALLOW_ENTRIES` contains the same 15 new subcommand globs listed above
+- [x] The ghost entry `"Bash(apm take*)"` is removed from `APM_ALLOW_ENTRIES`
+- [x] The ghost entry `"Bash(apm take*)"` is removed from `APM_USER_ALLOW_ENTRIES`
+- [x] `apm init` is not added to either allow-list
+- [x] Running `apm init` in a fresh directory and inspecting the generated `.claude/settings.json` shows all newly added entries present under `permissions.allow`
+- [x] Running `apm init --user` and inspecting `~/.claude/settings.json` shows all newly added entries present under `permissions.allow`
 
 ### Out of scope
 
