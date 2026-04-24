@@ -4,12 +4,12 @@ title = "apm init re-run reports false diff for user-filled fields"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2e832569-apm-init-re-run-reports-false-diff-for-u"
 created_at = "2026-04-24T06:28:08.866116Z"
-updated_at = "2026-04-24T07:16:15.369075Z"
+updated_at = "2026-04-24T07:16:23.705274Z"
 +++
 
 ## Spec
