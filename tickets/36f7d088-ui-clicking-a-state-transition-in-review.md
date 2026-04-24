@@ -35,7 +35,12 @@ A secondary ordering issue compounds the problem even in the success path: `setR
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Clicking a valid state transition button closes the ReviewEditor pane when the transition API returns success
+- [ ] If the editor has unsaved changes (`isDirty === true`), those changes are saved before the transition is attempted; the pane does not close if the save fails
+- [ ] If the editor has no unsaved changes (`isDirty === false`), clicking a transition skips the save and calls the transition API directly
+- [ ] If the transition API returns an error, the pane remains open and the error is displayed in the header
+- [ ] Keyboard shortcuts for transitions (non-K keys) behave identically to clicking the transition buttons
+- [ ] "Keep at [state] [K]" button behaviour is unchanged (no regression)
 
 ### Out of scope
 
