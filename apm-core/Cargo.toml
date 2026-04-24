@@ -1,7 +1,16 @@
 [package]
 name = "apm-core"
-version = "0.1.8"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "Core library for APM — a git-native project manager for parallel AI coding agents."
+categories = ["development-tools"]
+readme = "../README.md"
 
 [dependencies]
 serde = { workspace = true }

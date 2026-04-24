@@ -1,7 +1,16 @@
 [package]
-name = "apm"
-version = "0.1.8"
-edition = "2021"
+name = "apm-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "CLI project manager for running AI coding agents in parallel, isolated by design."
+categories = ["command-line-utilities", "development-tools"]
+readme = "../README.md"
 
 [lib]
 name = "apm"
@@ -12,7 +21,7 @@ name = "apm"
 path = "src/main.rs"
 
 [dependencies]
-apm-core = { path = "../apm-core" }
+apm-core = { path = "../apm-core", version = "0.1.8" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }

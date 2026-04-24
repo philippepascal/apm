@@ -6,6 +6,16 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+version = "0.1.8"
+edition = "2021"
+license = "BUSL-1.1"
+authors = ["Philippe Pascal"]
+repository = "https://github.com/philippepascal/apm"
+homepage = "https://philippepascal.com/lab/apm"
+documentation = "https://github.com/philippepascal/apm/blob/main/README.md"
+keywords = ["ai-agents", "project-management", "git", "workflow", "cli"]
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

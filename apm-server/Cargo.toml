@@ -1,7 +1,16 @@
 [package]
 name = "apm-server"
-version = "0.1.8"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "Web UI and agent dispatcher for APM, a git-native project manager for parallel AI coding agents."
+categories = ["web-programming::http-server", "development-tools"]
+readme = "../README.md"
 
 [[bin]]
 name = "apm-server"
@@ -14,7 +23,7 @@ serde_json = { workspace = true }
 serde = { workspace = true }
 anyhow = { workspace = true }
 toml = { workspace = true }
-apm-core = { path = "../apm-core" }
+apm-core = { path = "../apm-core", version = "0.1.8" }
 chrono = { workspace = true }
 tower-http = { workspace = true, features = ["set-header"] }
 include_dir = { workspace = true }
