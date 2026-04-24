@@ -16,7 +16,9 @@ updated_at = "2026-04-24T07:14:25.822187Z"
 
 ### Problem
 
-After apm init finishes, the only output is "apm initialized." (apm/src/cmd/init.rs:62). New users get no cue on what to do next: whether to commit the .apm/ changes, how to create a first ticket, or that apm-server exists. Expected: print a short tips block (~5 lines) before exit suggesting: (1) commit the .apm/ config files, (2) try apm new to create a first ticket, (3) try apm-server for the web UI, (4) use apm --help for the full CLI reference. Keep it brief; consider suppressing when stdin is not a tty (CI scripts) or behind a --quiet flag.
+After `apm init` completes, the only output is a bare `"apm initialized."` line (`apm/src/cmd/init.rs:62`). New users receive no cue on what to do next: whether to commit the generated `.apm/` files, how to create a first ticket, that a web UI (`apm-server`) exists, or where to find the full command reference.
+
+The desired behaviour is to print a short tips block immediately after `"apm initialized."` that surfaces the four most useful next steps. The block should be suppressed automatically when stdout is not a TTY (so CI pipelines stay clean) and should also respect a `--quiet` flag, consistent with the pattern already established by `apm sync`.
 
 ### Acceptance criteria
 
