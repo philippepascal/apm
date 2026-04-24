@@ -51,7 +51,72 @@ Affected users: any developer who runs `apm init` on a non-APM project — the p
 
 ### Approach
 
-How the implementation will work.
+Three files change; all edits are pure text substitutions or small additions.
+
+#### `apm-core/src/default/apm.agents.md`
+
+1. **Development workflow** — replace step 4:
+   - Before: `Run \`cargo test --workspace\` — all tests must pass before calling \`apm state <id> implemented\``
+   - After: `Run your project's test suite — all tests must pass before calling \`apm state <id> implemented\``
+
+2. **Shell discipline `bash -c` example** — replace the command inside the example:
+   - Before: `bash -c "cd $wt && cargo test --workspace 2>&1"`
+   - After: `bash -c "cd $wt && <your-test-command> 2>&1"`
+
+3. **`####` convention note** — add a short note at the end of the `## Spec quality bar` section (or as a standalone `## Spec subsection convention` section near the top of the spec-quality block):
+   ```
+   #### Subsection markers
+
+   Within long sections such as `### Approach` or `### Acceptance criteria`,
+   use `####` headings as named editing handles. This lets `apm spec <id>
+   --section "Approach > Phase 2"` target a subsection without overwriting the
+   whole section.
+   ```
+
+#### `apm-core/src/default/apm.worker.md`
+
+4. **Tests section** — replace the three bullet points:
+   - Before:
+     ```
+     - Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
+     - Integration tests in `apm/tests/integration.rs` — use temp git repos, no
+       fixture files needed
+     - Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
+     ```
+   - After:
+     ```
+     - Write tests appropriate for your project's structure and conventions
+     - Run your project's test suite — all tests must pass before calling `apm state <id> implemented`
+     ```
+
+5. **"Finishing implementation" section** — replace the run line:
+   - Before: `Run \`cargo test --workspace\` — all tests must pass.`
+   - After: `Run your project's test suite — all tests must pass.`
+
+6. **Shell discipline `bash -c` example** — same substitution as in `apm.agents.md`:
+   - Before: `bash -c "cd $wt && cargo test --workspace 2>&1"`
+   - After: `bash -c "cd $wt && <your-test-command> 2>&1"`
+
+#### `apm-core/src/default/apm.spec-writer.md`
+
+7. No apm-specific paths exist here. Add only the `####` subsection convention note at the end of the `## Approach` section (mirrors the note added to `apm.agents.md`):
+   ```
+   Use `####` headings within long sections to create named subsections that
+   serve as editing handles. Example: inside `### Approach`, add `#### Phase 1`
+   so a future `apm spec <id> --section "Approach > Phase 1"` can update that
+   block without touching the rest.
+   ```
+
+#### Verification
+
+After editing, confirm:
+```
+grep -r "apm-core" apm-core/src/default/   # must return nothing
+grep -r "apm/tests" apm-core/src/default/  # must return nothing
+grep -r "cargo test" apm-core/src/default/ # must return nothing
+```
+
+No Rust tests are added or modified — this is a pure content change to embedded markdown strings. The existing test suite (`cargo test --workspace`) verifies that `apm init` still writes all three files correctly; no new tests are needed.
 
 ### Open questions
 
