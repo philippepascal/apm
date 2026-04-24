@@ -38,7 +38,7 @@ git fetch --tags --quiet
 # Current version
 # ---------------------------------------------------------------------------
 
-CARGO_VERSION=$(grep '^version' apm/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
 LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
 
 bold "Current Cargo.toml version: $CARGO_VERSION"
@@ -75,18 +75,18 @@ echo
 if [[ "$CARGO_VERSION" != "$NEW_VERSION" ]]; then
     confirm "Update Cargo.toml versions to $NEW_VERSION?"
 
-    for toml in apm/Cargo.toml apm-core/Cargo.toml apm-server/Cargo.toml; do
-        sed -i '' "s/^version = \"$CARGO_VERSION\"/version = \"$NEW_VERSION\"/" "$toml"
-    done
+    # Workspace version (inherited by each crate via `version.workspace = true`)
+    sed -i '' "s/^version = \"$CARGO_VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
 
-    # Also update internal dependency versions
+    # apm-core path-dep version in the dependent crates
     for toml in apm/Cargo.toml apm-server/Cargo.toml; do
         sed -i '' "s/apm-core\(.*\)version = \"$CARGO_VERSION\"/apm-core\1version = \"$NEW_VERSION\"/" "$toml"
     done
 
     echo
-    bold "Updated Cargo.toml files:"
-    grep -n '^version' apm/Cargo.toml apm-core/Cargo.toml apm-server/Cargo.toml
+    bold "Updated version fields:"
+    grep -n '^version' Cargo.toml
+    grep -n 'apm-core.*version' apm/Cargo.toml apm-server/Cargo.toml
     echo
 
     # Verify it still builds
@@ -101,7 +101,7 @@ if [[ "$CARGO_VERSION" != "$NEW_VERSION" ]]; then
     echo
 
     confirm "Commit version bump?"
-    git add apm/Cargo.toml apm-core/Cargo.toml apm-server/Cargo.toml Cargo.lock
+    git add Cargo.toml apm/Cargo.toml apm-server/Cargo.toml Cargo.lock
     git commit -m "Release $TAG"
     green "Committed version bump"
     echo

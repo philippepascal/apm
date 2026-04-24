@@ -77,7 +77,7 @@ jobs:
         run: sudo apt-get install -y musl-tools
 
       - name: Build binaries
-        run: cargo build --release --target ${{ matrix.target }} -p apm -p apm-server
+        run: cargo build --release --target ${{ matrix.target }} -p apm-cli -p apm-server
 
       - name: Strip binaries
         run: |
