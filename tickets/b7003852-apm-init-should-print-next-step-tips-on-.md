@@ -1,7 +1,7 @@
 +++
 id = "b7003852"
 title = "apm init should print next-step tips on completion"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b7003852-apm-init-should-print-next-step-tips-on-"
 created_at = "2026-04-24T06:28:19.582833Z"
-updated_at = "2026-04-24T06:28:19.582833Z"
+updated_at = "2026-04-24T07:12:57.783704Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-24T06:28Z | — | new | philippepascal |
+| 2026-04-24T07:12Z | new | groomed | philippepascal |
