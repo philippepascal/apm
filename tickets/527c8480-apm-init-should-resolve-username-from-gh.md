@@ -1,7 +1,7 @@
 +++
 id = "527c8480"
 title = "apm init should resolve username from gh when available"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/527c8480-apm-init-should-resolve-username-from-gh"
 created_at = "2026-04-24T06:27:54.558050Z"
-updated_at = "2026-04-24T07:32:13.869753Z"
+updated_at = "2026-04-24T08:01:35.345878Z"
 +++
 
 ## Spec
@@ -78,3 +78,4 @@ apm init calls prompt_username() in apm/src/cmd/init.rs:27-31 on first run even 
 | 2026-04-24T07:25Z | specd | ready | philippepascal |
 | 2026-04-24T07:29Z | ready | in_progress | philippepascal |
 | 2026-04-24T07:32Z | in_progress | implemented | claude-0424-0729-7818 |
+| 2026-04-24T08:01Z | implemented | closed | philippepascal(apm-sync) |
