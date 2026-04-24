@@ -78,7 +78,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     Ok(())
 }
 
-fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> Result<()> {
+fn open_editor(root: &Path, config: &Config, branch: &str, rel_path: &str) -> Result<()> {
     // Check out the ticket branch, open editor, commit result, return to previous branch.
     let prev_branch = std::process::Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
@@ -87,7 +87,7 @@ fn open_editor(root: &Path, _config: &Config, branch: &str, rel_path: &str) -> R
         .ok()
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "main".to_string());
+        .unwrap_or_else(|| config.project.default_branch.clone());
 
     let _ = std::process::Command::new("git")
         .args(["checkout", branch])

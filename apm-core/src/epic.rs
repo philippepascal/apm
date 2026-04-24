@@ -198,13 +198,13 @@ mod tests {
     }
 }
 
-pub fn create(root: &Path, title: &str) -> Result<String> {
+pub fn create(root: &Path, title: &str, config: &crate::config::Config) -> Result<String> {
     let id = crate::ticket_fmt::gen_hex_id();
     let slug = crate::ticket::slugify(title);
     let branch = format!("epic/{id}-{slug}");
 
-    // Fetch origin/main; propagate error if it doesn't exist.
-    git_util::fetch_branch(root, "main")?;
+    let default_branch = &config.project.default_branch;
+    git_util::fetch_branch(root, default_branch)?;
 
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -218,7 +218,7 @@ pub fn create(root: &Path, title: &str) -> Result<String> {
     ));
 
     let wt_path_str = wt_path.to_string_lossy();
-    git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, "origin/main"])?;
+    git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, &format!("origin/{default_branch}")])?;
 
     let result = (|| -> Result<()> {
         let epic_md = wt_path.join("EPIC.md");
@@ -381,13 +381,14 @@ pub fn set_epic_owner(
     Ok((to_change.len(), skipped.len()))
 }
 
-pub fn create_epic_branch(root: &Path, title: &str) -> Result<(String, String)> {
+pub fn create_epic_branch(root: &Path, title: &str, config: &crate::config::Config) -> Result<(String, String)> {
     let id = crate::ticket_fmt::gen_hex_id();
     let slug = crate::ticket::slugify(title);
     let branch = format!("epic/{id}-{slug}");
-    let _ = crate::git_util::run(root, &["fetch", "origin", "main"]);
-    if crate::git_util::run(root, &["branch", &branch, "origin/main"]).is_err() {
-        crate::git_util::run(root, &["branch", &branch, "main"])?;
+    let default_branch = &config.project.default_branch;
+    let _ = crate::git_util::run(root, &["fetch", "origin", default_branch]);
+    if crate::git_util::run(root, &["branch", &branch, &format!("origin/{default_branch}")]).is_err() {
+        crate::git_util::run(root, &["branch", &branch, default_branch])?;
     }
     crate::git_util::commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")?;
     let _ = crate::git_util::push_branch(root, &branch);

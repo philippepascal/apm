@@ -130,7 +130,8 @@ pub async fn create_epic(
     };
     let title_clone = title.clone();
     let (id, branch) = crate::util::blocking(move || {
-        apm_core::epic::create_epic_branch(&root, &title_clone)
+        let config = apm_core::config::Config::load(&root)?;
+        apm_core::epic::create_epic_branch(&root, &title_clone, &config)
     }).await?;
     Ok((
         StatusCode::CREATED,

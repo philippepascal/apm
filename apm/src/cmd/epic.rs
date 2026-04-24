@@ -51,7 +51,8 @@ pub fn run_list(root: &Path) -> Result<()> {
 }
 
 pub fn run_new(root: &Path, title: String) -> Result<()> {
-    let branch = apm_core::epic::create(root, &title)?;
+    let config = apm_core::config::Config::load(root)?;
+    let branch = apm_core::epic::create(root, &title, &config)?;
     println!("{branch}");
     Ok(())
 }
