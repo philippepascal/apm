@@ -34,7 +34,29 @@ apm init calls prompt_username() in apm/src/cmd/init.rs:27-31 on first run even 
 
 ### Approach
 
-How the implementation will work.
+**File changed:** `apm/src/cmd/init.rs` only. `apm_core::github::gh_username()` already exists in `apm-core/src/github.rs` and does exactly what is needed — no new helpers required.
+
+1. Change `prompt_username()` signature to accept an optional default:
+   ```rust
+   fn prompt_username(default: Option<&str>) -> Result<String>
+   ```
+
+2. Update the prompt text inside `prompt_username`:
+   - If `default.is_some()` → print `Username [{}]: ` filled with the default value
+   - Otherwise → print `Username []: ` (current behaviour)
+
+3. After reading the line, if the trimmed input is empty and a default was provided, return `default.to_string()`; otherwise return the trimmed input as before.
+
+4. At the call site (currently line 28), resolve the gh default before calling the prompt:
+   ```rust
+   let gh_default = apm_core::github::gh_username();
+   let username = prompt_username(gh_default.as_deref())?;
+   ```
+   This call is already guarded by `!has_git_host && !local_toml.exists() && is_tty`, so no additional guard is needed.
+
+**Constraint:** `apm_core` is already a dependency of the `apm` binary crate, and `github::gh_username` is `pub`, so no new imports or feature flags are required.
+
+**No changes** to `apm-core/src/init.rs`, `apm-core/src/github.rs`, or any config logic — the username value flows through the existing path unchanged.
 
 ### Open questions
 
