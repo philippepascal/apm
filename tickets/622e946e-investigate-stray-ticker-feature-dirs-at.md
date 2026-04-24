@@ -53,7 +53,34 @@ No active development is happening in these worktrees (no apm tickets reference 
 
 ### Approach
 
-How the implementation will work.
+All commands run against the ticker main repo. No apm code changes are required.
+
+1. **Confirm feature/6 is absorbed** — run:
+   ```
+   git -C /Users/philippepascal/repos/ticker branch -r --contains fce80c4
+   ```
+   Expected output includes `origin/feature/3-grow-formula` or similar. If the commit is unreachable from any remote, push `feature/6-website-metrics` first.
+
+2. **Remove the three worktrees** (one Bash call each; order does not matter):
+   ```
+   git -C /Users/philippepascal/repos/ticker worktree remove /Users/philippepascal/repos/ticker-feature-6-website-metrics
+   git -C /Users/philippepascal/repos/ticker worktree remove /Users/philippepascal/repos/ticker-feature-1-export-xlsx
+   git -C /Users/philippepascal/repos/ticker worktree remove /Users/philippepascal/repos/ticker-feature-3-grow-formula
+   ```
+   If git complains about uncommitted changes use `--force` only after confirming nothing untracked is needed.
+
+3. **Prune** to remove stale worktree metadata:
+   ```
+   git -C /Users/philippepascal/repos/ticker worktree prune
+   ```
+
+4. **Verify** the list is clean:
+   ```
+   git -C /Users/philippepascal/repos/ticker worktree list
+   ```
+   Should show only the main worktree (`/Users/philippepascal/repos/ticker`) and any current `ticker--worktrees/` entries.
+
+This ticket closes once the three directories are gone and `worktree list` is clean. No source code changes.
 
 ### Open questions
 
