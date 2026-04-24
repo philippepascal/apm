@@ -1,7 +1,7 @@
 +++
 id = "b7003852"
 title = "apm init should print next-step tips on completion"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b7003852-apm-init-should-print-next-step-tips-on-"
 created_at = "2026-04-24T06:28:19.582833Z"
-updated_at = "2026-04-24T07:39:18.242594Z"
+updated_at = "2026-04-24T08:01:50.497647Z"
 +++
 
 ## Spec
@@ -93,3 +93,4 @@ Use `stdout().is_terminal()` (consistent with `clean.rs`) rather than the existi
 | 2026-04-24T07:25Z | specd | ready | philippepascal |
 | 2026-04-24T07:36Z | ready | in_progress | philippepascal |
 | 2026-04-24T07:39Z | in_progress | implemented | claude-0424-0736-13f0 |
+| 2026-04-24T08:01Z | implemented | closed | philippepascal(apm-sync) |
