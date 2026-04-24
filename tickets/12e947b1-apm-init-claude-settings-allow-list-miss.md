@@ -41,7 +41,41 @@ Every missing command has been observed to trigger a mid-session prompt during n
 
 ### Approach
 
-How the implementation will work.
+Single file change: `apm/src/cmd/init.rs`.
+
+**In `APM_ALLOW_ENTRIES` (around line 121–136):**
+
+1. Remove the line `"Bash(apm take*)",` — this subcommand does not exist; `start` is already present.
+2. Append the following entries (order within the list does not matter):
+   ```
+   "Bash(apm help*)",
+   "Bash(apm review*)",
+   "Bash(apm close*)",
+   "Bash(apm assign*)",
+   "Bash(apm validate*)",
+   "Bash(apm work*)",
+   "Bash(apm move*)",
+   "Bash(apm archive*)",
+   "Bash(apm clean*)",
+   "Bash(apm workers*)",
+   "Bash(apm epic*)",
+   "Bash(apm register*)",
+   "Bash(apm sessions*)",
+   "Bash(apm revoke*)",
+   "Bash(apm version*)",
+   ```
+
+**In `APM_USER_ALLOW_ENTRIES` (around line 140–156):**
+
+1. Remove the line `"Bash(apm take*)",` — same reason as above.
+2. Add `"Bash(apm spec*)",` — currently missing from user-level list only.
+3. Append the same 15 new entries listed above.
+
+**Glob pattern convention:** Use `"Bash(apm <sub>*)"` (no space before `*`) for commands that take no args or where glob-matching the name alone is sufficient (e.g. `apm version*`). Use `"Bash(apm <sub> *)"` (space before `*`) for commands that require an argument (e.g. `apm review *`). Follow the existing pattern in the file: commands that need args already use `"Bash(apm set *)"` style. For the new entries, commands like `review`, `close`, `assign`, `work`, `move`, `archive`, `clean`, `epic`, `register`, `revoke`, `sessions` take arguments — use a trailing space before `*`. Commands like `help`, `validate`, `workers`, `version` may be invoked bare — use no space. Match the style of neighbouring existing entries.
+
+**No other files change.** The constants are `&[&str]` slices used directly by the init logic that writes settings.json; adding entries here is sufficient.
+
+After editing, run the existing init integration tests (if any) to confirm the new entries appear in test output. No new tests are strictly required for this change.
 
 ### Open questions
 
