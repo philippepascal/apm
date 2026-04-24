@@ -1,7 +1,7 @@
 +++
 id = "36f7d088"
 title = "UI: clicking a state transition in review editor doesn't close editor pane"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/36f7d088-ui-clicking-a-state-transition-in-review"
 created_at = "2026-04-24T16:53:04.340859Z"
-updated_at = "2026-04-24T16:53:04.340859Z"
+updated_at = "2026-04-24T16:53:18.481781Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-24T16:53Z | — | new | philippepascal |
+| 2026-04-24T16:53Z | new | groomed | philippepascal |
