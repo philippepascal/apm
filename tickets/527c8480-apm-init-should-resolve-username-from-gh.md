@@ -30,7 +30,7 @@ apm init calls prompt_username() in apm/src/cmd/init.rs:27-31 on first run even 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Token-based GitHub auth fallback (fetch_authenticated_user) — not relevant when gh CLI is unavailable at init time\n- GitLab, Bitbucket, or any non-GitHub git host provider\n- Changing behaviour when has_git_host is true (identity already comes from the provider in that path)\n- Auto-accepting the gh username without prompting (user must always have the chance to override)
 
 ### Approach
 
