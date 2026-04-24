@@ -16,7 +16,11 @@ updated_at = "2026-04-24T07:14:12.680669Z"
 
 ### Problem
 
-Re-running apm init generates .apm/config.toml.init that differs from the live .apm/config.toml even when the user has not edited the live config. Example: "collaborators = [\"philippepascal\"]" in live vs "collaborators = []" in .init. Root cause: default_config() at apm-core/src/init.rs:244 is re-invoked to produce .init content, but effective_username is empty on non-TTY re-runs (line ~91-97 passes empty collaborators when no username). The test at apm-core/src/init.rs:687-704 shows when .init is created. Fix: fields that are filled during interactive setup (project.name, project.description, project.collaborators) should be normalized out of the diff, either by writing .init with the live values for those fields, diffing only structural keys, or treating them as user-owned in .init.
+When `apm init` is run on a project that already has `.apm/config.toml`, the re-run is supposed to detect whether the live config has drifted from the current default template. If it has drifted, `apm init` writes `.apm/config.toml.init` so the user can compare the two files and decide whether to adopt any new defaults.
+
+The bug: `setup()` at `apm-core/src/init.rs:116` reconstructs the default config by extracting `project.name`, `project.description`, and `project.default_branch` from the live file — but hardcodes `collaborators = &[]`. Because `default_config()` serializes that as `collaborators = []`, the reconstructed default never matches the live file when the user has a non-empty collaborators list (e.g. `collaborators = ["philippepascal"]`). This causes a spurious `.apm/config.toml.init` to be produced on every re-run, even when the live config has never been touched by the user.
+
+The affected users are anyone whose collaborators list was populated during initial interactive setup (i.e. when `apm init` ran with a detected Git username). Every subsequent re-run reports a false diff, which erodes trust in the `.init` signal.
 
 ### Acceptance criteria
 
