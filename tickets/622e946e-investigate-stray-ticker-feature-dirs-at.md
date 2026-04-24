@@ -16,7 +16,24 @@ updated_at = "2026-04-24T07:19:38.416712Z"
 
 ### Problem
 
-Three unexplained directories at /Users/philippepascal/repos/: ticker-feature-1-export-xlsx, ticker-feature-3-grow-formula, ticker-feature-6-website-metrics (all dated Mar 24, older than current apm worktree work). Naming does not match apm conventions (which expect ticket-<id>-<slug> or epic-<id>-<slug> under <project>--worktrees/). Likely NOT from current apm — but could be from an earlier version, a past supervisor-run git worktree add, or an unrelated tool. Expected: first identify the source. Starting points: run "git -C <dir> worktree list 2>&1" and "git -C <dir> log -n 3 --oneline" in each to see if they are legitimate git worktrees of some repo. If apm-related even from older version, document cleanup and verify current code does not produce these paths. If unrelated, close with a note. File-system hygiene only; not blocking any active work.
+Three directories at `/Users/philippepascal/repos/` do not match the current apm worktree convention:
+
+```
+ticker-feature-1-export-xlsx      (created ~2026-03-24)
+ticker-feature-3-grow-formula     (created ~2026-04-08)
+ticker-feature-6-website-metrics  (created ~2026-03-25)
+```
+
+**What they are:** Legitimate git worktrees of `/Users/philippepascal/repos/ticker`, registered in that repo's worktree list. Each is checked out on a `feature/<n>-<slug>` branch. They were created under an older convention where worktrees were placed directly in `~/repos/` as `<project>-<branch-path-hyphenated>`. The current apm convention places worktrees under `<project>--worktrees/<branch-slug>` (double-dash separator, one level in).
+
+**Why they are stray:** Current apm code (`apm-core/src/worktree.rs`, `ensure_worktree()`) constructs paths as `worktrees_base + branch_slug` where `worktrees_base` defaults to `../worktrees` relative to the main repo root. It cannot produce sibling paths at the `~/repos/` level. These worktrees pre-date or were created outside of current apm.
+
+**Branch state:**
+- `feature/1-export-xlsx` — pushed to `origin/feature/1-export-xlsx`
+- `feature/3-grow-formula` — pushed to `origin/feature/3-grow-formula`
+- `feature/6-website-metrics` — no remote tracking branch; tip commit `fce80c4` is shared with `feature/3-grow-formula`, suggesting its work was absorbed
+
+No active development is happening in these worktrees (no apm tickets reference them, dates are weeks old). Leaving them wastes disk space and pollutes `git worktree list` output for the `ticker` project.
 
 ### Acceptance criteria
 
