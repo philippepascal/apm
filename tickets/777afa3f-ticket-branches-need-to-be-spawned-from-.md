@@ -38,7 +38,7 @@ When `default_branch` is absent from `.apm/config.toml`, the field is populated 
 
 ### Approach
 
-Three hardcoded `"main"` references need to be replaced with `config.project.default_branch`. The pattern to follow is already established in `apm-core/src/start.rs`.
+Three hardcoded `"main"` references need to be replaced with `config.project.default_branch`. The pattern to follow is already established in `apm-core/src/start.rs`. When `default_branch` is not set in `.apm/config.toml`, the serde default (`"main"`) is used automatically — no additional fallback logic is required in the changed code.
 
 **1. `apm-core/src/epic.rs` — `create()` function (~lines 207, 221)**
 
@@ -57,7 +57,7 @@ Three hardcoded `"main"` references need to be replaced with `config.project.def
 - Replace `.unwrap_or_else(|| "main".to_string())` with a lookup of `config.project.default_branch`
 - Load the config at the top of the function (or accept it as a parameter) using the same loading call used elsewhere in the `cmd/` layer.
 
-No new config fields are introduced. No behaviour changes for projects that already omit `default_branch` from `apm.toml`.
+No new config fields are introduced. No behaviour changes for projects that already omit `default_branch` from `.apm/config.toml`.
 
 ### Open questions
 
