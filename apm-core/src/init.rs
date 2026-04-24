@@ -338,7 +338,8 @@ fn maybe_initial_commit(root: &Path, messages: &mut Vec<String>) -> Result<()> {
 
 fn ensure_worktrees_dir(root: &Path, messages: &mut Vec<String>) -> Result<()> {
     if let Ok(config) = crate::config::Config::load(root) {
-        let wt_dir = root.join(&config.worktrees.dir);
+        let main_root = crate::git_util::main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+        let wt_dir = main_root.join(&config.worktrees.dir);
         if !wt_dir.exists() {
             std::fs::create_dir_all(&wt_dir)?;
             messages.push(format!("Created worktrees dir: {}", wt_dir.display()));

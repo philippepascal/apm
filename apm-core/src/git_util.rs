@@ -964,7 +964,8 @@ pub fn merge_into_default(root: &Path, config: &Config, branch: &str, default_br
     let merge_dir = if current_branch == default_branch {
         root.to_path_buf()
     } else {
-        let worktrees_base = root.join(&config.worktrees.dir);
+        let main_root = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+        let worktrees_base = main_root.join(&config.worktrees.dir);
         ensure_worktree(root, &worktrees_base, default_branch)?
     };
 
