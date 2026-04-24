@@ -1,7 +1,7 @@
 +++
 id = "12e947b1"
 title = "apm init Claude settings allow-list missing commands"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/12e947b1-apm-init-claude-settings-allow-list-miss"
 created_at = "2026-04-24T06:28:47.480554Z"
-updated_at = "2026-04-24T07:19:57.933406Z"
+updated_at = "2026-04-24T07:25:28.707197Z"
 +++
 
 ## Spec
@@ -94,3 +94,4 @@ After editing, run the existing init integration tests (if any) to confirm the n
 | 2026-04-24T07:13Z | new | groomed | philippepascal |
 | 2026-04-24T07:16Z | groomed | in_design | philippepascal |
 | 2026-04-24T07:19Z | in_design | specd | claude-0424-0716-4bc8 |
+| 2026-04-24T07:25Z | specd | ready | philippepascal |
