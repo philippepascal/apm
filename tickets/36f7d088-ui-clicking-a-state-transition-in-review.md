@@ -51,7 +51,45 @@ A secondary ordering issue compounds the problem even in the success path: `setR
 
 ### Approach
 
-How the implementation will work.
+Single-file change: `apm-ui/src/components/ReviewEditor.tsx`, the `handleTransition` function (currently lines 202-222). No backend changes, no other frontend files.
+
+**Change 1 — guard `handleSave()` with `isDirtyRef.current`**
+
+Only call `handleSave()` when the editor actually has unsaved changes. When there is nothing to save, skip directly to the transition API call. This eliminates the PUT request that was unconditionally blocking the transition even on a clean editor.
+
+**Change 2 — move `setReviewMode(false)` before `invalidateQueries`**
+
+Call `setReviewMode(false)` immediately after confirming the transition succeeded (`res.ok`), before either `queryClient.invalidateQueries` call. This ensures the pane unmounts synchronously before React Query notifies its subscribers, removing the micro-render race.
+
+Replace the current `handleTransition` body with:
+
+```tsx
+async function handleTransition(to: string) {
+  if (isDirtyRef.current) {
+    const saved = await handleSave()
+    if (!saved) return
+  }
+  try {
+    const res = await fetch(`/api/tickets/${ticket.id}/transition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError((data as { error?: string }).error ?? `Transition failed: ${res.status}`)
+      return
+    }
+    setReviewMode(false)
+    queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
+    queryClient.invalidateQueries({ queryKey: ['tickets'] })
+  } catch (e) {
+    setError(String(e))
+  }
+}
+```
+
+No other logic changes. The keyboard-shortcut path (`handleTransitionRef.current(tr.to)` in the `useEffect`) calls the same function, so it inherits the fix automatically.
 
 ### Open questions
 
