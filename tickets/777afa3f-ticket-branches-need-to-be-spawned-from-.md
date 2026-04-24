@@ -1,7 +1,7 @@
 +++
 id = "777afa3f"
 title = "ticket branches need to be spawned from default branch"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/777afa3f-ticket-branches-need-to-be-spawned-from-"
 created_at = "2026-04-24T16:38:58.520269Z"
-updated_at = "2026-04-24T17:11:57.730129Z"
+updated_at = "2026-04-24T17:16:44.829861Z"
 +++
 
 ## Spec
@@ -83,3 +83,4 @@ No new config fields are introduced. No behaviour changes for projects that alre
 | 2026-04-24T16:55Z | in_design | specd | claude-0424-1652-cd98 |
 | 2026-04-24T16:56Z | specd | ready | philippepascal |
 | 2026-04-24T17:11Z | ready | in_progress | philippepascal |
+| 2026-04-24T17:16Z | in_progress | implemented | claude-0424-1712-55a0 |
