@@ -31,7 +31,10 @@ The affected users are anyone whose collaborators list was populated during init
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Other user-editable fields (`logging.enabled`, `agents.max_concurrent`, etc.) are not normalized out of the diff; if the user changes them the `.init` signal fires correctly
+- The interactive TTY path (`apm init` with a live terminal prompting for username) is not changed
+- Normalizing diffs for `workflow.toml`, `ticket.toml`, `agents.md`, or other managed files
+- Surfacing or formatting the diff to the user (that is a separate UX concern)
 
 ### Approach
 
