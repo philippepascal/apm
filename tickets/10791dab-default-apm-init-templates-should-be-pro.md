@@ -1,7 +1,7 @@
 +++
 id = "10791dab"
 title = "Default apm init templates should be project-agnostic"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/10791dab-default-apm-init-templates-should-be-pro"
 created_at = "2026-04-24T06:28:34.301755Z"
-updated_at = "2026-04-24T07:25:22.190456Z"
+updated_at = "2026-04-24T07:39:34.566444Z"
 +++
 
 ## Spec
@@ -136,3 +136,4 @@ No Rust tests are added or modified — this is a pure content change to embedde
 | 2026-04-24T07:14Z | groomed | in_design | philippepascal |
 | 2026-04-24T07:19Z | in_design | specd | claude-0424-0714-f230 |
 | 2026-04-24T07:25Z | specd | ready | philippepascal |
+| 2026-04-24T07:39Z | ready | in_progress | philippepascal |
