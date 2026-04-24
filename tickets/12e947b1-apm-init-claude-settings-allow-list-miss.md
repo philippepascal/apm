@@ -16,7 +16,13 @@ updated_at = "2026-04-24T07:16:49.824155Z"
 
 ### Problem
 
-APM_ALLOW_ENTRIES (apm/src/cmd/init.rs:121-136) and APM_USER_ALLOW_ENTRIES (init.rs:140-156) define the subset of apm commands added to .claude/settings.json and ~/.claude/settings.json so Claude does not prompt for each invocation. Several commonly-used apm commands are missing. Known gaps observed during ticker project use: apm help (triggers prompt mid-session), apm review, apm close, apm register, apm epic*, apm archive*, apm clean*, apm work*, apm assign*, apm validate*, apm version*, apm sessions*, apm revoke*. Expected: audit both lists against the canonical command set in apm/src/cmd/*.rs and add the missing entries. Use the "apm <sub>*" glob for each to cover args.
+`APM_ALLOW_ENTRIES` and `APM_USER_ALLOW_ENTRIES` in `apm/src/cmd/init.rs` (lines 121–156) define the commands written into `.claude/settings.json` and `~/.claude/settings.json` respectively when `apm init` is run. These allow-lists exist so Claude Code does not open a permission prompt for routine apm invocations during a ticket session.
+
+The allow-lists are significantly out of date relative to the command set the binary now exposes. An audit against all `apm/src/cmd/*.rs` files and the top-level CLI enum in `main.rs` reveals 15 subcommands that trigger permission prompts but are not whitelisted: `help`, `review`, `close`, `assign`, `validate`, `work`, `move`, `archive`, `clean`, `workers`, `epic`, `register`, `sessions`, `revoke`, and `version`. The user-level list has an additional gap: `spec` is whitelisted in the project list but absent from the user list.
+
+Both lists also contain the ghost entry `"Bash(apm take*)"` — `take` was renamed to `start`, which is already whitelisted; the dead entry has no effect but indicates the lists have drifted.
+
+Every missing command has been observed to trigger a mid-session prompt during normal ticker workflow use, interrupting automated agent runs.
 
 ### Acceptance criteria
 
