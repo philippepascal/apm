@@ -3,13 +3,13 @@ id = "20eeacce"
 title = "Epic worktrees nested under worktrees_base twice"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/20eeacce-epic-worktrees-nested-under-worktrees-ba"
 created_at = "2026-04-24T06:29:13.730768Z"
-updated_at = "2026-04-24T07:18:42.739393Z"
+updated_at = "2026-04-24T07:23:40.546063Z"
 +++
 
 ## Spec
