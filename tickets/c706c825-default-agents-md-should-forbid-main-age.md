@@ -34,7 +34,7 @@ This ticket depends on ticket 10791dab ("Default apm init templates should be pr
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Enforcing the restriction at the CLI level — no changes to the apm binary; this is instruction text only\n- Modifying existing project-specific agents.md files already deployed in user repos\n- The project-agnostic defaults changes (ticket 10791dab), which touch different content in the same file and land separately\n- Changes to the workflow state machine definitions in apm.toml
 
 ### Approach
 
