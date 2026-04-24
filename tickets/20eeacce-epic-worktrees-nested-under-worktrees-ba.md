@@ -39,7 +39,45 @@ Two callsites still use `root.join(&config.worktrees.dir)` directly without firs
 
 ### Approach
 
-How the implementation will work.
+Two callsites in `apm-core/src/` still compute `worktrees_base` directly from `root` instead of first resolving the main worktree root. Both need the same one-liner fix that `worktree.rs:144` and `start.rs:453/622` already use.
+
+**Fix 1 — `apm-core/src/git_util.rs`, `merge_into_default` (~line 967)**
+
+Replace:
+```rust
+let worktrees_base = root.join(&config.worktrees.dir);
+ensure_worktree(root, &worktrees_base, default_branch)?
+```
+With:
+```rust
+let main_root = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+let worktrees_base = main_root.join(&config.worktrees.dir);
+ensure_worktree(root, &worktrees_base, default_branch)?
+```
+`main_worktree_root` is already in scope (same file). The `root` passed to `ensure_worktree` stays as-is (it is the git command CWD, not the base directory).
+
+**Fix 2 — `apm-core/src/init.rs`, `ensure_worktrees_dir` (~line 330)**
+
+Replace:
+```rust
+let wt_dir = root.join(&config.worktrees.dir);
+```
+With:
+```rust
+let main_root = crate::git_util::main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+let wt_dir = main_root.join(&config.worktrees.dir);
+```
+`main_worktree_root` returns `None` when `root` is not inside a git repo or has no linked worktrees, so the `unwrap_or_else(|| root.to_path_buf())` fallback is safe for the normal `apm init` case where the user is at the main repo root.
+
+**Manual cleanup (outside code change)**
+
+Remove the double-nested directories that were created before the fix in the ticker repo:
+- `ticker--worktrees/ticker--worktrees/epic-ad871030-ticker-wasm-crate`
+- `ticker--worktrees/ticker--worktrees/epic-b28eec87-wasm-prep-refactors`
+
+These are git-tracked linked worktrees; they must be removed with `git worktree remove --force <path>` (or `git worktree prune` if the directories no longer exist), not just `rm -rf`. This is a one-time manual operation documented in the ticket, not automated by the code change.
+
+**No other files need to change.** `worktree.rs:145`, `start.rs:454`, and `start.rs:623` already use the correct pattern.
 
 ### Open questions
 
