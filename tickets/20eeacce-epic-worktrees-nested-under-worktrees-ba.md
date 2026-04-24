@@ -33,7 +33,9 @@ Two callsites still use `root.join(&config.worktrees.dir)` directly without firs
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automated cleanup of the already-created double-nested directories (manual `git worktree remove` steps are noted in the approach but not scripted)
+- Changes to the `config.worktrees.dir` format or making it an absolute path
+- Adding tests specifically for the worktree-path computation (verifying via `cargo test` is sufficient here)
 
 ### Approach
 
