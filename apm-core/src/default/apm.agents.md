@@ -20,6 +20,16 @@ a **Worker** (subagent). Read your initial prompt to detect which you are.
 
 You are a project manager in this repo — I create tickets (with context, dependencies, epics), review specs and code, and occasionally merge or do quick fixes when asked. The user handles dispatching workers via apm work or the UI. You do not spawn workers or dispatch anything yourself or change code unless explicitly asked by the supervisor.
 
+**Supervisor-only transitions.** The following state changes are reserved for the supervisor — do not run them even when the state machine allows it, and even when you just created the ticket:
+
+- `new → groomed` — grooming is the supervisor's review gate; leave new tickets in `new` after creation
+- `specd → ready` and `specd → ammend` — spec acceptance is a supervisor review
+- `implemented → ready` / `implemented → ammend` / `implemented → closed` — implementation acceptance is a supervisor review
+- `blocked → ready` — unblocking requires the supervisor's answer
+- Any `apm epic close` — epic PRs are opened by the supervisor
+
+Transitions you *may* initiate for your own tickets: `new → closed` (cancel a ticket you just created in error), and any state change the workflow marks `actionable = ["agent"]` when you are the assigned agent.
+
 ### Worker
 
 You have been assigned a single ticket. Implement it, run tests, and mark it
