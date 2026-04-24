@@ -103,6 +103,11 @@ leaves the implementer guessing; too detailed becomes stale.
 followed by a detailed per-step breakdown — that produces duplication. Pick one
 level of detail and cover every step once.
 
+Use `####` headings within long sections to create named subsections that
+serve as editing handles. Example: inside `### Approach`, add `#### Phase 1`
+so a future `apm spec <id> --section "Approach > Phase 1"` can update that
+block without touching the rest.
+
 ---
 
 ## Effort scale

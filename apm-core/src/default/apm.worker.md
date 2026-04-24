@@ -38,16 +38,14 @@ discipline. This file covers the implementation phase only.
 
 ## Tests
 
-- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
-- Integration tests in `apm/tests/integration.rs` — use temp git repos, no
-  fixture files needed
-- Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
+- Write tests appropriate for your project's structure and conventions
+- Run your project's test suite — all tests must pass before calling `apm state <id> implemented`
 
 ---
 
 ## Finishing implementation
 
-Run `cargo test --workspace` — all tests must pass.
+Run your project's test suite — all tests must pass.
 
 Then: `apm state <id> implemented`
 
@@ -109,11 +107,11 @@ apm spec 1234 --section Problem --set-file /tmp/problem.md
 **Do not use background jobs (`&`):**
 ```bash
 # Wrong
-cargo test & cargo clippy & wait
+apm state 1234 implemented & apm state 5678 implemented & wait
 
 # Right — sequential calls
-cargo test
-cargo clippy
+apm state 1234 implemented
+apm state 5678 implemented
 ```
 
 **Use `git -C` for all git operations in worktrees:**
@@ -128,5 +126,5 @@ git -C "$wt" add <files>
 **Use `bash -c` for multi-step commands that must share a directory:**
 ```bash
 # Right — single bash call, matches Bash(bash *)
-bash -c "cd $wt && cargo test --workspace 2>&1"
+bash -c "cd $wt && <your-test-command> 2>&1"
 ```
