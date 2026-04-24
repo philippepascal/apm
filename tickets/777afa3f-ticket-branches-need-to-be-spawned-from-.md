@@ -24,9 +24,9 @@ When `default_branch` is absent from `.apm/config.toml`, the field is populated 
 
 ### Acceptance criteria
 
-- [ ] When `default_branch = "develop"` is set in `apm.toml`, a new ticket worktree branch is fetched and created from `origin/develop`
-- [ ] When `default_branch = "develop"` is set in `apm.toml`, a new epic worktree branch is fetched and created from `origin/develop`
-- [ ] When `default_branch` is absent from `apm.toml`, ticket and epic branches continue to be created from `origin/main` (existing behaviour unchanged)
+- [ ] When `default_branch = "develop"` is set in `.apm/config.toml`, a new ticket worktree branch is fetched and created from `origin/develop`
+- [ ] When `default_branch = "develop"` is set in `.apm/config.toml`, a new epic worktree branch is fetched and created from `origin/develop`
+- [ ] When `default_branch` is absent from `.apm/config.toml`, ticket and epic branches continue to be created from `origin/main` (existing behaviour unchanged)
 - [ ] The fallback branch name in `apm/src/cmd/new.rs` `open_editor()` resolves to the configured default branch, not the literal string `"main"`
 
 ### Out of scope
