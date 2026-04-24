@@ -4,12 +4,12 @@ title = "Default agents.md should forbid main agent from grooming"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c706c825-default-agents-md-should-forbid-main-age"
 created_at = "2026-04-24T06:28:59.221174Z"
-updated_at = "2026-04-24T07:19:52.990114Z"
+updated_at = "2026-04-24T07:19:59.358761Z"
 +++
 
 ## Spec
