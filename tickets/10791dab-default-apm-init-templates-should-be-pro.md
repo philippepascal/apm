@@ -39,7 +39,7 @@ Affected users: any developer who runs `apm init` on a non-APM project — the p
 - [x] `apm.worker.md` shell-discipline `bash -c` example no longer contains `cargo test --workspace`
 - [x] `apm.spec-writer.md` or `apm.agents.md` contains a note explaining that `####` headings may be used inside long spec sections (e.g. `### Approach`) as editing subsection markers
 - [x] Running `grep -r "apm-core" apm-core/src/default/` returns no matches
-- [ ] Running `grep -r "apm/tests" apm-core/src/default/` returns no matches
+- [x] Running `grep -r "apm/tests" apm-core/src/default/` returns no matches
 
 ### Out of scope
 
