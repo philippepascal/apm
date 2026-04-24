@@ -39,7 +39,39 @@ The desired behaviour is to print a short tips block immediately after `"apm ini
 
 ### Approach
 
-How the implementation will work.
+Two files change: `apm/src/main.rs` and `apm/src/cmd/init.rs`. No changes to `apm-core`.
+
+**`apm/src/main.rs` — Init subcommand struct**
+
+Add a `quiet` field using the same pattern as the `Sync` subcommand (lines 391-393):
+
+```rust
+/// Suppress non-error output
+#[arg(long)]
+quiet: bool,
+```
+
+In the match arm that calls `cmd::init::run()`, pass the new `quiet` argument.
+
+**`apm/src/cmd/init.rs` — `run()` function**
+
+- Add `quiet: bool` to the `run()` signature.
+- After the existing `println!("apm initialized.");` (line 62), append:
+
+```rust
+if std::io::stdout().is_terminal() && !quiet {
+    println!();
+    println!("Next steps:");
+    println!("  * Commit the config:   git add .apm/ && git commit -m 'chore: init apm'");
+    println!("  * Create a ticket:     apm new");
+    println!("  * Open the web UI:     apm-server");
+    println!("  * Full CLI reference:  apm --help");
+}
+```
+
+Use `stdout().is_terminal()` (consistent with `clean.rs`) rather than the existing `is_tty` variable, which checks stdin and is scoped to interactive prompting. `IsTerminal` is already imported in `init.rs` via `use std::io::{self, BufRead, IsTerminal, Write};`, so no new import is needed.
+
+**Implementation order:** wire the flag in `main.rs` first (compile check), then add the tips block.
 
 ### Open questions
 
