@@ -200,8 +200,10 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
   }
 
   async function handleTransition(to: string) {
-    const saved = await handleSave()
-    if (!saved) return
+    if (isDirtyRef.current) {
+      const saved = await handleSave()
+      if (!saved) return
+    }
     try {
       const res = await fetch(`/api/tickets/${ticket.id}/transition`, {
         method: 'POST',
@@ -213,9 +215,9 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
         setError((data as { error?: string }).error ?? `Transition failed: ${res.status}`)
         return
       }
+      setReviewMode(false)
       queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
-      setReviewMode(false)
     } catch (e) {
       setError(String(e))
     }
