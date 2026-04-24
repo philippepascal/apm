@@ -3,13 +3,13 @@ id = "b7003852"
 title = "apm init should print next-step tips on completion"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b7003852-apm-init-should-print-next-step-tips-on-"
 created_at = "2026-04-24T06:28:19.582833Z"
-updated_at = "2026-04-24T07:14:25.822187Z"
+updated_at = "2026-04-24T07:18:03.345025Z"
 +++
 
 ## Spec
