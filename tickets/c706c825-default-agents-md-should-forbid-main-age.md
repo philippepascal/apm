@@ -1,7 +1,7 @@
 +++
 id = "c706c825"
 title = "Default agents.md should forbid main agent from grooming"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c706c825-default-agents-md-should-forbid-main-age"
 created_at = "2026-04-24T06:28:59.221174Z"
-updated_at = "2026-04-24T07:26:11.662700Z"
+updated_at = "2026-04-24T07:28:47.229171Z"
 +++
 
 ## Spec
@@ -83,3 +83,4 @@ git -C <worktree-path> commit -m "ticket(c706c825): add supervisor-only transiti
 | 2026-04-24T07:20Z | in_design | specd | claude-0424-0717-5210 |
 | 2026-04-24T07:25Z | specd | ready | philippepascal |
 | 2026-04-24T07:26Z | ready | in_progress | philippepascal |
+| 2026-04-24T07:28Z | in_progress | implemented | claude-0424-0728-c706 |
