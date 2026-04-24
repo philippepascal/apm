@@ -44,7 +44,10 @@ A secondary ordering issue compounds the problem even in the success path: `setR
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Fixing the TOML comparison logic in the `put_body` backend endpoint (the mismatch between `ticket.serialize()` and the raw branch file is a separate issue)
+- Any changes to frontmatter or history-section validation in the backend
+- Making save errors silent — they must still be displayed when they occur
+- Changes to the keyboard shortcut registration or shortcut assignment logic
 
 ### Approach
 
