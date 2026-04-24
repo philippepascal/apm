@@ -1,7 +1,7 @@
 +++
 id = "20eeacce"
 title = "Epic worktrees nested under worktrees_base twice"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/20eeacce-epic-worktrees-nested-under-worktrees-ba"
 created_at = "2026-04-24T06:29:13.730768Z"
-updated_at = "2026-04-24T07:53:19.046181Z"
+updated_at = "2026-04-24T08:01:19.485659Z"
 +++
 
 ## Spec
@@ -99,3 +99,4 @@ These are git-tracked linked worktrees; they must be removed with `git worktree 
 | 2026-04-24T07:25Z | specd | ready | philippepascal |
 | 2026-04-24T07:50Z | ready | in_progress | philippepascal |
 | 2026-04-24T07:53Z | in_progress | implemented | claude-0424-0750-2c98 |
+| 2026-04-24T08:01Z | implemented | closed | philippepascal(apm-sync) |
