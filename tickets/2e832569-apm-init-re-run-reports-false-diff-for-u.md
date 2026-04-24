@@ -1,7 +1,7 @@
 +++
 id = "2e832569"
 title = "apm init re-run reports false diff for user-filled fields"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2e832569-apm-init-re-run-reports-false-diff-for-u"
 created_at = "2026-04-24T06:28:08.866116Z"
-updated_at = "2026-04-24T07:16:23.705274Z"
+updated_at = "2026-04-24T07:16:31.475728Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ No other files change. No public API changes. Fully backward-compatible.
 | 2026-04-24T06:28Z | — | new | philippepascal |
 | 2026-04-24T07:12Z | new | groomed | philippepascal |
 | 2026-04-24T07:14Z | groomed | in_design | philippepascal |
+| 2026-04-24T07:16Z | in_design | specd | claude-0424-0714-6040 |
