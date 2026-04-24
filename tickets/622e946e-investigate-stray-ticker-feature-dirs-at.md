@@ -1,7 +1,7 @@
 +++
 id = "622e946e"
 title = "Investigate stray ticker-feature-* dirs at repos root"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/622e946e-investigate-stray-ticker-feature-dirs-at"
 created_at = "2026-04-24T06:29:26.733092Z"
-updated_at = "2026-04-24T06:29:26.733092Z"
+updated_at = "2026-04-24T07:13:29.807160Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-24T06:29Z | — | new | philippepascal |
+| 2026-04-24T07:13Z | new | groomed | philippepascal |
