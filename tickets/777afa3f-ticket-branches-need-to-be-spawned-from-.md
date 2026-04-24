@@ -62,6 +62,8 @@ No new config fields are introduced. No behaviour changes for projects that alre
 
 ### Amendment requests
 
+correct configuration name: it's .apm/config.toml not apm.toml
+specify how default branch is inferred if it's not specified in .apm/config.toml
 
 ### Code review
 
