@@ -22,7 +22,12 @@ The desired behaviour is to print a short tips block immediately after `"apm ini
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm init` on a TTY without `--quiet`, a tips block is printed after `"apm initialized."` containing suggestions to commit `.apm/` files, run `apm new`, try `apm-server`, and check `apm --help`
+- [ ] When stdout is not a TTY, the tips block is suppressed and only `"apm initialized."` is printed
+- [ ] `apm init --quiet` suppresses the tips block even when run on a TTY
+- [ ] `apm init --quiet` does not suppress `"apm initialized."` (the confirmation line always prints)
+- [ ] `apm init --quiet` is accepted by the CLI without error (the flag is wired up end-to-end)
+- [ ] `apm init --help` documents the `--quiet` flag with a description
 
 ### Out of scope
 
