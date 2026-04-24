@@ -24,7 +24,12 @@ Two callsites still use `root.join(&config.worktrees.dir)` directly without firs
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm state <epic-id> in_design` run from inside any linked worktree places the new epic worktree at `<worktrees_base>/epic-<id>-<slug>/`
+- [ ] `apm state <epic-id> in_design` run from the main repo root places the new epic worktree at `<worktrees_base>/epic-<id>-<slug>/`
+- [ ] `merge_into_default` invoked from inside a linked worktree creates the default-branch worktree at `<worktrees_base>/<default-branch>/`, not at `<worktrees_base>/<worktrees_base>/...`
+- [ ] `apm init` / `ensure_worktrees_dir` run from inside a linked worktree creates `<worktrees_base>/` at the correct location (sibling of the main repo, not nested under the existing worktrees dir)
+- [ ] Ticket (non-epic) worktrees continue to land at `<worktrees_base>/ticket-<id>-<slug>/` with no regression
+- [ ] `cargo test` passes with no new failures after both callsite fixes
 
 ### Out of scope
 
