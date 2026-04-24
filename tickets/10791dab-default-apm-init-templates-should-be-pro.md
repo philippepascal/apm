@@ -4,12 +4,12 @@ title = "Default apm init templates should be project-agnostic"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/10791dab-default-apm-init-templates-should-be-pro"
 created_at = "2026-04-24T06:28:34.301755Z"
-updated_at = "2026-04-24T07:19:00.655310Z"
+updated_at = "2026-04-24T07:19:08.422508Z"
 +++
 
 ## Spec
