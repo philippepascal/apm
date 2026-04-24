@@ -1,7 +1,7 @@
 +++
 id = "2e832569"
 title = "apm init re-run reports false diff for user-filled fields"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2e832569-apm-init-re-run-reports-false-diff-for-u"
 created_at = "2026-04-24T06:28:08.866116Z"
-updated_at = "2026-04-24T06:28:08.866116Z"
+updated_at = "2026-04-24T07:12:51.678655Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-24T06:28Z | — | new | philippepascal |
+| 2026-04-24T07:12Z | new | groomed | philippepascal |
