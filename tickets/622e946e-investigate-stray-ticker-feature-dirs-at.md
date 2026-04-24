@@ -46,7 +46,10 @@ No active development is happening in these worktrees (no apm tickets reference 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Merging or closing the `feature/*` branches on GitHub — separate ticker project concern
+- Changing apm's worktree naming convention or adding a guard against placing worktrees outside `--worktrees/`
+- Cleanup of any `ticker--worktrees/` directories (those follow current apm convention and are in scope for other tickets)
+- Determining exactly how the old-convention worktrees were originally created — the source is not actionable; only cleanup matters
 
 ### Approach
 
