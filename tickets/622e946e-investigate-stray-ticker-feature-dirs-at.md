@@ -1,7 +1,7 @@
 +++
 id = "622e946e"
 title = "Investigate stray ticker-feature-* dirs at repos root"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/622e946e-investigate-stray-ticker-feature-dirs-at"
 created_at = "2026-04-24T06:29:26.733092Z"
-updated_at = "2026-04-24T07:23:02.125284Z"
+updated_at = "2026-04-24T07:23:10.790135Z"
 +++
 
 ## Spec
@@ -98,3 +98,4 @@ This ticket closes once the three directories are gone and `worktree list` is cl
 | 2026-04-24T06:29Z | — | new | philippepascal |
 | 2026-04-24T07:13Z | new | groomed | philippepascal |
 | 2026-04-24T07:19Z | groomed | in_design | philippepascal |
+| 2026-04-24T07:23Z | in_design | specd | claude-0424-0719-b4d0 |
