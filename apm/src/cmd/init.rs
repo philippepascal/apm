@@ -4,7 +4,7 @@ use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool) -> Result<()> {
+pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool, quiet: bool) -> Result<()> {
     if migrate {
         let msgs = apm_core::init::migrate(root)?;
         for msg in msgs {
@@ -61,6 +61,14 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool) -> Re
     update_user_claude_settings()?;
     warn_if_settings_untracked(root);
     println!("apm initialized.");
+    if std::io::stdout().is_terminal() && !quiet {
+        println!();
+        println!("Next steps:");
+        println!("  * Commit the config:   git add .apm/ && git commit -m 'chore: init apm'");
+        println!("  * Create a ticket:     apm new");
+        println!("  * Open the web UI:     apm-server");
+        println!("  * Full CLI reference:  apm --help");
+    }
     Ok(())
 }
 
