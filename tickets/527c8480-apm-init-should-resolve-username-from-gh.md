@@ -4,12 +4,12 @@ title = "apm init should resolve username from gh when available"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/527c8480-apm-init-should-resolve-username-from-gh"
 created_at = "2026-04-24T06:27:54.558050Z"
-updated_at = "2026-04-24T07:17:00.163019Z"
+updated_at = "2026-04-24T07:17:08.310231Z"
 +++
 
 ## Spec
