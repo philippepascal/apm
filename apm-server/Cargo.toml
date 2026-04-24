@@ -23,7 +23,7 @@ serde_json = { workspace = true }
 serde = { workspace = true }
 anyhow = { workspace = true }
 toml = { workspace = true }
-apm-core = { path = "../apm-core", version = "0.1.8" }
+apm-core = { path = "../apm-core", version = "0.1.9" }
 chrono = { workspace = true }
 tower-http = { workspace = true, features = ["set-header"] }
 include_dir = { workspace = true }
