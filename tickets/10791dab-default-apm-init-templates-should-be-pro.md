@@ -33,7 +33,7 @@ Affected users: any developer who runs `apm init` on a non-APM project — the p
 
 - [x] `apm.agents.md` Development workflow no longer contains `cargo test --workspace`; it reads "Run your project's test suite" (or equivalent generic phrasing)
 - [x] `apm.agents.md` shell-discipline `bash -c` example no longer contains `cargo test --workspace`
-- [ ] `apm.worker.md` Tests section no longer references `apm-core/src/`, `apm-core/tests/`, or `apm/tests/integration.rs`
+- [x] `apm.worker.md` Tests section no longer references `apm-core/src/`, `apm-core/tests/`, or `apm/tests/integration.rs`
 - [ ] `apm.worker.md` Tests section uses generic phrasing ("Write tests appropriate for your project's structure")
 - [ ] `apm.worker.md` "Finishing implementation" section no longer contains `cargo test --workspace`; it reads "Run your project's test suite"
 - [ ] `apm.worker.md` shell-discipline `bash -c` example no longer contains `cargo test --workspace`
