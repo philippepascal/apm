@@ -1,7 +1,7 @@
 +++
 id = "36f7d088"
 title = "UI: clicking a state transition in review editor doesn't close editor pane"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/36f7d088-ui-clicking-a-state-transition-in-review"
 created_at = "2026-04-24T16:53:04.340859Z"
-updated_at = "2026-04-24T17:17:05.790102Z"
+updated_at = "2026-04-24T17:19:36.301497Z"
 +++
 
 ## Spec
@@ -110,3 +110,4 @@ No other logic changes. The keyboard-shortcut path (`handleTransitionRef.current
 | 2026-04-24T17:11Z | in_design | specd | claude-0424-1655-b678 |
 | 2026-04-24T17:12Z | specd | ready | philippepascal |
 | 2026-04-24T17:17Z | ready | in_progress | philippepascal |
+| 2026-04-24T17:19Z | in_progress | implemented | claude-0424-1717-3b58 |
