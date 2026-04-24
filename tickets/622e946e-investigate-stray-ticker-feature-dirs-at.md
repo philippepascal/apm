@@ -37,12 +37,12 @@ No active development is happening in these worktrees (no apm tickets reference 
 
 ### Acceptance criteria
 
-- [ ] `git -C /Users/philippepascal/repos/ticker worktree list` no longer shows any `ticker-feature-*` entry
-- [ ] The three directories no longer exist under `/Users/philippepascal/repos/`
-- [ ] Work in `feature/1-export-xlsx` is confirmed present on `origin/feature/1-export-xlsx` before removal
-- [ ] Work in `feature/3-grow-formula` is confirmed present on `origin/feature/3-grow-formula` before removal
-- [ ] Work in `feature/6-website-metrics` is confirmed absorbed (tip commit `fce80c4` reachable from at least one remote branch) before removal
-- [ ] `git -C /Users/philippepascal/repos/ticker worktree prune` exits cleanly after removal
+- [x] `git -C /Users/philippepascal/repos/ticker worktree list` no longer shows any `ticker-feature-*` entry
+- [x] The three directories no longer exist under `/Users/philippepascal/repos/`
+- [x] Work in `feature/1-export-xlsx` is confirmed present on `origin/feature/1-export-xlsx` before removal
+- [x] Work in `feature/3-grow-formula` is confirmed present on `origin/feature/3-grow-formula` before removal
+- [x] Work in `feature/6-website-metrics` is confirmed absorbed (tip commit `fce80c4` reachable from at least one remote branch) before removal
+- [x] `git -C /Users/philippepascal/repos/ticker worktree prune` exits cleanly after removal
 
 ### Out of scope
 
