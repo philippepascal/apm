@@ -38,7 +38,31 @@ This ticket depends on ticket 10791dab ("Default apm init templates should be pr
 
 ### Approach
 
-How the implementation will work.
+**File to change:** `apm-core/src/default/apm.agents.md` — one insertion, no other files.
+
+**Insertion point:** after the existing single-paragraph body of `### Main Agent` (currently ending with "…unless explicitly asked by the supervisor."), add a blank line then the following block verbatim from `ticker/.apm/agents.md` lines 31–39:
+
+```markdown
+**Supervisor-only transitions.** The following state changes are reserved for the supervisor — do not run them even when the state machine allows it, and even when you just created the ticket:
+
+- `new → groomed` — grooming is the supervisor's review gate; leave new tickets in `new` after creation
+- `specd → ready` and `specd → ammend` — spec acceptance is a supervisor review
+- `implemented → ready` / `implemented → ammend` / `implemented → closed` — implementation acceptance is a supervisor review
+- `blocked → ready` — unblocking requires the supervisor's answer
+- Any `apm epic close` — epic PRs are opened by the supervisor
+
+Transitions you *may* initiate for your own tickets: `new → closed` (cancel a ticket you just created in error), and any state change the workflow marks `actionable = ["agent"]` when you are the assigned agent.
+```
+
+**Ordering constraint:** ticket 10791dab touches the same file and should merge first. If 10791dab has already changed the `### Main Agent` section, confirm the insertion point still makes sense before committing; the content of the block itself does not change.
+
+**No tests required** — the file is a markdown template, not executable code.
+
+**Commit the change** to the ticket branch via the worktree:
+```bash
+git -C <worktree-path> add apm-core/src/default/apm.agents.md
+git -C <worktree-path> commit -m "ticket(c706c825): add supervisor-only transitions block to default agents.md"
+```
 
 ### Open questions
 
