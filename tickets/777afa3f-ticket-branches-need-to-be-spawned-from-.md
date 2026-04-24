@@ -18,7 +18,9 @@ updated_at = "2026-04-24T16:52:32.370500Z"
 
 When APM creates ticket or epic worktree branches, the git base branch is hardcoded to `"main"` in several places. This means projects that use a different default branch (e.g. `master`, `develop`, `trunk`) will have their branches spawned from the wrong base, leading to incorrect diffs, merge conflicts, and broken CI pipelines.
 
-The `default_branch` field already exists in `ProjectConfig` (loaded from `apm.toml`, defaults to `"main"`) and is correctly consumed in `start.rs` and `git_util.rs`. However, three locations in `epic.rs` and `new.rs` ignore it and hardcode `"main"` directly.
+The `default_branch` field already exists in `ProjectConfig` (loaded from `.apm/config.toml`, with `apm.toml` as a legacy fallback) and is correctly consumed in `start.rs` and `git_util.rs`. However, three locations in `epic.rs` and `new.rs` ignore it and hardcode `"main"` directly.
+
+When `default_branch` is absent from `.apm/config.toml`, the field is populated at deserialisation time via `#[serde(default = "default_branch_main")]`, which returns `"main"`. There is no runtime git-remote detection; the value is always sourced from the config struct.
 
 ### Acceptance criteria
 
