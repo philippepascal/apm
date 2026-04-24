@@ -20,7 +20,13 @@ apm init calls prompt_username() in apm/src/cmd/init.rs:27-31 on first run even 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When `gh` is authenticated, `apm init` prompts `Username [<gh-login>]:` where `<gh-login>` is the value returned by `gh api user -q .login`
+- [ ] Pressing Enter at the prompt when a gh-supplied default is shown accepts that default and writes it to `.apm/local.toml`
+- [ ] Typing a value at the prompt overrides the gh default; the typed value is written to `.apm/local.toml`
+- [ ] When `gh` is not installed, the prompt falls back to `Username []:` and blank-default behaviour is unchanged
+- [ ] When `gh api user -q .login` exits non-zero (unauthenticated or API error), the prompt falls back to `Username []:` and blank-default behaviour is unchanged
+- [ ] When `gh api user -q .login` exits zero but returns an empty string, the prompt falls back to `Username []:`
+- [ ] All existing conditions that skip the prompt entirely — `has_git_host` true, not a TTY, `.apm/local.toml` already exists — are unaffected by this change
 
 ### Out of scope
 
