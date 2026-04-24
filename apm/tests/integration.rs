@@ -5958,7 +5958,7 @@ fn move_standalone_ticket_into_epic() {
     let config = apm_core::config::Config::load(p).unwrap();
 
     // Create an epic branch.
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "test epic").unwrap();
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "test epic", &config).unwrap();
 
     // Create a standalone ticket (no epic).
     let mut warnings = vec![];
@@ -6039,7 +6039,7 @@ fn move_commits_replayed_on_new_base() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "replay epic").unwrap();
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "replay epic", &config).unwrap();
 
     let mut warnings = vec![];
     let ticket = apm_core::ticket::create(
@@ -6086,7 +6086,7 @@ fn move_ticket_out_of_epic() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "out epic").unwrap();
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "out epic", &config).unwrap();
 
     // Create ticket directly in the epic.
     let mut warnings = vec![];
@@ -6149,9 +6149,9 @@ fn move_between_epics() {
     let config = apm_core::config::Config::load(p).unwrap();
 
     let (epic1_id, epic1_branch) =
-        apm_core::epic::create_epic_branch(p, "first epic").unwrap();
+        apm_core::epic::create_epic_branch(p, "first epic", &config).unwrap();
     let (epic2_id, epic2_branch) =
-        apm_core::epic::create_epic_branch(p, "second epic").unwrap();
+        apm_core::epic::create_epic_branch(p, "second epic", &config).unwrap();
 
     // Create ticket in epic1.
     let mut warnings = vec![];
@@ -6221,7 +6221,7 @@ fn move_already_in_same_epic_is_noop() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "same epic").unwrap();
+    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "same epic", &config).unwrap();
 
     let mut warnings = vec![];
     let ticket = apm_core::ticket::create(
@@ -6300,7 +6300,7 @@ fn move_terminal_ticket_fails() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, _epic_branch) = apm_core::epic::create_epic_branch(p, "t epic").unwrap();
+    let (epic_id, _epic_branch) = apm_core::epic::create_epic_branch(p, "t epic", &config).unwrap();
 
     let mut warnings = vec![];
     let ticket = apm_core::ticket::create(
@@ -6375,7 +6375,7 @@ fn move_rebase_conflict_fails_cleanly() {
 
     // Create an epic branch, then add a commit to it that conflicts with the ticket.
     let (epic_id, epic_branch) =
-        apm_core::epic::create_epic_branch(p, "conflict epic").unwrap();
+        apm_core::epic::create_epic_branch(p, "conflict epic", &config).unwrap();
 
     // Add a commit to the epic branch that modifies "shared.txt".
     add_commit_to_branch_via_worktree(p, &epic_branch, "shared.txt", "from epic\n");
