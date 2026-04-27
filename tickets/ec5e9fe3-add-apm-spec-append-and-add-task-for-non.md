@@ -4,12 +4,12 @@ title = "Add apm spec --append and --add-task for non-destructive section update
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ec5e9fe3-add-apm-spec-append-and-add-task-for-non"
 created_at = "2026-04-27T22:17:27.580621Z"
-updated_at = "2026-04-27T23:09:46.036668Z"
+updated_at = "2026-04-27T23:09:52.090225Z"
 +++
 
 ## Spec
