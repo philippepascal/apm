@@ -1,7 +1,7 @@
 +++
 id = "e845127e"
 title = "Extend apm validate to enforce dependency rules across tickets"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e845127e-extend-apm-validate-to-enforce-dependenc"
 created_at = "2026-04-27T20:28:41.454959Z"
-updated_at = "2026-04-27T21:24:23.046663Z"
+updated_at = "2026-04-27T21:24:30.907626Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 depends_on = ["a3dc64db"]
@@ -135,3 +135,4 @@ Seven tests:
 | 2026-04-27T20:28Z | — | new | philippepascal |
 | 2026-04-27T20:43Z | new | groomed | philippepascal |
 | 2026-04-27T21:16Z | groomed | in_design | philippepascal |
+| 2026-04-27T21:24Z | in_design | specd | claude-0427-2116-b858 |
