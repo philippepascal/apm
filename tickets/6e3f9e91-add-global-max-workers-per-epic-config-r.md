@@ -1,7 +1,7 @@
 +++
 id = "6e3f9e91"
 title = "Add global max_workers_per_epic config; remove per-epic override"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6e3f9e91-add-global-max-workers-per-epic-config-r"
 created_at = "2026-04-27T20:28:07.069581Z"
-updated_at = "2026-04-27T20:55:50.048261Z"
+updated_at = "2026-04-27T20:57:06.932727Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
@@ -279,3 +279,4 @@ No change required — `max_workers_per_epic` defaults to `1` when absent. Optio
 | 2026-04-27T20:28Z | — | new | philippepascal |
 | 2026-04-27T20:43Z | new | groomed | philippepascal |
 | 2026-04-27T20:47Z | groomed | in_design | philippepascal |
+| 2026-04-27T20:57Z | in_design | specd | claude-0427-2047-5930 |
