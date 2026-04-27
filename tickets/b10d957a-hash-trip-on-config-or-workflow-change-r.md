@@ -38,7 +38,7 @@ This ticket wires the trigger mechanism. The dependency-rule validation logic it
 - [x] `apm init` is never blocked by the hash-trip gate (it runs before or during initial config creation)
 - [x] When `apm validate` completes with no issues, it updates the stamp file, clearing any stale hash-trip block on subsequent commands
 - [x] `.apm/.validate-stamp` does not appear in `git status` output (it is gitignored via `.apm/.gitignore`)
-- [ ] When `.apm/config.toml` does not exist (not an APM repo), the hash-trip logic is skipped entirely and no stamp file is written
+- [x] When `.apm/config.toml` does not exist (not an APM repo), the hash-trip logic is skipped entirely and no stamp file is written
 
 ### Out of scope
 
