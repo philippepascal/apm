@@ -1,7 +1,7 @@
 +++
 id = "056b1ee1"
 title = "Require epic quiescence in apm epic close"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/056b1ee1-require-epic-quiescence-in-apm-epic-clos"
 created_at = "2026-04-27T20:29:06.958516Z"
-updated_at = "2026-04-27T20:29:06.958516Z"
+updated_at = "2026-04-27T20:44:10.921582Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 depends_on = ["2973e208"]
@@ -51,3 +51,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-27T20:29Z | — | new | philippepascal |
+| 2026-04-27T20:44Z | new | groomed | philippepascal |
