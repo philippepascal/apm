@@ -172,7 +172,7 @@ Ticket e845127e must be merged before this ticket is implemented (step 3 calls v
 ### Amendment requests
 
 - [x] Add `Verify` to `is_read_only_command` so `apm verify` runs (with the warning) when config has changed and validation is failing. The "ok to run when config is broken" set is: `list`, `show`, `next`, `verify`, plus `validate` (already exempt). Everything else is blocked.
-- [ ] Update the AC that names the read-only/warn commands: replace the current list with `apm list`, `apm show`, `apm next`, `apm verify` warn-but-run; explicitly note that `apm sync`, `apm work`, `apm clean` are blocked.
+- [x] Update the AC that names the read-only/warn commands: replace the current list with `apm list`, `apm show`, `apm next`, `apm verify` warn-but-run; explicitly note that `apm sync`, `apm work`, `apm clean` are blocked.
 - [ ] Add a unit test for `is_read_only_command(Command::Verify) == true`.
 
 ### Code review
