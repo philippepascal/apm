@@ -19,15 +19,13 @@ depends_on = ["e845127e"]
 
 ### Problem
 
-Strategy or workflow changes can silently invalidate existing dependency setups (e.g., a ticket with deps was created under `merge`, then the strategy is switched to `pr` where deps are not allowed). The spec at `docs/strategy-and-dependencies.md` (section 'Hash-trip on config change') requires APM to detect config drift and refresh validation automatically.
+When a user modifies `.apm/config.toml` (e.g., switching the completion strategy from `merge` to `pr`) or `.apm/workflow.toml` after tickets with `depends_on` relationships have already been created, existing dependencies can silently become invalid. APM currently has no mechanism to detect this drift: the changed config takes effect immediately, but the tickets that were created under the old rules remain unchanged and unchecked.
 
-Hash `.apm/config.toml` and `.apm/workflow.toml` and store the stamp in `.apm/.validate-stamp` (gitignored). On every `apm` invocation, compare the live hash to the stamp:
-- If unchanged: no-op (cost: stat + hash, microseconds)
-- If changed: run `apm validate` automatically. If validation fails, refuse mutating commands (`apm new`, `apm state`, `apm set`, `apm spec`, `apm start`) until the issue is resolved; warn but allow read-only commands (`apm list`, `apm show`, `apm next`). On pass, refresh the stamp.
+The result is that tickets proceed through the workflow carrying stale, invalid dependency configurations. Violations only surface later as confusing failures in branch topology or merge conflicts — not as a clear diagnostic at the moment the configuration changed.
 
-Hash function should be cheap and stable (e.g., blake3 or sha2 over the file bytes). Depends on ticket e845127e — `apm validate` must enforce the dependency rules first, otherwise the hash-trip has nothing meaningful to surface.
+`docs/strategy-and-dependencies.md` (§ 'Hash-trip on config change') specifies the detection mechanism: APM stores a SHA-256 hash of both config files in a local stamp file (`.apm/.validate-stamp`, gitignored). On every `apm` invocation, the live hash is compared to the stored stamp. If they differ, `apm validate` is run automatically in-process. Mutating commands (`apm new`, `apm state`, `apm set`, `apm spec`, `apm start`) are blocked if validation fails; read-only commands (`apm list`, `apm show`, `apm next`) warn but proceed. The stamp is refreshed only after a clean validation pass.
 
-See docs/strategy-and-dependencies.md, section 'Hash-trip on config change'.
+This ticket wires the trigger mechanism. The dependency-rule validation logic itself (`validate_depends_on`, `check_depends_on_rules`) is implemented in ticket e845127e and must land before this ticket is implemented.
 
 ### Acceptance criteria
 
