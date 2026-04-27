@@ -1,7 +1,7 @@
 +++
 id = "b10d957a"
 title = "Hash-trip on config or workflow change runs apm validate"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b10d957a-hash-trip-on-config-or-workflow-change-r"
 created_at = "2026-04-27T20:28:59.343081Z"
-updated_at = "2026-04-27T23:40:44.419068Z"
+updated_at = "2026-04-27T23:47:56.205465Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 depends_on = ["e845127e"]
@@ -191,3 +191,4 @@ Ticket e845127e must be merged before this ticket is implemented (step 3 calls v
 | 2026-04-27T22:28Z | in_design | specd | claude-0427-2225-e100 |
 | 2026-04-27T22:55Z | specd | ready | philippepascal |
 | 2026-04-27T23:40Z | ready | in_progress | philippepascal |
+| 2026-04-27T23:47Z | in_progress | implemented | claude-0427-2340-8b78 |
