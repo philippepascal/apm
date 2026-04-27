@@ -1,7 +1,7 @@
 +++
 id = "941e57fa"
 title = "Make pr_or_epic_merge the default strategy and document tradeoffs"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/941e57fa-make-pr-or-epic-merge-the-default-strate"
 created_at = "2026-04-27T20:27:54.114826Z"
-updated_at = "2026-04-27T22:54:56.969357Z"
+updated_at = "2026-04-27T22:55:06.818584Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
@@ -90,3 +90,4 @@ Change `completion = "merge"` to `completion = "pr_or_epic_merge"` on the `in_pr
 | 2026-04-27T22:22Z | ammend | in_design | philippepascal |
 | 2026-04-27T22:24Z | in_design | specd | claude-0427-2222-b158 |
 | 2026-04-27T22:54Z | specd | ready | philippepascal |
+| 2026-04-27T22:55Z | ready | in_progress | philippepascal |
