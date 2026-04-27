@@ -45,6 +45,98 @@ Per-epic concurrency is currently controlled via a per-epic override: `apm epic 
 
 ### Approach
 
+Seven files change. Order matters: update `config.rs` first (removes `EpicConfig`, adds global field, rewrites `blocked_epics`), then the callers in `start.rs`, `cmd/epic.rs`, `cmd/work.rs`, then tests and docs.
+
+#### `apm-core/src/config.rs`
+
+Add `max_workers_per_epic: usize` to `AgentsConfig` with a serde default of `1`:
+```rust
+#[serde(default = "default_max_workers_per_epic")]
+pub max_workers_per_epic: usize,
+```
+Add `fn default_max_workers_per_epic() -> usize { 1 }` alongside `default_max_concurrent`. Update `AgentsConfig::default()` to set `max_workers_per_epic: 1`.
+
+Remove `EpicConfig` struct (lines 5–8) and `epics: HashMap<String, EpicConfig>` from `Config` (line 181).
+
+Remove the `.apm/epics.toml` loading block from `Config::load()` (lines 603–615).
+
+Remove `epic_max_workers()` (lines 511–513). Its only external caller is `apm/src/cmd/epic.rs:160` — remove that call site too.
+
+Rewrite `blocked_epics()` to apply the global limit uniformly to every epic (not just those with an explicit entry):
+```rust
+pub fn blocked_epics(&self, active_epic_ids: &[Option<String>]) -> Vec<String> {
+    let limit = self.agents.max_workers_per_epic;
+    let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    for eid in active_epic_ids.iter().filter_map(|e| e.as_deref()) {
+        *counts.entry(eid).or_insert(0) += 1;
+    }
+    counts.into_iter()
+        .filter(|(_, count)| *count >= limit)
+        .map(|(eid, _)| eid.to_string())
+        .collect()
+}
+```
+
+Unit tests: remove `epic_config_parses_from_epics_toml`, `epic_config_absent_defaults_empty`, `epic_config_no_max_workers_returns_none`. Add `agents_max_workers_per_epic_defaults_to_one` (parse minimal config, assert value is 1), `blocked_epics_global_limit_one` (limit=1, one active worker in epic A → epic A blocked), `blocked_epics_global_limit_two` (limit=2, one active worker → not blocked).
+
+#### `apm-core/src/start.rs` — `run_next()` (line 335)
+
+After loading `tickets` and computing `actionable`/`startable`, add epic-concurrency filtering before the `pick_next` call:
+
+```rust
+let active_epic_ids: Vec<Option<String>> = tickets.iter()
+    .filter(|t| {
+        let s = t.frontmatter.state.as_str();
+        actionable.contains(&s) && !startable.contains(&s)
+    })
+    .map(|t| t.frontmatter.epic.clone())
+    .collect();
+let blocked = config.blocked_epics(&active_epic_ids);
+let tickets: Vec<_> = tickets.into_iter()
+    .filter(|t| match t.frontmatter.epic.as_deref() {
+        Some(eid) => !blocked.iter().any(|b| b == eid),
+        None => true,
+    })
+    .collect();
+```
+
+Tickets with no epic pass through unfiltered. Tickets in agent-actionable non-startable states are those currently being worked on by an agent — the correct proxy for "active worker" in this stateless context.
+
+#### `apm/src/cmd/epic.rs` — `run_set()` (line 201)
+
+Change the field guard (line 202–204): remove `"max_workers"` from the accepted set and update the error message to `"valid fields: owner"`.
+
+Remove the `if field == "owner"` wrapper — `owner` is now the only path. Promote the owner logic to the top of the function body (no logic change, just removes the conditional shell).
+
+Delete the `max_workers` handling block entirely (lines 234–269): the `epics_path` variable, the `toml_edit` read/parse, the `if value == "-"` / else branch, and `std::fs::write`.
+
+#### `apm/src/cmd/epic.rs` — `run_show()` (around line 160)
+
+Remove the three lines that call `epic_max_workers` and print `Max workers:`:
+```rust
+if let Some(limit) = ctx.config.epic_max_workers(epic_id) {
+    println!("Max workers: {limit}");
+}
+```
+
+#### `apm/src/main.rs` — CLI help text
+
+Update the `field` argument description in the `epic set` sub-command from `"Field to update: max_workers or owner"` to `"Field to update: owner"`.
+
+#### `apm/tests/integration.rs`
+
+Remove: `epic_set_max_workers_writes_config`, `epic_set_max_workers_updates_existing_value`, `epic_set_max_workers_clear_removes_field`, `epic_set_max_workers_invalid_value_is_error`, `epic_set_zero_value_exits_nonzero`, `epic_set_preserves_existing_config_content`.
+
+Update `epic_set_nonexistent_epic_exits_nonzero`: change subprocess args from `["epic", "set", "deadbeef", "max_workers", "2"]` to `["epic", "set", "deadbeef", "owner", "alice"]`.
+
+Add `epic_set_max_workers_is_now_unknown_field`: assert that `apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2")` returns `Err`.
+
+Add `agents_max_workers_per_epic_defaults_to_one`: load config from a repo with no `max_workers_per_epic` key and assert `config.agents.max_workers_per_epic == 1`.
+
+#### `docs/commands.md` — `apm epic set` section (lines ~808–848)
+
+Remove the `max_workers` synopsis lines, the "Set `max_workers` to cap…" paragraph, the `max_workers` row from the options table, and the `.apm/epics.toml` row from the file-internals table.
+
 ### `apm-core/src/config.rs`
 
 1. Add `max_workers_per_epic: usize` to `AgentsConfig` with a serde default of `1`:
