@@ -44,7 +44,7 @@ Additionally, `README.md` line 175 marks `pr` as the default strategy and does n
 
 ### Approach
 
-Four files change; no `.rs` Rust source changes are required.
+Three files change; no `.rs` Rust source changes are required.
 
 **1. `.apm/workflow.toml` lines 151-152**
 
@@ -59,13 +59,7 @@ Change `completion = "merge"` to `completion = "pr_or_epic_merge"` on the `in_pr
 - Remove `(default)` from the `pr` bullet (line 175).
 - Add `(default)` to the `pr_or_epic_merge` bullet (line 177).
 - After the closing bullet of the strategy list, insert the four-row tradeoff table from `docs/strategy-and-dependencies.md` section 'Recommended default'. Columns: Strategy, Composes dependencies?, Notes. Rows: pr_or_epic_merge (Yes, within an epic; Default — same strategy yields PR-on-main and merge-to-epic depending on target_branch), merge (Yes, when ticket and deps share target_branch; Lands directly on the target, skips supervisor review on main), pr (No; state→implemented fires when the PR is opened, not when it merges, so downstream tickets can start before upstream code lands), none (No; nothing lands automatically, downstream tickets cannot rely on upstream code being present).
-
-**4. Create `docs/agents.md`**
-
-New file with three parts:
-- A one-paragraph summary of the two-tier model: standalone tickets (no epic) target the default branch and get a PR on implemented; epic tickets target the epic branch and merge directly on implemented.
-- The same four-row tradeoff table as above.
-- A closing note that dependencies are only safe with `pr_or_epic_merge` (within an epic) or `merge` (shared target branch); point to `docs/strategy-and-dependencies.md` for the full dependency rules.
+- After the table, add a line referencing `docs/strategy-and-dependencies.md` for the full dependency rules and strategy rationale.
 
 ### Open questions
 
