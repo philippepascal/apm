@@ -19,13 +19,11 @@ depends_on = ["a3dc64db"]
 
 ### Problem
 
-`apm validate` (see `apm validate --help`) currently checks apm.toml correctness, branch-field consistency, and uniqueness of branch names. It does not check that existing tickets' `depends_on` satisfies the strategy rules from the spec at `docs/strategy-and-dependencies.md` (section 'Dependency rules per strategy').
+`apm validate` currently checks config correctness, ticket state validity, and branch-field consistency. It does not check whether existing tickets' `depends_on` fields satisfy the rules for the currently configured completion strategy.
 
-Extend `apm validate` to walk every ticket and report any whose `depends_on` violates the current rule (per the configured completion strategy and the deps' epic / target_branch fields). Failures appear in both human and `--json` output, with one entry per violating ticket.
+The spec at `docs/strategy-and-dependencies.md` (section Dependency rules per strategy) defines when dependencies compose safely: under `pr_or_epic_merge`, all deps must share the ticket's epic; under `merge`, all deps must share the ticket's `target_branch`; under `pr` or `none`, no deps are allowed at all. These rules are enforced at write time by ticket a3dc64db, but tickets created before that enforcement existed -- or tickets whose config changed after creation -- can violate the rules silently.
 
-Reuse the helper added in ticket a3dc64db (strategy-aware dependency rules) so the rule lives in exactly one place and `apm validate` and the `depends_on` write sites (`apm new`, `apm set`) enforce identical semantics.
-
-See docs/strategy-and-dependencies.md, section 'Dependency rules per strategy'.
+This ticket extends `apm validate` to walk every non-closed ticket and report each one whose `depends_on` violates the active strategy rule. Ticket a3dc64db provides `active_completion_strategy()` and `check_depends_on_rules()` in `apm-core/src/validate.rs`; this ticket adds a sweep function that calls them over all loaded tickets, keeping the rule logic in a single place shared by both the write-time guards and the full-scan validator.
 
 ### Acceptance criteria
 
