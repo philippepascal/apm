@@ -27,7 +27,12 @@ This ticket wires that helper into `run_close`, replacing the existing bespoke g
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic close <id>` refuses when any epic ticket is in a non-terminal, non-`worker_end` state
+- [ ] `apm epic close <id>` refuses when any epic ticket has a live worker process
+- [ ] The refusal message begins with `"cannot close epic: the following tickets are not quiescent:"` followed by one line per blocker
+- [ ] Each blocker line names the ticket ID, title, and either its state or `"live worker"`
+- [ ] `apm epic close <id>` succeeds (pushes branch and opens PR) when all epic tickets are in terminal or `worker_end` states and no live workers exist
+- [ ] An epic with zero tickets passes the quiescence check and proceeds to PR creation
 
 ### Out of scope
 
