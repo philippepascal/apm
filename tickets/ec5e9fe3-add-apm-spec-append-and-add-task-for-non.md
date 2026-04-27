@@ -1,7 +1,7 @@
 +++
 id = "ec5e9fe3"
 title = "Add apm spec --append and --add-task for non-destructive section updates"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ec5e9fe3-add-apm-spec-append-and-add-task-for-non"
 created_at = "2026-04-27T22:17:27.580621Z"
-updated_at = "2026-04-27T23:09:52.090225Z"
+updated_at = "2026-04-27T23:10:01.907197Z"
 +++
 
 ## Spec
@@ -203,3 +203,4 @@ Update the dispatch arm for `Command::Spec` to pass the three new arguments to `
 | 2026-04-27T22:17Z | — | new | philippepascal |
 | 2026-04-27T22:55Z | new | groomed | philippepascal |
 | 2026-04-27T23:05Z | groomed | in_design | philippepascal |
+| 2026-04-27T23:10Z | in_design | specd | claude-0427-2305-aaf0 |
