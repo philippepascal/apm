@@ -2,11 +2,6 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Deserialize, Default)]
-pub struct EpicConfig {
-    pub max_workers: Option<usize>,
-}
-
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionType {
@@ -178,8 +173,6 @@ pub struct Config {
     #[serde(default)]
     pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
     #[serde(default)]
-    pub epics: std::collections::HashMap<String, EpicConfig>,
-    #[serde(default)]
     pub context: ContextConfig,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
@@ -327,6 +320,8 @@ fn default_risk_weight() -> f64 { -1.0 }
 pub struct AgentsConfig {
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
+    #[serde(default = "default_max_workers_per_epic")]
+    pub max_workers_per_epic: usize,
     #[serde(default)]
     pub instructions: Option<PathBuf>,
     #[serde(default = "default_true")]
@@ -336,6 +331,7 @@ pub struct AgentsConfig {
 }
 
 fn default_max_concurrent() -> usize { 3 }
+fn default_max_workers_per_epic() -> usize { 1 }
 fn default_true() -> bool { true }
 
 #[derive(Debug, Deserialize)]
@@ -358,6 +354,7 @@ impl Default for AgentsConfig {
     fn default() -> Self {
         Self {
             max_concurrent: default_max_concurrent(),
+            max_workers_per_epic: default_max_workers_per_epic(),
             instructions: None,
             side_tickets: true,
             skip_permissions: false,
@@ -508,28 +505,18 @@ impl WorkersConfig {
 }
 
 impl Config {
-    pub fn epic_max_workers(&self, epic_id: &str) -> Option<usize> {
-        self.epics.get(epic_id).and_then(|e| e.max_workers)
-    }
-
-    /// Returns epic IDs that have reached their `max_workers` limit
+    /// Returns epic IDs that have reached the global `max_workers_per_epic` limit
     /// given the currently active worker epic assignments.
     pub fn blocked_epics(&self, active_epic_ids: &[Option<String>]) -> Vec<String> {
-        let distinct: std::collections::HashSet<&str> = active_epic_ids.iter()
-            .filter_map(|eid| eid.as_deref())
-            .collect();
-        let mut blocked = Vec::new();
-        for eid in distinct {
-            if let Some(limit) = self.epic_max_workers(eid) {
-                let count = active_epic_ids.iter()
-                    .filter(|e| e.as_deref() == Some(eid))
-                    .count();
-                if count >= limit {
-                    blocked.push(eid.to_string());
-                }
-            }
+        let limit = self.agents.max_workers_per_epic;
+        let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+        for eid in active_epic_ids.iter().filter_map(|e| e.as_deref()) {
+            *counts.entry(eid).or_insert(0) += 1;
         }
-        blocked
+        counts.into_iter()
+            .filter(|(_, count)| *count >= limit)
+            .map(|(eid, _)| eid.to_string())
+            .collect()
     }
 
     /// States where `actor` can actively pick up / act on tickets.
@@ -598,20 +585,6 @@ impl Config {
                 );
             }
             config.ticket = tk.ticket;
-        }
-
-        let epics_path = apm_dir.join("epics.toml");
-        if epics_path.exists() {
-            let ep_contents = std::fs::read_to_string(&epics_path)
-                .with_context(|| format!("cannot read {}", epics_path.display()))?;
-            let ep: std::collections::HashMap<String, EpicConfig> = toml::from_str(&ep_contents)
-                .with_context(|| format!("cannot parse {}", epics_path.display()))?;
-            if !config.epics.is_empty() {
-                config.load_warnings.push(
-                    "both .apm/epics.toml and [epics] in config.toml exist; epics.toml takes precedence".into()
-                );
-            }
-            config.epics = ep;
         }
 
         let local_path = apm_dir.join("local.toml");
@@ -1130,41 +1103,30 @@ dir = "tickets"
     }
 
     #[test]
-    fn epic_config_parses_from_epics_toml() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        let apm_dir = root.join(".apm");
-        std::fs::create_dir_all(&apm_dir).unwrap();
-        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
-        std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\nmax_workers = 2\n\n[ff001122]\nmax_workers = 1\n").unwrap();
-        let config = Config::load(root).unwrap();
-        assert_eq!(config.epic_max_workers("ab12cd34"), Some(2));
-        assert_eq!(config.epic_max_workers("ff001122"), Some(1));
-        assert_eq!(config.epic_max_workers("nonexistent"), None);
+    fn agents_max_workers_per_epic_defaults_to_one() {
+        let toml = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n";
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.agents.max_workers_per_epic, 1);
     }
 
     #[test]
-    fn epic_config_absent_defaults_empty() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        let apm_dir = root.join(".apm");
-        std::fs::create_dir_all(&apm_dir).unwrap();
-        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
-        let config = Config::load(root).unwrap();
-        assert!(config.epics.is_empty());
-        assert_eq!(config.epic_max_workers("any_id"), None);
+    fn blocked_epics_global_limit_one() {
+        let toml = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n";
+        let config: Config = toml::from_str(toml).unwrap();
+        // limit=1, one active worker in epic A → epic A is blocked
+        let active = vec![Some("epicA".to_string())];
+        let blocked = config.blocked_epics(&active);
+        assert!(blocked.contains(&"epicA".to_string()));
     }
 
     #[test]
-    fn epic_config_no_max_workers_returns_none() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        let apm_dir = root.join(".apm");
-        std::fs::create_dir_all(&apm_dir).unwrap();
-        std::fs::write(apm_dir.join("config.toml"), "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n").unwrap();
-        std::fs::write(apm_dir.join("epics.toml"), "[ab12cd34]\n").unwrap();
-        let config = Config::load(root).unwrap();
-        assert_eq!(config.epic_max_workers("ab12cd34"), None);
+    fn blocked_epics_global_limit_two() {
+        let toml = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n\n[agents]\nmax_workers_per_epic = 2\n";
+        let config: Config = toml::from_str(toml).unwrap();
+        // limit=2, one active worker in epic A → epic A is NOT blocked
+        let active = vec![Some("epicA".to_string())];
+        let blocked = config.blocked_epics(&active);
+        assert!(!blocked.contains(&"epicA".to_string()));
     }
 
     #[test]

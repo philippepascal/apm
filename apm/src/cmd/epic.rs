@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::io::IsTerminal;
 use std::path::Path;
 use crate::ctx::CmdContext;
@@ -200,9 +200,6 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
     println!("Epic:   {title}");
     println!("Branch: {branch}");
     println!("State:  {derived}");
-    if let Some(limit) = ctx.config.epic_max_workers(epic_id) {
-        println!("Max workers: {limit}");
-    }
 
     if epic_tickets.is_empty() {
         println!();
@@ -242,8 +239,8 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
 }
 
 pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -> anyhow::Result<()> {
-    if field != "max_workers" && field != "owner" {
-        anyhow::bail!("unknown field {field:?}; valid fields: max_workers, owner");
+    if field != "owner" {
+        anyhow::bail!("unknown field {field:?}; valid fields: owner");
     }
 
     // Validate the epic exists.
@@ -262,54 +259,14 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     let branch = &matches[0];
     let epic_id = epic_id_from_branch(branch).to_string();
 
-    if field == "owner" {
-        let config = apm_core::config::Config::load(root)?;
+    let config = apm_core::config::Config::load(root)?;
 
-        // Pre-flight: validate the new owner
-        let local = apm_core::config::LocalConfig::load(root);
-        apm_core::validate::validate_owner(&config, &local, value)?;
+    // Pre-flight: validate the new owner
+    let local = apm_core::config::LocalConfig::load(root);
+    apm_core::validate::validate_owner(&config, &local, value)?;
 
-        let (changed, skipped) = apm_core::epic::set_epic_owner(root, &epic_id, value, &config)?;
-        println!("updated {changed} ticket(s), skipped {skipped} terminal ticket(s)");
-        return Ok(());
-    }
-
-    let apm_dir = root.join(".apm");
-    let epics_path = apm_dir.join("epics.toml");
-
-    let raw = if epics_path.exists() {
-        std::fs::read_to_string(&epics_path)
-            .with_context(|| format!("cannot read {}", epics_path.display()))?
-    } else {
-        String::new()
-    };
-    let mut doc: toml_edit::DocumentMut = raw.parse()
-        .with_context(|| format!("cannot parse {}", epics_path.display()))?;
-
-    if value == "-" {
-        // Remove max_workers from the epic table.
-        if let Some(epic_tbl) = doc.get_mut(&epic_id) {
-            if let Some(t) = epic_tbl.as_table_mut() {
-                t.remove("max_workers");
-            }
-        }
-    } else {
-        let n: i64 = value.parse().map_err(|_| anyhow::anyhow!("max_workers must be a positive integer, got {value:?}"))?;
-        if n <= 0 {
-            eprintln!("error: max_workers must be ≥ 1, got {n}");
-            std::process::exit(1);
-        }
-
-        // Ensure [<epic_id>] table exists.
-        if doc.get(&epic_id).is_none() {
-            doc.insert(&epic_id, toml_edit::Item::Table(toml_edit::Table::new()));
-        }
-        doc[&epic_id]["max_workers"] = toml_edit::value(n);
-    }
-
-    std::fs::create_dir_all(&apm_dir)?;
-    std::fs::write(&epics_path, doc.to_string())
-        .with_context(|| format!("cannot write {}", epics_path.display()))?;
+    let (changed, skipped) = apm_core::epic::set_epic_owner(root, &epic_id, value, &config)?;
+    println!("updated {changed} ticket(s), skipped {skipped} terminal ticket(s)");
     Ok(())
 }
 
@@ -387,10 +344,7 @@ pub(crate) fn run_epic_clean(
     }
 
     // Delete each candidate.
-    let epics_path = root.join(".apm").join("epics.toml");
     for branch in &candidates {
-        let id = apm_core::epic::epic_id_from_branch(branch).to_string();
-
         // Remove active worktree before attempting branch deletion.
         if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, branch) {
             if let Err(e) = apm_core::worktree::remove_worktree(root, &wt_path, false) {
@@ -433,16 +387,6 @@ pub(crate) fn run_epic_clean(
         }
 
         println!("deleted {branch}");
-
-        // Remove the epic's entry from .apm/epics.toml.
-        if epics_path.exists() {
-            let raw = std::fs::read_to_string(&epics_path)?;
-            let mut doc: toml_edit::DocumentMut = raw.parse()?;
-            if doc.contains_key(&id) {
-                doc.remove(&id);
-                std::fs::write(&epics_path, doc.to_string())?;
-            }
-        }
     }
 
     Ok(())
