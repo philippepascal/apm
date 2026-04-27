@@ -46,19 +46,23 @@ Additionally, `README.md` line 175 marks `pr` as the default strategy and does n
 
 ### Approach
 
-Three files change; no Rust source changes are required.
+Four files change; no `.rs` Rust source changes are required.
 
 **1. `.apm/workflow.toml` lines 151-152**
 
-Uncomment line 151 (`completion = "pr_or_epic_merge"`) and comment out line 152 (`completion = "merge"`), so that `pr_or_epic_merge` is the active value for the `in_progress → implemented` transition.
+Uncomment line 151 (`completion = "pr_or_epic_merge"`) and comment out or remove line 152 (`completion = "merge"`), so that `pr_or_epic_merge` is the active value for the `in_progress → implemented` transition.
 
-**2. `README.md` completion strategy list (currently lines 173-181)**
+**2. `apm-core/src/default/workflow.toml` line 143**
+
+Change `completion = "merge"` to `completion = "pr_or_epic_merge"` on the `in_progress → implemented` transition. This is the embedded template that `apm init` writes to new projects; it must match the live `.apm/workflow.toml` change in step 1.
+
+**3. `README.md` completion strategy list (currently lines 173-181)**
 
 - Remove `(default)` from the `pr` bullet (line 175).
 - Add `(default)` to the `pr_or_epic_merge` bullet (line 177).
 - After the closing bullet of the strategy list, insert the four-row tradeoff table from `docs/strategy-and-dependencies.md` section 'Recommended default'. Columns: Strategy, Composes dependencies?, Notes. Rows: pr_or_epic_merge (Yes, within an epic; Default — same strategy yields PR-on-main and merge-to-epic depending on target_branch), merge (Yes, when ticket and deps share target_branch; Lands directly on the target, skips supervisor review on main), pr (No; state→implemented fires when the PR is opened, not when it merges, so downstream tickets can start before upstream code lands), none (No; nothing lands automatically, downstream tickets cannot rely on upstream code being present).
 
-**3. Create `docs/agents.md`**
+**4. Create `docs/agents.md`**
 
 New file with three parts:
 - A one-paragraph summary of the two-tier model: standalone tickets (no epic) target the default branch and get a PR on implemented; epic tickets target the epic branch and merge directly on implemented.
