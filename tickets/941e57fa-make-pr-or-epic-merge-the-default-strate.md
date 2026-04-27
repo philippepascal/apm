@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/941e57fa-make-pr-or-epic-merge-the-default-strate"
 created_at = "2026-04-27T20:27:54.114826Z"
-updated_at = "2026-04-27T22:03:42.883507Z"
+updated_at = "2026-04-27T22:07:03.625113Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
