@@ -1,7 +1,7 @@
 +++
 id = "e845127e"
 title = "Extend apm validate to enforce dependency rules across tickets"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e845127e-extend-apm-validate-to-enforce-dependenc"
 created_at = "2026-04-27T20:28:41.454959Z"
-updated_at = "2026-04-27T20:43:57.941631Z"
+updated_at = "2026-04-27T21:16:27.693838Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 depends_on = ["a3dc64db"]
@@ -54,3 +54,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-27T20:28Z | — | new | philippepascal |
 | 2026-04-27T20:43Z | new | groomed | philippepascal |
+| 2026-04-27T21:16Z | groomed | in_design | philippepascal |
