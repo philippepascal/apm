@@ -36,7 +36,13 @@ This ticket wires that helper into `run_close`, replacing the existing bespoke g
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding `epic_is_quiescent()` itself — that is ticket 2973e208
+- The `apm refresh-epic` command — ticket 2973e208
+- Auto-killing workers or auto-transitioning tickets before close
+- Any changes to `apm validate`, dependency rules, or strategy enforcement
+- Changing the PR creation logic or the `gh_pr_create_or_update` call
+- Removing or changing the per-epic `max_workers` override (ticket 6e3f9e91)
+- Changing the default completion strategy (ticket 941e57fa)
 
 ### Approach
 
