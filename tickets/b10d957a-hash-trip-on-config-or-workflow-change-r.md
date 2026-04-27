@@ -32,7 +32,7 @@ This ticket wires the trigger mechanism. The dependency-rule validation logic it
 - [x] When `.apm/config.toml` and `.apm/workflow.toml` are unchanged since the last successful hash-trip, `apm` commands run without invoking validation (no extra output, negligible overhead beyond a hash comparison)
 - [x] When `.apm/.validate-stamp` is absent, the hash-trip runs on the next invocation; if validation passes, the stamp is created and the command proceeds normally
 - [x] When either config file changes and validation passes, the stamp is updated to the new hash and the command proceeds normally with no user-visible output
-- [ ] When either config file changes and validation fails, `apm new`, `apm state`, `apm set`, `apm spec`, and `apm start` exit with a non-zero code and a message explaining that mutating commands are blocked until validation passes
+- [x] When either config file changes and validation fails, `apm new`, `apm state`, `apm set`, `apm spec`, and `apm start` exit with a non-zero code and a message explaining that mutating commands are blocked until validation passes
 - [ ] When validation fails after a config change, `apm list`, `apm show`, `apm next`, and `apm verify` run normally but print a warning to stderr that the config has changed and validation is failing; `apm sync`, `apm work`, and `apm clean` are blocked with a non-zero exit code like other mutating commands
 - [ ] `apm validate` is never blocked by the hash-trip gate (it must always be runnable so users can diagnose and fix issues)
 - [ ] `apm init` is never blocked by the hash-trip gate (it runs before or during initial config creation)
