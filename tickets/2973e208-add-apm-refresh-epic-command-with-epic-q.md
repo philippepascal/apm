@@ -3,13 +3,13 @@ id = "2973e208"
 title = "Add apm refresh-epic command with epic quiescence check"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2973e208-add-apm-refresh-epic-command-with-epic-q"
 created_at = "2026-04-27T20:28:30.358011Z"
-updated_at = "2026-04-27T21:07:40.360079Z"
+updated_at = "2026-04-27T21:14:52.937236Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
