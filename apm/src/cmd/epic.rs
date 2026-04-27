@@ -126,6 +126,68 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn run_refresh_epic(root: &Path, id_arg: &str) -> Result<()> {
+    let config = CmdContext::load_config_only(root)?;
+
+    let matches = apm_core::epic::find_epic_branches(root, id_arg);
+    let epic_branch = match matches.len() {
+        0 => anyhow::bail!("no epic branch found matching '{id_arg}'"),
+        1 => matches.into_iter().next().unwrap(),
+        _ => anyhow::bail!(
+            "ambiguous id '{id_arg}': matches {}\n  {}",
+            matches.len(),
+            matches.join("\n  ")
+        ),
+    };
+
+    let epic_id = epic_id_from_branch(&epic_branch);
+
+    let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;
+    let blockers = apm_core::epic::epic_is_quiescent(root, epic_id, &config, &worktrees)?;
+    if !blockers.is_empty() {
+        anyhow::bail!(
+            "cannot refresh epic: the following tickets are not quiescent:\n{}",
+            blockers.join("\n")
+        );
+    }
+
+    let default_branch = &config.project.default_branch;
+
+    let log_out = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["log", "--oneline", "--no-decorate", &format!("{epic_branch}..{default_branch}")])
+        .output()?;
+    if !log_out.status.success() {
+        anyhow::bail!("git log failed: {}", String::from_utf8_lossy(&log_out.stderr).trim());
+    }
+    let log_str = String::from_utf8_lossy(&log_out.stdout);
+    let log_str = log_str.trim();
+
+    if log_str.is_empty() {
+        println!("epic branch is up to date with {default_branch}");
+        return Ok(());
+    }
+
+    let pr_title = format!("{epic_id}: refresh from {default_branch}");
+    let pr_body = log_str.to_string();
+
+    apm_core::git::push_branch_tracking(root, &epic_branch)?;
+
+    let mut messages = vec![];
+    apm_core::github::gh_pr_create_or_update_between(
+        root,
+        default_branch,
+        &epic_branch,
+        &pr_title,
+        &pr_body,
+        &mut messages,
+    )?;
+    for m in &messages {
+        println!("{m}");
+    }
+    Ok(())
+}
+
 pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> anyhow::Result<()> {
     let ctx = CmdContext::load(root, no_aggressive)?;
 
