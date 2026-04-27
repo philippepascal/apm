@@ -1,7 +1,7 @@
 +++
 id = "941e57fa"
 title = "Make pr_or_epic_merge the default strategy and document tradeoffs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/941e57fa-make-pr-or-epic-merge-the-default-strate"
 created_at = "2026-04-27T20:27:54.114826Z"
-updated_at = "2026-04-27T20:43:32.533672Z"
+updated_at = "2026-04-27T20:44:02.372454Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
@@ -55,3 +55,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-27T20:27Z | — | new | philippepascal |
 | 2026-04-27T20:43Z | new | groomed | philippepascal |
+| 2026-04-27T20:44Z | groomed | in_design | philippepascal |
