@@ -39,7 +39,13 @@ APM does not stop running workers; the supervisor is responsible for pausing the
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating `apm epic close` to use `epic_is_quiescent()` — that is ticket 056b1ee1
+- Auto-merging the refresh PR; the supervisor merges it manually
+- Stopping or killing running workers before the refresh
+- Any changes to `apm validate`, dependency rules, or strategy enforcement
+- Removing the per-epic `max_workers` override (ticket 6e3f9e91)
+- Changing the default completion strategy (ticket 941e57fa)
+- Adding the refresh PR to any CI/automation pipeline
 
 ### Approach
 
