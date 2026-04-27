@@ -61,7 +61,131 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 
 ### Approach
 
-How the implementation will work.
+**`apm-core/src/spec.rs` — add `append_section`**
+
+Add one new public function below `set_section`:
+
+```rust
+pub fn append_section(doc: &mut TicketDocument, name: &str, value: String) {
+    let existing = get_section(doc, name).unwrap_or_default();
+    let new_value = if existing.trim().is_empty() {
+        value
+    } else {
+        format!("{}\n{}", existing.trim_end(), value)
+    };
+    set_section(doc, name, new_value);
+}
+```
+
+`trim_end()` on existing prevents a double blank line when the stored value has a trailing newline. Add three unit tests in the `#[cfg(test)]` block:
+- `append_section_adds_to_existing` — verifies existing + "\n" + new
+- `append_section_creates_when_absent` — section not in doc; value becomes the content
+- `append_section_treats_empty_section_as_absent` — section exists but is `""` or whitespace-only; result is just the new value
+
+No other changes to `spec.rs`.
+
+---
+
+**`apm/src/main.rs` — extend `Spec` variant in `Command` enum**
+
+Add three new fields inside the `Spec { … }` struct variant, after `mark`:
+
+```rust
+/// Append content to the section without replacing existing content; use "-" to read from stdin
+#[arg(long, allow_hyphen_values = true, conflicts_with_all = ["set", "set_file", "append_file", "add_task"])]
+append: Option<String>,
+
+/// Read content to append from this file
+#[arg(long, value_name = "PATH", conflicts_with_all = ["set", "set_file", "append", "add_task"])]
+append_file: Option<String>,
+
+/// Append a new unchecked task item (`- [ ] <text>`) to a tasks-typed section
+#[arg(long, conflicts_with_all = ["set", "set_file", "append", "append_file"])]
+add_task: Option<String>,
+```
+
+Update the dispatch arm for `Command::Spec` to pass the three new arguments to `cmd::spec::run`.
+
+---
+
+**`apm/src/cmd/spec.rs` — extend `run` signature and add handling**
+
+1. Add `append: Option<String>`, `append_file: Option<String>`, `add_task: Option<String>` to the `run` function signature.
+
+2. Add guard clauses immediately after the existing `--mark` / `--set` guards:
+   ```rust
+   if append.is_some() && section.is_none()    { bail!("--append requires --section"); }
+   if append_file.is_some() && section.is_none() { bail!("--append-file requires --section"); }
+   if add_task.is_some() && section.is_none()  { bail!("--add-task requires --section"); }
+   ```
+
+3. After the `--mark` early-return block, before the `--set` block, insert two new blocks. These run after `doc` is parsed (move them after `let mut doc = ...`).
+
+   **`--add-task` block** (insert before `--append` block):
+   ```rust
+   if let Some(ref task_text) = add_task {
+       let name = section.as_ref().unwrap();
+       if config_active {
+           match config.find_section(name) {
+               Some(sc) if sc.type_ != SectionType::Tasks =>
+                   bail!("--add-task requires a tasks section; {:?} has type {:?}", name, sc.type_),
+               None => bail!("unknown section {:?}; not defined in [ticket.sections]", name),
+               _ => {}
+           }
+       }
+       let item = format!("- [ ] {}", task_text.trim());
+       spec::append_section(&mut doc, name, item);
+       t.body = doc.serialize();
+       git::commit_to_branch(root, &branch, &rel_path, &t.serialize()?,
+           &format!("ticket({id}): add task to {name}"))?;
+       if aggressive {
+           if let Err(e) = git::push_branch(root, &branch) {
+               eprintln!("warning: push failed: {e:#}");
+           }
+       }
+       println!("ticket #{id}: task added to {name:?}");
+       return Ok(());
+   }
+   ```
+
+   **`--append` / `--append-file` block** (insert after `--add-task` block):
+   ```rust
+   let append_resolved = match (append, append_file) {
+       (Some(v), _) => Some(v),
+       (None, Some(path)) => Some(std::fs::read_to_string(&path)
+           .map_err(|e| anyhow::anyhow!("--append-file: {}: {e}", path))?),
+       (None, None) => None,
+   };
+   if let Some(value) = append_resolved {
+       let name = section.as_ref().unwrap();
+       let trimmed = value.trim().to_string();
+       let formatted = if config_active {
+           let sc = config.find_section(name).unwrap();
+           spec::apply_section_type(&sc.type_, trimmed)
+       } else {
+           trimmed
+       };
+       spec::append_section(&mut doc, name, formatted);
+       t.body = doc.serialize();
+       git::commit_to_branch(root, &branch, &rel_path, &t.serialize()?,
+           &format!("ticket({id}): append to section {name}"))?;
+       if aggressive {
+           if let Err(e) = git::push_branch(root, &branch) {
+               eprintln!("warning: push failed: {e:#}");
+           }
+       }
+       println!("ticket #{id}: section {name:?} updated");
+       return Ok(());
+   }
+   ```
+
+4. The existing `--set` / `--set-file` block and read-only path remain unchanged below.
+
+---
+
+**Order matters:** place `--add-task` check before `--append` check, and both before the existing `--set` check. All three follow the `--mark` early-return and the `let mut doc` / `let config_active` lines.
+
+**No other files change.** The `SectionType` enum already has `Tasks`; no new variants needed.
 
 ### Open questions
 
