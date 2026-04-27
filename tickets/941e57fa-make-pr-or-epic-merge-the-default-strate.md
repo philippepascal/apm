@@ -28,6 +28,7 @@ Additionally, `README.md` line 175 marks `pr` as the default strategy and does n
 
 - [ ] `.apm/workflow.toml` `in_progress → implemented` transition has `completion = "pr_or_epic_merge"` as the active (uncommented) value
 - [ ] The old `completion = "merge"` line is removed or commented out in `.apm/workflow.toml`
+- [ ] `apm-core/src/default/workflow.toml` `in_progress → implemented` transition has `completion = "pr_or_epic_merge"` as the active value
 - [ ] `README.md` completion strategy list marks `pr_or_epic_merge` as the default, not `pr`
 - [ ] `README.md` includes the four-row strategy tradeoff table (strategies: pr_or_epic_merge, merge, pr, none) matching the table in `docs/strategy-and-dependencies.md` section 'Recommended default'
 - [ ] `docs/agents.md` is created and contains the completion strategy tradeoff table
@@ -68,8 +69,8 @@ New file with three parts:
 
 
 ### Amendment requests
-default configuration in src/ must have completion = "pr_or_epic_merge
 
+default configuration in src/ must have completion = "pr_or_epic_merge
 
 ### Code review
 
