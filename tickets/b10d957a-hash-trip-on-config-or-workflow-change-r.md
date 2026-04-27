@@ -1,7 +1,7 @@
 +++
 id = "b10d957a"
 title = "Hash-trip on config or workflow change runs apm validate"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b10d957a-hash-trip-on-config-or-workflow-change-r"
 created_at = "2026-04-27T20:28:59.343081Z"
-updated_at = "2026-04-27T20:44:04.648125Z"
+updated_at = "2026-04-27T21:24:54.837160Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 depends_on = ["e845127e"]
@@ -56,3 +56,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-27T20:28Z | — | new | philippepascal |
 | 2026-04-27T20:44Z | new | groomed | philippepascal |
+| 2026-04-27T21:24Z | groomed | in_design | philippepascal |
