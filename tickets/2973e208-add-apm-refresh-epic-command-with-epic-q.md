@@ -1,7 +1,7 @@
 +++
 id = "2973e208"
 title = "Add apm refresh-epic command with epic quiescence check"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2973e208-add-apm-refresh-epic-command-with-epic-q"
 created_at = "2026-04-27T20:28:30.358011Z"
-updated_at = "2026-04-27T22:55:16.980111Z"
+updated_at = "2026-04-27T23:27:42.422871Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
@@ -204,3 +204,4 @@ Steps:
 | 2026-04-27T21:07Z | groomed | in_design | philippepascal |
 | 2026-04-27T21:16Z | in_design | specd | claude-0427-2107-7f30 |
 | 2026-04-27T22:55Z | specd | ready | philippepascal |
+| 2026-04-27T23:27Z | ready | in_progress | philippepascal |
