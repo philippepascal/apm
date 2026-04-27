@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+mod hash_trip;
+
 #[derive(Parser)]
 #[command(
     name = "apm",
@@ -813,6 +815,29 @@ fn main() -> Result<()> {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     apm_core::logger::log("cmd", &args.join(" "));
+    if !hash_trip::is_exempt_command(&cli.command) {
+        match hash_trip::run(&root)? {
+            hash_trip::HashTripOutcome::Clean | hash_trip::HashTripOutcome::PassedAndRefreshed => {}
+            hash_trip::HashTripOutcome::Failed(issues) => {
+                for (subject, msg) in &issues {
+                    #[allow(clippy::print_stderr)]
+                    { eprintln!("  {}: {}", subject, msg); }
+                }
+                if hash_trip::is_read_only_command(&cli.command) {
+                    #[allow(clippy::print_stderr)]
+                    { eprintln!("warning: config has changed and apm validate is failing."); }
+                    #[allow(clippy::print_stderr)]
+                    { eprintln!("Run apm validate to see details and fix the issues."); }
+                } else {
+                    #[allow(clippy::print_stderr)]
+                    { eprintln!("error: config has changed and validation is failing."); }
+                    #[allow(clippy::print_stderr)]
+                    { eprintln!("Mutating commands are blocked. Run apm validate to fix."); }
+                    std::process::exit(2);
+                }
+            }
+        }
+    }
     match cli.command {
         Command::Init { no_claude, migrate, with_docker, quiet } => cmd::init::run(&root, no_claude, migrate, with_docker, quiet),
         Command::List { state, unassigned, all, actionable, no_aggressive, mine, author, owner } => cmd::list::run(&root, state, unassigned, all, actionable, no_aggressive, mine, author, owner),

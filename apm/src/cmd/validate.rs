@@ -118,6 +118,12 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
         );
     }
 
+    if config_errors.is_empty() && ticket_issues.is_empty() {
+        if let Ok(hash) = apm_core::hash_stamp::config_hash(root) {
+            let _ = apm_core::hash_stamp::write_stamp(root, &hash);
+        }
+    }
+
     if has_errors {
         anyhow::bail!(
             "{} config errors, {} ticket errors",
