@@ -36,7 +36,7 @@ This ticket wires the trigger mechanism. The dependency-rule validation logic it
 - [x] When validation fails after a config change, `apm list`, `apm show`, `apm next`, and `apm verify` run normally but print a warning to stderr that the config has changed and validation is failing; `apm sync`, `apm work`, and `apm clean` are blocked with a non-zero exit code like other mutating commands
 - [x] `apm validate` is never blocked by the hash-trip gate (it must always be runnable so users can diagnose and fix issues)
 - [x] `apm init` is never blocked by the hash-trip gate (it runs before or during initial config creation)
-- [ ] When `apm validate` completes with no issues, it updates the stamp file, clearing any stale hash-trip block on subsequent commands
+- [x] When `apm validate` completes with no issues, it updates the stamp file, clearing any stale hash-trip block on subsequent commands
 - [ ] `.apm/.validate-stamp` does not appear in `git status` output (it is gitignored via `.apm/.gitignore`)
 - [ ] When `.apm/config.toml` does not exist (not an APM repo), the hash-trip logic is skipped entirely and no stamp file is written
 
