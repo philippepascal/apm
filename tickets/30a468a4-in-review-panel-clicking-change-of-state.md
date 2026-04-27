@@ -40,7 +40,48 @@ The likely cause is a React render-batching race: `setReviewMode(false)` (a Zust
 
 ### Approach
 
-How the implementation will work.
+**Root cause and fix**
+
+The problem is in `apm-ui/src/components/ReviewEditor.tsx`, `handleTransition` (lines 202–224). After a successful transition the code does:
+
+```
+setReviewMode(false)                                                   // line 218
+queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })     // line 219
+queryClient.invalidateQueries({ queryKey: ['tickets'] })               // line 220
+```
+
+`setReviewMode(false)` schedules a Zustand state update. Before React commits it, `queryClient.invalidateQueries` (line 219) marks the `['ticket', ticket.id]` query stale and — because `ReviewEditor` still has an active `useQuery` observer — triggers an immediate background refetch. React may process the React Query internal state change (stale + isFetching) in the same batch, causing `ReviewEditor` to re-render. If that re-render happens before `WorkScreen` has committed `reviewMode = false`, the component stays alive and the panel never closes.
+
+**Fix — wrap `setReviewMode(false)` in `flushSync`**
+
+`flushSync` (from `react-dom`) forces React to synchronously flush the enclosed state update before returning. This guarantees `WorkScreen` has already switched to the normal layout (and unmounted `ReviewEditor`) before the `invalidateQueries` calls trigger any further re-renders.
+
+Changes in `apm-ui/src/components/ReviewEditor.tsx`:
+
+1. Add `import { flushSync } from 'react-dom'` to the imports at the top of the file.
+
+2. In `handleTransition`, change the success block from:
+   ```
+   setReviewMode(false)
+   queryClient.invalidateQueries(...)
+   queryClient.invalidateQueries(...)
+   ```
+   to:
+   ```
+   flushSync(() => setReviewMode(false))
+   queryClient.invalidateQueries(...)
+   queryClient.invalidateQueries(...)
+   ```
+
+No other files need to change. `handleCancel` (line 197) and the keyboard handler (line 243) call `setReviewMode(false)` from synchronous event handlers not followed by query invalidations; they do not exhibit the race and need no change.
+
+**Verification before applying the fix**
+
+Add `console.log('setReviewMode(false) reached')` immediately before line 218 and reproduce the bug in the browser. If the log does NOT appear, the API is returning a non-ok status that the catch/error path silently swallows — surface the error instead of applying flushSync. If the log DOES appear, the race-condition explanation holds; apply flushSync.
+
+**Fallback (if flushSync is insufficient)**
+
+Add a `useEffect` in `Editor` that stores the initial ticket state in a ref when the panel opens, then calls `setReviewMode(false)` whenever `ticket.state` changes to a different value. This is more invasive but removes any dependency on the imperative call-order.
 
 ### Open questions
 
