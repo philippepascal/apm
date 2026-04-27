@@ -1,4 +1,5 @@
 use crate::config::{CompletionStrategy, Config, LocalConfig};
+use crate::ticket_fmt::Ticket;
 use anyhow::{bail, Result};
 use std::collections::HashSet;
 use std::path::Path;
@@ -89,6 +90,34 @@ pub fn check_depends_on_rules(
         }
     }
     Ok(())
+}
+
+/// Walk every non-closed ticket and return a vec of `(subject, message)` pairs
+/// for each ticket whose `depends_on` violates the active completion strategy rule.
+pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, String)> {
+    let strategy = active_completion_strategy(config);
+    let mut violations: Vec<(String, String)> = Vec::new();
+    for ticket in tickets {
+        let fm = &ticket.frontmatter;
+        if fm.state == "closed" {
+            continue;
+        }
+        let dep_ids = match &fm.depends_on {
+            Some(deps) if !deps.is_empty() => deps,
+            _ => continue,
+        };
+        if let Err(e) = check_depends_on_rules(
+            &strategy,
+            fm.epic.as_deref(),
+            fm.target_branch.as_deref(),
+            dep_ids,
+            tickets,
+            &config.project.default_branch,
+        ) {
+            violations.push((format!("#{}", fm.id), e.to_string()));
+        }
+    }
+    violations
 }
 
 pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> Result<()> {
@@ -404,6 +433,87 @@ terminal = true
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("dep1"), "expected dep ID in: {msg}");
+    }
+
+    fn make_full_ticket(id: &str, state: &str, epic: Option<&str>, target_branch: Option<&str>, depends_on: &[&str]) -> Ticket {
+        let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+        let target_line = target_branch.map(|b| format!("target_branch = \"{b}\"\n")).unwrap_or_default();
+        let deps_line = if depends_on.is_empty() {
+            String::new()
+        } else {
+            let quoted: Vec<String> = depends_on.iter().map(|d| format!("\"{d}\"")).collect();
+            format!("depends_on = [{}]\n", quoted.join(", "))
+        };
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"{state}\"\n{epic_line}{target_line}{deps_line}+++\n\n"
+        );
+        Ticket::parse(Path::new(&format!("tickets/{id}-t.md")), &raw).unwrap()
+    }
+
+    #[test]
+    fn validate_depends_on_no_deps_clean() {
+        let config = strategy_config("pr_or_epic_merge");
+        let t1 = make_full_ticket("aa000001", "ready", Some("epic1"), None, &[]);
+        let t2 = make_full_ticket("aa000002", "in_progress", Some("epic1"), None, &[]);
+        let result = validate_depends_on(&config, &[t1, t2]);
+        assert!(result.is_empty(), "expected no violations, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_closed_ticket_skipped() {
+        let config = strategy_config("pr");
+        let dep = make_full_ticket("bb000001", "closed", None, None, &[]);
+        let ticket = make_full_ticket("bb000002", "closed", None, None, &["bb000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert!(result.is_empty(), "closed ticket should be skipped, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_pr_or_epic_merge_same_epic_ok() {
+        let config = strategy_config("pr_or_epic_merge");
+        let dep = make_full_ticket("cc000001", "ready", Some("abc"), None, &[]);
+        let ticket = make_full_ticket("cc000002", "ready", Some("abc"), None, &["cc000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert!(result.is_empty(), "same-epic deps should pass, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_pr_or_epic_merge_cross_epic_fails() {
+        let config = strategy_config("pr_or_epic_merge");
+        let dep = make_full_ticket("dd000001", "ready", Some("xyz"), None, &[]);
+        let ticket = make_full_ticket("dd000002", "ready", Some("abc"), None, &["dd000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("dd000001"), "message should mention dep ID: {}", result[0].1);
+    }
+
+    #[test]
+    fn validate_depends_on_merge_same_target_ok() {
+        let config = strategy_config("merge");
+        let dep = make_full_ticket("ee000001", "ready", None, Some("feat"), &[]);
+        let ticket = make_full_ticket("ee000002", "ready", None, Some("feat"), &["ee000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert!(result.is_empty(), "same-target deps should pass, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_merge_different_target_fails() {
+        let config = strategy_config("merge");
+        let dep = make_full_ticket("ff000001", "ready", None, Some("other"), &[]);
+        let ticket = make_full_ticket("ff000002", "ready", None, Some("feat"), &["ff000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("ff000001"), "message should mention dep ID: {}", result[0].1);
+    }
+
+    #[test]
+    fn validate_depends_on_pr_strategy_rejects_any_dep() {
+        let config = strategy_config("pr");
+        let dep = make_full_ticket("gg000001", "ready", None, None, &[]);
+        let ticket = make_full_ticket("gg000002", "ready", None, None, &["gg000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("pr"), "message should mention strategy: {}", result[0].1);
     }
 
     fn load_config(toml: &str) -> Config {
