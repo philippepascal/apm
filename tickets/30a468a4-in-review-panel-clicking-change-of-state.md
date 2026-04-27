@@ -1,7 +1,7 @@
 +++
 id = "30a468a4"
 title = "in review panel, clicking change of state doesn't close review panel"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/30a468a4-in-review-panel-clicking-change-of-state"
 created_at = "2026-04-27T22:04:03.732362Z"
-updated_at = "2026-04-27T22:04:03.732362Z"
+updated_at = "2026-04-27T22:04:51.036502Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-27T22:04Z | — | new | philippepascal |
+| 2026-04-27T22:04Z | new | groomed | philippepascal |
