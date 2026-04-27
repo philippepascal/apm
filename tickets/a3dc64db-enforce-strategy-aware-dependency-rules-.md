@@ -64,7 +64,55 @@ See docs/strategy-and-dependencies.md, section 'Dependency rules per strategy'.
 
 ### Approach
 
-How the implementation will work.
+Two public functions in `apm-core/src/validate.rs`
+
+No new modules needed; validate.rs is already the home for shared validation logic and accessible as `apm_core::validate::*` from the CLI crate.
+
+**`active_completion_strategy(config: &Config) -> CompletionStrategy`** (pub)
+Walk config.workflow.states, find the state with id == "in_progress", find its transition with to == "implemented". Return that transition completion field. If the state or transition is absent, return CompletionStrategy::None (safest default — no deps allowed when the workflow deviates from standard). Ticket e845127e (apm validate dep-rule checks) will call this same function.
+
+**`check_depends_on_rules(strategy, ticket_epic, ticket_target_branch, dep_ids, all_tickets, default_branch) -> Result<()>`** (pub)
+
+Exact signature: strategy: &CompletionStrategy, ticket_epic: Option<&str>, ticket_target_branch: Option<&str>, dep_ids: &[String], all_tickets: &[Ticket], default_branch: &str
+
+Rules per strategy:
+- Pr | None | Pull: reject any non-empty dep_ids; error "depends_on is not allowed under the <strategy> completion strategy".
+- PrOrEpicMerge: if ticket_epic is None, error "pr_or_epic_merge requires the ticket to belong to an epic before depends_on can be set". For each dep ID: look it up in all_tickets (not found = error "dep <id> not found"); check dep epic == ticket_epic. Collect mismatches. On any violation, single error "pr_or_epic_merge requires all deps to share epic <epic>; offending deps: <id1>, <id2>".
+- Merge: normalize both sides using default_branch when target_branch is None. Collect deps whose target differs. On any violation: "merge requires all deps to share target_branch <branch>; offending deps: <id1>, <id2>".
+
+Ticket is importable in validate.rs via `use crate::ticket_fmt::Ticket;`.
+
+**Write-site: apm/src/cmd/new.rs**
+
+In run(), after depends_on_parsed and epic_id/target_branch are resolved (around line 48), and before the call to ticket::create:
+- Guard: only run when depends_on_parsed is Some and non-empty.
+- Call `apm_core::ticket::load_all_from_git(root, &config.tickets.dir)` to get existing tickets.
+- Call `active_completion_strategy(&config)` to get the strategy.
+- Call `check_depends_on_rules` with strategy, epic_id.as_deref(), target_branch.as_deref(), dep IDs, loaded tickets, and config.project.default_branch.
+- Propagate error with `?`.
+When depends_on is empty (the common case) the ticket load is skipped entirely. new.rs calls CmdContext::load_config_only which already suffices since the ticket load is done separately above.
+
+**Write-site: apm/src/cmd/set.rs**
+
+In run(), before the call to ticket::set_field (around line 20), add a pre-check for field == "depends_on" and value != "-":
+- Parse dep IDs from value: split on comma, trim, filter empty (same logic as in set_field).
+- If the parsed list is non-empty, call active_completion_strategy and check_depends_on_rules.
+- Use t.frontmatter.epic.as_deref(), t.frontmatter.target_branch.as_deref(), &tickets (ctx.tickets, already loaded), and ctx.config.project.default_branch.
+- Bail on error before any mutation occurs.
+
+**Tests (9 new unit tests in apm-core/src/validate.rs `#[cfg(test)]`)**
+
+Follow the existing pattern: build Config from a TOML string, build Ticket objects with Frontmatter directly.
+
+- strategy_finds_in_progress_to_implemented: config with in_progress -> implemented completion = "pr_or_epic_merge" returns PrOrEpicMerge
+- strategy_defaults_to_none_when_absent: config with no in_progress state returns None
+- dep_rules_pr_rejects_dep: strategy Pr, one dep ticket -> Err
+- dep_rules_none_rejects_dep: strategy None, one dep ticket -> Err
+- dep_rules_pr_or_epic_merge_same_epic_ok: ticket and dep both in epic "abc" -> Ok
+- dep_rules_pr_or_epic_merge_different_epic_fails: dep in epic "xyz", ticket in epic "abc" -> Err naming the dep ID
+- dep_rules_pr_or_epic_merge_ticket_no_epic_fails: ticket has no epic -> Err
+- dep_rules_merge_both_default_branch_ok: both target_branch None -> Ok
+- dep_rules_merge_different_target_fails: dep has different target_branch -> Err naming the dep ID
 
 ### Open questions
 
