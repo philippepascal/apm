@@ -4,12 +4,12 @@ title = "Enforce strategy-aware dependency rules at every write site"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3dc64db-enforce-strategy-aware-dependency-rules-"
 created_at = "2026-04-27T20:28:18.110435Z"
-updated_at = "2026-04-27T21:06:59.613771Z"
+updated_at = "2026-04-27T21:07:03.297783Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
