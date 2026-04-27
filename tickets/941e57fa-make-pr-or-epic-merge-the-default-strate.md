@@ -68,6 +68,7 @@ New file with three parts:
 
 
 ### Amendment requests
+default configuration in src/ must have completion = "pr_or_epic_merge
 
 
 ### Code review
