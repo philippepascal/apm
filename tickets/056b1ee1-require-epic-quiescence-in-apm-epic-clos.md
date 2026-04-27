@@ -1,7 +1,7 @@
 +++
 id = "056b1ee1"
 title = "Require epic quiescence in apm epic close"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/056b1ee1-require-epic-quiescence-in-apm-epic-clos"
 created_at = "2026-04-27T20:29:06.958516Z"
-updated_at = "2026-04-27T23:37:26.128144Z"
+updated_at = "2026-04-27T23:40:27.077133Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 depends_on = ["2973e208"]
@@ -89,3 +89,4 @@ Steps 5–6 (derive title, push branch, call `gh_pr_create_or_update`) are uncha
 | 2026-04-27T21:36Z | in_design | specd | claude-0427-2132-b380 |
 | 2026-04-27T22:55Z | specd | ready | philippepascal |
 | 2026-04-27T23:37Z | ready | in_progress | philippepascal |
+| 2026-04-27T23:40Z | in_progress | implemented | claude-0427-2337-0b38 |
