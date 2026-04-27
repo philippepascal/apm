@@ -35,7 +35,13 @@ Additionally, `README.md` line 175 marks `pr` as the default strategy and does n
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Enforcing strategy/target rules at `apm new --depends-on` or `apm start` (ticket a3dc64db)
+- Extending `apm validate` with dependency-rule checks (ticket e845127e)
+- Hash-trip on config or workflow change (ticket b10d957a)
+- The `apm refresh-epic` command (ticket 2973e208)
+- Epic quiescence checks in `apm epic close` (ticket 056b1ee1)
+- Removing the per-epic `max_workers` override (ticket 6e3f9e91)
+- Any changes to Rust source — the behaviour is already implemented; this ticket only changes the config and docs
 
 ### Approach
 
