@@ -18,15 +18,22 @@ target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 
 ### Problem
 
-`apm new --depends-on` and `apm start` currently accept dependencies regardless of the configured completion strategy. The spec at `docs/strategy-and-dependencies.md` (section 'Dependency rules per strategy') defines when dependencies compose safely:
+`apm new --depends-on` and `apm set <id> depends_on …` currently accept dependencies regardless of the configured completion strategy. The spec at `docs/strategy-and-dependencies.md` (section 'Dependency rules per strategy') defines when dependencies compose safely:
 
 - pr_or_epic_merge: ticket and all deps must share an epic
 - merge: ticket and all deps must share target_branch (same epic, or all on default)
 - pr / none: --depends-on is rejected outright
 
-Implement the rule check at both creation time (`apm-core/src/ticket/ticket_util.rs::create`, around the `depends_on` parameter) and at start time (`apm-core/src/start.rs`, before transitioning to `in_progress`). Reject violations with a clear message naming the offending dep IDs and the rule that was broken.
+Implement the rule check at every site where `depends_on` is written:
 
-The rule depends on the completion strategy of the `in_progress → implemented` transition, read from `workflow.toml`. The strategy determination logic should live in a single helper that the start path, the new path, and `apm validate` (a separate ticket) all share.
+- `apm new` — `apm-core/src/ticket/ticket_util.rs::create`, around the `depends_on` parameter
+- `apm set <id> depends_on <ids>` — wherever the `set` subcommand handles the `depends_on` field
+
+Reject violations with a clear message naming the offending dep IDs and the rule that was broken.
+
+Re-validating at `apm start` is **not** required: the hash-trip / `apm validate` mechanism (separate ticket) catches the post-hoc case where a previously-valid setup becomes invalid after a config change. Validating at every write site plus the hash-trip is sufficient and avoids redundant checks on a hot path.
+
+The strategy-determination logic (read from `workflow.toml` to find the `in_progress → implemented` transition's `completion` field) and the per-strategy rule check should live in a single helper that the write paths and `apm validate` (separate ticket) all share.
 
 See docs/strategy-and-dependencies.md, section 'Dependency rules per strategy'.
 
