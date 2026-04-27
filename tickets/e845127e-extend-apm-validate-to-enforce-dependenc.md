@@ -41,7 +41,13 @@ This ticket extends `apm validate` to walk every non-closed ticket and report ea
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Implementing active_completion_strategy() and check_depends_on_rules() -- those are ticket a3dc64db
+- Hash-trip re-validation triggered by config or workflow changes -- ticket b10d957a
+- Auto-fix (--fix) for dependency violations -- no safe automatic correction exists
+- Enforcing dependency rules at write time (apm new, apm set) -- ticket a3dc64db
+- Changing the default completion strategy to pr_or_epic_merge -- ticket 941e57fa
+- Epic quiescence checks in apm epic close or apm refresh-epic -- tickets 056b1ee1, 2973e208
+- Removing the per-epic max_workers override -- ticket 6e3f9e91
 
 ### Approach
 
