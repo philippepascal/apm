@@ -1,7 +1,7 @@
 +++
 id = "ec5e9fe3"
 title = "Add apm spec --append and --add-task for non-destructive section updates"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ec5e9fe3-add-apm-spec-append-and-add-task-for-non"
 created_at = "2026-04-27T22:17:27.580621Z"
-updated_at = "2026-04-27T22:55:14.081682Z"
+updated_at = "2026-04-27T23:05:18.250272Z"
 +++
 
 ## Spec
@@ -57,3 +57,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-27T22:17Z | — | new | philippepascal |
 | 2026-04-27T22:55Z | new | groomed | philippepascal |
+| 2026-04-27T23:05Z | groomed | in_design | philippepascal |
