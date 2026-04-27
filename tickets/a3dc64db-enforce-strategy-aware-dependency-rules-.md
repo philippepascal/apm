@@ -1,6 +1,6 @@
 +++
 id = "a3dc64db"
-title = "Enforce strategy-aware dependency rules at apm new and apm start"
+title = "Enforce strategy-aware dependency rules at every write site"
 state = "new"
 priority = 0
 effort = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3dc64db-enforce-strategy-aware-dependency-rules-"
 created_at = "2026-04-27T20:28:18.110435Z"
-updated_at = "2026-04-27T20:28:18.110435Z"
+updated_at = "2026-04-27T20:42:21.104980Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
