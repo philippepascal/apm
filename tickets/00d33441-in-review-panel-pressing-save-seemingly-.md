@@ -38,7 +38,38 @@ The CLI `apm review` command already solves this correctly: it calls `split_body
 
 ### Approach
 
-How the implementation will work.
+The fix narrows the contract on both sides: the frontend sends only the spec, and the backend accepts only the spec and reconstructs the full file itself.
+
+**Backend — `apm-server/src/handlers/tickets.rs`**
+
+1. In the `GET /api/tickets/{id}` response, add a `spec` field populated by calling `split_body()` on the serialized ticket and extracting only the spec portion. This avoids adding a new endpoint.
+2. In `put_body()`, change the accepted request body from `{ content: String }` (full file) to `{ spec: String }` (spec only).
+3. Add an early validation step: if the incoming `spec` contains `+++` or `\n## History`, return HTTP 400 with a descriptive message.
+4. Load the existing ticket from disk. Use `split_body()` to extract its current front matter and history.
+5. Reconstruct the full file: `front_matter + "\n\n" + new_spec + "\n\n## History\n" + history_rows`.
+6. Write the reconstructed content to disk and commit.
+7. Remove the old front matter / history extraction-and-comparison logic — it is no longer needed because the endpoint no longer accepts those sections.
+
+**Frontend — `apm-ui/src/components/ReviewEditor.tsx`**
+
+1. In `fetchTicket()`, read `ticket.spec` (the new field) instead of `ticket.raw` to populate `initialDoc`.
+2. Remove the `EditorState.changeFilter` extension that was blocking edits to front matter and history ranges — it is no longer needed since those sections are absent from the editor.
+3. In `handleSave()`, send `{ spec: viewRef.current.state.doc.toString() }` instead of `{ content: ... }`.
+
+**Order of steps**
+
+1. Add `spec` to the ticket API response (backend) — unblocks frontend work.
+2. Update `put_body` to accept `spec` and reconstruct the full file (backend).
+3. Add the two validation guards to `put_body` (backend).
+4. Update ReviewEditor to use `ticket.spec` as the initial doc (frontend).
+5. Update `handleSave` to send `{ spec }` (frontend).
+6. Remove the `changeFilter` (frontend).
+7. Update or add tests for the narrowed `put_body` contract.
+
+**Constraints**
+
+- The `split_body()` and `apply_review()` utilities in `apm-core/src/review.rs` already exist and can be reused directly — no new parsing logic needed.
+- The change to `put_body`'s request shape (`content` → `spec`) is a breaking API change. Confirm no other callers send `content` before removing the old field; if the CLI ever calls this endpoint directly, update it too.
 
 ### Open questions
 
