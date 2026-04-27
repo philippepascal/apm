@@ -49,6 +49,41 @@ APM does not stop running workers; the supervisor is responsible for pausing the
 
 ### Approach
 
+**Files changed, in implementation order:**
+
+**`apm-core/src/epic.rs`** — add `pub fn epic_is_quiescent(root, epic_id, config, worktrees) -> Result<Vec<String>>`:
+- Load tickets via `load_all_from_git`; filter to `t.frontmatter.epic == Some(epic_id)`.
+- For each epic ticket, look up its `StateConfig`. If `!terminal && !worker_end`, push `"  {id} — {title} (state: {state})"`.
+- Find the ticket's worktree by matching its branch against the `worktrees: &[(PathBuf, String)]` slice. If found and `worker::is_alive(pid)` on its `.apm-worker.pid` returns true, push `"  {id} — {title} (live worker)"`. Skip the live-worker check if the ticket already appears from the state check.
+- Return the blocker list; empty = quiescent. Accept `worktrees` as a parameter so callers can reuse an already-loaded list and the function is unit-testable.
+
+**`apm-core/src/github.rs`** — add `pub fn gh_pr_create_or_update_between(root, head, base, title, body, messages)`:
+- Check for existing open PR: `gh pr list --head <head> --base <base> --state open --json number --jq .[0].number`.
+- If found, push `"PR #{n} already open ({head} → {base})"` and return `Ok(())`.
+- Otherwise: `gh pr create --base <base> --head <head> --title <title> --body <body>`. On success push the URL; on failure bail.
+- Leave the existing `gh_pr_create_or_update` unchanged.
+
+**`apm/src/cmd/epic.rs`** — add `pub fn run_refresh_epic(root, id_arg)`:
+1. Load config via `CmdContext::load_config_only`.
+2. Resolve epic branch with `find_epic_branches`; bail on 0 or >1 matches (same messages as `run_close`).
+3. Parse `epic_id` with `epic_id_from_branch`.
+4. Load worktrees via `apm_core::worktree::list_ticket_worktrees(root)?`.
+5. Call `epic_is_quiescent(root, epic_id, &config, &worktrees)?`; if blockers are non-empty, bail: `"cannot refresh epic: the following tickets are not quiescent:\n{blockers}"`.
+6. Run `git log --oneline --no-decorate <epic_branch>..<default_branch>`. If output is empty, print `"epic branch is up to date with {default_branch}"` and return `Ok(())`.
+7. Build `pr_title = "{epic_id}: refresh from {default_branch}"` and `pr_body` = the raw `--oneline` output.
+8. Push the epic branch to remote with `git::push_branch_tracking` (ensures the base ref exists on GitHub).
+9. Call `gh_pr_create_or_update_between(root, default_branch, &epic_branch, &pr_title, &pr_body, &mut messages)?` and print each message.
+
+**`apm/src/main.rs`**:
+- Add `RefreshEpic { id: String }` with doc comment `/// Pull default-branch updates into an epic branch` to the top-level `Command` enum.
+- Dispatch: `Command::RefreshEpic { id } => cmd::epic::run_refresh_epic(&root, &id)?`.
+- Add `"  refresh-epic   Pull default-branch updates into an epic branch"` to the `Epics:` block in the `help_template` string.
+
+**Tests to add** (in `apm-core/src/epic.rs`):
+- `epic_is_quiescent` returns empty vec when all epic tickets are in `worker_end` or `terminal` states.
+- `epic_is_quiescent` returns a blocker for a ticket whose state is `!terminal && !worker_end`.
+- `epic_is_quiescent` detects a live-worker blocker when a `.apm-worker.pid` containing the current process's PID exists in the matched worktree path.
+
 ### 1. `apm-core/src/epic.rs` — add `epic_is_quiescent()`
 
 Add a public function:
