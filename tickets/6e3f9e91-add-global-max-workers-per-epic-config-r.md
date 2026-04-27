@@ -35,7 +35,13 @@ Per-epic concurrency is currently controlled via a per-epic override: `apm epic 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Extending `apm validate` with dependency/strategy rule checks (ticket e845127e)
+- Hash-trip on config/workflow change triggering re-validation (ticket b10d957a)
+- The `apm refresh-epic` command (ticket 2973e208)
+- Epic quiescence checks in `apm epic close` (ticket 056b1ee1)
+- Migrating or flagging existing `.apm/epics.toml` files in user repos; silently ignoring them is sufficient
+- Changing `max_concurrent` behaviour (the cross-epic global worker cap under `[agents]`)
+- Any changes to `apm validate` that are not strictly required to make removed symbols compile-clean
 
 ### Approach
 
