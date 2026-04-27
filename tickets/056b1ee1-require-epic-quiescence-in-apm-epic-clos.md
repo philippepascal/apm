@@ -19,11 +19,11 @@ depends_on = ["2973e208"]
 
 ### Problem
 
-`apm epic close` currently opens a PR from the epic to the default branch without checking whether tickets in the epic are still being worked on. The spec at `docs/strategy-and-dependencies.md` (section 'Refresh and close: epic must be quiescent') requires the epic to be quiescent first: no ticket in `in_design`, `in_progress`, or with a live worker.
+`apm epic close` currently gates on a state check: it refuses if any epic ticket is not in a `satisfies_deps: true` or `terminal` state. This check is too narrow — it does not account for live worker processes and does not use the shared quiescence definition established by ticket 2973e208.
 
-Reuse the `epic_is_quiescent()` helper added in ticket 2973e208 (refresh-epic). On non-quiescence, `apm epic close` must refuse with a clear message naming the offending tickets and their states.
+The spec at `docs/strategy-and-dependencies.md` (§ 'Refresh and close: epic must be quiescent') requires the epic to be fully quiescent before the close PR is opened: no ticket may be in an active, non-terminal state, and no ticket may have a live worker process. Ticket 2973e208 adds `epic_is_quiescent()` in `apm-core/src/epic.rs` as the canonical helper for this check, used by both `apm refresh-epic` and `apm epic close`.
 
-See docs/strategy-and-dependencies.md, section 'Refresh and close: epic must be quiescent'.
+This ticket wires that helper into `run_close`, replacing the existing bespoke gate logic with a single call to `epic_is_quiescent()`.
 
 ### Acceptance criteria
 
