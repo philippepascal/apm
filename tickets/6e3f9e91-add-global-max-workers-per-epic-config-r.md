@@ -22,16 +22,16 @@ Per-epic concurrency is currently controlled via a per-epic override: `apm epic 
 
 ### Acceptance criteria
 
-- [ ] `apm epic set <id> max_workers <N>` exits non-zero and prints an error naming `owner` as the only valid field
-- [ ] `apm epic set <id> owner <username>` continues to work correctly after the removal
-- [ ] `.apm/config.toml` / `apm.toml` accepts `[agents] max_workers_per_epic = <N>` and parses it as a usize
-- [ ] When `max_workers_per_epic` is absent from config, it defaults to `1`
-- [ ] The engine loop (`apm work`) does not dispatch a second ticket from epic E while a worker for epic E is already active, given `max_workers_per_epic = 1` (the default)
-- [ ] The engine loop (`apm work`) dispatches a second ticket from epic E when `max_workers_per_epic = 2` and only one worker is active in that epic
-- [ ] `apm start --next` skips all tickets in epic E if epic E already has a ticket in an agent-active non-startable state and `max_workers_per_epic = 1`
-- [ ] `apm epic show <id>` no longer prints a `Max workers:` line
-- [ ] `.apm/epics.toml`, if present, is no longer read and its `max_workers` entries are silently ignored
-- [ ] All removed integration tests (`epic_set_max_workers_*`, `epic_set_zero_value_exits_nonzero`, `epic_set_preserves_existing_config_content`) are replaced by a test asserting `apm epic set <id> max_workers <N>` now errors
+- [x] `apm epic set <id> max_workers <N>` exits non-zero and prints an error naming `owner` as the only valid field
+- [x] `apm epic set <id> owner <username>` continues to work correctly after the removal
+- [x] `.apm/config.toml` / `apm.toml` accepts `[agents] max_workers_per_epic = <N>` and parses it as a usize
+- [x] When `max_workers_per_epic` is absent from config, it defaults to `1`
+- [x] The engine loop (`apm work`) does not dispatch a second ticket from epic E while a worker for epic E is already active, given `max_workers_per_epic = 1` (the default)
+- [x] The engine loop (`apm work`) dispatches a second ticket from epic E when `max_workers_per_epic = 2` and only one worker is active in that epic
+- [x] `apm start --next` skips all tickets in epic E if epic E already has a ticket in an agent-active non-startable state and `max_workers_per_epic = 1`
+- [x] `apm epic show <id>` no longer prints a `Max workers:` line
+- [x] `.apm/epics.toml`, if present, is no longer read and its `max_workers` entries are silently ignored
+- [x] All removed integration tests (`epic_set_max_workers_*`, `epic_set_zero_value_exits_nonzero`, `epic_set_preserves_existing_config_content`) are replaced by a test asserting `apm epic set <id> max_workers <N>` now errors
 
 ### Out of scope
 
