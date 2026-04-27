@@ -18,16 +18,7 @@ target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 
 ### Problem
 
-Per-epic concurrency is currently configurable via `apm epic set <id> max_workers <n>` (see `apm-core/src/epic.rs`, the `epic set` subcommand). The spec at `docs/strategy-and-dependencies.md` (section 'Epic concurrency') makes the parallelism unit the epic itself: each epic holds at most one active worker, and users gain parallelism by creating more epics rather than tuning concurrency within one.
-
-Add a global `max_workers_per_epic` setting under a new section in `.apm/config.toml` (or the project apm.toml schema), default 1. Enforce in the dispatch path (`pick_next` / `apm start --next --spawn`) so a ticket in epic E is not picked while another worker is already active in E.
-
-Remove the per-epic override:
-- Remove the `max_workers` field from the epic frontmatter
-- Remove `apm epic set <id> max_workers ...` (the `set` subcommand should accept only `owner` after this change)
-- Update tests
-
-See docs/strategy-and-dependencies.md, section 'Epic concurrency'.
+Per-epic concurrency is currently controlled via a per-epic override: `apm epic set <id> max_workers <N>` writes a `max_workers` entry to `.apm/epics.toml`, and both the engine loop (`apm work`) and `apm start --next` read it via `Config::blocked_epics()` to cap concurrent workers per epic. Epics **without** an explicit entry are completely uncapped — any number of workers can be dispatched into the same epic simultaneously.\n\nThe design spec at `docs/strategy-and-dependencies.md` (§ 'Epic concurrency') replaces this model: each epic gets at most one active worker by default, controlled by a single global `max_workers_per_epic` setting (default `1`). Users gain parallelism by creating more epics, not by raising a per-epic cap. This makes epics the atomic parallelism unit and eliminates within-epic merge races.\n\nThe per-epic override mechanism must be removed entirely: `apm epic set <id> max_workers` should become an error, `.apm/epics.toml` should stop being read, and the global limit must be enforced uniformly for every epic — including the `run_next` path (`apm start --next --spawn`), which currently applies no epic concurrency limit at all.
 
 ### Acceptance criteria
 
