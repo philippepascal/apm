@@ -23,7 +23,7 @@ depends_on = ["a3dc64db"]
 
 Extend `apm validate` to walk every ticket and report any whose `depends_on` violates the current rule (per the configured completion strategy and the deps' epic / target_branch fields). Failures appear in both human and `--json` output, with one entry per violating ticket.
 
-Reuse the helper added in ticket a3dc64db (strategy-aware dependency rules) so the rule lives in exactly one place and `apm validate`, `apm new`, and `apm start` enforce identical semantics.
+Reuse the helper added in ticket a3dc64db (strategy-aware dependency rules) so the rule lives in exactly one place and `apm validate` and the `depends_on` write sites (`apm new`, `apm set`) enforce identical semantics.
 
 See docs/strategy-and-dependencies.md, section 'Dependency rules per strategy'.
 
