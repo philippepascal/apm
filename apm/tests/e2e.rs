@@ -119,6 +119,17 @@ terminal = true
         let out = apm(p, "apm", &["init", "--no-claude"]);
         assert!(out.status.success(), "apm init failed:\n{}", stderr(&out));
 
+        // Patch the workflow so in_progress → implemented uses completion = "none".
+        // Tests run without a git remote, so strategies that push (pr_or_epic_merge,
+        // pr) would fail. The state transition itself is still fully exercised.
+        let wf_path = p.join(".apm/workflow.toml");
+        let wf = std::fs::read_to_string(&wf_path).unwrap();
+        let wf = wf.replace(
+            "  completion = \"pr_or_epic_merge\"",
+            "  completion = \"none\"",
+        );
+        std::fs::write(&wf_path, wf).unwrap();
+
         Env { dir }
     }
 
