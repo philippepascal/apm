@@ -1,7 +1,7 @@
 +++
 id = "6e3f9e91"
 title = "Add global max_workers_per_epic config; remove per-epic override"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6e3f9e91-add-global-max-workers-per-epic-config-r"
 created_at = "2026-04-27T20:28:07.069581Z"
-updated_at = "2026-04-27T20:28:07.069581Z"
+updated_at = "2026-04-27T20:43:38.659253Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
@@ -55,3 +55,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-27T20:28Z | — | new | philippepascal |
+| 2026-04-27T20:43Z | new | groomed | philippepascal |
