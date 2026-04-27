@@ -1,7 +1,7 @@
 +++
 id = "00d33441"
 title = "in review panel, pressing save seemingly attempts to save front matter and history"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/00d33441-in-review-panel-pressing-save-seemingly-"
 created_at = "2026-04-27T22:04:31.099252Z"
-updated_at = "2026-04-27T22:04:57.279406Z"
+updated_at = "2026-04-27T22:17:43.455676Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-27T22:04Z | — | new | philippepascal |
 | 2026-04-27T22:04Z | new | groomed | philippepascal |
+| 2026-04-27T22:17Z | groomed | in_design | philippepascal |
