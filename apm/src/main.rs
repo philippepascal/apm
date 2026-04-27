@@ -35,6 +35,7 @@ Workflow:
 
 Epics:
   epic           Manage epics
+  refresh-epic   Pull default-branch updates into an epic branch
 
 Maintenance:
   worktrees      List or remove permanent git worktrees
@@ -714,6 +715,11 @@ ac.txt) are always removed automatically without needing --untracked.")]
         #[command(subcommand)]
         command: EpicCommand,
     },
+    /// Pull default-branch updates into an epic branch
+    RefreshEpic {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+    },
     /// Read or write individual spec sections of a ticket
     #[command(long_about = "Read or write individual sections of a ticket's spec.
 
@@ -846,6 +852,7 @@ fn main() -> Result<()> {
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
         Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
         Command::Epic { command: EpicCommand::Set { id, field, value } } => cmd::epic::run_set(&root, &id, &field, &value),
+        Command::RefreshEpic { id } => cmd::epic::run_refresh_epic(&root, &id),
         Command::Register { username } => {
             let inferred = username.is_none();
             let config = apm_core::config::Config::load(&root)?;
