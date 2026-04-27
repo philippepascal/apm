@@ -99,7 +99,7 @@ pub fn is_exempt_command(cmd: &Command) -> bool
 Returns true for Command::Validate and Command::Init. Exempt commands skip the hash-trip gate; Validate handles stamp refresh itself (see step 5), and Init runs before a valid config exists.
 
 pub fn is_read_only_command(cmd: &Command) -> bool
-Returns true for Command::List, Command::Show, Command::Next. These warn but are not blocked when validation fails.
+Returns true for Command::List, Command::Show, Command::Next, Command::Verify. These warn but are not blocked when validation fails. Everything else (including Command::Sync, Command::Work, Command::Clean, and all mutating commands) is blocked.
 
 pub fn run(root: &Path) -> Result<HashTripOutcome>
 1. If <root>/.apm/config.toml is absent -> return Ok(HashTripOutcome::Clean) (not an APM repo).
@@ -109,7 +109,7 @@ pub fn run(root: &Path) -> Result<HashTripOutcome>
 5. Load config via apm_core::config::load(root)
 6. Load tickets (same pattern as cmd::validate::run uses)
 7. Gather issues:
-   - For each error from apm_core::validate::validate_config(&config): push (config.into(), err.to_string())
+   - For each error from apm_core::validate::validate_config(&config): push ("config".into(), err.to_string())
    - For each (subject, msg) from apm_core::validate::validate_depends_on(&config, &tickets) (ticket e845127e): push as-is
 8. If issues is empty -> write_stamp(root, &live)?; return Ok(PassedAndRefreshed)
 9. Else -> return Ok(Failed(issues))
@@ -120,6 +120,7 @@ Unit tests inside hash_trip.rs:
 - list_is_read_only: is_read_only_command returns true for List
 - new_is_not_read_only: is_read_only_command returns false for New
 - state_is_not_read_only: is_read_only_command returns false for State
+- verify_is_read_only: is_read_only_command returns true for Verify
 
 **4. Wire into apm/src/main.rs**
 
