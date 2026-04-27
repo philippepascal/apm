@@ -57,7 +57,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Stdin input via `-` for `--append` (only `--set` supports stdin today; no regression, just not extended)\n- Type validation for `--add-task` when no `[ticket.sections]` config is present — no config means no type to validate; the item is appended unconditionally\n- Changes to existing flag behaviour: `--set`, `--set-file`, `--mark`, `--check` are untouched\n- Bulk append (appending to multiple sections in one invocation)\n- A blank-line separator variant for `--append` (single newline is the separator)
 
 ### Approach
 
