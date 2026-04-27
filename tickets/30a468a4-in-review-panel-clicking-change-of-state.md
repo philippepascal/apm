@@ -3,13 +3,13 @@ id = "30a468a4"
 title = "in review panel, clicking change of state doesn't close review panel"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/30a468a4-in-review-panel-clicking-change-of-state"
 created_at = "2026-04-27T22:04:03.732362Z"
-updated_at = "2026-04-27T22:07:41.523971Z"
+updated_at = "2026-04-27T22:17:07.225580Z"
 +++
 
 ## Spec
