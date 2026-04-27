@@ -4,12 +4,12 @@ title = "in review panel, pressing save seemingly attempts to save front matter 
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/00d33441-in-review-panel-pressing-save-seemingly-"
 created_at = "2026-04-27T22:04:31.099252Z"
-updated_at = "2026-04-27T22:21:38.546274Z"
+updated_at = "2026-04-27T22:21:44.370729Z"
 +++
 
 ## Spec
