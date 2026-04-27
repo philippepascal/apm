@@ -36,7 +36,7 @@ The likely cause is a React render-batching race: `setReviewMode(false)` (a Zust
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the transition API endpoint or its success/error semantics\n- The save-before-transition flow (handleSave behavior is not part of this bug)\n- TransitionButtons in TicketDetail.tsx — those live in the normal (non-review) layout and do not need to close a review panel
 
 ### Approach
 
