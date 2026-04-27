@@ -54,7 +54,13 @@ See docs/strategy-and-dependencies.md, section 'Dependency rules per strategy'.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Enforcing dependency rules at `apm start` time (the hash-trip / `apm validate` mechanism, tickets b10d957a and e845127e, handles post-hoc drift after config changes)
+- Extending `apm validate` to check existing tickets against strategy rules across the whole ticket set (ticket e845127e)
+- Hash-trip on config or workflow change triggering automatic re-validation (ticket b10d957a)
+- Changing the default completion strategy to `pr_or_epic_merge` (ticket 941e57fa)
+- Removing the per-epic `max_workers` override (ticket 6e3f9e91)
+- Epic quiescence checks in `apm epic close` or `apm refresh-epic` (tickets 056b1ee1, 2973e208)
+- Supporting user-defined state names other than `in_progress`/`implemented` for strategy lookup (the helper reads exactly the `in_progress -> implemented` transition)
 
 ### Approach
 
