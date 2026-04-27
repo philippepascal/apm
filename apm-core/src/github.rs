@@ -83,6 +83,39 @@ pub fn gh_pr_create_or_update(root: &Path, branch: &str, default_branch: &str, i
     Ok(())
 }
 
+pub fn gh_pr_create_or_update_between(
+    root: &Path,
+    head: &str,
+    base: &str,
+    title: &str,
+    body: &str,
+    messages: &mut Vec<String>,
+) -> Result<()> {
+    let existing = std::process::Command::new("gh")
+        .args(["pr", "list", "--head", head, "--base", base, "--state", "open", "--json", "number", "--jq", ".[0].number"])
+        .current_dir(root)
+        .output()?;
+
+    let pr_num = String::from_utf8_lossy(&existing.stdout).trim().to_string();
+    if !pr_num.is_empty() && pr_num != "null" {
+        messages.push(format!("PR #{pr_num} already open ({head} → {base})"));
+        return Ok(());
+    }
+
+    let out = std::process::Command::new("gh")
+        .args(["pr", "create", "--base", base, "--head", head, "--title", title, "--body", body])
+        .current_dir(root)
+        .output()?;
+
+    if out.status.success() {
+        let url = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        messages.push(format!("PR created: {url}"));
+    } else {
+        bail!("gh pr create failed: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    Ok(())
+}
+
 fn pr_title(id: &str, title: &str) -> String {
     let short_id = &id[..8.min(id.len())];
     if title.is_empty() {
