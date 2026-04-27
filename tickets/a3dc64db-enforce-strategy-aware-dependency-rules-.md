@@ -39,18 +39,18 @@ See docs/strategy-and-dependencies.md, section 'Dependency rules per strategy'.
 
 ### Acceptance criteria
 
-- [ ] `apm new --depends-on <dep> --epic <epic>` succeeds when `<dep>` belongs to the same epic as the new ticket under `pr_or_epic_merge` strategy
-- [ ] `apm new --depends-on <dep> --epic <epic>` fails with a message naming `<dep>` and the violated rule when `<dep>` belongs to a different (or no) epic under `pr_or_epic_merge` strategy
-- [ ] `apm new --depends-on <dep>` (no `--epic`) fails under `pr_or_epic_merge` strategy because the new ticket is not in any epic
-- [ ] `apm new --depends-on <dep>` fails unconditionally under `pr` strategy, naming `<dep>` and the rule
-- [ ] `apm new --depends-on <dep>` fails unconditionally under `none` strategy, naming `<dep>` and the rule
-- [ ] `apm new --depends-on <dep>` succeeds under `merge` strategy when ticket and `<dep>` share the same `target_branch` (including both having no `target_branch`, i.e. both targeting the default branch)
-- [ ] `apm new --depends-on <dep>` fails under `merge` strategy when ticket and `<dep>` have different `target_branch` values, naming `<dep>` and the rule
-- [ ] `apm set <id> depends_on <dep>` succeeds when strategy rules are satisfied for existing ticket `<id>`
-- [ ] `apm set <id> depends_on <dep>` fails with a message naming `<dep>` and the violated rule when the dep violates strategy rules for `<id>`
-- [ ] `apm set <id> depends_on -` always succeeds regardless of strategy (clearing deps is always allowed)
-- [ ] Error messages name the offending dep IDs and state the violated rule (e.g. "dep abc123 not in epic xyz789; pr_or_epic_merge requires all deps to share the ticket epic")
-- [ ] `active_completion_strategy` and `check_depends_on_rules` are public exports from `apm_core::validate`, not inlined in the CLI handlers
+- [x] `apm new --depends-on <dep> --epic <epic>` succeeds when `<dep>` belongs to the same epic as the new ticket under `pr_or_epic_merge` strategy
+- [x] `apm new --depends-on <dep> --epic <epic>` fails with a message naming `<dep>` and the violated rule when `<dep>` belongs to a different (or no) epic under `pr_or_epic_merge` strategy
+- [x] `apm new --depends-on <dep>` (no `--epic`) fails under `pr_or_epic_merge` strategy because the new ticket is not in any epic
+- [x] `apm new --depends-on <dep>` fails unconditionally under `pr` strategy, naming `<dep>` and the rule
+- [x] `apm new --depends-on <dep>` fails unconditionally under `none` strategy, naming `<dep>` and the rule
+- [x] `apm new --depends-on <dep>` succeeds under `merge` strategy when ticket and `<dep>` share the same `target_branch` (including both having no `target_branch`, i.e. both targeting the default branch)
+- [x] `apm new --depends-on <dep>` fails under `merge` strategy when ticket and `<dep>` have different `target_branch` values, naming `<dep>` and the rule
+- [x] `apm set <id> depends_on <dep>` succeeds when strategy rules are satisfied for existing ticket `<id>`
+- [x] `apm set <id> depends_on <dep>` fails with a message naming `<dep>` and the violated rule when the dep violates strategy rules for `<id>`
+- [x] `apm set <id> depends_on -` always succeeds regardless of strategy (clearing deps is always allowed)
+- [x] Error messages name the offending dep IDs and state the violated rule (e.g. "dep abc123 not in epic xyz789; pr_or_epic_merge requires all deps to share the ticket epic")
+- [x] `active_completion_strategy` and `check_depends_on_rules` are public exports from `apm_core::validate`, not inlined in the CLI handlers
 
 ### Out of scope
 
