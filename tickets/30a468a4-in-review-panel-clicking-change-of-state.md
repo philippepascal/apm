@@ -16,7 +16,13 @@ updated_at = "2026-04-27T22:07:41.523971Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When a user opens the review panel (via the "Review" button in `TicketDetail`) and clicks a state-change button (e.g., "→ specd", "→ accepted"), the panel should close and return the user to the normal 3-column board view. Instead, it remains open after the transition.
+
+The review panel is controlled by the `reviewMode` boolean in `useLayoutStore` (`apm-ui/src/store/useLayoutStore.ts`). `WorkScreen` renders a 2-column layout (WorkerView + ReviewEditor) when `reviewMode` is `true`, and the normal 3-column layout (Workers, Board, TicketDetail) when `false`.
+
+Inside `ReviewEditor.tsx`, the `handleTransition` function (lines 202–224) handles state-change button clicks. On a successful API response it calls `setReviewMode(false)` at line 218, which *should* close the panel. Despite this call being present in the code, the panel stays open.
+
+The likely cause is a React render-batching race: `setReviewMode(false)` (a Zustand update) is immediately followed by `queryClient.invalidateQueries` calls (lines 219–220) that—because `ReviewEditor` is still mounted at call time—trigger an immediate background refetch. If React processes the React Query state change before the Zustand update, `ReviewEditor` re-renders once more with `reviewMode` still `true`, and the component survives the render cycle that was supposed to unmount it.
 
 ### Acceptance criteria
 
@@ -33,13 +39,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
