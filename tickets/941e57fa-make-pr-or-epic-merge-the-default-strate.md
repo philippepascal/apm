@@ -70,7 +70,7 @@ Change `completion = "merge"` to `completion = "pr_or_epic_merge"` on the `in_pr
 - [x] Drop creation of `docs/agents.md`. The strategy tradeoff table already lives in `docs/strategy-and-dependencies.md`; updating `README.md` to reference that spec is sufficient. (`.apm/agents.md` exists separately and is for agent runtime instructions, not user-facing strategy docs — do not confuse the two.)
 - [x] Remove the corresponding ACs ("`docs/agents.md` is created and contains the completion strategy tradeoff table" and "tradeoffs documented in `docs/agents.md` and `README.md` correctly describe …").
 - [x] Remove section "3. Create `docs/agents.md`" from the Approach.
-- [ ] Update the Problem section to drop the paragraph about `docs/agents.md` not existing.
+- [x] Update the Problem section to drop the paragraph about `docs/agents.md` not existing.
 
 ### Code review
 
