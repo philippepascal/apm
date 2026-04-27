@@ -34,7 +34,7 @@ The CLI `apm review` command already solves this correctly: it calls `split_body
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- State transitions triggered from the review panel (existing logic, not changed by this ticket)\n- Markdown preview or rendering in the review panel\n- Any editor or panel other than ReviewEditor\n- The CLI `apm review` command (already correct)
 
 ### Approach
 
