@@ -1,7 +1,7 @@
 +++
 id = "a3dc64db"
 title = "Enforce strategy-aware dependency rules at every write site"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3dc64db-enforce-strategy-aware-dependency-rules-"
 created_at = "2026-04-27T20:28:18.110435Z"
-updated_at = "2026-04-27T23:10:23.088424Z"
+updated_at = "2026-04-27T23:21:24.156701Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
@@ -133,3 +133,4 @@ Follow the existing pattern: build Config from a TOML string, build Ticket objec
 | 2026-04-27T21:07Z | in_design | specd | claude-0427-2057-0500 |
 | 2026-04-27T22:55Z | specd | ready | philippepascal |
 | 2026-04-27T23:10Z | ready | in_progress | philippepascal |
+| 2026-04-27T23:21Z | in_progress | implemented | claude-0427-2310-dfd0 |
