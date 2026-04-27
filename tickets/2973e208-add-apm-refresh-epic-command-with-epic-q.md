@@ -34,7 +34,7 @@ APM does not stop running workers; the supervisor is responsible for pausing the
 - [x] `apm refresh-epic <id>` creates a PR with `--base <epic_branch> --head <default_branch>` when the epic is quiescent and new commits exist
 - [x] The refresh PR title is formatted as `<epic_id>: refresh from <default_branch>`
 - [x] The refresh PR body lists the commits on the default branch that are not yet in the epic branch (one per line, `--oneline` format)
-- [ ] If an open PR from the default branch into the epic branch already exists, `apm refresh-epic` reports the existing PR number and exits 0 without creating a duplicate
+- [x] If an open PR from the default branch into the epic branch already exists, `apm refresh-epic` reports the existing PR number and exits 0 without creating a duplicate
 - [ ] `apm_core::epic::epic_is_quiescent` is a public function that accepts the repo root, the epic id, the loaded config, and a list of ticket worktrees, and returns the blocking descriptions so `apm epic close` (ticket 056b1ee1) can reuse it without re-implementing the logic
 
 ### Out of scope
