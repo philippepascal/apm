@@ -18,17 +18,11 @@ target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 
 ### Problem
 
-There is no built-in way to pull default-branch updates into a long-running epic branch. The spec at `docs/strategy-and-dependencies.md` (section 'Refresh and close: epic must be quiescent') defines `apm refresh-epic <id>` as the supervisor-facing tool for this.
+Long-running epic branches drift from the default branch over time. There is no built-in APM command to pull default-branch updates into an epic branch. The spec at `docs/strategy-and-dependencies.md` (§ 'Refresh and close: epic must be quiescent') defines `apm refresh-epic <id>` as the supervisor-facing tool for this: it opens a PR from the default branch into the epic branch, which the supervisor reviews and merges so subsequent workers in the epic see the updated tip.
 
-Implementation:
-- New `apm refresh-epic <id>` subcommand
-- Open a PR from the default branch into `epic/<id>-<slug>` via `gh pr create --base epic/<id>-<slug> --head <default>`
-- PR title and body auto-generated from the diff range (commits on default not yet in the epic)
-- Refuse the operation if the epic is not quiescent: any ticket in the epic is in `in_design`, `in_progress`, or has a live worker. Define a shared `epic_is_quiescent()` helper to be reused by `apm epic close` (separate ticket).
+The command must refuse to run if any ticket in the epic is currently being worked on (i.e., in a state that is neither terminal nor `worker_end`, such as `in_design` or `in_progress`) or has a live worker process (alive `.apm-worker.pid`). This precondition is shared with `apm epic close` (ticket 056b1ee1), so the check must be extracted into a reusable `epic_is_quiescent()` helper in `apm-core`.
 
-The supervisor reviews and merges the PR manually. APM does not stop running workers; it only enforces the precondition.
-
-See docs/strategy-and-dependencies.md, section 'Refresh and close: epic must be quiescent'.
+APM does not stop running workers; the supervisor is responsible for pausing the dispatcher and waiting for the active worker to complete before calling this command.
 
 ### Acceptance criteria
 
