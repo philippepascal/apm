@@ -28,7 +28,7 @@ APM does not stop running workers; the supervisor is responsible for pausing the
 
 - [x] `apm refresh-epic <id>` exits with a non-zero code and prints an error if the id prefix matches no epic branch
 - [x] `apm refresh-epic <id>` exits with a non-zero code and prints an error if the id prefix is ambiguous (matches multiple epic branches)
-- [ ] `apm refresh-epic <id>` exits with a non-zero code and lists every blocking ticket when any epic ticket is in a state that is not terminal and not `worker_end`
+- [x] `apm refresh-epic <id>` exits with a non-zero code and lists every blocking ticket when any epic ticket is in a state that is not terminal and not `worker_end`
 - [ ] `apm refresh-epic <id>` exits with a non-zero code and lists every blocking ticket when any epic ticket has a live `.apm-worker.pid` (alive process), even if the ticket state appears clean
 - [ ] `apm refresh-epic <id>` prints a message and exits 0 when the default branch has no new commits not yet present in the epic branch (nothing to refresh)
 - [ ] `apm refresh-epic <id>` creates a PR with `--base <epic_branch> --head <default_branch>` when the epic is quiescent and new commits exist
