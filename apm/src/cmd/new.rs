@@ -58,6 +58,21 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
         )
     };
 
+    if let Some(ref dep_ids) = depends_on_parsed {
+        if !dep_ids.is_empty() {
+            let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+            let strategy = apm_core::validate::active_completion_strategy(&config);
+            apm_core::validate::check_depends_on_rules(
+                &strategy,
+                epic_id.as_deref(),
+                target_branch.as_deref(),
+                dep_ids,
+                &all_tickets,
+                &config.project.default_branch,
+            )?;
+        }
+    }
+
     let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
     let mut warnings = Vec::new();
     let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch, &mut warnings)?;
