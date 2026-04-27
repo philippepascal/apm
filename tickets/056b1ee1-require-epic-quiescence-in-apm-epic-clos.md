@@ -46,7 +46,29 @@ This ticket wires that helper into `run_close`, replacing the existing bespoke g
 
 ### Approach
 
-How the implementation will work.
+Single file changes: **`apm/src/cmd/epic.rs`**, function `run_close`.
+
+**Remove** the existing gate check (the `not_ready` vec, the loop over `epic_tickets`, and the `anyhow::bail!` for not-ready tickets — currently lines 85–105). Also remove the `tickets` and `epic_tickets` bindings that were only used by that check (steps 3–4 in the current code).
+
+**Replace** with the following, inserted after `epic_id` is resolved (after step 2) and before the PR-title derivation (step 5):
+
+```rust
+let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;
+let blockers = apm_core::epic::epic_is_quiescent(root, epic_id, &config, &worktrees)?;
+if !blockers.is_empty() {
+    anyhow::bail!(
+        "cannot close epic: the following tickets are not quiescent:\n{}",
+        blockers.join("\n")
+    );
+}
+```
+
+Steps 5–6 (derive title, push branch, call `gh_pr_create_or_update`) are unchanged.
+
+**Constraints:**
+- `epic_is_quiescent` is defined in ticket 2973e208. This ticket must not be implemented until that dependency is merged; the function signature is `pub fn epic_is_quiescent(root: &Path, epic_id: &str, config: &Config, worktrees: &[(PathBuf, String)]) -> Result<Vec<String>>`.
+- The error message prefix must match `"cannot close epic: the following tickets are not quiescent:"` exactly, to stay consistent with the analogous message in `run_refresh_epic` (`"cannot refresh epic: the following tickets are not quiescent:"`).
+- No new tests are required in `apm/` — `epic_is_quiescent` carries its own unit tests (ticket 2973e208). An integration-level smoke test verifying the bail path is welcome but not required.
 
 ### Open questions
 
