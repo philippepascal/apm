@@ -22,7 +22,7 @@ The `in_progress → implemented` transition in `.apm/workflow.toml` (line 152) 
 
 The `merge` strategy always merges directly to the target branch. For standalone tickets (no epic, target = default branch), this bypasses supervisor PR review. For epic tickets it behaves identically to `pr_or_epic_merge`, so `merge` provides no advantage in that context either. `pr_or_epic_merge` implements the two-tier model with a single setting: standalone tickets get a PR against the default branch (supervisor-reviewed, safe for parallel work), and epic tickets get a direct merge to the epic branch (autonomous serial, deps-safe within the epic).
 
-Additionally, `README.md` line 175 marks `pr` as the default strategy and does not explain the tradeoffs between strategies. After this change it should reflect `pr_or_epic_merge` as the default and include the four-row tradeoff table from `docs/strategy-and-dependencies.md`. `docs/agents.md` does not currently exist; this ticket creates it as the canonical agent-facing reference for completion strategy behaviour.
+Additionally, `README.md` line 175 marks `pr` as the default strategy and does not explain the tradeoffs between strategies. After this change it should reflect `pr_or_epic_merge` as the default and include the four-row tradeoff table from `docs/strategy-and-dependencies.md`.
 
 ### Acceptance criteria
 
