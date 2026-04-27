@@ -4,12 +4,12 @@ title = "Add global max_workers_per_epic config; remove per-epic override"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6e3f9e91-add-global-max-workers-per-epic-config-r"
 created_at = "2026-04-27T20:28:07.069581Z"
-updated_at = "2026-04-27T20:55:44.257398Z"
+updated_at = "2026-04-27T20:55:50.048261Z"
 epic = "5ea30227"
 target_branch = "epic/5ea30227-strategy-and-dependency-hardening"
 +++
