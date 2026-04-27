@@ -27,17 +27,17 @@ This ticket extends `apm validate` to walk every non-closed ticket and report ea
 
 ### Acceptance criteria
 
-- [ ] `apm validate` reports an error for each non-closed ticket whose `depends_on` is non-empty and violates the active completion strategy rule
-- [ ] `apm validate` reports no `depends_on` error for tickets with an empty or absent `depends_on`
-- [ ] `apm validate` skips tickets in the `closed` state when checking `depends_on`
-- [ ] `apm validate` reports a `depends_on` error when a dep ID in `depends_on` is not found in the loaded ticket set
-- [ ] `apm validate --json` includes each dependency violation in the errors array with kind = depends_on
-- [ ] Human-readable output for dependency violations follows the existing format: error [depends_on] #id: message
-- [ ] A ticket with a `depends_on` that satisfies the active strategy (correct epic for `pr_or_epic_merge`, correct `target_branch` for `merge`) produces no `depends_on` error
-- [ ] When the strategy is `pr` or `none`, any ticket with a non-empty `depends_on` is flagged
-- [ ] `apm validate --config-only` does not run dependency checks (tickets are not loaded in config-only mode)
-- [ ] `apm validate` exits with a non-zero exit code when any `depends_on` violation is found
-- [ ] A pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, String)> exists in apm-core/src/validate.rs with at least 7 unit tests covering: no deps, closed ticket skipped, pr_or_epic_merge same-epic passes, pr_or_epic_merge cross-epic fails, merge same-target passes, merge different-target fails, pr strategy rejects any dep
+- [x] `apm validate` reports an error for each non-closed ticket whose `depends_on` is non-empty and violates the active completion strategy rule
+- [x] `apm validate` reports no `depends_on` error for tickets with an empty or absent `depends_on`
+- [x] `apm validate` skips tickets in the `closed` state when checking `depends_on`
+- [x] `apm validate` reports a `depends_on` error when a dep ID in `depends_on` is not found in the loaded ticket set
+- [x] `apm validate --json` includes each dependency violation in the errors array with kind = depends_on
+- [x] Human-readable output for dependency violations follows the existing format: error [depends_on] #id: message
+- [x] A ticket with a `depends_on` that satisfies the active strategy (correct epic for `pr_or_epic_merge`, correct `target_branch` for `merge`) produces no `depends_on` error
+- [x] When the strategy is `pr` or `none`, any ticket with a non-empty `depends_on` is flagged
+- [x] `apm validate --config-only` does not run dependency checks (tickets are not loaded in config-only mode)
+- [x] `apm validate` exits with a non-zero exit code when any `depends_on` violation is found
+- [x] A pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, String)> exists in apm-core/src/validate.rs with at least 7 unit tests covering: no deps, closed ticket skipped, pr_or_epic_merge same-epic passes, pr_or_epic_merge cross-epic fails, merge same-target passes, merge different-target fails, pr strategy rejects any dep
 
 ### Out of scope
 
