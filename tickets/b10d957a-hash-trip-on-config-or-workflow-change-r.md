@@ -42,7 +42,15 @@ This ticket wires the trigger mechanism. The dependency-rule validation logic it
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-fixing dependency violations — no safe automatic correction exists; requires user intervention
+- Enforcing dependency rules at `apm new` or `apm set` write time — ticket a3dc64db
+- Implementing `validate_depends_on` and `check_depends_on_rules` — ticket e845127e; this ticket only wires the trigger
+- Hash-tripping on changes to ticket files, `agents.md`, or any file other than `config.toml` and `workflow.toml`
+- Network-based or CI-triggered re-validation
+- A dedicated `apm stamp reset` or `apm stamp clear` command
+- Sharing the stamp file across machines or storing it in git — the stamp is intentionally machine-local and gitignored
+- Blocking `apm workers`, `apm sessions`, `apm revoke`, `apm version`, `apm register`, `apm show`, `apm list`, `apm next`, or other read-only / administrative commands (they warn but are not blocked)
+- Changing the default completion strategy (ticket 941e57fa) or removing the per-epic max_workers override (ticket 6e3f9e91)
 
 ### Approach
 
