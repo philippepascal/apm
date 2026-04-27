@@ -32,7 +32,28 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] **`--append` / `--append-file`**
+
+- [ ] `apm spec <id> --append <text>` without `--section` exits non-zero with an error containing `"--append requires --section"`
+- [ ] `apm spec <id> --section <name> --append <text>` appends the trimmed text after the existing section content, separated by a single newline
+- [ ] When the target section is empty or absent, `--append` creates it with the new text (no leading newline)
+- [ ] `apm spec <id> --section <name> --append-file <path>` reads the file at `<path>` and appends its contents to the section identically to `--append`
+- [ ] `--append-file` without `--section` exits non-zero with an error containing `"--append-file requires --section"`
+- [ ] Supplying both `--append` and `--set` (or `--set-file`) exits with a clap conflict error
+- [ ] Supplying both `--append` and `--append-file` exits with a clap conflict error
+- [ ] When config is active and the section has a defined type, `--append` applies `apply_section_type` formatting to the appended text before committing (consistent with `--set`)
+- [ ] `--append` commits to the ticket branch with message `ticket(<id>): append to section <name>`
+- [ ] When aggressive sync is enabled, `--append` pushes to origin after the commit; a push failure prints a warning but does not fail the command
+
+- [ ] **`--add-task`**
+
+- [ ] `apm spec <id> --add-task <text>` without `--section` exits non-zero with an error containing `"--add-task requires --section"`
+- [ ] `apm spec <id> --section <name> --add-task <text>` appends `- [ ] <text>` to the named section
+- [ ] When the target section is empty or absent, `--add-task` creates it with `- [ ] <text>` as its sole item
+- [ ] When config is active and the named section has `type != "tasks"`, `--add-task` exits non-zero with an error that names the actual section type
+- [ ] `--add-task` commits to the ticket branch with message `ticket(<id>): add task to <name>`
+- [ ] When aggressive sync is enabled, `--add-task` pushes to origin after the commit; a push failure prints a warning but does not fail the command
+- [ ] Supplying `--add-task` together with `--set`, `--set-file`, `--append`, or `--append-file` exits with a clap conflict error
 
 ### Out of scope
 
