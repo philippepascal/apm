@@ -83,11 +83,11 @@ enum EpicCommand {
         #[arg(long)]
         no_aggressive: bool,
     },
-    /// Set a field on an epic (max_workers or owner)
+    /// Set a field on an epic (owner)
     Set {
         /// Epic ID (4–8 char hex prefix)
         id: String,
-        /// Field to update: max_workers or owner
+        /// Field to update: owner
         field: String,
         /// New value (use "-" to clear)
         value: String,
