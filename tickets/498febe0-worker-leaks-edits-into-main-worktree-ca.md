@@ -117,26 +117,16 @@ This test enforces the sync rule going forward: any future ticket that edits one
 
 ---
 
-**4. `workflow.toml` — verify `merge_failed` state**
-
-A code audit found `.apm/workflow.toml` already contains `merge_failed` at lines 187-198 (likely added by concurrent ticket e1781eef). Implementer should:
-- Read `.apm/workflow.toml` and confirm the block has `id = "merge_failed"`, `actionable = ["supervisor"]`, and two transitions — `to = "implemented"` and `to = "in_progress"`, both `trigger = "manual"`
-- If correct, no code change needed
-- If missing or incomplete, copy the block verbatim from `apm-core/src/default/workflow.toml` lines 201-212 into `.apm/workflow.toml` (after the `implemented` state, before `closed`)
-
----
-
 **Order of steps:**
-1. Read `.apm/workflow.toml` — confirm `merge_failed` is present; patch only if needed
-2. Add Path discipline section to both `apm.worker.md` files; confirm they match word-for-word
-3. Add the `apm.worker.md` sync test to `apm-core/tests/`
-4. Verify `--output-format stream-json` flag is supported (`<worker-binary> --help`)
-5. Add compatibility probe + `--output-format stream-json` args in both spawn functions in `start.rs`
-6. Write spawn-cwd regression test in `apm-core/tests/`
-7. Run `cargo test --workspace` — all tests must pass
-8. Commit and transition to implemented
+1. Add Path discipline section to both `apm.worker.md` files; confirm they match word-for-word
+2. Add the `apm.worker.md` sync test to `apm-core/tests/`
+3. Verify `--output-format stream-json` flag is supported (`<worker-binary> --help`)
+4. Add compatibility probe + `--output-format stream-json` args in both spawn functions in `start.rs`
+5. Write spawn-cwd regression test in `apm-core/tests/`
+6. Run `cargo test --workspace` — all tests must pass
+7. Commit and transition to implemented
 
-Note: this ticket (`498febe0`) should land before `e1781eef` (UI: show tickets in merge_failed state) — the UI ticket assumes the `merge_failed` state already exists in `.apm/workflow.toml`; landing out of order would have the UI surface a state the workflow config does not yet recognise.
+Note: `498febe0` and `e1781eef` (UI: show tickets in merge_failed state) no longer block each other — neither is a prerequisite for the other. Both depend on `79a03767`'s `apm validate --fix` having been run against the project to port the `merge_failed` state into `.apm/workflow.toml`; that is an operational step, not a code-level dependency between these tickets.
 
 ### Open questions
 
