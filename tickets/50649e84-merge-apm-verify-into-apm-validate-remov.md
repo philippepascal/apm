@@ -66,7 +66,7 @@ Concrete edits:
 - [x] `apm validate` still reports all previously-existing check categories: config parse errors, invalid state-transition targets, branch-field mismatches, duplicate branch assignments, and dependency-rule violations
 - [x] `apm validate --fix` auto-closes tickets whose branch is already merged (calls `ticket::close`); it does NOT recreate missing worktrees
 - [x] `apm validate --fix` continues to repair branch-field mismatches (existing behaviour)
-- [ ] `apm validate --config-only` skips all per-ticket and filesystem checks, including the merged-branch and worktree checks brought over from verify
+- [x] `apm validate --config-only` skips all per-ticket and filesystem checks, including the merged-branch and worktree checks brought over from verify
 - [ ] `apm validate --json` includes issues from the full merged check set in its structured output
 - [ ] A config or workflow change that triggers the hash-trip now catches dangling worktrees and frontmatter drift without a separate `apm verify` invocation
 - [ ] `docs/commands.md` has no `apm verify` section; the `apm validate` section lists the complete merged check set
