@@ -29,14 +29,15 @@ This ticket wires those two pieces together: add one-line doc comments to every 
 
 - [ ] `apm help config` exits 0 and prints non-empty output to stdout
 - [ ] The placeholder string referencing ticket d486d183 no longer appears in `apm help config` output
-- [ ] Output contains a recognisable header or path prefix for each top-level section: `project`, `tickets`, `worktrees`, `git_host`, `agents`, `sync`, `logging`, `workers`
+- [ ] Output contains a recognisable header or path prefix for each top-level in-scope section: `project`, `tickets`, `worktrees`, `git_host`, `agents`, `sync`, `logging`, `workers`, `work`, `server`, `context`, `worker_profiles`
 - [ ] Output contains a line for `project.name` that is marked as required (no default shown)
 - [ ] Output contains a line for `project.default_branch` with default `main`
 - [ ] Output contains a line for `agents.max_concurrent` with default `3`
 - [ ] Output contains a line for `agents.max_workers_per_epic` with default `1`
+- [ ] Output contains a line for `agents.max_workers_on_default` with default `1`
 - [ ] Output contains a line for `workers.command` with default `claude`
 - [ ] Every field line that has a doc comment shows a non-empty description
-- [ ] `worker_profiles` appears in the output with a description explaining it is a map of named profiles
+- [ ] `worker_profiles` appears in the output with a description explaining it is a map of named profiles; field paths use `worker_profiles.<name>.<field>` map notation (not array notation)
 
 ### Out of scope
 
