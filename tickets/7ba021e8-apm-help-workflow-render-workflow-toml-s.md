@@ -27,7 +27,15 @@ This ticket does two things: (1) adds meaningful doc comments to all fields on t
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm help workflow` exits 0 and prints non-empty output
+- [ ] The output contains the path `workflow.states[].id`
+- [ ] The output contains the path `workflow.states[].transitions[].completion`
+- [ ] The output contains the path `workflow.prioritization.priority_weight`
+- [ ] The `completion` field entry lists all five variants: `pr`, `merge`, `pull`, `pr_or_epic_merge`, `none`
+- [ ] The `satisfies_deps` field entry shows its two forms (`bool | string`) or equivalent variant description
+- [ ] Every field entry in the output has a non-empty description (no blank `#` column)
+- [ ] Fields with numeric defaults (`priority_weight = 10`, `effort_weight = -2`, `risk_weight = -1`) show those defaults in the output
+- [ ] The output includes a brief preamble line stating that `workflow.states` is an array of user-defined state objects
 
 ### Out of scope
 
