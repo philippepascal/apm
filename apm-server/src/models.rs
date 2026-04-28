@@ -24,6 +24,7 @@ pub struct TicketDetailResponse {
     pub frontmatter: apm_core::ticket::Frontmatter,
     pub body: String,
     pub raw: String,
+    pub spec: String,
     pub valid_transitions: Vec<TransitionOption>,
     pub blocking_deps: Vec<BlockingDep>,
     pub owner: Option<String>,
@@ -60,7 +61,7 @@ pub struct BatchResult {
 
 #[derive(serde::Deserialize)]
 pub struct PutBodyRequest {
-    pub content: String,
+    pub spec: String,
 }
 
 #[derive(serde::Deserialize)]
