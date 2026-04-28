@@ -1,7 +1,7 @@
 +++
 id = "52e12de8"
 title = "Derive worktree gitignore pattern from config; validate enforces it"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/52e12de8-derive-worktree-gitignore-pattern-from-c"
 created_at = "2026-04-28T19:54:13.505295Z"
-updated_at = "2026-04-28T19:54:30.081282Z"
+updated_at = "2026-04-28T19:54:34.902369Z"
 +++
 
 ## Spec
@@ -90,3 +90,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T19:54Z | — | new | philippepascal |
 | 2026-04-28T19:54Z | new | groomed | philippepascal |
+| 2026-04-28T19:54Z | groomed | in_design | philippepascal |
