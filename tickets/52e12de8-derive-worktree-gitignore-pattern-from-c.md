@@ -226,6 +226,9 @@ Add apm_core::init to the use imports if not already referenced by path.
 
 ### Amendment requests
 
+- [ ] Approach must include the new `ensure_gitignore` function signature explicitly: `pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &mut Vec<String>) -> Result<()>`. The current spec says "either pass config in, or have setup() compute the pattern" but never shows the resulting signature. Concrete signature prevents implementer drift.
+- [ ] `gitignore_covers_dir` must use exact-line matching (after trimming whitespace and optional leading/trailing `/`), not substring matching. The current loose-match approach would false-positive on lines like `worktree` matching a configured dir of `worktrees`. Spec the exact match algorithm: split file into lines; for each non-comment, non-empty line, trim whitespace, strip optional leading and trailing `/`, then compare equality against the configured dir name (similarly normalized).
+- [ ] Add an ordering note: this ticket depends on `50649e84` (verify → validate merge) landing first because the AC references tests that live in `apm-core/tests/verify.rs` today and will move into validate's test surface when 50649e84 lands. Either add `--depends-on 50649e84` or rephrase the test references to reflect post-merge structure.
 
 ### Code review
 
