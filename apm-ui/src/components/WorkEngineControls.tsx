@@ -42,6 +42,8 @@ async function startEngine(epic?: string): Promise<StatusResponse> {
 
 type AgentsConfig = {
   max_concurrent: number
+  max_workers_on_default: number
+  max_workers_per_epic: number
   override: number | null
 }
 
@@ -133,17 +135,17 @@ export default function WorkEngineControls() {
       <span className={STATUS_CLASSES[status]}>{STATUS_LABELS[status]}</span>
       {agentsConfig && (
         <>
-          <span className="text-xs text-gray-500">config: {agentsConfig.max_concurrent}</span>
+          <span className="text-xs text-gray-500">config: t {agentsConfig.max_concurrent} d {agentsConfig.max_workers_on_default} e {agentsConfig.max_workers_per_epic}</span>
           {!isEngineActive ? (
             <InlineNumberField
-              label="workers"
+              label="override max"
               value={agentsConfig.override ?? agentsConfig.max_concurrent}
               min={1}
               max={99}
               onCommit={(n) => overrideMutation.mutate(n)}
             />
           ) : (
-            <span className="text-xs text-gray-400">workers: {agentsConfig.override ?? agentsConfig.max_concurrent}</span>
+            <span className="text-xs text-gray-400">override max: {agentsConfig.override ?? agentsConfig.max_concurrent}</span>
           )}
         </>
       )}

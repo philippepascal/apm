@@ -6,6 +6,8 @@ use crate::{AppError, AppState};
 #[derive(serde::Serialize)]
 pub struct AgentsConfigResponse {
     max_concurrent: usize,
+    max_workers_on_default: usize,
+    max_workers_per_epic: usize,
     #[serde(rename = "override")]
     override_val: Option<usize>,
 }
@@ -19,15 +21,19 @@ pub struct PatchAgentsConfigRequest {
 pub async fn get_agents_config(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<AgentsConfigResponse>, AppError> {
-    let max_concurrent = match state.git_root() {
+    let (max_concurrent, max_workers_on_default, max_workers_per_epic) = match state.git_root() {
         Some(root) => {
             let config = crate::util::load_config(root.clone()).await?;
-            config.agents.max_concurrent.max(1)
+            (
+                config.agents.max_concurrent.max(1),
+                config.agents.max_workers_on_default,
+                config.agents.max_workers_per_epic,
+            )
         }
-        None => 3,
+        None => (3, 1, 1),
     };
     let override_val = *state.max_concurrent_override.lock().await;
-    Ok(Json(AgentsConfigResponse { max_concurrent, override_val }))
+    Ok(Json(AgentsConfigResponse { max_concurrent, max_workers_on_default, max_workers_per_epic, override_val }))
 }
 
 pub async fn patch_agents_config(
@@ -38,15 +44,21 @@ pub async fn patch_agents_config(
         return Ok((StatusCode::UNPROCESSABLE_ENTITY, "override must be >= 1").into_response());
     }
     *state.max_concurrent_override.lock().await = Some(req.override_val);
-    let max_concurrent = match state.git_root() {
+    let (max_concurrent, max_workers_on_default, max_workers_per_epic) = match state.git_root() {
         Some(root) => {
             let config = crate::util::load_config(root.clone()).await?;
-            config.agents.max_concurrent.max(1)
+            (
+                config.agents.max_concurrent.max(1),
+                config.agents.max_workers_on_default,
+                config.agents.max_workers_per_epic,
+            )
         }
-        None => 3,
+        None => (3, 1, 1),
     };
     Ok(Json(AgentsConfigResponse {
         max_concurrent,
+        max_workers_on_default,
+        max_workers_per_epic,
         override_val: Some(req.override_val),
     }).into_response())
 }
@@ -69,6 +81,8 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["max_concurrent"], 3);
+        assert_eq!(json["max_workers_on_default"], 1);
+        assert_eq!(json["max_workers_per_epic"], 1);
         assert!(json["override"].is_null());
     }
 
@@ -91,6 +105,8 @@ mod tests {
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["override"], 5);
         assert_eq!(json["max_concurrent"], 3);
+        assert_eq!(json["max_workers_on_default"], 1);
+        assert_eq!(json["max_workers_per_epic"], 1);
     }
 
     #[tokio::test]
