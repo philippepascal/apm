@@ -1,7 +1,7 @@
 +++
 id = "63f5e6d2"
 title = "UI: epics filter fixes"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/63f5e6d2-ui-epics-filter-fixes"
 created_at = "2026-04-28T19:28:59.918275Z"
-updated_at = "2026-04-28T19:28:59.918275Z"
+updated_at = "2026-04-28T19:33:03.956761Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T19:28Z | — | new | philippepascal |
+| 2026-04-28T19:33Z | new | groomed | philippepascal |
