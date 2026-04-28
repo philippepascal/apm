@@ -32,7 +32,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 
 ### Acceptance criteria
 
-- [ ] **`--append` / `--append-file`**
+- [x] **`--append` / `--append-file`**
 
 - [ ] `apm spec <id> --append <text>` without `--section` exits non-zero with an error containing `"--append requires --section"`
 - [ ] `apm spec <id> --section <name> --append <text>` appends the trimmed text after the existing section content, separated by a single newline
