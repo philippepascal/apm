@@ -1,7 +1,7 @@
 +++
 id = "79a03767"
 title = "Parameterize transition failure landing in workflow.toml (on_failure)"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/79a03767-parameterize-transition-failure-landing-"
 created_at = "2026-04-28T23:00:16.821798Z"
-updated_at = "2026-04-28T23:09:00.898204Z"
+updated_at = "2026-04-28T23:14:11.070715Z"
 depends_on = ["50649e84"]
 +++
 
@@ -247,3 +247,4 @@ In `apm-core/src/validate.rs` `#[cfg(test)]` block, add four unit tests (mirror 
 | 2026-04-28T23:01Z | new | groomed | philippepascal |
 | 2026-04-28T23:04Z | groomed | in_design | philippepascal |
 | 2026-04-28T23:09Z | in_design | specd | claude-0428-2304-d588 |
+| 2026-04-28T23:14Z | specd | ammend | philippepascal |
