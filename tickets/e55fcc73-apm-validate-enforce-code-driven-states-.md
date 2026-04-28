@@ -3,13 +3,13 @@ id = "e55fcc73"
 title = "apm validate: enforce code-driven states are declared in workflow.toml"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e55fcc73-apm-validate-enforce-code-driven-states-"
 created_at = "2026-04-28T22:42:06.291026Z"
-updated_at = "2026-04-28T22:48:19.267181Z"
+updated_at = "2026-04-28T22:52:59.139118Z"
 depends_on = ["50649e84"]
 +++
 
