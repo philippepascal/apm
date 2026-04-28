@@ -33,7 +33,16 @@ The existing hash-trip on config-file changes surfaces this check automatically 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm validate` on a project whose `workflow.toml` has no `merge_failed` state exits non-zero and prints an error that names `merge_failed` and suggests running `apm validate --fix`
+- [ ] `apm validate --config-only` also catches the missing system-state (the check is config-level, not ticket-level)
+- [ ] `apm validate` on a freshly `apm init`'d project passes the new system-states check without errors
+- [ ] `apm validate --fix` on a project missing `merge_failed` appends the `[[workflow.states]]` block from the default template to `.apm/workflow.toml` and prints which states were added
+- [ ] `apm validate --fix` re-run on a project that already has `merge_failed` in `workflow.toml` makes no changes (idempotent)
+- [ ] `apm validate --fix` when a state in `SYSTEM_STATES` has no corresponding block in the embedded default template reports a clear error and exits non-zero (it does not silently skip the state)
+- [ ] `apm validate --json` includes the system-states issue with `kind = "config"`
+- [ ] `SYSTEM_STATES` in `apm-core/src/state.rs` contains exactly `["merge_failed"]` with a code comment identifying the function that writes each entry
+- [ ] A unit test in `apm-core/src/validate.rs` asserts that every entry in `SYSTEM_STATES` has a matching `[[workflow.states]]` block in the embedded default `workflow.toml`; adding a new entry to `SYSTEM_STATES` without a default-template block causes this test to fail
+- [ ] `docs/commands.md` `apm validate` section lists the new check under *Config checks*
 
 ### Out of scope
 
