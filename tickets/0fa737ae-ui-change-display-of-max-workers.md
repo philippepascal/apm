@@ -40,7 +40,22 @@ The fix is purely presentational: extend the API response to carry all three con
 
 ### Approach
 
-How the implementation will work.
+**`apm-server/src/agents.rs`**
+
+- Add `max_workers_per_epic: usize` and `max_workers_on_default: usize` to `AgentsConfigResponse`.
+- In `get_agents_config`: after loading config, also read `config.agents.max_workers_per_epic` and `config.agents.max_workers_on_default`; when no git root, default both to `1`. Include the two new fields in the returned `AgentsConfigResponse`.
+- In `patch_agents_config`: same — load and return all three config values in the response.
+- Update the test `get_agents_config_returns_default_when_in_memory` to assert `json["max_workers_on_default"] == 1` and `json["max_workers_per_epic"] == 1`.
+- Update `patch_agents_config_stores_override` similarly.
+
+**`apm-ui/src/components/WorkEngineControls.tsx`**
+
+- Extend the `AgentsConfig` type (lines 43–46) with `max_workers_on_default: number` and `max_workers_per_epic: number`.
+- Line 136: change the config badge from `config: {agentsConfig.max_concurrent}` to `config: t {agentsConfig.max_concurrent} d {agentsConfig.max_workers_on_default} e {agentsConfig.max_workers_per_epic}`.
+- Line 139: change `label="workers"` on `InlineNumberField` to `label="override max"`.
+- Line 146: change `workers: {agentsConfig.override ?? agentsConfig.max_concurrent}` to `override max: {agentsConfig.override ?? agentsConfig.max_concurrent}`.
+
+The API change is purely additive (new fields on the response), so the server and client sides can land in either order without breakage.
 
 ### Open questions
 
