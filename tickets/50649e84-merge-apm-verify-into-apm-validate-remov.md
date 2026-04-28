@@ -112,7 +112,7 @@ Delete `apm/src/cmd/verify.rs`.
 
 **Step 5 — Update `apm/src/hash_trip.rs`**
 
-- Remove `| super::Command::Verify { .. }` from `is_read_only_command()`.
+- **Delete** (do not comment out) the `| super::Command::Verify { .. }` arm from `is_read_only_command()` entirely. Commenting it out risks accidental resurrection if someone later uncomments dead code; the line must be removed from the source file.
 - Delete the `verify_is_read_only` test in `hash_trip.rs`.
 
 **Step 6 — Update `docs/commands.md`**
