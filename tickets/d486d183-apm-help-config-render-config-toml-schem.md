@@ -52,7 +52,69 @@ This ticket wires those two pieces together: add one-line doc comments to every 
 
 ### Approach
 
-How the implementation will work.
+**Precondition:** ticket 069c3403 is merged, so `apm_core::help_schema::{schema_entries, FieldEntry}` exist and `JsonSchema` is already derived on `Config` and all nested types.
+
+---
+
+**1. Add `/// doc comments` to `apm-core/src/config.rs`**
+
+Every user-facing field in the `Config` struct tree needs a one-line doc comment so schemars can surface it as a `description`. Fields that already have a comment (e.g. `load_warnings`, `actionable`, `label`, `hint`) need no change. Fields to annotate (one line each):
+
+- `Config`: no field-level comments needed; struct-level doc is optional
+- `ProjectConfig`: `name`, `description`, `default_branch`, `collaborators`
+- `TicketsConfig`: `dir`, `archive_dir` (skip `sections` — internal use)
+- `AgentsConfig`: `max_concurrent`, `max_workers_per_epic`, `max_workers_on_default`, `instructions`, `side_tickets`, `skip_permissions`
+- `WorktreesConfig`: `dir`, `agent_dirs`
+- `SyncConfig`: `aggressive`
+- `LoggingConfig`: `enabled`, `file`
+- `GitHostConfig`: `provider`, `repo`, `token_env`
+- `WorkersConfig`: `container`, `command`, `args`, `model`, `env`, `keychain`
+- `WorkerProfileConfig`: `command`, `args`, `model`, `env`, `container`, `instructions`, `role_prefix`
+- `WorkConfig`: `epic`
+- `ServerConfig`: `origin`, `url`
+- `ContextConfig`: `epic_sibling_cap`, `epic_byte_cap`
+- `PrioritizationConfig`: `priority_weight`, `effort_weight`, `risk_weight`
+
+Doc comments must be `/// one sentence.` placed immediately above the field. Do not change field types, serde attributes, or defaults.
+
+---
+
+**2. Replace the stub in `apm/src/cmd/help.rs`**
+
+Replace `render_config()` (currently returns a placeholder string) with a function that:
+
+1. Calls `apm_core::help_schema::schema_entries::<apm_core::config::Config>()` to get `Vec<FieldEntry>`.
+2. Groups entries by their first path segment (the part before the first `.` or `[`). Preserve the order in which each new prefix is first encountered (struct field order flows through schemars).
+3. For each group, print a `[section]` header line (e.g. `[project]`), then one line per entry using the same column-aligned format as `render_schema` from 069c3403:
+   ```
+   <toml_path>  <type>  [default: <val>]  # <description>
+   ```
+   Omit `[default: ...]` when `entry.default` is `None`; omit `# ...` when `entry.description` is `None`.
+4. For `worker_profiles`, emit the section header `[worker_profiles.<name>]` and a single descriptive note explaining that each key is a user-defined named profile whose fields mirror `[workers]`, followed by the fields from `WorkerProfileConfig` with paths like `worker_profiles[].command`.
+5. Return the resulting `String`; the caller in `run()` prints it to stdout.
+
+Column widths: compute the maximum width of `toml_path` and `type` across all entries in the group, then pad with spaces. This keeps output readable without requiring a terminal-width query.
+
+---
+
+**3. Imports and crate wiring**
+
+`apm/src/cmd/help.rs` already imports `apm_core` (it will after bc89e0a0). Add:
+```rust
+use apm_core::help_schema::schema_entries;
+use apm_core::config::Config;
+```
+
+No `Cargo.toml` changes needed — `apm-core` is already a workspace dependency of `apm`.
+
+---
+
+**Implementation order:**
+
+1. Add doc comments to `apm-core/src/config.rs` (bulk of the work; safe — comments only)
+2. Replace `render_config()` stub in `apm/src/cmd/help.rs`
+3. `cargo build -p apm` — confirm it compiles
+4. `apm help config` — manually verify output contains section headers and all AC field lines
 
 ### Open questions
 
