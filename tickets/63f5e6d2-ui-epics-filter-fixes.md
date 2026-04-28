@@ -32,7 +32,9 @@ The epics filter dropdown in `SupervisorView` has two independent bugs.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding a "No epic" filter option to PriorityQueuePanel (separate component with its own independent local epic filter)
+- Adding a "No epic" toggle affordance on TicketCard (tickets without an epic show no epic badge, so there is no click target)
+- Backend changes
 
 ### Approach
 
