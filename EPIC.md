@@ -1,1 +1,1 @@
-# Safer apm sync
+# Strategy and dependency hardening

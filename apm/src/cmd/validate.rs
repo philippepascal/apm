@@ -1,5 +1,6 @@
 use anyhow::Result;
 pub use apm_core::validate::validate_config;
+pub use apm_core::validate::validate_depends_on;
 pub use apm_core::validate::validate_warnings;
 use apm_core::{config::Config, git, ticket, ticket_fmt};
 use serde::Serialize;
@@ -75,6 +76,14 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
             }
         }
 
+        for (subject, message) in validate_depends_on(&config, &tickets) {
+            ticket_issues.push(Issue {
+                kind: "depends_on".into(),
+                subject,
+                message,
+            });
+        }
+
         if fix {
             apply_branch_fixes(root, &config, branch_fixes)?;
         }
@@ -107,6 +116,12 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
             config_warnings.len(),
             ticket_issues.len(),
         );
+    }
+
+    if config_errors.is_empty() && ticket_issues.is_empty() {
+        if let Ok(hash) = apm_core::hash_stamp::config_hash(root) {
+            let _ = apm_core::hash_stamp::write_stamp(root, &hash);
+        }
     }
 
     if has_errors {
