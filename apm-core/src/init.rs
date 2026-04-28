@@ -134,7 +134,10 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
     write_default(&apm_dir.join("apm.worker.md"), include_str!("default/apm.worker.md"), ".apm/apm.worker.md", &mut messages)?;
     ensure_claude_md(root, ".apm/agents.md", &mut messages)?;
     let gitignore = root.join(".gitignore");
-    ensure_gitignore(&gitignore, &mut messages)?;
+    let wt_pattern = crate::config::Config::load(root)
+        .ok()
+        .and_then(|c| worktree_gitignore_pattern(&c.worktrees.dir));
+    ensure_gitignore(&gitignore, wt_pattern.as_deref(), &mut messages)?;
     maybe_initial_commit(root, &mut messages)?;
     ensure_worktrees_dir(root, &mut messages)?;
     Ok(SetupOutput { messages })
@@ -191,8 +194,27 @@ pub fn detect_default_branch(root: &Path) -> String {
         .unwrap_or_else(|| "main".to_string())
 }
 
-pub fn ensure_gitignore(path: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json", "# apm worktrees", "/worktrees/"];
+/// Returns the gitignore pattern for the worktree dir, or None if it is external.
+///
+/// External paths (absolute or parent-relative) don't need a gitignore entry.
+/// For in-repo paths, returns `Some("/<dir>/")`.
+pub fn worktree_gitignore_pattern(dir: &Path) -> Option<String> {
+    let s = dir.to_string_lossy();
+    if s.starts_with('/') || s.starts_with("..") {
+        return None;
+    }
+    Some(format!("/{s}/"))
+}
+
+pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &mut Vec<String>) -> Result<()> {
+    let static_entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+    let mut entries: Vec<&str> = static_entries.to_vec();
+    let owned_pattern;
+    if let Some(p) = worktree_pattern {
+        entries.push("# apm worktrees");
+        owned_pattern = p.to_owned();
+        entries.push(&owned_pattern);
+    }
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;
@@ -442,7 +464,7 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join(".gitignore");
         let mut msgs = Vec::new();
-        ensure_gitignore(&path, &mut msgs).unwrap();
+        ensure_gitignore(&path, None, &mut msgs).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("tickets/NEXT_ID"));
         assert!(contents.contains(".apm/local.toml"));
@@ -457,7 +479,7 @@ mod tests {
         let path = tmp.path().join(".gitignore");
         std::fs::write(&path, "node_modules\n").unwrap();
         let mut msgs = Vec::new();
-        ensure_gitignore(&path, &mut msgs).unwrap();
+        ensure_gitignore(&path, None, &mut msgs).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("node_modules"));
         assert!(contents.contains("tickets/NEXT_ID"));
@@ -468,9 +490,9 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join(".gitignore");
         let mut msgs = Vec::new();
-        ensure_gitignore(&path, &mut msgs).unwrap();
+        ensure_gitignore(&path, None, &mut msgs).unwrap();
         let before = std::fs::read_to_string(&path).unwrap();
-        ensure_gitignore(&path, &mut msgs).unwrap();
+        ensure_gitignore(&path, None, &mut msgs).unwrap();
         let after = std::fs::read_to_string(&path).unwrap();
         assert_eq!(before, after);
     }
@@ -833,9 +855,9 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join(".gitignore");
         let mut msgs = Vec::new();
-        ensure_gitignore(&path, &mut msgs).unwrap();
+        ensure_gitignore(&path, Some("/worktrees/"), &mut msgs).unwrap();
         let before = std::fs::read_to_string(&path).unwrap();
-        ensure_gitignore(&path, &mut msgs).unwrap();
+        ensure_gitignore(&path, Some("/worktrees/"), &mut msgs).unwrap();
         let after = std::fs::read_to_string(&path).unwrap();
         assert_eq!(before, after, "second ensure_gitignore must not duplicate /worktrees/ entry");
         let count = before.matches("/worktrees/").count();
@@ -850,6 +872,46 @@ mod tests {
         assert!(
             tmp.path().join("worktrees").exists(),
             "worktrees dir should be created inside the repo"
+        );
+    }
+
+    #[test]
+    fn worktree_gitignore_pattern_simple() {
+        assert_eq!(
+            worktree_gitignore_pattern(std::path::Path::new("worktrees")),
+            Some("/worktrees/".to_string())
+        );
+    }
+
+    #[test]
+    fn worktree_gitignore_pattern_hidden_dir() {
+        assert_eq!(
+            worktree_gitignore_pattern(std::path::Path::new(".apm--worktrees")),
+            Some("/.apm--worktrees/".to_string())
+        );
+    }
+
+    #[test]
+    fn worktree_gitignore_pattern_nested() {
+        assert_eq!(
+            worktree_gitignore_pattern(std::path::Path::new("build/wt")),
+            Some("/build/wt/".to_string())
+        );
+    }
+
+    #[test]
+    fn worktree_gitignore_pattern_absolute_is_none() {
+        assert_eq!(
+            worktree_gitignore_pattern(std::path::Path::new("/abs/path")),
+            None
+        );
+    }
+
+    #[test]
+    fn worktree_gitignore_pattern_parent_relative_is_none() {
+        assert_eq!(
+            worktree_gitignore_pattern(std::path::Path::new("../external")),
+            None
         );
     }
 }

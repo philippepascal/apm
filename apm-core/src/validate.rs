@@ -139,6 +139,20 @@ pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> R
     bail!("unknown user '{username}'; valid collaborators: {list}");
 }
 
+fn is_external_worktree(dir: &Path) -> bool {
+    let s = dir.to_string_lossy();
+    s.starts_with('/') || s.starts_with("..")
+}
+
+fn gitignore_covers_dir(content: &str, dir: &str) -> bool {
+    let normalized_dir = dir.trim_matches('/');
+    content
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .any(|line| line.trim_matches('/') == normalized_dir)
+}
+
 pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
 
@@ -229,6 +243,22 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
                     ));
                 }
             }
+        }
+    }
+
+    if !is_external_worktree(&config.worktrees.dir) {
+        let dir_str = config.worktrees.dir.to_string_lossy();
+        let gitignore = root.join(".gitignore");
+        match std::fs::read_to_string(&gitignore) {
+            Err(_) => errors.push(format!(
+                "config: worktrees.dir '{dir_str}' is in-repo but .gitignore is missing; \
+                 run 'apm init' or add '/{dir_str}/' manually"
+            )),
+            Ok(content) if !gitignore_covers_dir(&content, &dir_str) => errors.push(format!(
+                "config: worktrees.dir '{dir_str}' is in-repo but .gitignore does not cover it; \
+                 add '/{dir_str}/' or run 'apm init'"
+            )),
+            Ok(_) => {}
         }
     }
 
@@ -1282,6 +1312,129 @@ container = ""
         assert!(
             !issues.iter().any(|i| i.contains("worktree")),
             "unexpected worktree issue for specd state; got: {issues:?}"
+        );
+    }
+
+    fn in_repo_wt_config(dir: &str) -> Config {
+        let toml = format!(
+            r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "{dir}"
+"#
+        );
+        toml::from_str(&toml).expect("config parse failed")
+    }
+
+    #[test]
+    fn validate_config_gitignore_missing_in_repo_wt() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let config = in_repo_wt_config("worktrees");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            errors.iter().any(|e| e.contains("worktrees") && e.contains(".gitignore")),
+            "expected gitignore missing error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_gitignore_covered_anchored_slash() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "/worktrees/\n").unwrap();
+        let config = in_repo_wt_config("worktrees");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            !errors.iter().any(|e| e.contains("gitignore")),
+            "unexpected gitignore error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_gitignore_covered_anchored_no_slash() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "/worktrees\n").unwrap();
+        let config = in_repo_wt_config("worktrees");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            !errors.iter().any(|e| e.contains("gitignore")),
+            "unexpected gitignore error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_gitignore_covered_unanchored_slash() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "worktrees/\n").unwrap();
+        let config = in_repo_wt_config("worktrees");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            !errors.iter().any(|e| e.contains("gitignore")),
+            "unexpected gitignore error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_gitignore_covered_bare() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "worktrees\n").unwrap();
+        let config = in_repo_wt_config("worktrees");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            !errors.iter().any(|e| e.contains("gitignore")),
+            "unexpected gitignore error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_gitignore_not_covered() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "node_modules\n").unwrap();
+        let config = in_repo_wt_config("worktrees");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            errors.iter().any(|e| e.contains("worktrees") && e.contains("gitignore")),
+            "expected gitignore not covered error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_gitignore_no_false_positive() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        std::fs::write(tmp.path().join(".gitignore"), "wt-old/\n").unwrap();
+        let config = in_repo_wt_config("wt");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            errors.iter().any(|e| e.contains("wt") && e.contains("gitignore")),
+            "wt-old should not match wt; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_external_dotdot_no_check() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        // No .gitignore at all
+        let config = in_repo_wt_config("../ext");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            !errors.iter().any(|e| e.contains("gitignore")),
+            "external dotdot path should skip gitignore check; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn validate_config_external_absolute_no_check() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        // No .gitignore at all
+        let config = in_repo_wt_config("/abs/path");
+        let errors = validate_config(&config, tmp.path());
+        assert!(
+            !errors.iter().any(|e| e.contains("gitignore")),
+            "absolute path should skip gitignore check; got: {errors:?}"
         );
     }
 }

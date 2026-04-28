@@ -103,6 +103,17 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
         }
     }
 
+    if fix {
+        let pattern = apm_core::init::worktree_gitignore_pattern(&config.worktrees.dir);
+        if let Some(p) = pattern {
+            let mut msgs = Vec::new();
+            apm_core::init::ensure_gitignore(&root.join(".gitignore"), Some(&p), &mut msgs)?;
+            for m in &msgs {
+                println!("  fixed: {m}");
+            }
+        }
+    }
+
     let has_errors = !config_errors.is_empty() || !ticket_issues.is_empty();
 
     if json {
