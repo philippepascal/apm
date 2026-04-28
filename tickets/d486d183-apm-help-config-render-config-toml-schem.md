@@ -1,7 +1,7 @@
 +++
 id = "d486d183"
 title = "apm help config: render config.toml schema from Config struct"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d486d183-apm-help-config-render-config-toml-schem"
 created_at = "2026-04-28T19:27:57.393396Z"
-updated_at = "2026-04-28T19:27:57.393396Z"
+updated_at = "2026-04-28T19:32:54.764934Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0", "069c3403"]
@@ -72,3 +72,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T19:27Z | — | new | philippepascal |
+| 2026-04-28T19:32Z | new | groomed | philippepascal |
