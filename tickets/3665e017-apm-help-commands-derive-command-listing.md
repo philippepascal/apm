@@ -42,7 +42,12 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Color, ANSI styling, or markdown rendering in the output
+- Pager integration (no `less`/`more` invocation)
+- Fuzzy-matching or "did you mean?" suggestions for unknown topics (that belongs in ticket bc89e0a0's dispatcher)
+- Changes to how `apm <subcommand> --help` works (clap-native help is untouched)
+- Content for the `config`, `workflow`, or `ticket` help topics (sibling tickets d486d183, 7ba021e8, 14214305)
+- Grouping commands by category (Setup / Workflow / etc.) — alphabetical or Cli-enum order only
 
 ### Approach
 
