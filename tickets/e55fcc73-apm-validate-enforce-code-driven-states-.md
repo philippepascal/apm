@@ -1,7 +1,7 @@
 +++
 id = "e55fcc73"
 title = "apm validate: enforce code-driven states are declared in workflow.toml"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e55fcc73-apm-validate-enforce-code-driven-states-"
 created_at = "2026-04-28T22:42:06.291026Z"
-updated_at = "2026-04-28T22:42:06.291026Z"
+updated_at = "2026-04-28T22:44:08.564690Z"
 depends_on = ["50649e84"]
 +++
 
@@ -86,3 +86,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T22:42Z | — | new | philippepascal |
+| 2026-04-28T22:44Z | new | groomed | philippepascal |
