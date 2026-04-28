@@ -4,12 +4,12 @@ title = "apm archive for non merged tasks"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/06a9dcab-apm-archive-for-non-merged-tasks"
 created_at = "2026-04-28T07:11:58.042694Z"
-updated_at = "2026-04-28T07:36:27.025822Z"
+updated_at = "2026-04-28T07:36:36.504708Z"
 +++
 
 ## Spec
