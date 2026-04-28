@@ -1,7 +1,7 @@
 +++
 id = "14214305"
 title = "apm help ticket: render ticket.toml schema from TicketConfig struct"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/14214305-apm-help-ticket-render-ticket-toml-schem"
 created_at = "2026-04-28T19:28:31.483927Z"
-updated_at = "2026-04-28T19:33:00.711484Z"
+updated_at = "2026-04-28T19:57:25.528866Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0", "069c3403"]
@@ -68,3 +68,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T19:28Z | — | new | philippepascal |
 | 2026-04-28T19:33Z | new | groomed | philippepascal |
+| 2026-04-28T19:57Z | groomed | in_design | philippepascal |
