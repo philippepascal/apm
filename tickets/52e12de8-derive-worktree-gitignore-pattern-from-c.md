@@ -67,7 +67,7 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 ### Acceptance criteria
 
 - [x] `apm init` with default config (`worktrees.dir = "worktrees"`) writes `/worktrees/` to `.gitignore`
-- [ ] `apm init` with `worktrees.dir = ".apm--worktrees"` writes `/.apm--worktrees/` to `.gitignore`
+- [x] `apm init` with `worktrees.dir = ".apm--worktrees"` writes `/.apm--worktrees/` to `.gitignore`
 - [ ] `apm init` with `worktrees.dir = "build/wt"` (nested relative) writes `/build/wt/` to `.gitignore`
 - [ ] `apm init` with `worktrees.dir = "/abs/path"` (absolute) does NOT add a worktree line to `.gitignore`
 - [ ] `apm init` with `worktrees.dir = "../external"` (parent-relative) does NOT add a worktree line to `.gitignore`
