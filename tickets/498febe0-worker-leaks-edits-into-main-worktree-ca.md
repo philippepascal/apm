@@ -47,7 +47,15 @@ The CLAUDE.md rule "main worktree always on main, never holds work" was violated
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Running a worker with the default configuration produces a `.apm-worker.log` containing JSONL lines (one JSON object per line) for every event emitted by the worker driver, including `tool_use` events that expose the path argument for every Edit, Write, and Bash call the worker made
+- [ ] A `.apm-worker.log` from a run that edits a file contains a line from which the absolute path of the edited file can be extracted (e.g. via grep or jq)
+- [ ] An integration test in `apm-core/tests/` (or `apm/tests/integration.rs`) spawns a worker process via the same code path used by `apm start --spawn`, captures the spawned process's working directory, and asserts it equals the ticket's worktree path
+- [ ] `cargo test --workspace` passes with the new integration test included
+- [ ] `.apm/apm.worker.md` contains a Path discipline section that states: never edit files outside the ticket worktree; always use absolute paths rooted at the worktree path shown in `apm show`; includes a labelled correct example and a wrong example
+- [ ] `apm-core/src/default/apm.worker.md` contains the identical Path discipline section (same wording as the project file)
+- [ ] `.apm/workflow.toml` contains a `[[workflow.states]]` block with `id = "merge_failed"`, `actionable = ["supervisor"]`, and two `[[workflow.states.transitions]]` entries: one to `implemented` and one to `in_progress`, both `trigger = "manual"`
+- [ ] `apm state <ticket_in_merge_failed> implemented` exits 0
+- [ ] `apm state <ticket_in_merge_failed> in_progress` exits 0
 
 ### Out of scope
 
