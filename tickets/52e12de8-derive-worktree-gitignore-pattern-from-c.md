@@ -1,7 +1,7 @@
 +++
 id = "52e12de8"
 title = "Derive worktree gitignore pattern from config; validate enforces it"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/52e12de8-derive-worktree-gitignore-pattern-from-c"
 created_at = "2026-04-28T19:54:13.505295Z"
-updated_at = "2026-04-28T20:34:48.439888Z"
+updated_at = "2026-04-28T20:53:29.840855Z"
 depends_on = ["50649e84"]
 +++
 
@@ -371,3 +371,4 @@ Add apm_core::init to the use imports if not already referenced by path.
 | 2026-04-28T20:17Z | ammend | in_design | philippepascal |
 | 2026-04-28T20:21Z | in_design | specd | claude-0428-2017-76d0 |
 | 2026-04-28T20:34Z | specd | ready | philippepascal |
+| 2026-04-28T20:53Z | ready | in_progress | philippepascal |
