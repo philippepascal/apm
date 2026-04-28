@@ -1,1 +1,1 @@
-# Strategy and dependency hardening
+# apm help: auto-derived git-style topic help
