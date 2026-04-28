@@ -106,7 +106,7 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 ### Amendment requests
 
 - [x] Mandate alphabetical sort order for top-level commands. Nested subcommands follow the parent's order. Currently the spec says "alphabetical or Cli-enum order" — pick alphabetical and lock it in an AC.
-- [ ] Specify whether inline `(default: …)` annotations count toward the 100-char wrap limit. Recommend: yes, they count — the wrap is about visible output width.
+- [x] Specify whether inline `(default: …)` annotations count toward the 100-char wrap limit. Recommend: yes, they count — the wrap is about visible output width.
 - [ ] AC must explicitly list `epic new` and `epic close` (and any other current nested subcommands) to lock in that recursive coverage works on the real Cli definition.
 - [ ] Cross-cutting style decision: `apm help commands` produces flat lines with word-wrapping, while `apm help config|workflow|ticket` produce a column-aligned table from the auto-derive infra. Decide before implementing: (a) reconcile so all four topics share a style, or (b) document the divergence intentionally in `bc89e0a0`'s overview output ("commands vs config schemas use different layouts because the data shapes differ"). Either is defensible; pick one.
 
