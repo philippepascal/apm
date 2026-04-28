@@ -190,36 +190,59 @@ For each `(state, transition)` pair where `transition.completion` is `Merge` or 
 2. If `transition.on_failure == Some(ref name)` and `!declared_states.contains(name.as_str())` → push issue:
    `"transition '{state.id}' → '{transition.to}' has `on_failure = \"{name}\"` but state \"{name}\" is not declared in workflow.toml"`
 
+**Conservative rule:** The check at step 1 is on the **transition definition**, not on ticket runtime state. A `PrOrEpicMerge` transition is flagged the moment it lacks `on_failure` — no lookup of tickets with `target_branch` is performed. This is deliberate: `validate` cannot know which future tickets will exercise the merge path, so it enforces completeness up front on every transition that can potentially trigger a merge.
+
 Both checks run even if `--config-only` is not passed; they are config checks that do not touch tickets or the filesystem.
 
-**Step 5 — `apm/src/cmd/validate.rs`: `--fix` logic for missing `on_failure`**
+**Step 5 — `apm/src/cmd/validate.rs`: `--fix` logic for missing `on_failure` and missing referenced state**
 
-Add a function `apply_on_failure_fixes(root: &Path, config: &Config) -> Result<bool>` (returns `true` if any change was written):
+Add a function `apply_on_failure_fixes(root: &Path, config: &Config) -> Result<bool>` (returns `true` if any change was written). This function performs both repairs — the missing field and the missing state — in a single pass before writing once:
 
-1. Load the embedded default workflow config (same source `apm-core` already uses for `apm init`).
+**5a — Port missing `on_failure` field:**
+
+1. Load the embedded default workflow config (same `include_str!` source `apm-core` already uses for `apm init`).
 2. Build a map `default_on_failure: HashMap<String, String>` keyed by the default transition's `to` value, value is `on_failure` from that transition. Only include entries where the default also has `completion ∈ {Merge, PrOrEpicMerge}`.
 3. Collect the set of `(from_state_id, to)` pairs in the project config that need patching (missing `on_failure`, right completion).
 4. Read `<root>/.apm/workflow.toml` as raw text.
 5. For each transition needing a patch, insert `on_failure = "<value>"` immediately after the `completion = "..."` line within that transition's TOML block. Match the block by scanning for the `to = "<value>"` line preceded by `[[workflow.states.transitions]]`. Use the `toml_edit` crate if it is already a dependency; otherwise a careful line-scan is sufficient given the template's consistent formatting.
-6. Write the modified text back. Idempotent: if the field is already present, step 3 finds no pairs to patch and no write occurs.
+
+**5b — Append missing referenced states:**
+
+After patching fields (working on the same mutable raw text from step 4 above), for each transition with `on_failure = Some(ref name)` where `name` is not in the project's declared states:
+
+1. Locate the corresponding state definition in the default template (match by `id = "<name>"`). Extract the full state block — from the line containing `[[workflow.states]]` / `id = "<name>"` through all lines until the next `[[workflow.states]]` header or end of file (strip trailing blank lines).
+2. Append the extracted block to the end of the raw text (preceded by a blank line).
+3. Mark that a write is needed.
+
+Idempotent: if the state is already present in the project's workflow, step 5b finds no names to port and no write occurs.
+
+**5c — Write back:**
+
+Write the modified text back to `<root>/.apm/workflow.toml` if either 5a or 5b produced changes. Both repairs are applied before this single write, making the operation atomic from the caller's perspective — no partial state is written.
 
 Call `apply_on_failure_fixes` in `run()` under the `--fix` branch, after existing branch and merged-ticket fixes.
 
 **Step 6 — Tests**
 
-In `apm-core/src/validate.rs` `#[cfg(test)]` block, add four unit tests (mirror the pattern of existing tests that construct a minimal `Config`):
+In `apm-core/src/validate.rs` `#[cfg(test)]` block, add four unit tests:
 
 - `test_on_failure_missing_for_merge`: one transition `{completion: Merge, on_failure: None}` → issue list contains `"missing \`on_failure\`"`.
-- `test_on_failure_missing_for_pr_or_epic_merge`: same with `PrOrEpicMerge`.
+- `test_on_failure_missing_for_pr_or_epic_merge`: one `PrOrEpicMerge` transition with `on_failure: None`; **no ticket is created in the test** — issue is returned from `validate_config()` based on the transition definition alone, confirming the conservative rule.
 - `test_on_failure_unknown_state`: `{completion: Merge, on_failure: Some("ghost_state".into())}`, `ghost_state` not in declared states → issue list contains `"ghost_state"`.
 - `test_on_failure_valid`: `{completion: Merge, on_failure: Some("merge_failed".into())}`, `merge_failed` declared → no `on_failure`-related issues.
+
+Integration tests for `--fix` (in `apm/tests/` or via the existing CLI test harness):
+
+- `test_fix_adds_field_only`: project has `on_failure` absent but `merge_failed` declared → after `--fix`, field is present, state list unchanged.
+- `test_fix_adds_state_only`: project has `on_failure = "merge_failed"` on the transition but state not declared → after `--fix`, state block is appended, field unchanged.
+- `test_fix_adds_both_atomically`: project has neither `on_failure` field nor `merge_failed` declared → a **single** `--fix` run adds both; re-running validate exits 0 without a second `--fix`.
 
 **Step 7 — Docs**
 
 - `docs/commands.md`, `apm validate` section: add two bullets under config checks:
-  - "Transitions with `completion = merge` or `pr_or_epic_merge` that are missing an `on_failure` field"
+  - "Transitions with `completion = merge` or `pr_or_epic_merge` that are missing an `on_failure` field (rule applies to the transition definition; no per-ticket data required)"
   - "`on_failure` values referencing undeclared states"
-  - Expand `--fix` description: "also patches missing `on_failure` fields by porting the value from the matching default-template transition".
+  - Expand `--fix` description: "also patches missing `on_failure` fields by porting the value from the matching default-template transition, and appends any state blocks referenced by `on_failure` that are absent from the project's workflow".
 - `README.md`: search for `merge_failed`; if any text describes it as hardcoded, replace with a note that it is configured via `on_failure` in `workflow.toml`.
 
 **Constraint reminders**
@@ -228,6 +251,7 @@ In `apm-core/src/validate.rs` `#[cfg(test)]` block, add four unit tests (mirror 
 - The `--fix` path must not create or recreate worktrees; it only edits `workflow.toml`.
 - `--config-only` already exits before per-ticket iteration; the new `validate_config()` checks are config-level and run before that guard, so they are always checked (consistent with other config checks).
 - Backward compatibility: existing workflows without `on_failure` continue to load without error at parse time (field is `Option`); the error surface is `apm validate`, not deserialization.
+- `apply_on_failure_fixes` performs both the field patch and the state append before writing the file once — no partial write.
 
 ### Open questions
 
