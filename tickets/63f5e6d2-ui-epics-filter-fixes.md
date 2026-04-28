@@ -38,7 +38,26 @@ The epics filter dropdown in `SupervisorView` has two independent bugs.
 
 ### Approach
 
-How the implementation will work.
+Three changes, all confined to `apm-ui/src/components/supervisor/SupervisorView.tsx`. No other files need to change.
+
+**1. Add `refetchInterval` to the epics query (line 60)**
+
+Change the epics `useQuery` call to include `refetchInterval: 10_000`, matching the pattern used by the tickets query and all other polling queries in the UI.
+
+**2. Add "No epic" option to the dropdown (after "All epics", line 235)**
+
+Insert `<option value="__none__">No epic</option>` immediately after the "All epics" option, before the mapped epics list.
+
+The existing `onChange` handler (`setEpicFilter(e.target.value || null)`) works without modification: `"__none__"` is truthy so it passes through unchanged; empty string maps to `null` (clear). The `value={epicFilter ?? ""}` binding also handles `"__none__"` correctly.
+
+**3. Update filter logic (lines 112-114)**
+
+Replace the single-branch guard with a two-branch guard:
+
+- When `epicFilter === "__none__"`: keep only tickets where `!t.epic` (absent or falsy)
+- When `epicFilter !== null` (and not `"__none__"`): keep only tickets where `t.epic === epicFilter`
+
+The existing `hasActiveFilters` check (`epicFilter !== null`) already treats `"__none__"` as active. No changes needed to `useLayoutStore.ts` — the `epicFilter: string | null` type accommodates the sentinel without modification.
 
 ### Open questions
 
