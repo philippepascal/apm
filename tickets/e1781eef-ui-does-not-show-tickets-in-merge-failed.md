@@ -1,7 +1,7 @@
 +++
 id = "e1781eef"
 title = "UI does not show tickets in merge_failed state"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e1781eef-ui-does-not-show-tickets-in-merge-failed"
 created_at = "2026-04-28T22:26:52.277291Z"
-updated_at = "2026-04-28T22:41:47.199612Z"
+updated_at = "2026-04-28T22:41:52.294550Z"
 +++
 
 ## Spec
@@ -130,3 +130,4 @@ No changes required to `visibleStates`, `columns`, or any Swimlane component —
 | 2026-04-28T22:26Z | — | new | philippepascal |
 | 2026-04-28T22:30Z | new | groomed | philippepascal |
 | 2026-04-28T22:35Z | groomed | in_design | philippepascal |
+| 2026-04-28T22:41Z | in_design | specd | claude-0428-2235-ee40 |
