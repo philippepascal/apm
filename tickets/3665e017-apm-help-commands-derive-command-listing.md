@@ -1,7 +1,7 @@
 +++
 id = "3665e017"
 title = "apm help commands: derive command listing from clap"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3665e017-apm-help-commands-derive-command-listing"
 created_at = "2026-04-28T19:27:18.217337Z"
-updated_at = "2026-04-28T20:17:46.579618Z"
+updated_at = "2026-04-28T20:21:49.595229Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0"]
@@ -123,3 +123,4 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 | 2026-04-28T19:42Z | in_design | specd | claude-0428-1937-c708 |
 | 2026-04-28T20:17Z | specd | ammend | philippepascal |
 | 2026-04-28T20:17Z | ammend | in_design | philippepascal |
+| 2026-04-28T20:21Z | in_design | specd | claude-0428-2017-f9f0 |
