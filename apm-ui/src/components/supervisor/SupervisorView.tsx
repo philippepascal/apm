@@ -5,20 +5,6 @@ import Swimlane from './Swimlane'
 import type { Ticket } from './types'
 import { useLayoutStore } from '../../store/useLayoutStore'
 
-const ALL_WORKFLOW_STATES = [
-  'new',
-  'in_design',
-  'question',
-  'specd',
-  'ammend',
-  'ready',
-  'in_progress',
-  'blocked',
-  'implemented',
-  'accepted',
-  'closed',
-]
-
 async function fetchTickets(includeClosed: boolean): Promise<{ tickets: Ticket[]; supervisor_states: string[] }> {
   const url = includeClosed ? '/api/tickets?include_closed=true' : '/api/tickets'
   const res = await fetch(url)
@@ -100,6 +86,10 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
     if (showClosed) base.push('closed')
     return base
   }, [stateFilter, showClosed, supervisorStates])
+
+  const dropdownStates = useMemo(() => {
+    return [...supervisorStates, 'closed']
+  }, [supervisorStates])
 
   const columns = useMemo(() => {
     const query = searchText.trim().toLowerCase()
@@ -205,7 +195,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           <option value="">All states</option>
-          {ALL_WORKFLOW_STATES.map((s) => (
+          {dropdownStates.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
