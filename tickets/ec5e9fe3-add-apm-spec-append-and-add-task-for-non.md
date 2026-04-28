@@ -45,7 +45,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 - [x] `--append` commits to the ticket branch with message `ticket(<id>): append to section <name>`
 - [x] When aggressive sync is enabled, `--append` pushes to origin after the commit; a push failure prints a warning but does not fail the command
 
-- [ ] **`--add-task`**
+- [x] **`--add-task`**
 
 - [ ] `apm spec <id> --add-task <text>` without `--section` exits non-zero with an error containing `"--add-task requires --section"`
 - [ ] `apm spec <id> --section <name> --add-task <text>` appends `- [ ] <text>` to the named section
