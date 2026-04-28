@@ -279,6 +279,8 @@ agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [agents]
 max_concurrent = 3
+max_workers_per_epic = 1
+max_workers_on_default = 1
 instructions = ".apm/agents.md"
 
 [workers]

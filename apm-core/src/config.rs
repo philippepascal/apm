@@ -322,6 +322,8 @@ pub struct AgentsConfig {
     pub max_concurrent: usize,
     #[serde(default = "default_max_workers_per_epic")]
     pub max_workers_per_epic: usize,
+    #[serde(default = "default_max_workers_on_default")]
+    pub max_workers_on_default: usize,
     #[serde(default)]
     pub instructions: Option<PathBuf>,
     #[serde(default = "default_true")]
@@ -332,6 +334,7 @@ pub struct AgentsConfig {
 
 fn default_max_concurrent() -> usize { 3 }
 fn default_max_workers_per_epic() -> usize { 1 }
+fn default_max_workers_on_default() -> usize { 1 }
 fn default_true() -> bool { true }
 
 #[derive(Debug, Deserialize)]
@@ -355,6 +358,7 @@ impl Default for AgentsConfig {
         Self {
             max_concurrent: default_max_concurrent(),
             max_workers_per_epic: default_max_workers_per_epic(),
+            max_workers_on_default: default_max_workers_on_default(),
             instructions: None,
             side_tickets: true,
             skip_permissions: false,
@@ -517,6 +521,16 @@ impl Config {
             .filter(|(_, count)| *count >= limit)
             .map(|(eid, _)| eid.to_string())
             .collect()
+    }
+
+    /// Returns true when the default-branch worker slot is full.
+    /// A value of 0 for `max_workers_on_default` means no additional cap.
+    pub fn is_default_branch_blocked(&self, active_epic_ids: &[Option<String>]) -> bool {
+        if self.agents.max_workers_on_default == 0 {
+            return false;
+        }
+        let count = active_epic_ids.iter().filter(|e| e.is_none()).count();
+        count >= self.agents.max_workers_on_default
     }
 
     /// States where `actor` can actively pick up / act on tickets.
@@ -1127,6 +1141,43 @@ dir = "tickets"
         let active = vec![Some("epicA".to_string())];
         let blocked = config.blocked_epics(&active);
         assert!(!blocked.contains(&"epicA".to_string()));
+    }
+
+    #[test]
+    fn default_branch_not_blocked_when_no_active_non_epic_workers() {
+        let base = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n";
+        let config: Config = toml::from_str(base).unwrap();
+        assert_eq!(config.agents.max_workers_on_default, 1);
+        // limit=1, 0 active non-epic workers → not blocked
+        let active: Vec<Option<String>> = vec![];
+        assert!(!config.is_default_branch_blocked(&active));
+    }
+
+    #[test]
+    fn default_branch_blocked_when_one_active_non_epic_worker_and_limit_one() {
+        let base = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n";
+        let config: Config = toml::from_str(base).unwrap();
+        // limit=1, 1 active non-epic worker → blocked
+        let active = vec![None];
+        assert!(config.is_default_branch_blocked(&active));
+    }
+
+    #[test]
+    fn default_branch_not_blocked_when_limit_zero() {
+        let toml = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n\n[agents]\nmax_workers_on_default = 0\n";
+        let config: Config = toml::from_str(toml).unwrap();
+        // limit=0, any number of active non-epic workers → not blocked
+        let active = vec![None, None, None];
+        assert!(!config.is_default_branch_blocked(&active));
+    }
+
+    #[test]
+    fn default_branch_not_blocked_when_all_workers_are_epic_linked() {
+        let base = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n";
+        let config: Config = toml::from_str(base).unwrap();
+        // limit=1, all active workers are epic-linked → not blocked
+        let active = vec![Some("epicA".to_string()), Some("epicB".to_string())];
+        assert!(!config.is_default_branch_blocked(&active));
     }
 
     #[test]

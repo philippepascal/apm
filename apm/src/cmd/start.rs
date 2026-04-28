@@ -37,10 +37,11 @@ pub fn spawn_next_worker(
     skip_permissions: bool,
     epic_filter: Option<&str>,
     blocked_epics: &[String],
+    default_blocked: bool,
 ) -> Result<Option<(String, Option<String>, std::process::Child, std::path::PathBuf)>> {
     let mut messages = Vec::new();
     let mut warnings = Vec::new();
-    let result = apm_core::start::spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter, blocked_epics, &mut messages, &mut warnings)?;
+    let result = apm_core::start::spawn_next_worker(root, no_aggressive, skip_permissions, epic_filter, blocked_epics, default_blocked, &mut messages, &mut warnings)?;
     for w in &warnings {
         eprintln!("{w}");
     }

@@ -108,13 +108,15 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
         }
 
         if !no_more && workers.len() < max_concurrent {
-            let blocked_epics: Vec<String> = {
+            let (blocked_epics, default_blocked) = {
                 let epic_ids: Vec<Option<String>> = workers.iter()
                     .map(|(_, eid, _, _)| eid.clone())
                     .collect();
-                config.blocked_epics(&epic_ids)
+                let blocked = config.blocked_epics(&epic_ids);
+                let def_blocked = config.is_default_branch_blocked(&epic_ids);
+                (blocked, def_blocked)
             };
-            match super::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics) {
+            match super::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics, default_blocked) {
                 Ok(None) => {
                     if daemon {
                         let secs = interval_secs;
