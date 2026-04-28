@@ -26,13 +26,13 @@ The likely cause is a React render-batching race: `setReviewMode(false)` (a Zust
 
 ### Acceptance criteria
 
-- [ ] After clicking a state-change button in the review panel and the transition API returns success, the review panel closes
-- [ ] After the panel closes, the normal 3-column board view is shown
-- [ ] After the panel closes, the board column for the ticket reflects its new state without a page reload
-- [ ] If the transition API returns an error, the panel stays open and displays the error message
-- [ ] The "Keep at [state] [K]" button closes the panel without changing the ticket's state
-- [ ] The K keyboard shortcut closes the panel without changing the ticket's state
-- [ ] Keyboard-shortcut transitions (letter keys mapped to valid states) also close the panel on success
+- [x] After clicking a state-change button in the review panel and the transition API returns success, the review panel closes
+- [x] After the panel closes, the normal 3-column board view is shown
+- [x] After the panel closes, the board column for the ticket reflects its new state without a page reload
+- [x] If the transition API returns an error, the panel stays open and displays the error message
+- [x] The "Keep at [state] [K]" button closes the panel without changing the ticket's state
+- [x] The K keyboard shortcut closes the panel without changing the ticket's state
+- [x] Keyboard-shortcut transitions (letter keys mapped to valid states) also close the panel on success
 
 ### Out of scope
 
