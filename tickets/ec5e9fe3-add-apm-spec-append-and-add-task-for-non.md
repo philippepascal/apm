@@ -47,7 +47,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 
 - [x] **`--add-task`**
 
-- [ ] `apm spec <id> --add-task <text>` without `--section` exits non-zero with an error containing `"--add-task requires --section"`
+- [x] `apm spec <id> --add-task <text>` without `--section` exits non-zero with an error containing `"--add-task requires --section"`
 - [ ] `apm spec <id> --section <name> --add-task <text>` appends `- [ ] <text>` to the named section
 - [ ] When the target section is empty or absent, `--add-task` creates it with `- [ ] <text>` as its sole item
 - [ ] When config is active and the named section has `type != "tasks"`, `--add-task` exits non-zero with an error that names the actual section type
