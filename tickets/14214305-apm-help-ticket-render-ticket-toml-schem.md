@@ -19,27 +19,11 @@ depends_on = ["bc89e0a0", "069c3403"]
 
 ### Problem
 
-Replace the `render_ticket()` stub from ticket bc89e0a0 with a real renderer that uses the auto-derive infrastructure from ticket 069c3403 to render the `TicketConfig` and `SectionConfig` structs from `apm-core/src/config.rs` (or wherever they live).
+The `render_ticket()` function in `apm/src/cmd/help.rs` — introduced as a stub by ticket bc89e0a0 — returns a placeholder string and does nothing useful. As a result, `apm help ticket` gives users no actionable information about what fields are valid in `.apm/ticket.toml`, their types, defaults, or purpose.
 
-**Structure to render:**
-- `[[ticket.sections]]` array — each `SectionConfig` with fields: `name`, `type` (enum: `free`, `tasks`, `qa`), `required`, `placeholder`.
-- Top-level explanation that `ticket.sections` is an array defining the spec sections every ticket has, in order.
-- Document each section type's semantics:
-  - `free` — free-form prose
-  - `tasks` — checkbox list (`- [ ] item`); supports `apm spec --mark` and `apm spec --add-task`
-  - `qa` — question/answer pairs
+The relevant types (`TicketConfig`, `TicketSection`, `SectionType`) already exist in `apm-core/src/config.rs`. Ticket 069c3403 adds `JsonSchema` derives to those types and supplies `apm_core::help_schema::render_schema::<T>()`, which walks the schema and emits a formatted table of fields with their types, defaults, and doc-comment descriptions. All that is missing is: (1) meaningful doc comments on `TicketConfig`, `TicketSection`, and `SectionType` so `render_schema` has descriptions to emit, and (2) a real body for `render_ticket()` that calls `render_schema::<TicketConfig>()` and prepends a short introductory header.
 
-**Output structure:**
-- Per field: name, type, default, description from doc comments.
-- Section-type enum: list variants with semantics (especially the `tasks`/`qa` interactions with `apm spec` flags).
-
-**Implementation pointers:**
-- In `apm/src/cmd/help.rs`: replace the stub for `ticket` topic. Call into `apm_core::help_schema` for the `TicketConfig` type.
-- Doc comments on `TicketConfig`, `SectionConfig`, and the section-type enum may need to be added or improved as part of this ticket.
-
-**Out of scope:**
-- Frontmatter schema (`Frontmatter` struct) — that is the ticket *file* format, not `.apm/ticket.toml`. Could be a follow-up help topic but is not in scope here.
-- Examples beyond struct doc comments.
+The `SectionType` enum warrants special attention: its three variants (`free`, `tasks`, `qa`) each have distinct runtime semantics — `tasks` sections integrate with `apm spec --mark` and `apm spec --add-task` — and those semantics should be visible from `apm help ticket` without reading source code.
 
 ### Acceptance criteria
 
