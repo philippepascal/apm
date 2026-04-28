@@ -21,6 +21,7 @@ pub mod spec;
 pub mod ticket;
 pub mod work;
 pub mod worker;
+pub mod hash_stamp;
 pub mod validate;
 pub mod verify;
 pub use state::{TransitionOption, compute_valid_transitions};

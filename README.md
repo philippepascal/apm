@@ -172,11 +172,20 @@ apm epic close <epic-id>
 
 When a ticket reaches `implemented`, the completion strategy determines what happens next:
 
-- **`pr`** — push the branch and open a pull request (default)
+- **`pr`** — push the branch and open a pull request
 - **`merge`** — merge directly into the target branch
-- **`pr_or_epic_merge`** — open a PR for standalone tickets, merge into the epic branch for epic tickets
+- **`pr_or_epic_merge`** — open a PR for standalone tickets, merge into the epic branch for epic tickets (default)
 - **`pull`** — pull the latest default branch into the ticket branch
 - **`none`** — just push the branch, handle the rest manually
+
+| Strategy | Composes dependencies? | Notes |
+|---|---|---|
+| `pr_or_epic_merge` | Yes, within an epic | Default. Same strategy yields PR-on-main and merge-to-epic depending on `target_branch`. |
+| `merge` | Yes, when ticket and deps share `target_branch` | Lands directly on the target. Skips supervisor review on main. |
+| `pr` | No | State→`implemented` fires when the PR is *opened*, not when it merges. Downstream tickets can start before upstream code lands. |
+| `none` | No | Nothing lands automatically; downstream tickets cannot rely on upstream code being present. |
+
+See `docs/strategy-and-dependencies.md` for the full dependency rules and strategy rationale.
 
 Strategies are configured per-transition in `workflow.toml`.
 

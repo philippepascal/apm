@@ -110,6 +110,113 @@ required = false
     dir
 }
 
+/// Like setup() but configures the `merge` completion strategy for
+/// `in_progress → implemented` so that depends_on is allowed when tickets
+/// share the same target_branch (or both default to main).
+fn setup_merge() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q", "-b", "main"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 3
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id         = "new"
+label      = "New"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states]]
+id         = "ammend"
+label      = "Ammend"
+actionable = ["agent"]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "implemented"
+completion = "merge"
+
+[[workflow.states]]
+id       = "implemented"
+label    = "Implemented"
+terminal = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+
+[[ticket.sections]]
+name     = "Problem"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Acceptance criteria"
+type     = "tasks"
+required = true
+
+[[ticket.sections]]
+name     = "Out of scope"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Approach"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Open questions"
+type     = "qa"
+required = false
+
+[[ticket.sections]]
+name     = "Amendment requests"
+type     = "tasks"
+required = false
+"#,
+    )
+    .unwrap();
+
+    git(p, &["add", "apm.toml"]);
+    git(p, &[
+        "-c", "commit.gpgsign=false",
+        "commit", "-m", "init", "--allow-empty",
+    ]);
+
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
 /// Read a file's content from a git branch (does not touch the working tree).
 fn branch_content(dir: &std::path::Path, branch: &str, path: &str) -> String {
     let out = std::process::Command::new("git")
@@ -635,37 +742,46 @@ fn set_priority_updates_frontmatter() {
 
 #[test]
 fn set_depends_on_single_id() {
-    let dir = setup();
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Dep ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id = find_ticket_id(dir.path(), "dep-ticket");
     apm::cmd::new::run(dir.path(), "Dep test single".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "dep-test-single");
     let id = find_ticket_id(dir.path(), "dep-test-single");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345".into(), true).unwrap();
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), dep_id.clone(), true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
-    assert!(content.contains("depends_on = [\"abc12345\"]"));
+    assert!(content.contains(&dep_id), "dep id missing in content");
 }
 
 #[test]
 fn set_depends_on_comma_separated() {
-    let dir = setup();
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Dep alpha".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id1 = find_ticket_id(dir.path(), "dep-alpha");
+    apm::cmd::new::run(dir.path(), "Dep beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id2 = find_ticket_id(dir.path(), "dep-beta");
     apm::cmd::new::run(dir.path(), "Dep test multi".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "dep-test-multi");
     let id = find_ticket_id(dir.path(), "dep-test-multi");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345,def67890".into(), true).unwrap();
+    let val = format!("{dep_id1},{dep_id2}");
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), val, true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
-    assert!(content.contains("abc12345"));
-    assert!(content.contains("def67890"));
+    assert!(content.contains(&dep_id1), "first dep id missing");
+    assert!(content.contains(&dep_id2), "second dep id missing");
 }
 
 #[test]
 fn set_depends_on_clear() {
-    let dir = setup();
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Dep ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id = find_ticket_id(dir.path(), "dep-ticket");
     apm::cmd::new::run(dir.path(), "Dep test clear".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "dep-test-clear");
     let id = find_ticket_id(dir.path(), "dep-test-clear");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "abc12345".into(), true).unwrap();
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), dep_id, true).unwrap();
     apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "-".into(), true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(!content.contains("depends_on"));
@@ -673,15 +789,20 @@ fn set_depends_on_clear() {
 
 #[test]
 fn set_depends_on_trims_whitespace() {
-    let dir = setup();
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Dep one".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id1 = find_ticket_id(dir.path(), "dep-one");
+    apm::cmd::new::run(dir.path(), "Dep two".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id2 = find_ticket_id(dir.path(), "dep-two");
     apm::cmd::new::run(dir.path(), "Dep test trim".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let branch = find_ticket_branch(dir.path(), "dep-test-trim");
     let id = find_ticket_id(dir.path(), "dep-test-trim");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), " id1 , id2 ".into(), true).unwrap();
+    let val = format!(" {dep_id1} , {dep_id2} ");
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), val, true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
-    assert!(content.contains("\"id1\""));
-    assert!(content.contains("\"id2\""));
+    assert!(content.contains(&format!("\"{dep_id1}\"")), "first dep id missing");
+    assert!(content.contains(&format!("\"{dep_id2}\"")), "second dep id missing");
 }
 
 // --- next ---
@@ -2355,7 +2476,11 @@ fn new_epic_bad_id_is_error() {
 
 #[test]
 fn new_depends_on_sets_frontmatter() {
-    let dir = setup();
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Dep one".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id1 = find_ticket_id(dir.path(), "dep-one");
+    apm::cmd::new::run(dir.path(), "Dep two".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id2 = find_ticket_id(dir.path(), "dep-two");
     apm::cmd::new::run(
         dir.path(),
         "Dependent ticket".into(),
@@ -2367,21 +2492,26 @@ fn new_depends_on_sets_frontmatter() {
         vec![],
         vec![],
         None,
-        vec!["aabbccdd".into(), "11223344".into()],
+        vec![dep_id1.clone(), dep_id2.clone()],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "dependent-ticket");
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("depends_on"), "depends_on field missing");
-    assert!(content.contains("aabbccdd"), "first dep missing");
-    assert!(content.contains("11223344"), "second dep missing");
+    assert!(content.contains(&dep_id1), "first dep missing");
+    assert!(content.contains(&dep_id2), "second dep missing");
     assert!(!content.contains("epic ="), "epic should be absent");
     assert!(!content.contains("target_branch ="), "target_branch should be absent");
 }
 
 #[test]
 fn new_depends_on_comma_separated() {
-    let dir = setup();
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Dep one".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id1 = find_ticket_id(dir.path(), "dep-one");
+    apm::cmd::new::run(dir.path(), "Dep two".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let dep_id2 = find_ticket_id(dir.path(), "dep-two");
+    let combined = format!("{dep_id1},{dep_id2}");
     apm::cmd::new::run(
         dir.path(),
         "Comma deps ticket".into(),
@@ -2393,13 +2523,13 @@ fn new_depends_on_comma_separated() {
         vec![],
         vec![],
         None,
-        vec!["aabbccdd,11223344".into()],
+        vec![combined],
     ).unwrap();
     let branch = find_ticket_branch(dir.path(), "comma-deps-ticket");
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
-    assert!(content.contains("aabbccdd"), "first dep missing");
-    assert!(content.contains("11223344"), "second dep missing");
+    assert!(content.contains(&dep_id1), "first dep missing");
+    assert!(content.contains(&dep_id2), "second dep missing");
 }
 
 #[test]
@@ -4915,48 +5045,13 @@ fn pr_or_epic_merge_with_target_branch_pushes_target_to_origin() {
     assert_eq!(local_sha, remote_sha, "origin/epic/push-test should match local after push");
 }
 
-// --- epic set max_workers ---
+// --- epic set max_workers (now an error) ---
 
 #[test]
-fn epic_set_max_workers_writes_config() {
+fn epic_set_max_workers_is_now_unknown_field() {
     let (dir, epic_id) = setup_with_epic();
-    let p = dir.path();
-
-    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2").unwrap();
-
-    let config = apm_core::config::Config::load(p).unwrap();
-    assert_eq!(config.epic_max_workers(&epic_id), Some(2));
-}
-
-#[test]
-fn epic_set_max_workers_updates_existing_value() {
-    let (dir, epic_id) = setup_with_epic();
-    let p = dir.path();
-
-    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "3").unwrap();
-    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "1").unwrap();
-
-    let config = apm_core::config::Config::load(p).unwrap();
-    assert_eq!(config.epic_max_workers(&epic_id), Some(1));
-}
-
-#[test]
-fn epic_set_max_workers_clear_removes_field() {
-    let (dir, epic_id) = setup_with_epic();
-    let p = dir.path();
-
-    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2").unwrap();
-    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "-").unwrap();
-
-    let config = apm_core::config::Config::load(p).unwrap();
-    assert_eq!(config.epic_max_workers(&epic_id), None);
-}
-
-#[test]
-fn epic_set_max_workers_invalid_value_is_error() {
-    let (dir, epic_id) = setup_with_epic();
-    let result = apm::cmd::epic::run_set(dir.path(), &epic_id, "max_workers", "not_a_number");
-    assert!(result.is_err(), "expected error for non-integer value");
+    let result = apm::cmd::epic::run_set(dir.path(), &epic_id, "max_workers", "2");
+    assert!(result.is_err(), "expected error: max_workers is no longer a valid field");
 }
 
 #[test]
@@ -4972,7 +5067,7 @@ fn epic_set_nonexistent_epic_exits_nonzero() {
     // No epic branch exists, so any ID should fail.
     // run_set calls std::process::exit(1) for nonexistent epic, so we test via subprocess.
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["epic", "set", "deadbeef", "max_workers", "2"])
+        .args(["epic", "set", "deadbeef", "owner", "alice"])
         .current_dir(dir.path())
         .env("GIT_AUTHOR_NAME", "test")
         .env("GIT_AUTHOR_EMAIL", "test@test.com")
@@ -4984,32 +5079,10 @@ fn epic_set_nonexistent_epic_exits_nonzero() {
 }
 
 #[test]
-fn epic_set_zero_value_exits_nonzero() {
-    let (dir, epic_id) = setup_with_epic();
-    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["epic", "set", &epic_id, "max_workers", "0"])
-        .current_dir(dir.path())
-        .env("GIT_AUTHOR_NAME", "test")
-        .env("GIT_AUTHOR_EMAIL", "test@test.com")
-        .env("GIT_COMMITTER_NAME", "test")
-        .env("GIT_COMMITTER_EMAIL", "test@test.com")
-        .output()
-        .unwrap();
-    assert!(!out.status.success(), "expected non-zero exit for max_workers = 0");
-}
-
-#[test]
-fn epic_set_preserves_existing_config_content() {
-    let (dir, epic_id) = setup_with_epic();
-    let p = dir.path();
-
-    // The existing apm.toml has [agents] max_concurrent = 3.
-    apm::cmd::epic::run_set(p, &epic_id, "max_workers", "2").unwrap();
-
-    // Config should still parse correctly with all original fields intact.
-    let config = apm_core::config::Config::load(p).unwrap();
-    assert_eq!(config.agents.max_concurrent, 3);
-    assert_eq!(config.epic_max_workers(&epic_id), Some(2));
+fn agents_max_workers_per_epic_defaults_to_one() {
+    let dir = setup();
+    let config = apm_core::config::Config::load(dir.path()).unwrap();
+    assert_eq!(config.agents.max_workers_per_epic, 1);
 }
 
 // --- epic set owner (bulk) ---

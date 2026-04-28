@@ -4,6 +4,49 @@ use std::path::Path;
 use crate::config::StateConfig;
 use crate::{git_util, worktree};
 
+pub fn epic_is_quiescent(
+    root: &Path,
+    epic_id: &str,
+    config: &crate::config::Config,
+    worktrees: &[(std::path::PathBuf, String)],
+) -> Result<Vec<String>> {
+    let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let mut blockers = Vec::new();
+
+    for t in all_tickets.iter().filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id)) {
+        let id = &t.frontmatter.id;
+        let title = &t.frontmatter.title;
+        let state_id = &t.frontmatter.state;
+
+        let state_cfg = config.workflow.states.iter().find(|s| &s.id == state_id);
+        let is_terminal = state_cfg.map(|s| s.terminal).unwrap_or(false);
+        let is_worker_end = state_cfg.map(|s| s.worker_end).unwrap_or(false);
+
+        let state_blocks = !is_terminal && !is_worker_end;
+        if state_blocks {
+            blockers.push(format!("  {id} — {title} (state: {state_id})"));
+            continue;
+        }
+
+        let ticket_branch = t.frontmatter.branch.clone()
+            .or_else(|| crate::ticket_fmt::branch_name_from_path(&t.path));
+        if let Some(branch) = ticket_branch {
+            if let Some((wt_path, _)) = worktrees.iter().find(|(_, b)| b == &branch) {
+                let pid_file = wt_path.join(".apm-worker.pid");
+                if pid_file.exists() {
+                    if let Ok((pid, _)) = crate::worker::read_pid_file(&pid_file) {
+                        if crate::worker::is_alive(pid) {
+                            blockers.push(format!("  {id} — {title} (live worker)"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(blockers)
+}
+
 /// Derive the display state of an epic from the `StateConfig`s of its tickets.
 ///
 /// Rules (evaluated in order):
@@ -147,6 +190,83 @@ mod tests {
         let (changed, skipped) = set_epic_owner(p, "epic5678", "bob", &config).unwrap();
         assert_eq!(changed, 0);
         assert_eq!(skipped, 2);
+    }
+
+    const TOML_WITH_WORKER_END: &str = concat!(
+        "[project]\nname = \"test\"\n\n",
+        "[tickets]\ndir = \"tickets\"\n\n",
+        "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\nterminal = false\nworker_end = false\n\n",
+        "[[workflow.states]]\nid = \"implemented\"\nlabel = \"Implemented\"\nterminal = false\nworker_end = true\n\n",
+        "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
+    );
+
+    #[test]
+    fn epic_is_quiescent_all_done() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::write(p.join("apm.toml"), TOML_WITH_WORKER_END).unwrap();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let closed = make_ticket_content("aaaa0001", "closed", "epic0001");
+        crate::git::commit_to_branch(p, "ticket/aaaa0001-t1", "tickets/aaaa0001-t1.md", &closed, "add t1").unwrap();
+
+        let implemented = make_ticket_content("bbbb0002", "implemented", "epic0001");
+        crate::git::commit_to_branch(p, "ticket/bbbb0002-t2", "tickets/bbbb0002-t2.md", &implemented, "add t2").unwrap();
+
+        let blockers = epic_is_quiescent(p, "epic0001", &config, &[]).unwrap();
+        assert!(blockers.is_empty(), "expected no blockers, got: {blockers:?}");
+    }
+
+    #[test]
+    fn epic_is_quiescent_state_blocker() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::write(p.join("apm.toml"), TOML_WITH_WORKER_END).unwrap();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let content = make_ticket_content("cccc0003", "ready", "epic0002");
+        crate::git::commit_to_branch(p, "ticket/cccc0003-t3", "tickets/cccc0003-t3.md", &content, "add t3").unwrap();
+
+        let blockers = epic_is_quiescent(p, "epic0002", &config, &[]).unwrap();
+        assert_eq!(blockers.len(), 1);
+        assert!(blockers[0].contains("cccc0003"));
+        assert!(blockers[0].contains("(state: ready)"));
+    }
+
+    #[test]
+    fn epic_is_quiescent_live_worker_blocker() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::write(p.join("apm.toml"), TOML_WITH_WORKER_END).unwrap();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        // Ticket in worker_end state (quiescent by state check).
+        let content = make_ticket_content("dddd0004", "implemented", "epic0003");
+        crate::git::commit_to_branch(p, "ticket/dddd0004-t4", "tickets/dddd0004-t4.md", &content, "add t4").unwrap();
+
+        // Simulate a worktree with a live .apm-worker.pid (current process PID).
+        let wt_path = tmp.path().join("fake-worktree-dddd0004");
+        std::fs::create_dir_all(&wt_path).unwrap();
+        let pid = std::process::id();
+        std::fs::write(
+            wt_path.join(".apm-worker.pid"),
+            format!(r#"{{"pid":{pid},"ticket_id":"dddd0004","started_at":"2026-01-01T00:00:00Z"}}"#),
+        ).unwrap();
+
+        let worktrees = vec![(wt_path, "ticket/dddd0004-t4".to_string())];
+        let blockers = epic_is_quiescent(p, "epic0003", &config, &worktrees).unwrap();
+        assert_eq!(blockers.len(), 1);
+        assert!(blockers[0].contains("dddd0004"));
+        assert!(blockers[0].contains("(live worker)"));
     }
 
     fn make_state(terminal: bool, satisfies_deps: bool, actionable: Vec<&str>) -> StateConfig {
