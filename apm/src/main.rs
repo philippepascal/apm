@@ -759,6 +759,15 @@ the given substring:
         /// Mark the first unchecked item matching this text in --section as done
         #[arg(long)]
         mark: Option<String>,
+        /// Append content to the section without replacing existing content
+        #[arg(long, allow_hyphen_values = true, conflicts_with_all = ["set", "set_file", "append_file", "add_task"])]
+        append: Option<String>,
+        /// Read content to append from this file
+        #[arg(long, value_name = "PATH", conflicts_with_all = ["set", "set_file", "append", "add_task"])]
+        append_file: Option<String>,
+        /// Append a new unchecked task item (`- [ ] <text>`) to a tasks-typed section
+        #[arg(long, conflicts_with_all = ["set", "set_file", "append", "append_file"])]
+        add_task: Option<String>,
         /// Skip automatic git fetch/push
         #[arg(long)]
         no_aggressive: bool,
@@ -870,7 +879,7 @@ fn main() -> Result<()> {
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
         Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked, epics),
-        Command::Spec { id, section, set, set_file, check, mark, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, no_aggressive),
+        Command::Spec { id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
