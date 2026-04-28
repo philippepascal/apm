@@ -1,7 +1,7 @@
 +++
 id = "498febe0"
 title = "Worker leaks edits into main worktree; capture full transcript"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 6
 risk = 5
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/498febe0-worker-leaks-edits-into-main-worktree-ca"
 created_at = "2026-04-28T22:35:14.876837Z"
-updated_at = "2026-04-28T23:04:27.679122Z"
+updated_at = "2026-04-28T23:04:32.433171Z"
 +++
 
 ## Spec
@@ -162,3 +162,4 @@ Note: this ticket (`498febe0`) should land before `e1781eef` (UI: show tickets i
 | 2026-04-28T22:48Z | in_design | specd | claude-0428-2242-af90 |
 | 2026-04-28T23:00Z | specd | ammend | philippepascal |
 | 2026-04-28T23:01Z | ammend | in_design | philippepascal |
+| 2026-04-28T23:04Z | in_design | specd | claude-0428-2301-6e28 |
