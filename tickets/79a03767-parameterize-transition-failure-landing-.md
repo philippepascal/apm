@@ -230,6 +230,11 @@ In `apm-core/src/validate.rs` `#[cfg(test)]` block, add four unit tests (mirror 
 
 ### Amendment requests
 
+- [ ] Clarify the validate rule conservatively: any transition with `completion ∈ {merge, pr_or_epic_merge}` requires `on_failure`, regardless of whether a runtime ticket sets `target_branch`. The validation lives on the transition config, which can't predict per-ticket runtime decisions. Over-specifies for `pr_or_epic_merge` tickets that never trigger a merge — but the cost is one harmless config field. Principle: validate up front, not at the moment of failure.
+- [ ] AC must explicitly state the conservative rule and add a test: a `pr_or_epic_merge` transition without `on_failure` is rejected by validate **without requiring any ticket with `target_branch` set to exist**. The rule is on the transition definition, period.
+- [ ] Extend `apm validate --fix` to also port a missing referenced state, not just the field. When `on_failure = "X"` references a state X that is not declared in the workflow, `--fix` extracts the X state block from `apm-core/src/default/workflow.toml` (same `include_str!` mechanism used for porting the field) and appends it to the project's `.apm/workflow.toml`. Idempotent.
+- [ ] AC: a project where the `on_failure` field is missing AND the referenced state is missing → a single `apm validate --fix` invocation adds both atomically (one combined fix pass, not two separate runs).
+- [ ] Cross-ticket note in the spec: this ticket subsumes the workflow.toml port from `498febe0` (which originally manually ported `merge_failed` into the project config). After `79a03767` lands, the canonical path to add `merge_failed` to a project's workflow is via `apm validate --fix`. `498febe0` will be amended to drop that scope.
 
 ### Code review
 
