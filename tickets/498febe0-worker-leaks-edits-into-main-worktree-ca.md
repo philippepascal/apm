@@ -1,7 +1,7 @@
 +++
 id = "498febe0"
 title = "Worker leaks edits into main worktree; capture full transcript"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/498febe0-worker-leaks-edits-into-main-worktree-ca"
 created_at = "2026-04-28T22:35:14.876837Z"
-updated_at = "2026-04-28T22:48:03.023823Z"
+updated_at = "2026-04-28T23:00:57.826942Z"
 +++
 
 ## Spec
@@ -144,3 +144,4 @@ A code audit found `.apm/workflow.toml` already contains `merge_failed` at lines
 | 2026-04-28T22:36Z | new | groomed | philippepascal |
 | 2026-04-28T22:42Z | groomed | in_design | philippepascal |
 | 2026-04-28T22:48Z | in_design | specd | claude-0428-2242-af90 |
+| 2026-04-28T23:00Z | specd | ammend | philippepascal |
