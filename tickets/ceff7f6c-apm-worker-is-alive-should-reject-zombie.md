@@ -29,7 +29,7 @@ apm-core::worker::is_alive(pid) treats zombie/defunct processes as alive. It use
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Reaping or cleaning up zombie processes (that is the parent process's responsibility)\n- Handling other unusual process states such as T (stopped/traced) or D (uninterruptible sleep) — only Z is treated as dead\n- Windows support (APM targets macOS and Linux)\n- Changes to the pid-file format or schema\n- UI changes to apm workers output beyond the alive/dead flag already computed by is_alive
 
 ### Approach
 
