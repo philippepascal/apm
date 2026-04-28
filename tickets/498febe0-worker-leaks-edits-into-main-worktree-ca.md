@@ -1,7 +1,7 @@
 +++
 id = "498febe0"
 title = "Worker leaks edits into main worktree; capture full transcript"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 6
 risk = 5
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/498febe0-worker-leaks-edits-into-main-worktree-ca"
 created_at = "2026-04-28T22:35:14.876837Z"
-updated_at = "2026-04-28T23:27:18.743654Z"
+updated_at = "2026-04-28T23:31:01.029863Z"
 +++
 
 ## Spec
@@ -157,3 +157,4 @@ Note: `498febe0` and `e1781eef` (UI: show tickets in merge_failed state) no long
 | 2026-04-28T23:14Z | specd | ammend | philippepascal |
 | 2026-04-28T23:23Z | ammend | in_design | philippepascal |
 | 2026-04-28T23:27Z | in_design | specd | claude-0428-2323-70b0 |
+| 2026-04-28T23:31Z | specd | ready | philippepascal |
