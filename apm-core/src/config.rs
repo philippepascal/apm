@@ -300,6 +300,8 @@ pub struct TransitionConfig {
     pub warning: Option<String>,
     #[serde(default)]
     pub profile: Option<String>,
+    #[serde(default)]
+    pub on_failure: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]

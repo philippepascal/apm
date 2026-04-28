@@ -1035,6 +1035,8 @@ filesystem state.
 - `.apm/` TOML files parse without errors
 - All state transitions reference states that exist in the config
 - `completion = "pr"` or `"merge"` requires `[git_host]` with a provider configured
+- Transitions with `completion = "merge"` or `"pr_or_epic_merge"` that are missing an `on_failure` field (rule applies to the transition definition; no per-ticket data required)
+- `on_failure` values referencing states not declared in `workflow.toml`
 - Instruction file paths referenced in config exist on disk
 - Warning-only checks (e.g. `workers.container` set but Docker not in PATH)
 
@@ -1055,21 +1057,24 @@ filesystem state.
 - `in_design` or `in_progress` tickets whose worktree directory is absent from disk
 
 `--fix` automatically repairs branch-field mismatches by committing the corrected frontmatter to
-the ticket's branch, and closes tickets whose branch has already been merged into the default
-branch. Missing worktrees are reported but **never** auto-recreated.
+the ticket's branch, closes tickets whose branch has already been merged into the default branch,
+patches missing `on_failure` fields by porting the value from the matching default-template
+transition, and appends any state blocks referenced by `on_failure` that are absent from the
+project's `workflow.toml`. Missing worktrees are reported but **never** auto-recreated.
 
 `--json` outputs the full results as a structured JSON object — useful for CI pipelines:
 
     apm validate --json | jq '.errors'
 
 `--config-only` skips all per-ticket and filesystem checks (including merged-branch and worktree
-checks) and validates only the config files.
+checks) and validates only the config files. The `on_failure` config checks are config-level and
+run even without `--config-only`.
 
 #### Options
 
 | Flag / Arg | Type | Default | Description |
 |------------|------|---------|-------------|
-| `--fix` | flag | false | Auto-fix branch-field mismatches and close merged-branch tickets |
+| `--fix` | flag | false | Auto-fix branch-field mismatches, close merged-branch tickets, and patch missing `on_failure` fields and state declarations in `workflow.toml` |
 | `--json` | flag | false | Output results as JSON |
 | `--config-only` | flag | false | Run only config validation; skip all per-ticket and filesystem checks |
 | `--no-aggressive` | flag | false | Skip implicit git fetch |

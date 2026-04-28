@@ -2819,6 +2819,153 @@ terminal = true
     assert!(has_bad_section, "expected context_section mismatch error in {errors:?}");
 }
 
+// --- on_failure fix tests ---
+
+/// Helper: create a minimal APM project with `.apm/config.toml` + `.apm/workflow.toml`.
+/// The workflow uses `pr_or_epic_merge` (no provider required for validate).
+fn setup_on_failure_fix_project(
+    on_failure: Option<&str>,
+    declare_merge_failed: bool,
+) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git(p, &["init", "-q", "-b", "main"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    std::fs::write(
+        p.join(".apm").join("config.toml"),
+        "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n",
+    )
+    .unwrap();
+
+    let on_failure_line = on_failure
+        .map(|v| format!("on_failure = \"{v}\"\n"))
+        .unwrap_or_default();
+
+    let merge_failed_block = if declare_merge_failed {
+        "\n[[workflow.states]]\nid         = \"merge_failed\"\nlabel      = \"Merge failed\"\nactionable = [\"supervisor\"]\n\n  [[workflow.states.transitions]]\n  to      = \"implemented\"\n  trigger = \"manual\"\n\n  [[workflow.states.transitions]]\n  to      = \"in_progress\"\n  trigger = \"manual\"\n"
+    } else {
+        ""
+    };
+
+    let workflow_toml = format!(
+        "[workflow]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n  [[workflow.states.transitions]]\n  to         = \"implemented\"\n  completion = \"pr_or_epic_merge\"\n  {on_failure_line}\n[[workflow.states]]\nid       = \"implemented\"\nlabel    = \"Implemented\"\nterminal = true\n{merge_failed_block}"
+    );
+    std::fs::write(p.join(".apm").join("workflow.toml"), &workflow_toml).unwrap();
+
+    git(p, &["add", ".apm/config.toml", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    dir
+}
+
+#[test]
+fn test_fix_adds_field_only() {
+    // on_failure absent, merge_failed state IS declared.
+    let dir = setup_on_failure_fix_project(None, true);
+    let p = dir.path();
+
+    // validate fails before fix.
+    assert!(
+        apm::cmd::validate::run(p, false, false, true, true).is_err(),
+        "expected validate to fail before fix"
+    );
+
+    // --fix repairs the workflow.toml (may still report errors from before the fix).
+    let _ = apm::cmd::validate::run(p, true, false, true, true);
+
+    let wf_content = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
+    assert!(
+        wf_content.contains("on_failure = \"merge_failed\""),
+        "expected on_failure field added to workflow.toml:\n{wf_content}"
+    );
+
+    // Subsequent validate passes.
+    apm::cmd::validate::run(p, false, false, true, true).unwrap();
+}
+
+#[test]
+fn test_fix_adds_state_only() {
+    // on_failure present, merge_failed state NOT declared.
+    let dir = setup_on_failure_fix_project(Some("merge_failed"), false);
+    let p = dir.path();
+
+    // validate fails before fix.
+    assert!(
+        apm::cmd::validate::run(p, false, false, true, true).is_err(),
+        "expected validate to fail before fix"
+    );
+
+    // --fix repairs the workflow.toml.
+    let _ = apm::cmd::validate::run(p, true, false, true, true);
+
+    let wf_content = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
+    assert!(
+        wf_content.contains("merge_failed"),
+        "expected merge_failed state appended to workflow.toml:\n{wf_content}"
+    );
+    assert!(
+        wf_content.contains("on_failure = \"merge_failed\""),
+        "on_failure field should still be present:\n{wf_content}"
+    );
+
+    // Subsequent validate passes.
+    apm::cmd::validate::run(p, false, false, true, true).unwrap();
+}
+
+#[test]
+fn test_fix_adds_both_atomically() {
+    // Both on_failure field and merge_failed state are absent.
+    let dir = setup_on_failure_fix_project(None, false);
+    let p = dir.path();
+
+    // validate fails before fix.
+    assert!(
+        apm::cmd::validate::run(p, false, false, true, true).is_err(),
+        "expected validate to fail before fix"
+    );
+
+    // A SINGLE --fix adds both field and state.
+    let _ = apm::cmd::validate::run(p, true, false, true, true);
+
+    let wf_content = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
+    assert!(
+        wf_content.contains("on_failure = \"merge_failed\""),
+        "expected on_failure field added:\n{wf_content}"
+    );
+    assert!(
+        wf_content.contains("merge_failed"),
+        "expected merge_failed state appended:\n{wf_content}"
+    );
+
+    // Subsequent validate passes without needing another --fix.
+    apm::cmd::validate::run(p, false, false, true, true).unwrap();
+}
+
+#[test]
+fn test_fix_is_idempotent() {
+    // Start with both absent; first --fix repairs; second --fix makes no further changes.
+    let dir = setup_on_failure_fix_project(None, false);
+    let p = dir.path();
+
+    // First fix: repairs the workflow.
+    let _ = apm::cmd::validate::run(p, true, false, true, true);
+    let after_first = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
+
+    // Second fix on the already-fixed project: no changes.
+    apm::cmd::validate::run(p, true, false, true, true).unwrap();
+    let after_second = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
+
+    assert_eq!(
+        after_first, after_second,
+        "workflow.toml should be identical after two --fix runs"
+    );
+}
+
 // --- review ---
 
 #[test]
@@ -6698,6 +6845,7 @@ label = "New"
   to         = "implemented"
   trigger    = "manual"
   completion = "merge"
+  on_failure = "merge_failed"
 
 [[workflow.states]]
 id         = "implemented"
