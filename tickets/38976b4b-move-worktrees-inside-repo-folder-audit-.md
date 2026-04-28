@@ -78,7 +78,7 @@ The fix: enumerate via `git worktree list --porcelain` (which reads from `.git/w
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Automatic migration of existing repos from `../apm--worktrees` to `worktrees/` (coordinating with running workers and rewriting `.git/worktrees/*/gitdir` pointers is deferred)\n- `apm init --migrate-worktrees` command\n- Renaming the in-repo worktrees dir to something other than `worktrees`\n- Sharing a single `CARGO_TARGET_DIR` across worktrees to reduce disk usage\n- Fixing IDE indexers that do not respect `.gitignore` (document the caveat; out of scope to fix non-compliant tooling)\n- Any changes to the `apm worktree move` / `git worktree move` flows\n- Changing the path computation in `provision_worktree` beyond what the new default config value already causes
 
 ### Approach
 
