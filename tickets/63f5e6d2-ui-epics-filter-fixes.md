@@ -1,7 +1,7 @@
 +++
 id = "63f5e6d2"
 title = "UI: epics filter fixes"
-state = "merge_failed"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/63f5e6d2-ui-epics-filter-fixes"
 created_at = "2026-04-28T19:28:59.918275Z"
-updated_at = "2026-04-28T20:39:32.574085Z"
+updated_at = "2026-04-28T22:41:37.220685Z"
 +++
 
 ## Spec
@@ -88,3 +88,4 @@ Merge with strategy ort failed.
 | 2026-04-28T20:35Z | ready | in_progress | philippepascal |
 | 2026-04-28T20:39Z | in_progress | implemented | claude-0428-2035-ae38 |
 | 2026-04-28T20:39Z | implemented | merge_failed | claude-0428-2035-ae38 |
+| 2026-04-28T22:41Z | merge_failed | implemented | philippepascal |
