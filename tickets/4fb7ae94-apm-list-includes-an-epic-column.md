@@ -1,7 +1,7 @@
 +++
 id = "4fb7ae94"
 title = "apm list includes an epic column"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4fb7ae94-apm-list-includes-an-epic-column"
 created_at = "2026-04-28T00:25:28.853946Z"
-updated_at = "2026-04-28T00:26:15.511261Z"
+updated_at = "2026-04-28T00:57:32.160631Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T00:25Z | — | new | philippepascal |
 | 2026-04-28T00:26Z | new | groomed | philippepascal |
+| 2026-04-28T00:57Z | groomed | in_design | philippepascal |
