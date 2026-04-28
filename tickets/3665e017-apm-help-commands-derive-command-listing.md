@@ -1,7 +1,7 @@
 +++
 id = "3665e017"
 title = "apm help commands: derive command listing from clap"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3665e017-apm-help-commands-derive-command-listing"
 created_at = "2026-04-28T19:27:18.217337Z"
-updated_at = "2026-04-28T19:32:48.707128Z"
+updated_at = "2026-04-28T19:37:58.638986Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0"]
@@ -71,3 +71,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T19:27Z | — | new | philippepascal |
 | 2026-04-28T19:32Z | new | groomed | philippepascal |
+| 2026-04-28T19:37Z | groomed | in_design | philippepascal |
