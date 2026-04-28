@@ -46,7 +46,73 @@ The hardcoded fallback `supervisor_states` in `tickets.rs` (lines 41–44), used
 
 ### Approach
 
-How the implementation will work.
+Three files change.
+
+---
+
+### `apm-server/src/handlers/tickets.rs`
+
+**Change 1 — Fallback list** (lines 41–44): add `"merge_failed"` so degraded mode still surfaces it:
+
+```rust
+let fallback_supervisor_states = || vec![
+    "new".to_string(), "question".to_string(), "specd".to_string(),
+    "blocked".to_string(), "implemented".to_string(), "merge_failed".to_string(),
+];
+```
+
+**Change 2 — Catch-all pass**: make `supervisor_states` mutable in the destructure at line 45, then insert a scan immediately after the match block closes (after line 67) and before `tickets.retain(…)` (line 68). The scan appends any non-terminal ticket state not already in `supervisor_states`, making the board resilient to any future engine state not yet in the local config:
+
+```rust
+// Change the binding at line 45 to mut:
+let (resolved_ids, terminal_ids, mut supervisor_states): (Vec<String>, Vec<String>, Vec<String>) = …;
+
+// Insert after line 67, before line 68:
+{
+    let sup_set: std::collections::HashSet<&str> =
+        supervisor_states.iter().map(|s| s.as_str()).collect();
+    let term_set: std::collections::HashSet<&str> =
+        terminal_ids.iter().map(|s| s.as_str()).collect();
+    let mut seen = std::collections::HashSet::<String>::new();
+    for t in &tickets {
+        let s = t.frontmatter.state.clone();
+        if !sup_set.contains(s.as_str()) && !term_set.contains(s.as_str()) && seen.insert(s.clone()) {
+            supervisor_states.push(s);
+        }
+    }
+}
+```
+
+Running this before `tickets.retain(…)` means the scan operates on the full, unfiltered ticket list.
+
+---
+
+### `apm-ui/src/lib/stateColors.ts`
+
+Add `merge_failed: RED` to `STATE_COLORS` immediately after the existing `blocked: RED` entry (line 47):
+
+```typescript
+blocked: RED,
+merge_failed: RED,
+```
+
+---
+
+### `apm-ui/src/components/supervisor/SupervisorView.tsx`
+
+1. Delete the `ALL_WORKFLOW_STATES` constant (lines 8–20).
+
+2. Add a `dropdownStates` memo below the existing `visibleStates` memo (after line 102). It derives the filter-dropdown options from `supervisorStates` plus `'closed'`:
+
+```typescript
+const dropdownStates = useMemo(() => {
+    return [...supervisorStates, 'closed']
+}, [supervisorStates])
+```
+
+3. Replace `ALL_WORKFLOW_STATES.map(…)` at line 206 with `dropdownStates.map(…)`.
+
+No changes required to `visibleStates`, `columns`, or any Swimlane component — they already derive correctly from `supervisorStates`. After the server fix the column appears automatically; after the UI fix the dropdown lists it.
 
 ### Open questions
 
