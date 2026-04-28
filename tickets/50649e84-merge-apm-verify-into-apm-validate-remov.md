@@ -56,7 +56,7 @@ Concrete edits:
 ### Acceptance criteria
 
 - [x] `apm verify` exits with an unrecognized-command error; no deprecation alias exists
-- [ ] `apm validate` reports unknown ticket state values (state not in `config.workflow.states`)
+- [x] `apm validate` reports unknown ticket state values (state not in `config.workflow.states`)
 - [ ] `apm validate` reports tickets whose filename numeric prefix does not match the frontmatter `id` field
 - [ ] `apm validate` reports `in_progress` and `implemented` tickets that have no `branch` field
 - [ ] `apm validate` reports tickets whose branch is already merged into the default branch but whose state is not closed
