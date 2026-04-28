@@ -121,6 +121,9 @@ No `Cargo.toml` changes needed — `apm-core` is already a workspace dependency 
 
 ### Amendment requests
 
+- [ ] `worker_profiles` rendering is contradictory between AC and Approach. AC describes it as "a map of named profiles" but Approach uses array notation `worker_profiles[].command`. The actual struct is `HashMap<String, WorkerProfileConfig>`, which is a map, not an array. Reconcile to map notation: render as `worker_profiles.<name>.command` (matching the TOML form `[worker_profiles.spec_agent]`). Update the AC and Approach together so they agree.
+- [ ] Field name verification not done. The spec lists ~30 fields to add doc comments to, but doesn't reference current line numbers in `apm-core/src/config.rs`. Before implementing: pull the current struct definitions, walk every field listed in the spec, and confirm the field exists with the stated type and default. Some specifics that may have drifted: `workers.command` defaulting to `claude`, the exact field set on `AgentsConfig`, and any fields added after this spec was written (e.g., `max_workers_on_default` from ticket 07d51d55).
+- [ ] After field verification, update the AC list to reference the verified field names. Remove any ACs that point at fields that don't exist in the current struct, and add ACs for any fields that exist but weren't in the original list.
 
 ### Code review
 
