@@ -1,7 +1,7 @@
 +++
 id = "6cf21715"
 title = "apm verify should detect missing worktree for active-state tickets"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6cf21715-apm-verify-should-detect-missing-worktre"
 created_at = "2026-04-28T00:50:59.455196Z"
-updated_at = "2026-04-28T00:50:59.455196Z"
+updated_at = "2026-04-28T00:51:49.863312Z"
 +++
 
 ## Spec
@@ -52,3 +52,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T00:50Z | — | new | philippepascal |
+| 2026-04-28T00:51Z | new | groomed | philippepascal |
