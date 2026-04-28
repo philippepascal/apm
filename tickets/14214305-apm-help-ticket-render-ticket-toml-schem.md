@@ -39,7 +39,15 @@ The `SectionType` enum warrants special attention: its three variants (`free`, `
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Frontmatter schema (`Frontmatter` struct in `ticket_fmt.rs`) — that is the ticket *file* format, not `.apm/ticket.toml`; could be a follow-up help topic
+- ANSI colour or markdown rendering in the output
+- Pager integration (`less`/`more`)
+- The `apm help` dispatcher and topic routing — established by ticket bc89e0a0
+- The `help_schema` infrastructure (`schema_entries`, `render_schema`, `FieldEntry`) — that is ticket 069c3403
+- Adding `JsonSchema` derives to `TicketConfig`, `TicketSection`, `SectionType` — that is ticket 069c3403
+- Content for `render_commands()`, `render_config()`, `render_workflow()` — sibling tickets 3665e017, d486d183, 7ba021e8
+- Changes to how `apm <subcommand> --help` works (clap-native help is untouched)
+- Per-section examples or a tutorial on designing a ticket workflow
 
 ### Approach
 
