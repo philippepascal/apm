@@ -51,7 +51,52 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 
 ### Approach
 
-How the implementation will work.
+**File to change:** `apm/src/cmd/help.rs` — replace the body of `render_commands()` only. No other files change.
+
+**Key dependencies:**
+- `use clap::CommandFactory;` — brings `Cli::command()` into scope (clap 4 derive feature, already in Cargo.toml)
+- `use crate::Cli;` — the top-level parser struct defined in `main.rs`
+
+**Algorithm — `render_commands()`:**
+
+1. Call `crate::Cli::command()` to obtain the root `clap::Command`.
+2. Extract its subcommands via `root.get_subcommands()`. These are the 30+ top-level commands.
+3. Collect into a `Vec`, then sort by `cmd.get_name()` alphabetically (or preserve Cli-enum order — either is acceptable; alphabetical is safer for stability).
+4. For each top-level command, call a helper `fn render_one(cmd: &clap::Command, prefix: &str) -> String` that:
+   a. Skips if `cmd.is_hide_set()`.
+   b. Builds a usage line: `{prefix}{name} {positional_summary}` where `positional_summary` lists positional arg value-names in angle brackets (e.g. `<TITLE>`, `[ID]`).
+   c. Appends the about string on the next line, indented 2 spaces, word-wrapped at 100 columns.
+   d. For each non-hidden argument from `cmd.get_arguments()`:
+      - Skip if `arg.is_hide_set()` or if the arg id is `"help"` or `"version"` (clap auto-generated).
+      - For positionals: already covered in the usage line; skip here.
+      - For flags/options: format as `  -s, --long-name <VALUE>   help text (default: X)` (or `  --long-name` if no short; omit `<VALUE>` if it's a boolean flag; omit default clause if none).
+      - Wrap the help text column at 100 characters, aligning continuation lines under the help text start.
+   e. If the command has subcommands (`cmd.get_subcommands().next().is_some()`), recurse: for each non-hidden subcommand call `render_one(sub, &format!("{prefix}{name} "))` and indent the block by 2 additional spaces.
+5. Join all rendered blocks with a blank line separator.
+6. Prepend a one-line header: `"Commands
+========
+"`.
+7. Return the assembled String.
+
+**StyledStr conversion:** In clap 4, `get_about()`, `get_help()`, and `get_value_names()` return `Option<&StyledStr>`. Call `.to_string()` to get plain text (StyledStr implements Display).
+
+**OsStr conversion:** `get_default_values()` returns `&[OsStr]`. Use `.to_string_lossy()` on each element.
+
+**Positional arg detection:** `arg.is_positional()` returns true when the arg has no `--long` and no `-s` short flag.
+
+**Optional positionals:** `arg.get_required()` (or check `arg.get_num_args()`) distinguishes required vs optional positionals; wrap optional value-names in `[]`, required in `<>`.
+
+**Nested subcommands:** Only `Epic` currently has nested subcommands (`epic new`, `epic close`, `epic list`, `epic show`, `epic set`). The recursive approach handles any future nesting automatically.
+
+**100-column wrapping helper:** A small `fn wrap(text: &str, indent: usize, max_width: usize) -> String` that inserts newlines at word boundaries. Use `textwrap` crate if already in the dependency tree, otherwise implement a simple word-wrap loop (the crate is not required — the wrapping logic is a handful of lines).
+
+**Implementation order:**
+1. Add `use clap::CommandFactory;` and `use crate::Cli;` at the top of `help.rs`
+2. Implement the `wrap()` helper
+3. Implement `render_one(cmd, prefix)` recursively
+4. Replace the stub body of `render_commands()` with a call that builds the root command, iterates top-level commands, and joins the results
+5. `cargo build` to confirm it compiles
+6. `apm help commands` smoke test against all 12 acceptance criteria
 
 ### Open questions
 
