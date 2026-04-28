@@ -41,14 +41,16 @@ Adding an epic/base-branch column to `apm list` exposes this topology at a glanc
 
 **File to change:** `apm/src/cmd/list.rs`
 
-1. **Confirm config availability.** The `run()` function (or its caller) already receives a `Config` value for most commands. Verify that the project config — specifically `config.project.default_branch` — is accessible in the list command's entry point. If not, thread it through from the CLI dispatch layer the same way other commands receive it.
+1. **Confirm config availability.** The `run()` function (or its caller) already receives a `Config` value for most commands. Verify that the project config — specifically `config.project.default_branch` — is accessible in the list command entry point. If not, thread it through from the CLI dispatch layer the same way other commands receive it.
 
 2. **Compute the column value per ticket.** In the per-ticket formatting loop, derive the display string:
    ```rust
-   let base = ticket.frontmatter.target_branch
-       .as_deref()
-       .unwrap_or(config.project.default_branch.as_str());
+   let base = match ticket.frontmatter.target_branch.as_deref() {
+       Some(branch) => apm_core::epic::epic_id_from_branch(branch).to_owned(),
+       None => config.project.default_branch.clone(),
+   };
    ```
+   `epic_id_from_branch` is already exported from `apm-core/src/epic.rs`. It strips the `epic/` prefix and returns everything before the first `-`, so `epic/8db73240-user-auth` → `8db73240`.
 
 3. **Insert the column into the format string.** The current format is:
    ```
@@ -56,9 +58,9 @@ Adding an epic/base-branch column to `apm list` exposes this topology at a glanc
    ```
    Change it to:
    ```
-   {id:<8} [{state:<12}] {owner:<16} {base:<26} {title}
+   {id:<8} [{state:<12}] {owner:<16} {base:<12} {title}
    ```
-   Width `26` accommodates a typical epic branch name (`epic/xxxxxxxx-some-feature`). Adjust after testing against real data if needed.
+   Width `12` comfortably fits an 8-char epic ID and typical default branch names like `main` or `master`.
 
 4. **Update tests.** Find any snapshot tests or integration tests in `apm/tests/` or `testdata/` that assert on `apm list` output and update their expected strings to include the new column. Run `cargo test -p apm` to confirm.
 
