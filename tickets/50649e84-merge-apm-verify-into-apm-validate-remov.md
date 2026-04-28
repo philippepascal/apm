@@ -3,13 +3,13 @@ id = "50649e84"
 title = "Merge apm verify into apm validate; remove verify command"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/50649e84-merge-apm-verify-into-apm-validate-remov"
 created_at = "2026-04-28T19:19:47.773209Z"
-updated_at = "2026-04-28T19:33:30.069332Z"
+updated_at = "2026-04-28T19:37:45.538657Z"
 +++
 
 ## Spec
