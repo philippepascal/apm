@@ -28,7 +28,11 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
     for t in filtered {
         let fm = &t.frontmatter;
         let owner = fm.owner.as_deref().unwrap_or("-");
-        println!("{:<8} [{:<12}] {:<16} {}", fm.id, fm.state, owner, fm.title);
+        let base = match fm.target_branch.as_deref() {
+            Some(branch) => apm_core::epic::epic_id_from_branch(branch).to_owned(),
+            None => ctx.config.project.default_branch.clone(),
+        };
+        println!("{:<8} [{:<12}] {:<16} {:<12} {}", fm.id, fm.state, owner, base, fm.title);
     }
     Ok(())
 }
