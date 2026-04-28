@@ -16,22 +16,11 @@ updated_at = "2026-04-28T07:31:23.624834Z"
 
 ### Problem
 
-apm archive --older-than 5d
-warning: tickets/056b1ee1-require-epic-quiescence-in-apm-epic-clos.md is in non-terminal state 'implemented' — skipping
+`apm archive --older-than N` reads ticket state exclusively from the default branch (e.g., `main`). For tickets whose `target_branch` is an epic rather than main, the ticket file on main may reflect an intermediate state (e.g., `implemented`) because the epic has not yet been merged into main. The ticket's authoritative state lives on its own `ticket/*` branch — which `apm show` correctly reads and reports as `closed`.
 
-but
+The result: archive incorrectly warns "non-terminal state 'implemented' — skipping" and refuses to archive a ticket that is genuinely closed. Users have to work around this by manually verifying and cannot rely on `apm archive` to clean up after epic-based workflows.
 
-apm show 056b1ee1
-From https://github.com/philippepascal/apm
- * branch              ticket/056b1ee1-require-epic-quiescence-in-apm-epic-clos -> FETCH_HEAD
-056b1ee1 — Require epic quiescence in apm epic close
-state:    closed
-priority: 0  effort: 2  risk: 2
-branch:   ticket/056b1ee1-require-epic-quiescence-in-apm-epic-clos
-epic:         5ea30227
-target_branch: epic/5ea30227-strategy-and-dependency-hardening
-depends_on:   2973e208
-owner:        philippepascal
+Root cause: `archive.rs` calls `git::read_from_branch(root, default_branch, rel_path)` (line 48) and then checks `terminal_states.contains(&t.frontmatter.state)` (line 65) against the default-branch version only. It never consults the ticket's own branch, even though the `branch` frontmatter field is always set and `git::read_from_branch` already supports local-then-remote fallback.
 
 ### Acceptance criteria
 
