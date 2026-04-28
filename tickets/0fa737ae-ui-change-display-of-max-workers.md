@@ -24,12 +24,12 @@ The fix is purely presentational: extend the API response to carry all three con
 
 ### Acceptance criteria
 
-- [ ] The config badge reads `config: t <total> d <default> e <epic>` using the three values from the API (e.g. `config: t 3 d 1 e 1`)
-- [ ] When the engine is inactive, the `InlineNumberField` carries the label "override max" instead of "workers"
-- [ ] When the engine is active, the static text reads `override max: <value>` instead of `workers: <value>`
-- [ ] The `GET /api/agents/config` response includes `max_workers_on_default` and `max_workers_per_epic` fields alongside the existing `max_concurrent` and `override`
-- [ ] When no git root is present (in-memory default), `max_workers_on_default` and `max_workers_per_epic` both default to `1`
-- [ ] Existing backend tests pass (or are updated to assert the new response shape)
+- [x] The config badge reads `config: t <total> d <default> e <epic>` using the three values from the API (e.g. `config: t 3 d 1 e 1`)
+- [x] When the engine is inactive, the `InlineNumberField` carries the label "override max" instead of "workers"
+- [x] When the engine is active, the static text reads `override max: <value>` instead of `workers: <value>`
+- [x] The `GET /api/agents/config` response includes `max_workers_on_default` and `max_workers_per_epic` fields alongside the existing `max_concurrent` and `override`
+- [x] When no git root is present (in-memory default), `max_workers_on_default` and `max_workers_per_epic` both default to `1`
+- [x] Existing backend tests pass (or are updated to assert the new response shape)
 
 ### Out of scope
 
