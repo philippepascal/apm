@@ -1,7 +1,7 @@
 +++
 id = "4fb7ae94"
 title = "apm list includes an epic column"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4fb7ae94-apm-list-includes-an-epic-column"
 created_at = "2026-04-28T00:25:28.853946Z"
-updated_at = "2026-04-28T01:01:51.552353Z"
+updated_at = "2026-04-28T01:02:04.874219Z"
 +++
 
 ## Spec
@@ -78,3 +78,4 @@ Adding an epic/base-branch column to `apm list` exposes this topology at a glanc
 | 2026-04-28T00:25Z | — | new | philippepascal |
 | 2026-04-28T00:26Z | new | groomed | philippepascal |
 | 2026-04-28T00:57Z | groomed | in_design | philippepascal |
+| 2026-04-28T01:02Z | in_design | specd | claude-0428-0057-2c68 |
