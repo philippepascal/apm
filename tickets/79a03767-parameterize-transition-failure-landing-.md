@@ -93,7 +93,137 @@ Supersedes the closed ticket `e55fcc73` ("apm validate: enforce code-driven stat
 
 ### Approach
 
-How the implementation will work.
+Work through the steps in order — each compiles independently after step 1.
+
+**Step 1 — `apm-core/src/config.rs`: Add `on_failure` to `TransitionConfig`**
+
+Append to the struct (after the existing `profile` field):
+
+```rust
+#[serde(default)]
+pub on_failure: Option<String>,
+```
+
+`Option<String>` with `#[serde(default)]` deserializes cleanly from existing TOML that lacks the field (`None`) and from files that have it (`Some`). No migration of the struct is required.
+
+**Step 2 — `apm-core/src/default/workflow.toml`: Wire up default**
+
+In the `in_progress → implemented` transition block, add `on_failure = "merge_failed"` below the `completion` line:
+
+```toml
+[[workflow.states.transitions]]
+to         = "implemented"
+trigger    = "manual"
+completion = "pr_or_epic_merge"   # (or "merge" — match whatever is there)
+on_failure = "merge_failed"
+```
+
+The `merge_failed` state is already declared with outbound transitions to `implemented` and `in_progress`; no changes to that state definition.
+
+**Step 3 — `apm-core/src/state.rs`: Replace hardcoded `"merge_failed"` with `on_failure` lookup**
+
+Locate the `CompletionStrategy::Merge` arm (lines 150–179). The `transition` variable holding the live `TransitionConfig` must be in scope at the point where `completion` is matched — confirm its name before editing. Replace the hardcoded failure block with:
+
+```rust
+if let Err(merge_err) = merge_result {
+    let merge_err_msg = format!("{merge_err:#}");
+    let failure_state = match &transition.on_failure {
+        Some(s) => s.clone(),
+        None => {
+            return Err(anyhow::anyhow!(
+                "{merge_err_msg}\n\nMerge failed and the transition to '{}' has \
+                 no `on_failure` configured. Run `apm validate --fix` to add it.",
+                new_state
+            ));
+        }
+    };
+    let fail_now = Utc::now();
+    t.frontmatter.state = failure_state.clone();
+    t.frontmatter.updated_at = Some(fail_now);
+    set_merge_notes(&mut t.body, &merge_err_msg);
+    append_history(
+        &mut t.body, &new_state, &failure_state,
+        &fail_now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor,
+    );
+    let fallback_content = match t.serialize() {
+        Ok(c) => c,
+        Err(_) => return Err(merge_err),
+    };
+    if git::commit_to_branch(
+        root, &branch, &rel_path, &fallback_content,
+        &format!("ticket({id}): {new_state} → {failure_state}"),
+    ).is_err() {
+        return Err(merge_err);
+    }
+    crate::logger::log("state_transition", &format!("{id:?} {new_state} -> {failure_state}"));
+    return Ok(TransitionOutput {
+        id: id.clone(),
+        old_state: old_state.clone(),
+        new_state: failure_state,
+        worktree_path: None,
+        warnings,
+        messages,
+    });
+}
+```
+
+For `CompletionStrategy::PrOrEpicMerge` (lines 181–188): change the `?` on `merge_into_default` (the `target_branch`-gated path) to a `match`, and apply the same `on_failure` pattern. The PR fallback path (no `target_branch`) does not reach a merge, so it is unchanged.
+
+**Step 4 — `apm-core/src/validate.rs`: Two new checks in `validate_config()`**
+
+Build a state-ID set once before the transition loop:
+
+```rust
+let declared_states: std::collections::HashSet<&str> =
+    config.workflow.states.iter().map(|s| s.id.as_str()).collect();
+```
+
+For each `(state, transition)` pair where `transition.completion` is `Merge` or `PrOrEpicMerge`:
+
+1. If `transition.on_failure.is_none()` → push issue of kind `"config"`:
+   `"transition '{state.id}' → '{transition.to}' uses completion '{completion}' but is missing `on_failure`; run `apm validate --fix` to add it"`
+
+2. If `transition.on_failure == Some(ref name)` and `!declared_states.contains(name.as_str())` → push issue:
+   `"transition '{state.id}' → '{transition.to}' has `on_failure = \"{name}\"` but state \"{name}\" is not declared in workflow.toml"`
+
+Both checks run even if `--config-only` is not passed; they are config checks that do not touch tickets or the filesystem.
+
+**Step 5 — `apm/src/cmd/validate.rs`: `--fix` logic for missing `on_failure`**
+
+Add a function `apply_on_failure_fixes(root: &Path, config: &Config) -> Result<bool>` (returns `true` if any change was written):
+
+1. Load the embedded default workflow config (same source `apm-core` already uses for `apm init`).
+2. Build a map `default_on_failure: HashMap<String, String>` keyed by the default transition's `to` value, value is `on_failure` from that transition. Only include entries where the default also has `completion ∈ {Merge, PrOrEpicMerge}`.
+3. Collect the set of `(from_state_id, to)` pairs in the project config that need patching (missing `on_failure`, right completion).
+4. Read `<root>/.apm/workflow.toml` as raw text.
+5. For each transition needing a patch, insert `on_failure = "<value>"` immediately after the `completion = "..."` line within that transition's TOML block. Match the block by scanning for the `to = "<value>"` line preceded by `[[workflow.states.transitions]]`. Use the `toml_edit` crate if it is already a dependency; otherwise a careful line-scan is sufficient given the template's consistent formatting.
+6. Write the modified text back. Idempotent: if the field is already present, step 3 finds no pairs to patch and no write occurs.
+
+Call `apply_on_failure_fixes` in `run()` under the `--fix` branch, after existing branch and merged-ticket fixes.
+
+**Step 6 — Tests**
+
+In `apm-core/src/validate.rs` `#[cfg(test)]` block, add four unit tests (mirror the pattern of existing tests that construct a minimal `Config`):
+
+- `test_on_failure_missing_for_merge`: one transition `{completion: Merge, on_failure: None}` → issue list contains `"missing \`on_failure\`"`.
+- `test_on_failure_missing_for_pr_or_epic_merge`: same with `PrOrEpicMerge`.
+- `test_on_failure_unknown_state`: `{completion: Merge, on_failure: Some("ghost_state".into())}`, `ghost_state` not in declared states → issue list contains `"ghost_state"`.
+- `test_on_failure_valid`: `{completion: Merge, on_failure: Some("merge_failed".into())}`, `merge_failed` declared → no `on_failure`-related issues.
+
+**Step 7 — Docs**
+
+- `docs/commands.md`, `apm validate` section: add two bullets under config checks:
+  - "Transitions with `completion = merge` or `pr_or_epic_merge` that are missing an `on_failure` field"
+  - "`on_failure` values referencing undeclared states"
+  - Expand `--fix` description: "also patches missing `on_failure` fields by porting the value from the matching default-template transition".
+- `README.md`: search for `merge_failed`; if any text describes it as hardcoded, replace with a note that it is configured via `on_failure` in `workflow.toml`.
+
+**Constraint reminders**
+
+- `on_failure` is read from the live transition; never from a hardcoded literal in `state.rs` after this change.
+- The `--fix` path must not create or recreate worktrees; it only edits `workflow.toml`.
+- `--config-only` already exits before per-ticket iteration; the new `validate_config()` checks are config-level and run before that guard, so they are always checked (consistent with other config checks).
+- Backward compatibility: existing workflows without `on_failure` continue to load without error at parse time (field is `Option`); the error surface is `apm validate`, not deserialization.
 
 ### Open questions
 
