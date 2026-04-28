@@ -1,7 +1,7 @@
 +++
 id = "e1781eef"
 title = "UI does not show tickets in merge_failed state"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e1781eef-ui-does-not-show-tickets-in-merge-failed"
 created_at = "2026-04-28T22:26:52.277291Z"
-updated_at = "2026-04-28T22:26:52.277291Z"
+updated_at = "2026-04-28T22:30:24.327084Z"
 +++
 
 ## Spec
@@ -68,3 +68,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T22:26Z | — | new | philippepascal |
+| 2026-04-28T22:30Z | new | groomed | philippepascal |
