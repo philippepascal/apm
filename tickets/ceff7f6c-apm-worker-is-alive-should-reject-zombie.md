@@ -3,13 +3,13 @@ id = "ceff7f6c"
 title = "apm worker is_alive should reject zombie/defunct processes"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ceff7f6c-apm-worker-is-alive-should-reject-zombie"
 created_at = "2026-04-28T00:50:51.047540Z"
-updated_at = "2026-04-28T01:02:27.065486Z"
+updated_at = "2026-04-28T01:05:30.875662Z"
 +++
 
 ## Spec
