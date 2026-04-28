@@ -39,7 +39,15 @@ This ticket does two things: (1) adds meaningful doc comments to all fields on t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Content for `render_commands()`, `render_config()`, `render_ticket()` — those are tickets 3665e017, d486d183, and 14214305 respectively
+- The `apm help` dispatcher and topic routing — established by ticket bc89e0a0
+- The `help_schema` infrastructure (`schema_entries`, `render_schema`, `FieldEntry`) — that is ticket 069c3403
+- Adding `JsonSchema` derives to workflow types — that is ticket 069c3403
+- ANSI colour or markdown rendering in the output
+- Pager integration (`less`/`more`)
+- A workflow design tutorial or worked examples beyond doc-comment text
+- Validation rules for workflow config (those belong to `apm validate`)
+- `LocalConfig` and `LocalWorkersOverride` — internal override file, not user-facing
 
 ### Approach
 
