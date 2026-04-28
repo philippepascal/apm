@@ -48,7 +48,8 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 - Fuzzy-matching or "did you mean?" suggestions for unknown topics (that belongs in ticket bc89e0a0's dispatcher)
 - Changes to how `apm <subcommand> --help` works (clap-native help is untouched)
 - Content for the `config`, `workflow`, or `ticket` help topics (sibling tickets d486d183, 7ba021e8, 14214305)
-- Grouping commands by category (Setup / Workflow / etc.) — alphabetical or Cli-enum order only
+- Grouping commands by category (Setup / Workflow / etc.) — top-level commands are sorted alphabetically; subcommands appear in declaration order
+- Reconciling output style with the `config`/`workflow`/`ticket` topics — the divergence is intentional: this ticket uses flat word-wrapped lines because commands form a hierarchy, while schema topics use column-aligned tables because they describe flat key-value fields; `bc89e0a0`'s `render_overview()` source should include a comment acknowledging this distinction
 
 ### Approach
 
