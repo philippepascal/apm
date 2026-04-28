@@ -16,10 +16,11 @@ updated_at = "2026-04-28T07:27:22.868510Z"
 
 ### Problem
 
-config parameter is max_workers_on_default
-default value is 1
-limits the number of parallel workers for tickets not on an epic.
-0 means limit is max_workers
+Currently APM has two parallelism controls: `max_concurrent` (global ceiling across all workers) and `max_workers_per_epic` (cap per epic). Tickets that belong to no epic ("default branch" work) are never individually capped — they can collectively fill every available slot up to `max_concurrent`.
+
+This is a problem when a project mixes epics (branch-isolated features) with standalone tickets. Without a cap, a burst of non-epic tickets can monopolise the worker pool and starve ongoing epic work, or vice versa.
+
+The fix is a new `[agents]` config field, `max_workers_on_default`, that limits how many workers may simultaneously run on non-epic tickets. A value of `0` means "no limit beyond `max_concurrent`" (existing behaviour). The default is `1`, matching the existing conservative default for `max_workers_per_epic`.
 
 ### Acceptance criteria
 
