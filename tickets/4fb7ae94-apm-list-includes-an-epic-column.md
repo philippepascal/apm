@@ -24,11 +24,11 @@ Adding an epic/base-branch column to `apm list` exposes this topology at a glanc
 
 ### Acceptance criteria
 
-- [ ] `apm list` output includes a new column between the owner column and the title column
-- [ ] For a ticket whose `target_branch` frontmatter field is set, the column displays only the epic ID extracted from that value (e.g. `8db73240` from `epic/8db73240-user-auth`)
-- [ ] For a ticket whose `target_branch` field is absent, the column displays the project's configured default branch (e.g. `main`)
-- [ ] All rows in a single `apm list` invocation use the same fixed column width so values are left-aligned in a consistent gutter
-- [ ] Existing snapshot or integration tests for `apm list` pass (updated to include the new column)
+- [x] `apm list` output includes a new column between the owner column and the title column
+- [x] For a ticket whose `target_branch` frontmatter field is set, the column displays only the epic ID extracted from that value (e.g. `8db73240` from `epic/8db73240-user-auth`)
+- [x] For a ticket whose `target_branch` field is absent, the column displays the project's configured default branch (e.g. `main`)
+- [x] All rows in a single `apm list` invocation use the same fixed column width so values are left-aligned in a consistent gutter
+- [x] Existing snapshot or integration tests for `apm list` pass (updated to include the new column)
 
 ### Out of scope
 
