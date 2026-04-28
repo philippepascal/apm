@@ -3,13 +3,13 @@ id = "38976b4b"
 title = "Move worktrees inside repo folder; audit apm clean for safety"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/38976b4b-move-worktrees-inside-repo-folder-audit-"
 created_at = "2026-04-28T01:24:55.011587Z"
-updated_at = "2026-04-28T07:22:42.995942Z"
+updated_at = "2026-04-28T07:26:44.793759Z"
 +++
 
 ## Spec
