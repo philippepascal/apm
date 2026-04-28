@@ -1,7 +1,7 @@
 +++
 id = "63f5e6d2"
 title = "UI: epics filter fixes"
-state = "implemented"
+state = "merge_failed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/63f5e6d2-ui-epics-filter-fixes"
 created_at = "2026-04-28T19:28:59.918275Z"
-updated_at = "2026-04-28T20:39:30.435410Z"
+updated_at = "2026-04-28T20:39:32.574085Z"
 +++
 
 ## Spec
@@ -68,6 +68,14 @@ The existing `hasActiveFilters` check (`epicFilter !== null`) already treats `"_
 ### Code review
 
 
+### Merge notes
+
+merge conflict — resolve manually and push: error: Your local changes to the following files would be overwritten by merge:
+	apm-ui/src/components/supervisor/SupervisorView.tsx
+Please commit your changes or stash them before you merge.
+Aborting
+Merge with strategy ort failed.
+
 ## History
 
 | When | From | To | By |
@@ -79,3 +87,4 @@ The existing `hasActiveFilters` check (`epicFilter !== null`) already treats `"_
 | 2026-04-28T20:34Z | specd | ready | philippepascal |
 | 2026-04-28T20:35Z | ready | in_progress | philippepascal |
 | 2026-04-28T20:39Z | in_progress | implemented | claude-0428-2035-ae38 |
+| 2026-04-28T20:39Z | implemented | merge_failed | claude-0428-2035-ae38 |
