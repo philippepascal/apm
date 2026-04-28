@@ -38,7 +38,11 @@ The hardcoded fallback `supervisor_states` in `tickets.rs` (lines 41–44), used
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding `merge_failed` to the project's local `.apm/workflow.toml` (operational concern; not a code bug).
+- Designing or implementing a `/api/workflow` endpoint.
+- Changes to `apm list` (already works correctly).
+- Fixing the operational ticket 63f5e6d2 that triggered this report.
+- Changing the state machine logic in `apm-core/src/state.rs` (already correct — it correctly writes `merge_failed` on merge failure).
 
 ### Approach
 
