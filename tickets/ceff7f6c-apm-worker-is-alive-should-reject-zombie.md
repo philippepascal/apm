@@ -20,7 +20,7 @@ apm-core::worker::is_alive(pid) treats zombie/defunct processes as alive. It use
 
 ### Acceptance criteria
 
-- [ ] `is_alive(pid)` returns `false` when the process state reported by `ps -p <pid> -o state=` begins with `Z`
+- [x] `is_alive(pid)` returns `false` when the process state reported by `ps -p <pid> -o state=` begins with `Z`
 - [ ] `is_alive(pid)` returns `true` for the current process PID (existing behaviour preserved)
 - [ ] `is_alive(pid)` returns `false` for a PID that does not exist in the process table (existing behaviour preserved)
 - [ ] A unit test for the zombie-state parsing helper covers: state string `"Z"` → zombie, `"Z+"` → zombie, `"S"` → not zombie, `"R"` → not zombie, empty string → not zombie
