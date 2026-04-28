@@ -34,7 +34,10 @@ Root cause: `archive.rs` calls `git::read_from_branch(root, default_branch, rel_
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Fetching from remote as part of `apm archive` (no network calls added, no `--aggressive` flag)
+- Changing how the default branch is scanned to discover ticket files
+- Handling tickets that exist on their ticket branch but are absent from the default branch entirely
+- Syncing or updating the default-branch copy of the ticket file during archiving
 
 ### Approach
 
