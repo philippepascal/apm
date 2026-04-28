@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import type { Range } from '@codemirror/state'
@@ -215,7 +216,7 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
         setError((data as { error?: string }).error ?? `Transition failed: ${res.status}`)
         return
       }
-      setReviewMode(false)
+      flushSync(() => setReviewMode(false))
       queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
     } catch (e) {
