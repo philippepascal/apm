@@ -55,6 +55,14 @@ This ticket wires those two pieces together: add one-line doc comments to every 
 
 **Precondition:** ticket 069c3403 is merged, so `apm_core::help_schema::{schema_entries, FieldEntry}` exist and `JsonSchema` is already derived on `Config` and all nested types.
 
+**Field inventory (verified against current `apm-core/src/config.rs`):**
+
+All fields listed below were confirmed to exist with the stated types and defaults. Key facts checked:
+- `agents.max_workers_on_default` exists, default `1` (via `default_max_workers_on_default()`)
+- `workers.command` exists, default `"claude"` (via `default_command()`)
+- `workers.args` exists, default `["--print"]` (via `default_args()`)
+- `WorkerProfileConfig` is a map value type in `HashMap<String, WorkerProfileConfig>` — map semantics, not array
+
 ---
 
 **1. Add `/// doc comments` to `apm-core/src/config.rs`**
@@ -85,13 +93,13 @@ Doc comments must be `/// one sentence.` placed immediately above the field. Do 
 Replace `render_config()` (currently returns a placeholder string) with a function that:
 
 1. Calls `apm_core::help_schema::schema_entries::<apm_core::config::Config>()` to get `Vec<FieldEntry>`.
-2. Groups entries by their first path segment (the part before the first `.` or `[`). Preserve the order in which each new prefix is first encountered (struct field order flows through schemars).
+2. Groups entries by their first path segment (the part before the first `.` or `<`). Preserve the order in which each new prefix is first encountered (struct field order flows through schemars).
 3. For each group, print a `[section]` header line (e.g. `[project]`), then one line per entry using the same column-aligned format as `render_schema` from 069c3403:
    ```
    <toml_path>  <type>  [default: <val>]  # <description>
    ```
    Omit `[default: ...]` when `entry.default` is `None`; omit `# ...` when `entry.description` is `None`.
-4. For `worker_profiles`, emit the section header `[worker_profiles.<name>]` and a single descriptive note explaining that each key is a user-defined named profile whose fields mirror `[workers]`, followed by the fields from `WorkerProfileConfig` with paths like `worker_profiles[].command`.
+4. For `worker_profiles`, emit the section header `[worker_profiles.<name>]` and a single descriptive note explaining that each key is a user-defined named profile whose fields mirror `[workers]`, followed by the fields from `WorkerProfileConfig` with paths using map notation: `worker_profiles.<name>.command`, `worker_profiles.<name>.args`, etc. (not array notation like `worker_profiles[].command`).
 5. Return the resulting `String`; the caller in `run()` prints it to stdout.
 
 Column widths: compute the maximum width of `toml_path` and `type` across all entries in the group, then pad with spaces. This keeps output readable without requiring a terminal-width query.
