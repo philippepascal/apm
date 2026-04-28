@@ -1118,7 +1118,7 @@ fn spec_prints_all_sections() {
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
     // Should succeed and not error
-    apm::cmd::spec::run(p, "1", None, None, None, false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", None, None, None, false, None, None, None, None, true).unwrap();
 }
 
 #[test]
@@ -1126,7 +1126,7 @@ fn spec_prints_single_section() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "the problem text", "the approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, None, false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, None, false, None, None, None, None, true).unwrap();
 }
 
 #[test]
@@ -1134,7 +1134,7 @@ fn spec_set_section_commits() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), None, false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), None, false, None, None, None, None, true).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("new problem text"), "updated problem not found: {content}");
 }
@@ -1144,7 +1144,7 @@ fn spec_check_passes_full_ticket() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    apm::cmd::spec::run(p, "1", None, None, None, true, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", None, None, None, true, None, None, None, None, true).unwrap();
 }
 
 #[test]
@@ -1152,7 +1152,7 @@ fn spec_unknown_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, None, false, None, true);
+    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, None, false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("unknown section"));
 }
@@ -1161,7 +1161,7 @@ fn spec_unknown_section_errors() {
 fn spec_nonexistent_ticket_errors() {
     let dir = setup();
     let p = dir.path();
-    let result = apm::cmd::spec::run(p, "999", None, None, None, false, None, true);
+    let result = apm::cmd::spec::run(p, "999", None, None, None, false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("no ticket matches"));
 }
@@ -1171,7 +1171,7 @@ fn spec_set_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), None, false, None, true);
+    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), None, false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set requires --section"));
 }
@@ -1181,7 +1181,7 @@ fn spec_set_hyphen_value() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("- [ ] Fix the thing".into()), None, false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("- [ ] Fix the thing".into()), None, false, None, None, None, None, true).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("- [ ] Fix the thing"), "hyphen value not stored: {content}");
 }
@@ -1193,7 +1193,7 @@ fn spec_set_file_reads_content() {
     write_spec_ticket(p, 1, "old problem", "old approach");
     let tmp = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(tmp.path(), "content from file").unwrap();
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some(tmp.path().to_string_lossy().into_owned()), false, None, true).unwrap();
+    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some(tmp.path().to_string_lossy().into_owned()), false, None, None, None, None, true).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("content from file"), "file content not stored: {content}");
 }
@@ -1203,7 +1203,7 @@ fn spec_set_file_nonexistent_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some("/nonexistent/path/to/file.txt".into()), false, None, true);
+    let result = apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some("/nonexistent/path/to/file.txt".into()), false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set-file"));
 }
@@ -1213,7 +1213,7 @@ fn spec_set_file_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, None, Some("/some/file.txt".into()), false, None, true);
+    let result = apm::cmd::spec::run(p, "1", None, None, Some("/some/file.txt".into()), false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set-file requires --section"));
 }
@@ -1256,6 +1256,9 @@ fn spec_mark_checks_off_item_in_amendment_requests() {
         None,
         false,
         Some("Add error handling".into()),
+        None,
+        None,
+        None,
         true,
     ).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
@@ -1276,6 +1279,9 @@ fn spec_mark_no_match_errors() {
         None,
         false,
         Some("nonexistent item".into()),
+        None,
+        None,
+        None,
         true,
     );
     assert!(result.is_err());
@@ -1307,6 +1313,9 @@ fn spec_mark_ambiguous_errors() {
         None,
         false,
         Some("error".into()),
+        None,
+        None,
+        None,
         true,
     );
     assert!(result.is_err());
@@ -1319,7 +1328,7 @@ fn spec_mark_without_section_errors() {
     let dir = setup();
     let p = dir.path();
     write_ticket_with_amendment_requests(p, 1);
-    let result = apm::cmd::spec::run(p, "1", None, None, None, false, Some("Add error handling".into()), true);
+    let result = apm::cmd::spec::run(p, "1", None, None, None, false, Some("Add error handling".into()), None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--mark requires --section"));
 }
@@ -1337,10 +1346,131 @@ fn spec_mark_case_insensitive() {
         None,
         false,
         Some("ADD ERROR".into()),
+        None,
+        None,
+        None,
         true,
     ).unwrap();
     let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
+}
+
+// ── apm spec --append / --append-file / --add-task ───────────────────────────
+
+#[test]
+fn spec_append_without_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, "1", None, None, None, false, None, Some("extra".into()), None, None, true);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--append requires --section"));
+}
+
+#[test]
+fn spec_append_file_without_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, "1", None, None, None, false, None, None, Some("/some/file.txt".into()), None, true);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--append-file requires --section"));
+}
+
+#[test]
+fn spec_add_task_without_section_errors() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, "1", None, None, None, false, None, None, None, Some("new task".into()), true);
+    assert!(result.is_err());
+    assert!(format!("{}", result.unwrap_err()).contains("--add-task requires --section"));
+}
+
+#[test]
+fn spec_append_adds_to_existing_section() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "original problem", "an approach");
+    apm::cmd::spec::run(
+        p, "1",
+        Some("Problem".into()),
+        None, None, false, None,
+        Some("extra line".into()),
+        None, None, true,
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("original problem"), "original text missing: {content}");
+    assert!(content.contains("extra line"), "appended text missing: {content}");
+}
+
+#[test]
+fn spec_append_creates_absent_section() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    apm::cmd::spec::run(
+        p, "1",
+        Some("Open questions".into()),
+        None, None, false, None,
+        Some("Why does this happen?".into()),
+        None, None, true,
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("Why does this happen?"), "new section content missing: {content}");
+}
+
+#[test]
+fn spec_append_file_reads_and_appends() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "original", "an approach");
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(tmp.path(), "appended from file").unwrap();
+    apm::cmd::spec::run(
+        p, "1",
+        Some("Problem".into()),
+        None, None, false, None, None,
+        Some(tmp.path().to_string_lossy().into_owned()),
+        None, true,
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("original"), "original text missing: {content}");
+    assert!(content.contains("appended from file"), "file content missing: {content}");
+}
+
+#[test]
+fn spec_add_task_appends_checkbox() {
+    let dir = setup();
+    let p = dir.path();
+    write_ticket_with_amendment_requests(p, 1);
+    apm::cmd::spec::run(
+        p, "1",
+        Some("Amendment requests".into()),
+        None, None, false, None, None, None,
+        Some("Handle edge case".into()),
+        true,
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("- [ ] Handle edge case"), "new task missing: {content}");
+    assert!(content.contains("- [ ] Add error handling"), "existing task missing: {content}");
+}
+
+#[test]
+fn spec_add_task_creates_absent_section() {
+    let dir = setup();
+    let p = dir.path();
+    write_spec_ticket(p, 1, "a problem", "an approach");
+    // "Amendment requests" is tasks-typed but absent from the write_spec_ticket fixture
+    apm::cmd::spec::run(
+        p, "1",
+        Some("Amendment requests".into()),
+        None, None, false, None, None, None,
+        Some("What is the scope?".into()),
+        true,
+    ).unwrap();
+    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    assert!(content.contains("- [ ] What is the scope?"), "new task missing: {content}");
 }
 
 // ── apm close ────────────────────────────────────────────────────────────────
@@ -1550,6 +1680,9 @@ fn no_aggressive_flag_suppresses_fetch_on_spec() {
         Some("test content".into()),
         None,
         false,
+        None,
+        None,
+        None,
         None,
         true,
     ).unwrap();

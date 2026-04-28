@@ -18,6 +18,16 @@ pub fn set_section(doc: &mut TicketDocument, name: &str, value: String) {
     }
 }
 
+pub fn append_section(doc: &mut TicketDocument, name: &str, value: String) {
+    let existing = get_section(doc, name).unwrap_or_default();
+    let new_value = if existing.trim().is_empty() {
+        value
+    } else {
+        format!("{}\n{}", existing.trim_end(), value)
+    };
+    set_section(doc, name, new_value);
+}
+
 pub fn apply_section_type(type_: &SectionType, value: String) -> String {
     match type_ {
         SectionType::Tasks => value
@@ -183,6 +193,29 @@ mod tests {
         let mut doc = base_doc();
         set_section(&mut doc, "New section", "Some content".to_string());
         assert_eq!(get_section(&doc, "New section"), Some("Some content".to_string()));
+    }
+
+    #[test]
+    fn append_section_adds_to_existing() {
+        let mut doc = base_doc();
+        set_section(&mut doc, "Problem", "A bug exists".to_string());
+        append_section(&mut doc, "Problem", "More details".to_string());
+        assert_eq!(get_section(&doc, "Problem"), Some("A bug exists\nMore details".to_string()));
+    }
+
+    #[test]
+    fn append_section_creates_when_absent() {
+        let mut doc = base_doc();
+        append_section(&mut doc, "Amendment requests", "- [ ] Fix docs".to_string());
+        assert_eq!(get_section(&doc, "Amendment requests"), Some("- [ ] Fix docs".to_string()));
+    }
+
+    #[test]
+    fn append_section_treats_empty_section_as_absent() {
+        let mut doc = base_doc();
+        set_section(&mut doc, "Problem", "   ".to_string());
+        append_section(&mut doc, "Problem", "Fresh content".to_string());
+        assert_eq!(get_section(&doc, "Problem"), Some("Fresh content".to_string()));
     }
 
     #[test]

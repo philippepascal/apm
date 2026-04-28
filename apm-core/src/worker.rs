@@ -19,12 +19,35 @@ pub fn read_pid_file(path: &Path) -> Result<(u32, PidFile)> {
     Ok((raw.pid, PidFile { ticket_id: raw.ticket_id, started_at: raw.started_at }))
 }
 
+fn state_is_zombie(state: &str) -> bool {
+    state.trim_start().starts_with('Z')
+}
+
+fn process_state(pid: u32) -> Option<String> {
+    let out = std::process::Command::new("ps")
+        .args(["-p", &pid.to_string(), "-o", "state="])
+        .output()
+        .ok()?;
+    if out.status.success() {
+        Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    } else {
+        None
+    }
+}
+
 pub fn is_alive(pid: u32) -> bool {
-    std::process::Command::new("kill")
+    let kill_ok = std::process::Command::new("kill")
         .args(["-0", &pid.to_string()])
         .output()
         .map(|o| o.status.success())
-        .unwrap_or(false)
+        .unwrap_or(false);
+    if !kill_ok {
+        return false;
+    }
+    match process_state(pid) {
+        Some(s) => !state_is_zombie(&s),
+        None => false,
+    }
 }
 
 pub fn elapsed_since(started_at: &str) -> String {
@@ -57,6 +80,36 @@ mod tests {
     use super::*;
 
     #[test]
+    fn state_is_zombie_z_is_zombie() {
+        assert!(state_is_zombie("Z"));
+    }
+
+    #[test]
+    fn state_is_zombie_z_plus_is_zombie() {
+        assert!(state_is_zombie("Z+"));
+    }
+
+    #[test]
+    fn state_is_zombie_z_with_leading_whitespace_is_zombie() {
+        assert!(state_is_zombie("  Z  "));
+    }
+
+    #[test]
+    fn state_is_zombie_s_is_not_zombie() {
+        assert!(!state_is_zombie("S"));
+    }
+
+    #[test]
+    fn state_is_zombie_r_is_not_zombie() {
+        assert!(!state_is_zombie("R"));
+    }
+
+    #[test]
+    fn state_is_zombie_empty_is_not_zombie() {
+        assert!(!state_is_zombie(""));
+    }
+
+    #[test]
     fn is_alive_returns_true_for_current_process() {
         assert!(is_alive(std::process::id()));
     }
@@ -64,6 +117,19 @@ mod tests {
     #[test]
     fn is_alive_returns_false_for_dead_pid() {
         assert!(!is_alive(99999999));
+    }
+
+    #[test]
+    fn is_alive_returns_false_for_zombie() {
+        use std::process::Command;
+        let mut child = Command::new("true").spawn().expect("spawn true");
+        let pid = child.id();
+        // Give the process time to exit and become a zombie
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        // Parent has not called wait() yet, so the child is now a zombie
+        assert!(!is_alive(pid), "zombie process should not be considered alive");
+        // Reap the zombie
+        child.wait().ok();
     }
 
     #[test]
