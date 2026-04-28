@@ -62,6 +62,7 @@ The CLAUDE.md rule "main worktree always on main, never holds work" was violated
 - An automatic mechanism to keep `apm-core/src/default/*.md` and `apm-core/src/default/workflow.toml` in sync with existing project `.apm/` files on upgrades (broader upgrade-path problem; could be a follow-up ticket)
 - Recovering or retrying ticket 63f5e6d2 itself (operational, not a code change)
 - Identifying the exact root cause of the original main-worktree leak in ticket 63f5e6d2 beyond what the new logging will reveal in future incidents
+- Porting the `merge_failed` state to `.apm/workflow.toml` — delegated to ticket `79a03767` (`apm validate --fix` will detect and port missing referenced states from the default template)
 
 ### Approach
 
