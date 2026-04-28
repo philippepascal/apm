@@ -24,13 +24,13 @@ Root cause: `archive.rs` calls `git::read_from_branch(root, default_branch, rel_
 
 ### Acceptance criteria
 
-- [ ] `apm archive` archives a ticket whose state on the default branch is non-terminal but whose ticket branch (the `branch` frontmatter field) has a terminal state
-- [ ] The file written to the archive directory contains content sourced from the ticket branch, not the stale default-branch version
-- [ ] The `--older-than` filter uses `updated_at` from the ticket-branch content when the ticket-branch fallback is taken
-- [ ] `apm archive` still skips (with a warning) a ticket that is non-terminal on both the default branch and its ticket branch
-- [ ] `apm archive` still skips (with a warning) a ticket that is non-terminal on the default branch and has no `branch` frontmatter field
-- [ ] `apm archive` still skips (with a warning) a ticket that is non-terminal on the default branch and whose ticket branch cannot be read
-- [ ] Dry-run mode applies the same branch-fallback logic (a ticket eligible via the ticket branch appears in dry-run output)
+- [x] `apm archive` archives a ticket whose state on the default branch is non-terminal but whose ticket branch (the `branch` frontmatter field) has a terminal state
+- [x] The file written to the archive directory contains content sourced from the ticket branch, not the stale default-branch version
+- [x] The `--older-than` filter uses `updated_at` from the ticket-branch content when the ticket-branch fallback is taken
+- [x] `apm archive` still skips (with a warning) a ticket that is non-terminal on both the default branch and its ticket branch
+- [x] `apm archive` still skips (with a warning) a ticket that is non-terminal on the default branch and has no `branch` frontmatter field
+- [x] `apm archive` still skips (with a warning) a ticket that is non-terminal on the default branch and whose ticket branch cannot be read
+- [x] Dry-run mode applies the same branch-fallback logic (a ticket eligible via the ticket branch appears in dry-run output)
 
 ### Out of scope
 
