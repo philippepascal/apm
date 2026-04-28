@@ -76,9 +76,9 @@ Current state: Both stdout and stderr are already redirected to `.apm-worker.log
 
 Fix: Add `--output-format stream-json` to the args vector when building the worker command. This causes the Claude CLI to emit a newline-delimited JSON stream of all session events — including `tool_use` events with their full argument payloads and `tool_result` events — to stdout. Since stdout is already redirected to `.apm-worker.log`, no other plumbing change is needed.
 
-Locate the point in `build_spawn_command` where the args vec is assembled and insert `--output-format`, `stream-json`. Apply the identical change to the container spawn function.
+Worker-driver compatibility check (addresses Amendment 2): Before inserting `--output-format stream-json` into the args, probe the configured worker binary by running `<binary> --help` and scanning its combined stdout+stderr for the string `--output-format`. If the string is absent, `build_spawn_command` (or its caller) must return an error — do not fall back silently. The error message must include: the binary path, the missing flag name, and a hint to upgrade the binary or configure an alternative worker command. This makes the hard dependency explicit at spawn time rather than producing a silently incomplete log.
 
-Risk: Verify `--output-format stream-json` is supported by the `claude` binary version in use (`claude --help`). If the flag is unrecognised the worker will fail to launch.
+Locate the point in `build_spawn_command` where the args vec is assembled. First add the probe, then (if it passes) insert `--output-format`, `stream-json`. Apply the identical probe + insertion to the container spawn function.
 
 ---
 
@@ -108,6 +108,17 @@ Content: Your working directory is the ticket worktree. Never read or write file
 
 ---
 
+**3a. `apm.worker.md` sync enforcement test (addresses Amendment 1)**
+
+After editing both `apm.worker.md` files, add a Rust test in `apm-core/tests/` that:
+- Reads the byte content of `apm-core/src/default/apm.worker.md` (relative to the crate root via `env!("CARGO_MANIFEST_DIR")`)
+- Reads the byte content of `.apm/apm.worker.md` (relative to the workspace root, one level up from the crate)
+- Asserts they are byte-for-byte identical; on failure, prints a unified diff so the developer sees what diverged
+
+This test enforces the sync rule going forward: any future ticket that edits one file but not the other will fail `cargo test --workspace`.
+
+---
+
 **4. `workflow.toml` — verify `merge_failed` state**
 
 A code audit found `.apm/workflow.toml` already contains `merge_failed` at lines 187-198 (likely added by concurrent ticket e1781eef). Implementer should:
@@ -120,11 +131,14 @@ A code audit found `.apm/workflow.toml` already contains `merge_failed` at lines
 **Order of steps:**
 1. Read `.apm/workflow.toml` — confirm `merge_failed` is present; patch only if needed
 2. Add Path discipline section to both `apm.worker.md` files; confirm they match word-for-word
-3. Verify `--output-format stream-json` flag in the environment (`claude --help`)
-4. Add `--output-format stream-json` to args in both spawn functions in `start.rs`
-5. Write spawn-cwd regression test in `apm-core/tests/`
-6. Run `cargo test --workspace` — all tests must pass
-7. Commit and transition to implemented
+3. Add the `apm.worker.md` sync test to `apm-core/tests/`
+4. Verify `--output-format stream-json` flag is supported (`<worker-binary> --help`)
+5. Add compatibility probe + `--output-format stream-json` args in both spawn functions in `start.rs`
+6. Write spawn-cwd regression test in `apm-core/tests/`
+7. Run `cargo test --workspace` — all tests must pass
+8. Commit and transition to implemented
+
+Note: this ticket (`498febe0`) should land before `e1781eef` (UI: show tickets in merge_failed state) — the UI ticket assumes the `merge_failed` state already exists in `.apm/workflow.toml`; landing out of order would have the UI surface a state the workflow config does not yet recognise.
 
 ### Open questions
 
