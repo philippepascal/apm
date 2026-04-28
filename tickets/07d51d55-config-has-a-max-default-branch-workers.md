@@ -66,6 +66,18 @@ The fix is a new `[agents]` config field, `max_workers_on_default`, that limits 
    }
    ```
 
+**`apm-core/src/init.rs` — `default_config()` (~line 280)**
+
+In the `[agents]` section of the hardcoded config template, add both `max_workers_per_epic` and `max_workers_on_default` so new projects have them explicit from the start:
+
+```toml
+[agents]
+max_concurrent = 3
+max_workers_per_epic = 1
+max_workers_on_default = 1
+instructions = ".apm/agents.md"
+```
+
 **`apm-core/src/start.rs` — `run_next()` (~line 365)**
 
 After the existing `blocked_epics()` call, compute and apply the default-branch limit:
@@ -96,6 +108,7 @@ Add unit tests in `config.rs` (or a dedicated test module) for `is_default_branc
 
 
 ### Amendment requests
+
 apm init should set both max_workers_per_epic and max_workers_on_default to their default (1).
 
 ### Code review
