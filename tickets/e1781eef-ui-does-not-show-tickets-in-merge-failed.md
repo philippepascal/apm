@@ -3,13 +3,13 @@ id = "e1781eef"
 title = "UI does not show tickets in merge_failed state"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e1781eef-ui-does-not-show-tickets-in-merge-failed"
 created_at = "2026-04-28T22:26:52.277291Z"
-updated_at = "2026-04-28T22:35:01.519626Z"
+updated_at = "2026-04-28T22:41:41.313451Z"
 +++
 
 ## Spec
