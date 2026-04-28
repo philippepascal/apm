@@ -4,12 +4,12 @@ title = "config has a max_default_branch_workers"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/07d51d55-config-has-a-max-default-branch-workers"
 created_at = "2026-04-28T06:56:57.028226Z"
-updated_at = "2026-04-28T07:30:45.681399Z"
+updated_at = "2026-04-28T07:30:53.528629Z"
 +++
 
 ## Spec
