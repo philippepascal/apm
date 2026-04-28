@@ -41,7 +41,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 - [x] `--append-file` without `--section` exits non-zero with an error containing `"--append-file requires --section"`
 - [x] Supplying both `--append` and `--set` (or `--set-file`) exits with a clap conflict error
 - [x] Supplying both `--append` and `--append-file` exits with a clap conflict error
-- [ ] When config is active and the section has a defined type, `--append` applies `apply_section_type` formatting to the appended text before committing (consistent with `--set`)
+- [x] When config is active and the section has a defined type, `--append` applies `apply_section_type` formatting to the appended text before committing (consistent with `--set`)
 - [ ] `--append` commits to the ticket branch with message `ticket(<id>): append to section <name>`
 - [ ] When aggressive sync is enabled, `--append` pushes to origin after the commit; a push failure prints a warning but does not fail the command
 
