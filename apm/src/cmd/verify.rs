@@ -10,7 +10,7 @@ pub fn run(root: &Path, fix: bool, no_aggressive: bool) -> Result<()> {
     let merged = apm_core::git::merged_into_main(root, &ctx.config.project.default_branch).unwrap_or_default();
     let merged_set: HashSet<String> = merged.into_iter().collect();
 
-    let issues = apm_core::verify::verify_tickets(&ctx.config, &ctx.tickets, &merged_set);
+    let issues = apm_core::verify::verify_tickets(root, &ctx.config, &ctx.tickets, &merged_set);
 
     // Report completion strategies configured on transitions.
     for state in &ctx.config.workflow.states {
