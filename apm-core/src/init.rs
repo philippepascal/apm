@@ -337,8 +337,34 @@ fn write_local_toml(apm_dir: &Path, username: &str) -> Result<()> {
     Ok(())
 }
 
-fn default_workflow_toml() -> &'static str {
+pub fn default_workflow_toml() -> &'static str {
     include_str!("default/workflow.toml")
+}
+
+/// Returns a map from transition `to` value → `on_failure` state name for every
+/// `Merge` or `PrOrEpicMerge` transition declared in the default workflow template.
+pub fn default_on_failure_map() -> std::collections::HashMap<String, String> {
+    #[derive(serde::Deserialize)]
+    struct Wrapper {
+        workflow: crate::config::WorkflowConfig,
+    }
+    let w: Wrapper = toml::from_str(include_str!("default/workflow.toml"))
+        .expect("default workflow.toml is valid TOML");
+    let mut map = std::collections::HashMap::new();
+    for state in &w.workflow.states {
+        for tr in &state.transitions {
+            if matches!(
+                tr.completion,
+                crate::config::CompletionStrategy::Merge
+                    | crate::config::CompletionStrategy::PrOrEpicMerge
+            ) {
+                if let Some(ref of) = tr.on_failure {
+                    map.insert(tr.to.clone(), of.clone());
+                }
+            }
+        }
+    }
+    map
 }
 
 fn default_ticket_toml() -> &'static str {

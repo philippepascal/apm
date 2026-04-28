@@ -243,6 +243,30 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
                     ));
                 }
             }
+
+            // Merge/PrOrEpicMerge transitions require on_failure.
+            if matches!(
+                transition.completion,
+                CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge
+            ) {
+                if transition.on_failure.is_none() {
+                    errors.push(format!(
+                        "config: transition '{}' → '{}' uses completion '{}' but is missing \
+                         `on_failure`; run `apm validate --fix` to add it",
+                        state.id,
+                        transition.to,
+                        strategy_name(&transition.completion)
+                    ));
+                } else if let Some(ref name) = transition.on_failure {
+                    if name != "closed" && !state_ids.contains(name.as_str()) {
+                        errors.push(format!(
+                            "config: transition '{}' → '{}' has `on_failure = \"{}\"` but \
+                             state \"{}\" is not declared in workflow.toml",
+                            state.id, transition.to, name, name
+                        ));
+                    }
+                }
+            }
         }
     }
 
@@ -1435,6 +1459,97 @@ dir = "{dir}"
         assert!(
             !errors.iter().any(|e| e.contains("gitignore")),
             "absolute path should skip gitignore check; got: {errors:?}"
+        );
+    }
+
+    fn config_with_merge_transition(completion: &str, on_failure: Option<&str>, declare_failure_state: bool) -> Config {
+        let on_failure_line = on_failure
+            .map(|v| format!("on_failure = \"{v}\"\n"))
+            .unwrap_or_default();
+        let merge_failed_state = if declare_failure_state {
+            r#"
+[[workflow.states]]
+id       = "merge_failed"
+label    = "Merge failed"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#
+        } else {
+            ""
+        };
+        let toml = format!(
+            r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "implemented"
+completion = "{completion}"
+{on_failure_line}
+[[workflow.states]]
+id       = "implemented"
+label    = "Implemented"
+terminal = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+{merge_failed_state}
+"#
+        );
+        toml::from_str(&toml).expect("config parse failed")
+    }
+
+    #[test]
+    fn test_on_failure_missing_for_merge() {
+        let config = config_with_merge_transition("merge", None, false);
+        let errors = validate_config(&config, std::path::Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("missing `on_failure`")),
+            "expected missing on_failure error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn test_on_failure_missing_for_pr_or_epic_merge() {
+        // No ticket with target_branch — rule fires on transition definition alone.
+        let config = config_with_merge_transition("pr_or_epic_merge", None, false);
+        let errors = validate_config(&config, std::path::Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("missing `on_failure`")),
+            "expected missing on_failure error for pr_or_epic_merge; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn test_on_failure_unknown_state() {
+        let config = config_with_merge_transition("merge", Some("ghost_state"), false);
+        let errors = validate_config(&config, std::path::Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("ghost_state")),
+            "expected unknown state error for ghost_state; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn test_on_failure_valid() {
+        let config = config_with_merge_transition("merge", Some("merge_failed"), true);
+        let errors = validate_config(&config, std::path::Path::new("/tmp"));
+        let on_failure_errors: Vec<&String> = errors.iter()
+            .filter(|e| e.contains("on_failure") || e.contains("ghost_state") || e.contains("merge_failed"))
+            .collect();
+        assert!(
+            on_failure_errors.is_empty(),
+            "unexpected on_failure errors: {on_failure_errors:?}"
         );
     }
 }

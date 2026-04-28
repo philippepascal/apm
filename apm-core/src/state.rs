@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use crate::{config::{CompletionStrategy, Config}, git, review, ticket, ticket_fmt};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
@@ -52,8 +52,8 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         .find(|s| s.id == new_state)
         .map(|s| s.terminal)
         .unwrap_or(false);
-    let completion = if force {
-        CompletionStrategy::None
+    let (completion, on_failure): (CompletionStrategy, Option<String>) = if force {
+        (CompletionStrategy::None, None)
     } else if !target_is_terminal {
         if let Some(state_cfg) = config.workflow.states.iter().find(|s| s.id == old_state) {
             if !state_cfg.transitions.is_empty() {
@@ -70,15 +70,15 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
                 if let Some(ref w) = found.warning {
                     warnings.push(format!("⚠ {w}"));
                 }
-                found.completion.clone()
+                (found.completion.clone(), found.on_failure.clone())
             } else {
-                CompletionStrategy::None
+                (CompletionStrategy::None, None)
             }
         } else {
-            CompletionStrategy::None
+            (CompletionStrategy::None, None)
         }
     } else {
-        CompletionStrategy::None
+        (CompletionStrategy::None, None)
     };
 
     match new_state.as_str() {
@@ -160,23 +160,33 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
             };
             if let Err(merge_err) = merge_result {
                 let merge_err_msg = format!("{merge_err:#}");
+                let failure_state = match &on_failure {
+                    Some(s) => s.clone(),
+                    None => {
+                        return Err(anyhow!(
+                            "{merge_err_msg}\n\nMerge failed and the transition to '{}' has \
+                             no `on_failure` configured. Run `apm validate --fix` to add it.",
+                            new_state
+                        ));
+                    }
+                };
                 let fail_now = Utc::now();
-                t.frontmatter.state = "merge_failed".to_string();
+                t.frontmatter.state = failure_state.clone();
                 t.frontmatter.updated_at = Some(fail_now);
                 set_merge_notes(&mut t.body, &merge_err_msg);
-                append_history(&mut t.body, &new_state, "merge_failed", &fail_now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
+                append_history(&mut t.body, &new_state, &failure_state, &fail_now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
                 let fallback_content = match t.serialize() {
                     Ok(c) => c,
                     Err(_) => return Err(merge_err),
                 };
-                if git::commit_to_branch(root, &branch, &rel_path, &fallback_content, &format!("ticket({id}): {new_state} → merge_failed")).is_err() {
+                if git::commit_to_branch(root, &branch, &rel_path, &fallback_content, &format!("ticket({id}): {new_state} → {failure_state}")).is_err() {
                     return Err(merge_err);
                 }
-                crate::logger::log("state_transition", &format!("{id:?} {new_state} -> merge_failed"));
+                crate::logger::log("state_transition", &format!("{id:?} {new_state} -> {failure_state}"));
                 return Ok(TransitionOutput {
                     id: id.clone(),
                     old_state: old_state.clone(),
-                    new_state: "merge_failed".to_string(),
+                    new_state: failure_state,
                     worktree_path: None,
                     warnings,
                     messages,
@@ -186,7 +196,41 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         CompletionStrategy::PrOrEpicMerge => {
             git::push_branch_tracking(root, &branch)?;
             if let Some(ref target) = t.frontmatter.target_branch {
-                git::merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings)?;
+                let merge_result = git::merge_into_default(root, &config, &branch, target, false, &mut messages, &mut warnings);
+                if let Err(merge_err) = merge_result {
+                    let merge_err_msg = format!("{merge_err:#}");
+                    let failure_state = match &on_failure {
+                        Some(s) => s.clone(),
+                        None => {
+                            return Err(anyhow!(
+                                "{merge_err_msg}\n\nMerge failed and the transition to '{}' has \
+                                 no `on_failure` configured. Run `apm validate --fix` to add it.",
+                                new_state
+                            ));
+                        }
+                    };
+                    let fail_now = Utc::now();
+                    t.frontmatter.state = failure_state.clone();
+                    t.frontmatter.updated_at = Some(fail_now);
+                    set_merge_notes(&mut t.body, &merge_err_msg);
+                    append_history(&mut t.body, &new_state, &failure_state, &fail_now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);
+                    let fallback_content = match t.serialize() {
+                        Ok(c) => c,
+                        Err(_) => return Err(merge_err),
+                    };
+                    if git::commit_to_branch(root, &branch, &rel_path, &fallback_content, &format!("ticket({id}): {new_state} → {failure_state}")).is_err() {
+                        return Err(merge_err);
+                    }
+                    crate::logger::log("state_transition", &format!("{id:?} {new_state} -> {failure_state}"));
+                    return Ok(TransitionOutput {
+                        id: id.clone(),
+                        old_state: old_state.clone(),
+                        new_state: failure_state,
+                        worktree_path: None,
+                        warnings,
+                        messages,
+                    });
+                }
             } else {
                 crate::github::gh_pr_create_or_update(root, &branch, &config.project.default_branch, &id, &t.frontmatter.title, &format!("Closes #{id}"), &mut messages)?;
             }
