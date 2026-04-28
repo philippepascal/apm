@@ -74,18 +74,18 @@ This ticket also **subsumes the workflow.toml migration scope** from ticket `498
 
 ### Acceptance criteria
 
-- [ ] `TransitionConfig` has a `pub on_failure: Option<String>` field that deserializes from TOML correctly: present value → `Some(...)`, absent field → `None`
-- [ ] A fresh `apm init` produces a `workflow.toml` where the `in_progress → implemented` transition includes `on_failure = "merge_failed"`
-- [ ] `apm validate` on a project whose `in_progress → implemented` transition has `completion = "merge"` or `completion = "pr_or_epic_merge"` but no `on_failure` field emits a config error that names the source state, the `to` state, and the missing field
-- [ ] `apm validate` on a project whose transition has `on_failure` referencing a state not declared in `workflow.toml` emits a config error naming the unknown state value
-- [ ] `apm validate --fix` on a project missing `on_failure` adds the field (value ported from the matching default-template transition); a subsequent `apm validate` run exits 0
-- [ ] `apm validate --fix` on a project whose `on_failure` field is present but references a state not declared in `workflow.toml` appends that state's full block (extracted from the default template) to the project's `workflow.toml`; a subsequent `apm validate` run exits 0
-- [ ] A single `apm validate --fix` on a project missing both the `on_failure` field and the referenced state adds both in one invocation — the caller does not need to run `--fix` a second time to reach a clean validate
-- [ ] `apm validate --fix` is idempotent: running it twice on the same project produces the same `workflow.toml` and exits 0 both times
-- [ ] Triggering a real merge failure on a project with a properly configured `on_failure = "merge_failed"` lands the ticket in `merge_failed`, writes a history entry showing the transition, and the command's output reports `new_state = "merge_failed"`
-- [ ] Triggering a merge failure on a project where the transition has no `on_failure` returns a hard error, leaves the ticket in its pre-transition state (no state mutation, no history entry), and the error message instructs the user to run `apm validate --fix`
-- [ ] A unit test in `validate.rs` covers: a `completion = "merge"` transition with `on_failure` pointing to an undeclared state → `validate_config()` returns an issue containing that state name
-- [ ] A unit test in `validate.rs` covers: a `completion = "pr_or_epic_merge"` transition with no `on_failure` field → `validate_config()` returns an issue; the test constructs no ticket with `target_branch` set — the rule fires on the transition definition alone
+- [x] `TransitionConfig` has a `pub on_failure: Option<String>` field that deserializes from TOML correctly: present value → `Some(...)`, absent field → `None`
+- [x] A fresh `apm init` produces a `workflow.toml` where the `in_progress → implemented` transition includes `on_failure = "merge_failed"`
+- [x] `apm validate` on a project whose `in_progress → implemented` transition has `completion = "merge"` or `completion = "pr_or_epic_merge"` but no `on_failure` field emits a config error that names the source state, the `to` state, and the missing field
+- [x] `apm validate` on a project whose transition has `on_failure` referencing a state not declared in `workflow.toml` emits a config error naming the unknown state value
+- [x] `apm validate --fix` on a project missing `on_failure` adds the field (value ported from the matching default-template transition); a subsequent `apm validate` run exits 0
+- [x] `apm validate --fix` on a project whose `on_failure` field is present but references a state not declared in `workflow.toml` appends that state's full block (extracted from the default template) to the project's `workflow.toml`; a subsequent `apm validate` run exits 0
+- [x] A single `apm validate --fix` on a project missing both the `on_failure` field and the referenced state adds both in one invocation — the caller does not need to run `--fix` a second time to reach a clean validate
+- [x] `apm validate --fix` is idempotent: running it twice on the same project produces the same `workflow.toml` and exits 0 both times
+- [x] Triggering a real merge failure on a project with a properly configured `on_failure = "merge_failed"` lands the ticket in `merge_failed`, writes a history entry showing the transition, and the command's output reports `new_state = "merge_failed"`
+- [x] Triggering a merge failure on a project where the transition has no `on_failure` returns a hard error, leaves the ticket in its pre-transition state (no state mutation, no history entry), and the error message instructs the user to run `apm validate --fix`
+- [x] A unit test in `validate.rs` covers: a `completion = "merge"` transition with `on_failure` pointing to an undeclared state → `validate_config()` returns an issue containing that state name
+- [x] A unit test in `validate.rs` covers: a `completion = "pr_or_epic_merge"` transition with no `on_failure` field → `validate_config()` returns an issue; the test constructs no ticket with `target_branch` set — the rule fires on the transition definition alone
 
 ### Out of scope
 
