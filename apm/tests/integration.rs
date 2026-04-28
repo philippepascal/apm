@@ -5068,6 +5068,43 @@ fn archive_older_than_skips_recent_ticket() {
     assert!(files.iter().any(|f| f == &rel), "recent ticket should not be archived with --older-than 0d");
 }
 
+#[test]
+fn archive_falls_back_to_ticket_branch_for_stale_main() {
+    let dir = setup_with_archive_dir();
+    let p = dir.path();
+
+    // Create a ticket (state = "new", branch field set in frontmatter).
+    apm::cmd::new::run(p, "Epic ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(p, "epic-ticket");
+    let rel = ticket_rel_path(&branch);
+
+    // Read original content from the ticket branch (state = "new").
+    let orig = branch_content(p, &branch, &rel);
+
+    // Put a stale "in_progress" (non-terminal) version on main.
+    let stale = orig.replace("state = \"new\"", "state = \"in_progress\"");
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    std::fs::write(p.join(&rel), &stale).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "stale non-terminal on main"]);
+
+    // Commit a "closed" (terminal) version to the ticket branch.
+    let closed = orig.replace("state = \"new\"", "state = \"closed\"");
+    apm_core::git::commit_to_branch(p, &branch, &rel, &closed, "close ticket").unwrap();
+
+    // Dry-run archive: ticket should appear in dry_run_moves with no warnings.
+    let config = apm_core::config::Config::load(p).unwrap();
+    let out = apm_core::archive::archive(p, &config, true, None).unwrap();
+
+    let filename = std::path::Path::new(&rel).file_name().unwrap().to_str().unwrap().to_string();
+    let archive_path = format!("archive/tickets/{filename}");
+    assert!(
+        out.dry_run_moves.iter().any(|(old, new)| old == &rel && new == &archive_path),
+        "expected ticket in dry_run_moves; got: {:?}", out.dry_run_moves
+    );
+    assert!(out.warnings.is_empty(), "expected no warnings; got: {:?}", out.warnings);
+}
+
 // --- merge completion strategy: push to origin after merge ---
 
 fn merge_strategy_config_toml() -> &'static str {

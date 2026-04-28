@@ -62,13 +62,44 @@ pub fn archive(
             }
         };
 
-        if !terminal_states.contains(&t.frontmatter.state) {
+        let (content, t) = if terminal_states.contains(&t.frontmatter.state) {
+            (content, t)
+        } else if let Some(ticket_branch) = t.frontmatter.branch.clone() {
+            match git::read_from_branch(root, &ticket_branch, rel_path) {
+                Ok(branch_content) => match ticket::Ticket::parse(&dummy_path, &branch_content) {
+                    Ok(branch_t) if terminal_states.contains(&branch_t.frontmatter.state) => {
+                        (branch_content, branch_t)
+                    }
+                    Ok(branch_t) => {
+                        warnings.push(format!(
+                            "warning: {} is in non-terminal state '{}' — skipping",
+                            rel_path, branch_t.frontmatter.state
+                        ));
+                        continue;
+                    }
+                    Err(_) => {
+                        warnings.push(format!(
+                            "warning: {} is in non-terminal state '{}' — skipping",
+                            rel_path, t.frontmatter.state
+                        ));
+                        continue;
+                    }
+                },
+                Err(_) => {
+                    warnings.push(format!(
+                        "warning: {} is in non-terminal state '{}' — skipping",
+                        rel_path, t.frontmatter.state
+                    ));
+                    continue;
+                }
+            }
+        } else {
             warnings.push(format!(
                 "warning: {} is in non-terminal state '{}' — skipping",
                 rel_path, t.frontmatter.state
             ));
             continue;
-        }
+        };
 
         if let Some(threshold) = older_than {
             if let Some(updated_at) = t.frontmatter.updated_at {
