@@ -41,7 +41,20 @@ Root cause: `archive.rs` calls `git::read_from_branch(root, default_branch, rel_
 
 ### Approach
 
-How the implementation will work.
+**Only file changed:** `apm-core/src/archive.rs`
+
+Replace the non-terminal-state check block (currently lines 65-71) with logic that falls back to the ticket's own branch when the default-branch version is non-terminal. The existing `content` and `t` bindings need to be re-bound (shadowed) to the ticket-branch values when the fallback succeeds, because `content` is used later in `moves.push(...)` and `t.frontmatter.updated_at` is used in the `older_than` check.
+
+After parsing `t` from the default branch (line 57), replace the current non-terminal check with a three-way match:
+- If the default-branch state is terminal: proceed unchanged.
+- If non-terminal and `t.frontmatter.branch` is Some: call `git::read_from_branch(root, ticket_branch, rel_path)`, re-parse into a new Ticket, and if that version has a terminal state, shadow both `t` and `content` with the ticket-branch values and fall through into the `older_than` / move logic. On read error or still-non-terminal state, emit the warning and continue.
+- If non-terminal and no `branch` field: emit the warning and continue (existing behaviour, no change).
+
+The `content` variable that feeds `moves.push(...)` must be the ticket-branch content when the fallback is taken, so the archived file reflects the closed state rather than the stale default-branch state.
+
+No changes to `git_util.rs` are required; `read_from_branch` already handles local-then-remote fallback for any branch name.
+
+Add a unit test covering the case where the default-branch ticket is non-terminal but the ticket-branch version is terminal. The test should verify that the ticket appears in moves (or dry_run_moves) and that warnings is empty.
 
 ### Open questions
 
