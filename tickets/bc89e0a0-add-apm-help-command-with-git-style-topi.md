@@ -36,7 +36,11 @@ This ticket adds CLI plumbing only: the `Help` subcommand variant in the clap `C
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Actual content for any topic (`commands`, `config`, `workflow`, `ticket`) — each is a sibling ticket in this epic
+- Auto-derive infrastructure for rendering TOML schemas from Rust structs (ticket 069c3403)
+- Pager integration, markdown rendering, or color/ANSI output
+- Fuzzy-matching or "did you mean?" suggestions on unknown topics
+- Any changes to how `apm <subcommand> --help` works (clap-native help is untouched)
 
 ### Approach
 
