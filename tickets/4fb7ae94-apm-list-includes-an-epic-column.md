@@ -4,12 +4,12 @@ title = "apm list includes an epic column"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4fb7ae94-apm-list-includes-an-epic-column"
 created_at = "2026-04-28T00:25:28.853946Z"
-updated_at = "2026-04-28T01:01:40.415680Z"
+updated_at = "2026-04-28T01:01:51.552353Z"
 +++
 
 ## Spec
