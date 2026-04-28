@@ -19,30 +19,11 @@ depends_on = ["bc89e0a0"]
 
 ### Problem
 
-Replace the `render_commands()` stub from ticket bc89e0a0 with a real renderer that walks clap's introspection to produce a unified command/flag reference.
+The `render_commands()` function in `apm/src/cmd/help.rs` is introduced as a stub by ticket bc89e0a0. It returns a placeholder string and does nothing useful. As a result, `apm help commands` gives no actionable information to users.
 
-**Scope:** auto-derive the command listing from `crate::Cli::command()`. No hand-written command catalog.
+This ticket replaces that stub with a real implementation that walks clap's introspection API at runtime to produce a full command/flag reference. Because the output is derived directly from `crate::Cli::command()`, it never drifts from the actual CLI definition — new commands, subcommands, and flags appear automatically without any code changes to `help.rs`.
 
-**Behavior to implement:**
-- Walk every subcommand recursively (top-level commands plus nested ones like `apm epic new`, `apm epic close`).
-- For each command: name, one-line description (`get_about`), positional args (with type and description), flags (with long/short names, value name, default, description).
-- Group long-form details under each command. Sort top-level commands alphabetically (or follow the order in `Cli`).
-- Output is a single string returned to the caller; written to stdout.
-
-**Implementation pointers:**
-- Use `clap::Command::get_subcommands()`, `get_arguments()`, and the various `get_*` accessors to walk the command tree at runtime.
-- This avoids drift entirely — the help reflects the actual Cli definition. New commands and flags appear automatically.
-- Examples and `long_about` strings already live on each `#[command]` attribute; surface them in the rendered output.
-
-**Acceptance pointers (for spec phase):**
-- Adding a new `#[arg]` to any subcommand must show up in `apm help commands` without further code changes.
-- Adding a whole new subcommand likewise appears automatically.
-- Output is readable in a 100-column terminal without a pager.
-
-**Out of scope:**
-- Color or styling.
-- Markdown rendering (plain text output).
-- A separate `--help` per topic (we already have clap's built-in).
+The current `help_template` in `main.rs` provides a grouped overview (Setup / Ticket management / Workflow / Epics / Maintenance / Server), but it is hand-written and contains only one-liners. Users who need to know what arguments a specific command accepts must run `apm <command> --help` individually. `apm help commands` should give the full argument reference for every command in one place.
 
 ### Acceptance criteria
 
