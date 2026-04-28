@@ -33,7 +33,10 @@ The fix is purely presentational: extend the API response to carry all three con
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to work engine scheduling logic (which limits are enforced and how)
+- Changes to the PATCH endpoint's behavior (how the override value is stored and applied)
+- UI controls to edit per-epic or per-default-branch limits (read-only display only)
+- Any change to the `apm-core` config struct or its defaults
 
 ### Approach
 
