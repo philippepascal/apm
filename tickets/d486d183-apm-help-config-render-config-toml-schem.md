@@ -19,32 +19,11 @@ depends_on = ["bc89e0a0", "069c3403"]
 
 ### Problem
 
-Replace the `render_config()` stub from ticket bc89e0a0 with a real renderer that uses the auto-derive infrastructure from ticket 069c3403 to render the `Config` struct from `apm-core/src/config.rs`.
+The `render_config()` function in `apm/src/cmd/help.rs` is introduced as a stub by ticket bc89e0a0. It returns a placeholder string referencing this ticket (d486d183). As a result, `apm help config` gives users no actionable information about what fields are valid in `.apm/config.toml`, their types, defaults, or purpose.
 
-**Sections to cover** (top-level keys in `.apm/config.toml`):
-- `[project]` — name, description, default_branch
-- `[tickets]` — dir, archive_dir
-- `[worktrees]` — dir, agent_dirs
-- `[git_host]` — provider, repo, token_env
-- `[agents]` — instructions, max_concurrent, max_workers_per_epic, max_workers_on_default, side_tickets, skip_permissions
-- `[sync]` — aggressive
-- `[logging]` — enabled, file
-- `[workers]` — command, args, model, container, image, etc.
-- `[worker_profiles.<name>]` — same fields as workers, plus instructions, role_prefix
+The `Config` struct in `apm-core/src/config.rs` already defines all config keys and their types, but nearly every field lacks a `/// doc comment`. Ticket 069c3403 provides `apm_core::help_schema::schema_entries::<T>()` and `render_schema::<T>()`, which convert any `JsonSchema`-derived struct into a formatted field listing including type, default, and description drawn from doc comments.
 
-**Output structure:**
-- Group fields by their TOML section header.
-- Per field: name, type, default (when any), one-line description from doc comments.
-- Render order matches struct definition order or section grouping in `config.toml`.
-
-**Implementation pointers:**
-- In `apm/src/cmd/help.rs`: replace the stub for `config` topic. Call into `apm_core::help_schema` for the `Config` type.
-- Doc comments on `Config` and its nested structs in `apm-core/src/config.rs` may need to be added or improved as part of this ticket — describe each field in one line.
-
-**Out of scope:**
-- Worker_profiles content beyond a generic description (each profile inherits the workers fields; documenting each user-defined profile is meaningless).
-- Examples beyond what the struct doc comments contain.
-- Format conversion (TOML <-> JSON).
+This ticket wires those two pieces together: add one-line doc comments to every user-facing field in the `Config` struct tree, then replace the `render_config()` stub to call into the help_schema infrastructure and format output grouped by TOML section header.
 
 ### Acceptance criteria
 
