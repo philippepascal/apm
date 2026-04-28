@@ -1,7 +1,7 @@
 +++
 id = "50649e84"
 title = "Merge apm verify into apm validate; remove verify command"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/50649e84-merge-apm-verify-into-apm-validate-remov"
 created_at = "2026-04-28T19:19:47.773209Z"
-updated_at = "2026-04-28T20:34:21.099924Z"
+updated_at = "2026-04-28T20:43:34.401629Z"
 +++
 
 ## Spec
@@ -157,3 +157,4 @@ Search for `apm verify`. Replace the two-line block that references both command
 | 2026-04-28T20:21Z | ammend | in_design | philippepascal |
 | 2026-04-28T20:23Z | in_design | specd | claude-0428-2021-fc50 |
 | 2026-04-28T20:34Z | specd | ready | philippepascal |
+| 2026-04-28T20:43Z | ready | in_progress | philippepascal |
