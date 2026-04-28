@@ -26,13 +26,13 @@ The fix is to walk every non-terminal ticket whose state is in `{in_design, in_p
 
 ### Acceptance criteria
 
-- [ ] `apm verify` reports an issue for a ticket in `in_design` state whose branch's expected worktree directory does not exist on disk
-- [ ] `apm verify` reports an issue for a ticket in `in_progress` state whose branch's expected worktree directory does not exist on disk
-- [ ] The reported issue message for a missing worktree matches the format `#{id} [{state}]: worktree at <path> is missing`
-- [ ] `apm verify` does not report a worktree issue for a ticket in `in_design` or `in_progress` state when its worktree directory exists on disk
-- [ ] `apm verify` does not report a worktree issue for a ticket in `in_design` or `in_progress` when no `branch` field is set (the existing "state requires branch but none set" issue fires instead)
-- [ ] `apm verify` does not report a worktree issue for tickets in states outside `{in_design, in_progress}` (e.g., `specd`, `implemented`, `closed`) even when the computed path is absent
-- [ ] `apm verify --fix` does not auto-recreate missing worktrees; the issue is printed and the process exits non-zero, same as without `--fix`
+- [x] `apm verify` reports an issue for a ticket in `in_design` state whose branch's expected worktree directory does not exist on disk
+- [x] `apm verify` reports an issue for a ticket in `in_progress` state whose branch's expected worktree directory does not exist on disk
+- [x] The reported issue message for a missing worktree matches the format `#{id} [{state}]: worktree at <path> is missing`
+- [x] `apm verify` does not report a worktree issue for a ticket in `in_design` or `in_progress` state when its worktree directory exists on disk
+- [x] `apm verify` does not report a worktree issue for a ticket in `in_design` or `in_progress` when no `branch` field is set (the existing "state requires branch but none set" issue fires instead)
+- [x] `apm verify` does not report a worktree issue for tickets in states outside `{in_design, in_progress}` (e.g., `specd`, `implemented`, `closed`) even when the computed path is absent
+- [x] `apm verify --fix` does not auto-recreate missing worktrees; the issue is printed and the process exits non-zero, same as without `--fix`
 
 ### Out of scope
 
