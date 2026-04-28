@@ -7,7 +7,7 @@ dir = "tickets"
 archive_dir = "archive/tickets"
 
 [worktrees]
-dir = "../apm--worktrees"
+dir = ".apm--worktrees"
 agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [git_host]
