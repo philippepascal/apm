@@ -24,11 +24,11 @@ The epics filter dropdown in `SupervisorView` has two independent bugs.
 
 ### Acceptance criteria
 
-- [ ] The epics dropdown in SupervisorView refreshes automatically every 10 seconds without a page reload
-- [ ] A "No epic" option appears in the epics filter dropdown between "All epics" and the named epics
-- [ ] Selecting "No epic" hides all tickets that have an epic field set, showing only those where `epic` is absent
-- [ ] Selecting "All epics" after "No epic" restores the unfiltered view
-- [ ] The active-filter indicator (`hasActiveFilters`) is true when "No epic" is selected
+- [x] The epics dropdown in SupervisorView refreshes automatically every 10 seconds without a page reload
+- [x] A "No epic" option appears in the epics filter dropdown between "All epics" and the named epics
+- [x] Selecting "No epic" hides all tickets that have an epic field set, showing only those where `epic` is absent
+- [x] Selecting "All epics" after "No epic" restores the unfiltered view
+- [x] The active-filter indicator (`hasActiveFilters`) is true when "No epic" is selected
 
 ### Out of scope
 
