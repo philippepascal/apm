@@ -44,7 +44,36 @@ This ticket adds CLI plumbing only: the `Help` subcommand variant in the clap `C
 
 ### Approach
 
-How the implementation will work.
+**Files to change:**
+
+**1. apm/src/cmd/help.rs (new file)**
+
+- Define a private TOPICS: &[(&str, &str)] constant listing (commands, one-liner), (config, one-liner), (workflow, one-liner), (ticket, one-liner). One source of truth used by both the overview and the error path.
+- pub fn run(topic: Option<&str>) -> Result<()>:
+  - None -> print render_overview() to stdout, exit 0
+  - Some(t) -> match t against TOPICS names; dispatch to the matching render_*() fn and print; unknown -> anyhow::bail! with the topic name and a list of valid topics from TOPICS
+- fn render_overview() -> String: short description paragraph + table of TOPICS (name padded, one-line summary)
+- fn render_commands() -> String: returns placeholder string referencing ticket 3665e017
+- fn render_config() -> String: returns placeholder string referencing ticket d486d183
+- fn render_workflow() -> String: returns placeholder string referencing ticket 7ba021e8
+- fn render_ticket() -> String: returns placeholder string referencing ticket 14214305
+- run() does NOT take root: &Path -- the help command needs no repo context.
+
+**2. apm/src/main.rs**
+
+- Add Help { topic: Option<String> } to the Command enum with a doc comment.
+- Add Command::Help { topic } => cmd::help::run(topic.as_deref())? to the match dispatch.
+
+**3. apm/src/lib.rs (or wherever cmd submodules are declared)**
+
+- Add pub mod help; inside the pub mod cmd { ... } block alongside the other 27 command modules.
+
+**Implementation order:**
+1. Create apm/src/cmd/help.rs with TOPICS constant, run(), render_overview(), and four stubs
+2. Register pub mod help; in the cmd block
+3. Add Help variant and dispatch arm to main.rs
+4. cargo build to confirm the module compiles and the match is exhaustive
+5. Smoke-test all nine acceptance criteria cases manually
 
 ### Open questions
 
