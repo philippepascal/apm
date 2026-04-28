@@ -38,7 +38,10 @@ The fix is a new `[agents]` config field, `max_workers_on_default`, that limits 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `max_workers_per_epic` behaviour
+- Changing the default value of `max_concurrent`
+- Surfacing the default-branch worker count in `apm ps`, `apm show`, or other display commands
+- Any UI or config validation beyond accepting the field and applying the limit
 
 ### Approach
 
