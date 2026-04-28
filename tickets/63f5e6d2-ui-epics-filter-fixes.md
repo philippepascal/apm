@@ -4,12 +4,12 @@ title = "UI: epics filter fixes"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/63f5e6d2-ui-epics-filter-fixes"
 created_at = "2026-04-28T19:28:59.918275Z"
-updated_at = "2026-04-28T19:46:07.271303Z"
+updated_at = "2026-04-28T19:46:12.765942Z"
 +++
 
 ## Spec
