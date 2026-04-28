@@ -55,9 +55,6 @@ The CLAUDE.md rule "main worktree always on main, never holds work" was violated
 - [ ] `.apm/apm.worker.md` contains a Path discipline section that states: never edit files outside the ticket worktree; always use absolute paths rooted at the worktree path shown in `apm show`; includes a labelled correct example and a wrong example
 - [ ] `apm-core/src/default/apm.worker.md` contains the identical Path discipline section (same wording as the project file)
 - [ ] A `cargo test` assertion in `apm-core/tests/` reads both `apm-core/src/default/apm.worker.md` and `.apm/apm.worker.md` and fails with a diff if their contents are not byte-for-byte identical
-- [ ] `.apm/workflow.toml` contains a `[[workflow.states]]` block with `id = "merge_failed"`, `actionable = ["supervisor"]`, and two `[[workflow.states.transitions]]` entries: one to `implemented` and one to `in_progress`, both `trigger = "manual"`
-- [ ] `apm state <ticket_in_merge_failed> implemented` exits 0
-- [ ] `apm state <ticket_in_merge_failed> in_progress` exits 0
 
 ### Out of scope
 
