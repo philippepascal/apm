@@ -58,7 +58,7 @@ Concrete edits:
 - [x] `apm verify` exits with an unrecognized-command error; no deprecation alias exists
 - [x] `apm validate` reports unknown ticket state values (state not in `config.workflow.states`)
 - [x] `apm validate` reports tickets whose filename numeric prefix does not match the frontmatter `id` field
-- [ ] `apm validate` reports `in_progress` and `implemented` tickets that have no `branch` field
+- [x] `apm validate` reports `in_progress` and `implemented` tickets that have no `branch` field
 - [ ] `apm validate` reports tickets whose branch is already merged into the default branch but whose state is not closed
 - [ ] `apm validate` reports tickets in `in_design` or `in_progress` states whose worktree directory is absent from disk
 - [ ] `apm validate` reports tickets missing a `## Spec` section
