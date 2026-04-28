@@ -24,7 +24,7 @@ apm-core::worker::is_alive(pid) treats zombie/defunct processes as alive. It use
 - [x] `is_alive(pid)` returns `true` for the current process PID (existing behaviour preserved)
 - [x] `is_alive(pid)` returns `false` for a PID that does not exist in the process table (existing behaviour preserved)
 - [x] A unit test for the zombie-state parsing helper covers: state string `"Z"` → zombie, `"Z+"` → zombie, `"S"` → not zombie, `"R"` → not zombie, empty string → not zombie
-- [ ] `apm workers` does not list a zombie worker as alive
+- [x] `apm workers` does not list a zombie worker as alive
 - [ ] `epic_is_quiescent` returns quiescent (no blockers) when the only remaining worker PID is a zombie
 
 ### Out of scope
