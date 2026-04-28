@@ -847,6 +847,27 @@ pub fn remote_ticket_branches_with_dates(
     Ok(result)
 }
 
+/// Authoritative list of remote ticket branch names via `git ls-remote`.
+/// Unlike local remote-tracking refs (which can be stale or pruned),
+/// this queries origin directly. Returns an empty set on any error
+/// (no remote, network failure, etc.) so callers treat it as "no remote
+/// branches" and skip remote deletions safely.
+pub fn list_remote_ticket_branches(root: &Path) -> std::collections::HashSet<String> {
+    let mut set = std::collections::HashSet::new();
+    let out = match run(root, &["ls-remote", "--heads", "origin", "ticket/*"]) {
+        Ok(o) => o,
+        Err(_) => return set,
+    };
+    for line in out.lines() {
+        if let Some(refname) = line.split('\t').nth(1) {
+            if let Some(branch) = refname.trim().strip_prefix("refs/heads/") {
+                set.insert(branch.to_string());
+            }
+        }
+    }
+    set
+}
+
 /// Delete a remote branch on origin.
 pub fn delete_remote_branch(root: &Path, branch: &str) -> Result<()> {
     let status = Command::new("git")

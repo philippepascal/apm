@@ -76,6 +76,12 @@ pub fn run(
     }
 
     for candidate in &candidates {
+        let scope = match (candidate.local_branch_exists, candidate.remote_branch_exists) {
+            (true, true) => "local + remote",
+            (true, false) => "local",
+            (false, true) => "remote",
+            (false, false) => "registry only",
+        };
         if dry_run {
             if let Some(ref path) = candidate.worktree {
                 println!(
@@ -85,28 +91,19 @@ pub fn run(
                     candidate.reason
                 );
             }
-            if branches && (candidate.branch_merged || force) {
+            if branches {
                 println!(
-                    "would remove branch {} (local + remote, state: {})",
-                    candidate.branch, candidate.reason
-                );
-            } else if branches && !candidate.branch_merged {
-                println!(
-                    "would keep branch {} (not merged into main)",
-                    candidate.branch
+                    "would remove branch {} ({}, state: {})",
+                    candidate.branch, scope, candidate.reason
                 );
             }
         } else if force {
-            eprintln!(
-                "warning: force-removing {} — branch may not be merged",
-                candidate.branch
-            );
-            if crate::util::prompt_yes_no(&format!("Force-remove {}? [y/N] ", candidate.branch))? {
+            if crate::util::prompt_yes_no(&format!("Remove {}? [y/N] ", candidate.branch))? {
                 if let Some(ref path) = candidate.worktree {
                     println!("removed worktree {}", path.display());
                 }
                 if branches {
-                    println!("removed branch {} (local + remote)", candidate.branch);
+                    println!("removed branch {} ({})", candidate.branch, scope);
                 }
                 let remove_out = clean::remove(root, candidate, true, branches)?;
                 for w in &remove_out.warnings {
@@ -119,10 +116,8 @@ pub fn run(
             if let Some(ref path) = candidate.worktree {
                 println!("removed worktree {}", path.display());
             }
-            if branches && candidate.branch_merged {
-                println!("removed branch {} (local + remote)", candidate.branch);
-            } else if branches && !candidate.branch_merged {
-                println!("kept branch {} (not merged into main)", candidate.branch);
+            if branches {
+                println!("removed branch {} ({})", candidate.branch, scope);
             }
             let remove_out = clean::remove(root, candidate, false, branches)?;
             for w in &remove_out.warnings {

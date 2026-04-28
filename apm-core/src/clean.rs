@@ -19,6 +19,11 @@ pub struct CleanCandidate {
     pub reason: String,
     pub local_branch_exists: bool,
     pub branch_merged: bool,
+    /// Authoritative: is the branch present on origin right now? Computed
+    /// via a single `git ls-remote` at the start of candidate enumeration.
+    /// Used so remote deletion only attempts pushes that can succeed,
+    /// avoiding noisy "remote ref does not exist" errors.
+    pub remote_branch_exists: bool,
     /// Ticket's `updated_at` from frontmatter; None if absent. Used by
     /// `--older-than` to filter candidates by age.
     pub updated_at: Option<DateTime<Utc>>,
@@ -110,6 +115,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
     let merged = git::merged_into_main(root, default_branch)?;
     let merged_set: std::collections::HashSet<&str> = merged.iter().map(|s| s.as_str()).collect();
+    let remote_branches = git_util::list_remote_ticket_branches(root);
 
     let mut result = Vec::new();
     let mut dirty_result = Vec::new();
@@ -180,6 +186,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                             reason: branch_state.clone(),
                             local_branch_exists: lbe,
                             branch_merged: is_merged && is_ancestor,
+                            remote_branch_exists: remote_branches.contains(&branch),
                             updated_at: t.frontmatter.updated_at,
                         });
                     } else if untracked || diagnosis.other_untracked.is_empty() {
@@ -199,6 +206,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                             reason: branch_state.clone(),
                             local_branch_exists: lbe,
                             branch_merged: is_merged && is_ancestor,
+                            remote_branch_exists: remote_branches.contains(&branch),
                             updated_at: t.frontmatter.updated_at,
                         });
                     } else {
@@ -225,6 +233,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
             reason: branch_state.clone(),
             local_branch_exists,
             branch_merged: is_merged && is_ancestor,
+            remote_branch_exists: remote_branches.contains(&branch),
             updated_at: t.frontmatter.updated_at,
         });
     }
@@ -249,21 +258,31 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
         }
     }
 
-    if remove_branches && (candidate.branch_merged || force) {
+    if remove_branches {
+        // All candidates are already filtered to terminal states (the
+        // supervisor's verdict that the work is done), so we don't gate
+        // branch deletion on merge-into-main. The branch's commits live
+        // either in main, in an epic branch (preserved separately), or
+        // in the reflog if neither — the supervisor's `closed` decision
+        // is the authority.
+        let _ = force; // accepted for API stability; no longer gates deletion
         if candidate.local_branch_exists {
             git_util::delete_local_branch(root, &candidate.branch, &mut warnings);
             // Prune the remote tracking ref so sync_local_ticket_refs does not
             // recreate the local branch on the next apm sync.
             git_util::prune_remote_tracking(root, &candidate.branch);
         }
-        // Best-effort remote deletion. The remote may not exist (no origin),
-        // the branch may already be gone (auto-deleted on merge), or the
-        // user may lack push permission. Warn on failure; never bail.
-        if let Err(e) = git_util::delete_remote_branch(root, &candidate.branch) {
-            warnings.push(format!(
-                "warning: could not delete remote branch {}: {e}",
-                candidate.branch
-            ));
+        // Remote deletion: only attempt when origin actually has the
+        // branch (authoritative ls-remote check at candidate-collection
+        // time). Avoids noisy "remote ref does not exist" failures that
+        // happen routinely when GitHub auto-deletes branches on merge.
+        if candidate.remote_branch_exists {
+            if let Err(e) = git_util::delete_remote_branch(root, &candidate.branch) {
+                warnings.push(format!(
+                    "warning: could not delete remote branch {}: {e}",
+                    candidate.branch
+                ));
+            }
         }
     }
 

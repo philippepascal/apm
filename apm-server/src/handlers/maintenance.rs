@@ -176,6 +176,12 @@ pub async fn clean_handler(
         }
 
         for candidate in &candidates {
+            let scope = match (candidate.local_branch_exists, candidate.remote_branch_exists) {
+                (true, true) => "local + remote",
+                (true, false) => "local",
+                (false, true) => "remote",
+                (false, false) => "registry only",
+            };
             if dry_run {
                 if let Some(ref path) = candidate.worktree {
                     log.push(format!(
@@ -185,43 +191,20 @@ pub async fn clean_handler(
                         candidate.reason
                     ));
                 }
-                if branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
+                if branches {
                     log.push(format!(
-                        "would remove branch {} (state: {})",
-                        candidate.branch, candidate.reason
+                        "would remove branch {} ({}, state: {})",
+                        candidate.branch, scope, candidate.reason
                     ));
-                } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
-                    log.push(format!(
-                        "would keep branch {} (not merged into main)",
-                        candidate.branch
-                    ));
-                }
-            } else if force {
-                log.push(format!(
-                    "warning: force-removing {} — branch may not be merged",
-                    candidate.branch
-                ));
-                let remove_out = apm_core::clean::remove(&root, candidate, true, branches)?;
-                if let Some(ref path) = candidate.worktree {
-                    log.push(format!("removed worktree {}", path.display()));
-                    count += 1;
-                }
-                if branches && candidate.local_branch_exists {
-                    log.push(format!("removed branch {}", candidate.branch));
-                }
-                for w in &remove_out.warnings {
-                    log.push(w.clone());
                 }
             } else {
-                let remove_out = apm_core::clean::remove(&root, candidate, false, branches)?;
+                let remove_out = apm_core::clean::remove(&root, candidate, force, branches)?;
                 if let Some(ref path) = candidate.worktree {
                     log.push(format!("removed worktree {}", path.display()));
                     count += 1;
                 }
-                if branches && candidate.local_branch_exists && candidate.branch_merged {
-                    log.push(format!("removed branch {}", candidate.branch));
-                } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
-                    log.push(format!("kept branch {} (not merged into main)", candidate.branch));
+                if branches {
+                    log.push(format!("removed branch {} ({})", candidate.branch, scope));
                 }
                 for w in &remove_out.warnings {
                     log.push(w.clone());
