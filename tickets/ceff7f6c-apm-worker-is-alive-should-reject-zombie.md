@@ -16,16 +16,7 @@ updated_at = "2026-04-28T01:02:27.065486Z"
 
 ### Problem
 
-`apm-core::worker::is_alive(pid)` (the function used by `apm workers`, `epic_is_quiescent`, and the dispatcher's epic-concurrency cap) treats zombie/defunct processes as alive. It only verifies that the PID is present in the process table; it does not check the process state.
-
-Real incident: ticket ec5e9fe3 had a worker spawn, immediately exit, and become a zombie (`<defunct>`). `ps -p 3227 -o stat` returned `Z`. `apm workers` listed PID 3227 as the active worker, and the ticket was effectively unrecoverable through normal channels because APM thought a worker was still running.
-
-Affected call sites:
-- `apm workers` — false positives in the listing
-- `epic_is_quiescent` (added by ticket 2973e208 in epic 5ea30227) — falsely blocks `apm refresh-epic` and `apm epic close` when a worker has died as a zombie
-- The dispatcher's "is this epic at capacity?" check (`Config::blocked_epics` consumers in `start.rs::run_next`) — falsely caps an epic that is actually idle
-
-Fix direction: in `worker::is_alive`, after confirming the PID exists, check process state and return false if the state is `Z` (zombie) or otherwise indicates the process has exited. On macOS, `ps -p <pid> -o state=` returns a single character (`Z` for zombie); on Linux, the same flag works, or read `/proc/<pid>/stat` field 3. A small cross-platform helper that shells out to `ps -p <pid> -o state=` is the simplest portable approach.
+apm-core::worker::is_alive(pid) treats zombie/defunct processes as alive. It uses kill -0 to verify the PID is present in the process table, but kill -0 succeeds for zombies too — they remain in the table until reaped by their parent.\n\nReal incident: ticket ec5e9fe3 had a worker spawn, immediately exit, and become a zombie. ps -p 3227 -o stat returned Z. apm workers listed PID 3227 as the active worker, and the ticket was effectively unrecoverable through normal channels because APM thought a worker was still running.\n\nAffected call sites:\n- apm workers — false positives in the listing\n- epic_is_quiescent (apm-core/src/epic.rs) — falsely blocks apm refresh-epic and apm epic close when a worker has died as a zombie\n- apm-server/src/work.rs check_workers_alive — falsely reports an epic as occupied\n- apm-server/src/workers.rs — REST API reports zombie worker as alive\n\nThe fix is to extend is_alive so that, after confirming the PID exists, it also checks the process state via ps -p <pid> -o state= and returns false for any state beginning with Z.
 
 ### Acceptance criteria
 
