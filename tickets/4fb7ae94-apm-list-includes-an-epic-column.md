@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4fb7ae94-apm-list-includes-an-epic-column"
 created_at = "2026-04-28T00:25:28.853946Z"
-updated_at = "2026-04-28T01:41:27.783163Z"
+updated_at = "2026-04-28T01:41:37.629385Z"
 +++
 
 ## Spec
