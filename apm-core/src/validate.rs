@@ -1,7 +1,124 @@
 use crate::config::{CompletionStrategy, Config, LocalConfig};
+use crate::ticket_fmt::Ticket;
 use anyhow::{bail, Result};
 use std::collections::HashSet;
 use std::path::Path;
+
+/// Return the completion strategy configured for the `in_progress → implemented`
+/// transition.  Falls back to `None` when the transition is absent.
+pub fn active_completion_strategy(config: &Config) -> CompletionStrategy {
+    config.workflow.states.iter()
+        .find(|s| s.id == "in_progress")
+        .and_then(|s| s.transitions.iter().find(|t| t.to == "implemented"))
+        .map(|t| t.completion.clone())
+        .unwrap_or(CompletionStrategy::None)
+}
+
+fn strategy_name(strategy: &CompletionStrategy) -> &'static str {
+    match strategy {
+        CompletionStrategy::Pr => "pr",
+        CompletionStrategy::Merge => "merge",
+        CompletionStrategy::Pull => "pull",
+        CompletionStrategy::PrOrEpicMerge => "pr_or_epic_merge",
+        CompletionStrategy::None => "none",
+    }
+}
+
+/// Validate that `dep_ids` satisfy the dependency rules for `strategy`.
+///
+/// - `ticket_epic`: epic ID of the ticket being written (None if no epic)
+/// - `ticket_target_branch`: target_branch of the ticket (None = default branch)
+/// - `dep_ids`: the proposed dependency list (empty slice → always Ok)
+/// - `all_tickets`: all known tickets (used to look up dep metadata)
+/// - `default_branch`: project default branch name
+pub fn check_depends_on_rules(
+    strategy: &CompletionStrategy,
+    ticket_epic: Option<&str>,
+    ticket_target_branch: Option<&str>,
+    dep_ids: &[String],
+    all_tickets: &[crate::ticket_fmt::Ticket],
+    default_branch: &str,
+) -> Result<()> {
+    if dep_ids.is_empty() {
+        return Ok(());
+    }
+    match strategy {
+        CompletionStrategy::Pr | CompletionStrategy::None | CompletionStrategy::Pull => {
+            bail!(
+                "depends_on is not allowed under the {} completion strategy",
+                strategy_name(strategy)
+            );
+        }
+        CompletionStrategy::PrOrEpicMerge => {
+            let Some(epic) = ticket_epic else {
+                bail!(
+                    "pr_or_epic_merge requires the ticket to belong to an epic before depends_on can be set"
+                );
+            };
+            let mut offending: Vec<&str> = Vec::new();
+            for dep_id in dep_ids {
+                let dep = all_tickets.iter().find(|t| t.frontmatter.id == *dep_id)
+                    .ok_or_else(|| anyhow::anyhow!("dep {dep_id} not found"))?;
+                if dep.frontmatter.epic.as_deref() != Some(epic) {
+                    offending.push(dep_id.as_str());
+                }
+            }
+            if !offending.is_empty() {
+                bail!(
+                    "pr_or_epic_merge requires all deps to share epic {epic}; offending deps: {}",
+                    offending.join(", ")
+                );
+            }
+        }
+        CompletionStrategy::Merge => {
+            let ticket_target = ticket_target_branch.unwrap_or(default_branch);
+            let mut offending: Vec<&str> = Vec::new();
+            for dep_id in dep_ids {
+                let dep = all_tickets.iter().find(|t| t.frontmatter.id == *dep_id)
+                    .ok_or_else(|| anyhow::anyhow!("dep {dep_id} not found"))?;
+                let dep_target = dep.frontmatter.target_branch.as_deref().unwrap_or(default_branch);
+                if dep_target != ticket_target {
+                    offending.push(dep_id.as_str());
+                }
+            }
+            if !offending.is_empty() {
+                bail!(
+                    "merge requires all deps to share target_branch {ticket_target}; offending deps: {}",
+                    offending.join(", ")
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Walk every non-closed ticket and return a vec of `(subject, message)` pairs
+/// for each ticket whose `depends_on` violates the active completion strategy rule.
+pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, String)> {
+    let strategy = active_completion_strategy(config);
+    let mut violations: Vec<(String, String)> = Vec::new();
+    for ticket in tickets {
+        let fm = &ticket.frontmatter;
+        if fm.state == "closed" {
+            continue;
+        }
+        let dep_ids = match &fm.depends_on {
+            Some(deps) if !deps.is_empty() => deps,
+            _ => continue,
+        };
+        if let Err(e) = check_depends_on_rules(
+            &strategy,
+            fm.epic.as_deref(),
+            fm.target_branch.as_deref(),
+            dep_ids,
+            tickets,
+            &config.project.default_branch,
+        ) {
+            violations.push((format!("#{}", fm.id), e.to_string()));
+        }
+    }
+    violations
+}
 
 pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> Result<()> {
     if username == "-" {
@@ -140,8 +257,264 @@ pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{Config, LocalConfig};
+    use crate::config::{Config, CompletionStrategy, LocalConfig};
+    use crate::ticket::Ticket;
     use std::path::Path;
+
+    fn make_ticket(id: &str, epic: Option<&str>, target_branch: Option<&str>) -> Ticket {
+        let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+        let target_line = target_branch.map(|b| format!("target_branch = \"{b}\"\n")).unwrap_or_default();
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"ready\"\n{epic_line}{target_line}+++\n\n"
+        );
+        Ticket::parse(Path::new(&format!("tickets/{id}-t.md")), &raw).unwrap()
+    }
+
+    fn strategy_config(completion: &str) -> Config {
+        let toml = format!(
+            r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "implemented"
+completion = "{completion}"
+
+[[workflow.states]]
+id       = "implemented"
+label    = "Implemented"
+terminal = true
+"#
+        );
+        toml::from_str(&toml).unwrap()
+    }
+
+    #[test]
+    fn strategy_finds_in_progress_to_implemented() {
+        let config = strategy_config("pr_or_epic_merge");
+        assert_eq!(active_completion_strategy(&config), CompletionStrategy::PrOrEpicMerge);
+    }
+
+    #[test]
+    fn strategy_defaults_to_none_when_absent() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to = "closed"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(active_completion_strategy(&config), CompletionStrategy::None);
+    }
+
+    #[test]
+    fn dep_rules_pr_rejects_dep() {
+        let dep = make_ticket("dep1", None, None);
+        let result = check_depends_on_rules(
+            &CompletionStrategy::Pr,
+            None,
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("pr"), "expected strategy name in: {msg}");
+    }
+
+    #[test]
+    fn dep_rules_none_rejects_dep() {
+        let dep = make_ticket("dep1", None, None);
+        let result = check_depends_on_rules(
+            &CompletionStrategy::None,
+            None,
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("none"), "expected strategy name in: {msg}");
+    }
+
+    #[test]
+    fn dep_rules_pr_or_epic_merge_same_epic_ok() {
+        let dep = make_ticket("dep1", Some("abc"), None);
+        let result = check_depends_on_rules(
+            &CompletionStrategy::PrOrEpicMerge,
+            Some("abc"),
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+    }
+
+    #[test]
+    fn dep_rules_pr_or_epic_merge_different_epic_fails() {
+        let dep = make_ticket("dep1", Some("xyz"), None);
+        let result = check_depends_on_rules(
+            &CompletionStrategy::PrOrEpicMerge,
+            Some("abc"),
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("dep1"), "expected dep ID in: {msg}");
+    }
+
+    #[test]
+    fn dep_rules_pr_or_epic_merge_ticket_no_epic_fails() {
+        let dep = make_ticket("dep1", Some("abc"), None);
+        let result = check_depends_on_rules(
+            &CompletionStrategy::PrOrEpicMerge,
+            None,
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("epic"), "expected epic mention in: {msg}");
+    }
+
+    #[test]
+    fn dep_rules_merge_both_default_branch_ok() {
+        let dep = make_ticket("dep1", None, None);
+        let result = check_depends_on_rules(
+            &CompletionStrategy::Merge,
+            None,
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_ok(), "expected Ok, got {result:?}");
+    }
+
+    #[test]
+    fn dep_rules_merge_different_target_fails() {
+        let dep = make_ticket("dep1", None, Some("epic/other"));
+        let result = check_depends_on_rules(
+            &CompletionStrategy::Merge,
+            None,
+            None,
+            &["dep1".to_string()],
+            &[dep],
+            "main",
+        );
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("dep1"), "expected dep ID in: {msg}");
+    }
+
+    fn make_full_ticket(id: &str, state: &str, epic: Option<&str>, target_branch: Option<&str>, depends_on: &[&str]) -> Ticket {
+        let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
+        let target_line = target_branch.map(|b| format!("target_branch = \"{b}\"\n")).unwrap_or_default();
+        let deps_line = if depends_on.is_empty() {
+            String::new()
+        } else {
+            let quoted: Vec<String> = depends_on.iter().map(|d| format!("\"{d}\"")).collect();
+            format!("depends_on = [{}]\n", quoted.join(", "))
+        };
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"T\"\nstate = \"{state}\"\n{epic_line}{target_line}{deps_line}+++\n\n"
+        );
+        Ticket::parse(Path::new(&format!("tickets/{id}-t.md")), &raw).unwrap()
+    }
+
+    #[test]
+    fn validate_depends_on_no_deps_clean() {
+        let config = strategy_config("pr_or_epic_merge");
+        let t1 = make_full_ticket("aa000001", "ready", Some("epic1"), None, &[]);
+        let t2 = make_full_ticket("aa000002", "in_progress", Some("epic1"), None, &[]);
+        let result = validate_depends_on(&config, &[t1, t2]);
+        assert!(result.is_empty(), "expected no violations, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_closed_ticket_skipped() {
+        let config = strategy_config("pr");
+        let dep = make_full_ticket("bb000001", "closed", None, None, &[]);
+        let ticket = make_full_ticket("bb000002", "closed", None, None, &["bb000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert!(result.is_empty(), "closed ticket should be skipped, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_pr_or_epic_merge_same_epic_ok() {
+        let config = strategy_config("pr_or_epic_merge");
+        let dep = make_full_ticket("cc000001", "ready", Some("abc"), None, &[]);
+        let ticket = make_full_ticket("cc000002", "ready", Some("abc"), None, &["cc000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert!(result.is_empty(), "same-epic deps should pass, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_pr_or_epic_merge_cross_epic_fails() {
+        let config = strategy_config("pr_or_epic_merge");
+        let dep = make_full_ticket("dd000001", "ready", Some("xyz"), None, &[]);
+        let ticket = make_full_ticket("dd000002", "ready", Some("abc"), None, &["dd000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("dd000001"), "message should mention dep ID: {}", result[0].1);
+    }
+
+    #[test]
+    fn validate_depends_on_merge_same_target_ok() {
+        let config = strategy_config("merge");
+        let dep = make_full_ticket("ee000001", "ready", None, Some("feat"), &[]);
+        let ticket = make_full_ticket("ee000002", "ready", None, Some("feat"), &["ee000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert!(result.is_empty(), "same-target deps should pass, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_merge_different_target_fails() {
+        let config = strategy_config("merge");
+        let dep = make_full_ticket("ff000001", "ready", None, Some("other"), &[]);
+        let ticket = make_full_ticket("ff000002", "ready", None, Some("feat"), &["ff000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("ff000001"), "message should mention dep ID: {}", result[0].1);
+    }
+
+    #[test]
+    fn validate_depends_on_pr_strategy_rejects_any_dep() {
+        let config = strategy_config("pr");
+        let dep = make_full_ticket("gg000001", "ready", None, None, &[]);
+        let ticket = make_full_ticket("gg000002", "ready", None, None, &["gg000001"]);
+        let result = validate_depends_on(&config, &[dep, ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("pr"), "message should mention strategy: {}", result[0].1);
+    }
 
     fn load_config(toml: &str) -> Config {
         toml::from_str(toml).expect("config parse failed")
