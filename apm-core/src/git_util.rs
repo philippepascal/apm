@@ -123,6 +123,30 @@ pub fn merged_into_main(root: &Path, default_branch: &str) -> Result<Vec<String>
             })
             .collect();
         merged.extend(squash_merged(root, &remote_merged, local_only)?);
+
+        // Also catch local ticket branches regular-merged into local
+        // <default_branch> whose remote ref was deleted (e.g. GitHub auto-
+        // delete after merge). `git branch -r --merged origin/<main>` only
+        // returns refs that still exist on origin, and the squash-merged
+        // path above skips ancestor branches because it expects the remote
+        // `--merged` to have caught them — which it can't when the remote
+        // ref is gone.
+        let local_default_ref = format!("refs/heads/{default_branch}");
+        if run(root, &["rev-parse", "--verify", &local_default_ref]).is_ok() {
+            let already: std::collections::HashSet<String> = merged.iter().cloned().collect();
+            let local_regular = run(
+                root,
+                &["branch", "--merged", default_branch, "--list", "ticket/*"],
+            )
+            .unwrap_or_default();
+            for line in local_regular.lines() {
+                let b = line.trim().trim_start_matches(['*', '+']).trim().to_string();
+                if !b.is_empty() && !already.contains(&b) {
+                    merged.push(b);
+                }
+            }
+        }
+
         return Ok(merged);
     }
 
@@ -1380,5 +1404,44 @@ mod tests {
         assert!(is_file_tracked(dir.path(), "tracked.txt"));
         std::fs::write(dir.path().join("untracked.txt"), "new").unwrap();
         assert!(!is_file_tracked(dir.path(), "untracked.txt"));
+    }
+
+    /// Regression test: a local ticket branch regular-merged into local
+    /// main, with the remote-tracking ref deleted (e.g. GitHub auto-delete
+    /// after merge), must still appear in `merged_into_main`'s result.
+    /// Previously the squash-merge detector skipped it because its tip is
+    /// already an ancestor, while `git branch -r --merged` could not see it
+    /// (the origin/ticket/* ref no longer exists).
+    #[test]
+    fn merged_into_main_detects_local_regular_merge_when_remote_deleted() {
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "f.txt", "base");
+
+        // Create a ticket branch and a commit on it.
+        git_cmd(p, &["checkout", "-b", "ticket/foo"]);
+        std::fs::write(p.join("f.txt"), "ticket-change").unwrap();
+        git_cmd(p, &["add", "f.txt"]);
+        git_cmd(p, &["commit", "-m", "ticket: change"]);
+
+        // Merge ticket/foo into main with --no-ff (regular merge, leaves a merge commit).
+        git_cmd(p, &["checkout", "main"]);
+        git_cmd(p, &["merge", "--no-ff", "ticket/foo", "-m", "Merge ticket/foo"]);
+
+        // Simulate that origin/main has been updated to match local main, but
+        // origin/ticket/foo was auto-deleted (no such remote-tracking ref).
+        let main_sha = run(p, &["rev-parse", "main"]).unwrap();
+        Cmd::new("git")
+            .args(["update-ref", "refs/remotes/origin/main", main_sha.trim()])
+            .current_dir(p)
+            .status()
+            .unwrap();
+        // No origin/ticket/foo ref is created — this is the auto-delete case.
+
+        let merged = merged_into_main(p, "main").unwrap();
+        assert!(
+            merged.iter().any(|b| b == "ticket/foo"),
+            "expected ticket/foo in merged set; got {merged:?}"
+        );
     }
 }
