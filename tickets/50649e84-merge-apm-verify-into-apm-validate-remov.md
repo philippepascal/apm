@@ -61,7 +61,7 @@ Concrete edits:
 - [x] `apm validate` reports `in_progress` and `implemented` tickets that have no `branch` field
 - [x] `apm validate` reports tickets whose branch is already merged into the default branch but whose state is not closed
 - [x] `apm validate` reports tickets in `in_design` or `in_progress` states whose worktree directory is absent from disk
-- [ ] `apm validate` reports tickets missing a `## Spec` section
+- [x] `apm validate` reports tickets missing a `## Spec` section
 - [ ] `apm validate` reports tickets missing a `## History` section
 - [ ] `apm validate` still reports all previously-existing check categories: config parse errors, invalid state-transition targets, branch-field mismatches, duplicate branch assignments, and dependency-rule violations
 - [ ] `apm validate --fix` auto-closes tickets whose branch is already merged (calls `ticket::close`); it does NOT recreate missing worktrees
