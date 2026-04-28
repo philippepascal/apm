@@ -75,7 +75,7 @@ Concrete edits:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding any check that neither validate nor verify performed before\n- Renaming `apm validate` to a different command name\n- A deprecation alias for `apm verify` (explicitly opted out)\n- Changing hash-trip caching logic beyond removing `Command::Verify` from `is_read_only_command`\n- Changes to `--no-aggressive` flag behaviour\n- Performance optimisation of the merged check set
 
 ### Approach
 
