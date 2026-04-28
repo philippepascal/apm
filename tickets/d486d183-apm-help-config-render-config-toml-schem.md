@@ -1,7 +1,7 @@
 +++
 id = "d486d183"
 title = "apm help config: render config.toml schema from Config struct"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d486d183-apm-help-config-render-config-toml-schem"
 created_at = "2026-04-28T19:27:57.393396Z"
-updated_at = "2026-04-28T20:17:23.522999Z"
+updated_at = "2026-04-28T20:22:08.772662Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0", "069c3403"]
@@ -137,3 +137,4 @@ No `Cargo.toml` changes needed — `apm-core` is already a workspace dependency 
 | 2026-04-28T19:49Z | groomed | in_design | philippepascal |
 | 2026-04-28T19:52Z | in_design | specd | claude-0428-1949-a538 |
 | 2026-04-28T20:17Z | specd | ammend | philippepascal |
+| 2026-04-28T20:22Z | ammend | in_design | philippepascal |
