@@ -57,7 +57,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
   const [showClosed, setShowClosed] = useState(false)
 
-  const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics })
+  const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics, refetchInterval: 10_000 })
 
   const { data } = useQuery({
     queryKey: ['tickets', showClosed],
@@ -109,7 +109,9 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
         if (ownerFilter !== null) {
           filtered = filtered.filter((t) => t.owner === ownerFilter)
         }
-        if (epicFilter !== null) {
+        if (epicFilter === '__none__') {
+          filtered = filtered.filter((t) => !t.epic)
+        } else if (epicFilter !== null) {
           filtered = filtered.filter((t) => t.epic === epicFilter)
         }
         if (authorFilter !== null) {
@@ -233,6 +235,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
           <option value="">All epics</option>
+          <option value="__none__">No epic</option>
           {epics.map((ep) => (
             <option key={ep.id} value={ep.id}>{ep.title || ep.id}</option>
           ))}
