@@ -93,7 +93,133 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 
 ### Approach
 
-How the implementation will work.
+Three files change. Changes are purely additive; no existing behaviour is removed.
+
+---
+
+### apm-core/src/init.rs
+
+**New helper** add pub fn worktree_gitignore_pattern(dir: &Path) -> Option<String>:
+- Return None if dir starts with / or .. (external path).
+- Otherwise return Some(format!("/{s}/")) where s = dir.to_string_lossy().
+- Make it pub so the CLI fix path can reuse it without duplicating the logic.
+
+**Signature change** ensure_gitignore(path, messages) gains a new second param: worktree_pattern: Option<&str>.
+
+**Body change** replace the static entries array with a Vec<&str>. Start with the 6 static entries,
+then conditionally push "# apm worktrees" and the owned pattern string when worktree_pattern is Some.
+
+**Call-site in setup()** before the ensure_gitignore call at line 137, load config and compute pattern:
+
+    let wt_pattern = crate::config::Config::load(root)
+        .ok()
+        .and_then(|c| worktree_gitignore_pattern(&c.worktrees.dir));
+    ensure_gitignore(&gitignore, wt_pattern.as_deref(), &mut messages)?;
+
+Config is guaranteed to exist at this point (written at line 97 or pre-existing).
+
+**Existing tests to update** (pass None as the new second argument):
+- ensure_gitignore_creates_file
+- ensure_gitignore_appends_missing_entry
+- ensure_gitignore_idempotent
+- ensure_gitignore_worktrees_idempotent -- pass Some("/worktrees/") instead;
+  update the assertion to check the pattern appears exactly once.
+
+**New unit tests for worktree_gitignore_pattern** -- assert Some/None for:
+- "worktrees" -> Some("/worktrees/")
+- ".apm--worktrees" -> Some("/.apm--worktrees/")
+- "build/wt" -> Some("/build/wt/")
+- "/abs/path" -> None
+- "../external" -> None
+
+The existing setup_gitignore_includes_worktrees_pattern test needs no change (default config uses
+dir = "worktrees" which is in-repo, so setup() still writes /worktrees/).
+
+---
+
+### apm-core/src/validate.rs
+
+**New private helpers** (add near top of file, outside validate_config):
+
+    fn is_external_worktree(dir: &Path) -> bool {
+        let s = dir.to_string_lossy();
+        s.starts_with("/") || s.starts_with("..")
+    }
+
+    fn gitignore_covers_dir(content: &str, dir: &str) -> bool {
+        content.lines().any(|line| {
+            let line = line.trim();
+            line == format!("/{dir}/")
+                || line == format!("/{dir}")
+                || line == format!("{dir}/")
+                || line == dir
+        })
+    }
+
+**New check inside validate_config()** append after all existing checks, before the final errors return:
+
+    if !is_external_worktree(&config.worktrees.dir) {
+        let dir_str = config.worktrees.dir.to_string_lossy();
+        let gitignore = root.join(".gitignore");
+        match std::fs::read_to_string(&gitignore) {
+            Err(_) => errors.push(format!(
+                "config: worktrees.dir '{dir_str}' is in-repo but .gitignore is missing; "
+                "run 'apm init' or add '/{dir_str}/' manually"
+            )),
+            Ok(content) if !gitignore_covers_dir(&content, &dir_str) => errors.push(format!(
+                "config: worktrees.dir '{dir_str}' is in-repo but .gitignore does not cover it; "
+                "add '/{dir_str}/' or run 'apm init'"
+            )),
+            Ok(_) => {}
+        }
+    }
+
+**New unit tests** each uses a TempDir, creates an optional .gitignore, builds a minimal config TOML
+with [worktrees] dir = "...", and calls validate_config(&config, tmp.path()):
+
+- validate_config_gitignore_missing_in_repo_wt -- in-repo dir, no .gitignore -> error containing dir name
+- validate_config_gitignore_covered_anchored_slash -- /<dir>/ -> no error
+- validate_config_gitignore_covered_anchored_no_slash -- /<dir> -> no error
+- validate_config_gitignore_covered_unanchored_slash -- <dir>/ -> no error
+- validate_config_gitignore_covered_bare -- bare dirname on its own line -> no error
+- validate_config_gitignore_not_covered -- .gitignore exists but lacks the dir -> error
+- validate_config_external_dotdot_no_check -- worktrees.dir = "../ext", no .gitignore -> no gitignore error
+- validate_config_external_absolute_no_check -- worktrees.dir = "/abs/path", no .gitignore -> no gitignore error
+
+---
+
+### apm/src/cmd/validate.rs
+
+**Fix path** after the if config_only / else block and before let has_errors = ..., add:
+
+    if fix {
+        let pattern = apm_core::init::worktree_gitignore_pattern(&config.worktrees.dir);
+        if let Some(p) = pattern {
+            let mut msgs = Vec::new();
+            apm_core::init::ensure_gitignore(&root.join(".gitignore"), Some(&p), &mut msgs)?;
+            for m in &msgs {
+                println!("  fixed: {m}");
+            }
+        }
+    }
+
+The config variable is in scope at this point in both config_only and full paths. The current
+invocation still exits with the error count after fixing (consistent with branch-field fix behaviour);
+a rerun of validate will pass.
+
+Add apm_core::init to the use imports if not already referenced by path.
+
+---
+
+### Constraints / gotchas
+
+- WorktreesConfig::default() in config.rs uses "../worktrees" (external), while default_config() in
+  init.rs emits dir = "worktrees" (in-repo). The validate check fires for the in-repo case. Users
+  who used apm init and never customised worktrees.dir get the check automatically.
+- The idempotency check in ensure_gitignore is a contents.contains(entry) substring match (pre-existing).
+  Do not change this in this ticket.
+- gitignore_covers_dir uses .trim() + exact equality per line to avoid false positives where one dirname
+  is a prefix of another (e.g. "wt" should not match a line containing "wt-old").
 
 ### Open questions
 
