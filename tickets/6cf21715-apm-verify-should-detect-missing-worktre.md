@@ -4,12 +4,12 @@ title = "apm verify should detect missing worktree for active-state tickets"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6cf21715-apm-verify-should-detect-missing-worktre"
 created_at = "2026-04-28T00:50:59.455196Z"
-updated_at = "2026-04-28T01:11:09.860476Z"
+updated_at = "2026-04-28T01:11:16.007847Z"
 +++
 
 ## Spec
