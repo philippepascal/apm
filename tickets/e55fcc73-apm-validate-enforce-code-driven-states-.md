@@ -1,7 +1,7 @@
 +++
 id = "e55fcc73"
 title = "apm validate: enforce code-driven states are declared in workflow.toml"
-state = "specd"
+state = "closed"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e55fcc73-apm-validate-enforce-code-driven-states-"
 created_at = "2026-04-28T22:42:06.291026Z"
-updated_at = "2026-04-28T22:53:07.086613Z"
+updated_at = "2026-04-28T23:00:39.772256Z"
 depends_on = ["50649e84"]
 +++
 
@@ -240,3 +240,4 @@ Update the `--fix` description to mention: "Adds missing system-state blocks to 
 | 2026-04-28T22:44Z | new | groomed | philippepascal |
 | 2026-04-28T22:48Z | groomed | in_design | philippepascal |
 | 2026-04-28T22:53Z | in_design | specd | claude-0428-2248-93a0 |
+| 2026-04-28T23:00Z | specd | closed | philippepascal (reason: Superseded by 79a03767. Premise was wrong: merge_failed is not a 'system state' carve-out; it is a regular workflow state. The right fix is to parameterize the transition's failure landing pad in workflow.toml (on_failure field), not introduce a separate registry of code-driven states.) |
