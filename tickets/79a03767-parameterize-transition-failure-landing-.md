@@ -85,7 +85,11 @@ Supersedes the closed ticket `e55fcc73` ("apm validate: enforce code-driven stat
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- An `on_success` field or any general transition hook mechanism — this ticket only addresses the failure landing pad
+- Applying `on_failure` semantics to `completion = "pr"`, `completion = "pull"`, or `completion = "none"` — none of these attempt a merge that can fail in the same recoverable way
+- Re-architecting the workflow schema or state machine beyond the single new field
+- Migrating tickets already stuck in `merge_failed` due to the old hardcoded code path — they are already in the correct state; only future failures are affected
+- Surfacing `on_failure` in `apm show`, `apm list`, or any display commands — it is a config field, not a ticket field
 
 ### Approach
 
