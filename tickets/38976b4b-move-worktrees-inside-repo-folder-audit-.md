@@ -1,7 +1,7 @@
 +++
 id = "38976b4b"
 title = "Move worktrees inside repo folder; audit apm clean for safety"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/38976b4b-move-worktrees-inside-repo-folder-audit-"
 created_at = "2026-04-28T01:24:55.011587Z"
-updated_at = "2026-04-28T15:40:29.134676Z"
+updated_at = "2026-04-28T16:31:34.665110Z"
 +++
 
 ## Spec
@@ -104,3 +104,4 @@ The fix: enumerate via `git worktree list --porcelain` (which reads from `.git/w
 | 2026-04-28T15:13Z | specd | ready | philippepascal |
 | 2026-04-28T15:29Z | ready | in_progress | philippepascal |
 | 2026-04-28T15:40Z | in_progress | implemented | claude-0428-1529-f768 |
+| 2026-04-28T16:31Z | implemented | closed | philippepascal(apm-sync) |
