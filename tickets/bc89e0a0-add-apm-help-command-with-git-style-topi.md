@@ -18,25 +18,9 @@ target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 
 ### Problem
 
-There is no unified `apm help` command today. Users discover surface area by running `apm <subcommand> --help` for each command and reading source for config schemas. This ticket adds the top-level `apm help [topic]` command with git-style topic dispatch.
+There is no unified `apm help` command today. Users discover apm surface area by running `apm <subcommand> --help` for each command individually and reading source for config schemas. A git-style `apm help [topic]` entry point would give users a single landing point to orient themselves across commands, config, and workflow concepts.
 
-**Scope (this ticket):** the CLI plumbing only. Topic content arrives in subsequent tickets in this epic.
-
-**Behavior to implement:**
-- `apm help` (no topic) prints an overview: a short description of the help system plus the list of available topics with one-line summaries.
-- `apm help <topic>` calls a topic-specific renderer. Initial topics: `commands`, `config`, `workflow`, `ticket`.
-- `apm help <unknown-topic>` exits non-zero with a clear error and the topic list.
-- Each topic renderer is a separate function returning `String` so subsequent tickets can replace stubs independently.
-
-**Implementation pointers:**
-- `apm/src/main.rs`: add `Help { topic: Option<String> }` to the `Command` enum. Wire dispatch to `cmd::help::run(topic.as_deref())`.
-- `apm/src/cmd/help.rs`: new module. Pub fn `run(topic: Option<&str>) -> Result<()>`. Internal stub functions `render_commands()`, `render_config()`, `render_workflow()`, `render_ticket()` that initially return "This topic will be populated by ticket <ID>" placeholders.
-- Output goes to stdout. No paging in this ticket.
-
-**Out of scope:**
-- Actual content for any topic (each is its own ticket).
-- Auto-derive infrastructure (separate ticket).
-- Pager integration, markdown rendering, color output.
+This ticket adds CLI plumbing only: the `Help` subcommand variant in the clap `Command` enum, dispatch wiring in `main()`, and a new `cmd::help` module with four stub renderer functions. No real content is produced here; topic content arrives in sibling tickets within this epic.
 
 ### Acceptance criteria
 
