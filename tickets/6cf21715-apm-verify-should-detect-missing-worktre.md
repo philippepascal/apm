@@ -43,7 +43,82 @@ The fix is to walk every non-terminal ticket whose state is in `{in_design, in_p
 
 ### Approach
 
-How the implementation will work.
+**Files changed:**
+
+1. `apm-core/src/verify.rs` — add the worktree-presence check
+2. `apm/src/cmd/verify.rs` — update the call site to pass `root`
+3. `apm-core/tests/verify.rs` — new test file covering the new check
+
+---
+
+**`apm-core/src/verify.rs`**
+
+Add `root: &Path` as a new first parameter to `verify_tickets`. The full new signature:
+
+```rust
+pub fn verify_tickets(
+    root: &Path,
+    config: &Config,
+    tickets: &[Ticket],
+    merged: &HashSet<String>,
+) -> Vec<String>
+```
+
+Before the per-ticket loop, compute the worktrees base path once:
+
+```rust
+let worktree_states: HashSet<&str> =
+    ["in_design", "in_progress"].iter().copied().collect();
+let main_root = crate::git_util::main_worktree_root(root)
+    .unwrap_or_else(|| root.to_path_buf());
+let worktrees_base = main_root.join(&config.worktrees.dir);
+```
+
+Inside the per-ticket loop, after the existing "state requires branch" check, add:
+
+```rust
+// in_design/in_progress with missing worktree directory.
+if worktree_states.contains(fm.state.as_str()) {
+    if let Some(branch) = &fm.branch {
+        let wt_name = branch.replace('/', "-");
+        let wt_path = worktrees_base.join(&wt_name);
+        if !wt_path.is_dir() {
+            issues.push(format!(
+                "{prefix}: worktree at {} is missing",
+                wt_path.display()
+            ));
+        }
+    }
+}
+```
+
+The check mirrors the path logic in `worktree::ensure_worktree` exactly: `branch.replace('/', "-")` joined onto `worktrees_base`.
+
+---
+
+**`apm/src/cmd/verify.rs`**
+
+Update the single call to `verify_tickets` to pass `root` as the new first argument:
+
+```rust
+let issues = apm_core::verify::verify_tickets(root, &ctx.config, &ctx.tickets, &merged_set);
+```
+
+No other change needed; `--fix` / `apply_fixes` is unaffected.
+
+---
+
+**`apm-core/tests/verify.rs`** (new file)
+
+Use the existing test pattern from `apm-core/tests/ticket_create.rs`: initialize a real git repo in a `TempDir`, write an `apm.toml` that sets `[worktrees] dir = "worktrees"` (inside the temp dir, so path assertions are predictable), then write ticket markdown files directly and call `verify_tickets`.
+
+Three tests:
+
+1. **`worktree_missing_in_design`** — ticket in `in_design`, branch set, worktree dir absent → issue fired with correct message.
+2. **`worktree_present_no_issue`** — same ticket, but `std::fs::create_dir_all` the expected path first → no worktree issue.
+3. **`worktree_check_skipped_for_other_states`** — ticket in `specd` with branch set, worktree absent → no worktree issue.
+
+Because `main_worktree_root` runs `git worktree list --porcelain` in the temp dir (a real git repo), it returns the temp dir path, so `worktrees_base = temp_dir/worktrees` and the computed `wt_path` is fully inside the temp dir — no path-outside-root awkwardness.
 
 ### Open questions
 
