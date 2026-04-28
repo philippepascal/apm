@@ -16,7 +16,11 @@ updated_at = "2026-04-28T00:57:32.160631Z"
 
 ### Problem
 
-if the ticket doesn't belong to an epic, show default branch
+`apm list` currently renders four columns: ID, state, owner, and title. There is no visibility into a ticket's epic membership or base-branch context. To understand where a ticket fits in the git topology, a user must `apm show` each ticket individually.
+
+Every ticket has an optional `target_branch` field. For epic-member tickets this holds the epic branch (e.g. `epic/8db73240-user-auth`); for standalone tickets the field is absent. When absent, the ticket's implicit base is the project's configured default branch (typically `main`).
+
+Adding an epic/base-branch column to `apm list` exposes this topology at a glance without requiring any per-ticket drill-down.
 
 ### Acceptance criteria
 
