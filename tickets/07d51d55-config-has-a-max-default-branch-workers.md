@@ -1,7 +1,7 @@
 +++
 id = "07d51d55"
 title = "config has a max_default_branch_workers"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/07d51d55-config-has-a-max-default-branch-workers"
 created_at = "2026-04-28T06:56:57.028226Z"
-updated_at = "2026-04-28T15:06:30.746671Z"
+updated_at = "2026-04-28T15:08:40.481898Z"
 +++
 
 ## Spec
@@ -110,3 +110,4 @@ apm init should set both max_workers_per_epic and max_workers_on_default to thei
 | 2026-04-28T07:27Z | groomed | in_design | philippepascal |
 | 2026-04-28T07:31Z | in_design | specd | claude-0428-0727-2e28 |
 | 2026-04-28T15:06Z | specd | ammend | philippepascal |
+| 2026-04-28T15:08Z | ammend | in_design | philippepascal |
