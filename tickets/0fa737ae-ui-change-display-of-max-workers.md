@@ -3,13 +3,13 @@ id = "0fa737ae"
 title = "UI: change display of max workers"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0fa737ae-ui-change-display-of-max-workers"
 created_at = "2026-04-28T19:24:12.894681Z"
-updated_at = "2026-04-28T19:38:13.413510Z"
+updated_at = "2026-04-28T19:41:34.827774Z"
 +++
 
 ## Spec
