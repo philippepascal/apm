@@ -3,13 +3,13 @@ id = "bc89e0a0"
 title = "Add apm help command with git-style topic dispatch"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bc89e0a0-add-apm-help-command-with-git-style-topi"
 created_at = "2026-04-28T19:27:00.760945Z"
-updated_at = "2026-04-28T19:33:33.568010Z"
+updated_at = "2026-04-28T19:37:29.845948Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 +++
