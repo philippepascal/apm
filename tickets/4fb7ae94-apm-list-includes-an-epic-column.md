@@ -32,7 +32,10 @@ Adding an epic/base-branch column to `apm list` exposes this topology at a glanc
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Filtering `apm list` by epic or by target branch
+- Resolving the epic ID to a human-readable epic title in the column
+- Showing the ticket's own branch name (distinct from `target_branch`)
+- Any changes to `apm show`, `apm epic list`, or other commands
 
 ### Approach
 
