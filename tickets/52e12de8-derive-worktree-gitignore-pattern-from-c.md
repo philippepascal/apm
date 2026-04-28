@@ -71,7 +71,7 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 - [x] `apm init` with `worktrees.dir = "build/wt"` (nested relative) writes `/build/wt/` to `.gitignore`
 - [x] `apm init` with `worktrees.dir = "/abs/path"` (absolute) does NOT add a worktree line to `.gitignore`
 - [x] `apm init` with `worktrees.dir = "../external"` (parent-relative) does NOT add a worktree line to `.gitignore`
-- [ ] Running `apm init` twice with the same config is idempotent: the worktree pattern appears exactly once in `.gitignore`
+- [x] Running `apm init` twice with the same config is idempotent: the worktree pattern appears exactly once in `.gitignore`
 - [ ] `apm init` writes the `# apm worktrees` comment alongside the pattern when the path is in-repo; the comment is NOT written for external paths
 - [ ] `apm validate` fails with an error message when `worktrees.dir` is in-repo and `.gitignore` is absent; the message names the dir and suggests `apm init` or manual addition
 - [ ] `apm validate` fails when `worktrees.dir` is in-repo and `.gitignore` exists but does not cover the dir in any recognized form
