@@ -66,7 +66,63 @@ The CLAUDE.md rule "main worktree always on main, never holds work" was violated
 
 ### Approach
 
-How the implementation will work.
+**1. Full transcript capture in `.apm-worker.log`**
+
+File: `apm-core/src/start.rs` — `build_spawn_command` (non-container) and the container spawn function.
+
+Current state: Both stdout and stderr are already redirected to `.apm-worker.log` via file descriptor cloning. The gap is that `claude -p` without further flags emits only a final text summary to stdout; tool-call events (Edit paths, Write paths, Bash commands) are not emitted.
+
+Fix: Add `--output-format stream-json` to the args vector when building the worker command. This causes the Claude CLI to emit a newline-delimited JSON stream of all session events — including `tool_use` events with their full argument payloads and `tool_result` events — to stdout. Since stdout is already redirected to `.apm-worker.log`, no other plumbing change is needed.
+
+Locate the point in `build_spawn_command` where the args vec is assembled and insert `--output-format`, `stream-json`. Apply the identical change to the container spawn function.
+
+Risk: Verify `--output-format stream-json` is supported by the `claude` binary version in use (`claude --help`). If the flag is unrecognised the worker will fail to launch.
+
+---
+
+**2. Spawn-cwd regression test**
+
+Finding: `start.rs` line 170 already calls `cmd.current_dir(wt)` — the CWD is already correct. No production-code change is needed. The goal is a regression test.
+
+In `apm-core/tests/` or `apm/tests/integration.rs`, add a test that:
+- Configures a minimal worker command (e.g. `sh -c 'pwd > /tmp/apm-cwd-check.txt'`) in place of the real worker
+- Calls the same spawn code path used by `apm start --spawn`
+- Waits for the child to exit
+- Reads the output file and asserts the trimmed contents equal the expected worktree path
+
+Check existing test helpers before writing setup from scratch; reuse any worktree or ticket fixtures already present. If `build_spawn_command` is private, add a `cfg(test)` re-export or test via the public start function with a mock worker command.
+
+---
+
+**3. `apm.worker.md` path-discipline section**
+
+Add a new `Path discipline` section to BOTH files:
+- `apm-core/src/default/apm.worker.md`
+- `.apm/apm.worker.md`
+
+Place it after the existing shell-discipline section. The two files must be word-for-word identical for this section.
+
+Content: Your working directory is the ticket worktree. Never read or write files outside it. Always use absolute paths rooted at your worktree. The worktree path appears in `apm show <id>` under Worktree — note it at the start of your run. Include a labelled correct example (path inside the worktree) and a wrong example (path in the main repo root). End with: if a tool call resolves to a path outside your worktree, stop immediately, file a side-note ticket, and set yourself to blocked.
+
+---
+
+**4. `workflow.toml` — verify `merge_failed` state**
+
+A code audit found `.apm/workflow.toml` already contains `merge_failed` at lines 187-198 (likely added by concurrent ticket e1781eef). Implementer should:
+- Read `.apm/workflow.toml` and confirm the block has `id = "merge_failed"`, `actionable = ["supervisor"]`, and two transitions — `to = "implemented"` and `to = "in_progress"`, both `trigger = "manual"`
+- If correct, no code change needed
+- If missing or incomplete, copy the block verbatim from `apm-core/src/default/workflow.toml` lines 201-212 into `.apm/workflow.toml` (after the `implemented` state, before `closed`)
+
+---
+
+**Order of steps:**
+1. Read `.apm/workflow.toml` — confirm `merge_failed` is present; patch only if needed
+2. Add Path discipline section to both `apm.worker.md` files; confirm they match word-for-word
+3. Verify `--output-format stream-json` flag in the environment (`claude --help`)
+4. Add `--output-format stream-json` to args in both spawn functions in `start.rs`
+5. Write spawn-cwd regression test in `apm-core/tests/`
+6. Run `cargo test --workspace` — all tests must pass
+7. Commit and transition to implemented
 
 ### Open questions
 
