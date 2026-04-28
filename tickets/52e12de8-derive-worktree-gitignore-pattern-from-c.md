@@ -4,12 +4,12 @@ title = "Derive worktree gitignore pattern from config; validate enforces it"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/52e12de8-derive-worktree-gitignore-pattern-from-c"
 created_at = "2026-04-28T19:54:13.505295Z"
-updated_at = "2026-04-28T20:02:36.034612Z"
+updated_at = "2026-04-28T20:02:38.974125Z"
 +++
 
 ## Spec
