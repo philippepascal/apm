@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/52e12de8-derive-worktree-gitignore-pattern-from-c"
 created_at = "2026-04-28T19:54:13.505295Z"
-updated_at = "2026-04-28T20:20:40.214534Z"
+updated_at = "2026-04-28T20:20:45.616395Z"
 depends_on = ["50649e84"]
 +++
 
