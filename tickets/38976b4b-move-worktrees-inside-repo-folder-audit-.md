@@ -74,7 +74,7 @@ The fix: enumerate via `git worktree list --porcelain` (which reads from `.git/w
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm init` on a fresh repo writes `dir = "worktrees"` (not `"../{name}--worktrees"`) to `.apm/config.toml`\n- [ ] After `apm init`, the directory `<repo>/worktrees/` exists\n- [ ] After `apm init`, `.gitignore` contains the line `/worktrees/`\n- [ ] Running `apm init` a second time does not duplicate the `/worktrees/` line in `.gitignore`\n- [ ] An existing repo whose `.apm/config.toml` already has `dir = "../apm--worktrees"` continues to provision and clean worktrees at that external path without error\n- [ ] `apm start` for a new ticket provisions the worktree at `<repo>/worktrees/<ticket-branch>/`, inside the repo root\n- [ ] `apm clean` invoked from inside a ticket's worktree (cwd is a path under `<repo>/worktrees/<branch>/`) refuses with a message containing "refusing to remove worktree containing the current working directory" and exits non-zero\n- [ ] `apm clean` enumerates candidate worktrees from `git worktree list --porcelain` only; no filesystem walk of `<repo>/worktrees/`\n- [ ] `apm clean` removes worktrees via `git worktree remove`, never via `rm -rf`\n- [ ] `apm clean` cleans dangling registry entries (registered path no longer on disk) via `git worktree prune`, not by deleting files\n- [ ] `apm clean --untracked` does not walk into or affect `<repo>/worktrees/` from the main worktree's perspective\n- [ ] `apm verify` produces no output related to files under `<repo>/worktrees/`
 
 ### Out of scope
 
