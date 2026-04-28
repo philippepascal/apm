@@ -140,6 +140,7 @@ Search for `apm verify`. Replace the two-line block that references both command
 
 ### Amendment requests
 
+- [ ] Approach must explicitly say "remove the `Verify` arm from `is_read_only_command` entirely" — not "comment out" — to prevent accidental resurrection if someone later uncomments dead code.
 
 ### Code review
 
