@@ -69,7 +69,7 @@ Adding an epic/base-branch column to `apm list` exposes this topology at a glanc
 
 ### Amendment requests
 
-only display the epic id in the column if applicable. in your example 8db73240
+- [x] only display the epic id in the column if applicable. in your example 8db73240
 
 ### Code review
 
