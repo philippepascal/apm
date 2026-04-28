@@ -65,7 +65,23 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm init` with default config (`worktrees.dir = "worktrees"`) writes `/worktrees/` to `.gitignore`
+- [ ] `apm init` with `worktrees.dir = ".apm--worktrees"` writes `/.apm--worktrees/` to `.gitignore`
+- [ ] `apm init` with `worktrees.dir = "build/wt"` (nested relative) writes `/build/wt/` to `.gitignore`
+- [ ] `apm init` with `worktrees.dir = "/abs/path"` (absolute) does NOT add a worktree line to `.gitignore`
+- [ ] `apm init` with `worktrees.dir = "../external"` (parent-relative) does NOT add a worktree line to `.gitignore`
+- [ ] Running `apm init` twice with the same config is idempotent: the worktree pattern appears exactly once in `.gitignore`
+- [ ] `apm init` writes the `# apm worktrees` comment alongside the pattern when the path is in-repo; the comment is NOT written for external paths
+- [ ] `apm validate` fails with an error message when `worktrees.dir` is in-repo and `.gitignore` is absent; the message names the dir and suggests `apm init` or manual addition
+- [ ] `apm validate` fails when `worktrees.dir` is in-repo and `.gitignore` exists but does not cover the dir in any recognized form
+- [ ] `apm validate` passes when `.gitignore` contains `/<dir>/` (root-anchored, trailing slash)
+- [ ] `apm validate` passes when `.gitignore` contains `/<dir>` (root-anchored, no trailing slash)
+- [ ] `apm validate` passes when `.gitignore` contains `<dir>/` (unanchored, trailing slash)
+- [ ] `apm validate` passes when `.gitignore` contains `<dir>` (bare dirname)
+- [ ] `apm validate` emits no gitignore error when `worktrees.dir = "../external"`, even if `.gitignore` is absent
+- [ ] `apm validate` emits no gitignore error when `worktrees.dir = "/abs/path"`, even if `.gitignore` is absent
+- [ ] `apm validate --fix` appends the worktree pattern and `# apm worktrees` comment to an existing `.gitignore` when they are absent
+- [ ] `apm validate --fix` creates `.gitignore` (with all standard APM entries including the worktree pattern) when the file is absent
 
 ### Out of scope
 
