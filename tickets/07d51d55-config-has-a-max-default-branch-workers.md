@@ -16,7 +16,8 @@ updated_at = "2026-04-28T06:56:57.028226Z"
 
 ### Problem
 
-limits the number of parallel workers for tickets not on an epic
+limits the number of parallel workers for tickets not on an epic.
+0 means limit is max_workers
 
 ### Acceptance criteria
 
