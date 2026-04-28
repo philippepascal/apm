@@ -1,0 +1,100 @@
++++
+id = "38976b4b"
+title = "Move worktrees inside repo folder; audit apm clean for safety"
+state = "new"
+priority = 0
+effort = 0
+risk = 0
+author = "philippepascal"
+owner = "philippepascal"
+branch = "ticket/38976b4b-move-worktrees-inside-repo-folder-audit-"
+created_at = "2026-04-28T01:24:55.011587Z"
+updated_at = "2026-04-28T01:24:55.011587Z"
++++
+
+## Spec
+
+### Problem
+
+**Motivation**
+
+The current default (`worktrees.dir = "../apm--worktrees"` in `.apm/config.toml`) places worktrees as a sibling of the repo. This forces every consumer of the project — Claude Code, containers, CI runners, sandboxed sessions — to know about and grant permission to a second filesystem location.
+
+Concrete pain in this project:
+- `CLAUDE.md` lists `/Users/philippepascal/repos/apm--worktrees` as an Additional working directory purely because of the external layout.
+- User memory `feedback_subagent_worktree_bash.md`: subagents with `isolation:"worktree"` do not pick up `.claude/settings.json`; Bash is denied and Edit/Write are blocked for any path under `apm--worktrees/`. The workaround today is to have the main conversation handle file writes on the agent's behalf — a real cost.
+- Containers/CI must mount or grant access to two paths instead of one.
+
+Moving worktrees to a directory **inside** the repo (e.g. default `worktrees.dir = "worktrees"`) collapses these to one permission scope.
+
+**What this ticket should change**
+
+1. Change the `apm init` default for `worktrees.dir` from `../apm--worktrees` to `worktrees` (or another in-repo subdir).
+2. Have `apm init` write/update `.gitignore` to include the worktrees dir line (e.g. `/worktrees/`). Idempotent — append only if the line is not present.
+3. Audit `apm clean` for safety with the new layout (see below — this is the load-bearing concern).
+4. Audit any other code path that walks the filesystem from the repo root and may descend into the worktrees subdir (e.g., `apm verify`, `apm sync` cache walks if any).
+5. Leave existing repos with `../apm--worktrees` untouched. Migration is opt-in: a repo already using the external layout keeps working. Optionally provide `apm init --migrate-worktrees` later, but that is out of scope here.
+
+**The `apm clean` case (detailed)**
+
+Today `apm clean` removes worktrees and branches for closed tickets. With external worktrees, the worktrees dir lives outside the repo and there is no risk of clean traversing into its own siblings. With internal worktrees the topology changes, and these become real concerns:
+
+(a) **Source of truth must be `git worktree list`, not filesystem walking.** If clean enumerates candidates by walking `<repo>/worktrees/` and matching directory names, it can:
+- pick up partially-deleted worktrees (race with concurrent removal)
+- pick up directories that are not registered worktrees at all (manual debris)
+- miss worktrees whose paths were renamed via `git worktree move`
+
+The fix: enumerate via `git worktree list --porcelain` (which reads from `.git/worktrees/`) and remove via `git worktree remove <path>`. Git's machinery already knows the registered set and refuses to remove a worktree with uncommitted changes unless `--force` is passed. Use that.
+
+(b) **Clean must refuse to remove the worktree the caller is inside.** If a worker invokes `apm clean` from its own ticket worktree (currently improbable, but possible) and that ticket happens to be marked closed concurrently, clean would try to remove the directory the process is running from. This is bad on every layout but particularly easy to trigger when worktrees live under a path the caller might `cd` into casually. Compute `std::env::current_dir()` and `apm_core::worktree::main_worktree_root()` at the start of clean; if `cwd` is inside any candidate worktree path, refuse with a clear message: `refusing to remove worktree containing the current working directory: <path>`.
+
+(c) **Clean must never `rm -rf` on a candidate path.** Use `git worktree remove` exclusively. If a worktree is "prunable" (registered but on-disk path missing), use `git worktree prune` to clean the registry — never delete files outside what git decides.
+
+(d) **Clean's existing `--branches`, `--remote`, `--older-than`, `--untracked` flags** (commit `7ab4d84c`) should be re-checked against the new layout. `--untracked` in particular: with the worktrees dir gitignored, untracked files inside a worktree are still untracked from that worktree's own perspective; the flag's existing semantics should hold, but write a test that confirms it.
+
+**Other concerns to address in the spec**
+
+- `.gitignore` line: `/worktrees/` (leading slash so it does not match nested files of that name elsewhere) plus a one-line comment naming why. Idempotent.
+- IDE indexers and editors will see N checkouts of the source under the repo root. Modern indexers respect `.gitignore`; older ones do not. Document this in the migration note. Out of scope to fix non-compliant tooling.
+- Cargo `target/` dirs end up per-worktree (`worktrees/<id>/target/`). Disk usage grows. Acceptable; reuse via `CARGO_TARGET_DIR` is out of scope.
+- Tools doing filesystem walks from the repo root that **don't** respect gitignore (any `std::fs::read_dir` walks in APM itself) must explicitly skip the configured worktrees dir. Search for any such walk in `apm-core/` and `apm/` and gate on `config.worktrees.dir`.
+
+**Implementation pointers**
+
+- `apm-core/src/init.rs` — change the `worktrees.dir` default in the generated config; update `ensure_worktrees_dir` if needed; ensure `.gitignore` is updated.
+- `apm-core/src/worktree.rs` — `provision_worktree` already uses `main_worktree_root()` (per fix `5a36f7db` Apr 12) so path computation is correct; just verify with a unit test that the new in-repo layout works.
+- `apm/src/cmd/clean.rs` — implement (a)/(b)/(c) above; add tests that drive `apm clean` from inside a ticket worktree and assert refusal.
+- `apm/src/cmd/verify.rs` — verify it does not descend into the worktrees dir while doing its checks.
+
+**Out of scope**
+
+- Migrating existing repos automatically (would require coordinating with running workers and rewriting `.git/worktrees/*/gitdir` files; defer).
+- Sharing a single `target/` across worktrees via `CARGO_TARGET_DIR`.
+- Changing the worktrees dir name to something other than `worktrees` (project preference; default is fine).
+
+### Acceptance criteria
+
+Checkboxes; each one independently testable.
+
+### Out of scope
+
+Explicit list of what this ticket does not cover.
+
+### Approach
+
+How the implementation will work.
+
+### Open questions
+
+
+### Amendment requests
+
+
+### Code review
+
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+| 2026-04-28T01:24Z | — | new | philippepascal |
