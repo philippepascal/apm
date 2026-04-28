@@ -74,7 +74,100 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 
 ### Approach
 
-How the implementation will work.
+**Chosen approach: `schemars` 0.8.** It converts `/// doc comments` into `description` fields automatically, respects `#[serde(default = "fn")]` by calling the default function and serializing the result, and handles nested structs, Vec-of-struct, enums, and HashMap without manual cataloguing. No proc-macro workspace crate is needed; one new dependency is the only trade-off.
+
+---
+
+**1. Add the dependency**
+
+In root `Cargo.toml` `[workspace.dependencies]` add:
+
+    schemars = { version = "0.8", features = ["derive"] }
+
+In `apm-core/Cargo.toml` `[dependencies]` add:
+
+    schemars = { workspace = true }
+
+---
+
+**2. Derive `JsonSchema` in `apm-core/src/config.rs`**
+
+Add `use schemars::JsonSchema;` and append `JsonSchema` to the `#[derive(...)]` list on every type in `Config`'s serialized tree:
+
+`Config`, `ProjectConfig`, `TicketConfig`, `TicketSection`, `SectionType`, `TicketsConfig`, `WorkflowConfig`, `StateConfig`, `TransitionConfig`, `CompletionStrategy`, `SatisfiesDeps`, `PrioritizationConfig`, `AgentsConfig`, `WorktreesConfig`, `SyncConfig`, `LoggingConfig`, `GitHostConfig`, `WorkersConfig`, `WorkerProfileConfig`, `WorkConfig`, `ServerConfig`, `ContextConfig`
+
+Intentionally exclude `LocalConfig` and `LocalWorkersOverride` (internal override file). The `load_warnings` field already carries `#[serde(skip)]`; schemars respects it.
+
+---
+
+**3. Derive `JsonSchema` in `apm-core/src/ticket/ticket_fmt.rs`**
+
+Add `use schemars::JsonSchema;` and `JsonSchema` to `Frontmatter` only. The `id` field uses a custom `deserialize_with` function that schemars cannot inspect; annotate it with `#[schemars(with = "String")]` to tell schemars to treat it as a plain string.
+
+Leave `Ticket`, `TicketDocument`, `ChecklistItem`, `ValidationError` unchanged.
+
+---
+
+**4. Create `apm-core/src/help_schema.rs`**
+
+Public surface:
+
+    pub struct FieldEntry {
+        pub toml_path: String,
+        pub type_name: String,
+        pub default: Option<String>,
+        pub description: Option<String>,
+        pub enum_variants: Option<Vec<String>>,
+        pub required: bool,
+    }
+
+    pub fn schema_entries<T: JsonSchema>() -> Vec<FieldEntry>
+    pub fn render_schema<T: JsonSchema>() -> String
+
+**`schema_entries` walker:**
+
+Call `schemars::schema_for::<T>()` to get a `RootSchema { schema, definitions, .. }`. Pass the root `SchemaObject`, the definitions map, an empty path prefix, and the root required-field set to a private recursive helper `walk_object`.
+
+`walk_object` iterates `obj.object.properties` (sorted alphabetically). For each `(field_name, field_schema)`:
+
+1. Resolve any `$ref` by looking up the ref name in `definitions`.
+2. Build `toml_path`: `field_name` at root, `prefix.field_name` otherwise.
+3. Determine `required` from `obj.object.required`.
+4. Classify the resolved schema:
+   - **Nested struct** (has named properties, not an array): recurse via `walk_object` with `toml_path` as new prefix; emit no `FieldEntry` for the container itself.
+   - **Vec of struct** (`instance_type == Array`, items resolves to an object with properties): recurse with `toml_path + "[]"` as new prefix; emit no `FieldEntry` for the array container. `type_name` label is `list-of-<RefName>` for documentation only.
+   - **Vec of scalar** (`instance_type == Array`, items is a scalar): emit one `FieldEntry` with `type_name = "list-of-<scalar>"`.
+   - **HashMap** (`additional_properties` set, no named properties): emit one `FieldEntry` with `type_name = "map"`; do not recurse.
+   - **Enum** (`enum_values` is Some): emit one `FieldEntry` with `type_name = "string"` and `enum_variants = Some(values as strings)`.
+   - **anyOf / oneOf** (untagged enum like `SatisfiesDeps`): emit one `FieldEntry` with `type_name` derived from the variant schemas (e.g., `"bool | string"`), `enum_variants = None`.
+   - **Scalar** (`instance_type` is String | Integer | Boolean | Number): map to `"string"`, `"integer"`, `"bool"`, `"number"`.
+5. `description` from `schema_obj.metadata.description`.
+6. `default` from `schema_obj.metadata.default` (a `serde_json::Value`): for `Value::String(s)` emit `s` without quotes; for numbers/bools call `.to_string()`; for arrays/objects call `serde_json::to_string`.
+
+**`render_schema` renderer:**
+
+Call `schema_entries::<T>()`. Emit one plain-text line per entry:
+
+    <toml_path>  <type>  [default: <val>]  # <description>  (variant1 | variant2 | ...)
+
+Column-align using the widest value per column. Omit `default:` when None; omit `#` clause when description is None; append variants in parentheses when `enum_variants` is Some.
+
+---
+
+**5. Export from `apm-core/src/lib.rs`**
+
+Add `pub mod help_schema;`.
+
+---
+
+**6. Unit tests inside `help_schema.rs`**
+
+Four tests in a `#[cfg(test)]` block:
+
+- `agents_max_concurrent_has_default_3`: finds the entry, asserts `default == Some("3")` and `required == false`
+- `project_name_is_required`: asserts `required == true`
+- `workflow_states_uses_array_notation`: asserts at least one entry has `toml_path` starting with `"workflow.states[]."`
+- `completion_strategy_has_enum_variants`: asserts the `workflow.states[].transitions[].completion` entry has `enum_variants` containing `"none"` and `"pr"`
 
 ### Open questions
 
