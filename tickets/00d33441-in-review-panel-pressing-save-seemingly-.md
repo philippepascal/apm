@@ -24,13 +24,13 @@ The CLI `apm review` command already solves this correctly: it calls `split_body
 
 ### Acceptance criteria
 
-- [ ] When the review panel editor opens, it contains only the spec portion of the ticket (the text between the closing `+++` and `## History`) — front matter and history are not visible in the editor
-- [ ] When the user clicks Save in the review panel, the payload sent to `PUT /api/tickets/{id}/body` contains only the spec text (no `+++` delimiters, no `## History` section)
-- [ ] After a successful save, the ticket file on disk still contains the original front matter unchanged
-- [ ] After a successful save, the ticket file on disk still contains the original history table unchanged
-- [ ] The backend `put_body` handler returns a 400 error when the submitted body contains a front matter delimiter (`+++`)
-- [ ] The backend `put_body` handler returns a 400 error when the submitted body contains a `## History` section
-- [ ] A valid spec-only save still results in the full ticket file being committed to git (front matter + new spec + history)
+- [x] When the review panel editor opens, it contains only the spec portion of the ticket (the text between the closing `+++` and `## History`) — front matter and history are not visible in the editor
+- [x] When the user clicks Save in the review panel, the payload sent to `PUT /api/tickets/{id}/body` contains only the spec text (no `+++` delimiters, no `## History` section)
+- [x] After a successful save, the ticket file on disk still contains the original front matter unchanged
+- [x] After a successful save, the ticket file on disk still contains the original history table unchanged
+- [x] The backend `put_body` handler returns a 400 error when the submitted body contains a front matter delimiter (`+++`)
+- [x] The backend `put_body` handler returns a 400 error when the submitted body contains a `## History` section
+- [x] A valid spec-only save still results in the full ticket file being committed to git (front matter + new spec + history)
 
 ### Out of scope
 
