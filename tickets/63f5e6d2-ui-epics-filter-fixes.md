@@ -16,8 +16,11 @@ updated_at = "2026-04-28T19:42:01.533924Z"
 
 ### Problem
 
-doesn't seem to auto refresh like the rest of the screen
-does not have an option for "no epic"
+The epics filter dropdown in `SupervisorView` has two independent bugs.
+
+**No auto-refresh.** The `useQuery` for epics (`queryKey: ['epics']`) at `SupervisorView.tsx:60` has no `refetchInterval`. Every other data query in the UI — tickets, ticket detail, priority queue — polls every 10 seconds. Because the epics query never re-fires on its own, a new epic created outside the browser (via CLI or another session) won't appear in the filter dropdown until the page reloads or a ticket-creating mutation happens to invalidate the `['epics']` cache entry. Supervisors working in long-running sessions routinely miss newly created epics.
+
+**Missing "No epic" option.** The dropdown only allows "All epics" or filtering by a specific epic ID. There is no way to show only tickets where `epic` is absent — a useful view for finding orphaned tickets that have never been assigned to an epic.
 
 ### Acceptance criteria
 
