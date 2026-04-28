@@ -1,7 +1,7 @@
 +++
 id = "30a468a4"
 title = "in review panel, clicking change of state doesn't close review panel"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/30a468a4-in-review-panel-clicking-change-of-state"
 created_at = "2026-04-27T22:04:03.732362Z"
-updated_at = "2026-04-28T00:50:41.435378Z"
+updated_at = "2026-04-28T01:11:51.770425Z"
 +++
 
 ## Spec
@@ -101,3 +101,4 @@ Add a `useEffect` in `Editor` that stores the initial ticket state in a ref when
 | 2026-04-27T22:07Z | groomed | in_design | philippepascal |
 | 2026-04-27T22:17Z | in_design | specd | claude-0427-2207-7d28 |
 | 2026-04-28T00:50Z | specd | ready | philippepascal |
+| 2026-04-28T01:11Z | ready | in_progress | philippepascal |
