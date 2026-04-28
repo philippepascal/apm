@@ -27,7 +27,16 @@ This ticket wires those two pieces together: add one-line doc comments to every 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm help config` exits 0 and prints non-empty output to stdout
+- [ ] The placeholder string referencing ticket d486d183 no longer appears in `apm help config` output
+- [ ] Output contains a recognisable header or path prefix for each top-level section: `project`, `tickets`, `worktrees`, `git_host`, `agents`, `sync`, `logging`, `workers`
+- [ ] Output contains a line for `project.name` that is marked as required (no default shown)
+- [ ] Output contains a line for `project.default_branch` with default `main`
+- [ ] Output contains a line for `agents.max_concurrent` with default `3`
+- [ ] Output contains a line for `agents.max_workers_per_epic` with default `1`
+- [ ] Output contains a line for `workers.command` with default `claude`
+- [ ] Every field line that has a doc comment shows a non-empty description
+- [ ] `worker_profiles` appears in the output with a description explaining it is a map of named profiles
 
 ### Out of scope
 
