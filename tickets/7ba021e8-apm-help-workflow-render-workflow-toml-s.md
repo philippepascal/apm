@@ -1,7 +1,7 @@
 +++
 id = "7ba021e8"
 title = "apm help workflow: render workflow.toml schema from WorkflowConfig struct"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7ba021e8-apm-help-workflow-render-workflow-toml-s"
 created_at = "2026-04-28T19:28:15.496296Z"
-updated_at = "2026-04-28T19:32:57.816051Z"
+updated_at = "2026-04-28T19:52:55.237005Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0", "069c3403"]
@@ -67,3 +67,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T19:28Z | — | new | philippepascal |
 | 2026-04-28T19:32Z | new | groomed | philippepascal |
+| 2026-04-28T19:52Z | groomed | in_design | philippepascal |
