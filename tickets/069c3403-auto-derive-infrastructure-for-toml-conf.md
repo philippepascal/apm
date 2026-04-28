@@ -75,7 +75,22 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 
 ### Approach
 
-**Chosen approach: `schemars` 0.8.** It converts `/// doc comments` into `description` fields automatically, respects `#[serde(default = "fn")]` by calling the default function and serializing the result, and handles nested structs, Vec-of-struct, enums, and HashMap without manual cataloguing. No proc-macro workspace crate is needed; one new dependency is the only trade-off.
+#### Decision: schemars 0.8
+
+Three approaches were considered and one was chosen:
+
+1. **`schemars` 0.8** *(chosen)*: derive `JsonSchema` on each config struct and walk the emitted JSON Schema object graph at runtime.
+   - Derives with no proc-macro authoring — `#[derive(JsonSchema)]` on each struct is the entire annotation burden.
+   - `/// doc comments` on fields become `description` entries in the schema automatically (schemars' proc-macro preserves them).
+   - `#[serde(default = "fn")]` is recognized: schemars calls the default function and serializes the result, making defaults available without extra annotation.
+   - Handles nested structs, `Vec<Struct>`, tagged enums, untagged enums (`anyOf`/`oneOf`), and `HashMap` without a hand-written catalog.
+   - Trade-off: one new workspace dependency (`schemars = "0.8"`).
+
+2. **Custom proc-macro derive** *(rejected)*: would produce a bespoke metadata table at compile time with no runtime dependency, but requires authoring and maintaining a proc-macro crate and re-implementing what schemars already provides. No benefit over option 1.
+
+3. **Pure runtime introspection via `serde_introspect` or hand-rolled visitor** *(rejected)*: serde does not retain doc comments at runtime, so field descriptions would still need a separate source. Achieves less with more effort.
+
+The user's preference for full auto-derive with no hand-written catalog makes schemars the unambiguous choice.
 
 ---
 
@@ -140,7 +155,7 @@ Call `schemars::schema_for::<T>()` to get a `RootSchema { schema, definitions, .
    - **Vec of scalar** (`instance_type == Array`, items is a scalar): emit one `FieldEntry` with `type_name = "list-of-<scalar>"`.
    - **HashMap** (`additional_properties` set, no named properties): emit one `FieldEntry` with `type_name = "map"`; do not recurse.
    - **Enum** (`enum_values` is Some): emit one `FieldEntry` with `type_name = "string"` and `enum_variants = Some(values as strings)`.
-   - **anyOf / oneOf** (untagged enum like `SatisfiesDeps`): emit one `FieldEntry` with `type_name` derived from the variant schemas (e.g., `"bool | string"`), `enum_variants = None`.
+   - **anyOf / oneOf** (untagged enum like `SatisfiesDeps`): emit one `FieldEntry` with `type_name` derived by joining the variant schemas' scalar types with ` | ` (e.g., `"bool | string"`), `enum_variants = None`.
    - **Scalar** (`instance_type` is String | Integer | Boolean | Number): map to `"string"`, `"integer"`, `"bool"`, `"number"`.
 5. `description` from `schema_obj.metadata.description`.
 6. `default` from `schema_obj.metadata.default` (a `serde_json::Value`): for `Value::String(s)` emit `s` without quotes; for numbers/bools call `.to_string()`; for arrays/objects call `serde_json::to_string`.
@@ -163,12 +178,13 @@ Add `pub mod help_schema;`.
 
 **6. Unit tests inside `help_schema.rs`**
 
-Four tests in a `#[cfg(test)]` block:
+Five tests in a `#[cfg(test)]` block:
 
-- `agents_max_concurrent_has_default_3`: finds the entry, asserts `default == Some("3")` and `required == false`
-- `project_name_is_required`: asserts `required == true`
-- `workflow_states_uses_array_notation`: asserts at least one entry has `toml_path` starting with `"workflow.states[]."`
-- `completion_strategy_has_enum_variants`: asserts the `workflow.states[].transitions[].completion` entry has `enum_variants` containing `"none"` and `"pr"`
+- `agents_max_concurrent_has_default_3`: calls `schema_entries::<Config>()`, finds the entry for `agents.max_concurrent`, asserts `default == Some("3")` and `required == false`.
+- `project_name_is_required`: calls `schema_entries::<Config>()`, finds `project.name`, asserts `required == true`.
+- `workflow_states_uses_array_notation`: calls `schema_entries::<Config>()`, asserts at least one entry has `toml_path` starting with `"workflow.states[]."`.
+- `completion_strategy_has_enum_variants`: calls `schema_entries::<Config>()`, finds `workflow.states[].transitions[].completion`, asserts `enum_variants` contains `"none"` and `"pr"`.
+- `satisfies_deps_has_union_type_name`: calls `schema_entries::<WorkflowConfig>()`, finds the entry for `workflow.states[].satisfies_deps`, asserts `type_name` is `"bool | string"` (the union form produced by the anyOf path), asserts `enum_variants == None`.
 
 ### Open questions
 
