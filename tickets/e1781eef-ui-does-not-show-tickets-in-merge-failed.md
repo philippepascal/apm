@@ -29,12 +29,12 @@ The hardcoded fallback `supervisor_states` in `tickets.rs` (lines 41–44), used
 
 ### Acceptance criteria
 
-- [ ] A ticket in `merge_failed` state appears as a swimlane column in the supervisor board when at least one such ticket exists, without any changes to `.apm/workflow.toml`.
-- [ ] The `merge_failed` swimlane column uses the RED colour scheme (same as `blocked`), signalling that supervisor action is required.
-- [ ] The state filter dropdown in SupervisorView lists `merge_failed` as a selectable option when at least one such ticket exists (dropdown is derived from `supervisorStates` rather than a hardcoded array).
-- [ ] When workflow config fails to load, the server fallback still includes `merge_failed` in `supervisor_states`.
-- [ ] Any other non-terminal ticket state present in the ticket list but absent from the workflow config is automatically surfaced as a swimlane column, with no further code changes required.
-- [ ] The `/api/tickets` response payload includes tickets in `merge_failed` state (server does not strip them).
+- [x] A ticket in `merge_failed` state appears as a swimlane column in the supervisor board when at least one such ticket exists, without any changes to `.apm/workflow.toml`.
+- [x] The `merge_failed` swimlane column uses the RED colour scheme (same as `blocked`), signalling that supervisor action is required.
+- [x] The state filter dropdown in SupervisorView lists `merge_failed` as a selectable option when at least one such ticket exists (dropdown is derived from `supervisorStates` rather than a hardcoded array).
+- [x] When workflow config fails to load, the server fallback still includes `merge_failed` in `supervisor_states`.
+- [x] Any other non-terminal ticket state present in the ticket list but absent from the workflow config is automatically surfaced as a swimlane column, with no further code changes required.
+- [x] The `/api/tickets` response payload includes tickets in `merge_failed` state (server does not strip them).
 
 ### Out of scope
 
