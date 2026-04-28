@@ -140,7 +140,7 @@ instructions   = ".apm/apm.worker.md"
   [[workflow.states.transitions]]
   to         = "implemented"
   trigger    = "manual"
-  completion = "merge"
+  completion = "pr_or_epic_merge"
 
   [[workflow.states.transitions]]
   to      = "blocked"
