@@ -43,7 +43,6 @@ Maintenance:
   worktrees      List or remove permanent git worktrees
   clean          Remove worktrees and branches for closed tickets
   workers        List and manage running worker processes
-  verify         Check ticket and worktree integrity
   validate       Validate config and ticket integrity
   archive        Move closed ticket files to the archive directory
   version        Print version and build type
@@ -479,40 +478,35 @@ is already decided before opening the editor.")]
         #[arg(long)]
         no_aggressive: bool,
     },
-    /// Check ticket and worktree integrity
-    #[command(long_about = "Check ticket branch and worktree integrity.
-
-Scans for inconsistencies: dangling worktrees, branches missing ticket
-files, ticket frontmatter that does not match the branch state, etc.
-
---fix attempts automatic repairs where safe. Anything it cannot fix is
-reported for manual attention.
-
-Run this if `apm list` or `apm show` is behaving unexpectedly.")]
-    Verify {
-        /// Auto-fix issues where possible
-        #[arg(long)]
-        fix: bool,
-        /// Skip automatic git fetch before reading ticket data
-        #[arg(long)]
-        no_aggressive: bool,
-    },
     /// Validate config and ticket integrity
-    #[command(long_about = "Validate apm.toml correctness and cross-ticket integrity.
+    #[command(long_about = "Validate apm.toml correctness and full ticket integrity.
 
-Checks performed:
-  * apm.toml parses without errors
-  * All state transitions reference known states
+Config checks:
+  * .apm/ TOML files parse without errors
+  * All state transitions reference states that exist in the config
+  * completion 'pr' or 'merge' requires [git_host] with a provider
+  * instruction file paths exist on disk
+
+Ticket integrity checks:
   * Every ticket's branch field matches its actual branch name
-  * No two tickets share the same branch
+  * dependency-rule violations per completion strategy
+  * Unknown state values (state not in config.workflow.states)
+  * ID/filename mismatches
+  * in_progress/implemented tickets missing a branch field
+  * Branches already merged into the default branch with ticket still open
+  * Missing ## Spec or ## History sections
+  * Document-structure validation errors
+  * in_design/in_progress tickets whose worktree directory is absent
 
---fix repairs branch-field mismatches automatically and re-commits the
-ticket file on its branch.
+--fix repairs branch-field mismatches automatically and closes tickets
+whose branch has already been merged. Missing worktrees are reported but
+never auto-recreated.
 
 --json outputs the full results as JSON — useful in CI pipelines:
   apm validate --json | jq '.errors'
 
---config-only skips per-ticket checks and validates only the config file.")]
+--config-only skips all per-ticket and filesystem checks, including
+merged-branch and worktree checks.")]
     Validate {
         /// Auto-fix repairable issues (branch field mismatches)
         #[arg(long)]
@@ -865,7 +859,6 @@ fn main() -> Result<()> {
         Command::Assign { id, username, no_aggressive, force } => cmd::assign::run(&root, &id, &username, no_aggressive, force),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
-        Command::Verify { fix, no_aggressive } => cmd::verify::run(&root, fix, no_aggressive),
         Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
         Command::Agents => cmd::agents::run(&root),

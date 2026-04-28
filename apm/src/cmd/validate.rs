@@ -2,6 +2,7 @@ use anyhow::Result;
 pub use apm_core::validate::validate_config;
 pub use apm_core::validate::validate_depends_on;
 pub use apm_core::validate::validate_warnings;
+pub use apm_core::validate::verify_tickets;
 use apm_core::{config::Config, git, ticket, ticket_fmt};
 use serde::Serialize;
 use std::collections::HashSet;
@@ -34,6 +35,9 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
         tickets_checked = ctx.tickets.len();
 
         let tickets = ctx.tickets;
+
+        let merged = apm_core::git::merged_into_main(root, &config.project.default_branch).unwrap_or_default();
+        let merged_set: HashSet<String> = merged.into_iter().collect();
 
         let state_ids: HashSet<&str> = config.workflow.states.iter()
             .map(|s| s.id.as_str())
@@ -84,8 +88,18 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
             });
         }
 
+        for issue in verify_tickets(root, &config, &tickets, &merged_set) {
+            ticket_issues.push(Issue {
+                kind: "integrity".into(),
+                subject: String::new(),
+                message: issue,
+            });
+        }
+
         if fix {
             apply_branch_fixes(root, &config, branch_fixes)?;
+            let merged_refs: HashSet<&str> = merged_set.iter().map(|s| s.as_str()).collect();
+            apply_merged_fixes(root, &config, &tickets, &merged_refs)?;
         }
     }
 
@@ -155,6 +169,34 @@ fn apply_branch_fixes(
         ) {
             Ok(_) => println!("  fixed {id}: branch -> {expected_branch}"),
             Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
+        }
+    }
+    Ok(())
+}
+
+fn apply_merged_fixes(
+    root: &Path,
+    config: &Config,
+    tickets: &[ticket::Ticket],
+    merged_set: &HashSet<&str>,
+) -> Result<()> {
+    for t in tickets {
+        let fm = &t.frontmatter;
+        let Some(branch) = &fm.branch else { continue };
+        if (fm.state == "in_progress" || fm.state == "implemented")
+            && merged_set.contains(branch.as_str())
+        {
+            let id = fm.id.clone();
+            let old_state = fm.state.clone();
+            match apm_core::ticket::close(root, config, &id, None, "validate --fix", false) {
+                Ok(msgs) => {
+                    for msg in &msgs {
+                        println!("{msg}");
+                    }
+                    println!("  fixed {id}: {old_state} → closed");
+                }
+                Err(e) => eprintln!("  warning: could not fix {id}: {e:#}"),
+            }
         }
     }
     Ok(())

@@ -330,7 +330,7 @@ APM has more features than the walkthrough above covers. Here's a quick map:
 - **Docker workers** — Run agents in sandboxed containers. Pass `--with-docker` to `apm init` to generate a Dockerfile, then configure `container` in `config.toml`. See [docs/docker-workers.md](docs/docker-workers.md).
 - **Ticket dependencies** — `apm set <id> depends_on <other-id>` blocks a ticket until its dependency reaches a configured gate state. The dispatcher respects these edges automatically.
 - **Worker profiles** — Define named profiles under `[worker_profiles.<name>]` in `config.toml` with their own `command`, `args`, `model`, `env`, and `instructions`. Assign profiles to transitions in `workflow.toml` to use different agents for different phases.
-- **Config validation** — `apm validate` checks your config and ticket integrity. `apm verify` cross-checks ticket frontmatter against the state machine.
+- **Config validation** — `apm validate` checks your config and full ticket integrity: config parse errors, branch-field mismatches, merged-but-open branches, missing worktrees, and more.
 - **Logging** — APM logs every command to a platform-specific log file. The web UI includes a live log viewer.
 - **Server options** — `apm-server --port <N>`, `--bind <addr>` to customize the listener. The `[server]` section in `config.toml` holds persistent defaults.
 - **Side tickets** — `apm new --side-note "title" --context "what you noticed"` lets agents capture out-of-scope issues without interrupting their current work.
