@@ -59,11 +59,13 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 - `use clap::CommandFactory;` — brings `Cli::command()` into scope (clap 4 derive feature, already in Cargo.toml)
 - `use crate::Cli;` — the top-level parser struct defined in `main.rs`
 
+**Output style decision:** `apm help commands` uses flat word-wrapped lines rather than the column-aligned table format that `config`/`workflow`/`ticket` topics use (via the `help_schema` infra from ticket 069c3403). The divergence is intentional: commands form a hierarchy (command → positionals → flags → subcommands) that does not fit a key-value table layout. `bc89e0a0`'s `render_overview()` source should include a brief comment noting that commands and schema topics use different layouts due to differing data shapes.
+
 **Algorithm — `render_commands()`:**
 
 1. Call `crate::Cli::command()` to obtain the root `clap::Command`.
 2. Extract its subcommands via `root.get_subcommands()`. These are the 30+ top-level commands.
-3. Collect into a `Vec`, then sort by `cmd.get_name()` alphabetically (or preserve Cli-enum order — either is acceptable; alphabetical is safer for stability).
+3. Collect into a `Vec`, then sort by `cmd.get_name()` alphabetically. This sort applies to top-level commands only; nested subcommands are not re-sorted and appear in declaration order as returned by `cmd.get_subcommands()`.
 4. For each top-level command, call a helper `fn render_one(cmd: &clap::Command, prefix: &str) -> String` that:
    a. Skips if `cmd.is_hide_set()`.
    b. Builds a usage line: `{prefix}{name} {positional_summary}` where `positional_summary` lists positional arg value-names in angle brackets (e.g. `<TITLE>`, `[ID]`).
@@ -72,12 +74,10 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
       - Skip if `arg.is_hide_set()` or if the arg id is `"help"` or `"version"` (clap auto-generated).
       - For positionals: already covered in the usage line; skip here.
       - For flags/options: format as `  -s, --long-name <VALUE>   help text (default: X)` (or `  --long-name` if no short; omit `<VALUE>` if it's a boolean flag; omit default clause if none).
-      - Wrap the help text column at 100 characters, aligning continuation lines under the help text start.
-   e. If the command has subcommands (`cmd.get_subcommands().next().is_some()`), recurse: for each non-hidden subcommand call `render_one(sub, &format!("{prefix}{name} "))` and indent the block by 2 additional spaces.
+      - Wrap the complete formatted flag line at 100 characters — the `(default: X)` annotation is part of the visible output and counts toward the limit; continuation lines align under the help text start.
+   e. If the command has subcommands (`cmd.get_subcommands().next().is_some()`), recurse: for each non-hidden subcommand call `render_one(sub, &format!("{prefix}{name} "))` and indent the block by 2 additional spaces. Subcommands are not re-sorted.
 5. Join all rendered blocks with a blank line separator.
-6. Prepend a one-line header: `"Commands
-========
-"`.
+6. Prepend a one-line header: `"Commands\n========\n"`.
 7. Return the assembled String.
 
 **StyledStr conversion:** In clap 4, `get_about()`, `get_help()`, and `get_value_names()` return `Option<&StyledStr>`. Call `.to_string()` to get plain text (StyledStr implements Display).
@@ -90,15 +90,15 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 
 **Nested subcommands:** Only `Epic` currently has nested subcommands (`epic new`, `epic close`, `epic list`, `epic show`, `epic set`). The recursive approach handles any future nesting automatically.
 
-**100-column wrapping helper:** A small `fn wrap(text: &str, indent: usize, max_width: usize) -> String` that inserts newlines at word boundaries. Use `textwrap` crate if already in the dependency tree, otherwise implement a simple word-wrap loop (the crate is not required — the wrapping logic is a handful of lines).
+**100-column wrapping helper:** A small `fn wrap(text: &str, indent: usize, max_width: usize) -> String` that inserts newlines at word boundaries. Use `textwrap` crate if already in the dependency tree, otherwise implement a simple word-wrap loop (the crate is not required — the wrapping logic is a handful of lines). The wrap limit applies to the complete rendered line including any `(default: X)` suffix.
 
 **Implementation order:**
 1. Add `use clap::CommandFactory;` and `use crate::Cli;` at the top of `help.rs`
 2. Implement the `wrap()` helper
 3. Implement `render_one(cmd, prefix)` recursively
-4. Replace the stub body of `render_commands()` with a call that builds the root command, iterates top-level commands, and joins the results
+4. Replace the stub body of `render_commands()` with a call that builds the root command, iterates top-level commands sorted alphabetically, and joins the results
 5. `cargo build` to confirm it compiles
-6. `apm help commands` smoke test against all 12 acceptance criteria
+6. `apm help commands` smoke test against all 13 acceptance criteria
 
 ### Open questions
 
