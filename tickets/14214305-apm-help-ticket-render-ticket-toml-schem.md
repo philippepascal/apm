@@ -51,7 +51,73 @@ The `SectionType` enum warrants special attention: its three variants (`free`, `
 
 ### Approach
 
-How the implementation will work.
+This ticket has two distinct changes: adding doc comments in `apm-core`, and replacing the stub in `apm`.
+
+---
+
+**1. `apm-core/src/config.rs` — add doc comments**
+
+Ticket 069c3403 already adds `JsonSchema` derives to `TicketConfig`, `TicketSection`, and `SectionType`. This ticket's job is to ensure the doc comments are present and informative enough for `render_schema` to produce useful output.
+
+Add or replace doc comments on:
+
+- `TicketConfig`:
+  ```rust
+  /// Configuration for the sections that appear on every ticket, in order.
+  /// Defined in `.apm/ticket.toml` as `[[ticket.sections]]` blocks.
+  ```
+
+- `TicketSection`:
+  ```rust
+  /// A single section in the ticket template.
+  ```
+  Per field:
+  - `name`: `/// Display name of the section (e.g. "Problem", "Approach").`
+  - `type_` (serde: `type`): `/// Rendering mode — controls how the section body is interpreted and which apm spec flags apply.`
+  - `required`: `/// Whether the section must be non-empty before the ticket can transition out of in_design.`
+  - `placeholder`: `/// Hint text pre-filled into an empty section when a new ticket is created.`
+
+- `SectionType` — the doc comment on the enum itself must carry variant semantics because `render_schema` emits a single `description` field for the `type` entry, not per-variant descriptions:
+  ```rust
+  /// `free` — free-form prose. `tasks` — checkbox list (`- [ ] item`);
+  /// supports `apm spec --mark` and `apm spec --add-task`. `qa` — question/answer pairs.
+  ```
+
+---
+
+**2. `apm/src/cmd/help.rs` — replace the stub**
+
+Replace the body of `fn render_ticket() -> String` (currently returning a placeholder referencing ticket 14214305) with:
+
+```rust
+fn render_ticket() -> String {
+    let header = "ticket.toml — ticket section configuration\n\
+                  \n\
+                  Defines the [[ticket.sections]] array: an ordered list of sections\n\
+                  that appear on every ticket created in this project.\n\n";
+    format!("{}{}", header, apm_core::help_schema::render_schema::<apm_core::config::TicketConfig>())
+}
+```
+
+No other changes to `help.rs` are needed.
+
+---
+
+**Implementation order:**
+
+1. Ensure 069c3403 is merged (or apply its changes locally in the worktree) — `TicketConfig` must have `JsonSchema` derived and `apm_core::help_schema` must exist before the `apm` crate can compile.
+2. Add doc comments to `TicketConfig`, `TicketSection`, `TicketSection` fields, and `SectionType` in `apm-core/src/config.rs`.
+3. Replace `render_ticket()` stub in `apm/src/cmd/help.rs`.
+4. `cargo build` to confirm the crate compiles and the call resolves.
+5. Smoke-test: run `apm help ticket` and verify all nine acceptance criteria pass.
+
+---
+
+**Constraints:**
+
+- Do not add `use` imports beyond what the two dependencies have already introduced; call `apm_core::help_schema::render_schema` by its full path or add one targeted `use` line.
+- The introductory header must end with a blank line so it is visually separated from the field table that `render_schema` emits.
+- `SectionType` doc comment must be a single contiguous string (no `///` line breaks mid-sentence) so schemars concatenates it into a single `description` value without spurious whitespace.
 
 ### Open questions
 
