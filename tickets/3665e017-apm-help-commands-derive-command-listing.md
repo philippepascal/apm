@@ -29,15 +29,16 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 
 - [ ] `apm help commands` exits 0 and prints output to stdout
 - [ ] Every non-hidden top-level command appears in the output (hidden commands such as `_hook` do not appear)
+- [ ] Top-level commands appear in alphabetical order in the output
 - [ ] Each command entry shows the command name and its one-line description (from `get_about()`)
 - [ ] Each command entry lists its positional arguments with their value-name label and help text
 - [ ] Each command entry lists its flags/options with long name, short name (if any), value name (if any), and help text
 - [ ] Flags with a default value show the default in their entry
 - [ ] Auto-generated clap flags (`--help`, `--version`) do not appear in the output
-- [ ] Nested subcommands (e.g. `epic new`, `epic close`) are listed with their full dotted/spaced path under the parent command
+- [ ] All five current `epic` subcommands — `epic new`, `epic close`, `epic list`, `epic show`, `epic set` — appear in the output under the `epic` parent entry, in declaration order
 - [ ] Adding a new `#[arg]` to any subcommand causes it to appear in `apm help commands` output without changes to `help.rs`
 - [ ] Adding a new variant to the `Command` enum causes it to appear in `apm help commands` output without changes to `help.rs`
-- [ ] Output lines do not exceed 100 characters (long descriptions are wrapped at word boundaries)
+- [ ] Output lines do not exceed 100 characters; `(default: …)` annotations count toward the 100-character limit and are wrapped at word boundaries like any other text
 - [ ] Output contains no ANSI escape codes (plain text only)
 
 ### Out of scope
