@@ -33,7 +33,41 @@ apm-core::worker::is_alive(pid) treats zombie/defunct processes as alive. It use
 
 ### Approach
 
-How the implementation will work.
+All changes are confined to `apm-core/src/worker.rs`. No other files need to change — all call sites use `is_alive` and benefit automatically.
+
+**1. Add a private `state_is_zombie(state: &str) -> bool` pure helper**
+
+Accepts the trimmed stdout of `ps -p <pid> -o state=` and returns `true` if the string starts with `'Z'`. Pure and trivially unit-testable without spawning any processes.
+
+**2. Add a private `process_state(pid: u32) -> Option<String>` helper**
+
+Shells out to `ps -p <pid> -o state=` and returns the trimmed stdout on success, `None` on any error (command not found, non-zero exit when the PID has just vanished, etc.).
+
+**3. Update `is_alive` to reject zombies**
+
+Keep the `kill -0` fast-path for the common case (PID not in process table at all), then add the zombie check. If `process_state` returns `None` (race: process exited between `kill -0` and `ps`), treat as dead.
+
+Logic:
+- Run `kill -0 <pid>` — if it fails, return `false` immediately.
+- Call `process_state(pid)`:
+  - `Some(s)` → return `!state_is_zombie(&s)`
+  - `None` → return `false` (vanished between the two checks)
+
+**4. Add unit tests for `state_is_zombie`**
+
+Cover: `"Z"` → true, `"Z+"` → true, `"  Z  "` (with whitespace) → true, `"S"` → false, `"R"` → false, `""` → false.
+
+**5. Add a zombie integration test for `is_alive`**
+
+Spawn a child process (`true` or similar), record its PID, sleep 100 ms to let it exit and become a zombie (parent has not called `wait()`), assert `is_alive(pid)` returns `false`, then reap with `child.wait()`. This test exercises the full `kill -0` + `ps` path against a real zombie on CI.
+
+The existing `is_alive_returns_true_for_current_process` test is unchanged and continues to pass.
+
+**Constraints**
+
+- `ps -p <pid> -o state=` is POSIX-compatible and works on macOS and Linux, both platforms APM targets. No `/proc` reading needed.
+- The `kill -0` fast-path is preserved to avoid the `ps` overhead for the common "PID does not exist" case.
+- No changes to public API surface; `is_alive` signature is unchanged.
 
 ### Open questions
 
