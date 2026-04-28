@@ -1,7 +1,7 @@
 +++
 id = "498febe0"
 title = "Worker leaks edits into main worktree; capture full transcript"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/498febe0-worker-leaks-edits-into-main-worktree-ca"
 created_at = "2026-04-28T22:35:14.876837Z"
-updated_at = "2026-04-28T22:35:14.876837Z"
+updated_at = "2026-04-28T22:36:06.063512Z"
 +++
 
 ## Spec
@@ -71,3 +71,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T22:35Z | — | new | philippepascal |
+| 2026-04-28T22:36Z | new | groomed | philippepascal |
