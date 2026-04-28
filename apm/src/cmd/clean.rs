@@ -1,29 +1,33 @@
 use anyhow::Result;
-use apm_core::{clean, git};
-use std::io::IsTerminal;
+use apm_core::clean;
 use std::path::Path;
 use crate::ctx::CmdContext;
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     root: &Path,
     dry_run: bool,
-    yes: bool,
+    _yes: bool,
     force: bool,
     branches: bool,
-    remote: bool,
     older_than: Option<String>,
     untracked: bool,
     epics: bool,
 ) -> Result<()> {
-    // Validate flag combinations.
-    if remote && older_than.is_none() {
-        anyhow::bail!("--remote requires --older-than <THRESHOLD>");
-    }
-
     let config = CmdContext::load_config_only(root)?;
-    let (candidates, dirty, candidate_warnings) = clean::candidates(root, &config, force, untracked, dry_run)?;
+    let (mut candidates, dirty, candidate_warnings) = clean::candidates(root, &config, force, untracked, dry_run)?;
     for w in &candidate_warnings {
         eprintln!("{w}");
+    }
+
+    // Apply --older-than filter (if set) by ticket frontmatter updated_at.
+    // Tickets with no updated_at are conservatively kept (we can't verify age).
+    if let Some(threshold_str) = older_than.as_deref() {
+        let threshold = clean::parse_older_than(threshold_str)?;
+        candidates.retain(|c| match c.updated_at {
+            Some(ts) => ts < threshold,
+            None => false,
+        });
     }
 
     // Refuse to remove any worktree that contains the current working directory.
@@ -45,7 +49,7 @@ pub fn run(
         }
     }
 
-    if candidates.is_empty() && dirty.is_empty() && !remote && !epics {
+    if candidates.is_empty() && dirty.is_empty() && !epics {
         println!("Nothing to clean.");
         return Ok(());
     }
@@ -81,12 +85,12 @@ pub fn run(
                     candidate.reason
                 );
             }
-            if branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
+            if branches && (candidate.branch_merged || force) {
                 println!(
-                    "would remove branch {} (state: {})",
+                    "would remove branch {} (local + remote, state: {})",
                     candidate.branch, candidate.reason
                 );
-            } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
+            } else if branches && !candidate.branch_merged {
                 println!(
                     "would keep branch {} (not merged into main)",
                     candidate.branch
@@ -101,8 +105,8 @@ pub fn run(
                 if let Some(ref path) = candidate.worktree {
                     println!("removed worktree {}", path.display());
                 }
-                if branches && candidate.local_branch_exists {
-                    println!("removed branch {}", candidate.branch);
+                if branches {
+                    println!("removed branch {} (local + remote)", candidate.branch);
                 }
                 let remove_out = clean::remove(root, candidate, true, branches)?;
                 for w in &remove_out.warnings {
@@ -115,9 +119,9 @@ pub fn run(
             if let Some(ref path) = candidate.worktree {
                 println!("removed worktree {}", path.display());
             }
-            if branches && candidate.local_branch_exists && candidate.branch_merged {
-                println!("removed branch {}", candidate.branch);
-            } else if branches && candidate.local_branch_exists && !candidate.branch_merged {
+            if branches && candidate.branch_merged {
+                println!("removed branch {} (local + remote)", candidate.branch);
+            } else if branches && !candidate.branch_merged {
                 println!("kept branch {} (not merged into main)", candidate.branch);
             }
             let remove_out = clean::remove(root, candidate, false, branches)?;
@@ -127,49 +131,8 @@ pub fn run(
         }
     }
 
-    // --remote --older-than path.
-    if remote {
-        let threshold_str = older_than.as_deref().unwrap();
-        let threshold = clean::parse_older_than(threshold_str)?;
-        let remote_candidates = clean::remote_candidates(root, &config, threshold)?;
-
-        if remote_candidates.is_empty() {
-            println!("No remote branches to clean.");
-        }
-
-        for rc in &remote_candidates {
-            if dry_run {
-                println!(
-                    "would delete remote branch {} (last commit: {})",
-                    rc.branch,
-                    rc.last_commit.format("%Y-%m-%d")
-                );
-                continue;
-            }
-            let should_delete = if yes {
-                true
-            } else if std::io::stdout().is_terminal() {
-                crate::util::prompt_yes_no(&format!(
-                    "Delete remote branch {} (last commit: {})? [y/N] ",
-                    rc.branch,
-                    rc.last_commit.format("%Y-%m-%d")
-                ))?
-            } else {
-                eprintln!(
-                    "skipping {} — non-interactive (use --yes to auto-confirm)",
-                    rc.branch
-                );
-                false
-            };
-            if should_delete {
-                git::delete_remote_branch(root, &rc.branch)?;
-                println!("deleted remote branch {}", rc.branch);
-            }
-        }
-    }
-
-    if epics || remote {
-        crate::cmd::epic::run_epic_clean(root, &config, dry_run, yes)?;
+    if epics {
+        crate::cmd::epic::run_epic_clean(root, &config, dry_run, _yes)?;
     }
 
     Ok(())

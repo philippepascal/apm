@@ -108,7 +108,6 @@ pub struct CleanRequest {
     pub dry_run:    Option<bool>,
     pub force:      Option<bool>,
     pub branches:   Option<bool>,
-    pub remote:     Option<bool>,
     pub older_than: Option<String>,
     pub untracked:  Option<bool>,
     pub epics:      Option<bool>,

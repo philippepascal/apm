@@ -913,46 +913,50 @@ whose `updated_at` is more recent than the threshold.
 
 ### apm clean
 
-**Remove worktrees and local/remote branches for closed tickets.**
+**Remove worktrees and (optionally) ticket branches for closed tickets.**
 
 #### Synopsis
 
-    apm clean [--dry-run] [--branches] [--force] [-y] [--untracked]
-              [--remote --older-than <threshold>]
+    apm clean [--dry-run] [--branches] [--force] [-y] [--untracked] [--epics]
+              [--older-than <threshold>]
 
 #### Description
 
 Removes permanent worktrees for tickets in terminal states. By default only worktrees are removed;
-local and remote branches are never touched without an explicit flag.
+ticket branches are never touched without `--branches`. APM only ever deletes branches matching
+`ticket/*` (or `epic/*` with `--epics`) — never any other branch.
 
-`--branches` also deletes local `ticket/*` branches that are already merged into the default
-branch.
+`--branches` deletes both local **and** remote `ticket/*` branches for closed/merged tickets.
+Remote deletions are best-effort: a missing remote, missing branch on origin, or insufficient
+permissions becomes a warning, not a failure.
 
-`--remote --older-than <threshold>` deletes remote `ticket/*` branches whose last commit is older
-than the threshold. Requires `--older-than`; each deletion is confirmed interactively unless `--yes`
-is also passed.
+`--older-than <threshold>` filters candidates by ticket frontmatter `updated_at`: only tickets
+last updated before the threshold are eligible for cleanup. Tickets with no `updated_at` are
+conservatively kept. Threshold format: `Nd` (N days ago) or `YYYY-MM-DD` (ISO date).
 
 `--force` bypasses the branch-merged check and prompts for confirmation before each removal.
 `--untracked` removes untracked non-temp files from worktrees before removal.
+`--epics` also cleans local and remote branches for "done" epics.
 
 Known temp files (`.apm-worker.pid`, `.apm-worker.log`, `pr-body.md`, `body.md`, `ac.txt`) are
 always removed automatically.
 
     apm clean                              # remove worktrees only
-    apm clean --branches                   # worktrees + merged local branches
-    apm clean --remote --older-than 30d    # delete old remote branches
+    apm clean --branches                   # worktrees + local + remote ticket branches
+    apm clean --branches --older-than 30d  # only tickets last updated >30d ago
+    apm clean --branches --older-than 2026-01-01  # ISO date threshold
 
 #### Options
 
 | Flag / Arg | Type | Default | Description |
 |------------|------|---------|-------------|
 | `--dry-run` | flag | false | Print what would be removed without modifying anything |
-| `-y` / `--yes` | flag | false | Skip per-branch confirmation (used with `--remote`) |
+| `-y` / `--yes` | flag | false | Skip per-branch confirmation prompts |
 | `--force` | flag | false | Bypass merge check; prompts before each removal |
-| `--branches` | flag | false | Also delete local `ticket/*` branches |
-| `--remote` | flag | false | Delete remote `ticket/*` branches older than `--older-than` |
-| `--older-than` | string | — | Age threshold for `--remote`: e.g. `30d` or `2026-01-01` (requires `--remote`) |
+| `--branches` | flag | false | Also delete local + remote `ticket/*` branches |
+| `--older-than` | string | — | Filter candidates by `updated_at`: e.g. `30d` or `2026-01-01` |
 | `--untracked` | flag | false | Remove untracked non-temp files from worktrees before removal |
+| `--epics` | flag | false | Also clean local and remote branches for "done" epics |
 
 #### Git internals
 
@@ -963,9 +967,9 @@ always removed automatically.
 | `git branch --merged <default-branch>` | Check whether a ticket branch is merged before deleting it |
 | `git rev-parse refs/heads/<branch>` | Verify the local branch exists before attempting deletion |
 | `git worktree remove [--force] <path>` | Remove the worktree directory and deregister it from git |
+| `git worktree prune --expire now` | Drop dangling registry entries when the on-disk path is gone |
 | `git branch -d <branch>` | (`--branches`) Delete the local ticket branch after worktree removal |
-| `git for-each-ref refs/remotes/origin/ticket/ --format=%(refname:short) %(creatordate:unix)` | (`--remote`) List remote ticket branches with their last-commit dates |
-| `git push origin --delete <branch>` | (`--remote`) Delete a remote ticket branch that meets the age threshold |
+| `git push origin --delete <branch>` | (`--branches`) Delete the remote ticket branch (best-effort) |
 
 ---
 

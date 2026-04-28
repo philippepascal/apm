@@ -132,24 +132,27 @@ pub async fn clean_handler(
     let dry_run   = req.dry_run.unwrap_or(false);
     let force     = req.force.unwrap_or(false);
     let branches  = req.branches.unwrap_or(false);
-    let remote    = req.remote.unwrap_or(false);
     let untracked = req.untracked.unwrap_or(false);
     let epics     = req.epics.unwrap_or(false);
     let older_than = req.older_than;
-
-    if remote && older_than.is_none() {
-        return Ok((StatusCode::BAD_REQUEST, "remote requires older_than").into_response());
-    }
 
     let (log, removed) = crate::util::blocking(move || -> anyhow::Result<(Vec<String>, usize)> {
         let mut log: Vec<String> = Vec::new();
         let mut count = 0usize;
 
         let config = apm_core::config::Config::load(&root)?;
-        let (candidates, dirty, candidate_warnings) =
+        let (mut candidates, dirty, candidate_warnings) =
             apm_core::clean::candidates(&root, &config, force, untracked, dry_run)?;
         for w in &candidate_warnings {
             log.push(w.clone());
+        }
+
+        if let Some(threshold_str) = older_than.as_deref() {
+            let threshold = apm_core::clean::parse_older_than(threshold_str)?;
+            candidates.retain(|c| match c.updated_at {
+                Some(ts) => ts < threshold,
+                None => false,
+            });
         }
 
         for dw in &dirty {
@@ -222,27 +225,6 @@ pub async fn clean_handler(
                 }
                 for w in &remove_out.warnings {
                     log.push(w.clone());
-                }
-            }
-        }
-
-        if remote {
-            let threshold_str = older_than.as_deref().unwrap();
-            let threshold = apm_core::clean::parse_older_than(threshold_str)?;
-            let remote_candidates = apm_core::clean::remote_candidates(&root, &config, threshold)?;
-            if remote_candidates.is_empty() {
-                log.push("No remote branches to clean.".to_string());
-            }
-            for rc in &remote_candidates {
-                if dry_run {
-                    log.push(format!(
-                        "would delete remote branch {} (last commit: {})",
-                        rc.branch,
-                        rc.last_commit.format("%Y-%m-%d")
-                    ));
-                } else {
-                    apm_core::git::delete_remote_branch(&root, &rc.branch)?;
-                    log.push(format!("deleted remote branch {}", rc.branch));
                 }
             }
         }

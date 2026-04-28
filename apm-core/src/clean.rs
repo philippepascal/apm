@@ -11,11 +11,6 @@ const KNOWN_TEMP_FILES: &[&str] = &[
     ".apm-worker.log",
 ];
 
-pub struct RemoteCandidate {
-    pub branch: String,
-    pub last_commit: DateTime<Utc>,
-}
-
 pub struct CleanCandidate {
     pub ticket_id: String,
     pub ticket_title: String,
@@ -24,6 +19,9 @@ pub struct CleanCandidate {
     pub reason: String,
     pub local_branch_exists: bool,
     pub branch_merged: bool,
+    /// Ticket's `updated_at` from frontmatter; None if absent. Used by
+    /// `--older-than` to filter candidates by age.
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 pub struct DirtyWorktree {
@@ -182,6 +180,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                             reason: branch_state.clone(),
                             local_branch_exists: lbe,
                             branch_merged: is_merged && is_ancestor,
+                            updated_at: t.frontmatter.updated_at,
                         });
                     } else if untracked || diagnosis.other_untracked.is_empty() {
                         // Auto-remove: known_temp always; other_untracked if --untracked.
@@ -200,6 +199,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
                             reason: branch_state.clone(),
                             local_branch_exists: lbe,
                             branch_merged: is_merged && is_ancestor,
+                            updated_at: t.frontmatter.updated_at,
                         });
                     } else {
                         dirty_result.push(diagnosis);
@@ -225,6 +225,7 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
             reason: branch_state.clone(),
             local_branch_exists,
             branch_merged: is_merged && is_ancestor,
+            updated_at: t.frontmatter.updated_at,
         });
     }
 
@@ -248,11 +249,22 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
         }
     }
 
-    if remove_branches && candidate.local_branch_exists && (candidate.branch_merged || force) {
-        git_util::delete_local_branch(root, &candidate.branch, &mut warnings);
-        // Prune the remote tracking ref so sync_local_ticket_refs does not
-        // recreate the local branch on the next apm sync.
-        git_util::prune_remote_tracking(root, &candidate.branch);
+    if remove_branches && (candidate.branch_merged || force) {
+        if candidate.local_branch_exists {
+            git_util::delete_local_branch(root, &candidate.branch, &mut warnings);
+            // Prune the remote tracking ref so sync_local_ticket_refs does not
+            // recreate the local branch on the next apm sync.
+            git_util::prune_remote_tracking(root, &candidate.branch);
+        }
+        // Best-effort remote deletion. The remote may not exist (no origin),
+        // the branch may already be gone (auto-deleted on merge), or the
+        // user may lack push permission. Warn on failure; never bail.
+        if let Err(e) = git_util::delete_remote_branch(root, &candidate.branch) {
+            warnings.push(format!(
+                "warning: could not delete remote branch {}: {e}",
+                candidate.branch
+            ));
+        }
     }
 
     Ok(RemoveOutput { warnings })
@@ -274,31 +286,6 @@ pub fn parse_older_than(s: &str) -> anyhow::Result<DateTime<Utc>> {
         "--older-than: unrecognised format {:?}; use \"30d\" or \"YYYY-MM-DD\"",
         s
     )
-}
-
-/// Return remote ticket/* branches in terminal states older than `older_than`.
-pub fn remote_candidates(
-    root: &Path,
-    config: &Config,
-    older_than: DateTime<Utc>,
-) -> Result<Vec<RemoteCandidate>> {
-    let terminal_states = config.terminal_state_ids();
-    let default_branch = &config.project.default_branch;
-    let branches = git::remote_ticket_branches_with_dates(root)?;
-    let mut result = Vec::new();
-    for (branch, last_commit) in branches {
-        if last_commit >= older_than {
-            continue;
-        }
-        let suffix = branch.trim_start_matches("ticket/");
-        let rel_path = format!("{}/{suffix}.md", config.tickets.dir.to_string_lossy());
-        if let Some(state) = ticket::state_from_branch(root, default_branch, &rel_path) {
-            if terminal_states.contains(&state) {
-                result.push(RemoteCandidate { branch, last_commit });
-            }
-        }
-    }
-    Ok(result)
 }
 
 #[cfg(test)]

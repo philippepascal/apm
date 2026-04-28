@@ -658,22 +658,20 @@ Examples:
         #[arg(long, value_name = "THRESHOLD")]
         older_than: Option<String>,
     },
-    /// Remove worktrees and local branches for closed tickets
+    /// Remove worktrees and (optionally) ticket branches for closed tickets
     #[command(long_about = "Remove worktrees (and optionally branches) for terminal-state tickets.
 
-Default (no flags): removes worktrees only. Local and remote branches are
-never touched without an explicit flag.
+Default (no flags): removes worktrees only. Branches are never touched
+without --branches. APM only ever deletes branches matching `ticket/*`
+or `epic/*` — never any other branch.
 
   apm clean                              # remove worktrees only
   apm clean --dry-run                    # preview worktree removals
-  apm clean --branches                   # also delete local ticket/* branches
-  apm clean --branches --dry-run         # preview worktrees + branches
+  apm clean --branches                   # also delete local + remote ticket/* branches
+  apm clean --branches --older-than 30d  # only tickets last updated >30d ago
+  apm clean --branches --older-than 2026-01-01  # ISO date threshold
   apm clean --untracked                  # also remove untracked non-temp files
   apm clean --force                      # bypass merge/divergence checks
-  apm clean --remote --older-than 30d    # delete remote branches older than 30 days
-  apm clean --remote --older-than 2026-01-01  # ISO date threshold
-  apm clean --remote --older-than 30d --yes   # skip per-branch confirmation
-  apm clean --remote --older-than 30d --dry-run  # preview remote deletions
 
 Known temp files (.apm-worker.pid, .apm-worker.log, pr-body.md, body.md,
 ac.txt) are always removed automatically without needing --untracked.")]
@@ -681,20 +679,17 @@ ac.txt) are always removed automatically without needing --untracked.")]
         /// Print what would be removed without modifying anything
         #[arg(long)]
         dry_run: bool,
-        /// Skip per-branch confirmation prompts (used with --remote)
+        /// Skip per-branch confirmation prompts
         #[arg(long, short = 'y')]
         yes: bool,
         /// Bypass merge and divergence checks; always prompts before each removal
         #[arg(long)]
         force: bool,
-        /// Also delete local ticket/* branches (default: worktrees only)
+        /// Also delete local + remote ticket/* branches (default: worktrees only)
         #[arg(long)]
         branches: bool,
-        /// Delete remote ticket/* branches in terminal states older than --older-than
-        #[arg(long)]
-        remote: bool,
-        /// Age threshold for --remote: e.g. "30d" or "2026-01-01" (YYYY-MM-DD)
-        #[arg(long, value_name = "THRESHOLD", requires = "remote")]
+        /// Filter to tickets last updated before this threshold: "30d" or "YYYY-MM-DD"
+        #[arg(long, value_name = "THRESHOLD")]
         older_than: Option<String>,
         /// Remove untracked non-temp files from worktrees before removal
         #[arg(long)]
@@ -878,7 +873,7 @@ fn main() -> Result<()> {
         Command::Move { ticket, target } => cmd::move_ticket::run(&root, &ticket, &target),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
         Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
-        Command::Clean { dry_run, yes, force, branches, remote, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, remote, older_than, untracked, epics),
+        Command::Clean { dry_run, yes, force, branches, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, older_than, untracked, epics),
         Command::Spec { id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive),
         Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
