@@ -40,7 +40,15 @@ This ticket wires those two pieces together: add one-line doc comments to every 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Content for `render_workflow()`, `render_ticket()`, `render_commands()` — those are sibling tickets 7ba021e8, 14214305, and 3665e017
+- ANSI colour or markdown rendering in the output
+- Pager integration (no `less`/`more` invocation)
+- Per-user-defined `worker_profiles` key documentation — only a generic map description is shown; individual profiles are user-defined and unknowable at build time
+- `LocalConfig` and `LocalWorkersOverride` structs — internal override file, not user-facing `config.toml`
+- `WorkflowConfig`, `StateConfig`, `TransitionConfig`, and their nested types — covered by ticket 7ba021e8
+- `TicketConfig` and `TicketSection` — covered by ticket 14214305
+- Changes to the `apm help` dispatcher or topic routing — established by ticket bc89e0a0
+- Publishing a JSON Schema file as a build artifact
 
 ### Approach
 
