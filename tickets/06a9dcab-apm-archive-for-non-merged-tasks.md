@@ -1,7 +1,7 @@
 +++
 id = "06a9dcab"
 title = "apm archive for non merged tasks"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/06a9dcab-apm-archive-for-non-merged-tasks"
 created_at = "2026-04-28T07:11:58.042694Z"
-updated_at = "2026-04-28T07:11:58.042694Z"
+updated_at = "2026-04-28T07:13:25.487899Z"
 +++
 
 ## Spec
@@ -59,3 +59,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-28T07:11Z | — | new | philippepascal |
+| 2026-04-28T07:13Z | new | groomed | philippepascal |
