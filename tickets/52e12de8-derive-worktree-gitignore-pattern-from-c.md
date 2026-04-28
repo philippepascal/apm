@@ -75,7 +75,7 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 - [x] `apm init` writes the `# apm worktrees` comment alongside the pattern when the path is in-repo; the comment is NOT written for external paths
 - [x] `apm validate` fails with an error message when `worktrees.dir` is in-repo and `.gitignore` is absent; the message names the dir and suggests `apm init` or manual addition
 - [x] `apm validate` fails when `worktrees.dir` is in-repo and `.gitignore` exists but does not cover the dir in any recognized form
-- [ ] `apm validate` passes when `.gitignore` contains `/<dir>/` (root-anchored, trailing slash)
+- [x] `apm validate` passes when `.gitignore` contains `/<dir>/` (root-anchored, trailing slash)
 - [ ] `apm validate` passes when `.gitignore` contains `/<dir>` (root-anchored, no trailing slash)
 - [ ] `apm validate` passes when `.gitignore` contains `<dir>/` (unanchored, trailing slash)
 - [ ] `apm validate` passes when `.gitignore` contains `<dir>` (bare dirname)
