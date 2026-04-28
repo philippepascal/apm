@@ -4,12 +4,12 @@ title = "Parameterize transition failure landing in workflow.toml (on_failure)"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/79a03767-parameterize-transition-failure-landing-"
 created_at = "2026-04-28T23:00:16.821798Z"
-updated_at = "2026-04-28T23:08:53.039181Z"
+updated_at = "2026-04-28T23:08:55.983001Z"
 depends_on = ["50649e84"]
 +++
 
