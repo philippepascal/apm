@@ -79,7 +79,61 @@ Concrete edits:
 
 ### Approach
 
-How the implementation will work.
+Perform changes in the order below; each step can be compiled independently before moving to the next.
+
+**Step 1 — Move verify logic into `apm-core/src/validate.rs`**
+
+Copy the `verify_tickets()` function from `apm-core/src/verify.rs` verbatim into `apm-core/src/validate.rs` as a new `pub fn verify_tickets(root, config, tickets, merged) -> Vec<String>`. No rename needed — it becomes part of the validate public surface. Delete `apm-core/src/verify.rs`.
+
+Remove `pub mod verify;` from `apm-core/src/lib.rs`.
+
+**Step 2 — Migrate verify tests**
+
+Move the three tests from `apm-core/tests/verify.rs` into the `#[cfg(test)]` block at the bottom of `apm-core/src/validate.rs`. Update the import: `use apm_core::verify::verify_tickets` → `use super::verify_tickets`. Delete `apm-core/tests/verify.rs`.
+
+**Step 3 — Integrate verify checks into `apm/src/cmd/validate.rs`**
+
+In `run()`, after loading `CmdContext`, and before the `--config-only` early-return path:
+
+- Unless `config_only` is true, call `apm_core::git::merged_into_main(root, &ctx.config.project.default_branch).unwrap_or_default()` and collect into a `HashSet<String>`.
+- Call `apm_core::validate::verify_tickets(root, &ctx.config, &ctx.tickets, &merged_set)` and append each result to the issue list with `kind = "integrity"` (or reuse an appropriate existing kind — whatever keeps the JSON schema consistent).
+- In `--fix` mode, after existing branch-field repairs, run the merged-ticket close loop (same body as `cmd/verify.rs::apply_fixes`). Do not add any worktree-recreation logic.
+- The informational lines that `cmd/verify.rs` prints (completion-strategy report, logging path) are not carried over — they are not part of an integrity check.
+
+Do not alter `--config-only` or `--no-aggressive` semantics. `--config-only` already exits before ticket iteration; the `merged_into_main` call must also be behind the `!config_only` guard. `--no-aggressive` is already threaded into `CmdContext::load` and controls the fetch; the `merged_into_main` call happens after load, so it respects the same flag implicitly.
+
+Delete `apm/src/cmd/verify.rs`.
+
+**Step 4 — Remove the `Verify` command from `apm/src/main.rs`**
+
+- Delete the `Verify { fix, no_aggressive }` variant and its `#[command]` doc block from the `Command` enum.
+- Delete the dispatch arm `Command::Verify { .. } => cmd::verify::run(...)`.
+- Remove `mod verify;` from `mod cmd { ... }` (or wherever the module is declared in main.rs).
+
+**Step 5 — Update `apm/src/hash_trip.rs`**
+
+- Remove `| super::Command::Verify { .. }` from `is_read_only_command()`.
+- Delete the `verify_is_read_only` test in `hash_trip.rs`.
+
+**Step 6 — Update `docs/commands.md`**
+
+- Delete the `apm verify` section (~lines 1066–1102).
+- Expand the `apm validate` section to list all checks now performed. Group them clearly:
+  - *Config checks*: config parse errors, invalid state-transition targets, git-host provider required for pr/merge transitions, instruction file paths, warning-only checks (e.g. missing Docker).
+  - *Ticket integrity checks* (previously validate): branch-field mismatches, duplicate branch assignments, dependency-rule violations per completion strategy.
+  - *Ticket integrity checks* (previously verify): unknown state values, ID/filename mismatches, missing branch for in_progress/implemented, merged-but-open branches, missing `## Spec`/`## History` sections, document-structure validation errors, missing worktrees for in_design/in_progress.
+- Update `--fix` description to cover both repair classes.
+- Update `--config-only` description to note it skips all per-ticket and filesystem checks.
+
+**Step 7 — Update `README.md`**
+
+Search for `apm verify`. Replace the two-line block that references both commands with a single entry for `apm validate` covering all integrity checks.
+
+**Constraints**
+
+- `verify_tickets` must NOT auto-close or auto-recreate; it only returns `Vec<String>`. The fix logic lives exclusively in `cmd/validate.rs::apply_fixes`.
+- The `--fix` flag must not silently re-provision missing worktrees. The worktree-missing issue is reported and the command exits non-zero; the implementer must verify no worktree-creation code path is introduced anywhere in this diff.
+- Backward compatibility: no behaviour changes to `--config-only`, `--json`, `--no-aggressive`, or existing validate checks.
 
 ### Open questions
 
