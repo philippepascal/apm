@@ -1,7 +1,7 @@
 +++
 id = "06a9dcab"
 title = "apm archive for non merged tasks"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/06a9dcab-apm-archive-for-non-merged-tasks"
 created_at = "2026-04-28T07:11:58.042694Z"
-updated_at = "2026-04-28T15:29:05.708603Z"
+updated_at = "2026-04-28T16:31:18.501883Z"
 +++
 
 ## Spec
@@ -76,3 +76,4 @@ Add a unit test covering the case where the default-branch ticket is non-termina
 | 2026-04-28T15:13Z | specd | ready | philippepascal |
 | 2026-04-28T15:21Z | ready | in_progress | philippepascal |
 | 2026-04-28T15:29Z | in_progress | implemented | claude-0428-1521-54b8 |
+| 2026-04-28T16:31Z | implemented | closed | philippepascal(apm-sync) |
