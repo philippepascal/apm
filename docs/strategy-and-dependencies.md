@@ -39,9 +39,12 @@ available but have caveats that make them unsafe for autonomous workers:
 
 ## Dependency rules per strategy
 
-A ticket's `depends_on` is enforced in two places: at `apm new --depends-on`
-(creation) and at `apm start` (entering implementation). The rule is the
-same in both places, derived from the configured completion strategy:
+A ticket's `depends_on` is enforced wherever it can be written:
+`apm new --depends-on` and `apm set <id> depends_on …` (and any future
+write site). The rule is derived from the configured completion strategy.
+Re-validating at `apm start` is unnecessary because the hash-trip /
+`apm validate` mechanism (below) already catches the case where a
+previously-valid setup becomes invalid after a config change:
 
 | Strategy | `--depends-on` allowed when … |
 |---|---|
@@ -109,8 +112,9 @@ enforces the precondition; it does not stop running workers.
    tradeoffs.
 2. `max_workers_per_epic` is a global config option in `apm.toml`, default
    `1`. The per-epic override is removed.
-3. `--depends-on` is gated by the strategy/target rules at both `apm new`
-   and `apm start`.
+3. `--depends-on` is gated by the strategy/target rules at every write
+   site (`apm new --depends-on`, `apm set <id> depends_on …`, and any
+   future write path).
 4. `apm validate` enforces the dependency rules across all tickets.
 5. A hash-trip on `apm.toml` / `workflow.toml` triggers automatic
    re-validation; failures block mutating commands.
