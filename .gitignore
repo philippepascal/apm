@@ -11,6 +11,7 @@
 CLAUDE.md
 
 # apm
+.apm--worktrees
 .apm-worker.log
 pr-body.txt
 .apm/local.toml
