@@ -45,7 +45,52 @@ The fix is a new `[agents]` config field, `max_workers_on_default`, that limits 
 
 ### Approach
 
-How the implementation will work.
+**`apm-core/src/config.rs`**
+
+1. Add `max_workers_on_default: usize` to `AgentsConfig`, with a serde default function returning `1`:
+   ```rust
+   #[serde(default = "default_max_workers_on_default")]
+   pub max_workers_on_default: usize,
+
+   fn default_max_workers_on_default() -> usize { 1 }
+   ```
+
+2. Add a method alongside `blocked_epics()`:
+   ```rust
+   pub fn is_default_branch_blocked(&self, active_epic_ids: &[Option<String>]) -> bool {
+       if self.agents.max_workers_on_default == 0 {
+           return false;
+       }
+       let count = active_epic_ids.iter().filter(|e| e.is_none()).count();
+       count >= self.agents.max_workers_on_default
+   }
+   ```
+
+**`apm-core/src/start.rs` — `run_next()` (~line 365)**
+
+After the existing `blocked_epics()` call, compute and apply the default-branch limit:
+```rust
+let blocked = config.blocked_epics(&active_epic_ids);
+let default_blocked = config.is_default_branch_blocked(&active_epic_ids);
+let tickets: Vec<_> = all_tickets.into_iter()
+    .filter(|t| match t.frontmatter.epic.as_deref() {
+        Some(eid) => !blocked.iter().any(|b| b == eid),
+        None => !default_blocked,
+    })
+    .collect();
+```
+
+**`apm-core/src/start.rs` — `spawn_next_worker()`**
+
+Inspect whether `active_epic_ids` is already available inside this function or passed as a parameter. If it is available (recomputed internally), add the same `is_default_branch_blocked()` call and update the candidate filter identically. If it receives a pre-computed `blocked_epics: Vec<String>` only, add a `default_blocked: bool` parameter and thread the value through from the call site in `work.rs`.
+
+**`apm/src/cmd/work.rs` — daemon spawn loop (~line 111)**
+
+After computing `blocked_epics` from active workers' epic IDs, also call `config.is_default_branch_blocked()` with the same `active_epic_ids` slice, and pass the resulting bool to `spawn_next_worker()` (if that function requires it as a parameter per the step above).
+
+**Tests**
+
+Add unit tests in `config.rs` (or a dedicated test module) for `is_default_branch_blocked()` covering the four cases in the acceptance criteria. No integration-test changes are required unless existing tests assert on the current "non-epic tickets are never blocked" behaviour.
 
 ### Open questions
 
