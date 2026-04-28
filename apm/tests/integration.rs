@@ -6940,3 +6940,135 @@ fn clean_untracked_does_not_affect_worktrees_dir_debris() {
         "debris file outside any registered worktree must not be touched by --untracked"
     );
 }
+
+#[test]
+fn clean_removes_closed_ticket_worktree_in_repo_layout() {
+    // Happy path under the new in-repo layout: a closed ticket with a
+    // provisioned worktree at <repo>/worktrees/<branch> must be cleaned via
+    // git worktree remove (not rm -rf), and both the dir and the registry
+    // entry must be gone after clean.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "happy");
+    merge_into_main(p, &branch);
+
+    let wt_path = p.join("worktrees").join("ticket-0001-happy");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Sanity: worktree exists on disk and in registry before clean.
+    assert!(wt_path.is_dir(), "worktree dir must exist before clean");
+    let list_before = std::process::Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        String::from_utf8_lossy(&list_before.stdout).contains("ticket-0001-happy"),
+        "worktree must be registered before clean"
+    );
+
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
+
+    assert!(
+        !wt_path.exists(),
+        "worktree dir must be removed by clean: {}",
+        wt_path.display()
+    );
+    let list_after = std::process::Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        !String::from_utf8_lossy(&list_after.stdout).contains("ticket-0001-happy"),
+        "registry entry must be gone after clean"
+    );
+}
+
+#[test]
+fn external_layout_worktrees_provisioned_at_sibling_path() {
+    // Existing repos with `dir = "../<name>--worktrees"` must keep working
+    // unchanged. provision_worktree must place the worktree at the
+    // configured external sibling, not inside the repo.
+    //
+    // Build the repo as a subdirectory of a controlled tempdir so the `..`
+    // resolution lands inside our tempdir (not the shared OS temp parent).
+    let outer = tempfile::tempdir().unwrap();
+    let p = outer.path().join("repo");
+    std::fs::create_dir_all(&p).unwrap();
+
+    git(&p, &["init", "-q", "-b", "main"]);
+    git(&p, &["config", "user.email", "test@test.com"]);
+    git(&p, &["config", "user.name", "test"]);
+
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[agents]
+max_concurrent = 1
+
+[worktrees]
+dir = "../external-worktrees"
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[ticket.sections]]
+name     = "Problem"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Acceptance criteria"
+type     = "tasks"
+required = true
+
+[[ticket.sections]]
+name     = "Out of scope"
+type     = "free"
+required = true
+
+[[ticket.sections]]
+name     = "Approach"
+type     = "free"
+required = true
+"#,
+    )
+    .unwrap();
+
+    git(&p, &["add", "apm.toml"]);
+    git(&p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    git(&p, &["branch", "ticket/ext-test"]);
+
+    let cfg = apm_core::config::Config::load(&p).unwrap();
+    let mut warnings: Vec<String> = Vec::new();
+    let wt = apm_core::worktree::provision_worktree(&p, &cfg, "ticket/ext-test", &mut warnings)
+        .unwrap();
+
+    let expected = outer.path().join("external-worktrees").join("ticket-ext-test");
+    assert_eq!(
+        wt.canonicalize().unwrap(),
+        expected.canonicalize().unwrap(),
+        "external worktree must be at sibling path: wt={} expected={}",
+        wt.display(),
+        expected.display()
+    );
+    assert!(wt.is_dir(), "external worktree dir must exist on disk");
+    assert!(
+        !wt.starts_with(&p),
+        "external worktree must not be inside the repo: wt={}",
+        wt.display()
+    );
+}

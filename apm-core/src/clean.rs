@@ -239,6 +239,11 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
             worktree::remove_worktree(root, path, force)?;
         } else {
             // Path no longer on disk — prune dangling registry entry only.
+            // `--expire now` overrides git's default grace period (a few
+            // months) and prunes every stale entry immediately, not just
+            // this candidate's. Acceptable because APM expects to own the
+            // worktrees directory; unrelated stale entries from manual
+            // workflows will also be cleaned.
             crate::git_util::run(root, &["worktree", "prune", "--expire", "now"])?;
         }
     }

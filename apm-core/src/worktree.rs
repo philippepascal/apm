@@ -160,29 +160,76 @@ mod tests {
     }
 
     #[test]
-    fn provision_worktree_path_is_inside_repo() {
+    fn provision_worktree_creates_dir_inside_repo() {
         let tmp = TempDir::new().unwrap();
         let repo = tmp.path();
         git_init(repo);
-        // Initial commit so worktrees work.
         std::fs::write(repo.join("README"), "x").unwrap();
         Command::new("git").args(["-c", "commit.gpgsign=false", "add", "README"]).current_dir(repo).output().unwrap();
         Command::new("git").args(["-c", "commit.gpgsign=false", "commit", "-m", "init"]).current_dir(repo).output().unwrap();
+        Command::new("git").args(["branch", "ticket/test-branch"]).current_dir(repo).output().unwrap();
+
+        let toml = r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+"#;
+        let config: crate::config::Config = toml::from_str(toml).unwrap();
+
+        let mut warnings: Vec<String> = Vec::new();
+        let wt = super::provision_worktree(repo, &config, "ticket/test-branch", &mut warnings).unwrap();
 
         let main_root = crate::git_util::main_worktree_root(repo)
             .unwrap_or_else(|| repo.to_path_buf());
-        let worktrees_base = main_root.join("worktrees");
-
+        let expected = main_root.join("worktrees").join("ticket-test-branch");
+        assert_eq!(wt, expected, "provisioned path must be <repo>/worktrees/<branch-slug>");
+        assert!(wt.is_dir(), "provisioned worktree dir must exist on disk: {}", wt.display());
         assert!(
-            worktrees_base.starts_with(&main_root),
-            "worktrees dir must be inside repo: base={} repo={}",
-            worktrees_base.display(),
+            wt.starts_with(&main_root),
+            "worktree path must be inside repo: wt={} repo={}",
+            wt.display(),
             main_root.display()
         );
-        assert!(
-            !worktrees_base.to_string_lossy().contains("--worktrees"),
-            "worktrees dir must not use the old external sibling layout"
+    }
+
+    #[test]
+    fn provision_worktree_honours_external_layout() {
+        // Existing repos with `dir = "../<name>--worktrees"` must keep working
+        // — the external layout is still supported, just no longer the default.
+        let tmp = TempDir::new().unwrap();
+        let repo = tmp.path().join("repo");
+        std::fs::create_dir_all(&repo).unwrap();
+        git_init(&repo);
+        std::fs::write(repo.join("README"), "x").unwrap();
+        Command::new("git").args(["-c", "commit.gpgsign=false", "add", "README"]).current_dir(&repo).output().unwrap();
+        Command::new("git").args(["-c", "commit.gpgsign=false", "commit", "-m", "init"]).current_dir(&repo).output().unwrap();
+        Command::new("git").args(["branch", "ticket/ext-branch"]).current_dir(&repo).output().unwrap();
+
+        let toml = r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "../external-worktrees"
+"#;
+        let config: crate::config::Config = toml::from_str(toml).unwrap();
+
+        let mut warnings: Vec<String> = Vec::new();
+        let wt = super::provision_worktree(&repo, &config, "ticket/ext-branch", &mut warnings).unwrap();
+
+        let expected = tmp.path().join("external-worktrees").join("ticket-ext-branch");
+        assert_eq!(
+            wt.canonicalize().unwrap(),
+            expected.canonicalize().unwrap(),
+            "external layout must place worktree as a sibling of the repo"
         );
+        assert!(wt.is_dir(), "external worktree dir must exist on disk: {}", wt.display());
     }
 }
 
