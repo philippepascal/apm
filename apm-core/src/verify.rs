@@ -1,8 +1,10 @@
 use crate::config::Config;
 use crate::ticket::Ticket;
 use std::collections::HashSet;
+use std::path::Path;
 
 pub fn verify_tickets(
+    root: &Path,
     config: &Config,
     tickets: &[Ticket],
     merged: &HashSet<String>,
@@ -14,6 +16,12 @@ pub fn verify_tickets(
 
     let in_progress_states: HashSet<&str> =
         ["in_progress", "implemented"].iter().copied().collect();
+
+    let worktree_states: HashSet<&str> =
+        ["in_design", "in_progress"].iter().copied().collect();
+    let main_root = crate::git_util::main_worktree_root(root)
+        .unwrap_or_else(|| root.to_path_buf());
+    let worktrees_base = main_root.join(&config.worktrees.dir);
 
     let mut issues: Vec<String> = Vec::new();
 
@@ -49,6 +57,20 @@ pub fn verify_tickets(
                 && merged.contains(branch.as_str())
             {
                 issues.push(format!("{prefix}: branch {branch} is merged but ticket not closed"));
+            }
+        }
+
+        // in_design/in_progress with missing worktree directory.
+        if worktree_states.contains(fm.state.as_str()) {
+            if let Some(branch) = &fm.branch {
+                let wt_name = branch.replace('/', "-");
+                let wt_path = worktrees_base.join(&wt_name);
+                if !wt_path.is_dir() {
+                    issues.push(format!(
+                        "{prefix}: worktree at {} is missing",
+                        wt_path.display()
+                    ));
+                }
             }
         }
 
