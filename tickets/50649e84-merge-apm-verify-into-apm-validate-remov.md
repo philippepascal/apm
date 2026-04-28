@@ -68,7 +68,7 @@ Concrete edits:
 - [x] `apm validate --fix` continues to repair branch-field mismatches (existing behaviour)
 - [x] `apm validate --config-only` skips all per-ticket and filesystem checks, including the merged-branch and worktree checks brought over from verify
 - [x] `apm validate --json` includes issues from the full merged check set in its structured output
-- [ ] A config or workflow change that triggers the hash-trip now catches dangling worktrees and frontmatter drift without a separate `apm verify` invocation
+- [x] A config or workflow change that triggers the hash-trip now catches dangling worktrees and frontmatter drift without a separate `apm verify` invocation
 - [ ] `docs/commands.md` has no `apm verify` section; the `apm validate` section lists the complete merged check set
 - [ ] `README.md` contains no reference to `apm verify`
 - [ ] All three tests previously in `apm-core/tests/verify.rs` pass under the validate test surface
