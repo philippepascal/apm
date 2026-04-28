@@ -441,7 +441,6 @@ async fn main() {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::handlers::tickets::{extract_frontmatter_raw, extract_history_raw};
     use apm_core::ticket::{Frontmatter, Ticket};
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
@@ -854,30 +853,6 @@ satisfies_deps = true
         assert!(json["valid_transitions"].is_array());
     }
 
-    #[test]
-    fn extract_frontmatter_raw_returns_toml_content() {
-        let content = "+++\nid = \"abc\"\ntitle = \"t\"\n+++\n\n## Body\n";
-        let fm = extract_frontmatter_raw(content).unwrap();
-        // extract_frontmatter_raw returns the slice up to (but not including) the \n before +++
-        assert_eq!(fm, "id = \"abc\"\ntitle = \"t\"");
-    }
-
-    #[test]
-    fn extract_frontmatter_raw_returns_none_on_missing() {
-        assert!(extract_frontmatter_raw("no frontmatter").is_none());
-    }
-
-    #[test]
-    fn extract_history_raw_returns_from_heading() {
-        let content = "## Spec\n\nBody text\n\n## History\n\n| row |";
-        assert_eq!(extract_history_raw(content), "\n## History\n\n| row |");
-    }
-
-    #[test]
-    fn extract_history_raw_returns_empty_when_absent() {
-        assert_eq!(extract_history_raw("no history here"), "");
-    }
-
     #[tokio::test]
     async fn put_body_in_memory_returns_501() {
         let app = build_app_with_tickets(test_tickets());
@@ -887,12 +862,47 @@ satisfies_deps = true
                     .method("PUT")
                     .uri("/api/tickets/aaaabbbb/body")
                     .header("content-type", "application/json")
-                    .body(Body::from(r#"{"content":"+++\n+++\n\nbody"}"#))
+                    .body(Body::from(r#"{"spec":"just a spec"}"#))
                     .unwrap(),
             )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
+    async fn put_body_rejects_spec_with_front_matter_delimiter() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/tickets/aaaabbbb/body")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"spec":"contains +++ delimiter"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn put_body_rejects_spec_with_history_section() {
+        let app = build_app_with_tickets(test_tickets());
+        let body = serde_json::json!({"spec": "## Spec\n\nfoo\n\n## History\n\n| row |"}).to_string();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri("/api/tickets/aaaabbbb/body")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
@@ -913,6 +923,27 @@ satisfies_deps = true
         assert!(json["raw"].is_string());
         let raw = json["raw"].as_str().unwrap();
         assert!(raw.starts_with("+++\n"), "raw should start with +++");
+    }
+
+    #[tokio::test]
+    async fn get_ticket_includes_spec_field() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/aaaabbbb")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["spec"].is_string(), "spec field should be present");
+        let spec = json["spec"].as_str().unwrap();
+        assert!(!spec.contains("+++"), "spec should not contain front matter");
+        assert!(!spec.contains("## History"), "spec should not contain history");
     }
 
     #[tokio::test]

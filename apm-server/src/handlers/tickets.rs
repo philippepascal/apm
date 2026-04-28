@@ -20,19 +20,6 @@ pub(crate) fn extract_section<'a>(body: &'a str, heading: &str) -> &'a str {
     }
 }
 
-pub(crate) fn extract_frontmatter_raw(content: &str) -> Option<&str> {
-    let rest = content.strip_prefix("+++\n")?;
-    let end = rest.find("\n+++")?;
-    Some(&rest[..end])
-}
-
-pub(crate) fn extract_history_raw(content: &str) -> &str {
-    match content.find("\n## History") {
-        Some(idx) => &content[idx..],
-        None => "",
-    }
-}
-
 pub async fn load_tickets(state: &AppState) -> Result<Vec<apm_core::ticket::Ticket>, AppError> {
     match &state.source {
         TicketSource::Git(root, tickets_dir) => {
@@ -175,6 +162,7 @@ pub async fn get_ticket(
             };
             let mut ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
             let raw = ticket.serialize().unwrap_or_default();
+            let (spec, _) = apm_core::review::split_body(&ticket.body);
             if ticket.frontmatter.author.is_none() {
                 ticket.frontmatter.author = Some("unassigned".to_string());
             }
@@ -183,6 +171,7 @@ pub async fn get_ticket(
                 frontmatter: ticket.frontmatter,
                 body: ticket.body,
                 raw,
+                spec,
                 valid_transitions,
                 blocking_deps,
                 owner,
@@ -253,6 +242,7 @@ pub async fn transition_ticket(
                     })
                     .await?;
                     let raw = ticket.serialize().unwrap_or_default();
+                    let (spec, _) = apm_core::review::split_body(&ticket.body);
                     let owner = ticket.frontmatter.owner.clone();
                     let mut fm = ticket.frontmatter;
                     fm.owner = None;
@@ -260,6 +250,7 @@ pub async fn transition_ticket(
                         frontmatter: fm,
                         body: ticket.body,
                         raw,
+                        spec,
                         valid_transitions,
                         blocking_deps,
                         owner,
@@ -276,10 +267,26 @@ pub async fn put_body(
     Path(id): Path<String>,
     Json(req): Json<PutBodyRequest>,
 ) -> Result<Response, AppError> {
+    if req.spec.contains("+++") {
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "spec must not contain front matter delimiters (+++)"})),
+        )
+            .into_response());
+    }
+    if req.spec.contains("## History") {
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "spec must not contain a ## History section"})),
+        )
+            .into_response());
+    }
+
     let root = match state.git_root() {
         Some(r) => r.clone(),
         None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
     };
+
     let tickets = load_tickets(&state).await?;
     let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
         Err(e) => {
@@ -312,63 +319,26 @@ pub async fn put_body(
         }
     };
 
+    let ticket_path = ticket.path.clone();
+    let new_spec = req.spec.clone();
     let root_clone = root.clone();
     let branch_clone = branch.clone();
     let rel_path_clone = rel_path.clone();
-    let current_content = crate::util::blocking(move || {
-        apm_core::git::read_from_branch(&root_clone, &branch_clone, &rel_path_clone)
+    let new_content = crate::util::blocking(move || {
+        let current_content = apm_core::git::read_from_branch(&root_clone, &branch_clone, &rel_path_clone)?;
+        let current_ticket = apm_core::ticket::Ticket::parse(&ticket_path, &current_content)?;
+        let (_, current_history) = apm_core::review::split_body(&current_ticket.body);
+        let new_body = format!("{}{}", new_spec.trim_end(), current_history);
+        let updated = apm_core::ticket::Ticket {
+            frontmatter: current_ticket.frontmatter,
+            body: new_body,
+            path: current_ticket.path,
+        };
+        updated.serialize()
     }).await?;
 
-    let current_fm = match extract_frontmatter_raw(&current_content) {
-        Some(fm) => fm.to_owned(),
-        None => {
-            return Err(AppError(anyhow::anyhow!("cannot parse frontmatter from current ticket")))
-        }
-    };
-    let submitted_fm = match extract_frontmatter_raw(&req.content) {
-        Some(fm) => fm.to_owned(),
-        None => {
-            return Ok((
-                StatusCode::UNPROCESSABLE_ENTITY,
-                Json(serde_json::json!({"error": "cannot parse frontmatter from submitted content"})),
-            )
-                .into_response())
-        }
-    };
-
-    let current_fm_val: toml::Value = toml::from_str(&current_fm)
-        .map_err(|e| AppError(anyhow::anyhow!("invalid current frontmatter TOML: {e}")))?;
-    let submitted_fm_val: toml::Value = match toml::from_str(&submitted_fm) {
-        Ok(v) => v,
-        Err(_) => {
-            return Ok((
-                StatusCode::UNPROCESSABLE_ENTITY,
-                Json(serde_json::json!({"error": "invalid frontmatter TOML in submitted content"})),
-            )
-                .into_response())
-        }
-    };
-    if current_fm_val != submitted_fm_val {
-        return Ok((
-            StatusCode::UNPROCESSABLE_ENTITY,
-            Json(serde_json::json!({"error": "frontmatter is read-only"})),
-        )
-            .into_response());
-    }
-
-    let current_history = extract_history_raw(&current_content).to_owned();
-    let submitted_history = extract_history_raw(&req.content).to_owned();
-    if current_history != submitted_history {
-        return Ok((
-            StatusCode::UNPROCESSABLE_ENTITY,
-            Json(serde_json::json!({"error": "history section is read-only"})),
-        )
-            .into_response());
-    }
-
-    let content = req.content.clone();
     crate::util::blocking(move || {
-        apm_core::git::commit_to_branch(&root, &branch, &rel_path, &content, "ui: edit ticket body")
+        apm_core::git::commit_to_branch(&root, &branch, &rel_path, &new_content, "ui: edit ticket body")
     }).await?;
 
     Ok(Json(serde_json::json!({"ok": true})).into_response())
@@ -470,6 +440,7 @@ pub async fn patch_ticket(
     })
     .await?;
     let raw = updated.serialize().unwrap_or_default();
+    let (spec, _) = apm_core::review::split_body(&updated.body);
     let owner = updated.frontmatter.owner.clone();
     let mut fm = updated.frontmatter;
     fm.owner = None;
@@ -477,6 +448,7 @@ pub async fn patch_ticket(
         frontmatter: fm,
         body: updated.body,
         raw,
+        spec,
         valid_transitions,
         blocking_deps,
         owner,

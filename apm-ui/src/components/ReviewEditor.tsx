@@ -15,6 +15,7 @@ interface TicketDetail {
   state: string
   body: string
   raw: string
+  spec: string
   valid_transitions: { to: string; label: string }[]
 }
 
@@ -22,19 +23,6 @@ async function fetchTicket(id: string): Promise<TicketDetail> {
   const res = await fetch(`/api/tickets/${id}`)
   if (!res.ok) throw Object.assign(new Error('fetch failed'), { status: res.status })
   return res.json()
-}
-
-function getFrontmatterEnd(content: string): number {
-  if (!content.startsWith('+++\n')) return 0
-  const idx = content.indexOf('\n+++', 4)
-  if (idx === -1) return 0
-  const end = idx + 4
-  return content[end] === '\n' ? end + 1 : end
-}
-
-function getHistoryStart(content: string): number {
-  const idx = content.indexOf('\n## History')
-  return idx === -1 ? content.length : idx
 }
 
 
@@ -116,7 +104,7 @@ const checkboxPlugin = ViewPlugin.fromClass(
 function Editor({ ticket }: { ticket: TicketDetail }) {
   const editorRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
-  const initialDoc = ticket.raw
+  const initialDoc = ticket.spec
   const [isDirty, setIsDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -134,19 +122,6 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
         extensions: [
           basicSetup,
           markdown(),
-          EditorState.changeFilter.of((tr) => {
-            if (!tr.docChanged) return true
-            const docStr = tr.startState.doc.toString()
-            const fmEnd = getFrontmatterEnd(docStr)
-            const histStart = getHistoryStart(docStr)
-            let blocked = false
-            tr.changes.iterChanges((fromA, toA) => {
-              if (fromA < fmEnd || toA >= histStart) {
-                blocked = true
-              }
-            })
-            return !blocked
-          }),
           checkboxPlugin,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
@@ -169,14 +144,14 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
 
   async function handleSave(): Promise<boolean> {
     if (!viewRef.current) return false
-    const content = viewRef.current.state.doc.toString()
+    const spec = viewRef.current.state.doc.toString()
     setSaving(true)
     setError(null)
     try {
       const res = await fetch(`/api/tickets/${ticket.id}/body`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ spec }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
