@@ -36,7 +36,10 @@ The fix is to walk every non-terminal ticket whose state is in `{in_design, in_p
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-recreating missing worktrees via `--fix`
+- Detecting stale git worktree registrations (entries in `git worktree list` that point to deleted directories) — a separate concern
+- Worktree checks for `implemented`, `blocked`, or any other state outside `{in_design, in_progress}`
+- Recreating or repairing the underlying git metadata for the missing worktree
 
 ### Approach
 
