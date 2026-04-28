@@ -62,7 +62,15 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- render_config(), render_workflow(), render_ticket() implementations -- those are sibling tickets d486d183, 7ba021e8, and 14214305 respectively
+- The apm help command dispatcher and topic routing (ticket bc89e0a0)
+- apm help commands content (ticket 3665e017)
+- ANSI/colour formatting or markdown rendering in output
+- Pager integration (less/more)
+- Publishing a JSON Schema file as a build artifact
+- Deriving JsonSchema on apm-server structs
+- LocalConfig and LocalWorkersOverride -- internal override file, not a user-facing apm.toml schema
+- Ticket, TicketDocument, ChecklistItem structs in ticket_fmt.rs -- not TOML config schemas; only Frontmatter is in scope
 
 ### Approach
 
