@@ -1,7 +1,7 @@
 +++
 id = "ceff7f6c"
 title = "apm worker is_alive should reject zombie/defunct processes"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ceff7f6c-apm-worker-is-alive-should-reject-zombie"
 created_at = "2026-04-28T00:50:51.047540Z"
-updated_at = "2026-04-28T00:51:43.520776Z"
+updated_at = "2026-04-28T01:02:27.065486Z"
 +++
 
 ## Spec
@@ -54,3 +54,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T00:50Z | — | new | philippepascal |
 | 2026-04-28T00:51Z | new | groomed | philippepascal |
+| 2026-04-28T01:02Z | groomed | in_design | philippepascal |
