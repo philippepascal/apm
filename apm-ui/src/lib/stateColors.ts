@@ -45,6 +45,7 @@ const GRAY: StateColors = {
 const STATE_COLORS: Record<string, StateColors> = {
   new: GRAY,
   blocked: RED,
+  merge_failed: RED,
   question: AMBER,
   in_design: BLUE,
   in_progress: BLUE,
