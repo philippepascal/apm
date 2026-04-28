@@ -1,7 +1,7 @@
 +++
 id = "63f5e6d2"
 title = "UI: epics filter fixes"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/63f5e6d2-ui-epics-filter-fixes"
 created_at = "2026-04-28T19:28:59.918275Z"
-updated_at = "2026-04-28T19:46:12.765942Z"
+updated_at = "2026-04-28T19:46:17.943010Z"
 +++
 
 ## Spec
@@ -75,3 +75,4 @@ The existing `hasActiveFilters` check (`epicFilter !== null`) already treats `"_
 | 2026-04-28T19:28Z | — | new | philippepascal |
 | 2026-04-28T19:33Z | new | groomed | philippepascal |
 | 2026-04-28T19:42Z | groomed | in_design | philippepascal |
+| 2026-04-28T19:46Z | in_design | specd | claude-0428-1942-39b8 |
