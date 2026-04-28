@@ -1,7 +1,7 @@
 +++
 id = "07d51d55"
 title = "config has a max_default_branch_workers"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/07d51d55-config-has-a-max-default-branch-workers"
 created_at = "2026-04-28T06:56:57.028226Z"
-updated_at = "2026-04-28T15:11:24.790652Z"
+updated_at = "2026-04-28T15:13:43.016153Z"
 +++
 
 ## Spec
@@ -125,3 +125,4 @@ Add unit tests in `config.rs` (or a dedicated test module) for `is_default_branc
 | 2026-04-28T15:06Z | specd | ammend | philippepascal |
 | 2026-04-28T15:08Z | ammend | in_design | philippepascal |
 | 2026-04-28T15:11Z | in_design | specd | claude-0428-1508-c3f0 |
+| 2026-04-28T15:13Z | specd | ready | philippepascal |
