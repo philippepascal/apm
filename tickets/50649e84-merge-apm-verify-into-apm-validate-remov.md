@@ -55,7 +55,23 @@ Concrete edits:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm verify` exits with an unrecognized-command error; no deprecation alias exists
+- [ ] `apm validate` reports unknown ticket state values (state not in `config.workflow.states`)
+- [ ] `apm validate` reports tickets whose filename numeric prefix does not match the frontmatter `id` field
+- [ ] `apm validate` reports `in_progress` and `implemented` tickets that have no `branch` field
+- [ ] `apm validate` reports tickets whose branch is already merged into the default branch but whose state is not closed
+- [ ] `apm validate` reports tickets in `in_design` or `in_progress` states whose worktree directory is absent from disk
+- [ ] `apm validate` reports tickets missing a `## Spec` section
+- [ ] `apm validate` reports tickets missing a `## History` section
+- [ ] `apm validate` still reports all previously-existing check categories: config parse errors, invalid state-transition targets, branch-field mismatches, duplicate branch assignments, and dependency-rule violations
+- [ ] `apm validate --fix` auto-closes tickets whose branch is already merged (calls `ticket::close`); it does NOT recreate missing worktrees
+- [ ] `apm validate --fix` continues to repair branch-field mismatches (existing behaviour)
+- [ ] `apm validate --config-only` skips all per-ticket and filesystem checks, including the merged-branch and worktree checks brought over from verify
+- [ ] `apm validate --json` includes issues from the full merged check set in its structured output
+- [ ] A config or workflow change that triggers the hash-trip now catches dangling worktrees and frontmatter drift without a separate `apm verify` invocation
+- [ ] `docs/commands.md` has no `apm verify` section; the `apm validate` section lists the complete merged check set
+- [ ] `README.md` contains no reference to `apm verify`
+- [ ] All three tests previously in `apm-core/tests/verify.rs` pass under the validate test surface
 
 ### Out of scope
 
