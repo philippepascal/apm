@@ -1,7 +1,7 @@
 +++
 id = "38976b4b"
 title = "Move worktrees inside repo folder; audit apm clean for safety"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/38976b4b-move-worktrees-inside-repo-folder-audit-"
 created_at = "2026-04-28T01:24:55.011587Z"
-updated_at = "2026-04-28T07:13:12.144484Z"
+updated_at = "2026-04-28T07:22:42.995942Z"
 +++
 
 ## Spec
@@ -99,3 +99,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T01:24Z | — | new | philippepascal |
 | 2026-04-28T07:13Z | new | groomed | philippepascal |
+| 2026-04-28T07:22Z | groomed | in_design | philippepascal |
