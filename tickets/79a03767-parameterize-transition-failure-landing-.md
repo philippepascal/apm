@@ -1,7 +1,7 @@
 +++
 id = "79a03767"
 title = "Parameterize transition failure landing in workflow.toml (on_failure)"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 6
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/79a03767-parameterize-transition-failure-landing-"
 created_at = "2026-04-28T23:00:16.821798Z"
-updated_at = "2026-04-28T23:31:05.443640Z"
+updated_at = "2026-04-28T23:35:30.264990Z"
 depends_on = ["50649e84"]
 +++
 
@@ -279,3 +279,4 @@ Integration tests for `--fix` (in `apm/tests/` or via the existing CLI test harn
 | 2026-04-28T23:14Z | ammend | in_design | philippepascal |
 | 2026-04-28T23:23Z | in_design | specd | claude-0428-2314-fd60 |
 | 2026-04-28T23:31Z | specd | ready | philippepascal |
+| 2026-04-28T23:35Z | ready | in_progress | philippepascal |
