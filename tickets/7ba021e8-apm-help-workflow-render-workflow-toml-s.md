@@ -19,26 +19,11 @@ depends_on = ["bc89e0a0", "069c3403"]
 
 ### Problem
 
-Replace the `render_workflow()` stub from ticket bc89e0a0 with a real renderer that uses the auto-derive infrastructure from ticket 069c3403 to render the `WorkflowConfig` struct and its nested types from `apm-core/src/config.rs`.
+The `render_workflow()` function in `apm/src/cmd/help.rs` (introduced as a stub by ticket bc89e0a0) returns a placeholder string and does nothing useful. As a result, `apm help workflow` gives users no actionable information about what fields are valid in `.apm/workflow.toml` (or in the `[workflow]` section of `apm.toml`), their types, defaults, or purpose.
 
-**Structure to render:**
-- `[[workflow.states]]` array — each `StateConfig` with fields: `id`, `label`, `actionable`, `terminal`, `satisfies_deps` (enum: bool or string-tag), `dep_requires`, `worker_end`, `instructions`.
-- `[[workflow.states.transitions]]` nested array — each `TransitionConfig` with fields: `to`, `trigger`, `completion` (enum: `merge`, `pr`, `pr_or_epic_merge`, `pull`, `none`), `profile`, `context_section`, `focus_section`, `warning`, `label`.
-- `[workflow.prioritization]` — `PrioritizationConfig` with `priority_weight`, `effort_weight`, `risk_weight`.
+The auto-derive infrastructure from ticket 069c3403 can render any `JsonSchema`-annotated struct as a formatted reference table. The types that govern workflow config — `WorkflowConfig`, `StateConfig`, `TransitionConfig`, `PrioritizationConfig`, `SatisfiesDeps`, `CompletionStrategy` — already have `JsonSchema` derived on them (by 069c3403), but most of their fields carry no Rust doc comments today. Since `schemars` converts `/// doc comments` directly into the `description` column of the rendered table, the output would be almost entirely blank without first adding those comments.
 
-**Output structure:**
-- Top-level explanation that `workflow.states` is an array (each element an object) and that the structure is config-driven (users define their own states and transitions).
-- Per field: name, type, default, description from doc comments.
-- For enum fields like `completion` and `satisfies_deps`: list the variants and describe each briefly (the spec at `docs/strategy-and-dependencies.md` already describes `completion` strategies — pull from there or reference it).
-
-**Implementation pointers:**
-- In `apm/src/cmd/help.rs`: replace the stub for `workflow` topic. Call into `apm_core::help_schema` for the `WorkflowConfig` type.
-- Doc comments on `WorkflowConfig`, `StateConfig`, `TransitionConfig`, `PrioritizationConfig`, `SatisfiesDeps`, `CompletionStrategy` may need to be added or improved.
-
-**Out of scope:**
-- A full tutorial on workflow design (this is reference, not guide).
-- Validation rules (those belong to `apm validate`).
-- Examples beyond struct doc comments.
+This ticket does two things: (1) adds meaningful doc comments to all fields on the workflow-related config types, drawing on the existing spec in `docs/strategy-and-dependencies.md`; (2) replaces the `render_workflow()` stub with a real implementation that calls `apm_core::help_schema::render_schema::<WorkflowConfig>()`.
 
 ### Acceptance criteria
 
