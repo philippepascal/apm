@@ -46,7 +46,13 @@ The existing hash-trip on config-file changes surfaces this check automatically 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Recovering ticket 63f5e6d2 specifically (operational; addressed manually)
+- Worker-leak / transcript work in ticket 498febe0 (separate concern)
+- Binary-version stamp in the hash-trip so a binary upgrade auto-triggers re-validation (acknowledged as a follow-up)
+- A general "sync project config from default template" command covering instruction files, `ticket.toml` defaults, or other config sections beyond workflow states
+- Adding `"closed"` to `SYSTEM_STATES` — `closed` is the implicit terminal state, intentionally not declared in `workflow.toml`
+- Adding `"in_progress"` to `SYSTEM_STATES` — the fallback default in `start.rs` is user-reachable via `apm start`; it is not a code-driven bypass
+- Modifying how `merge_failed` is written in `state.rs` (the code path stays unchanged; this ticket only adds the validation safety net)
 
 ### Approach
 
