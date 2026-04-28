@@ -12,7 +12,6 @@ pub mod cmd {
     pub mod init;
     pub mod start;
     pub mod validate;
-    pub mod verify;
     pub mod list;
     pub mod show;
     pub mod new;

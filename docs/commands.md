@@ -21,7 +21,7 @@ detailed breakdown of the git operations each command performs internally. `apm-
 | [Inspection](#inspection) | `list`, `next`, `show`, `spec` |
 | [Workflow orchestration](#workflow-orchestration) | `review`, `start`, `sync`, `work`, `workers` |
 | [Epics](#epics) | `epic new`, `epic close`, `epic list`, `epic set`, `epic show` |
-| [Repository maintenance](#repository-maintenance) | `archive`, `clean`, `init`, `validate`, `verify`, `worktrees` |
+| [Repository maintenance](#repository-maintenance) | `archive`, `clean`, `init`, `validate`, `worktrees` |
 | [Server & agent management](#server--agent-management-requires-apm-server) | `agents`, `register`, `revoke`, `sessions` |
 | [Internal commands](#internal-commands) | `_hook` |
 
@@ -1019,7 +1019,7 @@ with the normal setup path.
 
 ### apm validate
 
-**Validate `.apm/` config and cross-ticket integrity.**
+**Validate `.apm/` config and full ticket integrity.**
 
 #### Synopsis
 
@@ -1027,29 +1027,51 @@ with the normal setup path.
 
 #### Description
 
-Runs a suite of cross-ticket integrity checks:
+Runs the complete integrity check suite covering config correctness, ticket metadata, and
+filesystem state.
+
+**Config checks:**
 
 - `.apm/` TOML files parse without errors
 - All state transitions reference states that exist in the config
-- Every ticket's `branch` field matches its actual branch name
-- No two tickets share the same branch
+- `completion = "pr"` or `"merge"` requires `[git_host]` with a provider configured
+- Instruction file paths referenced in config exist on disk
+- Warning-only checks (e.g. `workers.container` set but Docker not in PATH)
+
+**Ticket integrity checks (previously validate):**
+
+- Every ticket's `branch` field matches its actual branch name (derived from the ticket file path)
+- Dependency-rule violations per active completion strategy
+
+**Ticket integrity checks (previously verify):**
+
+- Unknown state values (state not in `config.workflow.states`)
+- Filename numeric prefix does not match the frontmatter `id` field
+- `in_progress` or `implemented` tickets missing a `branch` field
+- Branches already merged into the default branch with the ticket still open
+- Missing `## Spec` section
+- Missing `## History` section
+- Document-structure validation errors (required sections non-empty, AC items)
+- `in_design` or `in_progress` tickets whose worktree directory is absent from disk
 
 `--fix` automatically repairs branch-field mismatches by committing the corrected frontmatter to
-the ticket's branch.
+the ticket's branch, and closes tickets whose branch has already been merged into the default
+branch. Missing worktrees are reported but **never** auto-recreated.
 
 `--json` outputs the full results as a structured JSON object — useful for CI pipelines:
 
     apm validate --json | jq '.errors'
 
-`--config-only` skips per-ticket checks and validates only the config files.
+`--config-only` skips all per-ticket and filesystem checks (including merged-branch and worktree
+checks) and validates only the config files.
 
 #### Options
 
 | Flag / Arg | Type | Default | Description |
 |------------|------|---------|-------------|
-| `--fix` | flag | false | Auto-fix repairable issues (branch field mismatches) |
+| `--fix` | flag | false | Auto-fix branch-field mismatches and close merged-branch tickets |
 | `--json` | flag | false | Output results as JSON |
-| `--config-only` | flag | false | Run only config validation; skip per-ticket checks |
+| `--config-only` | flag | false | Run only config validation; skip all per-ticket and filesystem checks |
 | `--no-aggressive` | flag | false | Skip implicit git fetch |
 
 #### Git internals
@@ -1059,45 +1081,8 @@ the ticket's branch.
 | `git fetch --all --quiet` | (aggressive only) Sync all remote refs before reading ticket data |
 | `git branch --list ticket/*` + `git branch -r --list origin/ticket/*` | Enumerate all ticket branches |
 | `git show <branch>:<path>` | Read every ticket file for validation |
-| `git add <path>` + `git commit -m "ticket(<id>): fix branch field (validate --fix)"` | (`--fix`) Commit the corrected `branch` frontmatter field to the ticket's branch |
-
----
-
-### apm verify
-
-**Check ticket and local cache integrity.**
-
-#### Synopsis
-
-    apm verify [--fix] [--no-aggressive]
-
-#### Description
-
-Scans for inconsistencies between the local branch cache and the actual git state: dangling
-worktrees, branches missing ticket files, stale cache entries, and tickets in active states whose
-branch has already been merged into the default branch.
-
-Prints the configured `completion` strategy for each state transition and the logging path (if
-logging is enabled), which is useful for diagnosing unexpected behaviour.
-
-`--fix` closes any in-progress or implemented tickets whose branch has been merged into the default
-branch, resolving the most common class of stale-state issues.
-
-#### Options
-
-| Flag / Arg | Type | Default | Description |
-|------------|------|---------|-------------|
-| `--fix` | flag | false | Auto-close tickets in active states whose branch is merged |
-| `--no-aggressive` | flag | false | Skip implicit git fetch |
-
-#### Git internals
-
-| Command | Why |
-|---------|-----|
-| `git fetch --all --quiet` | (aggressive only) Sync all remote refs before checking state |
-| `git branch --list ticket/*` + `git branch -r --list origin/ticket/*` | Enumerate all ticket branches |
-| `git show <branch>:<path>` | Read every ticket file |
 | `git branch -r --merged origin/<default>` + merge-base checks | Detect branches merged into the default branch (including squash-merges) |
+| `git add <path>` + `git commit -m "ticket(<id>): fix branch field (validate --fix)"` | (`--fix`) Commit the corrected `branch` frontmatter field to the ticket's branch |
 | `git add <path>` + `git commit -m "ticket(<id>): closed"` | (`--fix`) Close tickets whose branch has been merged |
 
 ---

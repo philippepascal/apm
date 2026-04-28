@@ -235,6 +235,98 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     errors
 }
 
+pub fn verify_tickets(
+    root: &Path,
+    config: &Config,
+    tickets: &[Ticket],
+    merged: &HashSet<String>,
+) -> Vec<String> {
+    let valid_states: HashSet<&str> = config.workflow.states.iter()
+        .map(|s| s.id.as_str())
+        .collect();
+    let terminal = config.terminal_state_ids();
+
+    let in_progress_states: HashSet<&str> =
+        ["in_progress", "implemented"].iter().copied().collect();
+
+    let worktree_states: HashSet<&str> =
+        ["in_design", "in_progress"].iter().copied().collect();
+    let main_root = crate::git_util::main_worktree_root(root)
+        .unwrap_or_else(|| root.to_path_buf());
+    let worktrees_base = main_root.join(&config.worktrees.dir);
+
+    let mut issues: Vec<String> = Vec::new();
+
+    for t in tickets {
+        let fm = &t.frontmatter;
+
+        // Skip terminal-state tickets.
+        if terminal.contains(fm.state.as_str()) { continue; }
+
+        let prefix = format!("#{} [{}]", fm.id, fm.state);
+
+        // State value not in config.
+        if !valid_states.is_empty() && !valid_states.contains(fm.state.as_str()) {
+            issues.push(format!("{prefix}: unknown state {:?}", fm.state));
+        }
+
+        // Frontmatter id doesn't match filename numeric prefix.
+        if let Some(name) = t.path.file_name().and_then(|n| n.to_str()) {
+            let expected_prefix = format!("{:04}", fm.id);
+            if !name.starts_with(&expected_prefix) {
+                issues.push(format!("{prefix}: id {} does not match filename {name}", fm.id));
+            }
+        }
+
+        // in_progress/implemented with no branch.
+        if in_progress_states.contains(fm.state.as_str()) && fm.branch.is_none() {
+            issues.push(format!("{prefix}: state requires branch but none set"));
+        }
+
+        // Branch merged but ticket not yet closed.
+        if let Some(branch) = &fm.branch {
+            if (fm.state == "in_progress" || fm.state == "implemented")
+                && merged.contains(branch.as_str())
+            {
+                issues.push(format!("{prefix}: branch {branch} is merged but ticket not closed"));
+            }
+        }
+
+        // in_design/in_progress with missing worktree directory.
+        if worktree_states.contains(fm.state.as_str()) {
+            if let Some(branch) = &fm.branch {
+                let wt_name = branch.replace('/', "-");
+                let wt_path = worktrees_base.join(&wt_name);
+                if !wt_path.is_dir() {
+                    issues.push(format!(
+                        "{prefix}: worktree at {} is missing",
+                        wt_path.display()
+                    ));
+                }
+            }
+        }
+
+        // Missing ## Spec section.
+        if !t.body.contains("## Spec") {
+            issues.push(format!("{prefix}: missing ## Spec section"));
+        }
+
+        // Missing ## History section.
+        if !t.body.contains("## History") {
+            issues.push(format!("{prefix}: missing ## History section"));
+        }
+
+        // Validate document structure (required sections non-empty, AC items present).
+        if let Ok(doc) = t.document() {
+            for err in doc.validate(&config.ticket.sections) {
+                issues.push(format!("{prefix}: {err}"));
+            }
+        }
+    }
+
+    issues
+}
+
 pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
     let mut warnings = config.load_warnings.clone();
     if let Some(container) = &config.workers.container {
@@ -259,7 +351,75 @@ mod tests {
     use super::*;
     use crate::config::{Config, CompletionStrategy, LocalConfig};
     use crate::ticket::Ticket;
+    use crate::git_util;
     use std::path::Path;
+    use std::collections::HashSet;
+
+    fn git_cmd(dir: &std::path::Path, args: &[&str]) {
+        std::process::Command::new("git")
+            .args(args)
+            .current_dir(dir)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "test@test.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "test@test.com")
+            .status()
+            .unwrap();
+    }
+
+    fn setup_verify_repo() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+
+        git_cmd(p, &["init", "-q", "-b", "main"]);
+        git_cmd(p, &["config", "user.email", "test@test.com"]);
+        git_cmd(p, &["config", "user.name", "test"]);
+
+        std::fs::write(
+            p.join("apm.toml"),
+            r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "worktrees"
+
+[[workflow.states]]
+id = "in_design"
+label = "In Design"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+
+[[workflow.states]]
+id = "specd"
+label = "Specd"
+"#,
+        )
+        .unwrap();
+
+        git_cmd(p, &["add", "apm.toml"]);
+        git_cmd(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+        dir
+    }
+
+    fn make_verify_ticket(root: &std::path::Path, id: &str, state: &str, branch: Option<&str>) -> Ticket {
+        let branch_line = match branch {
+            Some(b) => format!("branch = \"{b}\"\n"),
+            None => String::new(),
+        };
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"Test ticket\"\nstate = \"{state}\"\n{branch_line}+++\n\n## Spec\n\n## History\n"
+        );
+        let path = root.join("tickets").join(format!("{id}-test.md"));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &raw).unwrap();
+        Ticket::parse(&path, &raw).unwrap()
+    }
 
     fn make_ticket(id: &str, epic: Option<&str>, target_branch: Option<&str>) -> Ticket {
         let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
@@ -1072,5 +1232,56 @@ container = ""
         let config = load_config(toml);
         let warnings = super::validate_warnings(&config);
         assert!(warnings.is_empty(), "empty container string should not warn");
+    }
+
+    #[test]
+    fn worktree_missing_in_design() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_verify_ticket(root, "abcd1234", "in_design", Some("ticket/abcd1234-test"));
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        let main_root = git_util::main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+        let wt_path = main_root.join("worktrees").join("ticket-abcd1234-test");
+        let expected = format!(
+            "#abcd1234 [in_design]: worktree at {} is missing",
+            wt_path.display()
+        );
+        assert!(
+            issues.iter().any(|i| i == &expected),
+            "expected worktree missing issue; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn worktree_present_no_issue() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_verify_ticket(root, "abcd1234", "in_design", Some("ticket/abcd1234-test"));
+
+        std::fs::create_dir_all(root.join("worktrees").join("ticket-abcd1234-test")).unwrap();
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+        assert!(
+            !issues.iter().any(|i| i.contains("worktree")),
+            "unexpected worktree issue; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn worktree_check_skipped_for_other_states() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_verify_ticket(root, "abcd1234", "specd", Some("ticket/abcd1234-test"));
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+        assert!(
+            !issues.iter().any(|i| i.contains("worktree")),
+            "unexpected worktree issue for specd state; got: {issues:?}"
+        );
     }
 }

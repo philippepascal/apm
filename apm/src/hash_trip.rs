@@ -23,7 +23,6 @@ pub fn is_read_only_command(cmd: &super::Command) -> bool {
         super::Command::List { .. }
             | super::Command::Show { .. }
             | super::Command::Next { .. }
-            | super::Command::Verify { .. }
     )
 }
 
@@ -130,12 +129,4 @@ mod tests {
         assert!(!is_read_only_command(&cmd));
     }
 
-    #[test]
-    fn verify_is_read_only() {
-        let cmd = super::super::Command::Verify {
-            fix: false,
-            no_aggressive: false,
-        };
-        assert!(is_read_only_command(&cmd));
-    }
 }
