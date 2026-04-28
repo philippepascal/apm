@@ -85,7 +85,11 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Already-tracked files inside the worktree dir (`git rm --cached` is a separate migration concern)
+- `.git/info/exclude` as an alternative ignore source (intentionally focus on `.gitignore` because it is committed and team-shareable)
+- Removing stale gitignore patterns when `worktrees.dir` changes (old pattern stays; only new pattern is added)
+- Renaming or updating the worktree directory pattern in other APM filesystem walks (e.g., the `clean` command)
+- Windows-style backslash path separators
 
 ### Approach
 
