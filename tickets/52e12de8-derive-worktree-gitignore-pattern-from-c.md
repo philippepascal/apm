@@ -77,7 +77,7 @@ This is the "(e)" check that was discussed when 38976b4b shipped but never filed
 - [x] `apm validate` fails when `worktrees.dir` is in-repo and `.gitignore` exists but does not cover the dir in any recognized form
 - [x] `apm validate` passes when `.gitignore` contains `/<dir>/` (root-anchored, trailing slash)
 - [x] `apm validate` passes when `.gitignore` contains `/<dir>` (root-anchored, no trailing slash)
-- [ ] `apm validate` passes when `.gitignore` contains `<dir>/` (unanchored, trailing slash)
+- [x] `apm validate` passes when `.gitignore` contains `<dir>/` (unanchored, trailing slash)
 - [ ] `apm validate` passes when `.gitignore` contains `<dir>` (bare dirname)
 - [ ] `apm validate` emits no gitignore error when `worktrees.dir = "../external"`, even if `.gitignore` is absent
 - [ ] `apm validate` emits no gitignore error when `worktrees.dir = "/abs/path"`, even if `.gitignore` is absent
