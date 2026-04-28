@@ -1,7 +1,7 @@
 +++
 id = "00d33441"
 title = "in review panel, pressing save seemingly attempts to save front matter and history"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/00d33441-in-review-panel-pressing-save-seemingly-"
 created_at = "2026-04-27T22:04:31.099252Z"
-updated_at = "2026-04-28T00:50:47.852408Z"
+updated_at = "2026-04-28T01:27:17.644890Z"
 +++
 
 ## Spec
@@ -90,3 +90,4 @@ The fix narrows the contract on both sides: the frontend sends only the spec, an
 | 2026-04-27T22:17Z | groomed | in_design | philippepascal |
 | 2026-04-27T22:21Z | in_design | specd | claude-0427-2217-2718 |
 | 2026-04-28T00:50Z | specd | ready | philippepascal |
+| 2026-04-28T01:27Z | ready | in_progress | philippepascal |
