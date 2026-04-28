@@ -35,7 +35,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 - [x] **`--append` / `--append-file`**
 
 - [x] `apm spec <id> --append <text>` without `--section` exits non-zero with an error containing `"--append requires --section"`
-- [ ] `apm spec <id> --section <name> --append <text>` appends the trimmed text after the existing section content, separated by a single newline
+- [x] `apm spec <id> --section <name> --append <text>` appends the trimmed text after the existing section content, separated by a single newline
 - [ ] When the target section is empty or absent, `--append` creates it with the new text (no leading newline)
 - [ ] `apm spec <id> --section <name> --append-file <path>` reads the file at `<path>` and appends its contents to the section identically to `--append`
 - [ ] `--append-file` without `--section` exits non-zero with an error containing `"--append-file requires --section"`
