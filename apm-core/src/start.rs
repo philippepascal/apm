@@ -357,10 +357,11 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .map(|t| t.frontmatter.epic.clone())
         .collect();
     let blocked = config.blocked_epics(&active_epic_ids);
+    let default_blocked = config.is_default_branch_blocked(&active_epic_ids);
     let tickets: Vec<_> = all_tickets.into_iter()
         .filter(|t| match t.frontmatter.epic.as_deref() {
             Some(eid) => !blocked.iter().any(|b| b == eid),
-            None => true,
+            None => !default_blocked,
         })
         .collect();
 
@@ -509,6 +510,7 @@ pub fn spawn_next_worker(
     skip_permissions: bool,
     epic_filter: Option<&str>,
     blocked_epics: &[String],
+    default_blocked: bool,
     messages: &mut Vec<String>,
     warnings: &mut Vec<String>,
 ) -> Result<Option<(String, Option<String>, std::process::Child, PathBuf)>> {
@@ -532,7 +534,7 @@ pub fn spawn_next_worker(
         epic_filtered.into_iter()
             .filter(|t| match t.frontmatter.epic.as_deref() {
                 Some(eid) => !blocked_epics.iter().any(|b| b == eid),
-                None => true,
+                None => !default_blocked,
             })
             .collect()
     };

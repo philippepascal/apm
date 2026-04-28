@@ -45,17 +45,19 @@ pub fn run_engine_loop(
         }
 
         if !no_more && workers.len() < max_concurrent {
-            let blocked_epics: Vec<String> = crate::config::Config::load(root)
+            let (blocked_epics, default_blocked) = crate::config::Config::load(root)
                 .map(|config| {
                     let epic_ids: Vec<Option<String>> = workers.iter()
                         .map(|(_, eid, _, _)| eid.clone())
                         .collect();
-                    config.blocked_epics(&epic_ids)
+                    let blocked = config.blocked_epics(&epic_ids);
+                    let def_blocked = config.is_default_branch_blocked(&epic_ids);
+                    (blocked, def_blocked)
                 })
                 .unwrap_or_default();
             let mut _messages = Vec::new();
             let mut _warnings = Vec::new();
-            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics, &mut _messages, &mut _warnings) {
+            match crate::start::spawn_next_worker(root, true, skip_permissions, epic_filter.as_deref(), &blocked_epics, default_blocked, &mut _messages, &mut _warnings) {
                 Ok(None) => {
                     next_poll = Instant::now() + Duration::from_secs(interval_secs);
                     no_more = true;
