@@ -109,7 +109,7 @@ Add unit tests in `config.rs` (or a dedicated test module) for `is_default_branc
 
 ### Amendment requests
 
-- [ ] apm init should set both max_workers_per_epic and max_workers_on_default to their default (1).
+- [x] apm init should set both max_workers_per_epic and max_workers_on_default to their default (1).
 
 ### Code review
 
