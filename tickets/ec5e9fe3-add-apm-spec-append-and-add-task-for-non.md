@@ -52,7 +52,7 @@ Implementation lives in `apm-core/src/spec.rs` (where `set_section` already live
 - [x] When the target section is empty or absent, `--add-task` creates it with `- [ ] <text>` as its sole item
 - [x] When config is active and the named section has `type != "tasks"`, `--add-task` exits non-zero with an error that names the actual section type
 - [x] `--add-task` commits to the ticket branch with message `ticket(<id>): add task to <name>`
-- [ ] When aggressive sync is enabled, `--add-task` pushes to origin after the commit; a push failure prints a warning but does not fail the command
+- [x] When aggressive sync is enabled, `--add-task` pushes to origin after the commit; a push failure prints a warning but does not fail the command
 - [ ] Supplying `--add-task` together with `--set`, `--set-file`, `--append`, or `--append-file` exits with a clap conflict error
 
 ### Out of scope
