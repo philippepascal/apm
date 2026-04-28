@@ -192,7 +192,7 @@ pub fn detect_default_branch(root: &Path) -> String {
 }
 
 pub fn ensure_gitignore(path: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+    let entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json", "# apm worktrees", "/worktrees/"];
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         let mut changed = false;
@@ -274,7 +274,7 @@ dir = "tickets"
 archive_dir = "archive/tickets"
 
 [worktrees]
-dir = "../{name}--worktrees"
+dir = "worktrees"
 agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [agents]
@@ -803,5 +803,53 @@ mod tests {
             let s = sections.iter().find(|s| s.name == name).unwrap();
             assert!(s.required, "section '{name}' should be required");
         }
+    }
+
+    #[test]
+    fn default_config_has_in_repo_worktrees_dir() {
+        let config = default_config("myproj", "desc", "main", &[]);
+        assert!(
+            config.contains("dir = \"worktrees\""),
+            "default config should use in-repo worktrees dir: {config}"
+        );
+        assert!(
+            !config.contains("--worktrees"),
+            "default config must not reference the old external layout: {config}"
+        );
+    }
+
+    #[test]
+    fn setup_gitignore_includes_worktrees_pattern() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path(), None, None, None).unwrap();
+        let contents = std::fs::read_to_string(tmp.path().join(".gitignore")).unwrap();
+        assert!(contents.contains("/worktrees/"), ".gitignore must contain /worktrees/");
+        assert!(contents.contains("# apm worktrees"), ".gitignore must contain the apm worktrees comment");
+    }
+
+    #[test]
+    fn ensure_gitignore_worktrees_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join(".gitignore");
+        let mut msgs = Vec::new();
+        ensure_gitignore(&path, &mut msgs).unwrap();
+        let before = std::fs::read_to_string(&path).unwrap();
+        ensure_gitignore(&path, &mut msgs).unwrap();
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(before, after, "second ensure_gitignore must not duplicate /worktrees/ entry");
+        let count = before.matches("/worktrees/").count();
+        assert_eq!(count, 1, "/worktrees/ must appear exactly once, found {count}");
+    }
+
+    #[test]
+    fn setup_creates_worktrees_dir_inside_repo() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path(), None, None, None).unwrap();
+        assert!(
+            tmp.path().join("worktrees").exists(),
+            "worktrees dir should be created inside the repo"
+        );
     }
 }

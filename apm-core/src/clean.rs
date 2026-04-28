@@ -235,7 +235,12 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
     let mut warnings: Vec<String> = Vec::new();
 
     if let Some(ref path) = candidate.worktree {
-        worktree::remove_worktree(root, path, force)?;
+        if path.exists() {
+            worktree::remove_worktree(root, path, force)?;
+        } else {
+            // Path no longer on disk — prune dangling registry entry only.
+            crate::git_util::run(root, &["worktree", "prune", "--expire", "now"])?;
+        }
     }
 
     if remove_branches && candidate.local_branch_exists && (candidate.branch_merged || force) {

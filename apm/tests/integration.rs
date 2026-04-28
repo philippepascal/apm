@@ -6836,3 +6836,107 @@ fn merge_failed_to_in_progress_succeeds() {
         "expected in_progress state:\n{content}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// apm clean — in-repo worktree safety
+// ---------------------------------------------------------------------------
+
+#[test]
+fn clean_refuses_when_cwd_inside_worktree() {
+    // apm clean invoked from inside a ticket worktree must refuse with a
+    // non-zero exit and a message containing the expected phrase.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "cwd-guard");
+    merge_into_main(p, &branch);
+
+    let wt_path = p.join("worktrees").join("ticket-0001-cwd-guard");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .arg("clean")
+        .current_dir(&wt_path)
+        .output()
+        .unwrap();
+
+    assert!(
+        !out.status.success(),
+        "apm clean from inside a worktree must exit non-zero"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("refusing to remove worktree containing the current working directory"),
+        "stderr must contain refusal message, got: {stderr}"
+    );
+}
+
+#[test]
+fn clean_prunable_worktree_cleans_registry() {
+    // When a registered worktree's path no longer exists on disk, apm clean
+    // must prune the dangling registry entry without attempting to delete files.
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "prunable");
+    merge_into_main(p, &branch);
+
+    let wt_path = p.join("worktrees").join("ticket-0001-prunable");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Delete the worktree directory without using git worktree remove.
+    // This leaves a dangling registry entry in .git/worktrees/.
+    std::fs::remove_dir_all(&wt_path).unwrap();
+    assert!(!wt_path.exists(), "worktree dir must be gone before running clean");
+
+    // Verify the registry entry still exists.
+    let list_before = std::process::Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let list_str = String::from_utf8_lossy(&list_before.stdout);
+    assert!(
+        list_str.contains("ticket-0001-prunable"),
+        "registry entry must exist before clean: {list_str}"
+    );
+
+    apm::cmd::clean::run(p, false, false, false, false, false, None, false, false).unwrap();
+
+    // After clean, the dangling entry must be gone.
+    let list_after = std::process::Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let list_after_str = String::from_utf8_lossy(&list_after.stdout);
+    assert!(
+        !list_after_str.contains("ticket-0001-prunable"),
+        "dangling registry entry must be pruned after clean: {list_after_str}"
+    );
+}
+
+#[test]
+fn clean_untracked_does_not_affect_worktrees_dir_debris() {
+    // apm clean --untracked must not walk into or affect debris files placed
+    // directly under <repo>/worktrees/ (outside any registered worktree).
+    let dir = setup();
+    let p = dir.path();
+    let (branch, _) = write_closed_ticket(p, 1, "debris");
+    merge_into_main(p, &branch);
+
+    let wt_path = p.join("worktrees").join("ticket-0001-debris");
+    std::fs::create_dir_all(p.join("worktrees")).unwrap();
+    git(p, &["worktree", "add", &wt_path.to_string_lossy(), &branch]);
+
+    // Place a debris file directly under <repo>/worktrees/, outside any registered worktree.
+    let debris = p.join("worktrees").join("stray-debris.txt");
+    std::fs::write(&debris, "should not be touched").unwrap();
+
+    apm::cmd::clean::run(p, false, false, false, false, false, None, true, false).unwrap();
+
+    assert!(
+        debris.exists(),
+        "debris file outside any registered worktree must not be touched by --untracked"
+    );
+}
