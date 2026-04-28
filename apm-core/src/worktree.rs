@@ -148,6 +148,44 @@ pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: 
     Ok(wt)
 }
 
+#[cfg(test)]
+mod tests {
+    use std::process::Command;
+    use tempfile::TempDir;
+
+    fn git_init(dir: &std::path::Path) {
+        Command::new("git").args(["init", "-b", "main"]).current_dir(dir).output().unwrap();
+        Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(dir).output().unwrap();
+        Command::new("git").args(["config", "user.name", "test"]).current_dir(dir).output().unwrap();
+    }
+
+    #[test]
+    fn provision_worktree_path_is_inside_repo() {
+        let tmp = TempDir::new().unwrap();
+        let repo = tmp.path();
+        git_init(repo);
+        // Initial commit so worktrees work.
+        std::fs::write(repo.join("README"), "x").unwrap();
+        Command::new("git").args(["-c", "commit.gpgsign=false", "add", "README"]).current_dir(repo).output().unwrap();
+        Command::new("git").args(["-c", "commit.gpgsign=false", "commit", "-m", "init"]).current_dir(repo).output().unwrap();
+
+        let main_root = crate::git_util::main_worktree_root(repo)
+            .unwrap_or_else(|| repo.to_path_buf());
+        let worktrees_base = main_root.join("worktrees");
+
+        assert!(
+            worktrees_base.starts_with(&main_root),
+            "worktrees dir must be inside repo: base={} repo={}",
+            worktrees_base.display(),
+            main_root.display()
+        );
+        assert!(
+            !worktrees_base.to_string_lossy().contains("--worktrees"),
+            "worktrees dir must not use the old external sibling layout"
+        );
+    }
+}
+
 pub fn list_worktrees_with_tickets(
     root: &Path,
     tickets_dir: &Path,

@@ -26,6 +26,25 @@ pub fn run(
         eprintln!("{w}");
     }
 
+    // Refuse to remove any worktree that contains the current working directory.
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let canonical_cwd = cwd.canonicalize().unwrap_or_else(|_| cwd.clone());
+    for candidate in &candidates {
+        if let Some(ref wt_path) = candidate.worktree {
+            let canonical_wt = wt_path.canonicalize().unwrap_or_else(|_| wt_path.clone());
+            if canonical_cwd.starts_with(&canonical_wt) {
+                eprintln!(
+                    "refusing to remove worktree containing the current working directory: {}",
+                    wt_path.display()
+                );
+                anyhow::bail!(
+                    "refusing to remove worktree containing the current working directory: {}",
+                    wt_path.display()
+                );
+            }
+        }
+    }
+
     if candidates.is_empty() && dirty.is_empty() && !remote && !epics {
         println!("Nothing to clean.");
         return Ok(());
