@@ -1,7 +1,7 @@
 +++
 id = "79a03767"
 title = "Parameterize transition failure landing in workflow.toml (on_failure)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/79a03767-parameterize-transition-failure-landing-"
 created_at = "2026-04-28T23:00:16.821798Z"
-updated_at = "2026-04-28T23:01:48.011095Z"
+updated_at = "2026-04-28T23:04:48.869434Z"
 depends_on = ["50649e84"]
 +++
 
@@ -97,3 +97,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T23:00Z | — | new | philippepascal |
 | 2026-04-28T23:01Z | new | groomed | philippepascal |
+| 2026-04-28T23:04Z | groomed | in_design | philippepascal |
