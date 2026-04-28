@@ -1,7 +1,7 @@
 +++
 id = "0fa737ae"
 title = "UI: change display of max workers"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0fa737ae-ui-change-display-of-max-workers"
 created_at = "2026-04-28T19:24:12.894681Z"
-updated_at = "2026-04-28T19:32:42.356067Z"
+updated_at = "2026-04-28T19:38:13.413510Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-28T19:24Z | — | new | philippepascal |
 | 2026-04-28T19:32Z | new | groomed | philippepascal |
+| 2026-04-28T19:38Z | groomed | in_design | philippepascal |
