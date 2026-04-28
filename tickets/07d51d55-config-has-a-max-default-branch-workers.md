@@ -24,7 +24,17 @@ The fix is a new `[agents]` config field, `max_workers_on_default`, that limits 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `[agents] max_workers_on_default` is accepted in `.apm/config.toml` without error
+- [ ] When the field is absent, it defaults to `1`
+- [ ] When set to `1`, a second non-epic ticket is not picked by `apm start --next` while one non-epic worker is already active
+- [ ] When set to `2`, a third non-epic ticket is not picked while two non-epic workers are active
+- [ ] When set to `0`, non-epic tickets are picked freely up to `max_concurrent` (no additional cap)
+- [ ] Epic-linked tickets are unaffected: `max_workers_per_epic` still governs them independently
+- [ ] The `apm work` daemon respects the limit in its spawn loop (non-epic slots are counted each iteration)
+- [ ] A unit test covers: limit=1, 0 active non-epic workers → not blocked
+- [ ] A unit test covers: limit=1, 1 active non-epic worker → blocked
+- [ ] A unit test covers: limit=0, any number of active non-epic workers → not blocked
+- [ ] A unit test covers: active workers are all epic-linked → non-epic slot is not blocked
 
 ### Out of scope
 
