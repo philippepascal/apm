@@ -1,7 +1,7 @@
 +++
 id = "ceff7f6c"
 title = "apm worker is_alive should reject zombie/defunct processes"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ceff7f6c-apm-worker-is-alive-should-reject-zombie"
 created_at = "2026-04-28T00:50:51.047540Z"
-updated_at = "2026-04-28T06:00:41.681529Z"
+updated_at = "2026-04-28T06:05:09.939393Z"
 +++
 
 ## Spec
@@ -87,3 +87,4 @@ The existing `is_alive_returns_true_for_current_process` test is unchanged and c
 | 2026-04-28T01:02Z | groomed | in_design | philippepascal |
 | 2026-04-28T01:05Z | in_design | specd | claude-0428-0102-e8b0 |
 | 2026-04-28T06:00Z | specd | ready | philippepascal |
+| 2026-04-28T06:05Z | ready | in_progress | philippepascal |
