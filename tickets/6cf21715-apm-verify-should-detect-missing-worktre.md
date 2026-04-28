@@ -1,7 +1,7 @@
 +++
 id = "6cf21715"
 title = "apm verify should detect missing worktree for active-state tickets"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6cf21715-apm-verify-should-detect-missing-worktre"
 created_at = "2026-04-28T00:50:59.455196Z"
-updated_at = "2026-04-28T06:16:31.421642Z"
+updated_at = "2026-04-28T06:57:35.363312Z"
 +++
 
 ## Spec
@@ -140,3 +140,4 @@ Because `main_worktree_root` runs `git worktree list --porcelain` in the temp di
 | 2026-04-28T06:00Z | specd | ready | philippepascal |
 | 2026-04-28T06:09Z | ready | in_progress | philippepascal |
 | 2026-04-28T06:16Z | in_progress | implemented | claude-0428-0609-6848 |
+| 2026-04-28T06:57Z | implemented | closed | philippepascal(apm-sync) |
