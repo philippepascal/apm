@@ -20,6 +20,16 @@ pub fn run(
         eprintln!("{w}");
     }
 
+    // When --branches, also enumerate remote-only ticket branches (origin
+    // has them, no local head) whose ticket on the default branch is in a
+    // terminal state. These are common after an earlier clean removed
+    // local branches but the remote was still up.
+    if branches {
+        let local_branch_set: std::collections::HashSet<String> =
+            candidates.iter().map(|c| c.branch.clone()).collect();
+        candidates.extend(clean::remote_only_candidates(root, &config, &local_branch_set)?);
+    }
+
     // Apply --older-than filter (if set) by ticket frontmatter updated_at.
     // Tickets with no updated_at are conservatively kept (we can't verify age).
     if let Some(threshold_str) = older_than.as_deref() {

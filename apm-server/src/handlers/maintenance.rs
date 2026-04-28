@@ -147,6 +147,12 @@ pub async fn clean_handler(
             log.push(w.clone());
         }
 
+        if branches {
+            let local_branch_set: std::collections::HashSet<String> =
+                candidates.iter().map(|c| c.branch.clone()).collect();
+            candidates.extend(apm_core::clean::remote_only_candidates(&root, &config, &local_branch_set)?);
+        }
+
         if let Some(threshold_str) = older_than.as_deref() {
             let threshold = apm_core::clean::parse_older_than(threshold_str)?;
             candidates.retain(|c| match c.updated_at {

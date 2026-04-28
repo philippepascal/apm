@@ -241,6 +241,68 @@ pub fn candidates(root: &Path, config: &Config, force: bool, untracked: bool, dr
     Ok((result, dirty_result, warnings))
 }
 
+/// Find ticket branches that exist on origin but have no local head.
+/// For each, look up the ticket file on the default branch (in
+/// `tickets/` first, then `archive_dir/`) and accept it as a candidate
+/// if its state is terminal. These are pure remote-deletion candidates:
+/// no worktree, no local branch.
+///
+/// `skip` is the set of branches already returned by `candidates()` so
+/// we don't double-process branches that have a local head.
+pub fn remote_only_candidates(
+    root: &Path,
+    config: &Config,
+    skip: &std::collections::HashSet<String>,
+) -> Result<Vec<CleanCandidate>> {
+    let terminal_states = config.terminal_state_ids();
+    let default_branch = &config.project.default_branch;
+    let remote_branches = git_util::list_remote_ticket_branches(root);
+    let primary_dir = config.tickets.dir.to_string_lossy().to_string();
+    let archive_dir = config.tickets.archive_dir.as_ref().map(|p| p.to_string_lossy().to_string());
+
+    let mut result = Vec::new();
+    for branch in remote_branches {
+        if skip.contains(&branch) {
+            continue;
+        }
+        let suffix = branch.trim_start_matches("ticket/");
+        let primary_path = format!("{primary_dir}/{suffix}.md");
+        let (content, content_path) = match git::read_from_branch(root, default_branch, &primary_path) {
+            Ok(c) => (c, primary_path),
+            Err(_) => match &archive_dir {
+                Some(archive) => {
+                    let archive_path = format!("{archive}/{suffix}.md");
+                    match git::read_from_branch(root, default_branch, &archive_path) {
+                        Ok(c) => (c, archive_path),
+                        Err(_) => continue,
+                    }
+                }
+                None => continue,
+            },
+        };
+        let dummy = root.join(&content_path);
+        let ticket = match ticket_fmt::Ticket::parse(&dummy, &content) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if !terminal_states.contains(ticket.frontmatter.state.as_str()) {
+            continue;
+        }
+        result.push(CleanCandidate {
+            ticket_id: ticket.frontmatter.id.clone(),
+            ticket_title: ticket.frontmatter.title.clone(),
+            branch: branch.clone(),
+            worktree: None,
+            reason: ticket.frontmatter.state.clone(),
+            local_branch_exists: false,
+            branch_merged: true,
+            remote_branch_exists: true,
+            updated_at: ticket.frontmatter.updated_at,
+        });
+    }
+    Ok(result)
+}
+
 pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool) -> Result<RemoveOutput> {
     let mut warnings: Vec<String> = Vec::new();
 
