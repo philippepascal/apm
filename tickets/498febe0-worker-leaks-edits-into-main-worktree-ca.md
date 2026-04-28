@@ -4,12 +4,12 @@ title = "Worker leaks edits into main worktree; capture full transcript"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 4
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/498febe0-worker-leaks-edits-into-main-worktree-ca"
 created_at = "2026-04-28T22:35:14.876837Z"
-updated_at = "2026-04-28T22:47:53.655646Z"
+updated_at = "2026-04-28T22:47:58.296595Z"
 +++
 
 ## Spec
