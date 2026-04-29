@@ -30,7 +30,7 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 - [x] `apm help commands` exits 0 and prints output to stdout
 - [x] Every non-hidden top-level command appears in the output (hidden commands such as `_hook` do not appear)
 - [x] Top-level commands appear in alphabetical order in the output
-- [ ] Each command entry shows the command name and its one-line description (from `get_about()`)
+- [x] Each command entry shows the command name and its one-line description (from `get_about()`)
 - [ ] Each command entry lists its positional arguments with their value-name label and help text
 - [ ] Each command entry lists its flags/options with long name, short name (if any), value name (if any), and help text
 - [ ] Flags with a default value show the default in their entry
