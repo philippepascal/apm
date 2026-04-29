@@ -207,7 +207,7 @@ pub fn worktree_gitignore_pattern(dir: &Path) -> Option<String> {
 }
 
 pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &mut Vec<String>) -> Result<()> {
-    let static_entries = ["tickets/NEXT_ID", ".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+    let static_entries = [".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
     let mut entries: Vec<&str> = static_entries.to_vec();
     let owned_pattern;
     if let Some(p) = worktree_pattern {
@@ -492,7 +492,6 @@ mod tests {
         let mut msgs = Vec::new();
         ensure_gitignore(&path, None, &mut msgs).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
-        assert!(contents.contains("tickets/NEXT_ID"));
         assert!(contents.contains(".apm/local.toml"));
         assert!(contents.contains(".apm/*.init"));
         assert!(contents.contains(".apm/sessions.json"));
@@ -508,7 +507,7 @@ mod tests {
         ensure_gitignore(&path, None, &mut msgs).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("node_modules"));
-        assert!(contents.contains("tickets/NEXT_ID"));
+        assert!(contents.contains(".apm/local.toml"));
     }
 
     #[test]
