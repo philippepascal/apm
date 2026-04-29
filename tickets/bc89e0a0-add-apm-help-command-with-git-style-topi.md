@@ -1,7 +1,7 @@
 +++
 id = "bc89e0a0"
 title = "Add apm help command with git-style topic dispatch"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bc89e0a0-add-apm-help-command-with-git-style-topi"
 created_at = "2026-04-28T19:27:00.760945Z"
-updated_at = "2026-04-29T03:42:48.089633Z"
+updated_at = "2026-04-29T03:43:09.947071Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 +++
@@ -93,3 +93,4 @@ This ticket adds CLI plumbing only: the `Help` subcommand variant in the clap `C
 | 2026-04-28T19:33Z | groomed | in_design | philippepascal |
 | 2026-04-28T19:37Z | in_design | specd | claude-0428-1933-feb0 |
 | 2026-04-29T03:42Z | specd | ready | philippepascal |
+| 2026-04-29T03:43Z | ready | in_progress | philippepascal |
