@@ -16,7 +16,16 @@ updated_at = "2026-04-29T21:27:31.868020Z"
 
 ### Problem
 
-currently there is a mix of arguments defined in config, and some hardcoded. ideally, and to be able to support other agents, everything should be in config. explore a designs to achieve this.
+In `start.rs`, three Claude-specific invocation details are hardcoded in both `spawn_container_worker()` and `build_spawn_command()`:
+
+1. `--output-format stream-json` (lines 156, 195) — the structured-output flag APM relies on for log capture
+2. `--verbose` (lines 161, 200) — required by the Claude CLI whenever `--print` and `--output-format=stream-json` are combined
+3. The flag name `--system-prompt` (lines 162, 201) — the flag used to hand the worker its system instructions
+4. The flag name `--dangerously-skip-permissions` (lines 163-165, 202-204) — injected conditionally when `skip_permissions` is true
+
+Meanwhile the `WorkersConfig` struct already supports `command`, `args`, `model`, and `env` as configurable fields, and per-profile overrides exist via `WorkerProfileConfig`. The mismatch means a user who wants to swap in a different agent binary (e.g. `aider`, a custom wrapper) cannot do so via config alone — the hardcoded Claude flags will break any non-Claude invocation.
+
+The desired state: every argument that APM appends to the worker command is either (a) already in the user-controlled `args` array, or (b) driven by a named config field with a sensible default. No Claude-specific string should be hard-wired in `start.rs`.
 
 ### Acceptance criteria
 
