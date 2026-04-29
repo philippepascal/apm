@@ -35,7 +35,7 @@ This ticket does two things: (1) adds meaningful doc comments to all fields on t
 - [x] The `satisfies_deps` field entry shows its two forms (`bool | string`) or equivalent variant description
 - [x] Every field entry in the output has a non-empty description (no blank `#` column)
 - [x] Fields with numeric defaults (`priority_weight = 10`, `effort_weight = -2`, `risk_weight = -1`) show those defaults in the output
-- [ ] The output includes a brief preamble line stating that `workflow.states` is an array of user-defined state objects
+- [x] The output includes a brief preamble line stating that `workflow.states` is an array of user-defined state objects
 
 ### Out of scope
 
