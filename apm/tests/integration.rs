@@ -7316,7 +7316,7 @@ fn help_commands_includes_visible_top_level_commands() {
                  "help", "init", "list", "move", "new", "next",
                  "refresh-epic", "register", "review", "revoke",
                  "sessions", "set", "show", "spec", "start", "state",
-                 "sync", "validate", "verify", "version", "work",
+                 "sync", "validate", "version", "work",
                  "workers", "worktrees"] {
         assert!(stdout.contains(cmd), "missing command '{}' in:\n{}", cmd, stdout);
     }
