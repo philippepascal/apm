@@ -28,6 +28,10 @@ pub struct TicketConfig {
     pub sections: Vec<TicketSection>,
 }
 
+/// Determines how a worker's branch is integrated as part of a state transition.
+/// `pr`: open PR, fires on open not merge. `merge`: merge to target_branch directly.
+/// `pull`: pull upstream into ticket branch. `pr_or_epic_merge`: recommended default — PR
+/// on main, merge to epic branch when ticket belongs to an epic. `none`: no integration.
 #[derive(Debug, Clone, PartialEq, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum CompletionStrategy {
@@ -236,18 +240,24 @@ impl Default for TicketsConfig {
     }
 }
 
+/// Defines the ticket state machine and prioritization weights. Loaded from `.apm/workflow.toml` or the `[workflow]` section of `apm.toml`.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkflowConfig {
+    /// Ordered list of ticket states. Users define their own state IDs and transition graph.
     #[serde(default)]
     pub states: Vec<StateConfig>,
+    /// Weights used to rank tickets in `apm next` and `apm list`.
     #[serde(default)]
     pub prioritization: PrioritizationConfig,
 }
 
+/// Controls when reaching the parent state satisfies `depends_on` relationships on other tickets.
 #[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum SatisfiesDeps {
+    /// `false` = this state never satisfies dependencies; `true` = it always does.
     Bool(bool),
+    /// Satisfies only dependencies annotated with this string tag via `dep_requires`.
     Tag(String),
 }
 
@@ -255,60 +265,80 @@ impl Default for SatisfiesDeps {
     fn default() -> Self { SatisfiesDeps::Bool(false) }
 }
 
+/// A single state in the workflow state machine.
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct StateConfig {
+    /// Unique state identifier (e.g. `new`, `in_progress`). Used in ticket frontmatter and transition targets.
     pub id: String,
+    /// Human-readable name shown in `apm list` and review prompts.
     pub label: String,
+    /// Optional longer explanation of what this state means.
     #[serde(default)]
     pub description: String,
+    /// When `true`, tickets in this state are considered done; no further transitions are expected.
     #[serde(default)]
     pub terminal: bool,
+    /// When `true`, a worker finishing in this state is considered complete (used by the dispatcher to release the worker slot).
     #[serde(default)]
     pub worker_end: bool,
+    /// Whether reaching this state satisfies `depends_on` relationships. `false` = never, `true` = always, a string tag = satisfies deps tagged with that string.
     #[serde(default)]
     pub satisfies_deps: SatisfiesDeps,
+    /// Optional string tag that must appear in a dependency's `satisfies_deps` for it to count as satisfied.
     #[serde(default)]
     pub dep_requires: Option<String>,
+    /// List of outgoing transitions from this state.
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
-    /// Who can actively pick up / act on tickets in this state.
-    /// Values: "agent", "supervisor", "engineer", "any".
-    /// Drives `apm next`, `apm start`, and `apm list --actionable`.
+    /// Roles that can actively pick up / act on tickets in this state. Valid values: `agent`, `supervisor`, `engineer`, `any`. Drives `apm next`, `apm start`, and `apm list --actionable`.
     #[serde(default)]
     pub actionable: Vec<String>,
+    /// Optional extra instructions injected into the worker prompt when a ticket enters this state.
     #[serde(default)]
     pub instructions: Option<String>,
 }
 
+/// A directed edge in the state machine: from the parent state to `to`.
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TransitionConfig {
+    /// Target state ID after this transition fires.
     pub to: String,
+    /// Event or command that fires this transition (e.g. `close`, `approve`).
     #[serde(default)]
     pub trigger: String,
-    /// Short label shown in the review prompt (e.g. "Approve for implementation")
+    /// Short label shown in the review prompt (e.g. `Approve for implementation`).
     #[serde(default)]
     pub label: String,
-    /// Guidance shown in the editor header (e.g. "Add requests in ### Amendment requests")
+    /// Guidance shown in the editor header (e.g. `Add requests in ### Amendment requests`).
     #[serde(default)]
     pub hint: String,
+    /// How the worker's branch is integrated before or after this transition. See `CompletionStrategy`.
     #[serde(default)]
     pub completion: CompletionStrategy,
+    /// Markdown section heading the agent should focus on when acting on this transition.
     #[serde(default)]
     pub focus_section: Option<String>,
+    /// Markdown section heading included as extra context for the agent.
     #[serde(default)]
     pub context_section: Option<String>,
+    /// Optional warning message shown to the supervisor before the transition is confirmed.
     #[serde(default)]
     pub warning: Option<String>,
+    /// Worker profile to use for the agent spawned by this transition. References a key in `[worker_profiles]`.
     #[serde(default)]
     pub profile: Option<String>,
 }
 
+/// Weights used to compute the priority score for ticket selection in `apm next`.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct PrioritizationConfig {
+    /// Multiplier applied to the ticket's `priority` field. Default: 10.0.
     #[serde(default = "default_priority_weight")]
     pub priority_weight: f64,
+    /// Multiplier applied to the ticket's `effort` field (negative favours low-effort). Default: -2.0.
     #[serde(default = "default_effort_weight")]
     pub effort_weight: f64,
+    /// Multiplier applied to the ticket's `risk` field (negative favours low-risk). Default: -1.0.
     #[serde(default = "default_risk_weight")]
     pub risk_weight: f64,
 }
