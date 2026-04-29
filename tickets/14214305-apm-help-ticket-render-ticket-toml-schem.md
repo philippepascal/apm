@@ -27,15 +27,15 @@ The `SectionType` enum warrants special attention: its three variants (`free`, `
 
 ### Acceptance criteria
 
-- [ ] `apm help ticket` exits 0 and prints to stdout
-- [ ] The output contains the string `ticket.sections[]` (array notation indicating `[[ticket.sections]]` is a TOML array-of-tables)
-- [ ] The output contains a line for the `ticket.sections[].name` field with type `string`
-- [ ] The output contains a line for the `ticket.sections[].type` field with type `string` and enum variants listing `free`, `tasks`, and `qa`
-- [ ] The output contains a line for the `ticket.sections[].required` field with type `bool` and default `false`
-- [ ] The output contains a line for the `ticket.sections[].placeholder` field
-- [ ] The description shown for the `type` field (or the introductory header) mentions `apm spec --mark` and `apm spec --add-task` in the context of the `tasks` variant
-- [ ] The output does not contain the placeholder stub text from ticket bc89e0a0
-- [ ] `apm help ticket` output is identical to calling `render_ticket()` directly (no extra whitespace trimmed or added by the dispatcher)
+- [x] `apm help ticket` exits 0 and prints to stdout
+- [x] The output contains the string `ticket.sections[]` (array notation indicating `[[ticket.sections]]` is a TOML array-of-tables)
+- [x] The output contains a line for the `ticket.sections[].name` field with type `string`
+- [x] The output contains a line for the `ticket.sections[].type` field with type `string` and enum variants listing `free`, `tasks`, and `qa`
+- [x] The output contains a line for the `ticket.sections[].required` field with type `bool` and default `false`
+- [x] The output contains a line for the `ticket.sections[].placeholder` field
+- [x] The description shown for the `type` field (or the introductory header) mentions `apm spec --mark` and `apm spec --add-task` in the context of the `tasks` variant
+- [x] The output does not contain the placeholder stub text from ticket bc89e0a0
+- [x] `apm help ticket` output is identical to calling `render_ticket()` directly (no extra whitespace trimmed or added by the dispatcher)
 
 ### Out of scope
 
