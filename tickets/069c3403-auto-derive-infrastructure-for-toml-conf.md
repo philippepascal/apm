@@ -1,7 +1,7 @@
 +++
 id = "069c3403"
 title = "Auto-derive infrastructure for TOML config schemas"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 5
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/069c3403-auto-derive-infrastructure-for-toml-conf"
 created_at = "2026-04-28T19:27:37.355186Z"
-updated_at = "2026-04-29T07:37:52.119228Z"
+updated_at = "2026-04-29T21:05:06.049065Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 +++
@@ -214,3 +214,4 @@ Five tests in a `#[cfg(test)]` block:
 | 2026-04-29T03:47Z | in_progress | ready | philippepascal |
 | 2026-04-29T07:18Z | ready | in_progress | philippepascal |
 | 2026-04-29T07:37Z | in_progress | implemented | claude-0429-0718-a918 |
+| 2026-04-29T21:05Z | implemented | closed | philippepascal(apm-sync) |
