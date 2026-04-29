@@ -42,7 +42,7 @@ pub async fn list_tickets(
         "new".to_string(), "question".to_string(), "specd".to_string(),
         "blocked".to_string(), "implemented".to_string(), "merge_failed".to_string(),
     ];
-    let (resolved_ids, terminal_ids, mut supervisor_states): (Vec<String>, Vec<String>, Vec<String>) = match state.git_root() {
+    let (resolved_ids, terminal_ids, supervisor_states): (Vec<String>, Vec<String>, Vec<String>) = match state.git_root() {
         Some(root) => match apm_core::config::Config::load(root) {
             Ok(cfg) => {
                 let resolved = cfg.workflow.states.iter()
@@ -65,21 +65,6 @@ pub async fn list_tickets(
         },
         None => (vec![], vec!["closed".to_string()], fallback_supervisor_states()),
     };
-    {
-        let sup_set: std::collections::HashSet<String> =
-            supervisor_states.iter().cloned().collect();
-        let term_set: std::collections::HashSet<&str> =
-            terminal_ids.iter().map(|s| s.as_str()).collect();
-        let mut seen = std::collections::HashSet::<String>::new();
-        let mut to_add = Vec::new();
-        for t in &tickets {
-            let s = t.frontmatter.state.clone();
-            if !sup_set.contains(&s) && !term_set.contains(s.as_str()) && seen.insert(s.clone()) {
-                to_add.push(s);
-            }
-        }
-        supervisor_states.extend(to_add);
-    }
     if !params.include_closed.unwrap_or(false) {
         let terminal_set: std::collections::HashSet<&str> =
             terminal_ids.iter().map(|s| s.as_str()).collect();
