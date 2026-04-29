@@ -29,7 +29,16 @@ The desired state: every argument that APM appends to the worker command is eith
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `--output-format stream-json` is no longer hardcoded in `start.rs`; it is part of the resolved `args` list (present in the default config)
+- [ ] `--verbose` is no longer hardcoded in `start.rs`; it is part of the resolved `args` list (present in the default config)
+- [ ] A `system_prompt_flag` field in `WorkersConfig` controls the flag name used to pass the system prompt; it defaults to `"--system-prompt"`
+- [ ] When `system_prompt_flag` is `null` / absent, no system-prompt argument is appended to the command
+- [ ] A `skip_permissions_flag` field in `WorkersConfig` controls the flag name appended when permission-skipping is requested; it defaults to `"--dangerously-skip-permissions"`
+- [ ] When `skip_permissions_flag` is `null` / absent, no flag is appended even when `apm start --skip-permissions` is used
+- [ ] `WorkerProfileConfig` gains the same two fields and they override the global values when set
+- [ ] `check_output_format_supported()` is only invoked when `--output-format` appears in the final resolved `args` list
+- [ ] Existing projects whose configs do not set the new fields behave identically to today (backward-compatible via defaults)
+- [ ] `.apm/config.toml` `[workers]` and all `[worker_profiles.*]` entries explicitly include `--output-format`, `stream-json`, and `--verbose` in their `args` arrays
 
 ### Out of scope
 
