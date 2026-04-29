@@ -34,7 +34,7 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 - [x] Each command entry lists its positional arguments with their value-name label and help text
 - [x] Each command entry lists its flags/options with long name, short name (if any), value name (if any), and help text
 - [x] Flags with a default value show the default in their entry
-- [ ] Auto-generated clap flags (`--help`, `--version`) do not appear in the output
+- [x] Auto-generated clap flags (`--help`, `--version`) do not appear in the output
 - [ ] All five current `epic` subcommands — `epic new`, `epic close`, `epic list`, `epic show`, `epic set` — appear in the output under the `epic` parent entry, in declaration order
 - [ ] Adding a new `#[arg]` to any subcommand causes it to appear in `apm help commands` output without changes to `help.rs`
 - [ ] Adding a new variant to the `Command` enum causes it to appear in `apm help commands` output without changes to `help.rs`
