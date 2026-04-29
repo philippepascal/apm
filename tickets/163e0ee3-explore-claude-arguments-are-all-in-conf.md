@@ -42,7 +42,12 @@ The desired state: every argument that APM appends to the worker command is eith
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Validating or testing non-Claude agents end-to-end (this ticket makes the config expressive; wiring up a real alternative agent is a follow-up)
+- Adding `local.toml` override support for the new `system_prompt_flag` / `skip_permissions_flag` fields
+- Changing how the positional ticket-content argument is passed (still always the final positional arg)
+- Changing how `--model` is passed (already configurable, unchanged)
+- Supporting output-format capture strategies other than `stream-json`
+- Changing log parsing logic to handle non-JSON transcript formats
 
 ### Approach
 
