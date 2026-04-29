@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionType {
     Free,
@@ -10,7 +11,7 @@ pub enum SectionType {
     Qa,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TicketSection {
     pub name: String,
     #[serde(rename = "type")]
@@ -21,13 +22,13 @@ pub struct TicketSection {
     pub placeholder: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct TicketConfig {
     #[serde(default)]
     pub sections: Vec<TicketSection>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum CompletionStrategy {
     Pr,
@@ -39,14 +40,14 @@ pub enum CompletionStrategy {
     None,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct LoggingConfig {
     #[serde(default)]
     pub enabled: bool,
     pub file: Option<std::path::PathBuf>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 #[serde(default)]
 pub struct GitHostConfig {
     pub provider: Option<String>,
@@ -54,7 +55,7 @@ pub struct GitHostConfig {
     pub token_env: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct WorkersConfig {
     pub container: Option<String>,
     #[serde(default)]
@@ -85,7 +86,7 @@ impl Default for WorkersConfig {
 fn default_command() -> String { "claude".to_string() }
 fn default_args() -> Vec<String> { vec!["--print".to_string()] }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct WorkerProfileConfig {
     pub command: Option<String>,
     pub args: Option<Vec<String>>,
@@ -97,13 +98,13 @@ pub struct WorkerProfileConfig {
     pub role_prefix: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkConfig {
     #[serde(default)]
     pub epic: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ServerConfig {
     #[serde(default = "default_server_origin")]
     pub origin: String,
@@ -125,7 +126,7 @@ impl Default for ServerConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ContextConfig {
     #[serde(default = "default_epic_sibling_cap")]
     pub epic_sibling_cap: usize,
@@ -145,7 +146,7 @@ impl Default for ContextConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Config {
     pub project: ProjectConfig,
     #[serde(default)]
@@ -189,7 +190,7 @@ pub(crate) struct TicketFile {
     pub(crate) ticket: TicketConfig,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct SyncConfig {
     #[serde(default = "default_true")]
     pub aggressive: bool,
@@ -201,7 +202,7 @@ impl Default for SyncConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjectConfig {
     pub name: String,
     #[serde(default)]
@@ -216,7 +217,7 @@ fn default_branch_main() -> String {
     "main".to_string()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct TicketsConfig {
     pub dir: PathBuf,
     #[serde(default)]
@@ -235,7 +236,7 @@ impl Default for TicketsConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkflowConfig {
     #[serde(default)]
     pub states: Vec<StateConfig>,
@@ -243,7 +244,7 @@ pub struct WorkflowConfig {
     pub prioritization: PrioritizationConfig,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum SatisfiesDeps {
     Bool(bool),
@@ -254,7 +255,7 @@ impl Default for SatisfiesDeps {
     fn default() -> Self { SatisfiesDeps::Bool(false) }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct StateConfig {
     pub id: String,
     pub label: String,
@@ -279,7 +280,7 @@ pub struct StateConfig {
     pub instructions: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TransitionConfig {
     pub to: String,
     #[serde(default)]
@@ -302,7 +303,7 @@ pub struct TransitionConfig {
     pub profile: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct PrioritizationConfig {
     #[serde(default = "default_priority_weight")]
     pub priority_weight: f64,
@@ -316,7 +317,7 @@ fn default_priority_weight() -> f64 { 10.0 }
 fn default_effort_weight() -> f64 { -2.0 }
 fn default_risk_weight() -> f64 { -1.0 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct AgentsConfig {
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
@@ -337,7 +338,7 @@ fn default_max_workers_per_epic() -> usize { 1 }
 fn default_max_workers_on_default() -> usize { 1 }
 fn default_true() -> bool { true }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct WorktreesConfig {
     pub dir: PathBuf,
     #[serde(default)]
