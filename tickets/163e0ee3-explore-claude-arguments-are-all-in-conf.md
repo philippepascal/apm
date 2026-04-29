@@ -3,13 +3,13 @@ id = "163e0ee3"
 title = "explore: claude arguments are all in config"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/163e0ee3-explore-claude-arguments-are-all-in-conf"
 created_at = "2026-04-29T06:58:36.282134Z"
-updated_at = "2026-04-29T21:27:31.868020Z"
+updated_at = "2026-04-29T21:31:52.634788Z"
 +++
 
 ## Spec
