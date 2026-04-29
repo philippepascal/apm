@@ -38,7 +38,7 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 - [x] All five current `epic` subcommands — `epic new`, `epic close`, `epic list`, `epic show`, `epic set` — appear in the output under the `epic` parent entry, in declaration order
 - [x] Adding a new `#[arg]` to any subcommand causes it to appear in `apm help commands` output without changes to `help.rs`
 - [x] Adding a new variant to the `Command` enum causes it to appear in `apm help commands` output without changes to `help.rs`
-- [ ] Output lines do not exceed 100 characters; `(default: …)` annotations count toward the 100-character limit and are wrapped at word boundaries like any other text
+- [x] Output lines do not exceed 100 characters; `(default: …)` annotations count toward the 100-character limit and are wrapped at word boundaries like any other text
 - [ ] Output contains no ANSI escape codes (plain text only)
 
 ### Out of scope
