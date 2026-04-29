@@ -1,7 +1,7 @@
 +++
 id = "45e401f9"
 title = "UI: in progress shows up in supervisor panel"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/45e401f9-ui-in-progress-shows-up-in-supervisor-pa"
 created_at = "2026-04-29T06:57:10.412779Z"
-updated_at = "2026-04-29T21:39:52.568013Z"
+updated_at = "2026-04-29T21:50:26.505231Z"
 +++
 
 ## Spec
@@ -62,3 +62,4 @@ No UI changes are required. The supervisor panel (`SupervisorView.tsx`) already 
 | 2026-04-29T21:37Z | specd | ready | philippepascal |
 | 2026-04-29T21:37Z | ready | in_progress | philippepascal |
 | 2026-04-29T21:39Z | in_progress | implemented | claude-0429-2137-0340 |
+| 2026-04-29T21:50Z | implemented | closed | philippepascal |
