@@ -31,6 +31,7 @@ pub mod cmd {
     pub mod sessions;
     pub mod revoke;
     pub mod version;
+    pub mod help;
 }
 
 pub use crate::cmd::*;
