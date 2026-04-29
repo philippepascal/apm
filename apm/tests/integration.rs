@@ -13,6 +13,24 @@ fn git(dir: &std::path::Path, args: &[&str]) {
         .unwrap();
 }
 
+/// Create a mock worker binary inside `dir/bin/mock-worker`.
+/// When called with `--help` it prints `--output-format stream-json` so the
+/// compatibility probe in `check_output_format_supported` passes.
+/// For all other invocations it exits 0 immediately.
+fn make_mock_worker(dir: &std::path::Path) -> std::path::PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let bin_dir = dir.join("bin");
+    std::fs::create_dir_all(&bin_dir).unwrap();
+    let bin = bin_dir.join("mock-worker");
+    std::fs::write(
+        &bin,
+        "#!/bin/sh\nif [ \"$1\" = \"--help\" ]; then\n    echo '--output-format stream-json'\n    exit 0\nfi\nexit 0\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+    bin
+}
+
 fn setup() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
@@ -1707,6 +1725,7 @@ fn no_aggressive_flag_suppresses_fetch_on_set() {
 fn setup_with_local_worktrees() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
+    let mock_worker = make_mock_worker(p);
 
     git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
@@ -1714,7 +1733,8 @@ fn setup_with_local_worktrees() -> TempDir {
 
     std::fs::write(
         p.join("apm.toml"),
-        r#"[project]
+        format!(
+            r#"[project]
 name = "test"
 
 [tickets]
@@ -1724,7 +1744,7 @@ dir = "tickets"
 dir = "worktrees"
 
 [workers]
-command = "/usr/bin/true"
+command = "{}"
 
 [agents]
 max_concurrent = 3
@@ -1757,6 +1777,8 @@ id       = "closed"
 label    = "Closed"
 terminal = true
 "#,
+            mock_worker.display()
+        ),
     )
     .unwrap();
 
@@ -2077,6 +2099,7 @@ fn in_design_does_not_overwrite_different_owner() {
 fn setup_for_prompt_dispatch() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
+    let mock_worker = make_mock_worker(p);
 
     git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
@@ -2084,7 +2107,8 @@ fn setup_for_prompt_dispatch() -> TempDir {
 
     std::fs::write(
         p.join("apm.toml"),
-        r#"[project]
+        format!(
+            r#"[project]
 name = "test"
 
 [tickets]
@@ -2094,7 +2118,7 @@ dir = "tickets"
 dir = "worktrees"
 
 [workers]
-command = "/usr/bin/true"
+command = "{}"
 
 [agents]
 max_concurrent = 3
@@ -2144,6 +2168,8 @@ id       = "closed"
 label    = "Closed"
 terminal = true
 "#,
+            mock_worker.display()
+        ),
     )
     .unwrap();
 

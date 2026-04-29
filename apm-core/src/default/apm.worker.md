@@ -38,14 +38,16 @@ discipline. This file covers the implementation phase only.
 
 ## Tests
 
-- Write tests appropriate for your project's structure and conventions
-- Run your project's test suite — all tests must pass before calling `apm state <id> implemented`
+- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
+- Integration tests in `apm/tests/integration.rs` — use temp git repos, no
+  fixture files needed
+- Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
 
 ---
 
 ## Finishing implementation
 
-Run your project's test suite — all tests must pass.
+Run `cargo test --workspace` — all tests must pass.
 
 Then: `apm state <id> implemented`
 
@@ -107,11 +109,11 @@ apm spec 1234 --section Problem --set-file /tmp/problem.md
 **Do not use background jobs (`&`):**
 ```bash
 # Wrong
-apm state 1234 implemented & apm state 5678 implemented & wait
+cargo test & cargo clippy & wait
 
 # Right — sequential calls
-apm state 1234 implemented
-apm state 5678 implemented
+cargo test
+cargo clippy
 ```
 
 **Use `git -C` for all git operations in worktrees:**
@@ -126,5 +128,24 @@ git -C "$wt" add <files>
 **Use `bash -c` for multi-step commands that must share a directory:**
 ```bash
 # Right — single bash call, matches Bash(bash *)
-bash -c "cd $wt && <your-test-command> 2>&1"
+bash -c "cd $wt && cargo test --workspace 2>&1"
 ```
+
+---
+
+## Path discipline
+
+Your working directory is the ticket worktree. Never read or write files outside
+it. Always use absolute paths rooted at your worktree. The worktree path appears
+in `apm show <id>` under Worktree — note it at the start of your run.
+
+```
+# Correct — absolute path inside your worktree
+/Users/you/repos/myproject/.apm--worktrees/ticket-abc123-my-feature/src/main.rs
+
+# Wrong — path in the main repo root (leaks edits outside your worktree)
+/Users/you/repos/myproject/src/main.rs
+```
+
+If a tool call resolves to a path outside your worktree, stop immediately, file
+a side-note ticket, and set yourself to blocked.
