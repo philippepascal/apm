@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use std::path::PathBuf;
 
 mod hash_trip;
@@ -907,7 +907,7 @@ fn main() -> Result<()> {
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
         Command::Version => { cmd::version::run(); Ok(()) }
-        Command::Help { topic } => cmd::help::run(topic.as_deref()),
+        Command::Help { topic } => cmd::help::run(topic.as_deref(), Cli::command()),
     }
 }
 
