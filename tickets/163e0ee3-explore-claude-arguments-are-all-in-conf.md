@@ -1,7 +1,7 @@
 +++
 id = "163e0ee3"
 title = "explore: claude arguments are all in config"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/163e0ee3-explore-claude-arguments-are-all-in-conf"
 created_at = "2026-04-29T06:58:36.282134Z"
-updated_at = "2026-04-29T21:31:57.963894Z"
+updated_at = "2026-04-29T21:32:02.812026Z"
 +++
 
 ## Spec
@@ -100,3 +100,4 @@ Changes span `apm-core/src/config.rs`, `apm-core/src/start.rs`, and `.apm/config
 | 2026-04-29T06:58Z | — | new | philippepascal |
 | 2026-04-29T21:13Z | new | groomed | philippepascal |
 | 2026-04-29T21:27Z | groomed | in_design | philippepascal |
+| 2026-04-29T21:32Z | in_design | specd | claude-0429-2127-8e68 |
