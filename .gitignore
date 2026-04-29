@@ -23,3 +23,6 @@ start-server.sh
 
 # personal config/scripts
 s/
+
+# apm worktrees
+/.apm--worktrees/

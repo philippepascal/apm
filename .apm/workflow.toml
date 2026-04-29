@@ -149,6 +149,7 @@ instructions   = ".apm/apm.worker.md"
   trigger    = "manual"
 #  completion = "pr_or_epic_merge"
   completion = "merge"
+  on_failure = "merge_failed"
 
   [[workflow.states.transitions]]
   to      = "blocked"
