@@ -36,7 +36,11 @@ The catch-all is also redundant: `merge_failed` already carries `actionable = ["
 
 ### Approach
 
-How the implementation will work.
+Delete the catch-all block in `apm-server/src/handlers/tickets.rs` (lines 68–82 inclusive). That block is both incorrect — it adds states regardless of `actionable` — and unnecessary — `merge_failed` is already surfaced by the normal config-driven path at lines 52–57 because it has `actionable = ["supervisor"]` in `.apm/workflow.toml`.
+
+After removing the block, inspect line 45: if `supervisor_states` is no longer mutated after that point, remove the `mut` qualifier from its binding to keep the code clean.
+
+No UI changes are required. The supervisor panel (`SupervisorView.tsx`) already derives its columns entirely from `supervisor_states` returned by the server; fixing the server response is sufficient.
 
 ### Open questions
 
