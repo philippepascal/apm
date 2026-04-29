@@ -1,7 +1,7 @@
 +++
 id = "0fa737ae"
 title = "UI: change display of max workers"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0fa737ae-ui-change-display-of-max-workers"
 created_at = "2026-04-28T19:24:12.894681Z"
-updated_at = "2026-04-28T20:43:23.874940Z"
+updated_at = "2026-04-29T02:37:54.765242Z"
 +++
 
 ## Spec
@@ -77,3 +77,4 @@ The API change is purely additive (new fields on the response), so the server an
 | 2026-04-28T20:34Z | specd | ready | philippepascal |
 | 2026-04-28T20:40Z | ready | in_progress | philippepascal |
 | 2026-04-28T20:43Z | in_progress | implemented | claude-0428-2040-b608 |
+| 2026-04-29T02:37Z | implemented | closed | philippepascal(apm-sync) |
