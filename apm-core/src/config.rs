@@ -1,8 +1,10 @@
 use anyhow::{Context, Result};
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+/// `free` — free-form prose. `tasks` — checkbox list (`- [ ] item`); supports `apm spec --mark` and `apm spec --add-task`. `qa` — question/answer pairs.
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionType {
     Free,
@@ -10,24 +12,35 @@ pub enum SectionType {
     Qa,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+/// A single section in the ticket template.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TicketSection {
+    /// Display name of the section (e.g. "Problem", "Approach").
     pub name: String,
+    /// Rendering mode — `tasks` sections support `apm spec --mark` and `apm spec --add-task`; `free` is prose; `qa` is question/answer pairs.
     #[serde(rename = "type")]
     pub type_: SectionType,
+    /// Whether the section must be non-empty before the ticket can transition out of in_design.
     #[serde(default)]
     pub required: bool,
+    /// Hint text pre-filled into an empty section when a new ticket is created.
     #[serde(default)]
     pub placeholder: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+/// Configuration for the sections that appear on every ticket, in order.
+/// Defined in `.apm/ticket.toml` as `[[ticket.sections]]` blocks.
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct TicketConfig {
     #[serde(default)]
     pub sections: Vec<TicketSection>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
+/// Determines how a worker's branch is integrated as part of a state transition.
+/// `pr`: open PR, fires on open not merge. `merge`: merge to target_branch directly.
+/// `pull`: pull upstream into ticket branch. `pr_or_epic_merge`: recommended default — PR
+/// on main, merge to epic branch when ticket belongs to an epic. `none`: no integration.
+#[derive(Debug, Clone, PartialEq, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum CompletionStrategy {
     Pr,
@@ -39,14 +52,14 @@ pub enum CompletionStrategy {
     None,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct LoggingConfig {
     #[serde(default)]
     pub enabled: bool,
     pub file: Option<std::path::PathBuf>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 #[serde(default)]
 pub struct GitHostConfig {
     pub provider: Option<String>,
@@ -54,7 +67,7 @@ pub struct GitHostConfig {
     pub token_env: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct WorkersConfig {
     pub container: Option<String>,
     #[serde(default)]
@@ -85,7 +98,7 @@ impl Default for WorkersConfig {
 fn default_command() -> String { "claude".to_string() }
 fn default_args() -> Vec<String> { vec!["--print".to_string()] }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct WorkerProfileConfig {
     pub command: Option<String>,
     pub args: Option<Vec<String>>,
@@ -97,13 +110,13 @@ pub struct WorkerProfileConfig {
     pub role_prefix: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkConfig {
     #[serde(default)]
     pub epic: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ServerConfig {
     #[serde(default = "default_server_origin")]
     pub origin: String,
@@ -125,7 +138,7 @@ impl Default for ServerConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ContextConfig {
     #[serde(default = "default_epic_sibling_cap")]
     pub epic_sibling_cap: usize,
@@ -145,7 +158,7 @@ impl Default for ContextConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct Config {
     pub project: ProjectConfig,
     #[serde(default)]
@@ -189,7 +202,7 @@ pub(crate) struct TicketFile {
     pub(crate) ticket: TicketConfig,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct SyncConfig {
     #[serde(default = "default_true")]
     pub aggressive: bool,
@@ -201,7 +214,7 @@ impl Default for SyncConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjectConfig {
     pub name: String,
     #[serde(default)]
@@ -216,7 +229,7 @@ fn default_branch_main() -> String {
     "main".to_string()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct TicketsConfig {
     pub dir: PathBuf,
     #[serde(default)]
@@ -235,18 +248,24 @@ impl Default for TicketsConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+/// Defines the ticket state machine and prioritization weights. Loaded from `.apm/workflow.toml` or the `[workflow]` section of `apm.toml`.
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkflowConfig {
+    /// Ordered list of ticket states. Users define their own state IDs and transition graph.
     #[serde(default)]
     pub states: Vec<StateConfig>,
+    /// Weights used to rank tickets in `apm next` and `apm list`.
     #[serde(default)]
     pub prioritization: PrioritizationConfig,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+/// Controls when reaching the parent state satisfies `depends_on` relationships on other tickets.
+#[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum SatisfiesDeps {
+    /// `false` = this state never satisfies dependencies; `true` = it always does.
     Bool(bool),
+    /// Satisfies only dependencies annotated with this string tag via `dep_requires`.
     Tag(String),
 }
 
@@ -254,60 +273,80 @@ impl Default for SatisfiesDeps {
     fn default() -> Self { SatisfiesDeps::Bool(false) }
 }
 
-#[derive(Debug, Deserialize)]
+/// A single state in the workflow state machine.
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct StateConfig {
+    /// Unique state identifier (e.g. `new`, `in_progress`). Used in ticket frontmatter and transition targets.
     pub id: String,
+    /// Human-readable name shown in `apm list` and review prompts.
     pub label: String,
+    /// Optional longer explanation of what this state means.
     #[serde(default)]
     pub description: String,
+    /// When `true`, tickets in this state are considered done; no further transitions are expected.
     #[serde(default)]
     pub terminal: bool,
+    /// When `true`, a worker finishing in this state is considered complete (used by the dispatcher to release the worker slot).
     #[serde(default)]
     pub worker_end: bool,
+    /// Whether reaching this state satisfies `depends_on` relationships. `false` = never, `true` = always, a string tag = satisfies deps tagged with that string.
     #[serde(default)]
     pub satisfies_deps: SatisfiesDeps,
+    /// Optional string tag that must appear in a dependency's `satisfies_deps` for it to count as satisfied.
     #[serde(default)]
     pub dep_requires: Option<String>,
+    /// List of outgoing transitions from this state.
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
-    /// Who can actively pick up / act on tickets in this state.
-    /// Values: "agent", "supervisor", "engineer", "any".
-    /// Drives `apm next`, `apm start`, and `apm list --actionable`.
+    /// Roles that can actively pick up / act on tickets in this state. Valid values: `agent`, `supervisor`, `engineer`, `any`. Drives `apm next`, `apm start`, and `apm list --actionable`.
     #[serde(default)]
     pub actionable: Vec<String>,
+    /// Optional extra instructions injected into the worker prompt when a ticket enters this state.
     #[serde(default)]
     pub instructions: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+/// A directed edge in the state machine: from the parent state to `to`.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TransitionConfig {
+    /// Target state ID after this transition fires.
     pub to: String,
+    /// Event or command that fires this transition (e.g. `close`, `approve`).
     #[serde(default)]
     pub trigger: String,
-    /// Short label shown in the review prompt (e.g. "Approve for implementation")
+    /// Short label shown in the review prompt (e.g. `Approve for implementation`).
     #[serde(default)]
     pub label: String,
-    /// Guidance shown in the editor header (e.g. "Add requests in ### Amendment requests")
+    /// Guidance shown in the editor header (e.g. `Add requests in ### Amendment requests`).
     #[serde(default)]
     pub hint: String,
+    /// How the worker's branch is integrated before or after this transition. See `CompletionStrategy`.
     #[serde(default)]
     pub completion: CompletionStrategy,
+    /// Markdown section heading the agent should focus on when acting on this transition.
     #[serde(default)]
     pub focus_section: Option<String>,
+    /// Markdown section heading included as extra context for the agent.
     #[serde(default)]
     pub context_section: Option<String>,
+    /// Optional warning message shown to the supervisor before the transition is confirmed.
     #[serde(default)]
     pub warning: Option<String>,
+    /// Worker profile to use for the agent spawned by this transition. References a key in `[worker_profiles]`.
     #[serde(default)]
     pub profile: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+/// Weights used to compute the priority score for ticket selection in `apm next`.
+#[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct PrioritizationConfig {
+    /// Multiplier applied to the ticket's `priority` field. Default: 10.0.
     #[serde(default = "default_priority_weight")]
     pub priority_weight: f64,
+    /// Multiplier applied to the ticket's `effort` field (negative favours low-effort). Default: -2.0.
     #[serde(default = "default_effort_weight")]
     pub effort_weight: f64,
+    /// Multiplier applied to the ticket's `risk` field (negative favours low-risk). Default: -1.0.
     #[serde(default = "default_risk_weight")]
     pub risk_weight: f64,
 }
@@ -316,7 +355,7 @@ fn default_priority_weight() -> f64 { 10.0 }
 fn default_effort_weight() -> f64 { -2.0 }
 fn default_risk_weight() -> f64 { -1.0 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct AgentsConfig {
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
@@ -337,7 +376,7 @@ fn default_max_workers_per_epic() -> usize { 1 }
 fn default_max_workers_on_default() -> usize { 1 }
 fn default_true() -> bool { true }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct WorktreesConfig {
     pub dir: PathBuf,
     #[serde(default)]

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use std::path::PathBuf;
 
 mod hash_trip;
@@ -9,6 +9,7 @@ mod hash_trip;
     name = "apm",
     about = "Agent Project Manager",
     version,
+    disable_help_subcommand = true,
     help_template = "\
 Agent Project Manager — a git-native ticket system for human+AI teams.
 
@@ -17,6 +18,7 @@ Agent Project Manager — a git-native ticket system for human+AI teams.
 Setup:
   init           Initialize apm in the current repository
   agents         Print agent instructions
+  help           Show help for a topic (commands, config, workflow, ticket)
 
 Ticket management:
   new            Create a new ticket
@@ -788,6 +790,11 @@ the given substring:
     },
     /// Print version and build type
     Version,
+    /// Show help for a topic: commands, config, workflow, ticket
+    Help {
+        /// Topic to display (commands, config, workflow, ticket); omit for overview
+        topic: Option<String>,
+    },
 }
 
 pub fn repo_root() -> Result<PathBuf> {
@@ -900,6 +907,7 @@ fn main() -> Result<()> {
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
         Command::Version => { cmd::version::run(); Ok(()) }
+        Command::Help { topic } => cmd::help::run(topic.as_deref(), Cli::command()),
     }
 }
 
