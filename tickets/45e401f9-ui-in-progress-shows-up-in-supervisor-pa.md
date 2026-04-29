@@ -1,7 +1,7 @@
 +++
 id = "45e401f9"
 title = "UI: in progress shows up in supervisor panel"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/45e401f9-ui-in-progress-shows-up-in-supervisor-pa"
 created_at = "2026-04-29T06:57:10.412779Z"
-updated_at = "2026-04-29T06:57:10.412779Z"
+updated_at = "2026-04-29T21:13:54.145586Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-29T06:57Z | — | new | philippepascal |
+| 2026-04-29T21:13Z | new | groomed | philippepascal |
