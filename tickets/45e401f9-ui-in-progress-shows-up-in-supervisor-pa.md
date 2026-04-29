@@ -3,13 +3,13 @@ id = "45e401f9"
 title = "UI: in progress shows up in supervisor panel"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/45e401f9-ui-in-progress-shows-up-in-supervisor-pa"
 created_at = "2026-04-29T06:57:10.412779Z"
-updated_at = "2026-04-29T21:24:16.423560Z"
+updated_at = "2026-04-29T21:27:12.737984Z"
 +++
 
 ## Spec
