@@ -27,7 +27,7 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 
 ### Acceptance criteria
 
-- [ ] `apm help commands` exits 0 and prints output to stdout
+- [x] `apm help commands` exits 0 and prints output to stdout
 - [ ] Every non-hidden top-level command appears in the output (hidden commands such as `_hook` do not appear)
 - [ ] Top-level commands appear in alphabetical order in the output
 - [ ] Each command entry shows the command name and its one-line description (from `get_about()`)
