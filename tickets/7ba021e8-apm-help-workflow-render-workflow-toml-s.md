@@ -28,7 +28,7 @@ This ticket does two things: (1) adds meaningful doc comments to all fields on t
 ### Acceptance criteria
 
 - [x] `apm help workflow` exits 0 and prints non-empty output
-- [ ] The output contains the path `workflow.states[].id`
+- [x] The output contains the path `workflow.states[].id`
 - [ ] The output contains the path `workflow.states[].transitions[].completion`
 - [ ] The output contains the path `workflow.prioritization.priority_weight`
 - [ ] The `completion` field entry lists all five variants: `pr`, `merge`, `pull`, `pr_or_epic_merge`, `none`
