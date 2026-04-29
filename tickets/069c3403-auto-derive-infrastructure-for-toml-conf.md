@@ -59,7 +59,7 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 - [x] schema_entries for Config includes an entry for workflow.states[].transitions[].completion with enum_variants containing all five CompletionStrategy TOML values: pr, merge, pull, pr_or_epic_merge, none
 - [x] render_schema for Config returns a non-empty string that contains the literal text agents.max_concurrent
 - [x] schema_entries for WorkflowConfig includes an entry for workflow.states[].satisfies_deps with a union-style type_name (e.g. "bool | string") and enum_variants == None
-- [ ] cargo test -p apm-core passes with no regressions
+- [x] cargo test -p apm-core passes with no regressions
 
 ### Out of scope
 
