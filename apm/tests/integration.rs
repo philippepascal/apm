@@ -7285,3 +7285,139 @@ fn clean_older_than_filters_by_updated_at() {
     assert!(!old_wt.exists(), "old worktree should be cleaned (updated_at < threshold)");
     assert!(recent_wt.exists(), "recent worktree should be kept (updated_at >= threshold)");
 }
+
+// --- apm help commands ---
+
+fn apm_help_commands(dir: &std::path::Path) -> std::process::Output {
+    std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["help", "commands"])
+        .current_dir(dir)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn help_commands_exits_zero() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    assert!(
+        out.status.success(),
+        "apm help commands failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn help_commands_includes_visible_top_level_commands() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    for cmd in &["agents", "archive", "assign", "clean", "close", "epic",
+                 "help", "init", "list", "move", "new", "next",
+                 "refresh-epic", "register", "review", "revoke",
+                 "sessions", "set", "show", "spec", "start", "state",
+                 "sync", "validate", "verify", "version", "work",
+                 "workers", "worktrees"] {
+        assert!(stdout.contains(cmd), "missing command '{}' in:\n{}", cmd, stdout);
+    }
+}
+
+#[test]
+fn help_commands_excludes_hidden_hook() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        !stdout.contains("_hook"),
+        "hidden command '_hook' appeared in:\n{stdout}"
+    );
+}
+
+#[test]
+fn help_commands_alphabetical_order() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+
+    // Check a few pairs that must appear in alphabetical order.
+    let agents_pos = stdout.find("\nagents\n").expect("agents not found");
+    let archive_pos = stdout.find("\narchive\n").expect("archive not found");
+    let list_pos = stdout.find("\nlist\n").expect("list not found");
+    let worktrees_pos = stdout.find("\nworktrees\n").expect("worktrees not found");
+
+    assert!(agents_pos < archive_pos, "agents must precede archive");
+    assert!(archive_pos < list_pos, "archive must precede list");
+    assert!(list_pos < worktrees_pos, "list must precede worktrees");
+}
+
+#[test]
+fn help_commands_shows_epic_subcommands_in_order() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+
+    for sub in &["epic new", "epic close", "epic list", "epic show", "epic set"] {
+        assert!(stdout.contains(sub), "missing subcommand '{}' in:\n{}", sub, stdout);
+    }
+
+    // Subcommands must appear in declaration order (new, close, list, show, set).
+    let new_pos   = stdout.find("epic new").unwrap();
+    let close_pos = stdout.find("epic close").unwrap();
+    let list_pos  = stdout.find("epic list").unwrap();
+    let show_pos  = stdout.find("epic show").unwrap();
+    let set_pos   = stdout.find("epic set").unwrap();
+    assert!(new_pos < close_pos, "epic new must precede epic close");
+    assert!(close_pos < list_pos, "epic close must precede epic list");
+    assert!(list_pos < show_pos, "epic list must precede epic show");
+    assert!(show_pos < set_pos, "epic show must precede epic set");
+}
+
+#[test]
+fn help_commands_no_help_or_version_flags() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(!stdout.contains("--help"), "--help flag appeared in output");
+    assert!(!stdout.contains("--version"), "--version flag appeared in output");
+}
+
+#[test]
+fn help_commands_no_ansi_codes() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(
+        !stdout.contains('\x1b'),
+        "ANSI escape code found in output"
+    );
+}
+
+#[test]
+fn help_commands_lines_within_100_chars() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    for line in stdout.lines() {
+        assert!(
+            line.len() <= 100,
+            "line exceeds 100 chars ({} chars): {:?}",
+            line.len(),
+            line
+        );
+    }
+}
+
+#[test]
+fn help_commands_shows_defaults() {
+    let dir = setup();
+    let out = apm_help_commands(dir.path());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    // The --interval flag on `work` has default_value = "30".
+    assert!(
+        stdout.contains("(default: 30)"),
+        "default annotation not found in:\n{stdout}"
+    );
+    // Default must appear only once (not duplicated).
+    let count = stdout.matches("(default: 30)").count();
+    assert_eq!(count, 1, "default annotation appeared {} times (expected 1)", count);
+}

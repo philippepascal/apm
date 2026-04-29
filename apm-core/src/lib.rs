@@ -1,5 +1,6 @@
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 pub mod archive;
+pub mod help_schema;
 pub mod clean;
 pub mod config;
 pub mod context;
