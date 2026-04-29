@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+/// `free` — free-form prose. `tasks` — checkbox list (`- [ ] item`); supports `apm spec --mark` and `apm spec --add-task`. `qa` — question/answer pairs.
 #[derive(Debug, Clone, PartialEq, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionType {
@@ -11,17 +12,24 @@ pub enum SectionType {
     Qa,
 }
 
+/// A single section in the ticket template.
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct TicketSection {
+    /// Display name of the section (e.g. "Problem", "Approach").
     pub name: String,
+    /// Rendering mode — `tasks` sections support `apm spec --mark` and `apm spec --add-task`; `free` is prose; `qa` is question/answer pairs.
     #[serde(rename = "type")]
     pub type_: SectionType,
+    /// Whether the section must be non-empty before the ticket can transition out of in_design.
     #[serde(default)]
     pub required: bool,
+    /// Hint text pre-filled into an empty section when a new ticket is created.
     #[serde(default)]
     pub placeholder: Option<String>,
 }
 
+/// Configuration for the sections that appear on every ticket, in order.
+/// Defined in `.apm/ticket.toml` as `[[ticket.sections]]` blocks.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct TicketConfig {
     #[serde(default)]
