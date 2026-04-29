@@ -32,7 +32,7 @@ The current `help_template` in `main.rs` provides a grouped overview (Setup / Ti
 - [x] Top-level commands appear in alphabetical order in the output
 - [x] Each command entry shows the command name and its one-line description (from `get_about()`)
 - [x] Each command entry lists its positional arguments with their value-name label and help text
-- [ ] Each command entry lists its flags/options with long name, short name (if any), value name (if any), and help text
+- [x] Each command entry lists its flags/options with long name, short name (if any), value name (if any), and help text
 - [ ] Flags with a default value show the default in their entry
 - [ ] Auto-generated clap flags (`--help`, `--version`) do not appear in the output
 - [ ] All five current `epic` subcommands — `epic new`, `epic close`, `epic list`, `epic show`, `epic set` — appear in the output under the `epic` parent entry, in declaration order
