@@ -1,7 +1,7 @@
 +++
 id = "163e0ee3"
 title = "explore: claude arguments are all in config"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/163e0ee3-explore-claude-arguments-are-all-in-conf"
 created_at = "2026-04-29T06:58:36.282134Z"
-updated_at = "2026-04-29T21:13:58.004643Z"
+updated_at = "2026-04-29T21:27:31.868020Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-29T06:58Z | — | new | philippepascal |
 | 2026-04-29T21:13Z | new | groomed | philippepascal |
+| 2026-04-29T21:27Z | groomed | in_design | philippepascal |
