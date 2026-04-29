@@ -47,14 +47,14 @@ The CLAUDE.md rule "main worktree always on main, never holds work" was violated
 
 ### Acceptance criteria
 
-- [ ] Running a worker with the default configuration produces a `.apm-worker.log` containing JSONL lines (one JSON object per line) for every event emitted by the worker driver, including `tool_use` events that expose the path argument for every Edit, Write, and Bash call the worker made
-- [ ] A `.apm-worker.log` from a run that edits a file contains a line from which the absolute path of the edited file can be extracted (e.g. via grep or jq)
-- [ ] `apm start --spawn` exits non-zero with a descriptive error message if the configured worker binary does not advertise `--output-format stream-json` in its `--help` output; the error names the missing flag and the binary path
-- [ ] An integration test in `apm-core/tests/` (or `apm/tests/integration.rs`) spawns a worker process via the same code path used by `apm start --spawn`, captures the spawned process's working directory, and asserts it equals the ticket's worktree path
-- [ ] `cargo test --workspace` passes with the new integration test included
-- [ ] `.apm/apm.worker.md` contains a Path discipline section that states: never edit files outside the ticket worktree; always use absolute paths rooted at the worktree path shown in `apm show`; includes a labelled correct example and a wrong example
-- [ ] `apm-core/src/default/apm.worker.md` contains the identical Path discipline section (same wording as the project file)
-- [ ] A `cargo test` assertion in `apm-core/tests/` reads both `apm-core/src/default/apm.worker.md` and `.apm/apm.worker.md` and fails with a diff if their contents are not byte-for-byte identical
+- [x] Running a worker with the default configuration produces a `.apm-worker.log` containing JSONL lines (one JSON object per line) for every event emitted by the worker driver, including `tool_use` events that expose the path argument for every Edit, Write, and Bash call the worker made
+- [x] A `.apm-worker.log` from a run that edits a file contains a line from which the absolute path of the edited file can be extracted (e.g. via grep or jq)
+- [x] `apm start --spawn` exits non-zero with a descriptive error message if the configured worker binary does not advertise `--output-format stream-json` in its `--help` output; the error names the missing flag and the binary path
+- [x] An integration test in `apm-core/tests/` (or `apm/tests/integration.rs`) spawns a worker process via the same code path used by `apm start --spawn`, captures the spawned process's working directory, and asserts it equals the ticket's worktree path
+- [x] `cargo test --workspace` passes with the new integration test included
+- [x] `.apm/apm.worker.md` contains a Path discipline section that states: never edit files outside the ticket worktree; always use absolute paths rooted at the worktree path shown in `apm show`; includes a labelled correct example and a wrong example
+- [x] `apm-core/src/default/apm.worker.md` contains the identical Path discipline section (same wording as the project file)
+- [x] A `cargo test` assertion in `apm-core/tests/` reads both `apm-core/src/default/apm.worker.md` and `.apm/apm.worker.md` and fails with a diff if their contents are not byte-for-byte identical
 
 ### Out of scope
 
