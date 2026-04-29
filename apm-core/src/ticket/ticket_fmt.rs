@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -28,9 +29,10 @@ fn deserialize_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::E
     d.deserialize_any(IdVisitor)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Frontmatter {
     #[serde(deserialize_with = "deserialize_id")]
+    #[schemars(with = "String")]
     pub id: String,
     pub title: String,
     pub state: String,
