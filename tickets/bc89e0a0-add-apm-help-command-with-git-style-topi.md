@@ -26,7 +26,7 @@ This ticket adds CLI plumbing only: the `Help` subcommand variant in the clap `C
 
 - [x] `apm help` (no topic) exits 0 and prints a short description of the help system
 - [x] `apm help` (no topic) lists all available topics (`commands`, `config`, `workflow`, `ticket`) with a one-line summary each
-- [ ] `apm help commands` exits 0 and prints a non-empty placeholder string referencing ticket 3665e017
+- [x] `apm help commands` exits 0 and prints a non-empty placeholder string referencing ticket 3665e017
 - [ ] `apm help config` exits 0 and prints a non-empty placeholder string referencing ticket d486d183
 - [ ] `apm help workflow` exits 0 and prints a non-empty placeholder string referencing ticket 7ba021e8
 - [ ] `apm help ticket` exits 0 and prints a non-empty placeholder string referencing ticket 14214305
