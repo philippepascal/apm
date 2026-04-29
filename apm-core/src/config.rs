@@ -54,30 +54,41 @@ pub enum CompletionStrategy {
 
 #[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct LoggingConfig {
+    /// When true, apm writes a debug log file for each run.
     #[serde(default)]
     pub enabled: bool,
+    /// Path to the log file written when logging is enabled.
     pub file: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 #[serde(default)]
 pub struct GitHostConfig {
+    /// Git host provider; currently only `github` is supported.
     pub provider: Option<String>,
+    /// Repository path in `owner/name` form used for PR creation and collaborator lookup.
     pub repo: Option<String>,
+    /// Environment variable name that holds the git host API token.
     pub token_env: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct WorkersConfig {
+    /// Docker image used to run worker agents; omit for local execution.
     pub container: Option<String>,
+    /// Map of secret names to keychain item names resolved at worker launch time.
     #[serde(default)]
     pub keychain: std::collections::HashMap<String, String>,
+    /// Executable used to run worker agents.
     #[serde(default = "default_command")]
     pub command: String,
+    /// Default arguments passed to the worker command.
     #[serde(default = "default_args")]
     pub args: Vec<String>,
+    /// AI model override passed to the worker command; empty means use the command default.
     #[serde(default)]
     pub model: Option<String>,
+    /// Environment variables injected into every worker process.
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
 }
@@ -100,26 +111,36 @@ fn default_args() -> Vec<String> { vec!["--print".to_string()] }
 
 #[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct WorkerProfileConfig {
+    /// Override the worker command for this profile.
     pub command: Option<String>,
+    /// Override the worker command arguments for this profile.
     pub args: Option<Vec<String>>,
+    /// Override the AI model for this profile.
     pub model: Option<String>,
+    /// Extra environment variables merged into the worker environment for this profile.
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
+    /// Override the Docker image for this profile.
     pub container: Option<String>,
+    /// Additional instructions prepended to the worker prompt for this profile.
     pub instructions: Option<String>,
+    /// Role label prepended to the worker identity string for this profile.
     pub role_prefix: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkConfig {
+    /// Default epic ID assigned when creating tickets with `apm new`.
     #[serde(default)]
     pub epic: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct ServerConfig {
+    /// Public-facing origin URL of the apm server, used in PR descriptions.
     #[serde(default = "default_server_origin")]
     pub origin: String,
+    /// Internal URL the apm CLI uses to reach the apm server.
     #[serde(default = "default_server_url")]
     pub url: String,
 }
@@ -140,8 +161,10 @@ impl Default for ServerConfig {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ContextConfig {
+    /// Maximum number of sibling tickets included in worker context bundles.
     #[serde(default = "default_epic_sibling_cap")]
     pub epic_sibling_cap: usize,
+    /// Maximum byte size of the context bundle injected into worker prompts.
     #[serde(default = "default_epic_byte_cap")]
     pub epic_byte_cap: usize,
 }
@@ -204,6 +227,7 @@ pub(crate) struct TicketFile {
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct SyncConfig {
+    /// When true, `apm sync` fetches all remote branches before checking state.
     #[serde(default = "default_true")]
     pub aggressive: bool,
 }
@@ -216,11 +240,15 @@ impl Default for SyncConfig {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ProjectConfig {
+    /// Project name shown in prompts and the APM dashboard.
     pub name: String,
+    /// Optional description of the project's purpose.
     #[serde(default)]
     pub description: String,
+    /// Git branch used as the integration target for non-epic tickets.
     #[serde(default = "default_branch_main")]
     pub default_branch: String,
+    /// Usernames allowed to own and work on tickets.
     #[serde(default)]
     pub collaborators: Vec<String>,
 }
@@ -231,9 +259,11 @@ fn default_branch_main() -> String {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TicketsConfig {
+    /// Directory (relative to project root) where ticket files are stored.
     pub dir: PathBuf,
     #[serde(default)]
     pub sections: Vec<String>,
+    /// Optional directory where closed tickets are moved on `apm close`.
     #[serde(default)]
     pub archive_dir: Option<PathBuf>,
 }
@@ -357,16 +387,22 @@ fn default_risk_weight() -> f64 { -1.0 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct AgentsConfig {
+    /// Maximum number of worker agents allowed to run simultaneously.
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
+    /// Maximum workers allowed to work on the same epic at once.
     #[serde(default = "default_max_workers_per_epic")]
     pub max_workers_per_epic: usize,
+    /// Maximum workers allowed to target the default branch simultaneously.
     #[serde(default = "default_max_workers_on_default")]
     pub max_workers_on_default: usize,
+    /// Path to an instructions file injected into every worker prompt.
     #[serde(default)]
     pub instructions: Option<PathBuf>,
+    /// When true, workers may file side-note tickets during implementation.
     #[serde(default = "default_true")]
     pub side_tickets: bool,
+    /// When true, workers skip Claude Code permission prompts.
     #[serde(default)]
     pub skip_permissions: bool,
 }
@@ -378,7 +414,9 @@ fn default_true() -> bool { true }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct WorktreesConfig {
+    /// Directory (relative to project root) where git worktrees are created.
     pub dir: PathBuf,
+    /// Additional directories created inside each worker worktree.
     #[serde(default)]
     pub agent_dirs: Vec<String>,
 }

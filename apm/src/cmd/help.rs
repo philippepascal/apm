@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::config::{TicketConfig, WorkflowConfig};
+use apm_core::config::{Config, TicketConfig, WorkerProfileConfig, WorkflowConfig};
 use apm_core::help_schema::{schema_entries, FieldEntry};
 
 static TOPICS: &[(&str, &str)] = &[
@@ -250,7 +250,82 @@ fn wrap_with_indent(first_prefix: &str, text: &str, max_width: usize) -> String 
 }
 
 fn render_config() -> String {
-    "apm help config — config.toml schema reference\n\nContent not yet implemented. See ticket d486d183.\n".to_string()
+    let all_entries = schema_entries::<Config>();
+
+    // Group entries by their first path segment (before first '.' or '[').
+    // Preserve encounter order (schemars respects struct declaration order).
+    let mut sections: Vec<(String, Vec<FieldEntry>)> = Vec::new();
+    for e in all_entries {
+        let seg = e.toml_path
+            .split(|c: char| c == '.' || c == '[')
+            .next()
+            .unwrap_or(e.toml_path.as_str())
+            .to_string();
+        match sections.iter_mut().find(|(k, _)| *k == seg) {
+            Some(group) => group.1.push(e),
+            None => sections.push((seg, vec![e])),
+        }
+    }
+
+    let mut out = String::from("config.toml — project and tool configuration\n\n");
+
+    for (section, group) in &sections {
+        // workflow and ticket have dedicated `apm help workflow` / `apm help ticket` topics.
+        if section == "workflow" || section == "ticket" {
+            continue;
+        }
+
+        if section == "worker_profiles" {
+            // worker_profiles is a HashMap<String, WorkerProfileConfig>.
+            // Render using map notation: worker_profiles.<name>.<field>.
+            out.push_str("[worker_profiles.<name>]\n");
+            out.push_str("# Each key is a user-defined named profile whose fields mirror [workers].\n");
+
+            let profile_entries: Vec<FieldEntry> = schema_entries::<WorkerProfileConfig>()
+                .into_iter()
+                .map(|e| FieldEntry {
+                    toml_path: format!("worker_profiles.<name>.{}", e.toml_path),
+                    ..e
+                })
+                .collect();
+
+            if !profile_entries.is_empty() {
+                let path_w = profile_entries.iter().map(|e| e.toml_path.len()).max().unwrap_or(0);
+                let type_w = profile_entries.iter().map(|e| e.type_name.len()).max().unwrap_or(0);
+                for e in &profile_entries {
+                    out.push_str(&fmt_field_entry(e, path_w, type_w));
+                    out.push('\n');
+                }
+            }
+        } else {
+            out.push_str(&format!("[{}]\n", section));
+
+            let path_w = group.iter().map(|e| e.toml_path.len()).max().unwrap_or(0);
+            let type_w = group.iter().map(|e| e.type_name.len()).max().unwrap_or(0);
+            for e in group {
+                out.push_str(&fmt_field_entry(e, path_w, type_w));
+                out.push('\n');
+            }
+        }
+
+        out.push('\n');
+    }
+
+    out
+}
+
+fn fmt_field_entry(e: &FieldEntry, path_w: usize, type_w: usize) -> String {
+    let mut line = format!("{:<path_w$}  {:<type_w$}", e.toml_path, e.type_name);
+    if let Some(ref d) = e.default {
+        line.push_str(&format!("  [default: {}]", d));
+    }
+    if let Some(ref desc) = e.description {
+        line.push_str(&format!("  # {}", desc));
+    }
+    if let Some(ref variants) = e.enum_variants {
+        line.push_str(&format!("  ({})", variants.join(" | ")));
+    }
+    line
 }
 
 fn render_workflow() -> String {
