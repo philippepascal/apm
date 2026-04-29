@@ -49,7 +49,7 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 - [x] schemars = version 0.8, features derive is present in workspace.dependencies in the root Cargo.toml
 - [x] schemars = workspace true is present in dependencies in apm-core/Cargo.toml
 - [x] apm-core compiles cleanly after adding JsonSchema to all serialized config types in apm-core/src/config.rs
-- [ ] Frontmatter in apm-core/src/ticket/ticket_fmt.rs compiles with JsonSchema derive -- the id field custom deserializer does not cause a compilation error (handled via schemars with String)
+- [x] Frontmatter in apm-core/src/ticket/ticket_fmt.rs compiles with JsonSchema derive -- the id field custom deserializer does not cause a compilation error (handled via schemars with String)
 - [ ] apm_core::help_schema::FieldEntry is a public struct accessible from outside apm-core
 - [ ] apm_core::help_schema::schema_entries is callable from outside apm-core for any T: JsonSchema
 - [ ] apm_core::help_schema::render_schema is callable from outside apm-core for any T: JsonSchema
