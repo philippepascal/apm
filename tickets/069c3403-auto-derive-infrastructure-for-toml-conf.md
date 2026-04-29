@@ -55,7 +55,7 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 - [x] apm_core::help_schema::render_schema is callable from outside apm-core for any T: JsonSchema
 - [x] schema_entries for Config includes an entry for agents.max_concurrent with default == Some("3") and required == false
 - [x] schema_entries for Config includes an entry for project.name with required == true
-- [ ] schema_entries for Config includes at least one entry whose toml_path starts with workflow.states[]. (array-of-struct paths use [] notation)
+- [x] schema_entries for Config includes at least one entry whose toml_path starts with workflow.states[]. (array-of-struct paths use [] notation)
 - [ ] schema_entries for Config includes an entry for workflow.states[].transitions[].completion with enum_variants containing all five CompletionStrategy TOML values: pr, merge, pull, pr_or_epic_merge, none
 - [ ] render_schema for Config returns a non-empty string that contains the literal text agents.max_concurrent
 - [ ] schema_entries for WorkflowConfig includes an entry for workflow.states[].satisfies_deps with a union-style type_name (e.g. "bool | string") and enum_variants == None
