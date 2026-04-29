@@ -32,7 +32,7 @@ The catch-all is also redundant: `merge_failed` already carries `actionable = ["
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- UI component changes (SupervisorView.tsx, Swimlane.tsx)\n- Adding automated tests for supervisor panel state filtering\n- Changes to workflow state definitions in workflow.toml
 
 ### Approach
 
