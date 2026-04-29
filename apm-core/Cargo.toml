@@ -13,6 +13,7 @@ categories = ["development-tools"]
 readme = "../README.md"
 
 [dependencies]
+schemars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }

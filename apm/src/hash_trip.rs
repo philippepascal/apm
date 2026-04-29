@@ -13,7 +13,9 @@ pub enum HashTripOutcome {
 pub fn is_exempt_command(cmd: &super::Command) -> bool {
     matches!(
         cmd,
-        super::Command::Validate { .. } | super::Command::Init { .. }
+        super::Command::Validate { .. }
+            | super::Command::Init { .. }
+            | super::Command::Help { .. }
     )
 }
 
