@@ -51,7 +51,38 @@ The desired state: every argument that APM appends to the worker command is eith
 
 ### Approach
 
-How the implementation will work.
+Changes span `apm-core/src/config.rs`, `apm-core/src/start.rs`, and `.apm/config.toml`.
+
+**1. `config.rs` — `WorkersConfig`**
+- Add two new fields with serde defaults:
+  - `system_prompt_flag: Option<String>` — default `Some("--system-prompt")`
+  - `skip_permissions_flag: Option<String>` — default `Some("--dangerously-skip-permissions")`
+  Add corresponding `default_system_prompt_flag()` and `default_skip_permissions_flag()` functions, and update `WorkersConfig::default()`.
+- Change `default_args()` from `["--print"]` to `["--print", "--output-format", "stream-json", "--verbose"]` so new projects get the correct defaults without having to enumerate every flag.
+
+**2. `config.rs` — `WorkerProfileConfig`**
+- Add the same two fields as bare `Option<String>` with no serde default (i.e. absent from TOML = `None` = inherit from global). This preserves the existing profile-override pattern.
+
+**3. `start.rs` — `EffectiveWorkerParams`**
+- Add `system_prompt_flag: Option<String>` and `skip_permissions_flag: Option<String>` fields.
+
+**4. `start.rs` — `effective_spawn_params()`**
+- Resolve both new fields using the same profile-over-global pattern as `command`/`model`: profile value wins if `Some`, otherwise fall back to global `workers` value.
+
+**5. `start.rs` — `spawn_container_worker()` and `build_spawn_command()`**
+- Remove the two hardcoded lines for `--output-format stream-json` and `--verbose` — these will now arrive via `params.args`.
+- Replace hardcoded `cmd.args(["--system-prompt", worker_system])` with a conditional that only appends the flag+value when `params.system_prompt_flag` is `Some`.
+- Replace hardcoded `cmd.arg("--dangerously-skip-permissions")` with a conditional that checks both `skip_permissions == true` and `params.skip_permissions_flag.is_some()`.
+
+**6. `start.rs` — `check_output_format_supported()`**
+- Gate the call: only invoke it when `"--output-format"` appears in `params.args`. This avoids a spurious compatibility error for agents that use a different log-capture mechanism.
+
+**7. `.apm/config.toml`**
+- Update `[workers].args` and every `[worker_profiles.*].args` to add `"--output-format"`, `"stream-json"`, and `"--verbose"`. The existing config has explicit `args` entries that won't change just because `default_args()` changed, so this manual update is required to keep behaviour identical.
+
+**8. Tests in `config.rs`**
+- Update any assertion that `default_args() == ["--print"]` to reflect the new four-element default.
+- Add a test for `effective_spawn_params` verifying that `system_prompt_flag` and `skip_permissions_flag` resolve correctly under (a) profile override, (b) fallback to global, and (c) explicit `None` (no flag appended).
 
 ### Open questions
 
