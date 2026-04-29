@@ -53,7 +53,7 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 - [x] apm_core::help_schema::FieldEntry is a public struct accessible from outside apm-core
 - [x] apm_core::help_schema::schema_entries is callable from outside apm-core for any T: JsonSchema
 - [x] apm_core::help_schema::render_schema is callable from outside apm-core for any T: JsonSchema
-- [ ] schema_entries for Config includes an entry for agents.max_concurrent with default == Some("3") and required == false
+- [x] schema_entries for Config includes an entry for agents.max_concurrent with default == Some("3") and required == false
 - [ ] schema_entries for Config includes an entry for project.name with required == true
 - [ ] schema_entries for Config includes at least one entry whose toml_path starts with workflow.states[]. (array-of-struct paths use [] notation)
 - [ ] schema_entries for Config includes an entry for workflow.states[].transitions[].completion with enum_variants containing all five CompletionStrategy TOML values: pr, merge, pull, pr_or_epic_merge, none
