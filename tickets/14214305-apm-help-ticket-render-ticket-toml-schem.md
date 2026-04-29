@@ -1,7 +1,7 @@
 +++
 id = "14214305"
 title = "apm help ticket: render ticket.toml schema from TicketConfig struct"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/14214305-apm-help-ticket-render-ticket-toml-schem"
 created_at = "2026-04-28T19:28:31.483927Z"
-updated_at = "2026-04-29T07:50:45.379206Z"
+updated_at = "2026-04-29T07:55:54.972442Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0", "069c3403"]
@@ -138,3 +138,4 @@ No other changes to `help.rs` are needed.
 | 2026-04-28T20:01Z | in_design | specd | claude-0428-1957-cfa0 |
 | 2026-04-29T03:43Z | specd | ready | philippepascal |
 | 2026-04-29T07:50Z | ready | in_progress | philippepascal |
+| 2026-04-29T07:55Z | in_progress | implemented | claude-0429-0750-21d0 |
