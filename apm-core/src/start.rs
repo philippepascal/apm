@@ -154,6 +154,11 @@ fn spawn_container_worker(
         cmd.args(["--model", model]);
     }
     cmd.args(["--output-format", "stream-json"]);
+    // Claude CLI requires --verbose when --print is paired with
+    // --output-format=stream-json; without it the spawned process exits
+    // immediately with "When using --print, --output-format=stream-json
+    // requires --verbose". --print is in [workers] args by default.
+    cmd.arg("--verbose");
     cmd.args(["--system-prompt", worker_system]);
     if skip_permissions {
         cmd.arg("--dangerously-skip-permissions");
@@ -188,6 +193,11 @@ fn build_spawn_command(
         cmd.args(["--model", model]);
     }
     cmd.args(["--output-format", "stream-json"]);
+    // Claude CLI requires --verbose when --print is paired with
+    // --output-format=stream-json; without it the spawned process exits
+    // immediately with "When using --print, --output-format=stream-json
+    // requires --verbose". --print is in [workers] args by default.
+    cmd.arg("--verbose");
     cmd.args(["--system-prompt", worker_system]);
     if skip_permissions {
         cmd.arg("--dangerously-skip-permissions");
