@@ -63,6 +63,31 @@ fn git_config_value(root: &Path, key: &str) -> Option<String> {
     crate::git_util::git_config_get(root, key)
 }
 
+fn check_output_format_supported(binary: &str) -> Result<()> {
+    let out = std::process::Command::new(binary)
+        .arg("--help")
+        .output()
+        .map_err(|e| anyhow::anyhow!(
+            "failed to run `{binary} --help` to check worker-driver compatibility: {e}"
+        ))?;
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    if combined.contains("--output-format") {
+        Ok(())
+    } else {
+        bail!(
+            "worker binary `{binary}` does not advertise `--output-format` in its \
+             --help output; the flag `--output-format stream-json` is required for \
+             full transcript capture in .apm-worker.log.\n\
+             Upgrade the binary to a version that supports this flag, or configure \
+             an alternative worker command in your apm.toml [workers] section."
+        )
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn spawn_container_worker(
     root: &Path,
@@ -76,6 +101,8 @@ fn spawn_container_worker(
     skip_permissions: bool,
     log_path: &Path,
 ) -> anyhow::Result<std::process::Child> {
+    check_output_format_supported(&params.command)?;
+
     let api_key = crate::credentials::resolve(
         "ANTHROPIC_API_KEY",
         keychain.get("ANTHROPIC_API_KEY").map(|s| s.as_str()),
@@ -126,6 +153,7 @@ fn spawn_container_worker(
     if let Some(ref model) = params.model {
         cmd.args(["--model", model]);
     }
+    cmd.args(["--output-format", "stream-json"]);
     cmd.args(["--system-prompt", worker_system]);
     if skip_permissions {
         cmd.arg("--dangerously-skip-permissions");
@@ -151,6 +179,7 @@ fn build_spawn_command(
     skip_permissions: bool,
     log_path: &Path,
 ) -> Result<std::process::Child> {
+    check_output_format_supported(&params.command)?;
     let mut cmd = std::process::Command::new(&params.command);
     for arg in &params.args {
         cmd.arg(arg);
@@ -158,6 +187,7 @@ fn build_spawn_command(
     if let Some(ref model) = params.model {
         cmd.args(["--model", model]);
     }
+    cmd.args(["--output-format", "stream-json"]);
     cmd.args(["--system-prompt", worker_system]);
     if skip_permissions {
         cmd.arg("--dangerously-skip-permissions");
@@ -741,7 +771,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params};
+    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, build_spawn_command, check_output_format_supported, EffectiveWorkerParams};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -1046,5 +1076,104 @@ mod tests {
             None => all_tickets,
         };
         assert_eq!(filtered.len(), count);
+    }
+
+    // --- spawn worker cwd ---
+
+    #[test]
+    fn spawn_worker_cwd_is_ticket_worktree() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let wt = tempfile::tempdir().unwrap();
+        let log_dir = tempfile::tempdir().unwrap();
+        let script_dir = tempfile::tempdir().unwrap();
+
+        // Mock worker script:
+        //   --help  → prints "--output-format stream-json" so the probe passes
+        //   other   → writes pwd to $APM_TEST_CWD_FILE and exits
+        let script_path = script_dir.path().join("mock-worker");
+        let script = concat!(
+            "#!/bin/sh\n",
+            "if [ \"$1\" = \"--help\" ]; then\n",
+            "    echo '--output-format stream-json'\n",
+            "    exit 0\n",
+            "fi\n",
+            "pwd > \"$APM_TEST_CWD_FILE\"\n",
+        );
+        std::fs::write(&script_path, script).unwrap();
+        std::fs::set_permissions(
+            &script_path,
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+
+        let cwd_file = wt.path().join("cwd-output.txt");
+        let mut env = std::collections::HashMap::new();
+        env.insert(
+            "APM_TEST_CWD_FILE".to_string(),
+            cwd_file.to_str().unwrap().to_string(),
+        );
+
+        let params = EffectiveWorkerParams {
+            command: script_path.to_str().unwrap().to_string(),
+            args: vec![],
+            model: None,
+            env,
+            container: None,
+        };
+
+        let log_path = log_dir.path().join("worker.log");
+        let mut child = build_spawn_command(
+            &params,
+            wt.path(),
+            "test-worker",
+            "system",
+            "ticket content",
+            false,
+            &log_path,
+        )
+        .unwrap();
+
+        child.wait().unwrap();
+
+        let cwd_out = std::fs::read_to_string(&cwd_file)
+            .expect("cwd-output.txt not written — mock worker did not run in expected cwd");
+        let expected = wt.path().canonicalize().unwrap();
+        assert_eq!(
+            cwd_out.trim(),
+            expected.to_str().unwrap(),
+            "spawned worker CWD must equal the ticket worktree path"
+        );
+    }
+
+    // --- check_output_format_supported ---
+
+    #[test]
+    fn check_output_format_supported_passes_when_flag_present() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("fake-claude");
+        std::fs::write(&bin, "#!/bin/sh\necho '--output-format stream-json'\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(check_output_format_supported(bin.to_str().unwrap()).is_ok());
+    }
+
+    #[test]
+    fn check_output_format_supported_errors_when_flag_absent() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("old-claude");
+        std::fs::write(&bin, "#!/bin/sh\necho 'Usage: old-claude [options]'\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let err = check_output_format_supported(bin.to_str().unwrap()).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("--output-format"),
+            "error message must name the missing flag: {msg}"
+        );
+        assert!(
+            msg.contains(bin.to_str().unwrap()),
+            "error message must include binary path: {msg}"
+        );
     }
 }

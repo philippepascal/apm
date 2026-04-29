@@ -130,3 +130,22 @@ git -C "$wt" add <files>
 # Right — single bash call, matches Bash(bash *)
 bash -c "cd $wt && cargo test --workspace 2>&1"
 ```
+
+---
+
+## Path discipline
+
+Your working directory is the ticket worktree. Never read or write files outside
+it. Always use absolute paths rooted at your worktree. The worktree path appears
+in `apm show <id>` under Worktree — note it at the start of your run.
+
+```
+# Correct — absolute path inside your worktree
+/Users/you/repos/myproject/.apm--worktrees/ticket-abc123-my-feature/src/main.rs
+
+# Wrong — path in the main repo root (leaks edits outside your worktree)
+/Users/you/repos/myproject/src/main.rs
+```
+
+If a tool call resolves to a path outside your worktree, stop immediately, file
+a side-note ticket, and set yourself to blocked.
