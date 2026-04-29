@@ -32,7 +32,7 @@ This ticket adds CLI plumbing only: the `Help` subcommand variant in the clap `C
 - [x] `apm help ticket` exits 0 and prints a non-empty placeholder string referencing ticket 14214305
 - [x] `apm help <unknown-topic>` exits non-zero
 - [x] `apm help <unknown-topic>` prints an error message that names the unknown topic and lists the valid topics
-- [ ] `apm --help` lists `help` as a subcommand in the clap-generated usage output
+- [x] `apm --help` lists `help` as a subcommand in the clap-generated usage output
 
 ### Out of scope
 
