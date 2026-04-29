@@ -51,7 +51,7 @@ The `apm help config|workflow|ticket` topics need to render structured help from
 - [x] apm-core compiles cleanly after adding JsonSchema to all serialized config types in apm-core/src/config.rs
 - [x] Frontmatter in apm-core/src/ticket/ticket_fmt.rs compiles with JsonSchema derive -- the id field custom deserializer does not cause a compilation error (handled via schemars with String)
 - [x] apm_core::help_schema::FieldEntry is a public struct accessible from outside apm-core
-- [ ] apm_core::help_schema::schema_entries is callable from outside apm-core for any T: JsonSchema
+- [x] apm_core::help_schema::schema_entries is callable from outside apm-core for any T: JsonSchema
 - [ ] apm_core::help_schema::render_schema is callable from outside apm-core for any T: JsonSchema
 - [ ] schema_entries for Config includes an entry for agents.max_concurrent with default == Some("3") and required == false
 - [ ] schema_entries for Config includes an entry for project.name with required == true
