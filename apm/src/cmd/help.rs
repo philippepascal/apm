@@ -1,4 +1,6 @@
 use anyhow::Result;
+use apm_core::config::WorkflowConfig;
+use apm_core::help_schema::{schema_entries, FieldEntry};
 
 static TOPICS: &[(&str, &str)] = &[
     ("commands", "All apm subcommands and their usage"),
@@ -252,7 +254,43 @@ fn render_config() -> String {
 }
 
 fn render_workflow() -> String {
-    "apm help workflow — workflow.toml schema reference\n\nContent not yet implemented. See ticket 7ba021e8.\n".to_string()
+    let mut out = String::new();
+    out.push_str("workflow.toml — state-machine and prioritization configuration\n");
+    out.push_str("workflow.states is an array of user-defined state objects; each element defines one node in the ticket state machine.\n");
+    out.push('\n');
+
+    // Get entries and prefix all paths with "workflow." to match the TOML key hierarchy.
+    let entries: Vec<FieldEntry> = schema_entries::<WorkflowConfig>()
+        .into_iter()
+        .map(|e| FieldEntry {
+            toml_path: format!("workflow.{}", e.toml_path),
+            ..e
+        })
+        .collect();
+
+    if entries.is_empty() {
+        return out;
+    }
+
+    let path_w = entries.iter().map(|e| e.toml_path.len()).max().unwrap_or(0);
+    let type_w = entries.iter().map(|e| e.type_name.len()).max().unwrap_or(0);
+
+    for e in &entries {
+        let mut line = format!("{:<path_w$}  {:<type_w$}", e.toml_path, e.type_name);
+        if let Some(ref d) = e.default {
+            line.push_str(&format!("  [default: {}]", d));
+        }
+        if let Some(ref desc) = e.description {
+            line.push_str(&format!("  # {}", desc));
+        }
+        if let Some(ref variants) = e.enum_variants {
+            line.push_str(&format!("  ({})", variants.join(" | ")));
+        }
+        out.push_str(&line);
+        out.push('\n');
+    }
+
+    out
 }
 
 fn render_ticket() -> String {
