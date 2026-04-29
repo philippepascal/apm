@@ -8,33 +8,29 @@ State machine: transitions defined in `apm.toml` under `[[workflow.states]]`
 
 ## Roles
 
-Every Claude session in this repo is either a **Delegator** (master agent) or
-a **Worker** (subagent). Read your initial prompt to detect which you are.
+Every Claude session in this repo is either a **Main Agent** or a
+**Worker** (subagent). Read your initial prompt to detect which you are.
 
 **Role detection**
 - If your initial prompt contains "You are a Worker agent assigned to ticket #N"
   → you are a **Worker**. Skip to the Worker section below.
-- Otherwise → you are the **Delegator**. Follow the Delegator section below.
+- Otherwise → you are the **Main Agent**. Follow the Main Agent section below.
 
-### Delegator
+### Main Agent
 
-Your only job is to dispatch work to workers. You must not write specs,
-implement code, choose tickets manually, run `apm sync`, close or transition
-tickets, or take any action not driven by `apm start --next`.
+You are a project-management companion to the supervisor. The supervisor creates tickets (with context, dependencies, epics), reviews specs and code, and handles merges; you help with those tasks on request. Workers are dispatched by `apm work` or the web UI — not by you. Do not spawn workers, run the dispatcher, or change code unless explicitly asked by the supervisor.
 
-**Before dispatching:**
-1. If the user has not specified a maximum number of concurrent workers, ask.
-   Do not assume a default.
+**Supervisor-only transitions.** The following state changes are reserved for the supervisor — do not run them even when the state machine allows it, and even when you just created the ticket:
 
-**Dispatch loop:**
-2. Call `apm start --next --spawn` (or `--spawn -P` for permissionless workers).
-3. Repeat until `apm next` returns null (nothing ready) or max workers are running.
+- `new → groomed` — grooming is the supervisor's review gate; leave new tickets in `new` after creation
+- `specd → ready` and `specd → ammend` — spec acceptance is a supervisor review
+- `implemented → ready` / `implemented → ammend` / `implemented → closed` — implementation acceptance is a supervisor review
+- `blocked → ready` — unblocking requires the supervisor's answer
+- Any `apm epic close` — epic PRs are opened by the supervisor
 
-**When the queue is empty or all ready tickets are blocked:**
-4. Report back to the supervisor with a clear status summary:
-   - How many workers were spawned
-   - Which tickets are blocking (specd/groomed/blocked) and why they can't be dispatched
-   Do not improvise. Do not switch to worker behaviour.
+Transitions you *may* initiate for your own tickets: `new → closed` (cancel a ticket you just created in error), and any state change the workflow marks `actionable = ["agent"]` when you are the assigned agent.
+
+**Override.** The supervisor can ask you to perform any supervisor-only transition explicitly. If they do, run it and note in your response that you are acting at their direction. The exclusion list above applies only to actions you initiate on your own.
 
 ### Worker
 
@@ -66,7 +62,7 @@ Body sections (`## Spec` required):
 1. Read the relevant spec files before implementing anything
 2. Make the minimal change that satisfies the acceptance criteria
 3. Add or update tests — all acceptance criteria should be covered
-4. Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
+4. Run your project's test suite — all tests must pass before calling `apm state <id> implemented`
 
 ## Identity
 
@@ -98,12 +94,6 @@ to run git commands there without leaving your current directory.
 ## Startup
 
 1. `apm sync` — refresh local cache from all `ticket/*` branches
-
-   **Note:** `apm sync` detects merges via `origin/<default-branch>`. A ticket merged into your
-   local default branch but not yet pushed will not appear as closeable. If you expect a ticket to
-   be offered for closure after merging locally, run `git push` on the default branch first, then
-   re-run `apm sync`.
-
 2. `apm next --json` — find the highest-priority ticket you can act on now
 3. `apm list --state in_progress` — check for in-progress tickets (resume if any match your agent name)
 
@@ -118,8 +108,11 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the full ticket
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Write each spec section using `apm spec` (each `--set` auto-commits
-   to the ticket branch; no manual `git add`/`git commit` needed):
+3. Write each spec section using `apm spec` (each `--set` auto-commits to the
+   ticket branch; no manual `git add`/`git commit` needed). Use `--set` only
+   when the section is empty or contains just the initial placeholder; use
+   `--append` (or `--add-task` for checkbox sections) when the section
+   already has content you must preserve.
    ```bash
    apm spec <id> --section Problem --set "..."
    apm spec <id> --section "Acceptance criteria" --set "- [ ] ..."
@@ -129,8 +122,8 @@ The ticket's state determines what to do next:
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
 4. If blocked on an ambiguity: write the question in `### Open questions` with
-   `apm spec <id> --section "Open questions" --set "..."` (auto-commits),
-   then `apm state <id> question`
+   `apm spec <id> --section "Open questions" --append "..."` (use `--append`
+   to preserve any earlier questions), then `apm state <id> question`
 5. `apm set <id> effort <1-10>` — assess implementation scale (do this after writing the spec, not before)
 6. `apm set <id> risk <1-10>` — assess technical risk
 7. `apm state <id> specd` — submit spec for supervisor review
@@ -139,15 +132,20 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the Amendment requests carefully
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Address each item using `apm spec` to update sections, then mark each
-   amendment checkbox off with `apm spec <id> --section "Amendment requests" --mark "..."`.
-   Both `--set` and `--mark` auto-commit to the ticket branch.
+3. Address each item using `apm spec` to update sections. **Use `--append`,
+   not `--set`, when adding to a section that already has content** (most
+   sections by this point will). `--set` overwrites and would erase prior
+   decisions, including checked-off amendment items the supervisor expects
+   to see preserved. For `Acceptance criteria` and similar checkbox sections
+   use `--add-task` to add a new item. Mark each amendment off with
+   `apm spec <id> --section "Amendment requests" --mark "..."`. Each `apm spec`
+   call auto-commits; no manual `git add`/`git commit` needed.
 4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
 
 **state = `in_design`** — spec is actively being written or revised:
-The ticket is claimed by an agent. This state mirrors `in_progress` for the
-implementation phase. Do not pick up an `in_design` ticket unless the
-supervisor has reassigned it to you via `apm assign <id> <username>`.
+The ticket is claimed by another agent. Do not pick up an `in_design` ticket
+on your own. If the supervisor asks you to take it over, follow the "When
+asked to take over another agent's ticket" section below.
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
@@ -173,10 +171,10 @@ supervisor has reassigned it to you via `apm assign <id> <username>`.
 4. Update `## Spec` if the approach evolves during implementation
 5. `apm state <id> implemented` — this pushes the branch and opens the PR automatically; do not open a PR manually
 6. If blocked mid-implementation (missing information, upstream decision needed):
-   write the question in `### Open questions` via `apm spec <id> --section
-   "Open questions" --set "..."` (auto-commits), then
-   `apm state <id> blocked` — **do not use `apm state <id> ready`**, that
-   transition no longer exists from `in_progress`
+   write the question in `### Open questions` with `apm spec <id> --section
+   "Open questions" --append "..."`, commit it, then `apm state <id> blocked`
+   — **do not use `apm state <id> ready`**, that transition no longer exists
+   from `in_progress`
 
 **state = `blocked`** — implementation is blocked on a supervisor decision:
 1. The previous agent wrote questions in `### Open questions` before blocking
@@ -184,10 +182,13 @@ supervisor has reassigned it to you via `apm assign <id> <username>`.
 3. Once the supervisor transitions to `ready`, pick it up with `apm start <id>`
    and continue from the existing worktree/branch
 
-## Taking over another agent's ticket
+## When asked to take over another agent's ticket
+
+`apm assign` is a supervisor action. Do not run it on your own — only when the
+supervisor explicitly asks you to take a ticket over. When they do:
 
 1. `apm show <id>` — read the full ticket including history
-2. `apm assign <id> <your-username>` — reassign ownership
+2. `apm assign <id> <your-username>` — reassign ownership to yourself
 3. If the worktree doesn't exist yet: `apm state <id> in_design` (spec states) or `apm start <id>` (implementation states) to provision it
 4. Continue from where the previous agent left off
 5. Do not discard or overwrite previous spec work or open questions
@@ -203,13 +204,22 @@ Every spec must have all four required subsections before moving to `specd`:
 
 Do not check acceptance criteria boxes until the implementation is verified.
 
+#### Subsection markers
+
+Within long sections such as `### Approach` or `### Acceptance criteria`,
+use `####` headings as named editing handles. This lets `apm spec <id>
+--section "Approach > Phase 2"` target a subsection without overwriting the
+whole section.
+
 ## Spec discipline
 
 - Set `effort` and `risk` after writing the spec, before transitioning to `specd` — you only have enough context once the spec is complete
 - Do not proceed on assumptions: write questions, change state to `question`
 - Once a question is answered, reflect the decision in `### Approach`
 - Do not delete answered questions or checked amendment items — they are the
-  decision record
+  decision record. Use `apm spec --append` (or `--add-task` for checkbox
+  sections) to add new content to a non-empty section; reserve `--set` for
+  sections that are still empty or contain only the initial placeholder.
 
 ## Branch discipline
 
@@ -275,7 +285,7 @@ git -C "$wt" add <files>
 **Use `bash -c` for multi-step commands that must share a directory:**
 ```bash
 # Right — single bash call, matches Bash(bash *)
-bash -c "cd $wt && cargo test --workspace 2>&1"
+bash -c "cd $wt && <your-test-command> 2>&1"
 ```
 
 ## Creating tickets

@@ -30,6 +30,8 @@ You are a project-management companion to the supervisor. The supervisor creates
 
 Transitions you *may* initiate for your own tickets: `new → closed` (cancel a ticket you just created in error), and any state change the workflow marks `actionable = ["agent"]` when you are the assigned agent.
 
+**Override.** The supervisor can ask you to perform any supervisor-only transition explicitly. If they do, run it and note in your response that you are acting at their direction. The exclusion list above applies only to actions you initiate on your own.
+
 ### Worker
 
 You have been assigned a single ticket. Implement it, run tests, and mark it
@@ -107,7 +109,10 @@ The ticket's state determines what to do next:
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
 3. Write each spec section using `apm spec` (each `--set` auto-commits to the
-   ticket branch; no manual `git add`/`git commit` needed):
+   ticket branch; no manual `git add`/`git commit` needed). Use `--set` only
+   when the section is empty or contains just the initial placeholder; use
+   `--append` (or `--add-task` for checkbox sections) when the section
+   already has content you must preserve.
    ```bash
    apm spec <id> --section Problem --set "..."
    apm spec <id> --section "Acceptance criteria" --set "- [ ] ..."
@@ -117,8 +122,8 @@ The ticket's state determines what to do next:
    Note: `apm new` opens `$EDITOR` after creating a ticket. Agents should always
    pass `--no-edit` to skip the interactive editor: `apm new --no-edit "<title>"`.
 4. If blocked on an ambiguity: write the question in `### Open questions` with
-   `apm spec <id> --section "Open questions" --set "..."`, commit it to the
-   worktree, then `apm state <id> question`
+   `apm spec <id> --section "Open questions" --append "..."` (use `--append`
+   to preserve any earlier questions), then `apm state <id> question`
 5. `apm set <id> effort <1-10>` — assess implementation scale (do this after writing the spec, not before)
 6. `apm set <id> risk <1-10>` — assess technical risk
 7. `apm state <id> specd` — submit spec for supervisor review
@@ -127,15 +132,20 @@ The ticket's state determines what to do next:
 1. `apm show <id>` — read the Amendment requests carefully
 2. `apm state <id> in_design` — claim the ticket and provision its worktree;
    prints two lines: the state-change line, then the worktree path
-3. Address each item using `apm spec` to update sections, then mark each
-   amendment checkbox off with `apm spec <id> --section "Amendment requests" --mark "..."`.
-   Each `apm spec` call auto-commits; no manual `git add`/`git commit` needed.
+3. Address each item using `apm spec` to update sections. **Use `--append`,
+   not `--set`, when adding to a section that already has content** (most
+   sections by this point will). `--set` overwrites and would erase prior
+   decisions, including checked-off amendment items the supervisor expects
+   to see preserved. For `Acceptance criteria` and similar checkbox sections
+   use `--add-task` to add a new item. Mark each amendment off with
+   `apm spec <id> --section "Amendment requests" --mark "..."`. Each `apm spec`
+   call auto-commits; no manual `git add`/`git commit` needed.
 4. `apm state <id> specd` — resubmit only when all amendment boxes are checked
 
 **state = `in_design`** — spec is actively being written or revised:
-The ticket is claimed by an agent. This state mirrors `in_progress` for the
-implementation phase. Do not pick up an `in_design` ticket unless you are
-taking it over with `apm assign <id> <your-username>`.
+The ticket is claimed by another agent. Do not pick up an `in_design` ticket
+on your own. If the supervisor asks you to take it over, follow the "When
+asked to take over another agent's ticket" section below.
 
 **state = `ready`** — implement:
 1. `apm show <id>` — re-read the full spec before touching any code
@@ -161,9 +171,10 @@ taking it over with `apm assign <id> <your-username>`.
 4. Update `## Spec` if the approach evolves during implementation
 5. `apm state <id> implemented` — this pushes the branch and opens the PR automatically; do not open a PR manually
 6. If blocked mid-implementation (missing information, upstream decision needed):
-   write the question in `### Open questions`, commit it, then
-   `apm state <id> blocked` — **do not use `apm state <id> ready`**, that
-   transition no longer exists from `in_progress`
+   write the question in `### Open questions` with `apm spec <id> --section
+   "Open questions" --append "..."`, commit it, then `apm state <id> blocked`
+   — **do not use `apm state <id> ready`**, that transition no longer exists
+   from `in_progress`
 
 **state = `blocked`** — implementation is blocked on a supervisor decision:
 1. The previous agent wrote questions in `### Open questions` before blocking
@@ -171,7 +182,10 @@ taking it over with `apm assign <id> <your-username>`.
 3. Once the supervisor transitions to `ready`, pick it up with `apm start <id>`
    and continue from the existing worktree/branch
 
-## Taking over another agent's ticket
+## When asked to take over another agent's ticket
+
+`apm assign` is a supervisor action. Do not run it on your own — only when the
+supervisor explicitly asks you to take a ticket over. When they do:
 
 1. `apm show <id>` — read the full ticket including history
 2. `apm assign <id> <your-username>` — reassign ownership to yourself
@@ -203,7 +217,9 @@ whole section.
 - Do not proceed on assumptions: write questions, change state to `question`
 - Once a question is answered, reflect the decision in `### Approach`
 - Do not delete answered questions or checked amendment items — they are the
-  decision record
+  decision record. Use `apm spec --append` (or `--add-task` for checkbox
+  sections) to add new content to a non-empty section; reserve `--set` for
+  sections that are still empty or contain only the initial placeholder.
 
 ## Branch discipline
 
@@ -271,6 +287,31 @@ git -C "$wt" add <files>
 # Right — single bash call, matches Bash(bash *)
 bash -c "cd $wt && <your-test-command> 2>&1"
 ```
+
+## Creating tickets
+
+Every `apm new` invocation must seed the ticket's Problem section with
+enough context that a downstream worker can pick it up without having to
+re-derive the analysis. A bare title is not enough — it forces the next
+agent to re-investigate the repo, and the supervisor loses the reasoning
+that motivated the ticket.
+
+Always pass `--context` (and `--no-edit`, to skip the interactive editor):
+
+```bash
+apm new --no-edit --context "<problem statement with concrete usage sites, measurements, or constraints>" "<title>"
+```
+
+The `--context` string is written into `### Problem` verbatim. Include
+whatever made you file the ticket: the failing test, the grep results,
+the measured regression, the file:line usage sites, the upstream decision
+this depends on. If the context is too long to fit in a shell argument,
+create the ticket with a short `--context` placeholder, then replace the
+Problem section with `apm spec <id> --section Problem --set-file <path>`.
+
+If you only have a title and no usable context yet, the ticket is not
+ready to be filed — leave a note for the supervisor instead of creating
+a skeleton ticket.
 
 ## Side tickets
 
