@@ -26,7 +26,9 @@ The catch-all is also redundant: `merge_failed` already carries `actionable = ["
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] The supervisor panel does not show an `in_progress` swimlane column when one or more tickets exist in `in_progress` state
+- [ ] The supervisor panel continues to show `merge_failed` tickets after the fix
+- [ ] The supervisor panel continues to show all other expected supervisor-actionable states (`new`, `question`, `specd`, `blocked`, `implemented`) when tickets exist in those states
 
 ### Out of scope
 
