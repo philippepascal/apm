@@ -1,7 +1,7 @@
 +++
 id = "7ba021e8"
 title = "apm help workflow: render workflow.toml schema from WorkflowConfig struct"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7ba021e8-apm-help-workflow-render-workflow-toml-s"
 created_at = "2026-04-28T19:28:15.496296Z"
-updated_at = "2026-04-29T07:50:28.020510Z"
+updated_at = "2026-04-29T21:05:18.833075Z"
 epic = "e3b24cb9"
 target_branch = "epic/e3b24cb9-apm-help-auto-derived-git-style-topic-he"
 depends_on = ["bc89e0a0", "069c3403"]
@@ -149,3 +149,4 @@ No other changes to `help.rs` are needed.
 | 2026-04-29T03:42Z | specd | ready | philippepascal |
 | 2026-04-29T07:38Z | ready | in_progress | philippepascal |
 | 2026-04-29T07:50Z | in_progress | implemented | claude-0429-0800-7ba0 |
+| 2026-04-29T21:05Z | implemented | closed | philippepascal(apm-sync) |
