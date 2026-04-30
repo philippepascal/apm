@@ -26,7 +26,19 @@ This ticket's scope is the data model and its rules. The field is deliberately i
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `TransitionConfig` has a `pub outcome: Option<String>` field with `#[serde(default)]` and a doc comment citing the five recognised values
+- [ ] A public `resolve_outcome<'a>(transition: &'a TransitionConfig, target_state: &StateConfig) -> &'a str` function exists in `apm-core`
+- [ ] `resolve_outcome` returns the explicit outcome string (as `&str`) when `transition.outcome` is `Some`
+- [ ] `resolve_outcome` returns `"success"` when `outcome` is `None` and `transition.completion != CompletionStrategy::None`
+- [ ] `resolve_outcome` returns `"cancelled"` when `outcome` is `None`, `completion == None`, and `target_state.terminal == true`
+- [ ] `resolve_outcome` returns `"needs_input"` when `outcome` is `None`, `completion == None`, and `target_state.terminal == false`
+- [ ] Every `[[workflow.states.transitions]]` block in `apm-core/src/default/workflow.toml` contains an explicit `outcome` field
+- [ ] `apm validate` emits a `warning:` line (not an error) when the workflow has no reachable `success` outcome from any agent-actionable state
+- [ ] `apm validate` exits 0 (success) when the dead-end warning is the only issue
+- [ ] Unit tests in `apm-core/src/config.rs` cover all four `resolve_outcome` branches, each as a separate `#[test]`
+- [ ] A test asserts that every transition in the default workflow reports a non-empty outcome string via `resolve_outcome`
+- [ ] A validate test covers the dead-end-warning path (workflow with an agent-actionable state but no reachable `success` transition)
+- [ ] A validate test asserts the dead-end warning is absent for the default workflow (which has a reachable `success` via `in_progress -> implemented`)
 
 ### Out of scope
 
