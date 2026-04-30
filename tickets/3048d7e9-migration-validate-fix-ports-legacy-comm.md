@@ -55,6 +55,87 @@ This ticket adds that migration to `apm validate --fix`. A developer who upgrade
 
 ### Approach
 
+#### Files changed
+
+**`apm/Cargo.toml`** — add `toml_edit` to the `[dependencies]` table (it is already in the workspace Cargo.toml at `toml_edit = "0.22"`; add `toml_edit.workspace = true`).
+
+**`apm/src/cmd/validate.rs`** — add `apply_config_migration_fixes(root: &Path) -> Result<bool>` (returns `true` if any change was written) and call it from `run()` when `fix = true`, before the existing branch/on-failure/merged fix calls. Print the migration message from `run()` after `apply_config_migration_fixes` returns `true`.
+
+No changes to `apm-core/src/` — the migration is a TOML rewrite at the CLI layer, not a semantic config operation.
+
+---
+
+#### `apply_config_migration_fixes(root)` — step by step
+
+**1. Locate config file.**
+Check `root/.apm/config.toml` first, then `root/apm.toml`. If neither exists, return `Ok(false)`.
+
+**2. Parse with `toml_edit`.**
+`let mut doc = content.parse::<toml_edit::DocumentMut>()?;`
+
+**3. Detect legacy fields.**
+Check `doc["workers"]` for the presence of any of `command`, `args`, `model`. Check each table under `doc["worker_profiles"]` for the same keys. If none are present in any section, return `Ok(false)` (no-op).
+
+**4. Guard: non-claude command.**
+If `doc["workers"]["command"]` exists and its string value is not `"claude"`, print:
+```
+warning: [workers] command = "<value>" is not "claude" — cannot auto-migrate; choose a wrapper manually
+```
+and return `Ok(false)` without modifying the file.
+
+For each `worker_profiles.<name>` table that has a `command` key whose value is not `"claude"`, print:
+```
+warning: [worker_profiles.<name>] command = "<value>" is not "claude" — cannot auto-migrate; choose a wrapper manually
+```
+and return `Ok(false)`.
+
+Only proceed past this point if every `command` field present is exactly `"claude"`.
+
+**5. Migrate `[workers]`.**
+- If `workers.command` is present (value must be `"claude"` at this point): remove it, set `workers.agent = "claude"`.
+- If `workers.model` is present: read the value, remove the key, set `workers.options.model = <value>`. Create `workers.options` as an inline table if it does not exist.
+- If `workers.args` is present: remove the key. No replacement.
+
+**6. Migrate each `[worker_profiles.<name>]`.**
+For each profile table:
+- If `command` is present (value must be `"claude"`): remove it. Do **not** add `agent` at the profile level — profiles inherit `agent` from `[workers]`.
+- If `model` is present: read the value, remove the key, set `profile.options.model = <value>`.
+- If `args` is present: remove it.
+
+**7. Write back.**
+`fs::write(config_path, doc.to_string())?;`
+
+`toml_edit` preserves comments, key ordering, and whitespace in untouched sections automatically.
+
+**8. Re-validate.**
+Call `apm_core::validate::run(root, /*fix=*/false, /*json=*/false, /*config_only=*/true, /*no_aggressive=*/false)`. If it returns an error, surface it as a `bail!` so the user knows the migration produced an invalid config (should not happen in normal cases, but guards against bugs).
+
+---
+
+#### Message output
+
+`apply_config_migration_fixes` returns `Ok(true)` on success. The caller in `run()` prints:
+```
+migrated [workers] config to agent-driven shape; legacy command/args/model removed
+```
+
+---
+
+#### Tests
+
+Add to `apm/tests/validate_fix.rs` (or the existing validate integration test file):
+
+- **`test_fix_migrates_claude_command`** — fixture config with `command = "claude"`, `args = [...]`, `model = "sonnet"` → assert written config has `agent = "claude"`, `options.model = "sonnet"`, no `command`/`args`/`model` keys.
+- **`test_fix_noop_on_non_claude_command`** — fixture with `command = "my-ai"` → assert file is unchanged, stderr contains `"cannot auto-migrate"`.
+- **`test_fix_noop_on_non_claude_profile_command`** — global command absent, `worker_profiles.impl_agent.command = "my-ai"` → unchanged, warning names the profile.
+- **`test_fix_mixed_legacy_and_new_fields`** — fixture has both `agent = "claude"` (already present) and leftover `model = "opus"` → `model` is removed, `agent` preserved, `options.model = "opus"` added.
+- **`test_fix_already_migrated_noop`** — fixture with `agent = "claude"`, `[workers.options] model = "sonnet"`, no legacy keys → file content is byte-identical after `--fix`.
+- **`test_fix_preserves_comments`** — fixture contains a TOML comment between sections → the comment survives unchanged in the output.
+- **`test_fix_profile_model_migration`** — `worker_profiles.spec_agent` has `model = "opus"`, no global model → `worker_profiles.spec_agent.options.model = "opus"` in output, profile `model` key gone.
+- **`test_fix_revalidate_passes`** — after migration, `apm_core::validate::run` with `config_only=true` returns `Ok(())`.
+
+Test fixtures are small inline TOML strings written to a `tempdir`; no external fixture files needed.
+
 ### Files changed
 
 **`apm/Cargo.toml`** — add `toml_edit` to the `[dependencies]` table (it is already in the workspace Cargo.toml at `toml_edit = "0.22"`; add `toml_edit.workspace = true`).
