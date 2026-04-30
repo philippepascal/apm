@@ -44,7 +44,19 @@ Refactor `apm-core/src/start.rs` to dispatch through a Wrapper abstraction inste
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core/src/wrapper/mod.rs` exists and exports a public `Wrapper` trait with a single method `fn spawn(&self, ctx: &WrapperContext) -> anyhow::Result<std::process::Child>`
+- [ ] `WrapperContext` is a public struct with fields covering all items listed in the Problem scope: `worker_name`, `ticket_id`, `ticket_branch`, `worktree_path`, `system_prompt_file`, `user_message_file`, `skip_permissions`, `profile`, `role_prefix`, `options`, `model`, `log_path`
+- [ ] `resolve_builtin("claude")` returns `Some(_)` (a `Box<dyn Wrapper>`)
+- [ ] `resolve_builtin` returns `None` for any name other than `"claude"`
+- [ ] The `claude` built-in spawns `claude --print --output-format=stream-json --verbose --system-prompt <content-of-system-prompt-file> [--model <value>] [--dangerously-skip-permissions] <content-of-user-message-file>` — byte-for-byte identical flags to the current hardcoded invocation
+- [ ] All ten contract env vars are present on the spawned child process: `APM_AGENT_NAME`, `APM_TICKET_ID`, `APM_TICKET_BRANCH`, `APM_TICKET_WORKTREE`, `APM_SYSTEM_PROMPT_FILE`, `APM_USER_MESSAGE_FILE`, `APM_SKIP_PERMISSIONS` (`"1"` or `"0"`), `APM_PROFILE`, `APM_WRAPPER_VERSION=1`; `APM_ROLE_PREFIX` is set when `ctx.role_prefix` is `Some`
+- [ ] System prompt content is written to a temp file before spawn; `ctx.system_prompt_file` and `APM_SYSTEM_PROMPT_FILE` point to the same path
+- [ ] User message content is written to a temp file before spawn; `ctx.user_message_file` and `APM_USER_MESSAGE_FILE` point to the same path
+- [ ] Both temp files are removed after the child process exits (best-effort; removal errors are not propagated)
+- [ ] `build_spawn_command` is refactored to write temp files and dispatch through `WrapperContext`; it no longer directly appends `--output-format`, `--verbose`, `--system-prompt`, or `--dangerously-skip-permissions` to the command
+- [ ] `spawn_container_worker` is refactored to write temp files and dispatch through `WrapperContext`; docker `--env` flags carry the same APM contract vars as the local path
+- [ ] All pre-existing tests in `start.rs` pass
+- [ ] New unit tests cover: `resolve_builtin` returning `Some`/`None`, all APM env vars present on the spawned process, temp file creation and best-effort cleanup after child exit
 
 ### Out of scope
 
