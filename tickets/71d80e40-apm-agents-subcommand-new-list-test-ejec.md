@@ -1,7 +1,7 @@
 +++
 id = "71d80e40"
 title = "apm agents subcommand: new, list, test, eject"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/71d80e40-apm-agents-subcommand-new-list-test-ejec"
 created_at = "2026-04-30T20:04:57.796154Z"
-updated_at = "2026-04-30T21:02:40.645840Z"
+updated_at = "2026-04-30T22:02:56.837073Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "2c32a282"]
@@ -89,3 +89,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-30T20:04Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
+| 2026-04-30T22:02Z | groomed | in_design | philippepascal |
