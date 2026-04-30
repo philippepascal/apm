@@ -51,7 +51,138 @@ This ticket's scope is the data model and its rules. The field is deliberately i
 
 ### Approach
 
-How the implementation will work.
+### 1. `apm-core/src/config.rs` — add field to `TransitionConfig`
+
+Add after the `profile` field (~line 365):
+
+```rust
+/// Semantic outcome of this transition from the worker's perspective.
+/// Recognised values: `success`, `needs_input`, `blocked`, `rejected`, `cancelled`.
+/// Custom values are accepted but treated as non-success by tooling.
+/// When omitted, `resolve_outcome` applies implicit defaults; see that function.
+#[serde(default)]
+pub outcome: Option<String>,
+```
+
+### 2. `apm-core/src/config.rs` — add `resolve_outcome`
+
+Add as a free function at module level (not inside `impl`), below the struct definitions:
+
+```rust
+/// Returns the effective outcome label for `transition`.
+///
+/// Uses the explicit `outcome` field when set; otherwise applies implicit defaults in order:
+/// 1. `completion` strategy is set (non-`None`) → `"success"`
+/// 2. `target_state.terminal` is true → `"cancelled"`
+/// 3. Otherwise → `"needs_input"`
+pub fn resolve_outcome<'a>(
+    transition: &'a TransitionConfig,
+    target_state: &StateConfig,
+) -> &'a str {
+    if let Some(ref o) = transition.outcome {
+        return o.as_str();
+    }
+    if transition.completion != CompletionStrategy::None {
+        return "success";
+    }
+    if target_state.terminal {
+        return "cancelled";
+    }
+    "needs_input"
+}
+```
+
+The static string returns (`"success"` etc.) coerce to `&'a str` because `'static: 'a`.
+
+### 3. `apm-core/src/default/workflow.toml` — annotate every transition
+
+Add `outcome = "<value>"` to each `[[workflow.states.transitions]]` block. The mapping rule matches the implicit defaults exactly, so these annotations are self-documenting, not overrides:
+
+| Condition | `outcome` value |
+|---|---|
+| transition has `completion` set | `"success"` |
+| target state is `closed` (terminal) | `"cancelled"` |
+| all other transitions | `"needs_input"` |
+
+No transition in the default workflow uses `rejected` or `blocked` explicitly — those values exist for project-level customisation. Every explicit value set here matches what `resolve_outcome` would infer anyway.
+
+Mapping for each transition (implementer: verify `completion` field in the file before writing; `completion`-carrying transitions are the authoritative source of `"success"`):
+
+- `new → groomed` (no completion, non-terminal) → `"needs_input"`
+- `new → closed` (terminal) → `"cancelled"`
+- `groomed → in_design` (no completion, non-terminal) → `"needs_input"`
+- `groomed → closed` → `"cancelled"`
+- `question → groomed` → `"needs_input"`
+- `question → closed` → `"cancelled"`
+- `specd → ready` → `"needs_input"`
+- `specd → ammend` → `"needs_input"`
+- `specd → closed` → `"cancelled"`
+- `ammend → specd` → `"needs_input"`
+- `ammend → question` → `"needs_input"`
+- `ammend → in_design` → `"needs_input"`
+- `ammend → closed` → `"cancelled"`
+- `in_design → specd` — if `completion` is set → `"success"`, else `"needs_input"`
+- `in_design → question` → `"needs_input"`
+- `in_design → ammend` → `"needs_input"`
+- `in_design → closed` → `"cancelled"`
+- `ready → in_progress` — if `completion` is set → `"success"`, else `"needs_input"`
+- `ready → ammend` → `"needs_input"`
+- `ready → specd` → `"needs_input"`
+- `ready → closed` → `"cancelled"`
+- `in_progress → implemented` — has `completion` (merge or pr_or_epic_merge) → `"success"`
+- `in_progress → blocked` → `"needs_input"`
+- `in_progress → ready` → `"needs_input"`
+- `in_progress → ammend` → `"needs_input"`
+- `in_progress → closed` → `"cancelled"`
+- `blocked → ready` → `"needs_input"`
+- `blocked → closed` → `"cancelled"`
+- `implemented → ready` → `"needs_input"`
+- `implemented → ammend` → `"needs_input"`
+- `implemented → in_progress` → `"needs_input"`
+- `implemented → closed` → `"cancelled"`
+- `merge_failed → implemented` — check `completion`; apply rule
+- `merge_failed → in_progress` → `"needs_input"`
+
+### 4. `apm-core/src/validate.rs` — dead-end warning in `validate_warnings`
+
+Extend `validate_warnings(config: &Config) -> Vec<String>` with a reachability check. Insert after the existing docker check:
+
+```
+1. Build HashMap<&str, &StateConfig> indexed by state.id for O(1) target lookup.
+2. Collect agent-startable state IDs: states where actionable contains "agent" or "any".
+3. BFS from each startable state ID, tracking visited state IDs to avoid cycles.
+   For each visited state, iterate its transitions:
+   - Call resolve_outcome(t, lookup[t.to]) for each transition t.
+   - If any result == "success": success is reachable — skip the warning entirely.
+   - Otherwise enqueue t.to if not yet visited.
+4. If BFS completes without finding a "success" outcome, push:
+   "workflow has no reachable 'success' outcome from any agent-actionable state; \
+    workers may never complete successfully"
+```
+
+This is O(states × transitions) — negligible for real workflows.
+
+Note: skip the check (no warning) if there are no agent-startable states at all, since the workflow may be supervisor-only by design.
+
+### 5. Tests
+
+**`apm-core/src/config.rs` `#[cfg(test)]`** — four new unit tests for `resolve_outcome`:
+
+- `resolve_outcome_explicit_override`: `outcome = Some("rejected")`, `completion = None`, non-terminal target → `"rejected"`
+- `resolve_outcome_implicit_success`: `outcome = None`, `completion = Merge`, any target → `"success"`
+- `resolve_outcome_implicit_cancelled`: `outcome = None`, `completion = None`, `target.terminal = true` → `"cancelled"`
+- `resolve_outcome_implicit_needs_input`: `outcome = None`, `completion = None`, `target.terminal = false` → `"needs_input"`
+
+Construct minimal `TransitionConfig` and `StateConfig` values inline (derive `Default` if needed or set each field explicitly).
+
+**`apm-core/src/init.rs` or `apm-core/src/config.rs`** — extend `default_workflow_toml_is_valid` or add a sibling test:
+
+Parse the default workflow; build a state-by-id map; for each state's transitions, call `resolve_outcome(t, target)`; assert the result is one of `["success", "needs_input", "blocked", "rejected", "cancelled"]`. This guards against future regressions that produce an unexpected outcome string.
+
+**`apm-core/src/validate.rs` `#[cfg(test)]`** — two new tests:
+
+- `dead_end_workflow_warning_emitted`: construct a minimal `Config` with one `actionable = ["agent"]` state whose only transition leads to another non-terminal, no-completion state (forming a cycle with no success exit). Assert `validate_warnings` returns a vec containing a string with `"success"` in the dead-end warning message.
+- `default_workflow_no_dead_end_warning`: load the default config (same helper used by existing tests). Assert no item in `validate_warnings` is the dead-end warning string — the default workflow has `in_progress → implemented` with `completion = merge`, which is reachable from `in_progress` (actionable by agents).
 
 ### Open questions
 
