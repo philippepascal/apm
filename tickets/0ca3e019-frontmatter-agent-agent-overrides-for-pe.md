@@ -53,7 +53,11 @@ The full resolution order (per spawn, where P is the profile name declared by th
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-transition agent mapping (a `{transition_name: agent}` map). The design doc explicitly defers this as a v2 contract extension; per-profile granularity is sufficient for v1.
+- A CLI command to set the override (e.g. `apm set <id> agent <name>`). Could be added to `apm set`'s field list; noted as a small follow-up, not in this ticket.
+- Surfacing the override in `apm show` output. The fields are present in frontmatter and visible via `cat`; display in `apm show` is a follow-up.
+- Validating frontmatter agent names against custom project wrappers in `.apm/agents/<name>/`. `apm validate` in this ticket only checks built-ins via `resolve_builtin()`. Custom-wrapper validation is ticket 2c32a282's territory.
+- Any changes to `apm set`, `apm show`, or `apm agents` subcommands.
 
 ### Approach
 
