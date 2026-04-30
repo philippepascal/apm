@@ -42,7 +42,12 @@ This ticket's scope is the data model and its rules. The field is deliberately i
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Mock wrappers (`mock-happy`, `mock-sad`, `mock-random`) reading the `outcome` field — ticket 25c92daa
+- `apm validate --fix` auto-populating `outcome` on project `workflow.toml` files (implicit defaults make migration unnecessary)
+- Supervisor UI colouring transitions by outcome
+- JSON Schema / schemars export changes (automatic via `#[derive(JsonSchema)]` already on `TransitionConfig`)
+- Per-profile dead-end analysis in `apm validate` (this ticket warns at global workflow level only; per-profile is a possible follow-up)
+- Rejecting unknown outcome values at parse time (custom strings are accepted; tooling treats them as non-success)
 
 ### Approach
 
