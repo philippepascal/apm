@@ -1,7 +1,7 @@
 +++
 id = "3048d7e9"
 title = "Migration: validate --fix ports legacy command/args/model to agent + options"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3048d7e9-migration-validate-fix-ports-legacy-comm"
 created_at = "2026-04-30T20:03:17.277300Z"
-updated_at = "2026-04-30T20:03:17.277300Z"
+updated_at = "2026-04-30T21:02:27.190910Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["6cac8518"]
@@ -72,3 +72,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-30T20:03Z | — | new | philippepascal |
+| 2026-04-30T21:02Z | new | groomed | philippepascal |
