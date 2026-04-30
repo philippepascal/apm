@@ -80,7 +80,161 @@ Implement custom-wrapper resolution from `.apm/agents/<name>/` so projects can s
 
 ### Approach
 
-How the implementation will work.
+**New types -- apm-core/src/wrapper/custom.rs (new file)**
+
+Manifest struct (deserialised from [wrapper] in manifest.toml):
+- name: Option<String>
+- contract_version: u32 with serde default 1
+- parser: String with serde default canonical
+- parser_command: Option<String> (only meaningful when parser = external)
+
+WrapperKind enum (defined in wrapper/custom.rs, re-exported from wrapper/mod.rs):
+- Custom variant: script_path: PathBuf, manifest: Option<Manifest>
+- Builtin variant: String (the name)
+
+CustomWrapper struct holds script_path and manifest and implements the Wrapper trait from d3b93b95.
+
+---
+
+**wrapper/custom.rs -- private helpers**
+
+find_script(root: &Path, name: &str) -> Option<PathBuf>
+- Read entries under root/.apm/agents/<name>/; return None if the directory is absent or unreadable
+- Keep entries whose file name starts with wrapper. (any extension after the dot)
+- Unix: keep only entries where metadata().permissions().mode() & 0o111 != 0
+- Non-Unix: treat any matching file as executable
+- Return the first match in alphabetical order (deterministic when multiple wrapper.* files coexist)
+
+parse_manifest(root: &Path, name: &str) -> anyhow::Result<Option<Manifest>>
+- Path is root/.apm/agents/<name>/manifest.toml; return Ok(None) if absent
+- Read and parse as TOML; deserialise the [wrapper] table into Manifest via serde
+- Propagate IO or TOML parse errors via anyhow::Context
+
+manifest_unknown_keys(root: &Path, name: &str) -> anyhow::Result<Vec<String>>
+- Parse manifest as toml::Value, navigate to the [wrapper] table, collect key names
+- Return any key not in the known set: name, contract_version, parser, parser_command
+- Called by apm validate to emit warnings without failing the parse
+
+---
+
+**wrapper/mod.rs -- resolve_wrapper**
+
+Add pub mod custom; and re-export WrapperKind and Manifest.
+
+Signature: pub fn resolve_wrapper(root: &Path, name: &str) -> anyhow::Result<Option<WrapperKind>>
+
+Algorithm:
+1. Call find_script(root, name); if a script is found, call parse_manifest(root, name)? and
+   return Ok(Some(WrapperKind::Custom containing script_path and manifest))
+2. Else if resolve_builtin(name).is_some(), return Ok(Some(WrapperKind::Builtin(name.to_owned())))
+3. Else return Ok(None)
+
+---
+
+**CustomWrapper::spawn (implements Wrapper trait)**
+
+1. Check self.manifest contract_version (defaulting to 1 when manifest is None); if > 1, bail
+   with a message stating the declared version is unsupported and directing the user to upgrade APM
+2. Build Command::new(&self.script_path) -- no shell interpreter, the script is exec-d directly
+3. Set all APM contract env vars (identical set to ClaudeWrapper; see d3b93b95 approach table)
+4. Forward ctx.extra_env entries (user-configured env from [workers] env)
+5. .current_dir(&ctx.worktree_path)
+6. Redirect stdout + stderr to File::create(&ctx.log_path)?; try_clone() for stderr fd
+7. .process_group(0) then .spawn()
+
+---
+
+**start.rs -- dispatcher wiring**
+
+In spawn_worker (introduced by d3b93b95), add project_root: &Path as a second parameter.
+Update the three call sites (run, run_next, spawn_next_worker) to pass root, which is already
+in scope at each site.
+
+Replace the hardcoded resolve_builtin(claude)...spawn(&ctx) call with a match on
+resolve_wrapper(project_root, claude)?:
+
+- Custom variant -> construct CustomWrapper from script_path and manifest, call .spawn(&ctx)?
+- Builtin(name) variant -> resolve_builtin(&name).expect(known built-in).spawn(&ctx)?
+- None -> anyhow::bail with message: agent not found, checked built-ins and .apm/agents/claude/
+
+The hardcoded claude string is replaced by config.workers.agent when ticket 6cac8518 lands;
+the shape of this call does not change at that point.
+
+---
+
+**validate.rs -- validate_agents helper**
+
+Add fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warnings: &mut Vec<String>)
+and call it from validate_config.
+
+Steps:
+
+1. Collect agent names to check.
+   Pre-6cac8518: use config.workers.command (defaults to claude) as the single name.
+   When 6cac8518 lands: switch to config.workers.agent and add per-profile agent names.
+   De-duplicate.
+
+2. For each name call resolve_wrapper(root, name):
+   - Ok(None) -> push error: agent NAME not found: checked built-ins (claude) and .apm/agents/NAME/
+   - Err(e) -> push error: agent NAME: {e}
+   - Ok(Some(_)) -> ok
+
+3. Scan .apm/agents/ (skip if absent); for each subdirectory NAME:
+   - If any wrapper.* file exists but none is executable (Unix only) ->
+     push warning: agent NAME: .apm/agents/NAME/wrapper.* exists but is not executable; run chmod +x
+   - If manifest.toml exists:
+     - TOML parse error -> push error: agent NAME: manifest.toml is not valid TOML: {e}
+     - contract_version > 1 -> push error: agent NAME: manifest.toml declares contract_version V;
+       this APM build supports version 1 only -- upgrade APM
+     - Unknown keys via manifest_unknown_keys -> one warning per key:
+       agent NAME: manifest.toml: unknown key K
+
+---
+
+**Tests**
+
+Unit tests in wrapper/custom.rs under #[cfg(test)]:
+
+- resolve_wrapper_custom_shadows_builtin: temp dir with executable .apm/agents/claude/wrapper.sh;
+  assert resolve_wrapper(root, claude) returns the Custom variant
+- resolve_wrapper_fallback_to_builtin: no .apm/agents/claude/ dir;
+  assert result is Builtin(claude)
+- resolve_wrapper_missing_returns_none: no script, not a built-in name;
+  assert Ok(None)
+- resolve_wrapper_nonexecutable_invisible: wrapper.sh present with mode 0o644;
+  assert result is Builtin(claude) (non-executable script is invisible, falls through)
+- manifest_parse_valid: write a complete valid manifest.toml; assert struct fields match declared values
+- manifest_parse_defaults: write [wrapper] with no keys;
+  assert contract_version == 1, parser == canonical, parser_command == None
+- manifest_parse_invalid_toml: write syntactically broken TOML;
+  assert parse_manifest returns Err
+- manifest_missing: no manifest.toml present;
+  assert parse_manifest returns Ok(None)
+- manifest_unknown_keys_detected: write [wrapper] with an extra unknown_key = foo;
+  assert manifest_unknown_keys returns a vec containing unknown_key
+- spawn_rejects_contract_version_gt_1: CustomWrapper with manifest.contract_version = 2;
+  assert spawn() returns Err containing the string upgrade APM
+
+Integration test in apm-core/tests/custom_wrapper_integration.rs:
+
+- integration_echo_test_wrapper: fixture project contains .apm/agents/echo-test/wrapper.sh
+  with a shebang line and a single printf emitting one valid JSONL line to stdout; mode 0o755.
+  Build a minimal WrapperContext pointing at a temp worktree and log file.
+  Call resolve_wrapper(root, echo-test), assert it returns the Custom variant.
+  Call CustomWrapper::spawn, wait for child exit 0.
+  Read log file and assert it contains the emitted JSONL line.
+
+---
+
+**File change summary**
+
+| File | Change |
+|---|---|
+| apm-core/src/wrapper/mod.rs | Add pub mod custom; re-export WrapperKind; add resolve_wrapper() |
+| apm-core/src/wrapper/custom.rs | New: Manifest, WrapperKind, CustomWrapper + Wrapper impl, helpers, unit tests |
+| apm-core/src/start.rs | Add project_root param to spawn_worker; replace resolve_builtin call with resolve_wrapper dispatch |
+| apm-core/src/validate.rs | Add validate_agents() helper; call from validate_config |
+| apm-core/tests/custom_wrapper_integration.rs | New integration test with echo-test fixture |
 
 ### Open questions
 
