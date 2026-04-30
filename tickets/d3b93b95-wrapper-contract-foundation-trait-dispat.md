@@ -4,12 +4,12 @@ title = "Wrapper contract foundation: trait, dispatcher, claude built-in (refact
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d3b93b95-wrapper-contract-foundation-trait-dispat"
 created_at = "2026-04-30T20:01:55.080870Z"
-updated_at = "2026-04-30T21:08:11.559005Z"
+updated_at = "2026-04-30T21:08:14.472552Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 +++
