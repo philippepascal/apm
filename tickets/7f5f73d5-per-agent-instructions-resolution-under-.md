@@ -19,36 +19,18 @@ depends_on = ["d3b93b95", "2c32a282"]
 
 ### Problem
 
-Each agent may want different prompt conventions (Aider concise context, Codex structured tags, etc.). Move `apm.worker.md` and `apm.spec-writer.md` resolution to be per-agent under `.apm/agents/<name>/`, with project-level overrides retained.
+The current `resolve_system_prompt` function in `apm-core/src/start.rs` uses a flat 4-level chain that ends in a silent hardcoded fallback string (`"You are an APM worker agent."`). It has no concept of which agent is being run and resolves the system prompt from a single flat path — `.apm/apm.worker.md` — shared across all agents. As custom wrappers are introduced (ticket 2c32a282), different agents may need different prompt conventions (Codex structured tags, Aider concise context, etc.); a single flat `.apm/apm.worker.md` cannot express per-agent defaults.
 
-**Reference spec:** `docs/agent-wrappers.md` — section 'Per-agent instructions'.
+The desired behaviour is a 4-level resolution chain per spawn (agent A, role = worker|spec-writer, profile P):
+1. `[worker_profiles.<P>].instructions` — project-level per-profile override
+2. `[workers].instructions` — project-level global override, applies to all profiles
+3. `.apm/agents/<A>/apm.<role>.md` — project-supplied per-agent file, if it exists
+4. APM's bundled default for agent A (via `include_str!`, built-in agents only)
+5. Hard error if none of the above resolve
 
-**Scope:**
-- New layout: `.apm/agents/<name>/apm.worker.md` and `.apm/agents/<name>/apm.spec-writer.md` are the per-agent defaults.
-- For built-ins: ship the per-agent default markdown bundled in the binary (`include_str!` from `apm-core/src/default/agents/<name>/apm.<role>.md`). For custom wrappers: the user authors them in their wrapper directory.
-- Resolution chain (highest priority first), per spawn (profile = P, role = worker|spec-writer, agent = A):
-  1. `[worker_profiles.<P>].instructions` (project-level override, full path)
-  2. `[workers].instructions` (project-level override, applies to all profiles)
-  3. `.apm/agents/<A>/apm.<role>.md` (project-supplied per-agent file, if it exists)
-  4. APM's built-in default for agent A (only for built-in agents)
-  5. Hard error if none of the above resolve
-- The spawn code passes the resolved file path's contents as the system prompt (already happens; just change where the path comes from).
-- For migration: existing `.apm/apm.worker.md` and `.apm/apm.spec-writer.md` continue to work because they are referenced by `[workers].instructions` and `[worker_profiles.<P>].instructions` in the default config (project-level overrides at level 1/2). No automatic migration needed — users keep what they have unless they delete the override and want the per-agent default.
+Existing projects keep working without edits because their `[worker_profiles.spec_agent] instructions = ".apm/apm.spec-writer.md"` and `[worker_profiles.impl_agent] instructions = ".apm/apm.worker.md"` satisfy level 1. No migration is required.
 
-**Built-in defaults to ship:**
-- `apm-core/src/default/agents/claude/apm.worker.md` — copy of the current default `apm.worker.md`.
-- `apm-core/src/default/agents/claude/apm.spec-writer.md` — copy of the current default `apm.spec-writer.md`.
-- (Mock built-ins from a separate ticket may not need spec-writer/worker .md files at all; defer to that ticket.)
-
-**Out of scope:**
-- Updating the .md content for non-Claude agents — there are no other built-ins yet.
-- Per-agent `agents.md` (the project-wide conventions file is still `.apm/agents.md`, not per-agent).
-- Sync test extending the existing `apm.worker.md` byte-identical check to other roles — separate concern.
-
-**Tests:**
-- Resolution chain test for each level.
-- Hard-error test when no instructions resolve.
-- Backward-compat: a project with the old config that references `.apm/apm.worker.md` continues to work without edits.
+The silent hardcoded fallback and the `StateConfig.instructions`-as-system-prompt path are both removed. `StateConfig.instructions` is a per-state annotation used for display and tooling (the field remains on the struct) but is no longer consumed by `resolve_system_prompt`.
 
 ### Acceptance criteria
 
