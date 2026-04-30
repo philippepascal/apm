@@ -49,7 +49,14 @@ The silent hardcoded fallback and the `StateConfig.instructions`-as-system-promp
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the content of `apm.worker.md` or `apm.spec-writer.md` — this ticket only changes where the file comes from, not what it says.
+- Per-agent `agents.md` — the project-wide agent conventions file stays at `.apm/agents.md`, not per-agent.
+- Instruction defaults for mock built-ins (`mock-happy`, `mock-sad`, `mock-random`, `debug`) — deferred to ticket 25c92daa; those wrappers may not need per-role instruction files at all.
+- Per-ticket frontmatter `agent_overrides` changing which instruction file is loaded — ticket 0ca3e019.
+- Updating the `apm init` template to remove profile-level `instructions` fields — the existing template keeps its overrides; the per-agent fallback is an addition, not a replacement.
+- Config field `[workers].agent` for config-driven agent selection — ticket 6cac8518; after that ticket the hardcoded `"claude"` string at call sites becomes `config.workers.agent`, but the shape of `resolve_system_prompt` does not change.
+- Removing the `StateConfig.instructions` field from the config struct — the field is kept for display / tooling use; only its role as a `resolve_system_prompt` input is removed.
+- Windows execute-bit or platform-specific path differences.
 
 ### Approach
 
