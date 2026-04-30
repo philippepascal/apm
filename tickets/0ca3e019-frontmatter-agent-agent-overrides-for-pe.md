@@ -61,7 +61,103 @@ The full resolution order (per spawn, where P is the profile name declared by th
 
 ### Approach
 
-How the implementation will work.
+### 1. `apm-core/src/ticket/ticket_fmt.rs` — `Frontmatter` struct
+
+Add `use std::collections::HashMap;` to the imports (currently not imported; `indexmap::IndexMap` is the only map in scope).
+
+Add two fields to `Frontmatter` after `depends_on`:
+
+```rust
+#[serde(default, skip_serializing_if = "Option::is_none")]
+pub agent: Option<String>,
+
+#[serde(default, skip_serializing_if = "HashMap::is_empty")]
+pub agent_overrides: HashMap<String, String>,
+```
+
+`agent_overrides` serializes as a TOML inline table when non-empty. Verify via the round-trip test that both the inline form (`agent_overrides = { spec_agent = "claude" }`) and the subtable form (`[agent_overrides]`) parse correctly; no special serde attribute is needed either way.
+
+`JsonSchema` is already derived on `Frontmatter`; `HashMap<String, String>` is schema-compatible by default.
+
+---
+
+### 2. `apm-core/src/start.rs` — Agent resolution
+
+Add a free function after `effective_spawn_params`:
+
+```rust
+fn apply_frontmatter_agent(
+    agent: &mut String,
+    frontmatter: &ticket_fmt::Frontmatter,
+    profile_name: &str,
+) {
+    if let Some(override_agent) = frontmatter.agent_overrides.get(profile_name) {
+        *agent = override_agent.clone();
+    } else if let Some(a) = &frontmatter.agent {
+        *agent = a.clone();
+    }
+    // else: keep config-resolved agent unchanged
+}
+```
+
+Call this in each of the three spawn paths — `run()`, `run_next()`, and `spawn_next_worker()` — immediately after `effective_spawn_params()` returns and before `WrapperContext` is constructed (introduced by d3b93b95). The ticket's frontmatter (`ticket.frontmatter`) is already loaded at all three call sites. The profile name is the string resolved by `resolve_profile()`.
+
+`EffectiveWorkerParams.agent` (added by 6cac8518) is the field being mutated. After d3b93b95 + 6cac8518 land, `WrapperContext` is constructed from `EffectiveWorkerParams`; the agent name flows through unchanged.
+
+---
+
+### 3. `apm-core/src/validate.rs` — `verify_tickets`
+
+In the per-ticket loop inside `verify_tickets()`, after existing checks, collect all agent names declared in frontmatter:
+
+```rust
+let agents_to_check: Vec<&str> = ticket.frontmatter.agent
+    .as_deref()
+    .into_iter()
+    .chain(ticket.frontmatter.agent_overrides.values().map(String::as_str))
+    .collect();
+
+for name in agents_to_check {
+    if wrapper::resolve_builtin(name).is_none() {
+        errors.push(format!(
+            "ticket {}: agent {:?} is not a known built-in",
+            ticket.frontmatter.id, name
+        ));
+    }
+}
+```
+
+Import `crate::wrapper` (introduced by d3b93b95). This check covers only built-ins; custom project scripts from ticket 2c32a282 are not checked here — when 2c32a282 lands and `resolve_wrapper()` subsumes `resolve_builtin()`, this call site can be upgraded in that ticket.
+
+---
+
+### 4. `.apm/apm.spec-writer.md` and `.apm/apm.worker.md`
+
+Append a short note to each file near the end:
+
+> **Frontmatter agent override** (supervisor tool): A supervisor may add `agent = "<name>"` or an `[agent_overrides]` table to a ticket's frontmatter to select a specific agent for that ticket or for individual profiles. Do not set these fields yourself — they are a supervisor-level escape hatch for debugging or per-ticket specialisation.
+
+---
+
+### 5. Tests
+
+**`apm-core/src/ticket/ticket_fmt.rs`** — add to the existing test module:
+
+- `frontmatter_agent_round_trip`: parse TOML with `agent = "mock-happy"` and two entries in `agent_overrides`; serialize; re-parse; assert both fields match original.
+- `frontmatter_agent_omitted_when_unset`: parse minimal frontmatter without `agent` or `agent_overrides`; serialize; assert neither field appears in the serialized string.
+
+**`apm-core/src/start.rs`** — add to the existing test module:
+
+- `apply_fm_profile_override_wins`: `agent_overrides = {impl_agent: "mock-happy"}`, `agent = "mock-sad"`, profile = `"impl_agent"` → result is `"mock-happy"`.
+- `apply_fm_agent_field_wins_when_no_profile_match`: `agent_overrides = {}`, `agent = Some("mock-sad")`, profile = `"impl_agent"` → result is `"mock-sad"`.
+- `apply_fm_profile_override_beats_agent_field`: `agent_overrides = {impl_agent: "claude"}`, `agent = Some("mock-random")`, profile = `"impl_agent"` → result is `"claude"`.
+- `apply_fm_no_fields_unchanged`: both fields empty/None, starting agent = `"claude"` → result unchanged.
+
+**`apm-core/src/validate.rs`** — add to the existing test module:
+
+- `validate_unknown_frontmatter_agent_is_error`: ticket with `agent = "nonexistent-bot"`; assert error contains ticket id and `"nonexistent-bot"`.
+- `validate_unknown_agent_in_overrides_is_error`: ticket with `agent_overrides` value `"nonexistent-bot"`; assert error contains ticket id and `"nonexistent-bot"`.
+- `validate_known_frontmatter_agent_passes`: ticket with `agent = "claude"`; assert no errors from the agent check.
 
 ### Open questions
 
