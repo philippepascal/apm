@@ -1,7 +1,7 @@
 +++
 id = "0ca3e019"
 title = "Frontmatter agent + agent_overrides for per-ticket wrapper choice"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0ca3e019-frontmatter-agent-agent-overrides-for-pe"
 created_at = "2026-04-30T20:03:58.532325Z"
-updated_at = "2026-04-30T21:02:33.388298Z"
+updated_at = "2026-04-30T21:50:38.458676Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "6cac8518"]
@@ -76,3 +76,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-30T20:03Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
+| 2026-04-30T21:50Z | groomed | in_design | philippepascal |
