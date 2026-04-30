@@ -1,7 +1,7 @@
 +++
 id = "6cac8518"
 title = "Config schema: agent + options (drop command/args/model)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6cac8518-config-schema-agent-options-drop-command"
 created_at = "2026-04-30T20:02:34.693415Z"
-updated_at = "2026-04-30T21:23:36.029677Z"
+updated_at = "2026-04-30T21:23:41.365303Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95"]
@@ -49,3 +49,4 @@ Four files change, plus tests.\n\n### 1. apm-core/src/config.rs\n\nWorkersConfig
 | 2026-04-30T20:02Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
 | 2026-04-30T21:17Z | groomed | in_design | philippepascal |
+| 2026-04-30T21:23Z | in_design | specd | claude-0430-2117-71a8 |
