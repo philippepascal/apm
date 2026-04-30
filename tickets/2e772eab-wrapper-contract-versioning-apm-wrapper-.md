@@ -1,7 +1,7 @@
 +++
 id = "2e772eab"
 title = "Wrapper-contract versioning (APM_WRAPPER_VERSION + manifest.toml)"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2e772eab-wrapper-contract-versioning-apm-wrapper-"
 created_at = "2026-04-30T20:05:11.077339Z"
-updated_at = "2026-04-30T20:05:11.077339Z"
+updated_at = "2026-04-30T21:02:43.738731Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "2c32a282"]
@@ -73,3 +73,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-30T20:05Z | — | new | philippepascal |
+| 2026-04-30T21:02Z | new | groomed | philippepascal |
