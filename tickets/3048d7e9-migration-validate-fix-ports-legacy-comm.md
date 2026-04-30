@@ -44,7 +44,14 @@ This ticket adds that migration to `apm validate --fix`. A developer who upgrade
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- An `apm init --migrate` or `apm agents migrate` subcommand — `apm validate --fix` is the canonical migration path
+- Migration of `.apm/agents.md`, `.apm/apm.worker.md`, or `.apm/apm.spec-writer.md` — those are prompt content, not config
+- Hash-trip integration changes — the existing hash-trip already runs validate on config change; no adjustment needed here
+- Removing deprecated `command`/`args`/`model` fields from the Rust structs — that happens after the deprecation window, tracked separately (ticket 6cac8518 retains the fields for backward compatibility)
+- `apm validate --fix` for `workflow.toml` files — only `.apm/config.toml` (and `apm.toml` legacy root path) contain worker config
+- Rollback or backup of the original config — the caller can use version control
+- Migrating a config where `command` is non-Claude — this ticket explicitly stops and warns rather than guessing a wrapper name
+- Windows execute-bit semantics or platform-specific config path differences
 
 ### Approach
 
