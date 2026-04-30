@@ -1,7 +1,7 @@
 +++
 id = "25c92daa"
 title = "Mock and debug built-in wrappers (mock-happy, mock-sad, mock-random, debug)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25c92daa-mock-and-debug-built-in-wrappers-mock-ha"
 created_at = "2026-04-30T20:04:21.901984Z"
-updated_at = "2026-04-30T21:02:37.480077Z"
+updated_at = "2026-04-30T21:57:43.460139Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "a1b94ea4", "6cac8518"]
@@ -94,3 +94,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-30T20:04Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
+| 2026-04-30T21:57Z | groomed | in_design | philippepascal |
