@@ -60,7 +60,16 @@ Refactor `apm-core/src/start.rs` to dispatch through a Wrapper abstraction inste
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Reading wrapper name from config (`[workers] agent = ...`) — hardcoded to `claude` for now; config wiring is ticket 6cac8518
+- `APM_OPT_<KEY>` env vars — options are not yet readable from config; deferred to ticket 6cac8518
+- Custom wrappers from `.apm/agents/<name>/` — ticket 2c32a282
+- Mock built-ins (`mock-happy`, `mock-sad`, `mock-random`, `debug`) — ticket 25c92daa
+- Wrapper-contract versioning checks against `manifest.toml` — ticket 2e772eab; `APM_WRAPPER_VERSION=1` is stamped but not validated
+- Removing `check_output_format_supported()` — kept until config moves to `agent` field
+- Per-agent instruction file resolution under `.apm/agents/<name>/` — ticket 7f5f73d5
+- `apm agents` subcommand — ticket 71d80e40
+- Migration tooling for legacy `command/args/model` config — ticket 3048d7e9
+- Frontmatter `agent` / `agent_overrides` fields — ticket 0ca3e019
 
 ### Approach
 
