@@ -19,32 +19,11 @@ depends_on = ["6cac8518"]
 
 ### Problem
 
-When existing projects upgrade APM, their `.apm/config.toml` still uses the legacy `[workers] command/args/model` shape. Provide an automated migration so users do not have to hand-edit. The legacy fields are read with a deprecation warning (per ticket 6cac8518); this ticket adds the migration that retires them.
+Existing APM projects have a `.apm/config.toml` using the legacy `[workers]` shape: `command = "claude"`, `args = ["--print", ...]`, and `model = "sonnet"`. After upgrading to the agent-wrapper architecture (ticket 6cac8518), those projects receive a deprecation warning on every `apm start` invocation but have no automated way to migrate.
 
-**Reference spec:** `docs/agent-wrappers.md` — section 'Migration from current config'.
+The desired state is `agent = "claude"` in `[workers]` with model moved to `[workers.options]` and `args` dropped entirely (the wrapper now owns CLI flag construction). A matching migration must apply to every `[worker_profiles.<X>]` section as well.
 
-**Scope:**
-- Extend `apm validate --fix` to detect a config with legacy fields and rewrite to the new shape:
-  - `command = "claude"` → `agent = "claude"`
-  - `model = "sonnet"` → `[workers.options] model = "sonnet"`
-  - `args = ["--print", "--output-format=stream-json", "--verbose"]` (or any subset) → dropped (the wrapper handles flags)
-  - Same migration for every `[worker_profiles.<X>]` section.
-- TOML rewrite must preserve comments, ordering of unrelated sections, and trailing whitespace as much as possible (use a TOML-aware editor, e.g. `toml_edit`).
-- If `command` is anything other than `claude`, do not auto-migrate — print a warning that the user must hand-pick a wrapper for their custom command and stop.
-- After migration, re-run validate to confirm the new config parses cleanly. The old fields should be entirely gone (no commented-out leftovers).
-- Add a one-line migration message: `migrated [workers] config to agent-driven shape; legacy command/args/model removed`.
-
-**Out of scope:**
-- An interactive `apm init --migrate` subcommand. Validate --fix is the canonical migration path.
-- Migration of any `.apm/agents.md` or `.apm/apm.*.md` files. Those are content, not config.
-- Hash-trip integration changes — the existing hash-trip already runs validate on config change.
-
-**Tests:**
-- Repo with legacy config + claude command → fix produces the new shape; re-validate passes.
-- Repo with legacy config + non-claude command → fix prints a warning and does not modify config.
-- Repo with mixed legacy + new fields → fix removes legacy fields, preserves new ones.
-- Repo with already-migrated config → fix is a no-op.
-- TOML preservation: a config with a comment between sections survives the fix unchanged.
+This ticket adds that migration to `apm validate --fix`. A developer who upgrades APM runs `apm validate --fix`, sees a one-line confirmation message, and their config is correct without any manual editing. If the project was using a non-Claude command, automated migration is not safe — the tool warns and stops so the user can hand-pick a wrapper.
 
 ### Acceptance criteria
 
