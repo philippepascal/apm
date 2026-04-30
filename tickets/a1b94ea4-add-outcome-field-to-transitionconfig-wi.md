@@ -1,7 +1,7 @@
 +++
 id = "a1b94ea4"
 title = "Add outcome field to TransitionConfig with implicit defaults"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a1b94ea4-add-outcome-field-to-transitionconfig-wi"
 created_at = "2026-04-30T20:02:08.987471Z"
-updated_at = "2026-04-30T21:16:08.236745Z"
+updated_at = "2026-04-30T21:17:07.256797Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 +++
@@ -334,3 +334,4 @@ Parse the default workflow; build a state-by-id map; for each state's transition
 | 2026-04-30T20:02Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
 | 2026-04-30T21:08Z | groomed | in_design | philippepascal |
+| 2026-04-30T21:17Z | in_design | specd | claude-0430-2108-e298 |
