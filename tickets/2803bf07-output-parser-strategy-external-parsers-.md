@@ -1,7 +1,7 @@
 +++
 id = "2803bf07"
 title = "Output parser strategy: external parsers via manifest.toml"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2803bf07-output-parser-strategy-external-parsers-"
 created_at = "2026-04-30T20:05:40.844536Z"
-updated_at = "2026-04-30T20:05:40.844536Z"
+updated_at = "2026-04-30T21:02:46.987871Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["2c32a282", "2e772eab"]
@@ -70,3 +70,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-30T20:05Z | — | new | philippepascal |
+| 2026-04-30T21:02Z | new | groomed | philippepascal |
