@@ -27,7 +27,7 @@ The wrapper dispatcher landed in d3b93b95 always resolves to the `claude` built-
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Custom wrapper resolution from `.apm/agents/<name>/` — ticket 2c32a282\n- Per-ticket frontmatter `agent` / `agent_overrides` override — ticket 0ca3e019\n- `apm migrate --fix` automated config file rewrite — ticket 3048d7e9\n- Mock wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) — ticket 25c92daa\n- Removing `check_output_format_supported()` — deferred to wrapper-versioning ticket 2e772eab\n- Wrapper-contract versioning checks against `manifest.toml` — ticket 2e772eab\n- Per-agent instruction file resolution under `.apm/agents/<name>/` — ticket 7f5f73d5\n- The `apm agents` subcommand — ticket 71d80e40
 
 ### Approach
 
