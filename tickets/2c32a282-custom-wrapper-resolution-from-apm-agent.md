@@ -68,7 +68,15 @@ Implement custom-wrapper resolution from `.apm/agents/<name>/` so projects can s
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-agent instruction file resolution (`apm.worker.md` etc. under `.apm/agents/<name>/`) — ticket 7f5f73d5
+- The `apm agents new/list/test/eject` subcommand family — ticket 71d80e40
+- Wrapper-contract version compatibility checks beyond rejecting `contract_version > 1` at parse/validate time — ticket 2e772eab; this ticket stores the field but only enforces the v1 ceiling
+- External parser invocation (`parser = "external"` piping stdout through `parser_command`) — ticket 2803bf07; this ticket parses and stores `parser` and `parser_command` but does not act on them at spawn time
+- Reading the `agent` config field introduced by ticket 6cac8518; `start.rs` after this ticket still passes the hardcoded string `"claude"` to `resolve_wrapper`
+- Frontmatter `agent` / `agent_overrides` override — ticket 0ca3e019
+- Mock built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) — ticket 25c92daa
+- `apm migrate --fix` automated config rewrite — ticket 3048d7e9
+- Windows execute-bit semantics (on non-Unix platforms, `find_script` treats any `wrapper.*` file as executable)
 
 ### Approach
 
