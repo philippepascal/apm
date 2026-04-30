@@ -18,29 +18,11 @@ target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 
 ### Problem
 
-Add an explicit `outcome` field to `TransitionConfig` so mock wrappers and tooling can ask 'is this the success path?' without inferring from `completion` strategy or terminal flags. Independent of the wrapper code; lands as a workflow.toml schema change.
+The `TransitionConfig` struct in `apm-core/src/config.rs` has no `outcome` field. Any tooling that needs to know whether a transition represents the worker's success path — mock wrappers, dead-end detection in `apm validate`, future UI colouring — must each re-implement the same inference from `CompletionStrategy` and `StateConfig.terminal`. That logic has a canonical definition in `docs/agent-wrappers.md` § "Transition outcomes," but it lives only in prose, not in code.
 
-**Reference spec:** `docs/agent-wrappers.md` — section 'Transition outcomes'.
+Adding `pub outcome: Option<String>` to `TransitionConfig` together with a single `resolve_outcome` helper centralises the inference once. Projects that want a more precise label (e.g. marking a transition to `ammend` as `rejected` rather than the inferred `needs_input`) can set the field explicitly; the helper returns the explicit value when present and falls back to the three-rule inference otherwise.
 
-**Scope:**
-- Add `pub outcome: Option<String>` to `TransitionConfig` in `apm-core/src/config.rs`, with `#[serde(default)]`.
-- Recognised values: `success`, `needs_input`, `blocked`, `rejected`, `cancelled`. Custom values are accepted (treated as non-success by tooling).
-- Add a helper `pub fn resolve_outcome(transition: &TransitionConfig, target_state: &StateConfig) -> &str` that returns the explicit value if set, otherwise applies the implicit-default rules:
-  1. If `completion` is set (any non-`None` strategy) → `success`
-  2. Else if target state has `terminal = true` → `cancelled`
-  3. Else → `needs_input`
-- Add `outcome` to every transition in `apm-core/src/default/workflow.toml` explicitly. The defaults agree with the inference (so this is documentation only) but make the workflow self-describing for new readers and tooling.
-- Extend `apm validate` to warn (not error) if a profile would never reach a `success` outcome from any startable state — a dead-end workflow indicates a config mistake worth surfacing. Conservative: warn, don't fail.
-
-**Out of scope:**
-- Mock wrappers using the field (separate ticket; this just adds the field and helper).
-- UI surfacing outcome (could be a follow-up; the help schema would auto-pick it up via schemars).
-- Hash-trip / validate auto-fix to add `outcome` to existing project workflow.tomls — implicit defaults make this unnecessary.
-
-**Tests:**
-- Unit tests for `resolve_outcome` covering each implicit rule and the explicit-override case.
-- Update existing default-workflow tests to assert each transition has an outcome (explicit or inferred).
-- Validate test for the dead-end warning.
+This ticket's scope is the data model and its rules. The field is deliberately inert in the current binary: mock wrappers that read it are a separate ticket (25c92daa). The value delivered here is (a) a stable, typed schema that downstream consumers can rely on without re-deriving the logic, (b) a `resolve_outcome` helper they can call directly, and (c) an annotated `workflow.toml` that makes the shipped default self-describing.
 
 ### Acceptance criteria
 
