@@ -73,7 +73,90 @@ Refactor `apm-core/src/start.rs` to dispatch through a Wrapper abstraction inste
 
 ### Approach
 
-How the implementation will work.
+**New module: `apm-core/src/wrapper/`**
+
+Create two files; register with `pub mod wrapper;` in `apm-core/src/lib.rs`:
+
+- `wrapper/mod.rs` — `Wrapper` trait, `WrapperContext`, `resolve_builtin()`
+- `wrapper/claude.rs` — `ClaudeWrapper` struct implementing `Wrapper`
+
+---
+
+**`WrapperContext` (in `wrapper/mod.rs`)**
+
+Public struct with fields: `worker_name: String`, `ticket_id: String`, `ticket_branch: String`, `worktree_path: PathBuf`, `system_prompt_file: PathBuf`, `user_message_file: PathBuf`, `skip_permissions: bool`, `profile: String`, `role_prefix: Option<String>`, `options: HashMap<String, String>` (empty until config ticket 6cac8518), `model: Option<String>`, `log_path: PathBuf`, `container: Option<String>` (Some(image) → docker path).
+
+**`Wrapper` trait**
+
+One method: `fn spawn(&self, ctx: &WrapperContext) -> anyhow::Result<std::process::Child>`
+
+**`resolve_builtin`**
+
+Match on name: `"claude"` → `Some(Box::new(ClaudeWrapper))`, anything else → `None`.
+
+---
+
+**`ClaudeWrapper` (in `wrapper/claude.rs`)**
+
+`spawn()` branches on `ctx.container`:
+
+_Local path (container is None):_
+1. Read file contents: `sys = fs::read_to_string(&ctx.system_prompt_file)?`, `msg = fs::read_to_string(&ctx.user_message_file)?`
+2. Build `Command::new("claude")` with args in order: `--print`, `--output-format stream-json`, `--verbose`, `--system-prompt <sys>`, optionally `--model <value>`, optionally `--dangerously-skip-permissions` (when `ctx.skip_permissions`), then `<msg>` as positional arg
+3. Set all APM contract env vars (see table below)
+4. `.current_dir(&ctx.worktree_path)`
+5. Redirect stdout + stderr to `File::create(&ctx.log_path)?`; `try_clone()` for stderr fd
+6. `.process_group(0)`, then `.spawn()`
+
+_Container path (container is Some(image)):_
+Build `docker run --rm --volume <wt>:/workspace --workdir /workspace` followed by `--env KEY=VAL` for each APM contract var and inherited vars (ANTHROPIC_API_KEY, git identity), then `<image> claude --print --output-format stream-json --verbose --system-prompt <sys> [--model X] [--dangerously-skip-permissions] <msg>`. Mirrors current `spawn_container_worker` structure; ANTHROPIC_API_KEY and git identity vars still resolved the same way.
+
+**APM contract env vars (set in both paths)**
+
+| Var | Value |
+|---|---|
+| `APM_AGENT_NAME` | `ctx.worker_name` |
+| `APM_TICKET_ID` | `ctx.ticket_id` |
+| `APM_TICKET_BRANCH` | `ctx.ticket_branch` |
+| `APM_TICKET_WORKTREE` | `ctx.worktree_path` as str |
+| `APM_SYSTEM_PROMPT_FILE` | `ctx.system_prompt_file` as str |
+| `APM_USER_MESSAGE_FILE` | `ctx.user_message_file` as str |
+| `APM_SKIP_PERMISSIONS` | `"1"` or `"0"` |
+| `APM_PROFILE` | `ctx.profile` |
+| `APM_ROLE_PREFIX` | `ctx.role_prefix` when Some |
+| `APM_WRAPPER_VERSION` | `"1"` |
+
+For local path, use `.env(key, val)` on `Command`. For container path, use `--env key=val` docker args.
+
+---
+
+**Temp file helpers (private, in `start.rs` or `wrapper/mod.rs`)**
+
+`write_temp_file(prefix: &str, content: &str) -> Result<PathBuf>`: write content to `std::env::temp_dir() / "apm-{prefix}-{random}.txt"` and return the path. Use `rand_u16()` (already exists) for the suffix.
+
+---
+
+**Refactoring `build_spawn_command` and `spawn_container_worker`**
+
+Replace both with a single private `spawn_worker(ctx: WrapperContext) -> Result<Child>` that calls `resolve_builtin("claude").expect("always registered").spawn(&ctx)`. The three call sites (`run()`, `run_next()`, `spawn_next_worker()`) each gain the same pattern:
+
+1. Write temp files: `sys_file = write_temp_file("sys", &worker_system)?`, `msg_file = write_temp_file("msg", &ticket_content)?`
+2. Build `WrapperContext` from locals already in scope — all fields (`ticket_id`, `ticket_branch`, `worktree_path`, `profile` name, `role_prefix`, `model`, `container`, etc.) are available at each call site
+3. Call `spawn_worker(ctx)` → `child`
+4. Spawn a cleanup thread that waits on `child.wait()` then calls `fs::remove_file` on both temp paths (errors ignored)
+
+`params.args` (the `--print` arg previously from `workers.args` config) is no longer passed to the claude CLI from outside; the built-in hardcodes it. The `params.env` user-configured env vars should still be forwarded to the child process; add them to `WrapperContext.options` or thread them through a dedicated `extra_env: HashMap<String,String>` field.
+
+---
+
+**Tests to add**
+
+- `resolve_builtin_claude_returns_some` — `assert!(resolve_builtin("claude").is_some())`
+- `resolve_builtin_unknown_returns_none` — `assert!(resolve_builtin("bogus").is_none())`
+- `claude_wrapper_sets_apm_env_vars` — mock script writes its env to a file; assert `APM_TICKET_ID`, `APM_TICKET_BRANCH`, `APM_TICKET_WORKTREE`, `APM_SYSTEM_PROMPT_FILE`, `APM_USER_MESSAGE_FILE`, `APM_SKIP_PERMISSIONS`, `APM_PROFILE`, `APM_WRAPPER_VERSION` are all present with correct values (same fixture pattern as existing `spawn_worker_cwd_is_ticket_worktree`)
+- `temp_files_removed_after_child_exits` — write two temp files, include their paths in `WrapperContext`, spawn a trivial wrapper, wait, assert both files are gone
+
+**Existing test compatibility:** `spawn_worker_cwd_is_ticket_worktree` calls `build_spawn_command` directly. After the refactor, update it to call `spawn_worker` with a `WrapperContext`; the invariant (cwd == worktree path) is unchanged.
 
 ### Open questions
 
