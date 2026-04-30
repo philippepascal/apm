@@ -36,7 +36,20 @@ The full resolution order (per spawn, where P is the profile name declared by th
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `Frontmatter` struct has `pub agent: Option<String>` with `#[serde(default, skip_serializing_if = "Option::is_none")]`
+- [ ] `Frontmatter` struct has `pub agent_overrides: HashMap<String, String>` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]`
+- [ ] A ticket frontmatter containing `agent = "mock-happy"` round-trips through TOML serialize → parse → serialize without loss
+- [ ] A ticket frontmatter containing `[agent_overrides]` round-trips through TOML serialize → parse → serialize without loss
+- [ ] A ticket with neither `agent` nor `agent_overrides` set serializes without either field appearing in the output
+- [ ] When spawning a worker for profile `P` and `frontmatter.agent_overrides[P]` is set, that value is used as the agent name
+- [ ] When `agent_overrides` has no entry for profile `P` but `frontmatter.agent` is set, `frontmatter.agent` is used
+- [ ] When `frontmatter.agent_overrides[P]` is set and `frontmatter.agent` is also set, the profile-specific override wins
+- [ ] When neither frontmatter field is set, the config-resolved agent (from 6cac8518) is used unchanged
+- [ ] `apm validate` reports an error for a ticket whose `frontmatter.agent` names a non-existent built-in; the error message includes the ticket id
+- [ ] `apm validate` reports an error for a ticket whose `frontmatter.agent_overrides` contains a value naming a non-existent built-in; the error message includes the ticket id and the offending agent name
+- [ ] `apm validate` does not report an error for a ticket whose `frontmatter.agent` is `"claude"`
+- [ ] `.apm/apm.spec-writer.md` contains a brief note that supervisors may set `agent` or `[agent_overrides]` in frontmatter
+- [ ] `.apm/apm.worker.md` contains a brief note that supervisors may set `agent` or `[agent_overrides]` in frontmatter
 
 ### Out of scope
 
