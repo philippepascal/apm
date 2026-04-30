@@ -60,7 +60,110 @@ The silent hardcoded fallback and the `StateConfig.instructions`-as-system-promp
 
 ### Approach
 
-How the implementation will work.
+**New default files**
+
+Create two files (content copied verbatim from existing siblings):
+- `apm-core/src/default/agents/claude/apm.worker.md` — copy of `apm-core/src/default/apm.worker.md`
+- `apm-core/src/default/agents/claude/apm.spec-writer.md` — copy of `apm-core/src/default/apm.spec-writer.md`
+
+Add two module-level constants in `start.rs` (or a new private `instructions.rs`):
+```rust
+const CLAUDE_WORKER_DEFAULT: &str = include_str!("default/agents/claude/apm.worker.md");
+const CLAUDE_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");
+```
+
+---
+
+**`apm-core/src/config.rs` changes**
+
+1. Add `pub instructions: Option<String>` to `WorkersConfig` and its `Default` impl (default = None). Docstring: "Global instructions file used as the system prompt for all profiles; overridden by per-profile `instructions`.".
+
+2. Add `pub role: Option<String>` to `WorkerProfileConfig` (default = None). Docstring: "Role name used to select the per-agent instruction file (e.g. \"worker\", \"spec-writer\"). Defaults to \"worker\" when absent.".
+
+---
+
+**`apm-core/src/start.rs` changes**
+
+*New private helper:*
+```rust
+fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
+    match (agent, role) {
+        ("claude", "worker")       => Some(CLAUDE_WORKER_DEFAULT),
+        ("claude", "spec-writer")  => Some(CLAUDE_SPEC_WRITER_DEFAULT),
+        _                          => None,
+    }
+}
+```
+
+*Updated `resolve_system_prompt` signature and implementation:*
+```rust
+fn resolve_system_prompt(
+    root: &Path,
+    profile: Option<&WorkerProfileConfig>,
+    workers: &WorkersConfig,
+    agent: &str,
+    role: &str,
+) -> Result<String>
+```
+
+Implementation (levels in order — return on first match, bail on exhaustion):
+1. If `profile.instructions` is Some(path): read `root.join(path)`; return Ok(content) on success, or bail with "[worker_profiles.*].instructions: file not found: {path}".
+2. If `workers.instructions` is Some(path): read `root.join(path)`; return Ok(content) on success, or bail with "[workers].instructions: file not found: {path}".
+3. Try `root.join(".apm/agents/{agent}/apm.{role}.md")`; if the file exists and is readable, return Ok(content). Missing file is not an error — fall through.
+4. Call `resolve_builtin_instructions(agent, role)`; if Some(s), return Ok(s.to_string()).
+5. `bail!("no instructions found for agent '{agent}' role '{role}': set [workers].instructions in .apm/config.toml or add .apm/agents/{agent}/apm.{role}.md")`
+
+*Remove the `state_instructions` parameter* from `resolve_system_prompt`. The `StateConfig.instructions` value is no longer passed to this function at any call site.
+
+*Update call sites* — three locations (`run()`, `run_next()`, `spawn_next_worker()`):
+- Remove the local `state_instructions` variable that was fed into `resolve_system_prompt`.
+- Add `let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");`
+- Pass `&config.workers`, `"claude"` (hardcoded; replaced by `config.workers.agent` in ticket 6cac8518), and `role`.
+- Propagate the `Result` with `?`.
+
+---
+
+**`apm-core/src/init.rs` changes**
+
+In the `apm init` default config template string (the `[worker_profiles.spec_agent]` section), add `role = "spec-writer"`:
+```toml
+[worker_profiles.spec_agent]
+command = "claude"
+args = ["--print"]
+instructions = ".apm/apm.spec-writer.md"
+role = "spec-writer"
+role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
+```
+(`impl_agent` is left without a `role` field — its default of `"worker"` is correct.)
+
+---
+
+**`apm-core/src/validate.rs` changes**
+
+In the existing config validation pass, add a check for `config.workers.instructions`:
+```rust
+if let Some(ref path) = config.workers.instructions {
+    if !root.join(path).exists() {
+        errors.push(format!(
+            "config: [workers].instructions — file not found: {path}"
+        ));
+    }
+}
+```
+
+---
+
+**Tests in `apm-core/src/start.rs` `#[cfg(test)]`**
+
+Update the three existing `resolve_system_prompt_*` tests to match the new signature (add `workers`, `agent`, `role` args; unwrap the Result). Then add:
+
+- `resolve_system_prompt_uses_workers_instructions_when_no_profile` — `WorkersConfig` with `instructions = Some(path)`; file exists; no profile → returns that content.
+- `resolve_system_prompt_uses_per_agent_file` — no profile, no workers.instructions, `.apm/agents/claude/apm.worker.md` exists → returns its content.
+- `resolve_system_prompt_falls_back_to_builtin_default` — no overrides, no per-agent project file, agent="claude", role="worker" → returns `CLAUDE_WORKER_DEFAULT`.
+- `resolve_system_prompt_falls_back_to_builtin_spec_writer` — same but role="spec-writer" → returns `CLAUDE_SPEC_WRITER_DEFAULT`.
+- `resolve_system_prompt_errors_for_unknown_agent` — no overrides, no per-agent project file, agent="custom-bot" → returns `Err`.
+- `resolve_system_prompt_profile_instructions_missing_file_is_error` — profile.instructions set but file absent → returns `Err` (not silently falls through).
+- `resolve_system_prompt_backward_compat` — profile.instructions = ".apm/apm.worker.md", file exists → works, confirming no regression for existing projects.
 
 ### Open questions
 
