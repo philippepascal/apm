@@ -1,7 +1,7 @@
 +++
 id = "7f5f73d5"
 title = "Per-agent instructions resolution under .apm/agents/<name>/"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7f5f73d5-per-agent-instructions-resolution-under-"
 created_at = "2026-04-30T20:03:33.687625Z"
-updated_at = "2026-04-30T21:02:30.154031Z"
+updated_at = "2026-04-30T21:42:25.580070Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "2c32a282"]
@@ -77,3 +77,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-30T20:03Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
+| 2026-04-30T21:42Z | groomed | in_design | philippepascal |
