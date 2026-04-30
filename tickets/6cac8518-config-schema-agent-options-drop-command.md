@@ -1,7 +1,7 @@
 +++
 id = "6cac8518"
 title = "Config schema: agent + options (drop command/args/model)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6cac8518-config-schema-agent-options-drop-command"
 created_at = "2026-04-30T20:02:34.693415Z"
-updated_at = "2026-04-30T21:02:20.952245Z"
+updated_at = "2026-04-30T21:17:25.961937Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95"]
@@ -73,3 +73,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-04-30T20:02Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
+| 2026-04-30T21:17Z | groomed | in_design | philippepascal |
