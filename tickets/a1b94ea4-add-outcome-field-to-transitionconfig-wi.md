@@ -1,7 +1,7 @@
 +++
 id = "a1b94ea4"
 title = "Add outcome field to TransitionConfig with implicit defaults"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a1b94ea4-add-outcome-field-to-transitionconfig-wi"
 created_at = "2026-04-30T20:02:08.987471Z"
-updated_at = "2026-04-30T20:02:08.987471Z"
+updated_at = "2026-04-30T21:02:18.045801Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 +++
@@ -68,3 +68,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-04-30T20:02Z | — | new | philippepascal |
+| 2026-04-30T21:02Z | new | groomed | philippepascal |
