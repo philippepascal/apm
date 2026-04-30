@@ -1,7 +1,7 @@
 +++
 id = "d3b93b95"
 title = "Wrapper contract foundation: trait, dispatcher, claude built-in (refactor)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d3b93b95-wrapper-contract-foundation-trait-dispat"
 created_at = "2026-04-30T20:01:55.080870Z"
-updated_at = "2026-04-30T21:08:14.472552Z"
+updated_at = "2026-04-30T21:08:19.769830Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 +++
@@ -174,3 +174,4 @@ Replace both with a single private `spawn_worker(ctx: WrapperContext) -> Result<
 | 2026-04-30T20:01Z | — | new | philippepascal |
 | 2026-04-30T21:02Z | new | groomed | philippepascal |
 | 2026-04-30T21:02Z | groomed | in_design | philippepascal |
+| 2026-04-30T21:08Z | in_design | specd | claude-0430-2102-93c0 |
