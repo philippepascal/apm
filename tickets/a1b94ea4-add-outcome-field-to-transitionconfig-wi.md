@@ -3,13 +3,13 @@ id = "a1b94ea4"
 title = "Add outcome field to TransitionConfig with implicit defaults"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a1b94ea4-add-outcome-field-to-transitionconfig-wi"
 created_at = "2026-04-30T20:02:08.987471Z"
-updated_at = "2026-04-30T21:08:37.433112Z"
+updated_at = "2026-04-30T21:16:05.337291Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 +++
