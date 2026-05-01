@@ -113,6 +113,9 @@ let agents_to_check: Vec<&str> = ticket.frontmatter.agent
     .collect();
 
 for name in agents_to_check {
+    // TODO(2c32a282): upgrade to wrapper::resolve_wrapper(root, name) once
+    // custom wrapper resolution lands so project-defined scripts referenced
+    // in `agent` / `agent_overrides` are also validated here.
     if wrapper::resolve_builtin(name).is_none() {
         errors.push(format!(
             "ticket {}: agent {:?} is not a known built-in",
@@ -122,7 +125,9 @@ for name in agents_to_check {
 }
 ```
 
-This checks only built-ins. When ticket 2c32a282 lands and `resolve_wrapper()` subsumes `resolve_builtin()`, this call site can be upgraded in that ticket.
+Import `crate::wrapper` (introduced by d3b93b95). The `// TODO(2c32a282)` comment must appear verbatim in the source so the upgrade is discoverable without re-deriving the dependency.
+
+**Cross-ticket obligation:** when ticket 2c32a282 (custom wrapper resolution) lands and `resolve_wrapper(root, name)` is available — checking both built-ins and project scripts under `.apm/agents/` — this call site must be upgraded. Ticket 2c32a282 should include that upgrade in its scope; this comment is the breadcrumb that makes it visible.
 
 #### `.apm/apm.spec-writer.md` and `.apm/apm.worker.md`
 
