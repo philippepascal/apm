@@ -76,7 +76,7 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 - [x] `apm agents new <name> --force` succeeds when the directory already exists and overwrites the scaffolded files
 - [x] `apm agents new <name>` prints next-step guidance directing the user to edit `wrapper.sh` and run `apm agents test <name>`
 - [x] `apm agents test <name>` exits 0 and prints a pass summary when the wrapper exits 0 and emits at least one canonical JSONL line (a JSON object containing a `"type"` key)
-- [ ] `apm agents test <name>` exits non-zero and prints a fail summary when the wrapper exits non-zero
+- [x] `apm agents test <name>` exits non-zero and prints a fail summary when the wrapper exits non-zero
 - [ ] `apm agents test <name>` reports exit code, canonical JSONL event count, non-canonical log line count, stderr line count, and wall-clock milliseconds in its output
 - [ ] `apm agents test <name>` exits non-zero with a clear error message when `<name>` is not a known wrapper (built-in or project)
 - [ ] `apm agents eject claude` creates `.apm/agents/claude/wrapper.sh` containing a bash script that invokes the `claude` CLI with `--print --output-format stream-json --verbose`
