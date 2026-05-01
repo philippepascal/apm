@@ -79,7 +79,7 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 - [x] `apm agents test <name>` exits non-zero and prints a fail summary when the wrapper exits non-zero
 - [x] `apm agents test <name>` reports exit code, canonical JSONL event count, non-canonical log line count, stderr line count, and wall-clock milliseconds in its output
 - [x] `apm agents test <name>` exits non-zero with a clear error message when `<name>` is not a known wrapper (built-in or project)
-- [ ] `apm agents eject claude` creates `.apm/agents/claude/wrapper.sh` containing a bash script that invokes the `claude` CLI with `--print --output-format stream-json --verbose`
+- [x] `apm agents eject claude` creates `.apm/agents/claude/wrapper.sh` containing a bash script that invokes the `claude` CLI with `--print --output-format stream-json --verbose`
 - [ ] `apm agents eject <name>` creates `.apm/agents/<name>/manifest.toml` with `contract_version = 1` and `parser = "canonical"`
 - [ ] `apm agents eject <name>` sets the execute bit on the ejected `wrapper.sh`
 - [ ] `apm agents eject <name>` exits non-zero when `.apm/agents/<name>/` already exists
