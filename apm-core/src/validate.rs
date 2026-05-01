@@ -179,7 +179,17 @@ fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warni
                 name, name
             )),
             Err(e) => errors.push(format!("agent '{name}': {e}")),
-            Ok(Some(_)) => {}
+            Ok(Some(wrapper::WrapperKind::Custom { manifest, .. })) => {
+                if let Some(m) = &manifest {
+                    if m.parser == "external" && m.parser_command.is_none() {
+                        errors.push(format!(
+                            "agent '{name}': manifest.toml declares parser = \"external\" \
+                             but parser_command is absent"
+                        ));
+                    }
+                }
+            }
+            Ok(Some(wrapper::WrapperKind::Builtin(_))) => {}
         }
     }
 

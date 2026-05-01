@@ -145,6 +145,156 @@ fn spawn_matching_contract_succeeds() {
 
 #[cfg(unix)]
 #[test]
+fn integration_canonical_mode() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+
+    let agent_dir = root.join(".apm").join("agents").join("canonical-test");
+    std::fs::create_dir_all(&agent_dir).unwrap();
+
+    let script_path = agent_dir.join("wrapper.sh");
+    std::fs::write(
+        &script_path,
+        "#!/bin/sh\nprintf '{\"type\":\"result\",\"text\":\"canonical-ok\"}\\n'\nexit 0\n",
+    ).unwrap();
+    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let wt = tempfile::tempdir().unwrap();
+    let log_dir = tempfile::tempdir().unwrap();
+    let log_path = log_dir.path().join("worker.log");
+
+    let kind = apm_core::wrapper::resolve_wrapper(root, "canonical-test")
+        .expect("resolve_wrapper should not error")
+        .expect("canonical-test should be found");
+
+    let (script, manifest) = match kind {
+        WrapperKind::Custom { script_path, manifest } => (script_path, manifest),
+        WrapperKind::Builtin(_) => panic!("expected Custom"),
+    };
+    let wrapper = CustomWrapper { script_path: script, manifest };
+
+    let ctx = WrapperContext {
+        worker_name: "canonical-test".to_string(),
+        ticket_id: "canonical-id".to_string(),
+        ticket_branch: "ticket/canonical-id".to_string(),
+        worktree_path: wt.path().to_path_buf(),
+        system_prompt_file: wt.path().join("sys.txt"),
+        user_message_file: wt.path().join("msg.txt"),
+        skip_permissions: false,
+        profile: "default".to_string(),
+        role_prefix: None,
+        options: HashMap::new(),
+        model: None,
+        log_path: log_path.clone(),
+        container: None,
+        extra_env: HashMap::new(),
+        root: root.to_path_buf(),
+        keychain: HashMap::new(),
+    };
+
+    let mut child = wrapper.spawn(&ctx).expect("spawn should succeed for canonical mode");
+    let status = child.wait().expect("wait should succeed");
+    assert!(status.success(), "wrapper should exit 0; got: {status}");
+
+    let log_content = std::fs::read_to_string(&log_path)
+        .expect("log file should exist after wrapper exits");
+    assert!(
+        log_content.contains(r#"{"type":"result","text":"canonical-ok"}"#),
+        "log must contain the emitted JSONL line; got:\n{log_content}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn integration_external_parser_pipe() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+
+    let agent_dir = root.join(".apm").join("agents").join("pipe-test");
+    std::fs::create_dir_all(&agent_dir).unwrap();
+
+    // Wrapper emits non-JSONL text on stdout
+    let wrapper_script = agent_dir.join("wrapper.sh");
+    std::fs::write(
+        &wrapper_script,
+        "#!/bin/sh\nprintf 'raw-output-line\\n'\nexit 0\n",
+    ).unwrap();
+    std::fs::set_permissions(&wrapper_script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    // Parser reads each line from stdin and wraps it as JSON
+    let parser_script = dir.path().join("parser.sh");
+    std::fs::write(
+        &parser_script,
+        "#!/bin/sh\nwhile IFS= read -r line; do\n  printf '{\"type\":\"parsed\",\"content\":\"%s\"}\\n' \"$line\"\ndone\n",
+    ).unwrap();
+    std::fs::set_permissions(&parser_script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let parser_absolute = parser_script.to_string_lossy().to_string();
+
+    // Write manifest with parser = "external" and absolute path to parser
+    std::fs::write(
+        agent_dir.join("manifest.toml"),
+        format!(
+            "[wrapper]\ncontract_version = 1\nparser = \"external\"\nparser_command = \"{}\"\n",
+            parser_absolute.replace('\\', "\\\\")
+        ),
+    ).unwrap();
+
+    let wt = tempfile::tempdir().unwrap();
+    let log_dir = tempfile::tempdir().unwrap();
+    let log_path = log_dir.path().join("worker.log");
+
+    let kind = apm_core::wrapper::resolve_wrapper(root, "pipe-test")
+        .expect("resolve_wrapper should not error")
+        .expect("pipe-test should be found");
+
+    let (script, manifest) = match kind {
+        WrapperKind::Custom { script_path, manifest } => (script_path, manifest),
+        WrapperKind::Builtin(_) => panic!("expected Custom"),
+    };
+    let wrapper = CustomWrapper { script_path: script, manifest };
+
+    let ctx = WrapperContext {
+        worker_name: "pipe-test".to_string(),
+        ticket_id: "pipe-id".to_string(),
+        ticket_branch: "ticket/pipe-id".to_string(),
+        worktree_path: wt.path().to_path_buf(),
+        system_prompt_file: wt.path().join("sys.txt"),
+        user_message_file: wt.path().join("msg.txt"),
+        skip_permissions: false,
+        profile: "default".to_string(),
+        role_prefix: None,
+        options: HashMap::new(),
+        model: None,
+        log_path: log_path.clone(),
+        container: None,
+        extra_env: HashMap::new(),
+        root: root.to_path_buf(),
+        keychain: HashMap::new(),
+    };
+
+    let mut parser_child = wrapper.spawn(&ctx).expect("spawn should succeed for external mode");
+    let status = parser_child.wait().expect("wait on parser child should succeed");
+    assert!(status.success(), "parser should exit 0; got: {status}");
+
+    let log_content = std::fs::read_to_string(&log_path)
+        .expect("log file should exist after parser exits");
+    assert!(
+        log_content.contains("raw-output-line"),
+        "log must contain input text wrapped in JSON; got:\n{log_content}"
+    );
+    assert!(
+        log_content.contains(r#""type":"parsed""#),
+        "log must contain parsed JSON object; got:\n{log_content}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
 fn spawn_future_contract_rejected() {
     use std::os::unix::fs::PermissionsExt;
 
