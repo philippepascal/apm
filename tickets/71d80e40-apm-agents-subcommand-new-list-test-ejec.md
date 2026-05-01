@@ -272,6 +272,7 @@ Update `hash_trip::is_read_only_command` if `Agents` is listed: `List` and `Test
 
 ### Amendment requests
 
+- [ ] Make explicit in the Approach that the manifest emitted by `eject` (`contract_version = 1`, `parser = "canonical"`) is the same template as `new` and is therefore recognised as v1-canonical by the resolution paths in `2c32a282` (manifest parser) and `2e772eab` (version check). State this so users don't wonder whether ejected scripts need extra setup, and so a future implementer doesn't accidentally invent a different template for ejected wrappers. One sentence in the eject section is enough.
 
 ### Code review
 
