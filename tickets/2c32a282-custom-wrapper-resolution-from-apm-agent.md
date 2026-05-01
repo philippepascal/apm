@@ -19,34 +19,11 @@ depends_on = ["d3b93b95"]
 
 ### Problem
 
-Implement custom-wrapper resolution from `.apm/agents/<name>/` so projects can ship their own agent integrations alongside built-ins. A project script at `.apm/agents/<name>/wrapper.<ext>` shadows any built-in of the same name.
+APM can currently invoke only the built-in Claude wrapper. There is no way for a project team to integrate a different AI CLI (Aider, Codex, a company-internal tool) without modifying APM's Rust source and shipping a new binary. The `d3b93b95` wrapper contract established the `Wrapper` trait, `WrapperContext`, and `ClaudeWrapper`, but the dispatcher still always resolves to Claude — it has no mechanism to look for, load, or exec a project-defined script.
 
-**Reference spec:** `docs/agent-wrappers.md` — sections 'Custom wrappers', 'manifest.toml (optional)'.
+This ticket wires custom-wrapper resolution into the dispatcher. When a project places an executable script at `.apm/agents/<name>/wrapper.<ext>`, APM picks it up and runs it in place of any built-in with the same name. An optional `manifest.toml` alongside the script carries metadata: which contract version the wrapper targets and which output-parser strategy it uses. `apm validate` gains agent-resolution checks so broken or missing wrappers are caught before any real worker is spawned.
 
-**Scope:**
-- New module `apm-core/src/wrapper/custom.rs` (or similar). Public API: `pub fn resolve_wrapper(root: &Path, name: &str) -> Option<WrapperKind>` returning either a `Custom { script_path: PathBuf, manifest: Option<Manifest> }` or `Builtin(name)`.
-- Resolution order: project script first (any executable file matching `wrapper.*` in `.apm/agents/<name>/`), then built-in.
-- Custom wrappers are exec'd directly (not via shell). The wrapper script must have its shebang and execute bit set; APM does not interpret extensions or pick interpreters.
-- Parse optional `manifest.toml` in the wrapper directory: `[wrapper] name`, `contract_version` (default 1), `parser` (default "canonical"), `parser_command` (only when parser = "external"). Strict parsing; unknown keys are warnings.
-- Wire the dispatcher (from d3b93b95) to call into custom-wrapper exec when the resolved kind is `Custom`.
-- Extend `apm validate` to:
-  - Confirm the configured agent (global, per-profile) resolves either to a built-in or a project script.
-  - Validate `manifest.toml` if present (parses, declared `contract_version` is supported by this APM build).
-  - Error message format: "agent 'foo' not found: checked built-ins {claude, ...} and `.apm/agents/foo/`".
-
-**Out of scope:**
-- Per-agent instructions (`apm.worker.md` etc. per agent dir) — separate ticket.
-- The `apm agents new/list/test/eject` subcommand — separate ticket.
-- Wrapper-contract version checking at spawn time — separate ticket; this ticket only parses the field.
-- External parser invocation — separate ticket; this ticket only stores the manifest fields.
-
-**Tests:**
-- Resolution test: project script shadows built-in.
-- Resolution test: missing wrapper returns None; validate fails with the expected error.
-- Manifest parsing tests (valid, invalid, missing).
-- Integration test: a fixture project with a `.apm/agents/echo-test/wrapper.sh` that just echoes a JSONL event and exits 0; dispatcher runs it, output captured to log.
-
-**Wrapper-contract version 1** is the only one this ticket supports; manifest.toml declaring contract_version > 1 should be rejected with a clear upgrade-APM message.
+The result is a genuinely multi-agent APM: any tool that can read the APM env vars and emit JSONL on stdout can be wired in as a first-class wrapper, without touching APM's binary.
 
 ### Acceptance criteria
 
