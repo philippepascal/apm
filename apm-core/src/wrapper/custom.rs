@@ -4,6 +4,52 @@ use serde::Deserialize;
 use anyhow::Context;
 use super::{Wrapper, WrapperContext, CONTRACT_VERSION};
 
+#[derive(Debug, Clone, PartialEq)]
+enum ParserStrategy {
+    Canonical,
+    External,
+}
+
+impl ParserStrategy {
+    fn from_manifest(m: Option<&Manifest>) -> Self {
+        match m.and_then(|m| Some(m.parser.as_str())) {
+            Some("external") => Self::External,
+            _ => Self::Canonical,
+        }
+    }
+}
+
+/// Locate an executable binary by name or absolute path.
+/// For absolute paths: checks the file exists.
+/// For relative names: walks PATH entries and returns the first executable match.
+fn find_binary(cmd: &str) -> anyhow::Result<PathBuf> {
+    let p = Path::new(cmd);
+    if p.is_absolute() {
+        if p.is_file() {
+            return Ok(p.to_path_buf());
+        }
+        anyhow::bail!("parser binary not found: {}", cmd);
+    }
+    let path_var = std::env::var("PATH").unwrap_or_default();
+    for dir in std::env::split_paths(&path_var) {
+        let candidate = dir.join(cmd);
+        if !candidate.is_file() {
+            continue;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = candidate.metadata() {
+                if meta.permissions().mode() & 0o111 == 0 {
+                    continue;
+                }
+            }
+        }
+        return Ok(candidate);
+    }
+    anyhow::bail!("parser binary not found: {}", cmd);
+}
+
 fn default_contract_version() -> u32 { 1 }
 fn default_parser() -> String { "canonical".to_string() }
 
@@ -76,18 +122,88 @@ impl Wrapper for CustomWrapper {
         for (k, v) in &ctx.extra_env {
             cmd.env(k, v);
         }
-
         cmd.current_dir(&ctx.worktree_path);
 
-        let log_file = std::fs::File::create(&ctx.log_path)?;
-        let log_clone = log_file.try_clone()?;
-        cmd.stdout(log_file);
-        cmd.stderr(log_clone);
+        let strategy = ParserStrategy::from_manifest(self.manifest.as_ref());
 
+        #[cfg(unix)]
         use std::os::unix::process::CommandExt;
-        cmd.process_group(0);
 
-        Ok(cmd.spawn()?)
+        match strategy {
+            ParserStrategy::Canonical => {
+                let log_file = std::fs::File::create(&ctx.log_path)?;
+                let log_clone = log_file.try_clone()?;
+                cmd.stdout(log_file);
+                cmd.stderr(log_clone);
+                #[cfg(unix)]
+                cmd.process_group(0);
+                Ok(cmd.spawn()?)
+            }
+            ParserStrategy::External => {
+                let manifest_path = self.script_path
+                    .parent()
+                    .map(|p| p.join("manifest.toml"))
+                    .unwrap_or_else(|| PathBuf::from("manifest.toml"));
+
+                // Require parser_command
+                let parser_cmd_str = self.manifest.as_ref()
+                    .and_then(|m| m.parser_command.as_deref())
+                    .ok_or_else(|| anyhow::anyhow!(
+                        "{}: parser = \"external\" but parser_command is not set",
+                        manifest_path.display()
+                    ))?
+                    .to_owned();
+
+                // Validate binary is findable before spawning any process
+                let parser_bin = find_binary(&parser_cmd_str)?;
+
+                // Open log file; clone for each stream that writes to it:
+                // 1. wrapper.stderr, 2. parser.stdout, 3. parser.stderr
+                let log_file_wrapper_stderr = std::fs::File::create(&ctx.log_path)?;
+                let log_file_parser_stdout = log_file_wrapper_stderr.try_clone()?;
+                let log_file_parser_stderr = log_file_wrapper_stderr.try_clone()?;
+
+                use std::process::Stdio;
+
+                // Spawn wrapper: stdout piped to feed parser stdin; stderr directly to log
+                cmd.stdout(Stdio::piped());
+                cmd.stderr(log_file_wrapper_stderr);
+                #[cfg(unix)]
+                cmd.process_group(0);
+                let mut wrapper_child = cmd.spawn()?;
+
+                let wrapper_stdout = wrapper_child.stdout.take()
+                    .ok_or_else(|| anyhow::anyhow!("failed to capture wrapper stdout pipe"))?;
+
+                // Reap wrapper in background thread; append diagnostic exit line to log
+                let log_path_clone = ctx.log_path.clone();
+                std::thread::spawn(move || {
+                    let status = wrapper_child.wait();
+                    if let Ok(mut f) = std::fs::OpenOptions::new()
+                        .append(true)
+                        .create(true)
+                        .open(&log_path_clone)
+                    {
+                        let status_str = match status {
+                            Ok(s) => format!("{s}"),
+                            Err(e) => format!("error: {e}"),
+                        };
+                        let _ = writeln!(f, "[apm] wrapper exited: {status_str}");
+                    }
+                });
+
+                // Spawn parser: stdin = wrapper stdout pipe; stdout/stderr -> log
+                let mut parser_cmd = std::process::Command::new(&parser_bin);
+                parser_cmd.stdin(Stdio::from(wrapper_stdout));
+                parser_cmd.stdout(log_file_parser_stdout);
+                parser_cmd.stderr(log_file_parser_stderr);
+                parser_cmd.current_dir(&ctx.worktree_path);
+                #[cfg(unix)]
+                parser_cmd.process_group(0);
+
+                Ok(parser_cmd.spawn()?)
+            }
+        }
     }
 }
 
@@ -378,6 +494,108 @@ mod tests {
     fn check_version_no_manifest_defaults_to_1() {
         let declared = None::<Manifest>.map_or(1, |m| m.contract_version);
         assert_eq!(declared, 1);
+    }
+
+    // --- ParserStrategy tests ---
+
+    #[test]
+    fn parser_strategy_defaults_to_canonical() {
+        assert_eq!(ParserStrategy::from_manifest(None), ParserStrategy::Canonical);
+    }
+
+    #[test]
+    fn parser_strategy_explicit_canonical() {
+        let m = Manifest {
+            name: None,
+            contract_version: 1,
+            parser: "canonical".to_string(),
+            parser_command: None,
+        };
+        assert_eq!(ParserStrategy::from_manifest(Some(&m)), ParserStrategy::Canonical);
+    }
+
+    #[test]
+    fn parser_strategy_external() {
+        let m = Manifest {
+            name: None,
+            contract_version: 1,
+            parser: "external".to_string(),
+            parser_command: Some("my-parser".to_string()),
+        };
+        assert_eq!(ParserStrategy::from_manifest(Some(&m)), ParserStrategy::External);
+    }
+
+    #[test]
+    fn parser_strategy_unknown_falls_back_to_canonical() {
+        let m = Manifest {
+            name: None,
+            contract_version: 1,
+            parser: "foobar".to_string(),
+            parser_command: None,
+        };
+        assert_eq!(ParserStrategy::from_manifest(Some(&m)), ParserStrategy::Canonical);
+    }
+
+    #[test]
+    fn spawn_external_missing_parser_command() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let wt = tempfile::tempdir().unwrap();
+        let log_dir = tempfile::tempdir().unwrap();
+        let log_path = log_dir.path().join("worker.log");
+
+        let script = wt.path().join("wrapper.sh");
+        std::fs::write(&script, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let manifest = Manifest {
+            name: None,
+            contract_version: 1,
+            parser: "external".to_string(),
+            parser_command: None,
+        };
+        let wrapper = CustomWrapper {
+            script_path: script,
+            manifest: Some(manifest),
+        };
+
+        let ctx = make_ctx(wt.path(), &log_path);
+        let err = wrapper.spawn(&ctx).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("parser_command"), "error must mention parser_command: {msg}");
+        assert!(msg.contains("not set"), "error must mention 'not set': {msg}");
+    }
+
+    #[test]
+    fn spawn_external_binary_not_found() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let wt = tempfile::tempdir().unwrap();
+        let log_dir = tempfile::tempdir().unwrap();
+        let log_path = log_dir.path().join("worker.log");
+
+        let script = wt.path().join("wrapper.sh");
+        std::fs::write(&script, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let manifest = Manifest {
+            name: None,
+            contract_version: 1,
+            parser: "external".to_string(),
+            parser_command: Some("nonexistent-binary-xyzzy-2803".to_string()),
+        };
+        let wrapper = CustomWrapper {
+            script_path: script,
+            manifest: Some(manifest),
+        };
+
+        let ctx = make_ctx(wt.path(), &log_path);
+        let err = wrapper.spawn(&ctx).unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("nonexistent-binary-xyzzy-2803"),
+            "error must name the missing binary: {msg}"
+        );
     }
 
     #[test]
