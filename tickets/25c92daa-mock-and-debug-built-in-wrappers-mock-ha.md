@@ -113,6 +113,9 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 - [ ] **mock-random — seeding**
 - [ ] Given the same `APM_OPT_SEED` value, two successive `mock-random` spawns against the same ticket in the same state choose the same target state
 
+- [ ] **mock-random — error case**
+- [ ] When no valid transitions are available from the current state, `mock-random` exits non-zero and writes a diagnostic to stderr
+
 - [ ] **debug — output**
 - [ ] `debug` writes the name and value of every `APM_*` environment variable to stderr
 - [ ] `debug` writes the full contents of the file at `APM_SYSTEM_PROMPT_FILE` to stderr
@@ -127,6 +130,9 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 - [ ] `in_design → specd` carries `outcome = "success"` in the default workflow (`apm-core/src/default/workflow.toml`)
 - [ ] `ammend → specd` carries `outcome = "success"` in the default workflow
 - [ ] The project's `.apm/workflow.toml` carries the same two annotations
+
+- [ ] **per-agent instruction file stubs**
+- [ ] Each of the four built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) has both `apm.worker.md` and `apm.spec-writer.md` stub files under `apm-core/src/default/agents/<name>/`
 
 ### Out of scope
 
