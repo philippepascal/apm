@@ -142,7 +142,7 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 - Per-ticket `frontmatter.agent` / `agent_overrides` override — ticket 0ca3e019
 - Built-in wrappers for third-party agents (`codex`, `aider`, etc.)
 - Wrapper-contract version compatibility checks (`manifest.toml`, `APM_WRAPPER_VERSION` ceiling) — ticket 2e772eab
-- Per-agent instruction file resolution under `.apm/agents/<name>/apm.*.md` (ticket 7f5f73d5); mocks do not invoke a real agent so instruction files are irrelevant to their operation
+- Per-agent instruction file *content* beyond one-line stub text — mocks ignore the prompt entirely; the stubs exist only to satisfy ticket 7f5f73d5's resolution chain
 - Windows or non-Unix platform support; mocks shell out to `/bin/sh`
 - Automated handling of the `pr_or_epic_merge` completion strategy in integration tests; mock-happy creates a real commit and calls `apm state <id> implemented`, then APM's orchestration layer (running separately) handles the merge — no in-test merge attempt
 - Validating that `apm validate` warns when a workflow has no reachable success outcome — that check lives in ticket a1b94ea4
