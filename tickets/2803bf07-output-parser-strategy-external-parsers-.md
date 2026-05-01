@@ -72,7 +72,9 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 
 ### Approach
 
-### Files changed
+Wire the `parser` and `parser_command` fields (already parsed from manifest.toml by ticket 2c32a282) into `CustomWrapper::spawn`. Add a `ParserStrategy` enum that dispatches between three modes: `canonical` and `raw` both redirect wrapper stdout directly to the log file; `external` spawns an OS-level pipe so wrapper stdout feeds parser stdin and the parser's stdout is captured to the log. Add `which`-based pre-validation for the parser binary. Extend `validate_agents` to catch a missing `parser_command` at config-check time.
+
+**Files changed**
 
 | File | Change |
 |---|---|
