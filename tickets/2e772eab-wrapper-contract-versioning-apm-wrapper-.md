@@ -1,7 +1,7 @@
 +++
 id = "2e772eab"
 title = "Wrapper-contract versioning (APM_WRAPPER_VERSION + manifest.toml)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2e772eab-wrapper-contract-versioning-apm-wrapper-"
 created_at = "2026-04-30T20:05:11.077339Z"
-updated_at = "2026-05-01T00:33:43.481767Z"
+updated_at = "2026-05-01T00:33:48.510665Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "2c32a282"]
@@ -178,3 +178,4 @@ The `check_version_older_writes_warning` unit test covers the older-version path
 | 2026-04-30T22:03Z | groomed | in_design | philippepascal |
 | 2026-05-01T00:09Z | in_design | ammend | philippepascal |
 | 2026-05-01T00:30Z | ammend | in_design | philippepascal |
+| 2026-05-01T00:33Z | in_design | specd | claude-0501-0030-e588 |
