@@ -192,7 +192,7 @@ Line classification is heuristic because stdout and stderr share the log file. T
 4. `fs::create_dir_all(&dir)?`
 5. Match `name`: `"claude"` → write `CLAUDE_EJECT_SCRIPT` constant; other built-in names from 25c92daa → add cases as those land; default arm bails with "eject not yet implemented for built-in NAME".
 6. Set mode `0o755` on the script file.
-7. Write `dir/manifest.toml` (same content as `scaffold_wrapper`).
+7. Write `dir/manifest.toml` with the identical template used by `scaffold_wrapper` — `[wrapper]\ncontract_version = 1\nparser = "canonical"\n`. This is intentional: the ejected manifest is the same v1-canonical template, so it is recognised without extra setup by both the manifest resolution path in `2c32a282` and the version check in `2e772eab`.
 8. `Ok(())`
 
 **`CLAUDE_EJECT_SCRIPT` constant** (define as `const CLAUDE_EJECT_SCRIPT: &str` in `agents.rs`):
