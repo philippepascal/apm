@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/dac20967-migrate-base-setup-helper-to-init-repo"
 created_at = "2026-05-01T20:26:43.905437Z"
-updated_at = "2026-05-01T20:26:43.905437Z"
+updated_at = "2026-05-01T20:28:46.563129Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
