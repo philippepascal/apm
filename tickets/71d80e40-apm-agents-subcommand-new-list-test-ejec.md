@@ -64,7 +64,26 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm agents list` prints a row for the `claude` built-in with kind `built-in`
+- [ ] `apm agents list` prints a row for each executable `wrapper.*` found under `.apm/agents/<name>/` with kind `project`
+- [ ] `apm agents list` marks the agent matching the configured `workers.command` (legacy field) with a `(configured)` indicator
+- [ ] `apm agents list` shows a `parser` column value read from `manifest.toml`; defaults to `canonical` when the manifest is absent or the field is unset
+- [ ] `apm agents new <name>` creates `.apm/agents/<name>/wrapper.sh` with the execute bit set (mode `0o755` on Unix)
+- [ ] `apm agents new <name>` creates `.apm/agents/<name>/apm.worker.md` with content copied from `.apm/apm.worker.md` or the built-in default when the project file is absent
+- [ ] `apm agents new <name>` creates `.apm/agents/<name>/apm.spec-writer.md` with content copied from `.apm/apm.spec-writer.md` or the built-in default when the project file is absent
+- [ ] `apm agents new <name>` creates `.apm/agents/<name>/manifest.toml` containing `contract_version = 1` and `parser = "canonical"`
+- [ ] `apm agents new <name>` exits non-zero with a message that mentions `--force` when `.apm/agents/<name>/` already exists
+- [ ] `apm agents new <name> --force` succeeds when the directory already exists and overwrites the scaffolded files
+- [ ] `apm agents new <name>` prints next-step guidance directing the user to edit `wrapper.sh` and run `apm agents test <name>`
+- [ ] `apm agents test <name>` exits 0 and prints a pass summary when the wrapper exits 0 and emits at least one canonical JSONL line (a JSON object containing a `"type"` key)
+- [ ] `apm agents test <name>` exits non-zero and prints a fail summary when the wrapper exits non-zero
+- [ ] `apm agents test <name>` reports exit code, canonical JSONL event count, non-canonical log line count, stderr line count, and wall-clock milliseconds in its output
+- [ ] `apm agents test <name>` exits non-zero with a clear error message when `<name>` is not a known wrapper (built-in or project)
+- [ ] `apm agents eject claude` creates `.apm/agents/claude/wrapper.sh` containing a bash script that invokes the `claude` CLI with `--print --output-format stream-json --verbose`
+- [ ] `apm agents eject <name>` creates `.apm/agents/<name>/manifest.toml` with `contract_version = 1` and `parser = "canonical"`
+- [ ] `apm agents eject <name>` sets the execute bit on the ejected `wrapper.sh`
+- [ ] `apm agents eject <name>` exits non-zero when `.apm/agents/<name>/` already exists
+- [ ] `apm agents eject <name>` exits non-zero with a message when `<name>` is not a known built-in
 
 ### Out of scope
 
