@@ -1,7 +1,7 @@
 +++
 id = "2803bf07"
 title = "Output parser strategy: external parsers via manifest.toml"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2803bf07-output-parser-strategy-external-parsers-"
 created_at = "2026-04-30T20:05:40.844536Z"
-updated_at = "2026-05-01T03:00:29.528217Z"
+updated_at = "2026-05-01T03:08:38.404896Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["2c32a282", "2e772eab"]
@@ -206,3 +206,4 @@ Use absolute paths for `parser_command` in the integration test to avoid dependi
 | 2026-05-01T02:53Z | specd | ammend | philippepascal |
 | 2026-05-01T02:53Z | ammend | in_design | philippepascal |
 | 2026-05-01T03:00Z | in_design | specd | claude-0501-0253-bf98 |
+| 2026-05-01T03:08Z | specd | ammend | philippepascal |
