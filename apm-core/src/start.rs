@@ -175,10 +175,21 @@ impl Drop for ManagedChild {
     }
 }
 
-fn spawn_worker(ctx: &WrapperContext, agent: &str) -> Result<std::process::Child> {
-    match crate::wrapper::resolve_builtin(agent) {
-        Some(wrapper) => wrapper.spawn(ctx),
-        None => anyhow::bail!("unknown built-in agent {:?}; custom wrapper resolution is not yet supported (see ticket 2c32a282)", agent),
+fn spawn_worker(ctx: &WrapperContext, agent: &str, project_root: &Path) -> Result<std::process::Child> {
+    use crate::wrapper::{resolve_wrapper, resolve_builtin, WrapperKind, Wrapper};
+    use crate::wrapper::custom::CustomWrapper;
+
+    match resolve_wrapper(project_root, agent)? {
+        Some(WrapperKind::Custom { script_path, manifest }) => {
+            CustomWrapper { script_path, manifest }.spawn(ctx)
+        }
+        Some(WrapperKind::Builtin(name)) => {
+            resolve_builtin(&name).expect("known built-in").spawn(ctx)
+        }
+        None => anyhow::bail!(
+            "agent {:?} not found: checked built-ins {{claude}} and '.apm/agents/{agent}/'",
+            agent
+        ),
     }
 }
 
@@ -323,7 +334,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         keychain: config.workers.keychain.clone(),
     };
     check_output_format_supported(&params.command)?;
-    let mut child = spawn_worker(&ctx, &params.agent)?;
+    let mut child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -518,7 +529,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         keychain: config.workers.keychain.clone(),
     };
     check_output_format_supported(&params.command)?;
-    let mut child = spawn_worker(&ctx, &params.agent)?;
+    let mut child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -703,7 +714,7 @@ pub fn spawn_next_worker(
         keychain: config.workers.keychain.clone(),
     };
     check_output_format_supported(&params.command)?;
-    let child = spawn_worker(&ctx, &params.agent)?;
+    let child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
     let managed = ManagedChild {

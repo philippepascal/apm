@@ -1,6 +1,7 @@
 use crate::config::{resolve_outcome, CompletionStrategy, Config, LocalConfig};
 use crate::ticket_fmt::Ticket;
 use crate::wrapper;
+use crate::wrapper::custom::{parse_manifest, manifest_unknown_keys};
 use anyhow::{bail, Result};
 use std::collections::HashSet;
 use std::path::Path;
@@ -154,6 +155,103 @@ fn gitignore_covers_dir(content: &str, dir: &str) -> bool {
         .any(|line| line.trim_matches('/') == normalized_dir)
 }
 
+/// Layer 1 of the two-layer manifest validation design.
+/// Validates all configured agent names and scans `.apm/agents/` for issues.
+/// Errors (not-found agents, invalid manifests, unsupported contract versions) go into `errors`.
+/// Warnings (non-executable scripts, unknown manifest keys) go into `warnings`.
+fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warnings: &mut Vec<String>) {
+    // Collect configured agent names
+    let mut names: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let primary = config.workers.agent.clone()
+        .unwrap_or_else(|| "claude".to_string());
+    names.insert(primary);
+    for p in config.worker_profiles.values() {
+        if let Some(ref agent) = p.agent {
+            names.insert(agent.clone());
+        }
+    }
+
+    // Validate each configured agent name (Layer 1 error check)
+    for name in &names {
+        match wrapper::resolve_wrapper(root, name) {
+            Ok(None) => errors.push(format!(
+                "agent '{}' not found: checked built-ins {{claude}} and '.apm/agents/{}/'",
+                name, name
+            )),
+            Err(e) => errors.push(format!("agent '{name}': {e}")),
+            Ok(Some(_)) => {}
+        }
+    }
+
+    // Scan .apm/agents/ for per-directory warnings and errors
+    let agents_dir = root.join(".apm").join("agents");
+    let Ok(entries) = std::fs::read_dir(&agents_dir) else { return };
+
+    for entry in entries.filter_map(|e| e.ok()) {
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+        if !ft.is_dir() {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        // Check for non-executable wrapper.* files (Unix only)
+        let wrapper_files: Vec<_> = std::fs::read_dir(entry.path())
+            .ok()
+            .into_iter()
+            .flatten()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().starts_with("wrapper."))
+            .collect();
+
+        if !wrapper_files.is_empty() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let any_exec = wrapper_files.iter().any(|f| {
+                    f.metadata()
+                        .map(|m| m.permissions().mode() & 0o111 != 0)
+                        .unwrap_or(false)
+                });
+                if !any_exec {
+                    warnings.push(format!(
+                        "agent '{name}': .apm/agents/{name}/wrapper.* exists but is not executable; run chmod +x"
+                    ));
+                }
+            }
+        }
+
+        // Check manifest.toml
+        let manifest_path = entry.path().join("manifest.toml");
+        if manifest_path.exists() {
+            match parse_manifest(root, &name) {
+                Err(e) => {
+                    errors.push(format!("agent '{name}': manifest.toml is not valid TOML: {e}"));
+                }
+                Ok(Some(manifest)) => {
+                    if manifest.contract_version > 1 {
+                        errors.push(format!(
+                            "agent '{name}': manifest.toml declares contract_version {}; \
+                             this APM build supports version 1 only — upgrade APM",
+                            manifest.contract_version
+                        ));
+                    }
+                    if let Ok(unknown) = manifest_unknown_keys(root, &name) {
+                        for key in unknown {
+                            warnings.push(format!(
+                                "agent '{name}': manifest.toml: unknown key {key}"
+                            ));
+                        }
+                    }
+                }
+                Ok(None) => {}
+            }
+        }
+    }
+}
+
 pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
 
@@ -287,6 +385,9 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
         }
     }
 
+    let mut agent_warnings: Vec<String> = Vec::new();
+    validate_agents(config, root, &mut errors, &mut agent_warnings);
+
     errors
 }
 
@@ -386,14 +487,16 @@ pub fn verify_tickets(
             .collect();
 
         for name in agents_to_check {
-            // TODO(2c32a282): upgrade to wrapper::resolve_wrapper(root, name) once
-            // custom wrapper resolution lands so project-defined scripts referenced
-            // in `agent` / `agent_overrides` are also validated here.
-            if wrapper::resolve_builtin(name).is_none() {
-                issues.push(format!(
+            match wrapper::resolve_wrapper(root, name) {
+                Ok(Some(_)) => {}
+                Ok(None) => issues.push(format!(
                     "ticket {}: agent {:?} is not a known built-in",
                     fm.id, name
-                ));
+                )),
+                Err(e) => issues.push(format!(
+                    "ticket {}: agent {:?}: {e}",
+                    fm.id, name
+                )),
             }
         }
     }
@@ -401,7 +504,7 @@ pub fn verify_tickets(
     issues
 }
 
-pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
+pub fn validate_warnings(config: &crate::config::Config, root: &Path) -> Vec<String> {
     let mut warnings = config.load_warnings.clone();
     if let Some(container) = &config.workers.container {
         if !container.is_empty() {
@@ -480,6 +583,9 @@ pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
             );
         }
     }
+
+    let mut agent_errors: Vec<String> = Vec::new();
+    validate_agents(config, root, &mut agent_errors, &mut warnings);
 
     warnings
 }
@@ -1203,7 +1309,7 @@ name = "test"
 dir = "tickets"
 "#;
         let config = load_config(toml);
-        let warnings = super::validate_warnings(&config);
+        let warnings = super::validate_warnings(&config, Path::new("/tmp"));
         assert!(warnings.is_empty());
     }
 
@@ -1368,7 +1474,7 @@ dir = "tickets"
 container = ""
 "#;
         let config = load_config(toml);
-        let warnings = super::validate_warnings(&config);
+        let warnings = super::validate_warnings(&config, Path::new("/tmp"));
         assert!(warnings.is_empty(), "empty container string should not warn");
     }
 
@@ -1399,7 +1505,7 @@ label = "Middle"
 to = "start"
 "#;
         let config = load_config(toml);
-        let warnings = super::validate_warnings(&config);
+        let warnings = super::validate_warnings(&config, Path::new("/tmp"));
         assert!(
             warnings.iter().any(|w| w.contains("success")),
             "expected dead-end warning containing 'success'; got: {warnings:?}"
@@ -1419,7 +1525,7 @@ dir = "tickets"
 "#;
         let combined = format!("{}\n{}", base, crate::init::default_workflow_toml());
         let config: Config = toml::from_str(&combined).unwrap();
-        let warnings = super::validate_warnings(&config);
+        let warnings = super::validate_warnings(&config, Path::new("/tmp"));
         assert!(
             !warnings.iter().any(|w| w.contains("no reachable") && w.contains("success")),
             "unexpected dead-end warning for default workflow; got: {warnings:?}"
