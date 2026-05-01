@@ -1,7 +1,7 @@
 +++
 id = "25c92daa"
 title = "Mock and debug built-in wrappers (mock-happy, mock-sad, mock-random, debug)"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 6
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25c92daa-mock-and-debug-built-in-wrappers-mock-ha"
 created_at = "2026-04-30T20:04:21.901984Z"
-updated_at = "2026-05-01T01:10:31.239439Z"
+updated_at = "2026-05-01T01:43:18.690653Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "a1b94ea4", "6cac8518"]
@@ -610,3 +610,4 @@ All tests that require `apm` CLI calls in the script must resolve `current_exe()
 | 2026-05-01T00:09Z | ammend | in_design | philippepascal |
 | 2026-05-01T00:21Z | in_design | specd | claude-0501-0009-cec0 |
 | 2026-05-01T01:10Z | specd | ammend | philippepascal |
+| 2026-05-01T01:43Z | ammend | in_design | philippepascal |
