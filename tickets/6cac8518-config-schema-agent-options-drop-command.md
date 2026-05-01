@@ -27,7 +27,7 @@ The wrapper dispatcher landed in d3b93b95 always resolves to the `claude` built-
 - [x] `WorkerProfileConfig` deserializes a profile block containing `agent` and `options` without error
 - [x] A config with `workers.agent = "codex"` and `profile.agent` absent resolves the effective agent to `"codex"`
 - [x] A config with `workers.agent = "codex"` and `profile.agent = "mock-happy"` resolves the effective agent to `"mock-happy"`
-- [ ] A config with neither `workers.agent` nor `profile.agent` set resolves the effective agent to `"claude"`
+- [x] A config with neither `workers.agent` nor `profile.agent` set resolves the effective agent to `"claude"`
 - [ ] `profile.options` keys override `workers.options` keys when both define the same key
 - [ ] `profile.options` and `workers.options` keys that do not overlap are both present in the effective options map
 - [ ] Each entry in the effective options map is forwarded as an env var named `APM_OPT_<KEY>` (key uppercased, dots and dashes replaced with underscores)
