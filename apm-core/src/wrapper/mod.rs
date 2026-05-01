@@ -1,8 +1,10 @@
 mod claude;
+pub mod custom;
 pub use claude::ClaudeWrapper;
+pub use custom::{WrapperKind, Manifest};
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct WrapperContext {
     pub worker_name: String,
@@ -32,6 +34,17 @@ pub fn resolve_builtin(name: &str) -> Option<Box<dyn Wrapper>> {
         "claude" => Some(Box::new(ClaudeWrapper)),
         _ => None,
     }
+}
+
+pub fn resolve_wrapper(root: &Path, name: &str) -> anyhow::Result<Option<WrapperKind>> {
+    if let Some(script_path) = custom::find_script(root, name) {
+        let manifest = custom::parse_manifest(root, name)?;
+        return Ok(Some(WrapperKind::Custom { script_path, manifest }));
+    }
+    if resolve_builtin(name).is_some() {
+        return Ok(Some(WrapperKind::Builtin(name.to_owned())));
+    }
+    Ok(None)
 }
 
 pub fn write_temp_file(prefix: &str, content: &str) -> anyhow::Result<PathBuf> {

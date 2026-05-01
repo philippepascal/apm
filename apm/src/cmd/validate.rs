@@ -233,12 +233,12 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
     if config_only {
         config = CmdContext::load_config_only(root)?;
         config_errors = validate_config(&config, root);
-        config_warnings = validate_warnings(&config);
+        config_warnings = validate_warnings(&config, root);
     } else {
         let ctx = CmdContext::load(root, no_aggressive)?;
         config = ctx.config;
         config_errors = validate_config(&config, root);
-        config_warnings = validate_warnings(&config);
+        config_warnings = validate_warnings(&config, root);
         tickets_checked = ctx.tickets.len();
 
         let tickets = ctx.tickets;
