@@ -49,7 +49,15 @@ Add wrapper-contract versioning so future contract changes (new env vars, new ou
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `pub const CONTRACT_VERSION: u32 = 1` is defined in `apm_core::wrapper` and accessible from outside the module
+- [ ] `APM_WRAPPER_VERSION` env var is set to `CONTRACT_VERSION.to_string()` (not a hardcoded `"1"`) in both `ClaudeWrapper::spawn` and `CustomWrapper::spawn`
+- [ ] Spawning a custom wrapper whose manifest declares `contract_version = 1` (equal to `CONTRACT_VERSION`) succeeds and no version-warning line is written to the worker log
+- [ ] Spawning a custom wrapper with no manifest present defaults to `contract_version = 1`, spawn succeeds, no warning written
+- [ ] Spawning a custom wrapper whose manifest declares `contract_version > CONTRACT_VERSION` returns `Err` and does not produce a child process
+- [ ] The error for `contract_version > CONTRACT_VERSION` includes the wrapper name, the declared version number, the APM max-supported version, and the string `"upgrade APM"`
+- [ ] Spawning a custom wrapper whose manifest declares `contract_version < CONTRACT_VERSION` succeeds (returns `Ok(child)`, no error)
+- [ ] When declared version is less than `CONTRACT_VERSION`, a warning line is appended to the worker log file before spawn proceeds
+- [ ] The version-comparison logic is extracted into a private helper `check_contract_version(declared: u32, apm_version: u32, log_path: &Path)` so the older-version warning path can be exercised in a unit test without modifying the compile-time constant
 
 ### Out of scope
 
