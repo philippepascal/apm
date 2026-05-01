@@ -1,7 +1,7 @@
 +++
 id = "25c92daa"
 title = "Mock and debug built-in wrappers (mock-happy, mock-sad, mock-random, debug)"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 6
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25c92daa-mock-and-debug-built-in-wrappers-mock-ha"
 created_at = "2026-04-30T20:04:21.901984Z"
-updated_at = "2026-05-01T01:57:11.578116Z"
+updated_at = "2026-05-01T17:38:14.758614Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "a1b94ea4", "6cac8518"]
@@ -644,3 +644,4 @@ This wrapper is a mock — see docs/agent-wrappers.md.
 | 2026-05-01T01:10Z | specd | ammend | philippepascal |
 | 2026-05-01T01:43Z | ammend | in_design | philippepascal |
 | 2026-05-01T01:57Z | in_design | specd | claude-0501-0143-f3e8 |
+| 2026-05-01T17:38Z | specd | ready | philippepascal |
