@@ -61,7 +61,12 @@ Add wrapper-contract versioning so future contract changes (new env vars, new ou
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Defining what changes to the contract constitute a version bump — documented at the time of the bump, not here
+- Backporting compatibility shims for wrappers targeting future contract versions
+- A wrapper-version registry or cross-ecosystem compatibility matrix
+- `apm validate` output for version mismatches — that check is already part of ticket 2c32a282's `validate_agents` helper
+- Surfacing `CONTRACT_VERSION` in any CLI output (`apm version`, `apm validate --verbose`, etc.)
+- Version-checking built-in wrappers — they always target the current build's version by definition and carry no manifest
 
 ### Approach
 
