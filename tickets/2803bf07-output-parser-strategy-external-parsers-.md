@@ -83,6 +83,97 @@ Wire the `parser` and `parser_command` fields (already parsed from manifest.toml
 
 ---
 
+### `wrapper/custom.rs` -- `ParserStrategy` enum
+
+Add a private enum above `CustomWrapper`:
+
+```rust
+#[derive(Debug, Clone, PartialEq)]
+enum ParserStrategy { Canonical, External }
+
+impl ParserStrategy {
+    fn from_manifest(m: Option<&Manifest>) -> Self {
+        match m.and_then(|m| Some(m.parser.as_str())) {
+            Some("external") => Self::External,
+            _                => Self::Canonical,   // absent, "canonical", or any unrecognised value
+        }
+    }
+}
+```
+
+---
+
+### `wrapper/custom.rs` -- refactor `CustomWrapper::spawn`
+
+After the existing `check_contract_version(...)` call and the env-var block (both established by prior tickets), derive the strategy and branch:
+
+```rust
+let strategy = ParserStrategy::from_manifest(self.manifest.as_ref());
+```
+
+**Canonical (stdout -> log directly):**
+
+Keep the existing spawn sequence unchanged for this mode:
+- `File::create(&ctx.log_path)?` -> `log_file`; `log_file.try_clone()?` -> `log_clone`
+- `Command::new(&self.script_path).envs(...).current_dir(...).stdout(log_file).stderr(log_clone).process_group(0).spawn()`
+
+**External -- validate, then pipe:**
+
+1. Derive the manifest path for error messages: `self.script_path.parent().unwrap().join("manifest.toml")`.
+
+2. Require `parser_command`: call `.ok_or_else(|| anyhow!("...: parser = \"external\" but parser_command is not set"))` on `self.manifest.as_ref().and_then(|m| m.parser_command.as_deref())`. Return `Err` immediately if absent -- no subprocess is started.
+
+3. Validate the binary is findable before spawning the wrapper. Use `which::which(parser_cmd)` (see dependency note below). Return `Err` naming the missing binary if not found. Again, no subprocess is started yet.
+
+4. Spawn the wrapper with `stdout(Stdio::piped())` and `stderr(log_clone)` (wrapper stderr goes directly to the log). Call `.process_group(0).spawn()?`. Take `wrapper_child.stdout.take()`.
+
+5. Spawn the parser: `stdin(Stdio::from(wrapper_stdout))`, `stdout(parser_log_out)`, `stderr(parser_log_err)`, both log clones from `File::create(&ctx.log_path)?`. Call `.process_group(0).spawn()?`.
+
+6. Reap the wrapper in a background thread that waits for it, then appends a diagnostic line to the log: `[apm] wrapper exited: <status>`. The wrapper exit code is informational only and does not affect ticket state.
+
+7. Return `Ok(parser_child)`. APM monitors the parser child for exit; the parser's exit code is the worker's exit status.
+
+**Dependency note:** Add `which = "6"` to `apm-core/Cargo.toml` if not already present. As a fallback without the crate: walk `std::env::var("PATH")` entries and check `Path::new(entry).join(parser_cmd).is_file()` for relative names; accept the path as-is when `parser_cmd` starts with `/`.
+
+---
+
+### `validate.rs` -- extend `validate_agents`
+
+In the `Ok(Some(WrapperKind::Custom { manifest, .. }))` match arm, after existing manifest checks, add:
+
+```rust
+if let Some(m) = &manifest {
+    if m.parser == "external" && m.parser_command.is_none() {
+        errors.push(format!(
+            "agent {name}: manifest.toml declares parser = \"external\" \
+             but parser_command is absent"
+        ));
+    }
+}
+```
+
+This mirrors the runtime check in `spawn` so `apm validate` catches the misconfiguration before any worker starts.
+
+---
+
+### Tests
+
+**Unit tests in `wrapper/custom.rs` under `#[cfg(test)]`:**
+
+- `parser_strategy_defaults_to_canonical` -- `ParserStrategy::from_manifest(None)` equals `Canonical`
+- `parser_strategy_explicit_canonical` -- manifest with `parser = "canonical"` -> `Canonical`
+- `parser_strategy_external` -- manifest with `parser = "external"` -> `External`
+- `parser_strategy_unknown_falls_back_to_canonical` -- manifest with `parser = "foobar"` -> `Canonical`
+- `spawn_external_missing_parser_command` -- `CustomWrapper` with manifest `parser = "external"`, `parser_command = None`; assert `spawn()` returns `Err` whose message contains `"parser_command"` and `"not set"`
+- `spawn_external_binary_not_found` -- `parser_command = Some("nonexistent-binary-xyzzy-2803")`; assert `spawn()` returns `Err` naming that binary
+
+**Integration tests in `apm-core/tests/custom_wrapper_integration.rs`** (extend the file introduced by 2c32a282):
+
+- `integration_canonical_mode` -- wrapper script emits one valid JSONL line; assert log contains that line verbatim; assert spawn returns `Ok`
+- `integration_external_parser_pipe` -- wrapper script emits one line of non-JSONL text on stdout and exits 0; a second fixture script (the parser, mode 0o755, `#!/bin/sh`) reads each stdin line and emits a JSONL object wrapping the line on stdout; manifest declares `parser = "external"` and `parser_command` set to the absolute path of the parser fixture (not a PATH name); assert spawn returns `Ok`; wait for the returned parser child to exit 0; read the log; assert log contains the input text wrapped in JSON
+
+Use absolute paths for `parser_command` in the integration test to avoid depending on test-harness PATH configuration. The `which` crate accepts absolute paths to existing executable files directly.
+
 ### `wrapper/custom.rs` — `ParserStrategy` enum
 
 Add a private enum above `CustomWrapper`:
