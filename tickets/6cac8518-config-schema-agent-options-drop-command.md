@@ -29,7 +29,7 @@ The wrapper dispatcher landed in d3b93b95 always resolves to the `claude` built-
 - [x] A config with `workers.agent = "codex"` and `profile.agent = "mock-happy"` resolves the effective agent to `"mock-happy"`
 - [x] A config with neither `workers.agent` nor `profile.agent` set resolves the effective agent to `"claude"`
 - [x] `profile.options` keys override `workers.options` keys when both define the same key
-- [ ] `profile.options` and `workers.options` keys that do not overlap are both present in the effective options map
+- [x] `profile.options` and `workers.options` keys that do not overlap are both present in the effective options map
 - [ ] Each entry in the effective options map is forwarded as an env var named `APM_OPT_<KEY>` (key uppercased, dots and dashes replaced with underscores)
 - [ ] `options.model = "sonnet"` results in `APM_OPT_MODEL=sonnet` being set on the spawned child
 - [ ] A config using only legacy `command = "claude"` (no `agent` field) still spawns the claude wrapper successfully
