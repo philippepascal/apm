@@ -46,7 +46,17 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When `parser` is absent from manifest.toml, or manifest.toml itself is absent, `CustomWrapper::spawn` captures the wrapper's stdout directly to the log file (equivalent to `parser = "canonical"`)
+- [ ] When `parser = "canonical"`, `CustomWrapper::spawn` captures the wrapper's stdout directly to the log file with no transformation; the wrapper's stderr is also written to the same log file
+- [ ] When `parser = "raw"`, `CustomWrapper::spawn` captures the wrapper's stdout verbatim to the log file; a wrapper emitting `"hello world\n"` produces a log whose content includes that text with no `[apm] warning:` lines injected by APM
+- [ ] When `parser = "external"` and `parser_command` resolves to an executable binary, `CustomWrapper::spawn` creates an OS-level pipe: the wrapper's stdout is the parser's stdin; the parser's stdout is captured to the log file
+- [ ] When `parser = "external"`, the wrapper's stderr is written to the log file independently (not through the parser pipe)
+- [ ] When `parser = "external"`, the parser's stderr is also written to the log file
+- [ ] When `parser = "external"` and `parser_command` is absent from manifest.toml, `CustomWrapper::spawn` returns `Err` before spawning any process; the error message names the manifest file path and states that `parser_command` is required
+- [ ] When `parser = "external"` and `parser_command` names a binary not found in PATH and is not an absolute path to an existing file, `CustomWrapper::spawn` returns `Err` before spawning any process; the error message names the missing binary
+- [ ] `apm validate` reports an error when a custom wrapper's manifest.toml declares `parser = "external"` but `parser_command` is absent
+- [ ] Built-in wrappers (e.g. the `claude` built-in) always behave as `parser = "canonical"` regardless of any manifest file; no manifest is required or consulted for them
+- [ ] `CustomWrapper::spawn` for external mode returns the parser's `Child` handle; the wrapper child is reaped in a background thread so it does not become a zombie
 
 ### Out of scope
 
