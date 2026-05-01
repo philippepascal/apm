@@ -346,6 +346,8 @@ pub fn create(
         epic,
         target_branch,
         depends_on,
+        agent: None,
+        agent_overrides: std::collections::HashMap::new(),
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
     let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
@@ -990,6 +992,8 @@ mod tests {
             epic: None,
             target_branch: None,
             depends_on: None,
+            agent: None,
+            agent_overrides: std::collections::HashMap::new(),
         }
     }
 

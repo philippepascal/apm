@@ -169,3 +169,7 @@ transition to `question`. Do not guess and proceed.
 
 Once an answer arrives, reflect the decision in `### Approach` before
 transitioning back to `specd`.
+
+---
+
+**Frontmatter agent override** (supervisor tool): A supervisor may add `agent = "<name>"` or an `[agent_overrides]` table to a ticket's frontmatter to select a specific agent for that ticket or for individual profiles. Do not set these fields yourself — they are a supervisor-level escape hatch for debugging or per-ticket specialisation.
