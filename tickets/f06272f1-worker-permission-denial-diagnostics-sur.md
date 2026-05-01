@@ -26,7 +26,7 @@ When a worker hits a permission denial mid-run, today the only signal is a burie
 
 **Scope — two integration points:**
 
-1. **Worker-exit summary in .** When the wrapper exits, scan the captured transcript for permission-denial entries. Append a structured summary (or write a sibling file like `.apm-worker.summary.json`) listing each denied tool call with: timestamp, tool name (Bash/Edit/Read/etc.), tool input (truncated for privacy), and a classification:
+1. **Worker-exit summary in `.apm-worker.log` (or sibling file).** When the wrapper exits, scan the captured transcript for permission-denial entries. Append a structured summary (or write a sibling file like `.apm-worker.summary.json`) listing each denied tool call with: timestamp, tool name (Bash/Edit/Read/etc.), tool input (truncated for privacy), and a classification:
    - `apm_command_denial` — denied a Bash call starting with `apm `. APM should never deny apm commands; this is a default-allowlist gap.
    - `outside_worktree` — denied a path outside the ticket worktree. Expected if the path validator (sibling ticket) is enforcing.
    - `unknown_pattern` — other denial categories.
