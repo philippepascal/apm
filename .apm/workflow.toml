@@ -77,6 +77,7 @@ instructions   = ".apm/apm.spec-writer.md"
   [[workflow.states.transitions]]
   to            = "specd"
   trigger       = "manual"
+  outcome       = "success"
 
   [[workflow.states.transitions]]
   to      = "question"
@@ -100,6 +101,7 @@ instructions = ".apm/apm.spec-writer.md"
   [[workflow.states.transitions]]
   to            = "specd"
   trigger       = "manual"
+  outcome       = "success"
 
   [[workflow.states.transitions]]
   to      = "question"

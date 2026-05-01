@@ -316,7 +316,7 @@ impl Default for SatisfiesDeps {
 }
 
 /// A single state in the workflow state machine.
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct StateConfig {
     /// Unique state identifier (e.g. `new`, `in_progress`). Used in ticket frontmatter and transition targets.
     pub id: String,

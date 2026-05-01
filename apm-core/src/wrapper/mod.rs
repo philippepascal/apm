@@ -1,6 +1,6 @@
-mod claude;
+pub mod builtin;
 pub mod custom;
-pub use claude::ClaudeWrapper;
+pub use builtin::ClaudeWrapper;
 pub use custom::{WrapperKind, Manifest};
 
 use std::collections::HashMap;
@@ -25,6 +25,7 @@ pub struct WrapperContext {
     pub extra_env: HashMap<String, String>,
     pub root: PathBuf,
     pub keychain: HashMap<String, String>,
+    pub current_state: String,
 }
 
 pub trait Wrapper {
@@ -33,13 +34,17 @@ pub trait Wrapper {
 
 pub fn resolve_builtin(name: &str) -> Option<Box<dyn Wrapper>> {
     match name {
-        "claude" => Some(Box::new(ClaudeWrapper)),
+        "claude" => Some(Box::new(builtin::ClaudeWrapper)),
+        "mock-happy" => Some(Box::new(builtin::MockHappyWrapper)),
+        "mock-sad" => Some(Box::new(builtin::MockSadWrapper)),
+        "mock-random" => Some(Box::new(builtin::MockRandomWrapper)),
+        "debug" => Some(Box::new(builtin::DebugWrapper)),
         _ => None,
     }
 }
 
 pub fn list_builtin_names() -> &'static [&'static str] {
-    &["claude"]
+    &["claude", "mock-happy", "mock-sad", "mock-random", "debug"]
 }
 
 pub fn resolve_wrapper(root: &Path, name: &str) -> anyhow::Result<Option<WrapperKind>> {
@@ -59,7 +64,7 @@ pub fn write_temp_file(prefix: &str, content: &str) -> anyhow::Result<PathBuf> {
     Ok(path)
 }
 
-fn rand_u16() -> u16 {
+pub(crate) fn rand_u16() -> u16 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().subsec_nanos() as u16
 }
@@ -77,6 +82,25 @@ mod tests {
     fn resolve_builtin_unknown_returns_none() {
         assert!(resolve_builtin("bogus").is_none());
         assert!(resolve_builtin("").is_none());
-        assert!(resolve_builtin("mock-happy").is_none());
+    }
+
+    #[test]
+    fn resolve_builtin_mock_happy_returns_some() {
+        assert!(resolve_builtin("mock-happy").is_some());
+    }
+
+    #[test]
+    fn resolve_builtin_mock_sad_returns_some() {
+        assert!(resolve_builtin("mock-sad").is_some());
+    }
+
+    #[test]
+    fn resolve_builtin_mock_random_returns_some() {
+        assert!(resolve_builtin("mock-random").is_some());
+    }
+
+    #[test]
+    fn resolve_builtin_debug_returns_some() {
+        assert!(resolve_builtin("debug").is_some());
     }
 }

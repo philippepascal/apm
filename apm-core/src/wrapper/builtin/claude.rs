@@ -1,5 +1,5 @@
 use std::os::unix::process::CommandExt;
-use super::{Wrapper, WrapperContext, CONTRACT_VERSION};
+use crate::wrapper::{Wrapper, WrapperContext, CONTRACT_VERSION};
 
 pub struct ClaudeWrapper;
 

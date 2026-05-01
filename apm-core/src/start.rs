@@ -6,6 +6,14 @@ use std::path::{Path, PathBuf};
 
 const CLAUDE_WORKER_DEFAULT: &str = include_str!("default/agents/claude/apm.worker.md");
 const CLAUDE_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");
+const MOCK_HAPPY_WORKER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.worker.md");
+const MOCK_HAPPY_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.spec-writer.md");
+const MOCK_SAD_WORKER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.worker.md");
+const MOCK_SAD_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.spec-writer.md");
+const MOCK_RANDOM_WORKER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.worker.md");
+const MOCK_RANDOM_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.spec-writer.md");
+const DEBUG_WORKER_DEFAULT: &str = include_str!("default/agents/debug/apm.worker.md");
+const DEBUG_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/debug/apm.spec-writer.md");
 
 static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -333,6 +341,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         extra_env: params.env.clone(),
         root: root.to_path_buf(),
         keychain: config.workers.keychain.clone(),
+        current_state: new_state.clone(),
     };
     check_output_format_supported(&params.command)?;
     let mut child = spawn_worker(&ctx, &params.agent, root)?;
@@ -526,6 +535,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         extra_env: params.env.clone(),
         root: root.to_path_buf(),
         keychain: config.workers.keychain.clone(),
+        current_state: t.frontmatter.state.clone(),
     };
     check_output_format_supported(&params.command)?;
     let mut child = spawn_worker(&ctx, &params.agent, root)?;
@@ -709,6 +719,7 @@ pub fn spawn_next_worker(
         extra_env: params.env.clone(),
         root: root.to_path_buf(),
         keychain: config.workers.keychain.clone(),
+        current_state: t.frontmatter.state.clone(),
     };
     check_output_format_supported(&params.command)?;
     let child = spawn_worker(&ctx, &params.agent, root)?;
@@ -757,6 +768,14 @@ fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str>
     match (agent, role) {
         ("claude", "worker") => Some(CLAUDE_WORKER_DEFAULT),
         ("claude", "spec-writer") => Some(CLAUDE_SPEC_WRITER_DEFAULT),
+        ("mock-happy", "worker") => Some(MOCK_HAPPY_WORKER_DEFAULT),
+        ("mock-happy", "spec-writer") => Some(MOCK_HAPPY_SPEC_WRITER_DEFAULT),
+        ("mock-sad", "worker") => Some(MOCK_SAD_WORKER_DEFAULT),
+        ("mock-sad", "spec-writer") => Some(MOCK_SAD_SPEC_WRITER_DEFAULT),
+        ("mock-random", "worker") => Some(MOCK_RANDOM_WORKER_DEFAULT),
+        ("mock-random", "spec-writer") => Some(MOCK_RANDOM_SPEC_WRITER_DEFAULT),
+        ("debug", "worker") => Some(DEBUG_WORKER_DEFAULT),
+        ("debug", "spec-writer") => Some(DEBUG_SPEC_WRITER_DEFAULT),
         _ => None,
     }
 }
@@ -1257,6 +1276,7 @@ mod tests {
             extra_env,
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
+            current_state: "in_progress".to_string(),
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1352,6 +1372,7 @@ mod tests {
             extra_env,
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
+            current_state: "in_progress".to_string(),
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1425,6 +1446,7 @@ mod tests {
             extra_env,
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
+            current_state: "in_progress".to_string(),
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1545,6 +1567,7 @@ mod tests {
             extra_env,
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
+            current_state: "in_progress".to_string(),
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1605,5 +1628,509 @@ mod tests {
         let mut agent = "claude".to_string();
         apply_frontmatter_agent(&mut agent, &fm, "impl_agent");
         assert_eq!(agent, "claude");
+    }
+
+    // --- mock wrapper integration tests ---
+
+    fn find_apm_bin() -> Option<String> {
+        if let Ok(v) = std::env::var("APM_BIN") {
+            if !v.is_empty() && std::path::Path::new(&v).exists() {
+                return Some(v);
+            }
+        }
+        let out = std::process::Command::new("which").arg("apm").output().ok()?;
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !s.is_empty() { return Some(s); }
+        }
+        None
+    }
+
+    fn make_mock_project(root: &std::path::Path, ticket_state: &str, ticket_id: &str) {
+        use std::fs;
+
+        fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
+        fs::create_dir_all(root.join("tickets")).unwrap();
+
+        fs::write(root.join(".apm/config.toml"), r#"
+[project]
+name = "test-project"
+default_branch = "main"
+
+[workers]
+agent = "mock-happy"
+
+[tickets]
+dir = "tickets"
+"#).unwrap();
+
+        fs::write(root.join(".apm/workflow.toml"), r#"
+[[workflow.states]]
+id = "in_design"
+label = "In Design"
+actionable = ["agent"]
+instructions = ".apm/apm.spec-writer.md"
+
+  [[workflow.states.transitions]]
+  to = "specd"
+  trigger = "manual"
+  outcome = "success"
+
+  [[workflow.states.transitions]]
+  to = "closed"
+  trigger = "manual"
+  outcome = "cancelled"
+
+[[workflow.states]]
+id = "specd"
+label = "Specd"
+actionable = ["supervisor"]
+satisfies_deps = true
+worker_end = true
+
+  [[workflow.states.transitions]]
+  to = "in_progress"
+  trigger = "manual"
+  outcome = "success"
+
+  [[workflow.states.transitions]]
+  to = "closed"
+  trigger = "manual"
+  outcome = "cancelled"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+instructions = ".apm/apm.worker.md"
+
+  [[workflow.states.transitions]]
+  to = "implemented"
+  trigger = "manual"
+  outcome = "success"
+
+  [[workflow.states.transitions]]
+  to = "closed"
+  trigger = "manual"
+  outcome = "cancelled"
+
+[[workflow.states]]
+id = "implemented"
+label = "Implemented"
+actionable = ["supervisor"]
+satisfies_deps = true
+worker_end = true
+terminal = false
+
+  [[workflow.states.transitions]]
+  to = "closed"
+  trigger = "manual"
+  outcome = "cancelled"
+
+[[workflow.states]]
+id = "closed"
+label = "Closed"
+terminal = true
+"#).unwrap();
+
+        fs::write(root.join(".apm/apm.worker.md"), "Worker instructions.").unwrap();
+        fs::write(root.join(".apm/apm.spec-writer.md"), "Spec writer instructions.").unwrap();
+
+        let ticket_content = format!(r#"+++
+id = "{ticket_id}"
+title = "Test Ticket"
+state = "{ticket_state}"
+priority = 0
+effort = 5
+risk = 3
+author = "test"
+owner = "test"
+branch = "ticket/{ticket_id}-test"
+created_at = "2026-01-01T00:00:00Z"
+updated_at = "2026-01-01T00:00:00Z"
++++
+
+## Spec
+
+### Problem
+
+Original problem.
+
+### Acceptance criteria
+
+- [ ] Some criterion
+
+### Out of scope
+
+Nothing.
+
+### Approach
+
+Some approach.
+
+### Open questions
+
+### Amendment requests
+
+### Code review
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+"#);
+        fs::write(root.join(format!("tickets/{ticket_id}-test.md")), ticket_content).unwrap();
+
+        std::process::Command::new("git")
+            .arg("init")
+            .current_dir(root)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        // Create main branch with config files
+        std::process::Command::new("git")
+            .args(["add", ".apm"])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "initial commit", "--allow-empty"])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        // Create the ticket branch and commit the ticket there
+        let branch_name = format!("ticket/{ticket_id}-test");
+        std::process::Command::new("git")
+            .args(["checkout", "-b", &branch_name])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["add", &format!("tickets/{ticket_id}-test.md")])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", &format!("ticket({ticket_id}): created")])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        // Switch back to main
+        std::process::Command::new("git")
+            .args(["checkout", "main"])
+            .current_dir(root)
+            .output()
+            .unwrap();
+    }
+
+    fn make_wrapper_ctx_for_mock(
+        project_root: &std::path::Path,
+        ticket_id: &str,
+        ticket_state: &str,
+        apm_bin: &str,
+        log_path: std::path::PathBuf,
+    ) -> crate::wrapper::WrapperContext {
+        let sys_file = crate::wrapper::write_temp_file("sys", "system prompt").unwrap();
+        let msg_file = crate::wrapper::write_temp_file("msg", "ticket content").unwrap();
+        let mut options = HashMap::new();
+        options.insert("apm_bin".to_string(), apm_bin.to_string());
+        crate::wrapper::WrapperContext {
+            worker_name: "test-worker".to_string(),
+            ticket_id: ticket_id.to_string(),
+            ticket_branch: format!("ticket/{ticket_id}-test"),
+            worktree_path: project_root.to_path_buf(),
+            system_prompt_file: sys_file,
+            user_message_file: msg_file,
+            skip_permissions: false,
+            profile: "default".to_string(),
+            role_prefix: None,
+            options,
+            model: None,
+            log_path,
+            container: None,
+            extra_env: HashMap::new(),
+            root: project_root.to_path_buf(),
+            keychain: HashMap::new(),
+            current_state: ticket_state.to_string(),
+        }
+    }
+
+    #[test]
+    fn mock_happy_spec_mode_transitions_to_specd() {
+        let apm_bin = match find_apm_bin() { Some(b) => b, None => return };
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_mock_project(root, "in_design", "aaaa0001");
+        let log_path = root.join("test-worker.log");
+        let ctx = make_wrapper_ctx_for_mock(root, "aaaa0001", "in_design", &apm_bin, log_path.clone());
+        let wrapper = crate::wrapper::resolve_builtin("mock-happy").unwrap();
+        let mut child = wrapper.spawn(&ctx).unwrap();
+        child.wait().unwrap();
+
+        let log_content = std::fs::read_to_string(&log_path).unwrap_or_default();
+        // Read ticket from the ticket branch (where apm commits changes)
+        let ticket_from_branch = {
+            let out = std::process::Command::new("git")
+                .args(["show", "ticket/aaaa0001-test:tickets/aaaa0001-test.md"])
+                .current_dir(root)
+                .output()
+                .unwrap();
+            String::from_utf8_lossy(&out.stdout).to_string()
+        };
+        assert!(ticket_from_branch.contains("state = \"specd\""),
+            "ticket should be in specd state\nticket_from_branch: {ticket_from_branch}\nlog: {log_content}");
+        assert!(ticket_from_branch.contains("### Problem"),
+            "ticket should have Problem section\n{ticket_from_branch}");
+        assert!(ticket_from_branch.contains("effort = 1"),
+            "effort should be 1\n{ticket_from_branch}");
+        assert!(ticket_from_branch.contains("risk = 1"),
+            "risk should be 1\n{ticket_from_branch}");
+    }
+
+    #[test]
+    fn mock_happy_zero_success_transitions_returns_err() {
+        use std::fs;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+
+        fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
+        fs::create_dir_all(root.join("tickets")).unwrap();
+        fs::write(root.join(".apm/config.toml"), r#"
+[project]
+name = "test"
+default_branch = "main"
+[workers]
+agent = "mock-happy"
+[tickets]
+dir = "tickets"
+"#).unwrap();
+        fs::write(root.join(".apm/workflow.toml"), r#"
+[[workflow.states]]
+id = "in_design"
+label = "In Design"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to = "closed"
+  trigger = "manual"
+  outcome = "needs_input"
+
+[[workflow.states]]
+id = "closed"
+label = "Closed"
+terminal = true
+"#).unwrap();
+        fs::write(root.join(".apm/apm.worker.md"), "instructions").unwrap();
+        fs::write(root.join(".apm/apm.spec-writer.md"), "instructions").unwrap();
+        let ticket_content = r#"+++
+id = "aaaa0002"
+title = "Test"
+state = "in_design"
+priority = 0
+effort = 5
+risk = 3
+author = "test"
+owner = "test"
+branch = "ticket/aaaa0002-test"
+created_at = "2026-01-01T00:00:00Z"
+updated_at = "2026-01-01T00:00:00Z"
++++
+
+## Spec
+
+### Problem
+
+### Acceptance criteria
+
+### Out of scope
+
+### Approach
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+"#;
+        fs::write(root.join("tickets/aaaa0002-test.md"), ticket_content).unwrap();
+        std::process::Command::new("git").args(["init"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.name", "T"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", "."]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "init"]).current_dir(root).output().unwrap();
+
+        let log_path = root.join("test.log");
+        let sys_file = crate::wrapper::write_temp_file("sys", "sys").unwrap();
+        let msg_file = crate::wrapper::write_temp_file("msg", "msg").unwrap();
+        let ctx = crate::wrapper::WrapperContext {
+            worker_name: "test".to_string(),
+            ticket_id: "aaaa0002".to_string(),
+            ticket_branch: "ticket/aaaa0002-test".to_string(),
+            worktree_path: root.to_path_buf(),
+            system_prompt_file: sys_file,
+            user_message_file: msg_file,
+            skip_permissions: false,
+            profile: "default".to_string(),
+            role_prefix: None,
+            options: HashMap::new(),
+            model: None,
+            log_path,
+            container: None,
+            extra_env: HashMap::new(),
+            root: root.to_path_buf(),
+            keychain: HashMap::new(),
+            current_state: "in_design".to_string(),
+        };
+        let wrapper = crate::wrapper::resolve_builtin("mock-happy").unwrap();
+        let result = wrapper.spawn(&ctx);
+        assert!(result.is_err(), "mock-happy should return Err when no success transitions");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("no success-outcome transition"), "error should mention no success transition: {msg}");
+    }
+
+    #[test]
+    fn mock_sad_transitions_to_non_success_state() {
+        let apm_bin = match find_apm_bin() { Some(b) => b, None => return };
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_mock_project(root, "in_design", "aaaa0003");
+        let log_path = root.join("test.log");
+        let ctx = make_wrapper_ctx_for_mock(root, "aaaa0003", "in_design", &apm_bin, log_path.clone());
+        let wrapper = crate::wrapper::resolve_builtin("mock-sad").unwrap();
+        let mut child = wrapper.spawn(&ctx).unwrap();
+        child.wait().unwrap();
+
+        let log_content = std::fs::read_to_string(&log_path).unwrap_or_default();
+        let out = std::process::Command::new("git")
+            .args(["show", "ticket/aaaa0003-test:tickets/aaaa0003-test.md"])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        let ticket_from_branch = String::from_utf8_lossy(&out.stdout).to_string();
+        assert!(!ticket_from_branch.contains("state = \"specd\""),
+            "mock-sad should NOT transition to specd\n{ticket_from_branch}\nlog: {log_content}");
+        // Should have transitioned to some other state
+        assert!(ticket_from_branch.contains("state = \"closed\"") || ticket_from_branch.contains("state = \"in_design\""),
+            "mock-sad should transition to a non-success state\n{ticket_from_branch}\nlog: {log_content}");
+    }
+
+    #[test]
+    fn mock_sad_seed_reproducibility() {
+        let apm_bin = match find_apm_bin() { Some(b) => b, None => return };
+
+        let run_mock_sad = |ticket_id: &str, seed: &str| -> String {
+            let dir = tempfile::tempdir().unwrap();
+            let root = dir.path();
+            make_mock_project(root, "in_design", ticket_id);
+            let log_path = root.join("test.log");
+            let mut options = HashMap::new();
+            options.insert("apm_bin".to_string(), apm_bin.clone());
+            options.insert("seed".to_string(), seed.to_string());
+            let sys_file = crate::wrapper::write_temp_file("sys", "sys").unwrap();
+            let msg_file = crate::wrapper::write_temp_file("msg", "msg").unwrap();
+            let ctx = crate::wrapper::WrapperContext {
+                worker_name: "test".to_string(),
+                ticket_id: ticket_id.to_string(),
+                ticket_branch: format!("ticket/{ticket_id}-test"),
+                worktree_path: root.to_path_buf(),
+                system_prompt_file: sys_file,
+                user_message_file: msg_file,
+                skip_permissions: false,
+                profile: "default".to_string(),
+                role_prefix: None,
+                options,
+                model: None,
+                log_path,
+                container: None,
+                extra_env: HashMap::new(),
+                root: root.to_path_buf(),
+                keychain: HashMap::new(),
+                current_state: "in_design".to_string(),
+            };
+            let wrapper = crate::wrapper::resolve_builtin("mock-sad").unwrap();
+            let mut child = wrapper.spawn(&ctx).unwrap();
+            child.wait().unwrap();
+
+            // Read state from ticket branch (where apm commits changes)
+            let git_content = {
+                let o = std::process::Command::new("git")
+                    .args(["show", &format!("ticket/{ticket_id}-test:tickets/{ticket_id}-test.md")])
+                    .current_dir(root)
+                    .output()
+                    .unwrap();
+                String::from_utf8_lossy(&o.stdout).to_string()
+            };
+            for line in git_content.lines() {
+                if line.starts_with("state = ") {
+                    return line.to_string();
+                }
+            }
+            "unknown".to_string()
+        };
+
+        let state1 = run_mock_sad("aaaa000a", "42");
+        let state2 = run_mock_sad("aaaa000b", "42");
+        assert_eq!(state1, state2, "mock-sad with same seed should pick same target state");
+    }
+
+    #[test]
+    fn debug_does_not_change_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_mock_project(root, "in_design", "aaaa0005");
+        let log_path = root.join("test.log");
+        let sys_file = crate::wrapper::write_temp_file("sys", "debug-system-prompt-unique-text").unwrap();
+        let msg_file = crate::wrapper::write_temp_file("msg", "debug-message").unwrap();
+        let ctx = crate::wrapper::WrapperContext {
+            worker_name: "test-worker".to_string(),
+            ticket_id: "aaaa0005".to_string(),
+            ticket_branch: "ticket/aaaa0005-test".to_string(),
+            worktree_path: root.to_path_buf(),
+            system_prompt_file: sys_file,
+            user_message_file: msg_file,
+            skip_permissions: false,
+            profile: "default".to_string(),
+            role_prefix: None,
+            options: HashMap::new(),
+            model: None,
+            log_path: log_path.clone(),
+            container: None,
+            extra_env: HashMap::new(),
+            root: root.to_path_buf(),
+            keychain: HashMap::new(),
+            current_state: "in_design".to_string(),
+        };
+        let wrapper = crate::wrapper::resolve_builtin("debug").unwrap();
+        let mut child = wrapper.spawn(&ctx).unwrap();
+        child.wait().unwrap();
+
+        // State should still be in_design (debug doesn't commit or transition)
+        // Read from the ticket branch (HEAD of main won't have the ticket)
+        let git_content = {
+            let o = std::process::Command::new("git")
+                .args(["show", "ticket/aaaa0005-test:tickets/aaaa0005-test.md"])
+                .current_dir(root)
+                .output()
+                .unwrap();
+            String::from_utf8_lossy(&o.stdout).to_string()
+        };
+        assert!(git_content.contains("state = \"in_design\""),
+            "debug should not change ticket state\n{git_content}");
+
+        // Log file should contain APM env vars and system prompt text
+        let log_content = std::fs::read_to_string(&log_path).unwrap_or_default();
+        assert!(log_content.contains("APM_TICKET_ID"),
+            "log should contain APM_TICKET_ID\n{log_content}");
+        assert!(log_content.contains("debug-system-prompt-unique-text"),
+            "log should contain system prompt text\n{log_content}");
+        assert!(log_content.contains("\"type\":\"tool_use\""),
+            "log should contain tool_use JSONL\n{log_content}");
     }
 }

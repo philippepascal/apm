@@ -53,6 +53,7 @@ fn integration_echo_test_wrapper() {
         extra_env: HashMap::new(),
         root: root.to_path_buf(),
         keychain: HashMap::new(),
+        current_state: "test".to_string(),
     };
 
     // Spawn custom wrapper and wait
@@ -129,6 +130,7 @@ fn spawn_matching_contract_succeeds() {
         extra_env: HashMap::new(),
         root: root.to_path_buf(),
         keychain: HashMap::new(),
+        current_state: "test".to_string(),
     };
 
     let mut child = wrapper.spawn(&ctx).expect("spawn should succeed for contract_version = 1");
@@ -192,6 +194,7 @@ fn integration_canonical_mode() {
         extra_env: HashMap::new(),
         root: root.to_path_buf(),
         keychain: HashMap::new(),
+        current_state: "test".to_string(),
     };
 
     let mut child = wrapper.spawn(&ctx).expect("spawn should succeed for canonical mode");
@@ -275,6 +278,7 @@ fn integration_external_parser_pipe() {
         extra_env: HashMap::new(),
         root: root.to_path_buf(),
         keychain: HashMap::new(),
+        current_state: "test".to_string(),
     };
 
     let mut parser_child = wrapper.spawn(&ctx).expect("spawn should succeed for external mode");
@@ -345,6 +349,7 @@ fn spawn_future_contract_rejected() {
         extra_env: HashMap::new(),
         root: root.to_path_buf(),
         keychain: HashMap::new(),
+        current_state: "test".to_string(),
     };
 
     let result = wrapper.spawn(&ctx);
