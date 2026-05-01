@@ -369,6 +369,14 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
         }
     }
 
+    if let Some(ref path) = config.workers.instructions {
+        if !root.join(path).exists() {
+            errors.push(format!(
+                "config: [workers].instructions — file not found: {path}"
+            ));
+        }
+    }
+
     if !is_external_worktree(&config.worktrees.dir) {
         let dir_str = config.worktrees.dir.to_string_lossy();
         let gitignore = root.join(".gitignore");

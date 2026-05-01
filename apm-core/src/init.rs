@@ -313,6 +313,7 @@ model = "sonnet"
 
 [worker_profiles.spec_agent]
 instructions = ".apm/apm.spec-writer.md"
+role = "spec-writer"
 role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
 
 [worker_profiles.impl_agent]
