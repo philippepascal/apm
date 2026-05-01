@@ -27,21 +27,21 @@ The result is a genuinely multi-agent APM: any tool that can read the APM env va
 
 ### Acceptance criteria
 
-- [ ] `resolve_wrapper(root, "claude")` returns `Some(WrapperKind::Custom { script_path, .. })` when `.apm/agents/claude/wrapper.sh` exists and is executable, shadowing the built-in
-- [ ] `resolve_wrapper(root, "claude")` returns `Some(WrapperKind::Builtin("claude"))` when no project script exists for `"claude"`
-- [ ] `resolve_wrapper(root, "bogus")` returns `Ok(None)` when neither a project script nor a built-in with that name exists
-- [ ] A `wrapper.*` file that exists but is not executable (Unix: mode `& 0o111 == 0`) is invisible to `resolve_wrapper`; the function falls through to the built-in or returns `None`
-- [ ] `apm validate` emits an error of the form `"agent 'foo' not found: checked built-ins {claude} and '.apm/agents/foo/'"` when the configured agent cannot be resolved
-- [ ] `apm validate` emits a warning (not an error) when a `.apm/agents/<name>/wrapper.*` file exists but lacks the executable bit
-- [ ] A valid `manifest.toml` parses without error; `contract_version = 1` and `parser = "canonical"` are stored on the `Manifest` struct
-- [ ] A `manifest.toml` with only `[wrapper]` and no explicit fields parses to defaults: `contract_version = 1`, `parser = "canonical"`, `parser_command = None`
-- [ ] A `manifest.toml` with an unknown key causes `apm validate` to emit a warning (not an error); the manifest still parses and the wrapper is usable
-- [ ] A syntactically invalid `manifest.toml` causes `apm validate` to emit an error; `resolve_wrapper` also returns an error
-- [ ] A `manifest.toml` with `contract_version = 2` causes `apm validate` to emit an error directing the user to upgrade APM
-- [ ] `CustomWrapper::spawn()` returns an error (does not spawn the process) when `manifest.contract_version > 1`
-- [ ] The dispatcher in `start.rs` exec'''s a custom wrapper script directly via `Command::new(&script_path)` with no shell interpreter interposed, and all APM contract env vars are present in the child environment
-- [ ] Integration: a fixture `.apm/agents/echo-test/wrapper.sh` (executable, emits one valid JSONL line, exits 0) is spawned by the dispatcher; its output is captured to the log file and the child exits 0
-- [ ] Unit tests `resolve_wrapper_nonexecutable_invisible`, `resolve_wrapper_fallback_to_builtin`, `resolve_wrapper_missing_returns_none`, `manifest_parse_valid`, `manifest_parse_defaults`, `manifest_parse_invalid_toml`, and `manifest_missing` all pass
+- [x] `resolve_wrapper(root, "claude")` returns `Some(WrapperKind::Custom { script_path, .. })` when `.apm/agents/claude/wrapper.sh` exists and is executable, shadowing the built-in
+- [x] `resolve_wrapper(root, "claude")` returns `Some(WrapperKind::Builtin("claude"))` when no project script exists for `"claude"`
+- [x] `resolve_wrapper(root, "bogus")` returns `Ok(None)` when neither a project script nor a built-in with that name exists
+- [x] A `wrapper.*` file that exists but is not executable (Unix: mode `& 0o111 == 0`) is invisible to `resolve_wrapper`; the function falls through to the built-in or returns `None`
+- [x] `apm validate` emits an error of the form `"agent 'foo' not found: checked built-ins {claude} and '.apm/agents/foo/'"` when the configured agent cannot be resolved
+- [x] `apm validate` emits a warning (not an error) when a `.apm/agents/<name>/wrapper.*` file exists but lacks the executable bit
+- [x] A valid `manifest.toml` parses without error; `contract_version = 1` and `parser = "canonical"` are stored on the `Manifest` struct
+- [x] A `manifest.toml` with only `[wrapper]` and no explicit fields parses to defaults: `contract_version = 1`, `parser = "canonical"`, `parser_command = None`
+- [x] A `manifest.toml` with an unknown key causes `apm validate` to emit a warning (not an error); the manifest still parses and the wrapper is usable
+- [x] A syntactically invalid `manifest.toml` causes `apm validate` to emit an error; `resolve_wrapper` also returns an error
+- [x] A `manifest.toml` with `contract_version = 2` causes `apm validate` to emit an error directing the user to upgrade APM
+- [x] `CustomWrapper::spawn()` returns an error (does not spawn the process) when `manifest.contract_version > 1`
+- [x] The dispatcher in `start.rs` exec'''s a custom wrapper script directly via `Command::new(&script_path)` with no shell interpreter interposed, and all APM contract env vars are present in the child environment
+- [x] Integration: a fixture `.apm/agents/echo-test/wrapper.sh` (executable, emits one valid JSONL line, exits 0) is spawned by the dispatcher; its output is captured to the log file and the child exits 0
+- [x] Unit tests `resolve_wrapper_nonexecutable_invisible`, `resolve_wrapper_fallback_to_builtin`, `resolve_wrapper_missing_returns_none`, `manifest_parse_valid`, `manifest_parse_defaults`, `manifest_parse_invalid_toml`, and `manifest_missing` all pass
 
 ### Out of scope
 
