@@ -63,11 +63,10 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 - Defining the canonical JSONL event vocabulary — already noted as an open question in `docs/agent-wrappers.md`; any parser binary this ticket tests against must emit valid JSONL but the schema is not defined here
 - Multiplexing more than one parser per wrapper; manifest.toml accepts exactly one `parser` value and one optional `parser_command`
 - In-wrapper translation (`parser = "canonical"` where the wrapper itself transforms output inline) — that is wrapper-author responsibility; APM does not assist with it
+- `parser = "raw"` mode (verbatim pass-through capture without JSONL parsing) — projects that need this today can use `parser = "external"` with `parser_command = "cat"`; a dedicated `raw` mode may be added in a follow-up ticket after `docs/agent-wrappers.md` is updated to define it
 - The `apm agents test <name>` command for smoke-testing parser compliance — ticket 71d80e40
 - Per-ticket parser override via frontmatter `agent_overrides` — ticket 0ca3e019
-- Propagating the wrapper child's exit code to APM when both wrapper and parser run; the parser child's exit code is the effective worker exit code for this ticket
 - Non-Unix platform differences in subprocess piping (Windows `Stdio::from(ChildStdout)` semantics) — out of scope for now; the implementation targets Unix
-- Updating `docs/agent-wrappers.md` to document the `raw` parser mode — should be a follow-up to this ticket once the behaviour is validated
 
 ### Approach
 
