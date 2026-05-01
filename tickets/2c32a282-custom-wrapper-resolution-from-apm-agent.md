@@ -73,6 +73,18 @@ CustomWrapper struct holds script_path and manifest and implements the Wrapper t
 
 ---
 
+**Two-layer manifest validation design**
+
+Manifest validation happens at two distinct points in the APM lifecycle, and both layers are required:
+
+- Layer 1 — validate time (load-bearing UX): `apm validate` calls `resolve_wrapper` for every configured agent name, which freshly reads and parses each `manifest.toml`. Errors and warnings are surfaced here, before any worker is ever spawned. This is the primary user-facing safety net: a team running `apm validate` in CI catches broken or incompatible manifests immediately.
+
+- Layer 2 — spawn time (safety net): `CustomWrapper::spawn` re-checks `self.manifest` at the moment of spawning. Because `resolve_wrapper` is called fresh from `spawn_worker` each time a worker is started, the manifest is re-read from disk at spawn time as well. This catches edits made between `apm validate` and the actual spawn (e.g. a user bumps `contract_version` mid-session), and also protects the case where validate was not run.
+
+**Implementers must not remove either layer.** Skipping the validate-time parse degrades the user experience (errors appear only at runtime). Skipping the spawn-time check creates a window where a post-validate edit silently uses an unsupported contract.
+
+---
+
 **wrapper/custom.rs -- private helpers**
 
 find_script(root: &Path, name: &str) -> Option<PathBuf>
@@ -106,12 +118,19 @@ Algorithm:
 2. Else if resolve_builtin(name).is_some(), return Ok(Some(WrapperKind::Builtin(name.to_owned())))
 3. Else return Ok(None)
 
+`resolve_wrapper` is called at both validate time (from `validate_agents`) and spawn time (from
+`spawn_worker`), so the manifest file is re-read and re-parsed fresh on every call — this is what
+makes both layers of manifest validation possible without extra plumbing.
+
 ---
 
 **CustomWrapper::spawn (implements Wrapper trait)**
 
-1. Check self.manifest contract_version (defaulting to 1 when manifest is None); if > 1, bail
-   with a message stating the declared version is unsupported and directing the user to upgrade APM
+1. [Spawn-time safety net — do not omit] Check self.manifest contract_version (defaulting to 1
+   when manifest is None); if > 1, bail with a message stating the declared version is unsupported
+   and directing the user to upgrade APM. This is Layer 2 of the two-layer validation design: it
+   runs unconditionally at spawn time, even when `apm validate` already passed, because the
+   manifest file may have been edited between validate and this spawn call.
 2. Build Command::new(&self.script_path) -- no shell interpreter, the script is exec-d directly
 3. Set all APM contract env vars (identical set to ClaudeWrapper; see d3b93b95 approach table)
 4. Forward ctx.extra_env entries (user-configured env from [workers] env)
@@ -139,10 +158,13 @@ the shape of this call does not change at that point.
 
 ---
 
-**validate.rs -- validate_agents helper**
+**validate.rs -- validate_agents helper (Layer 1: primary manifest validation)**
 
 Add fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warnings: &mut Vec<String>)
-and call it from validate_config.
+and call it from validate_config. This function implements Layer 1 of the two-layer manifest
+validation design: all manifest problems are surfaced here, before any worker is spawned, by
+calling resolve_wrapper (which re-reads and re-parses each manifest.toml) for every configured
+agent name.
 
 Steps:
 
