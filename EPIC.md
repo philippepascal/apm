@@ -1,1 +1,1 @@
-# apm help: auto-derived git-style topic help
+# Integration tests use real apm commands
