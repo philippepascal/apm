@@ -50,6 +50,7 @@ The full resolution order (per spawn, where P is the profile name declared by th
 - [ ] `apm validate` does not report an error for a ticket whose `frontmatter.agent` is `"claude"`
 - [ ] `.apm/apm.spec-writer.md` contains a brief note that supervisors may set `agent` or `[agent_overrides]` in frontmatter
 - [ ] `.apm/apm.worker.md` contains a brief note that supervisors may set `agent` or `[agent_overrides]` in frontmatter
+- [ ] The `wrapper::resolve_builtin(name)` call site in `validate.rs` has an inline `// TODO(2c32a282)` comment noting that it must be upgraded to `wrapper::resolve_wrapper(root, name)` once ticket 2c32a282 (custom wrapper resolution) lands, so project-defined scripts referenced in `agent` or `agent_overrides` are also validated
 
 ### Out of scope
 
