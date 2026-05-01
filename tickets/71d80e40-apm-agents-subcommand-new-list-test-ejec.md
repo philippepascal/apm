@@ -98,7 +98,174 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 
 ### Approach
 
-How the implementation will work.
+**Prereqs:** d3b93b95 (`Wrapper` trait, `WrapperContext`, `resolve_builtin`, `ClaudeWrapper`) and 2c32a282 (`resolve_wrapper`, `WrapperKind`, `find_script`, `parse_manifest`, `CustomWrapper`) must be merged into the epic branch before this ticket is implemented. All API references below assume those tickets' final shapes.
+
+---
+
+**`apm-core/src/wrapper/mod.rs` — add `list_builtin_names`**
+
+Add one new public function returning the static list of registered built-in names:
+
+```rust
+pub fn list_builtin_names() -> &'static [&'static str] {
+    &["claude"]
+}
+```
+
+When ticket 25c92daa lands it expands the list; no other change needed here.
+
+---
+
+**`apm-core/src/agents.rs` — new module**
+
+Register with `pub mod agents;` in `apm-core/src/lib.rs`.
+
+Public types:
+
+```rust
+pub struct WrapperEntry {
+    pub name: String,
+    pub kind: WrapperKind,          // re-exported from wrapper::WrapperKind (2c32a282)
+    pub parser: String,             // "canonical" or value from manifest.toml
+    pub configured_as: Vec<String>, // e.g. ["(default)"] or ["spec_agent"]
+}
+
+pub struct TestReport {
+    pub exit_code: i32,
+    pub canonical_events: usize,
+    pub non_canonical_lines: usize,
+    pub stderr_lines: usize,
+    pub wall_millis: u64,
+    pub passed: bool,               // exit 0 && canonical_events >= 1
+}
+```
+
+**`list_wrappers(root: &Path, config: &Config) -> anyhow::Result<Vec<WrapperEntry>>`**
+
+1. Built-in entries: for each name in `wrapper::list_builtin_names()`, create a `WrapperEntry` with `kind: WrapperKind::Builtin(name.to_owned())`, `parser: "canonical"`, `configured_as: vec![]`.
+2. Project entries: read `root/.apm/agents/` (skip if absent or unreadable). For each subdirectory `entry_name`, call `wrapper::resolve_wrapper(root, entry_name)?`. If `Ok(Some(WrapperKind::Custom ..))`, add a project entry. Set `parser` from `wrapper::parse_manifest(root, entry_name)` — use manifest `parser` field, default to `"canonical"`.
+3. Configured marker: read `config.workers.command` (legacy, defaults to `"claude"`). For the entry whose `name == config.workers.command`, push `"(default)"` to `configured_as`. (TODO post-6cac8518: switch to `config.workers.agent` and iterate `config.worker_profiles` for per-profile markers.)
+4. Sort: built-ins first (in `list_builtin_names` order), then project wrappers alphabetically.
+
+**`scaffold_wrapper(root: &Path, name: &str, force: bool) -> anyhow::Result<()>`**
+
+1. `let dir = root.join(".apm/agents").join(name);`
+2. If `dir.exists() && !force`: bail with `.apm/agents/{name}/ already exists; use --force to overwrite`
+3. `fs::create_dir_all(&dir)?`
+4. Write `dir/wrapper.sh` using the `WRAPPER_TEMPLATE` constant (see below). On Unix, set permissions mode `0o755` via `std::os::unix::fs::PermissionsExt::from_mode`.
+5. Write `dir/manifest.toml`: `[wrapper]\ncontract_version = 1\nparser = "canonical"\n`
+6. For `apm.worker.md`: try `fs::read_to_string(root.join(".apm/apm.worker.md"))`; if absent, use the same default string that `apm init` writes (locate the constant in `apm_core::init`). Write to `dir/apm.worker.md`.
+7. Same for `apm.spec-writer.md`.
+8. `Ok(())`
+
+**`WRAPPER_TEMPLATE` constant** (define as `const WRAPPER_TEMPLATE: &str` in `agents.rs`):
+
+A bash script with:
+- `#!/usr/bin/env bash` shebang
+- Inline comments documenting each `APM_*` env var, the stdout/stderr/exit-code contract
+- `set -euo pipefail`
+- `env | grep '^APM_' >&2 || true` to dump APM vars to stderr on startup
+- `SYSTEM_PROMPT="$(cat "$APM_SYSTEM_PROMPT_FILE")"` and `USER_MESSAGE="$(cat "$APM_USER_MESSAGE_FILE")"`
+- A `printf` emitting one minimal valid JSONL line (`{"type":"text","text":"wrapper skeleton — replace with real invocation"}`) so `apm agents test` counts at least one canonical event
+- TODO comment to replace the printf with a real agent invocation
+- TODO comment to call `apm state "$APM_TICKET_ID" <target-state>`
+- `exit 0`
+
+**`test_wrapper(root: &Path, name: &str) -> anyhow::Result<TestReport>`**
+
+1. Call `wrapper::resolve_wrapper(root, name)?`; if `Ok(None)`: bail with agent-not-found message.
+2. Create a temp dir (use `std::env::temp_dir()` joined with a `rand_u16()` suffix, the same helper used in `start.rs`). Write `system.txt` → `"You are a test agent."`, `message.txt` → `"Test run — apm agents test."`. Set `log_path = tmpdir/wrapper.log`.
+3. Build `WrapperContext` (from d3b93b95): `worker_name = "agents-test"`, `ticket_id = "00000000"`, `ticket_branch = "test/agents-test"`, `worktree_path = tmpdir`, file paths as above, `skip_permissions = false`, `profile = "test"`, rest at defaults/empty.
+4. Spawn via the resolved `WrapperKind`: `Custom { script_path, manifest }` → `CustomWrapper::spawn(&ctx)?`; `Builtin(n)` → `resolve_builtin(&n).expect("registered").spawn(&ctx)?`.
+5. Record start instant, call `child.wait()`, compute `wall_millis`.
+6. Read log file (stdout+stderr interleaved per Wrapper contract; treat missing file as empty). Classify each non-empty line: valid JSON object containing a `"type"` key → `canonical_events += 1`; line starting with `APM_` (env-dump from skeleton) → `stderr_lines += 1`; everything else → `non_canonical_lines += 1`.
+7. `passed = status.success() && canonical_events >= 1`. Return `TestReport`.
+8. Remove tmpdir on return (best-effort, ignore errors).
+
+Line classification is heuristic because stdout and stderr share the log file. This is acceptable for a smoke test.
+
+**`eject_wrapper(root: &Path, name: &str) -> anyhow::Result<()>`**
+
+1. If `wrapper::resolve_builtin(name).is_none()`: bail with `'<name>' is not a known built-in; run apm agents list to see available wrappers`.
+2. `let dir = root.join(".apm/agents").join(name);`
+3. If `dir.exists()`: bail with `.apm/agents/{name}/ already exists; delete it first to eject again`.
+4. `fs::create_dir_all(&dir)?`
+5. Match `name`: `"claude"` → write `CLAUDE_EJECT_SCRIPT` constant; other built-in names from 25c92daa → add cases as those land; default arm bails with "eject not yet implemented for built-in NAME".
+6. Set mode `0o755` on the script file.
+7. Write `dir/manifest.toml` (same content as `scaffold_wrapper`).
+8. `Ok(())`
+
+**`CLAUDE_EJECT_SCRIPT` constant** (define as `const CLAUDE_EJECT_SCRIPT: &str` in `agents.rs`):
+
+A bash script with:
+- `#!/usr/bin/env bash` shebang, header comment `Ejected from APM built-in: claude`
+- `set -euo pipefail`
+- Builds `ARGS=(--print --output-format stream-json --verbose)`
+- Appends `--system-prompt "$(cat "$APM_SYSTEM_PROMPT_FILE")"` to ARGS
+- Conditionally appends `--model "$APM_OPT_MODEL"` when `APM_OPT_MODEL` is non-empty
+- Conditionally appends `--dangerously-skip-permissions` when `APM_SKIP_PERMISSIONS = "1"`
+- Ends with `exec claude "${ARGS[@]}" "$(cat "$APM_USER_MESSAGE_FILE")"`
+
+---
+
+**`apm/src/cmd/agents.rs` — replace with subcommand handlers**
+
+Delete existing `run(root)`. Add four functions:
+
+`run_list(root: &Path) -> Result<()>`: load config, call `apm_core::agents::list_wrappers(root, &config)?`, print a column-aligned table using `println!` (no external crate):
+```
+NAME             KIND       PARSER     STATUS
+claude           built-in   canonical  (configured)
+my-wrapper       project    canonical
+```
+
+`run_new(root: &Path, name: &str, force: bool) -> Result<()>`: call `apm_core::agents::scaffold_wrapper(root, name, force)?`, then print the list of created files and next-step guidance directing the user to edit `wrapper.sh` and run `apm agents test <name>`.
+
+`run_test(root: &Path, name: &str) -> Result<()>`: call `apm_core::agents::test_wrapper(root, name)?`. Print one-line summary: `PASS  exit=0  events=N  non-canonical=0  stderr=N  wall=Nms`. On fail, print `FAIL  ...` and call `anyhow::bail!` to produce non-zero exit.
+
+`run_eject(root: &Path, name: &str) -> Result<()>`: call `apm_core::agents::eject_wrapper(root, name)?`, then print path of ejected script and guidance to run `apm agents test <name>`.
+
+---
+
+**`apm/src/main.rs` — wire subcommands**
+
+Add `AgentsCommand` enum (four variants: `List`, `New { name: String, #[arg(long)] force: bool }`, `Test { name: String }`, `Eject { name: String }`).
+
+Change `Command::Agents` from unit variant to `Agents { #[command(subcommand)] command: AgentsCommand }`.
+
+Update the match arm to dispatch to the four `cmd::agents::run_*` functions.
+
+Update help text from `"agents         Print agent instructions"` to `"agents         Manage agent wrappers (list, new, test, eject)"`.
+
+Update `hash_trip::is_read_only_command` if `Agents` is listed: `List` and `Test` are read-only; `New` and `Eject` are mutating.
+
+---
+
+**Tests — `apm-core/tests/agents_integration.rs`**
+
+- `list_shows_builtin_claude` — no `.apm/agents/` dir; assert `list_wrappers` returns entry with `name == "claude"` and `WrapperKind::Builtin(_)`
+- `list_shows_project_wrapper` — create `root/.apm/agents/my-wrapper/wrapper.sh` mode `0o755`; assert `list_wrappers` returns a `WrapperKind::Custom` entry for `"my-wrapper"`
+- `scaffold_creates_all_files` — call `scaffold_wrapper(root, "test-wrap", false)`; assert all four files exist; assert `wrapper.sh` permissions `& 0o111 != 0`
+- `scaffold_refuses_existing_dir` — call twice without force; assert second call is `Err` with message containing `"--force"`
+- `scaffold_force_overwrites` — call twice with `force = false` then `force = true`; assert second call is `Ok`
+- `test_passes_for_good_script` — write `.apm/agents/test-ok/wrapper.sh` (mode `0o755`) emitting one valid JSONL line and exiting 0; assert `report.passed == true` and `report.canonical_events >= 1`
+- `test_fails_for_nonzero_exit` — write `.apm/agents/test-fail/wrapper.sh` (mode `0o755`) exiting 1; assert `report.passed == false` and `report.exit_code == 1`
+- `eject_claude_creates_script` — call `eject_wrapper(root, "claude")`; assert `.apm/agents/claude/wrapper.sh` exists and contains both `"claude"` and `"output-format"`
+- `eject_refuses_existing_dir` — pre-create `.apm/agents/claude/`; assert `eject_wrapper` returns `Err`
+- `eject_unknown_builtin_returns_error` — call `eject_wrapper(root, "not-a-builtin")`; assert `Err` message contains `"not a known built-in"`
+
+---
+
+**File change summary**
+
+| File | Change |
+|---|---|
+| `apm-core/src/lib.rs` | Add `pub mod agents;` |
+| `apm-core/src/wrapper/mod.rs` | Add `pub fn list_builtin_names()` |
+| `apm-core/src/agents.rs` | New: `WrapperEntry`, `TestReport`, all four functions, template constants |
+| `apm/src/cmd/agents.rs` | Replace with `run_list`, `run_new`, `run_test`, `run_eject` |
+| `apm/src/main.rs` | Add `AgentsCommand`; change `Command::Agents` to subcommand; wire dispatch; update help text; update read-only list |
+| `apm-core/tests/agents_integration.rs` | New: 10 integration tests |
 
 ### Open questions
 
