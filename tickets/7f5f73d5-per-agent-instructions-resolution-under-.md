@@ -37,7 +37,7 @@ The silent hardcoded fallback and the `StateConfig.instructions`-as-system-promp
 - [x] When `[worker_profiles.<P>].instructions` is set and the referenced file exists, its content is used as the system prompt.
 - [x] When `[worker_profiles.<P>].instructions` is absent (or the profile is not resolved) and `[workers].instructions` is set and the referenced file exists, its content is used as the system prompt.
 - [x] When neither profile nor global `[workers].instructions` resolves and `.apm/agents/<A>/apm.<role>.md` exists in the project, its content is used as the system prompt.
-- [ ] When the first three levels all fail and agent A is the `claude` built-in, APM's bundled default for `apm.<role>.md` (compiled in via `include_str!`) is used as the system prompt.
+- [x] When the first three levels all fail and agent A is the `claude` built-in, APM's bundled default for `apm.<role>.md` (compiled in via `include_str!`) is used as the system prompt.
 - [ ] When all four levels fail (custom agent, no project file, no config override), `apm start` exits with a descriptive error message that names the agent and role; no silent fallback occurs.
 - [ ] An existing project whose config has `[worker_profiles.spec_agent] instructions = ".apm/apm.spec-writer.md"` continues to work without any config edits.
 - [ ] An existing project whose config has `[worker_profiles.impl_agent] instructions = ".apm/apm.worker.md"` continues to work without any config edits.
