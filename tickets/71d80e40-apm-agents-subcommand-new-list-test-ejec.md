@@ -1,7 +1,7 @@
 +++
 id = "71d80e40"
 title = "apm agents subcommand: new, list, test, eject"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/71d80e40-apm-agents-subcommand-new-list-test-ejec"
 created_at = "2026-04-30T20:04:57.796154Z"
-updated_at = "2026-05-01T00:30:08.550575Z"
+updated_at = "2026-05-01T00:30:13.423872Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "2c32a282"]
@@ -285,3 +285,4 @@ Update `hash_trip::is_read_only_command` if `Agents` is listed: `List` and `Test
 | 2026-04-30T22:02Z | groomed | in_design | philippepascal |
 | 2026-05-01T00:08Z | in_design | ammend | philippepascal |
 | 2026-05-01T00:21Z | ammend | in_design | philippepascal |
+| 2026-05-01T00:30Z | in_design | specd | claude-0501-0021-fd28 |
