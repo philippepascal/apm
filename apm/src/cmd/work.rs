@@ -29,7 +29,7 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
         sig_count_clone.fetch_add(1, Ordering::Relaxed);
     });
 
-    let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
+    let mut workers: Vec<(String, Option<String>, apm_core::start::ManagedChild, std::path::PathBuf)> = Vec::new();
     let mut started_ids: Vec<String> = Vec::new();
     let mut no_more = false;
     // next_poll only used in daemon mode
