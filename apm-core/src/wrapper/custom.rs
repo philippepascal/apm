@@ -1,7 +1,8 @@
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use anyhow::Context;
-use super::{Wrapper, WrapperContext};
+use super::{Wrapper, WrapperContext, CONTRACT_VERSION};
 
 fn default_contract_version() -> u32 { 1 }
 fn default_parser() -> String { "canonical".to_string() }
@@ -28,20 +29,41 @@ pub struct CustomWrapper {
     pub manifest: Option<Manifest>,
 }
 
+fn check_contract_version(declared: u32, apm_version: u32, log_path: &Path) -> anyhow::Result<()> {
+    match declared.cmp(&apm_version) {
+        std::cmp::Ordering::Greater => anyhow::bail!(
+            "wrapper targets contract version {} but this APM build supports up to \
+             version {}; upgrade APM",
+            declared,
+            apm_version,
+        ),
+        std::cmp::Ordering::Less => {
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(log_path)
+            {
+                let _ = writeln!(
+                    f,
+                    "[apm] warning: wrapper targets contract version {} but this APM \
+                     build is version {}; the wrapper may not use newer env vars",
+                    declared, apm_version,
+                );
+            }
+        }
+        std::cmp::Ordering::Equal => {}
+    }
+    Ok(())
+}
+
 impl Wrapper for CustomWrapper {
     fn spawn(&self, ctx: &WrapperContext) -> anyhow::Result<std::process::Child> {
         // Layer 2 spawn-time safety net: check contract_version unconditionally.
         // Even if apm validate already passed, the manifest may have been edited
         // between validate and this spawn call.
-        let version = self.manifest.as_ref().map(|m| m.contract_version).unwrap_or(1);
-        if version > 1 {
-            anyhow::bail!(
-                "wrapper at '{}' declares contract_version = {}; \
-                 this APM build supports version 1 only — upgrade APM",
-                self.script_path.display(),
-                version
-            );
-        }
+        let declared = self.manifest.as_ref().map_or(1, |m| m.contract_version);
+        check_contract_version(declared, CONTRACT_VERSION, &ctx.log_path)
+            .map_err(|e| anyhow::anyhow!("wrapper '{}': {}", self.script_path.display(), e))?;
 
         let apm_bin = std::env::current_exe()
             .and_then(|p| p.canonicalize())
@@ -81,7 +103,7 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
     if let Some(ref prefix) = ctx.role_prefix {
         cmd.env("APM_ROLE_PREFIX", prefix);
     }
-    cmd.env("APM_WRAPPER_VERSION", "1");
+    cmd.env("APM_WRAPPER_VERSION", CONTRACT_VERSION.to_string());
     cmd.env("APM_BIN", apm_bin);
     for (k, v) in &ctx.options {
         let env_key = format!(
@@ -314,6 +336,48 @@ mod tests {
         let unknown = manifest_unknown_keys(root, "my-wrapper").unwrap();
         assert!(unknown.contains(&"unknown_key".to_string()),
             "expected unknown_key in {unknown:?}");
+    }
+
+    // --- check_contract_version unit tests ---
+
+    #[test]
+    fn check_version_equal() {
+        let log_dir = tempfile::tempdir().unwrap();
+        let log_path = log_dir.path().join("worker.log");
+        assert!(check_contract_version(1, 1, &log_path).is_ok());
+        // No log file created for equal versions
+        assert!(!log_path.exists() || std::fs::read_to_string(&log_path).unwrap().is_empty());
+    }
+
+    #[test]
+    fn check_version_older_writes_warning() {
+        let log_dir = tempfile::tempdir().unwrap();
+        let log_path = log_dir.path().join("worker.log");
+        // declared=1 is older than apm_version=2 → warning, Ok
+        let result = check_contract_version(1, 2, &log_path);
+        assert!(result.is_ok(), "expected Ok for older version");
+        let content = std::fs::read_to_string(&log_path).unwrap_or_default();
+        assert!(content.contains("warning"), "log must contain 'warning': {content}");
+        assert!(content.contains('1'), "log must contain declared version 1: {content}");
+        assert!(content.contains('2'), "log must contain apm version 2: {content}");
+    }
+
+    #[test]
+    fn check_version_too_high_returns_err() {
+        let log_dir = tempfile::tempdir().unwrap();
+        let log_path = log_dir.path().join("worker.log");
+        let result = check_contract_version(2, 1, &log_path);
+        assert!(result.is_err(), "expected Err for version > apm");
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("upgrade APM"), "error must mention 'upgrade APM': {msg}");
+        assert!(msg.contains('2'), "error must mention declared version 2: {msg}");
+        assert!(msg.contains('1'), "error must mention apm version 1: {msg}");
+    }
+
+    #[test]
+    fn check_version_no_manifest_defaults_to_1() {
+        let declared = None::<Manifest>.map_or(1, |m| m.contract_version);
+        assert_eq!(declared, 1);
     }
 
     #[test]
