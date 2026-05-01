@@ -163,6 +163,8 @@ Replace both with a single private `spawn_worker(ctx: WrapperContext) -> Result<
 
 ### Amendment requests
 
+- [ ] Add `APM_BIN=<absolute path>` to the wrapper-contract env var table. Source the value from `std::env::current_exe()` (same call that stamps `APM_WRAPPER_VERSION`) and resolve symlinks via `canonicalize`. This gives wrappers (especially the mocks in 25c92daa, but also any future custom wrapper that wants to call back into apm) a deterministic path to the same binary that spawned them. Without this, wrappers either rely on PATH (broken in tests, fragile across multi-version installs) or have to be told the path some other way per-wrapper. Set it in both spawn paths (container and non-container) and document it in the env-var table in the Approach.
+- [ ] Tighten the `APM_ROLE_PREFIX` AC to match the Approach: it is set when `ctx.role_prefix.is_some()`. The current AC says "when configured" without naming the condition; make it explicit so the implementer doesn't have to interpret.
 
 ### Code review
 
