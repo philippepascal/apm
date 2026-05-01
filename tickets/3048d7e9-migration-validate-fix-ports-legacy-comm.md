@@ -55,6 +55,10 @@ This ticket adds that migration to `apm validate --fix`. A developer who upgrade
 
 ### Approach
 
+**Prerequisite:** This ticket presupposes that ticket `6cac8518`'s runtime backward-compat fallback is already in place. When `apm validate --fix` runs, the legacy `command`/`args`/`model` fields it is about to remove are still being read by `6cac8518`'s fallback path, which emits the deprecation warning on `apm start`. That is the intended state: the warning signals to the developer that migration is needed, and `apm validate --fix` then removes those fields so the fallback no longer fires. There is no race — the CLI migration writes the config file before any worker is spawned.
+
+---
+
 #### Files changed
 
 **`apm/Cargo.toml`** — add `toml_edit` to the `[dependencies]` table (it is already in the workspace Cargo.toml at `toml_edit = "0.22"`; add `toml_edit.workspace = true`).
