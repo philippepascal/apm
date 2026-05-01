@@ -734,6 +734,7 @@ mod tests {
             warning: None,
             profile: profile.map(|s| s.to_string()),
             on_failure: None,
+            outcome: None,
         }
     }
 

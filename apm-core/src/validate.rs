@@ -1,4 +1,4 @@
-use crate::config::{CompletionStrategy, Config, LocalConfig};
+use crate::config::{resolve_outcome, CompletionStrategy, Config, LocalConfig};
 use crate::ticket_fmt::Ticket;
 use anyhow::{bail, Result};
 use std::collections::HashSet;
@@ -397,6 +397,70 @@ pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
             }
         }
     }
+
+    // Dead-end reachability check: warn when no agent-actionable state can reach a
+    // transition whose outcome resolves to "success".
+    let state_map: std::collections::HashMap<&str, &crate::config::StateConfig> =
+        config.workflow.states.iter()
+            .map(|s| (s.id.as_str(), s))
+            .collect();
+
+    let agent_startable: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.actionable.iter().any(|a| a == "agent" || a == "any"))
+        .map(|s| s.id.as_str())
+        .collect();
+
+    if !agent_startable.is_empty() {
+        let mut visited: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        let mut queue: std::collections::VecDeque<&str> = std::collections::VecDeque::new();
+        let mut found_success = false;
+
+        for &start in &agent_startable {
+            if visited.insert(start) {
+                queue.push_back(start);
+            }
+        }
+
+        'bfs: while let Some(state_id) = queue.pop_front() {
+            if let Some(state) = state_map.get(state_id) {
+                for t in &state.transitions {
+                    let outcome = if let Some(target_state) = state_map.get(t.to.as_str()) {
+                        resolve_outcome(t, target_state)
+                    } else {
+                        // Target not in map (e.g., built-in "closed" if not declared).
+                        // Inline the resolve_outcome fallback treating unknown targets as terminal.
+                        if let Some(ref o) = t.outcome {
+                            o.as_str()
+                        } else if t.completion != CompletionStrategy::None {
+                            "success"
+                        } else {
+                            "cancelled"
+                        }
+                    };
+
+                    if outcome == "success" {
+                        found_success = true;
+                        break 'bfs;
+                    }
+
+                    // Enqueue non-terminal target states for further exploration.
+                    if let Some(target) = state_map.get(t.to.as_str()) {
+                        if !target.terminal && visited.insert(t.to.as_str()) {
+                            queue.push_back(t.to.as_str());
+                        }
+                    }
+                }
+            }
+        }
+
+        if !found_success {
+            warnings.push(
+                "workflow has no reachable 'success' outcome from any agent-actionable state; \
+                 workers may never complete successfully".to_string()
+            );
+        }
+    }
+
     warnings
 }
 
@@ -1286,6 +1350,60 @@ container = ""
         let config = load_config(toml);
         let warnings = super::validate_warnings(&config);
         assert!(warnings.is_empty(), "empty container string should not warn");
+    }
+
+    #[test]
+    fn dead_end_workflow_warning_emitted() {
+        // A workflow where the only agent-actionable state cycles back to itself
+        // with no completion strategy — no "success" outcome is reachable.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "start"
+label      = "Start"
+actionable = ["agent"]
+
+[[workflow.states.transitions]]
+to = "middle"
+
+[[workflow.states]]
+id    = "middle"
+label = "Middle"
+
+[[workflow.states.transitions]]
+to = "start"
+"#;
+        let config = load_config(toml);
+        let warnings = super::validate_warnings(&config);
+        assert!(
+            warnings.iter().any(|w| w.contains("success")),
+            "expected dead-end warning containing 'success'; got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn default_workflow_no_dead_end_warning() {
+        // The default workflow has in_progress → implemented with completion = pr_or_epic_merge,
+        // reachable from the agent-actionable "ready" state. No dead-end warning should fire.
+        let base = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let combined = format!("{}\n{}", base, crate::init::default_workflow_toml());
+        let config: Config = toml::from_str(&combined).unwrap();
+        let warnings = super::validate_warnings(&config);
+        assert!(
+            !warnings.iter().any(|w| w.contains("no reachable") && w.contains("success")),
+            "unexpected dead-end warning for default workflow; got: {warnings:?}"
+        );
     }
 
     #[test]

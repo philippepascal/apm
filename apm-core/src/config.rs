@@ -367,6 +367,12 @@ pub struct TransitionConfig {
     pub profile: Option<String>,
     #[serde(default)]
     pub on_failure: Option<String>,
+    /// Semantic outcome of this transition from the worker's perspective.
+    /// Recognised values: `success`, `needs_input`, `blocked`, `rejected`, `cancelled`.
+    /// Custom values are accepted but treated as non-success by tooling.
+    /// When omitted, `resolve_outcome` applies implicit defaults; see that function.
+    #[serde(default)]
+    pub outcome: Option<String>,
 }
 
 /// Weights used to compute the priority score for ticket selection in `apm next`.
@@ -386,6 +392,28 @@ pub struct PrioritizationConfig {
 fn default_priority_weight() -> f64 { 10.0 }
 fn default_effort_weight() -> f64 { -2.0 }
 fn default_risk_weight() -> f64 { -1.0 }
+
+/// Returns the effective outcome label for `transition`.
+///
+/// Uses the explicit `outcome` field when set; otherwise applies implicit defaults in order:
+/// 1. `completion` strategy is set (non-`None`) → `"success"`
+/// 2. `target_state.terminal` is true → `"cancelled"`
+/// 3. Otherwise → `"needs_input"`
+pub fn resolve_outcome<'a>(
+    transition: &'a TransitionConfig,
+    target_state: &StateConfig,
+) -> &'a str {
+    if let Some(ref o) = transition.outcome {
+        return o.as_str();
+    }
+    if transition.completion != CompletionStrategy::None {
+        return "success";
+    }
+    if target_state.terminal {
+        return "cancelled";
+    }
+    "needs_input"
+}
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct AgentsConfig {
@@ -808,6 +836,58 @@ trigger = "manual"
         assert_eq!(t.completion, CompletionStrategy::None);
         assert!(t.focus_section.is_none());
         assert!(t.context_section.is_none());
+        assert!(t.outcome.is_none());
+    }
+
+    #[test]
+    fn resolve_outcome_explicit_override() {
+        let t: TransitionConfig = toml::from_str(r#"
+to      = "ammend"
+outcome = "rejected"
+"#).unwrap();
+        let s: StateConfig = toml::from_str(r#"
+id    = "ammend"
+label = "Ammend"
+"#).unwrap();
+        assert_eq!(super::resolve_outcome(&t, &s), "rejected");
+    }
+
+    #[test]
+    fn resolve_outcome_implicit_success() {
+        let t: TransitionConfig = toml::from_str(r#"
+to         = "implemented"
+completion = "merge"
+"#).unwrap();
+        let s: StateConfig = toml::from_str(r#"
+id    = "implemented"
+label = "Implemented"
+"#).unwrap();
+        assert_eq!(super::resolve_outcome(&t, &s), "success");
+    }
+
+    #[test]
+    fn resolve_outcome_implicit_cancelled() {
+        let t: TransitionConfig = toml::from_str(r#"
+to = "closed"
+"#).unwrap();
+        let s: StateConfig = toml::from_str(r#"
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#).unwrap();
+        assert_eq!(super::resolve_outcome(&t, &s), "cancelled");
+    }
+
+    #[test]
+    fn resolve_outcome_implicit_needs_input() {
+        let t: TransitionConfig = toml::from_str(r#"
+to = "blocked"
+"#).unwrap();
+        let s: StateConfig = toml::from_str(r#"
+id    = "blocked"
+label = "Blocked"
+"#).unwrap();
+        assert_eq!(super::resolve_outcome(&t, &s), "needs_input");
     }
 
     #[test]
