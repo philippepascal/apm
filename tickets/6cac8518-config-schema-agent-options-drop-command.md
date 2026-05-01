@@ -1,7 +1,7 @@
 +++
 id = "6cac8518"
 title = "Config schema: agent + options (drop command/args/model)"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6cac8518-config-schema-agent-options-drop-command"
 created_at = "2026-04-30T20:02:34.693415Z"
-updated_at = "2026-05-01T17:38:00.312276Z"
+updated_at = "2026-05-01T18:10:32.612106Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95"]
@@ -118,3 +118,4 @@ Replace the two [worker_profiles.*] blocks to keep only instructions and role_pr
 | 2026-05-01T01:26Z | ammend | in_design | philippepascal |
 | 2026-05-01T01:29Z | in_design | specd | claude-0501-0126-ffc0 |
 | 2026-05-01T17:38Z | specd | ready | philippepascal |
+| 2026-05-01T18:10Z | ready | in_progress | philippepascal |
