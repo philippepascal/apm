@@ -35,7 +35,7 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 **`mock-sad`** built-in:
 - Writes some-but-not-all required spec sections (or content that fails validate).
 - Optionally writes a question to `### Open questions`.
-- Picks uniformly from transitions where `outcome ≠ "success"` valid from the current state. Seedable via `APM_OPT_SEED`.
+- Picks uniformly from transitions where `outcome ≠ "success"` valid from the current state. Seeded via `APM_OPT_SEED` environment variable.
 - Runs `apm state <id> <to-state>`. If the eligible set is empty, exit non-zero with a diagnostic.
 - Exits 0.
 
@@ -54,18 +54,13 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 
 **Implementation notes:**
 - All four live under `apm-core/src/wrapper/builtin/` (one file each: `claude.rs`, `mock_happy.rs`, `mock_sad.rs`, `mock_random.rs`, `debug.rs`).
-- The mocks shell out to the host `apm` binary for state transitions and spec writes — no special internal API.
+- The mocks shell out to the host `apm` binary for state transitions and spec writes — no special internal API. The `apm` binary path is read from the `APM_BIN` environment variable (set by the spawn glue per d3b93b95's wrapper contract).
 - Mocks read the workflow from `apm-core::config::Config::load(root)` to find valid transitions and their outcomes (using the helper from ticket a1b94ea4).
-- Per-agent instruction files (`apm.worker.md`, `apm.spec-writer.md`) are NOT needed for mocks — the per-agent instructions resolution from ticket 7f5f73d5 should fall through gracefully when those files don't exist for a built-in. Confirm in spec phase.
+- Per-agent instruction file stubs are required for each mock/debug built-in (see Approach §10) so that a project configured to use a mock doesn't hit ticket 7f5f73d5's level-5 hard error. Content is a single-line stub; mocks ignore it.
 
 **Out of scope:**
 - Documenting the mocks in user-facing help/docs beyond the existing `docs/agent-wrappers.md` reference.
 - Apm subcommand support (`apm agents test mock-happy` etc.) — that is a separate ticket.
-
-**Tests:**
-- For each mock: integration test that wires it up against a fixture project, runs a worker, asserts the expected state transition occurred.
-- For mock-sad / mock-random: assert seed reproducibility (same seed → same chosen transition).
-- For debug: assert env vars, prompt, and message all appear in the captured `.apm-worker.log`.
 
 ### Acceptance criteria
 
