@@ -38,6 +38,10 @@ pub fn resolve_builtin(name: &str) -> Option<Box<dyn Wrapper>> {
     }
 }
 
+pub fn list_builtin_names() -> &'static [&'static str] {
+    &["claude"]
+}
+
 pub fn resolve_wrapper(root: &Path, name: &str) -> anyhow::Result<Option<WrapperKind>> {
     if let Some(script_path) = custom::find_script(root, name) {
         let manifest = custom::parse_manifest(root, name)?;
