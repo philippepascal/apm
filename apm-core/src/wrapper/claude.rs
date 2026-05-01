@@ -131,6 +131,14 @@ fn spawn_container(
     for (k, v) in &ctx.extra_env {
         cmd.args(["--env", &format!("{k}={v}")]);
     }
+    // APM_OPT_<KEY> for each option entry
+    for (k, v) in &ctx.options {
+        let env_key = format!(
+            "APM_OPT_{}",
+            k.to_uppercase().replace('.', "_").replace('-', "_")
+        );
+        cmd.args(["--env", &format!("{env_key}={v}")]);
+    }
 
     cmd.arg(image);
     cmd.arg("claude");
@@ -169,4 +177,12 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
     }
     cmd.env("APM_WRAPPER_VERSION", "1");
     cmd.env("APM_BIN", apm_bin);
+    // APM_OPT_<KEY> for each option entry
+    for (k, v) in &ctx.options {
+        let env_key = format!(
+            "APM_OPT_{}",
+            k.to_uppercase().replace('.', "_").replace('-', "_")
+        );
+        cmd.env(&env_key, v);
+    }
 }
