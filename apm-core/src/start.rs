@@ -93,6 +93,19 @@ pub fn effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &W
     EffectiveWorkerParams { command, args, model, env, container, agent, options }
 }
 
+fn apply_frontmatter_agent(
+    agent: &mut String,
+    frontmatter: &ticket_fmt::Frontmatter,
+    profile_name: &str,
+) {
+    if let Some(ov) = frontmatter.agent_overrides.get(profile_name) {
+        *agent = ov.clone();
+    } else if let Some(a) = &frontmatter.agent {
+        *agent = a.clone();
+    }
+    // else: keep config-resolved agent unchanged
+}
+
 pub struct StartOutput {
     pub id: String,
     pub old_state: String,
@@ -283,7 +296,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(profile, &id));
     let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
-    let params = effective_spawn_params(profile, &config.workers);
+    let mut params = effective_spawn_params(profile, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
     let role_prefix = profile.and_then(|p| p.role_prefix.clone());
 
     let log_path = wt_display.join(".apm-worker.log");
@@ -469,7 +483,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let raw_prompt_next = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
     let with_epic_next = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_next);
     let ticket_content = with_dependency_bundle(root, &dep_ids_next, &config, with_epic_next);
-    let params = effective_spawn_params(profile2, &config.workers);
+    let mut params = effective_spawn_params(profile2, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
     let role_prefix2 = profile2.and_then(|p| p.role_prefix.clone());
 
     let branch = t.frontmatter.branch.clone()
@@ -653,7 +668,8 @@ pub fn spawn_next_worker(
     let raw_prompt_snw = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
     let with_epic_snw = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_snw);
     let ticket_content = with_dependency_bundle(root, &dep_ids_snw, &config, with_epic_snw);
-    let params = effective_spawn_params(profile2, &config.workers);
+    let mut params = effective_spawn_params(profile2, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
     let role_prefix2 = profile2.and_then(|p| p.role_prefix.clone());
 
     let branch = t.frontmatter.branch.clone()
@@ -775,7 +791,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, ManagedChild, DEPRECATION_WARNED, DEPRECATION_TEST_LOG, DEPRECATION_TEST_LOCK};
+    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_TEST_LOG, DEPRECATION_TEST_LOCK};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -1431,5 +1447,53 @@ mod tests {
             .expect("env-output.txt not written");
 
         assert!(env_content.contains("APM_OPT_MODEL=sonnet"), "APM_OPT_MODEL=sonnet must be set\n{env_content}");
+    }
+
+    // --- apply_frontmatter_agent ---
+
+    fn make_frontmatter_with_agent(agent: Option<&str>, overrides: &[(&str, &str)]) -> crate::ticket_fmt::Frontmatter {
+        let agent_line = agent.map(|a| format!("agent = \"{a}\"\n")).unwrap_or_default();
+        let overrides_section = if overrides.is_empty() {
+            String::new()
+        } else {
+            let pairs: Vec<String> = overrides.iter()
+                .map(|(k, v)| format!("{k} = \"{v}\""))
+                .collect();
+            format!("[agent_overrides]\n{}\n", pairs.join("\n"))
+        };
+        let toml_str = format!("id = \"t\"\ntitle = \"T\"\nstate = \"new\"\n{agent_line}{overrides_section}");
+        toml::from_str(&toml_str).unwrap()
+    }
+
+    #[test]
+    fn apply_fm_profile_override_wins() {
+        let fm = make_frontmatter_with_agent(Some("mock-sad"), &[("impl_agent", "mock-happy")]);
+        let mut agent = "claude".to_string();
+        apply_frontmatter_agent(&mut agent, &fm, "impl_agent");
+        assert_eq!(agent, "mock-happy");
+    }
+
+    #[test]
+    fn apply_fm_agent_field_wins_when_no_profile_match() {
+        let fm = make_frontmatter_with_agent(Some("mock-sad"), &[]);
+        let mut agent = "claude".to_string();
+        apply_frontmatter_agent(&mut agent, &fm, "impl_agent");
+        assert_eq!(agent, "mock-sad");
+    }
+
+    #[test]
+    fn apply_fm_profile_override_beats_agent_field() {
+        let fm = make_frontmatter_with_agent(Some("mock-random"), &[("impl_agent", "claude")]);
+        let mut agent = "other".to_string();
+        apply_frontmatter_agent(&mut agent, &fm, "impl_agent");
+        assert_eq!(agent, "claude");
+    }
+
+    #[test]
+    fn apply_fm_no_fields_unchanged() {
+        let fm = make_frontmatter_with_agent(None, &[]);
+        let mut agent = "claude".to_string();
+        apply_frontmatter_agent(&mut agent, &fm, "impl_agent");
+        assert_eq!(agent, "claude");
     }
 }

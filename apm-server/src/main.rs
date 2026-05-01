@@ -488,6 +488,8 @@ pub(crate) mod tests {
                 epic: None,
                 target_branch: None,
                 depends_on: None,
+                agent: None,
+                agent_overrides: std::collections::HashMap::new(),
             },
             body: String::new(),
             path: PathBuf::from(format!("{}.md", id)),
