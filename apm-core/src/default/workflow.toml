@@ -7,10 +7,12 @@ label = "New"
   [[workflow.states.transitions]]
   to      = "groomed"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id           = "groomed"
@@ -24,10 +26,12 @@ instructions = ".apm/apm.spec-writer.md"
   trigger         = "command:start"
   profile         = "spec_agent"
   context_section = "Problem"
+  outcome         = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id         = "question"
@@ -37,10 +41,12 @@ actionable = ["supervisor"]
   [[workflow.states.transitions]]
   to      = "groomed"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "specd"
@@ -50,16 +56,19 @@ satisfies_deps = "spec"
 worker_end     = true
 
   [[workflow.states.transitions]]
-  to           = "ready"
-  trigger      = "manual"
+  to      = "ready"
+  trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "ammend"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "ammend"
@@ -70,21 +79,25 @@ satisfies_deps = "spec"
 instructions   = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
-  to            = "specd"
-  trigger       = "manual"
+  to      = "specd"
+  trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "question"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "command:start"
   profile = "spec_agent"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id           = "in_design"
@@ -92,20 +105,24 @@ label        = "In Design"
 instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
-  to            = "specd"
-  trigger       = "manual"
+  to      = "specd"
+  trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "question"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "ammend"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "ready"
@@ -118,18 +135,22 @@ instructions   = ".apm/apm.worker.md"
   to      = "in_progress"
   trigger = "command:start"
   profile = "impl_agent"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "ammend"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "specd"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "in_progress"
@@ -142,24 +163,29 @@ instructions   = ".apm/apm.worker.md"
   trigger    = "manual"
   completion = "pr_or_epic_merge"
   on_failure = "merge_failed"
+  outcome    = "success"
 
   [[workflow.states.transitions]]
   to      = "blocked"
   trigger = "manual"
   label   = "Agent is blocked — wrote questions in ### Open questions"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to           = "ready"
-  trigger      = "manual"
-  warning      = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
+  to      = "ready"
+  trigger = "manual"
+  warning = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to           = "ammend"
-  trigger      = "manual"
+  to      = "ammend"
+  trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id         = "blocked"
@@ -167,13 +193,15 @@ label      = "Blocked"
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to           = "ready"
-  trigger      = "manual"
-  label        = "Supervisor answered questions — agent can resume"
+  to      = "ready"
+  trigger = "manual"
+  label   = "Supervisor answered questions — agent can resume"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "implemented"
@@ -186,18 +214,22 @@ worker_end     = true
   to            = "ready"
   trigger       = "manual"
   focus_section = "Code review"
+  outcome       = "needs_input"
 
   [[workflow.states.transitions]]
-  to           = "ammend"
-  trigger      = "manual"
+  to      = "ammend"
+  trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
+  outcome = "cancelled"
 
 [[workflow.states]]
 id         = "merge_failed"
@@ -207,10 +239,12 @@ actionable = ["supervisor"]
   [[workflow.states.transitions]]
   to      = "implemented"
   trigger = "manual"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "manual"
+  outcome = "needs_input"
 
 [[workflow.states]]
 id             = "closed"
