@@ -31,7 +31,7 @@ The wrapper dispatcher landed in d3b93b95 always resolves to the `claude` built-
 - [x] `profile.options` keys override `workers.options` keys when both define the same key
 - [x] `profile.options` and `workers.options` keys that do not overlap are both present in the effective options map
 - [x] Each entry in the effective options map is forwarded as an env var named `APM_OPT_<KEY>` (key uppercased, dots and dashes replaced with underscores)
-- [ ] `options.model = "sonnet"` results in `APM_OPT_MODEL=sonnet` being set on the spawned child
+- [x] `options.model = "sonnet"` results in `APM_OPT_MODEL=sonnet` being set on the spawned child
 - [ ] A config using only legacy `command = "claude"` (no `agent` field) still spawns the claude wrapper successfully
 - [ ] When legacy `command`, `args`, or `model` fields are present and `agent` is absent, a line containing the substring `deprecated` is written to stderr
 - [ ] Across the lifetime of a single process, stderr contains the substring `deprecated` exactly once — even when multiple workers with legacy config are spawned
