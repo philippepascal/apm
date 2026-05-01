@@ -87,7 +87,14 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-agent instruction file resolution (`.apm/agents/<name>/apm.worker.md` etc.) — ticket 7f5f73d5; `apm agents new` writes these files as scaffold aids but their resolution order is not wired here
+- `apm agents install` and `apm agents remove` subcommands
+- Wrapper-contract version checking inside `apm agents test` — ticket 2e772eab
+- Mock built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) appearing in `apm agents list` — ticket 25c92daa must land first; once it does they appear automatically via the built-in registry without changes here
+- The previous `apm agents` (no subcommand) behaviour of printing the instructions file — this ticket replaces it entirely
+- Running `apm agents test` against the real `claude` CLI in automated tests — fixtures use small shell scripts
+- Config-driven active-profile column once ticket 6cac8518 lands — pre-6cac8518 the marker uses `workers.command`; `list_wrappers` includes a TODO comment for the post-6cac8518 switch to `workers.agent` and per-profile iteration
+- Windows execute-bit semantics (same limitation as ticket 2c32a282; any `wrapper.*` file is treated as executable on non-Unix platforms)
 
 ### Approach
 
