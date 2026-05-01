@@ -323,6 +323,7 @@ Parse the default workflow; build a state-by-id map; for each state's transition
 
 ### Amendment requests
 
+- [ ] The Approach's transition→outcome mapping table only covers ~22 of the 28+ transitions in the current `apm-core/src/default/workflow.toml`. The AC requires every transition to carry an explicit `outcome` field, so the implementer needs the full enumeration. Either (a) expand the mapping table in the Approach to enumerate every transition (preferred — reviewer time spent once is better than implementer time spent guessing), or (b) add an explicit AC step that says "before writing the workflow.toml change, list every transition with its inferred outcome and verify against the Approach's rule set." Pick one. The implicit-default rules will produce the right value either way; this is about doc-completeness so the implementer can verify their work without re-deriving the rules.
 
 ### Code review
 
