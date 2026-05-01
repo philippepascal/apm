@@ -25,9 +25,8 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 
 **Scope:**
 - `manifest.toml` already parses `parser` and `parser_command` (added in ticket 2c32a282). This ticket wires them into spawn.
-- Three parser modes:
+- Two parser modes:
   - `parser = "canonical"` (default) — wrapper produces JSONL stream-json directly. No transformation. Today's behaviour.
-  - `parser = "raw"` — wrapper output is captured as-is to log; no canonical-event parsing. Useful for agents whose output is unstructured or only meant for human reading. Worker-state events still drive off the wrapper's exit code and any `apm state` calls it makes.
   - `parser = "external"` — wrapper output is piped through the binary at `parser_command` (must be in PATH or absolute path); the parser's stdout becomes APM's captured stream. Parser must produce canonical JSONL.
 - Spawn glue: when `parser = "external"`, spawn the wrapper and the parser as a pipe (wrapper.stdout → parser.stdin). Capture parser.stdout (canonical events) and parser.stderr (parser's diagnostics) to `.apm-worker.log`. The wrapper's stderr also goes to the log directly.
 - Validate `parser_command` exists when `parser = "external"`. Fail at spawn with a clear error if not.
@@ -40,8 +39,7 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 
 **Tests:**
 - `canonical` mode: existing wrapper tests unchanged.
-- `raw` mode: a wrapper that emits "hello world" → log contains "hello world" verbatim, no JSONL parse warnings.
-- `external` mode: a wrapper that emits non-JSONL text + a parser script that wraps each line in a JSONL event → log contains the parsed JSONL, original text only in the parser's stderr.
+- `external` mode: a wrapper that emits non-JSONL text + a parser script that wraps each line in a JSONL event → log contains the parsed JSONL.
 - Missing parser_command → spawn fails with a clear error citing the manifest path.
 
 ### Acceptance criteria
@@ -191,6 +189,8 @@ Use absolute paths for `parser_command` in the integration test to avoid dependi
 - [x] Update the TOML example in `docs/agent-wrappers.md` (sections "Custom wrappers / manifest.toml" and "Output parser strategy") to mention all parser modes the implementation will support — currently `canonical` and `external`. This keeps the spec doc in sync with the implementation. Out of scope for this ticket: no other doc changes.
 
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
