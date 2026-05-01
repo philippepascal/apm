@@ -1,5 +1,6 @@
-use crate::config::{CompletionStrategy, Config, LocalConfig};
+use crate::config::{resolve_outcome, CompletionStrategy, Config, LocalConfig};
 use crate::ticket_fmt::Ticket;
+use crate::wrapper;
 use anyhow::{bail, Result};
 use std::collections::HashSet;
 use std::path::Path;
@@ -376,6 +377,25 @@ pub fn verify_tickets(
                 issues.push(format!("{prefix}: {err}"));
             }
         }
+
+        // Validate frontmatter agent names against known built-ins.
+        let agents_to_check: Vec<&str> = fm.agent
+            .as_deref()
+            .into_iter()
+            .chain(fm.agent_overrides.values().map(String::as_str))
+            .collect();
+
+        for name in agents_to_check {
+            // TODO(2c32a282): upgrade to wrapper::resolve_wrapper(root, name) once
+            // custom wrapper resolution lands so project-defined scripts referenced
+            // in `agent` / `agent_overrides` are also validated here.
+            if wrapper::resolve_builtin(name).is_none() {
+                issues.push(format!(
+                    "ticket {}: agent {:?} is not a known built-in",
+                    fm.id, name
+                ));
+            }
+        }
     }
 
     issues
@@ -397,6 +417,70 @@ pub fn validate_warnings(config: &crate::config::Config) -> Vec<String> {
             }
         }
     }
+
+    // Dead-end reachability check: warn when no agent-actionable state can reach a
+    // transition whose outcome resolves to "success".
+    let state_map: std::collections::HashMap<&str, &crate::config::StateConfig> =
+        config.workflow.states.iter()
+            .map(|s| (s.id.as_str(), s))
+            .collect();
+
+    let agent_startable: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.actionable.iter().any(|a| a == "agent" || a == "any"))
+        .map(|s| s.id.as_str())
+        .collect();
+
+    if !agent_startable.is_empty() {
+        let mut visited: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        let mut queue: std::collections::VecDeque<&str> = std::collections::VecDeque::new();
+        let mut found_success = false;
+
+        for &start in &agent_startable {
+            if visited.insert(start) {
+                queue.push_back(start);
+            }
+        }
+
+        'bfs: while let Some(state_id) = queue.pop_front() {
+            if let Some(state) = state_map.get(state_id) {
+                for t in &state.transitions {
+                    let outcome = if let Some(target_state) = state_map.get(t.to.as_str()) {
+                        resolve_outcome(t, target_state)
+                    } else {
+                        // Target not in map (e.g., built-in "closed" if not declared).
+                        // Inline the resolve_outcome fallback treating unknown targets as terminal.
+                        if let Some(ref o) = t.outcome {
+                            o.as_str()
+                        } else if t.completion != CompletionStrategy::None {
+                            "success"
+                        } else {
+                            "cancelled"
+                        }
+                    };
+
+                    if outcome == "success" {
+                        found_success = true;
+                        break 'bfs;
+                    }
+
+                    // Enqueue non-terminal target states for further exploration.
+                    if let Some(target) = state_map.get(t.to.as_str()) {
+                        if !target.terminal && visited.insert(t.to.as_str()) {
+                            queue.push_back(t.to.as_str());
+                        }
+                    }
+                }
+            }
+        }
+
+        if !found_success {
+            warnings.push(
+                "workflow has no reachable 'success' outcome from any agent-actionable state; \
+                 workers may never complete successfully".to_string()
+            );
+        }
+    }
+
     warnings
 }
 
@@ -1289,6 +1373,60 @@ container = ""
     }
 
     #[test]
+    fn dead_end_workflow_warning_emitted() {
+        // A workflow where the only agent-actionable state cycles back to itself
+        // with no completion strategy — no "success" outcome is reachable.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "start"
+label      = "Start"
+actionable = ["agent"]
+
+[[workflow.states.transitions]]
+to = "middle"
+
+[[workflow.states]]
+id    = "middle"
+label = "Middle"
+
+[[workflow.states.transitions]]
+to = "start"
+"#;
+        let config = load_config(toml);
+        let warnings = super::validate_warnings(&config);
+        assert!(
+            warnings.iter().any(|w| w.contains("success")),
+            "expected dead-end warning containing 'success'; got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn default_workflow_no_dead_end_warning() {
+        // The default workflow has in_progress → implemented with completion = pr_or_epic_merge,
+        // reachable from the agent-actionable "ready" state. No dead-end warning should fire.
+        let base = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+"#;
+        let combined = format!("{}\n{}", base, crate::init::default_workflow_toml());
+        let config: Config = toml::from_str(&combined).unwrap();
+        let warnings = super::validate_warnings(&config);
+        assert!(
+            !warnings.iter().any(|w| w.contains("no reachable") && w.contains("success")),
+            "unexpected dead-end warning for default workflow; got: {warnings:?}"
+        );
+    }
+
+    #[test]
     fn worktree_missing_in_design() {
         let dir = setup_verify_repo();
         let root = dir.path();
@@ -1550,6 +1688,68 @@ terminal = true
         assert!(
             on_failure_errors.is_empty(),
             "unexpected on_failure errors: {on_failure_errors:?}"
+        );
+    }
+
+    // --- frontmatter agent validation ---
+
+    fn make_agent_verify_ticket(root: &std::path::Path, id: &str, state: &str, extra_fm: &str) -> Ticket {
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"Test ticket\"\nstate = \"{state}\"\n{extra_fm}+++\n\n## Spec\n\n## History\n"
+        );
+        let path = root.join("tickets").join(format!("{id}-test.md"));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &raw).unwrap();
+        Ticket::parse(&path, &raw).unwrap()
+    }
+
+    #[test]
+    fn validate_unknown_frontmatter_agent_is_error() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_agent_verify_ticket(root, "abcd1234", "specd", "agent = \"nonexistent-bot\"\n");
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        assert!(
+            issues.iter().any(|i| i.contains("abcd1234") && i.contains("nonexistent-bot")),
+            "expected error with ticket id and agent name; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn validate_unknown_agent_in_overrides_is_error() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_agent_verify_ticket(
+            root,
+            "abcd1234",
+            "specd",
+            "[agent_overrides]\nimpl_agent = \"nonexistent-bot\"\n",
+        );
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        assert!(
+            issues.iter().any(|i| i.contains("abcd1234") && i.contains("nonexistent-bot")),
+            "expected error with ticket id and agent name; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn validate_known_frontmatter_agent_passes() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_agent_verify_ticket(root, "abcd1234", "specd", "agent = \"claude\"\n");
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        assert!(
+            !issues.iter().any(|i| i.contains("is not a known built-in")),
+            "expected no agent error for known built-in; got: {issues:?}"
         );
     }
 }
