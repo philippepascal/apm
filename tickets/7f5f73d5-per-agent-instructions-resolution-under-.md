@@ -45,7 +45,7 @@ The silent hardcoded fallback and the `StateConfig.instructions`-as-system-promp
 - [x] `apm validate` does not regress on the existing check for `[worker_profiles.<P>].instructions` pointing to a missing file.
 - [x] Both `apm.worker.md` and `apm.spec-writer.md` are compiled into the binary for the `claude` built-in (reachable at level 4 without any file on disk).
 - [x] The role (`worker` or `spec-writer`) is read from `WorkerProfileConfig.role` (defaults to `"worker"` when absent); the spec_agent profile in the `apm init` default config sets `role = "spec-writer"`.
-- [ ] Unit tests cover all five levels of the chain independently.
+- [x] Unit tests cover all five levels of the chain independently.
 
 ### Out of scope
 
