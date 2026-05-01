@@ -17,7 +17,7 @@ Agent Project Manager — a git-native ticket system for human+AI teams.
 
 Setup:
   init           Initialize apm in the current repository
-  agents         Print agent instructions
+  agents         Manage agent wrappers (list, new, test, eject)
   help           Show help for a topic (commands, config, workflow, ticket)
 
 Ticket management:
@@ -92,6 +92,30 @@ enum EpicCommand {
         field: String,
         /// New value (use "-" to clear)
         value: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum AgentsCommand {
+    /// List available wrappers (built-in and project-defined)
+    List,
+    /// Scaffold a new custom wrapper under .apm/agents/<name>/
+    New {
+        /// Name for the new wrapper
+        name: String,
+        /// Overwrite if the directory already exists
+        #[arg(long)]
+        force: bool,
+    },
+    /// Smoke-test a wrapper with a synthetic ticket
+    Test {
+        /// Wrapper name to test
+        name: String,
+    },
+    /// Extract a built-in wrapper to a project script under .apm/agents/<name>/
+    Eject {
+        /// Built-in wrapper name to eject (e.g. claude)
+        name: String,
     },
 }
 
@@ -533,17 +557,11 @@ merged-branch and worktree checks.")]
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         _extra: Vec<String>,
     },
-    /// Print agent instructions configured in .apm/apm.toml
-    #[command(long_about = "Print the contents of the instructions file configured under [agents] instructions in .apm/apm.toml.
-
-Useful for onboarding a new agent subprocess: pipe or paste the output into
-the agent's context so it knows the workflow, branch conventions, and shell
-discipline rules without needing file-system access to the repo.
-
-Example:
-  apm agents | pbcopy          # copy to clipboard
-  apm agents > /tmp/agents.md  # write to a temp file for injection")]
-    Agents,
+    /// Manage agent wrappers (list, new, test, eject)
+    Agents {
+        #[command(subcommand)]
+        command: AgentsCommand,
+    },
     /// Orchestrate workers: dispatch apm start --next --spawn in a loop
     #[command(long_about = "Orchestration loop: repeatedly dispatch agents until no work remains.
 
@@ -868,7 +886,10 @@ fn main() -> Result<()> {
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
         Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
-        Command::Agents => cmd::agents::run(&root),
+        Command::Agents { command: AgentsCommand::List } => cmd::agents::run_list(&root),
+        Command::Agents { command: AgentsCommand::New { name, force } } => cmd::agents::run_new(&root, &name, force),
+        Command::Agents { command: AgentsCommand::Test { name } } => cmd::agents::run_test(&root, &name),
+        Command::Agents { command: AgentsCommand::Eject { name } } => cmd::agents::run_eject(&root, &name),
         Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Move { ticket, target } => cmd::move_ticket::run(&root, &ticket, &target),
         Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
