@@ -6,6 +6,8 @@ pub use custom::{WrapperKind, Manifest};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+pub const CONTRACT_VERSION: u32 = 1;
+
 pub struct WrapperContext {
     pub worker_name: String,
     pub ticket_id: String,

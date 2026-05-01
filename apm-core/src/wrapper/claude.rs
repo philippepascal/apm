@@ -1,5 +1,5 @@
 use std::os::unix::process::CommandExt;
-use super::{Wrapper, WrapperContext};
+use super::{Wrapper, WrapperContext, CONTRACT_VERSION};
 
 pub struct ClaudeWrapper;
 
@@ -109,6 +109,7 @@ fn spawn_container(
     let worktree_str = ctx.worktree_path.to_string_lossy();
     let sys_file_str = ctx.system_prompt_file.to_string_lossy();
     let msg_file_str = ctx.user_message_file.to_string_lossy();
+    let contract_version_str = CONTRACT_VERSION.to_string();
 
     let apm_env_pairs: &[(&str, &str)] = &[
         ("APM_AGENT_NAME", &ctx.worker_name),
@@ -119,7 +120,7 @@ fn spawn_container(
         ("APM_USER_MESSAGE_FILE", &msg_file_str),
         ("APM_SKIP_PERMISSIONS", skip_perm_val),
         ("APM_PROFILE", &ctx.profile),
-        ("APM_WRAPPER_VERSION", "1"),
+        ("APM_WRAPPER_VERSION", &contract_version_str),
         ("APM_BIN", apm_bin),
     ];
     for (k, v) in apm_env_pairs {
@@ -175,7 +176,7 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
     if let Some(ref prefix) = ctx.role_prefix {
         cmd.env("APM_ROLE_PREFIX", prefix);
     }
-    cmd.env("APM_WRAPPER_VERSION", "1");
+    cmd.env("APM_WRAPPER_VERSION", CONTRACT_VERSION.to_string());
     cmd.env("APM_BIN", apm_bin);
     // APM_OPT_<KEY> for each option entry
     for (k, v) in &ctx.options {
