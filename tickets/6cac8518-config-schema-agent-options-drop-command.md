@@ -36,7 +36,7 @@ The wrapper dispatcher landed in d3b93b95 always resolves to the `claude` built-
 - [x] When legacy `command`, `args`, or `model` fields are present and `agent` is absent, a line containing the substring `deprecated` is written to stderr
 - [x] Across the lifetime of a single process, stderr contains the substring `deprecated` exactly once — even when multiple workers with legacy config are spawned
 - [x] Legacy `model = "sonnet"` with no `options.model` still produces the correct `--model sonnet` flag in the spawned claude command
-- [ ] `apm init` generates a config with `agent = "claude"`, `options.model = "sonnet"`, and no `command` or `args` fields
+- [x] `apm init` generates a config with `agent = "claude"`, `options.model = "sonnet"`, and no `command` or `args` fields
 - [ ] A config with no `[workers]` section at all spawns successfully with defaults (agent = claude)
 
 ### Out of scope
