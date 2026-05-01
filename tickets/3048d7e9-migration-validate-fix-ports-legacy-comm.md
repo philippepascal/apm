@@ -1,7 +1,7 @@
 +++
 id = "3048d7e9"
 title = "Migration: validate --fix ports legacy command/args/model to agent + options"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3048d7e9-migration-validate-fix-ports-legacy-comm"
 created_at = "2026-04-30T20:03:17.277300Z"
-updated_at = "2026-05-01T18:28:44.690454Z"
+updated_at = "2026-05-01T18:46:17.537410Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["6cac8518"]
@@ -244,3 +244,4 @@ Test fixtures are small inline TOML strings written to a `tempdir`; no external 
 | 2026-05-01T01:22Z | in_design | specd | claude-0501-0119-6978 |
 | 2026-05-01T17:38Z | specd | ready | philippepascal |
 | 2026-05-01T18:28Z | ready | in_progress | philippepascal |
+| 2026-05-01T18:46Z | in_progress | implemented | claude-0501-1828-b808 |
