@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/296c1061-migrate-setup-with-close-workflow-to-ini"
 created_at = "2026-05-01T20:26:48.501162Z"
-updated_at = "2026-05-01T20:26:48.501162Z"
+updated_at = "2026-05-01T20:28:53.353222Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
