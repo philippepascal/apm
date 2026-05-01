@@ -46,7 +46,6 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 
 - [ ] When `parser` is absent from manifest.toml, or manifest.toml itself is absent, `CustomWrapper::spawn` captures the wrapper's stdout directly to the log file (equivalent to `parser = "canonical"`)
 - [ ] When `parser = "canonical"`, `CustomWrapper::spawn` captures the wrapper's stdout directly to the log file with no transformation; the wrapper's stderr is also written to the same log file
-- [ ] When `parser = "raw"`, `CustomWrapper::spawn` captures the wrapper's stdout verbatim to the log file; a wrapper emitting `"hello world\n"` produces a log whose content includes that text with no `[apm] warning:` lines injected by APM
 - [ ] When `parser = "external"` and `parser_command` resolves to an executable binary, `CustomWrapper::spawn` creates an OS-level pipe: the wrapper's stdout is the parser's stdin; the parser's stdout is captured to the log file
 - [ ] When `parser = "external"`, the wrapper's stderr is written to the log file independently (not through the parser pipe)
 - [ ] When `parser = "external"`, the parser's stderr is also written to the log file
@@ -55,6 +54,8 @@ Support agents whose output is too far from APM's canonical JSONL stream-json to
 - [ ] `apm validate` reports an error when a custom wrapper's manifest.toml declares `parser = "external"` but `parser_command` is absent
 - [ ] Built-in wrappers (e.g. the `claude` built-in) always behave as `parser = "canonical"` regardless of any manifest file; no manifest is required or consulted for them
 - [ ] `CustomWrapper::spawn` for external mode returns the parser's `Child` handle; the wrapper child is reaped in a background thread so it does not become a zombie
+- [ ] When `parser = "external"`, the worker's exit status is taken from the parser's exit code; the wrapper's exit code is appended to the log file as a diagnostic line (e.g. `[apm] wrapper exited: exit status: 0`) but does not affect ticket state; if the wrapper exits non-zero before the parser has drained its stdin, the parser is allowed to finish naturally before APM reaps both
+- [ ] When `parser = "external"`, all three streams (parser stdout, parser stderr, wrapper stderr) are written to `.apm-worker.log` without truncation, even when one stream produces output much faster than another; ordering between streams is best-effort but no bytes from any stream may be dropped
 
 ### Out of scope
 
