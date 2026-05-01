@@ -255,7 +255,7 @@ Append a short note to each file near the end:
 
 ### Amendment requests
 
-- [ ] Add a cross-ticket TODO note in the Approach: this ticket's validate check uses `wrapper::resolve_builtin(name)` (correct as of foundation ticket d3b93b95). Once ticket 2c32a282 (custom wrappers) lands, that call site must be upgraded to `wrapper::resolve_wrapper(root, name)` so frontmatter agent overrides referencing project-defined custom wrappers also validate correctly. Without this note, the upgrade is invisible and a future ticket either misses it or has to re-derive the dependency. Adding it as an explicit AC ("After 2c32a282 lands, validate's frontmatter-agent check uses resolve_wrapper, not resolve_builtin") closes the loop.
+- [x] Add a cross-ticket TODO note in the Approach: this ticket's validate check uses `wrapper::resolve_builtin(name)` (correct as of foundation ticket d3b93b95). Once ticket 2c32a282 (custom wrappers) lands, that call site must be upgraded to `wrapper::resolve_wrapper(root, name)` so frontmatter agent overrides referencing project-defined custom wrappers also validate correctly. Without this note, the upgrade is invisible and a future ticket either misses it or has to re-derive the dependency. Adding it as an explicit AC ("After 2c32a282 lands, validate's frontmatter-agent check uses resolve_wrapper, not resolve_builtin") closes the loop.
 
 ### Code review
 
