@@ -4,6 +4,9 @@ use crate::wrapper::{WrapperContext, write_temp_file};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
+const CLAUDE_WORKER_DEFAULT: &str = include_str!("default/agents/claude/apm.worker.md");
+const CLAUDE_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");
+
 static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 #[cfg(test)]
@@ -300,10 +303,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .unwrap_or("")
         .to_string();
     let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-    let state_instructions = config.workflow.states.iter()
-        .find(|s| s.id == old_state)
-        .and_then(|sc| sc.instructions.as_deref());
-    let worker_system = resolve_system_prompt(root, profile, state_instructions);
+    let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
+    let worker_system = resolve_system_prompt(root, profile, &config.workers, "claude", role)?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(profile, &id));
     let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
@@ -484,10 +485,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .unwrap_or("")
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-    let state_instr2 = config.workflow.states.iter()
-        .find(|s| s.id == old_state)
-        .and_then(|sc| sc.instructions.as_deref());
-    let worker_system = resolve_system_prompt(root, profile2, state_instr2);
+    let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
+    let worker_system = resolve_system_prompt(root, profile2, &config.workers, "claude", role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -669,10 +668,8 @@ pub fn spawn_next_worker(
         .unwrap_or("")
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, warnings));
-    let state_instr2 = config.workflow.states.iter()
-        .find(|s| s.id == old_state)
-        .and_then(|sc| sc.instructions.as_deref());
-    let worker_system = resolve_system_prompt(root, profile2, state_instr2);
+    let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
+    let worker_system = resolve_system_prompt(root, profile2, &config.workers, "claude", role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -756,22 +753,54 @@ fn with_epic_bundle(root: &Path, epic_id: Option<&str>, ticket_id: &str, config:
     }
 }
 
-fn resolve_system_prompt(root: &Path, profile: Option<&WorkerProfileConfig>, state_instructions: Option<&str>) -> String {
+fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
+    match (agent, role) {
+        ("claude", "worker") => Some(CLAUDE_WORKER_DEFAULT),
+        ("claude", "spec-writer") => Some(CLAUDE_SPEC_WRITER_DEFAULT),
+        _ => None,
+    }
+}
+
+fn resolve_system_prompt(
+    root: &Path,
+    profile: Option<&WorkerProfileConfig>,
+    workers: &WorkersConfig,
+    agent: &str,
+    role: &str,
+) -> Result<String> {
+    // Level 1: profile.instructions
     if let Some(p) = profile {
         if let Some(ref instr_path) = p.instructions {
-            if let Ok(content) = std::fs::read_to_string(root.join(instr_path)) {
-                return content;
+            match std::fs::read_to_string(root.join(instr_path)) {
+                Ok(content) => return Ok(content),
+                Err(_) => bail!("[worker_profiles.*].instructions: file not found: {instr_path}"),
             }
         }
     }
-    if let Some(path) = state_instructions {
-        if let Ok(content) = std::fs::read_to_string(root.join(path)) {
-            return content;
+    // Level 2: workers.instructions
+    if let Some(ref instr_path) = workers.instructions {
+        match std::fs::read_to_string(root.join(instr_path)) {
+            Ok(content) => return Ok(content),
+            Err(_) => bail!("[workers].instructions: file not found: {instr_path}"),
         }
     }
-    let p = root.join(".apm/apm.worker.md");
-    std::fs::read_to_string(p)
-        .unwrap_or_else(|_| "You are an APM worker agent.".to_string())
+    // Level 3: .apm/agents/<agent>/apm.<role>.md
+    let per_agent = root.join(format!(".apm/agents/{agent}/apm.{role}.md"));
+    if per_agent.exists() {
+        if let Ok(content) = std::fs::read_to_string(&per_agent) {
+            return Ok(content);
+        }
+    }
+    // Level 4: built-in default
+    if let Some(s) = resolve_builtin_instructions(agent, role) {
+        return Ok(s.to_string());
+    }
+    // Level 5: hard error
+    bail!(
+        "no instructions found for agent '{agent}' role '{role}': \
+         set [workers].instructions in .apm/config.toml or add \
+         .apm/agents/{agent}/apm.{role}.md"
+    )
 }
 
 fn agent_role_prefix(profile: Option<&WorkerProfileConfig>, id: &str) -> String {
@@ -840,6 +869,7 @@ mod tests {
             keychain: HashMap::new(),
             agent: None,
             options: HashMap::new(),
+            instructions: None,
         }
     }
 
@@ -1010,28 +1040,97 @@ mod tests {
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(p.join(".apm/spec.md"), "SPEC WRITER").unwrap();
-        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
         let profile = make_profile(Some(".apm/spec.md"), None);
-        assert_eq!(resolve_system_prompt(p, Some(&profile), None), "SPEC WRITER");
+        let workers = WorkersConfig::default();
+        assert_eq!(
+            resolve_system_prompt(p, Some(&profile), &workers, "claude", "worker").unwrap(),
+            "SPEC WRITER"
+        );
     }
 
     #[test]
-    fn resolve_system_prompt_falls_back_to_state_instructions() {
+    fn resolve_system_prompt_uses_workers_instructions_when_no_profile() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
-        std::fs::write(p.join(".apm/state.md"), "STATE INSTRUCTIONS").unwrap();
-        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
-        assert_eq!(resolve_system_prompt(p, None, Some(".apm/state.md")), "STATE INSTRUCTIONS");
+        std::fs::write(p.join(".apm/global.md"), "GLOBAL INSTRUCTIONS").unwrap();
+        let workers = WorkersConfig {
+            instructions: Some(".apm/global.md".to_string()),
+            ..WorkersConfig::default()
+        };
+        assert_eq!(
+            resolve_system_prompt(p, None, &workers, "claude", "worker").unwrap(),
+            "GLOBAL INSTRUCTIONS"
+        );
     }
 
     #[test]
-    fn resolve_system_prompt_falls_back_to_worker_when_no_profile_no_state() {
+    fn resolve_system_prompt_uses_per_agent_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WORKER").unwrap();
+        let workers = WorkersConfig::default();
+        assert_eq!(
+            resolve_system_prompt(p, None, &workers, "claude", "worker").unwrap(),
+            "PER AGENT WORKER"
+        );
+    }
+
+    #[test]
+    fn resolve_system_prompt_falls_back_to_builtin_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let workers = WorkersConfig::default();
+        let result = resolve_system_prompt(p, None, &workers, "claude", "worker").unwrap();
+        assert_eq!(result, super::CLAUDE_WORKER_DEFAULT);
+    }
+
+    #[test]
+    fn resolve_system_prompt_falls_back_to_builtin_spec_writer() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let workers = WorkersConfig::default();
+        let result = resolve_system_prompt(p, None, &workers, "claude", "spec-writer").unwrap();
+        assert_eq!(result, super::CLAUDE_SPEC_WRITER_DEFAULT);
+    }
+
+    #[test]
+    fn resolve_system_prompt_errors_for_unknown_agent() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let workers = WorkersConfig::default();
+        let result = resolve_system_prompt(p, None, &workers, "custom-bot", "worker");
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("custom-bot"), "error should name the agent: {msg}");
+        assert!(msg.contains("worker"), "error should name the role: {msg}");
+    }
+
+    #[test]
+    fn resolve_system_prompt_profile_instructions_missing_file_is_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let profile = make_profile(Some(".apm/nonexistent.md"), None);
+        let workers = WorkersConfig::default();
+        let result = resolve_system_prompt(p, Some(&profile), &workers, "claude", "worker");
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("nonexistent.md"), "error should name the file: {msg}");
+    }
+
+    #[test]
+    fn resolve_system_prompt_backward_compat() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
-        std::fs::write(p.join(".apm/apm.worker.md"), "WORKER").unwrap();
-        assert_eq!(resolve_system_prompt(p, None, None), "WORKER");
+        std::fs::write(p.join(".apm/apm.worker.md"), "LEGACY WORKER CONTENT").unwrap();
+        let profile = make_profile(Some(".apm/apm.worker.md"), None);
+        let workers = WorkersConfig::default();
+        assert_eq!(
+            resolve_system_prompt(p, Some(&profile), &workers, "claude", "worker").unwrap(),
+            "LEGACY WORKER CONTENT"
+        );
     }
 
     // --- agent_role_prefix ---

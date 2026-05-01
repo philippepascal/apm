@@ -94,6 +94,8 @@ pub struct WorkersConfig {
     /// Key-value options forwarded to the agent wrapper as `APM_OPT_<KEY>` env vars.
     #[serde(default)]
     pub options: std::collections::HashMap<String, String>,
+    /// Global instructions file used as the system prompt for all profiles; overridden by per-profile `instructions`.
+    pub instructions: Option<String>,
 }
 
 impl Default for WorkersConfig {
@@ -107,6 +109,7 @@ impl Default for WorkersConfig {
             env: std::collections::HashMap::new(),
             agent: None,
             options: std::collections::HashMap::new(),
+            instructions: None,
         }
     }
 }
@@ -133,6 +136,8 @@ pub struct WorkerProfileConfig {
     /// Key-value options for this profile, merged over `[workers.options]`.
     #[serde(default)]
     pub options: std::collections::HashMap<String, String>,
+    /// Role name used to select the per-agent instruction file (e.g. "worker", "spec-writer"). Defaults to "worker" when absent.
+    pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, JsonSchema)]
