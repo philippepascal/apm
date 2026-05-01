@@ -89,121 +89,6 @@ Add a private enum above `CustomWrapper`:
 
 ```rust
 #[derive(Debug, Clone, PartialEq)]
-enum ParserStrategy { Canonical, External }
-
-impl ParserStrategy {
-    fn from_manifest(m: Option<&Manifest>) -> Self {
-        match m.and_then(|m| Some(m.parser.as_str())) {
-            Some("external") => Self::External,
-            _                => Self::Canonical,   // absent, "canonical", or any other value
-        }
-    }
-}
-```
-
----
-
-### `wrapper/custom.rs` — refactor `CustomWrapper::spawn`
-
-After the existing `check_contract_version(...)` call and the env-var block (both established by prior tickets), derive the strategy and branch:
-
-```rust
-let strategy = ParserStrategy::from_manifest(self.manifest.as_ref());
-```
-
-**Canonical (stdout → log directly):**
-
-Keep the existing spawn sequence for canonical mode:
-- `File::create(&ctx.log_path)?` → `log_file`; `log_file.try_clone()?` → `log_clone`
-- `Command::new(&self.script_path).envs(...).current_dir(...).stdout(log_file).stderr(log_clone).process_group(0).spawn()`
-
-**External — validate, then pipe:**
-
-1. Derive the manifest path for error messages: `self.script_path.parent().unwrap().join("manifest.toml")`.
-
-2. Require `parser_command`: call `.ok_or_else(|| anyhow!("...: parser = \"external\" but parser_command is not set"))` on `self.manifest.as_ref().and_then(|m| m.parser_command.as_deref())`. Return `Err` immediately if absent — no subprocess is started.
-
-3. Validate the binary is findable before spawning the wrapper. Use `which::which(parser_cmd)`. Return `Err` naming the missing binary if not found. No subprocess is started yet.
-
-4. Open the log file and clone three independent file handles — one per stream — so concurrent writes to the same underlying file never block or lose bytes:
-   ```rust
-   let log_file          = File::create(&ctx.log_path)?;
-   let wrapper_stderr_fd = log_file.try_clone()?;
-   let parser_stdout_fd  = log_file.try_clone()?;
-   let parser_stderr_fd  = log_file.try_clone()?;
-   // log_file itself is used only for the background-thread diagnostic write
-   let diag_fd           = log_file.try_clone()?;
-   ```
-   Each descriptor is a separate OS file description pointing at the same log file. The OS appends writes atomically for small chunks; for larger streams concurrent writes may interleave in ordering, but no bytes are lost because each stream has exclusive ownership of its fd.
-
-5. Spawn the wrapper: `stdout(Stdio::piped())`, `stderr(Stdio::from(wrapper_stderr_fd))`. Call `.process_group(0).spawn()?`. Take `wrapper_child.stdout.take()` → `wrapper_stdout`.
-
-6. Spawn the parser: `stdin(Stdio::from(wrapper_stdout))`, `stdout(Stdio::from(parser_stdout_fd))`, `stderr(Stdio::from(parser_stderr_fd))`. Call `.process_group(0).spawn()?` → `parser_child`.
-
-7. Reap the wrapper in a background thread to prevent zombie processes and append its exit status to the log as a diagnostic line:
-   ```rust
-   std::thread::spawn(move || {
-       match wrapper_child.wait() {
-           Ok(status) => {
-               let _ = writeln!(&diag_fd, "[apm] wrapper exited: {status}");
-           }
-           Err(e) => {
-               let _ = writeln!(&diag_fd, "[apm] wrapper wait error: {e}");
-           }
-       }
-   });
-   ```
-   The background thread holds the last reference to `wrapper_child`. Because the parser's stdin is `Stdio::from(wrapper_stdout)` (moved in step 6), the write-end of the pipe belongs to the wrapper. When the wrapper exits, its write-end closes, the parser reads EOF and exits naturally. APM waits on the parser child — not the wrapper — for the worker's exit status.
-
-8. Return `Ok(parser_child)`. The caller waits on this child; its exit code is the effective worker exit status. The wrapper's exit code (logged in step 7) is diagnostic only and does not affect ticket state.
-
-**Dependency note:** Add `which = "6"` to `apm-core/Cargo.toml` if not already present. As a fallback without the crate: walk `std::env::var("PATH")` entries and check `Path::new(entry).join(parser_cmd).is_file()` for relative names; accept the path as-is when `parser_cmd` starts with `/`.
-
----
-
-### `validate.rs` — extend `validate_agents`
-
-In the `Ok(Some(WrapperKind::Custom { manifest, .. }))` match arm, after existing manifest checks, add:
-
-```rust
-if let Some(m) = &manifest {
-    if m.parser == "external" && m.parser_command.is_none() {
-        errors.push(format!(
-            "agent {name}: manifest.toml declares parser = \"external\" \
-             but parser_command is absent"
-        ));
-    }
-}
-```
-
-This mirrors the runtime check in `spawn` so `apm validate` catches the misconfiguration before any worker starts.
-
----
-
-### Tests
-
-**Unit tests in `wrapper/custom.rs` under `#[cfg(test)]`:**
-
-- `parser_strategy_defaults_to_canonical` — `ParserStrategy::from_manifest(None)` equals `Canonical`
-- `parser_strategy_explicit_canonical` — manifest with `parser = "canonical"` → `Canonical`
-- `parser_strategy_external` — manifest with `parser = "external"` → `External`
-- `parser_strategy_unknown_falls_back_to_canonical` — manifest with `parser = "foobar"` → `Canonical`
-- `spawn_external_missing_parser_command` — `CustomWrapper` with manifest `parser = "external"`, `parser_command = None`; assert `spawn()` returns `Err` whose message contains `"parser_command"` and `"not set"`
-- `spawn_external_binary_not_found` — `parser_command = Some("nonexistent-binary-xyzzy-2803")`; assert `spawn()` returns `Err` naming that binary
-
-**Integration tests in `apm-core/tests/custom_wrapper_integration.rs`** (extend the file introduced by 2c32a282):
-
-- `integration_canonical_mode` — wrapper script emits one valid JSONL line; assert log contains that line verbatim; assert spawn returns `Ok`
-- `integration_external_parser_pipe` — wrapper script emits `"raw line\n"` on stdout and exits 0; a second fixture script (the parser, mode 0o755, `#!/bin/sh`) reads each stdin line and emits `{"text":"<line>"}` on stdout; manifest declares `parser = "external"` and `parser_command` set to the absolute path of the parser fixture; assert spawn returns `Ok`; wait for the returned parser child to exit 0; read the log; assert log contains the string `raw line` wrapped in JSON; assert log contains a line starting with `[apm] wrapper exited:`
-
-Use absolute paths for `parser_command` in the integration test to avoid depending on test-harness PATH configuration. The `which` crate accepts absolute paths to existing executable files directly.
-
-### `wrapper/custom.rs` — `ParserStrategy` enum
-
-Add a private enum above `CustomWrapper`:
-
-```rust
-#[derive(Debug, Clone, PartialEq)]
 enum ParserStrategy { Canonical, Raw, External }
 
 impl ParserStrategy {
@@ -299,9 +184,9 @@ Use absolute paths for `parser_command` in the integration test to avoid dependi
 
 ### Amendment requests
 
-- [x] Drop the `raw` parser mode from this ticket entirely. The reference spec at `docs/agent-wrappers.md` defines three strategies (canonical, in-wrapper translation, external) and never mentions a `raw` mode. Adding it here without first updating the design doc creates a documentation drift and adds a third behaviour to validate that nobody asked for. Anyone wanting raw output today can use `parser = "external"` with `parser_command = "cat"` (or any pass-through). If `raw` proves genuinely useful later, file a follow-up ticket that updates the design doc first. Remove the `raw` AC, the `raw` integration test, and any Approach text describing it.
-- [x] Clarify child exit-code semantics for `parser = "external"`. The wrapper and the parser are two children connected by a pipe (wrapper.stdout → parser.stdin). Add an AC: "the worker's exit status is taken from the **parser's** exit code; the wrapper's exit code is logged for diagnostics but does not affect ticket state. If the wrapper exits non-zero before the parser drains, the parser is allowed to finish naturally before APM reaps both." This removes ambiguity for the implementer about which Child handle to wait on.
-- [x] Add an AC for stream-capture loss-prevention: "all three streams (parser.stdout, parser.stderr, wrapper.stderr) are written to `.apm-worker.log` without truncation, even when one stream produces output much faster than another. Ordering is best-effort; lossless capture is required." This guards against a real bug class (pipe buffer races) while staying realistic about ordering guarantees.
+- [ ] Drop the `raw` parser mode from this ticket entirely. The reference spec at `docs/agent-wrappers.md` defines three strategies (canonical, in-wrapper translation, external) and never mentions a `raw` mode. Adding it here without first updating the design doc creates a documentation drift and adds a third behaviour to validate that nobody asked for. Anyone wanting raw output today can use `parser = "external"` with `parser_command = "cat"` (or any pass-through). If `raw` proves genuinely useful later, file a follow-up ticket that updates the design doc first. Remove the `raw` AC, the `raw` integration test, and any Approach text describing it. **Verification: after the amendment round, the strings `raw`, `Raw`, and `parser_strategy::Raw` must not appear anywhere in the Problem, Acceptance criteria, or Approach sections.**
+- [ ] Clarify child exit-code semantics for `parser = "external"`. The wrapper and the parser are two children connected by a pipe (wrapper.stdout → parser.stdin). Add an AC: "the worker's exit status is taken from the **parser's** exit code; the wrapper's exit code is logged for diagnostics but does not affect ticket state. If the wrapper exits non-zero before the parser drains, the parser is allowed to finish naturally before APM reaps both." This removes ambiguity for the implementer about which Child handle to wait on. **Verification: after the amendment round, an AC line containing the substring "parser's exit code" must exist in the Acceptance criteria section.**
+- [ ] Add an AC for stream-capture loss-prevention: "all three streams (parser.stdout, parser.stderr, wrapper.stderr) are written to `.apm-worker.log` without truncation, even when one stream produces output much faster than another. Ordering is best-effort; lossless capture is required." This guards against a real bug class (pipe buffer races) while staying realistic about ordering guarantees. **Verification: after the amendment round, an AC line containing the substring "without truncation" must exist in the Acceptance criteria section.**
 - [x] Update the TOML example in `docs/agent-wrappers.md` (sections "Custom wrappers / manifest.toml" and "Output parser strategy") to mention all parser modes the implementation will support — currently `canonical` and `external`. This keeps the spec doc in sync with the implementation. Out of scope for this ticket: no other doc changes.
 
 ### Code review
