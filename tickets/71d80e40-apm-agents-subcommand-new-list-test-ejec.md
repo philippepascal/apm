@@ -66,7 +66,7 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 
 - [x] `apm agents list` prints a row for the `claude` built-in with kind `built-in`
 - [x] `apm agents list` prints a row for each executable `wrapper.*` found under `.apm/agents/<name>/` with kind `project`
-- [ ] `apm agents list` marks the agent matching the configured `workers.command` (legacy field) with a `(configured)` indicator
+- [x] `apm agents list` marks the agent matching the configured `workers.command` (legacy field) with a `(configured)` indicator
 - [ ] `apm agents list` shows a `parser` column value read from `manifest.toml`; defaults to `canonical` when the manifest is absent or the field is unset
 - [ ] `apm agents new <name>` creates `.apm/agents/<name>/wrapper.sh` with the execute bit set (mode `0o755` on Unix)
 - [ ] `apm agents new <name>` creates `.apm/agents/<name>/apm.worker.md` with content copied from `.apm/apm.worker.md` or the built-in default when the project file is absent
