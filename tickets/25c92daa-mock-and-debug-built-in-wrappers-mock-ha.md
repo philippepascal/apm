@@ -64,70 +64,70 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 
 ### Acceptance criteria
 
-- [ ] **Dispatcher registration**
-- [ ] `resolve_builtin("mock-happy")` returns `Some(_)`
-- [ ] `resolve_builtin("mock-sad")` returns `Some(_)`
-- [ ] `resolve_builtin("mock-random")` returns `Some(_)`
-- [ ] `resolve_builtin("debug")` returns `Some(_)`
+- [x] **Dispatcher registration**
+- [x] `resolve_builtin("mock-happy")` returns `Some(_)`
+- [x] `resolve_builtin("mock-sad")` returns `Some(_)`
+- [x] `resolve_builtin("mock-random")` returns `Some(_)`
+- [x] `resolve_builtin("debug")` returns `Some(_)`
 
-- [ ] **mock-happy — spec mode (ticket in `in_design`)**
-- [ ] When run against a ticket in `in_design` state, `mock-happy` writes non-empty content to all four required spec sections: Problem, Acceptance criteria, Out of scope, Approach
-- [ ] When run against a ticket in `in_design` state, `mock-happy` sets the ticket's `effort` to `1`
-- [ ] When run against a ticket in `in_design` state, `mock-happy` sets the ticket's `risk` to `1`
-- [ ] When run against a ticket in `in_design` state, `mock-happy` transitions the ticket to `specd`
+- [x] **mock-happy — spec mode (ticket in `in_design`)**
+- [x] When run against a ticket in `in_design` state, `mock-happy` writes non-empty content to all four required spec sections: Problem, Acceptance criteria, Out of scope, Approach
+- [x] When run against a ticket in `in_design` state, `mock-happy` sets the ticket's `effort` to `1`
+- [x] When run against a ticket in `in_design` state, `mock-happy` sets the ticket's `risk` to `1`
+- [x] When run against a ticket in `in_design` state, `mock-happy` transitions the ticket to `specd`
 
-- [ ] **mock-happy — impl mode (ticket in `in_progress`)**
-- [ ] When run against a ticket in `in_progress` state, `mock-happy` creates at least one new git commit in the worktree
-- [ ] When run against a ticket in `in_progress` state, `mock-happy` calls `apm state <id> implemented`
+- [x] **mock-happy — impl mode (ticket in `in_progress`)**
+- [x] When run against a ticket in `in_progress` state, `mock-happy` creates at least one new git commit in the worktree
+- [x] When run against a ticket in `in_progress` state, `mock-happy` calls `apm state <id> implemented`
 
-- [ ] **mock-happy — JSONL output**
-- [ ] `mock-happy` emits at least one JSONL line on stdout; each emitted line is a valid JSON object with `"type": "tool_use"`
+- [x] **mock-happy — JSONL output**
+- [x] `mock-happy` emits at least one JSONL line on stdout; each emitted line is a valid JSON object with `"type": "tool_use"`
 
-- [ ] **mock-happy — error cases and exit**
-- [ ] When the current state has zero `outcome = "success"` transitions, `mock-happy` exits non-zero and writes a diagnostic message to stderr
-- [ ] When the current state has two or more `outcome = "success"` transitions, `mock-happy` exits non-zero and writes a diagnostic message to stderr
-- [ ] `mock-happy` exits 0 when it completes without error
+- [x] **mock-happy — error cases and exit**
+- [x] When the current state has zero `outcome = "success"` transitions, `mock-happy` exits non-zero and writes a diagnostic message to stderr
+- [x] When the current state has two or more `outcome = "success"` transitions, `mock-happy` exits non-zero and writes a diagnostic message to stderr
+- [x] `mock-happy` exits 0 when it completes without error
 
-- [ ] **mock-sad — behaviour**
-- [ ] `mock-sad` writes content to at least one but fewer than all four required spec sections (Problem, Acceptance criteria, Out of scope, Approach)
-- [ ] `mock-sad` transitions the ticket to a state reachable via a transition whose `resolve_outcome` result is not `"success"`
-- [ ] `mock-sad` exits 0 after completing its run
+- [x] **mock-sad — behaviour**
+- [x] `mock-sad` writes content to at least one but fewer than all four required spec sections (Problem, Acceptance criteria, Out of scope, Approach)
+- [x] `mock-sad` transitions the ticket to a state reachable via a transition whose `resolve_outcome` result is not `"success"`
+- [x] `mock-sad` exits 0 after completing its run
 
-- [ ] **mock-sad — seeding**
-- [ ] Given the same `APM_OPT_SEED` value, two successive `mock-sad` spawns against the same ticket in the same state choose the same target state
+- [x] **mock-sad — seeding**
+- [x] Given the same `APM_OPT_SEED` value, two successive `mock-sad` spawns against the same ticket in the same state choose the same target state
 
-- [ ] **mock-sad — error case**
-- [ ] When no non-success transitions are available from the current state, `mock-sad` exits non-zero and writes a diagnostic to stderr
+- [x] **mock-sad — error case**
+- [x] When no non-success transitions are available from the current state, `mock-sad` exits non-zero and writes a diagnostic to stderr
 
-- [ ] **mock-random — behaviour**
-- [ ] `mock-random` transitions the ticket to a state reachable by any valid transition from the current state (including success-outcome transitions)
-- [ ] When `mock-random` picks a success-outcome transition, it writes all four spec sections and sets effort/risk (spec mode) or creates a commit (impl mode), matching `mock-happy`'s behaviour
-- [ ] When `mock-random` picks a non-success-outcome transition, it writes only partial spec content (matching `mock-sad`'s behaviour)
-- [ ] `mock-random` exits 0 after completing its run
+- [x] **mock-random — behaviour**
+- [x] `mock-random` transitions the ticket to a state reachable by any valid transition from the current state (including success-outcome transitions)
+- [x] When `mock-random` picks a success-outcome transition, it writes all four spec sections and sets effort/risk (spec mode) or creates a commit (impl mode), matching `mock-happy`'s behaviour
+- [x] When `mock-random` picks a non-success-outcome transition, it writes only partial spec content (matching `mock-sad`'s behaviour)
+- [x] `mock-random` exits 0 after completing its run
 
-- [ ] **mock-random — seeding**
-- [ ] Given the same `APM_OPT_SEED` value, two successive `mock-random` spawns against the same ticket in the same state choose the same target state
+- [x] **mock-random — seeding**
+- [x] Given the same `APM_OPT_SEED` value, two successive `mock-random` spawns against the same ticket in the same state choose the same target state
 
-- [ ] **mock-random — error case**
-- [ ] When no valid transitions are available from the current state, `mock-random` exits non-zero and writes a diagnostic to stderr
+- [x] **mock-random — error case**
+- [x] When no valid transitions are available from the current state, `mock-random` exits non-zero and writes a diagnostic to stderr
 
-- [ ] **debug — output**
-- [ ] `debug` writes the name and value of every `APM_*` environment variable to stderr
-- [ ] `debug` writes the full contents of the file at `APM_SYSTEM_PROMPT_FILE` to stderr
-- [ ] `debug` writes the full contents of the file at `APM_USER_MESSAGE_FILE` to stderr
-- [ ] `debug` emits exactly one JSONL line on stdout: a valid JSON object with `"type": "tool_use"`
+- [x] **debug — output**
+- [x] `debug` writes the name and value of every `APM_*` environment variable to stderr
+- [x] `debug` writes the full contents of the file at `APM_SYSTEM_PROMPT_FILE` to stderr
+- [x] `debug` writes the full contents of the file at `APM_USER_MESSAGE_FILE` to stderr
+- [x] `debug` emits exactly one JSONL line on stdout: a valid JSON object with `"type": "tool_use"`
 
-- [ ] **debug — behaviour**
-- [ ] `debug` does not call `apm state`; the ticket's state is unchanged after `debug` runs
-- [ ] `debug` exits 0
+- [x] **debug — behaviour**
+- [x] `debug` does not call `apm state`; the ticket's state is unchanged after `debug` runs
+- [x] `debug` exits 0
 
-- [ ] **workflow.toml**
-- [ ] `in_design → specd` carries `outcome = "success"` in the default workflow (`apm-core/src/default/workflow.toml`)
-- [ ] `ammend → specd` carries `outcome = "success"` in the default workflow
-- [ ] The project's `.apm/workflow.toml` carries the same two annotations
+- [x] **workflow.toml**
+- [x] `in_design → specd` carries `outcome = "success"` in the default workflow (`apm-core/src/default/workflow.toml`)
+- [x] `ammend → specd` carries `outcome = "success"` in the default workflow
+- [x] The project's `.apm/workflow.toml` carries the same two annotations
 
-- [ ] **per-agent instruction file stubs**
-- [ ] Each of the four built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) has both `apm.worker.md` and `apm.spec-writer.md` stub files under `apm-core/src/default/agents/<name>/`
+- [x] **per-agent instruction file stubs**
+- [x] Each of the four built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) has both `apm.worker.md` and `apm.spec-writer.md` stub files under `apm-core/src/default/agents/<name>/`
 
 ### Out of scope
 
