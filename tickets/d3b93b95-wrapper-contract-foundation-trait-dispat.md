@@ -113,6 +113,8 @@ Build `docker run --rm --volume <wt>:/workspace --workdir /workspace` followed b
 
 **APM contract env vars (set in both paths)**
 
+Compute `apm_bin` once before spawning: `let apm_bin = std::env::current_exe()?.canonicalize()?.to_string_lossy().into_owned();`
+
 | Var | Value |
 |---|---|
 | `APM_AGENT_NAME` | `ctx.worker_name` |
@@ -123,8 +125,9 @@ Build `docker run --rm --volume <wt>:/workspace --workdir /workspace` followed b
 | `APM_USER_MESSAGE_FILE` | `ctx.user_message_file` as str |
 | `APM_SKIP_PERMISSIONS` | `"1"` or `"0"` |
 | `APM_PROFILE` | `ctx.profile` |
-| `APM_ROLE_PREFIX` | `ctx.role_prefix` when Some |
+| `APM_ROLE_PREFIX` | `ctx.role_prefix` when `ctx.role_prefix.is_some()` |
 | `APM_WRAPPER_VERSION` | `"1"` |
+| `APM_BIN` | canonicalized path of the running APM binary (`current_exe().canonicalize()`) |
 
 For local path, use `.env(key, val)` on `Command`. For container path, use `--env key=val` docker args.
 
@@ -153,7 +156,7 @@ Replace both with a single private `spawn_worker(ctx: WrapperContext) -> Result<
 
 - `resolve_builtin_claude_returns_some` — `assert!(resolve_builtin("claude").is_some())`
 - `resolve_builtin_unknown_returns_none` — `assert!(resolve_builtin("bogus").is_none())`
-- `claude_wrapper_sets_apm_env_vars` — mock script writes its env to a file; assert `APM_TICKET_ID`, `APM_TICKET_BRANCH`, `APM_TICKET_WORKTREE`, `APM_SYSTEM_PROMPT_FILE`, `APM_USER_MESSAGE_FILE`, `APM_SKIP_PERMISSIONS`, `APM_PROFILE`, `APM_WRAPPER_VERSION` are all present with correct values (same fixture pattern as existing `spawn_worker_cwd_is_ticket_worktree`)
+- `claude_wrapper_sets_apm_env_vars` — mock script writes its env to a file; assert `APM_TICKET_ID`, `APM_TICKET_BRANCH`, `APM_TICKET_WORKTREE`, `APM_SYSTEM_PROMPT_FILE`, `APM_USER_MESSAGE_FILE`, `APM_SKIP_PERMISSIONS`, `APM_PROFILE`, `APM_WRAPPER_VERSION`, `APM_BIN` are all present with correct values (same fixture pattern as existing `spawn_worker_cwd_is_ticket_worktree`); also assert `APM_BIN` points to an existing file
 - `temp_files_removed_after_child_exits` — write two temp files, include their paths in `WrapperContext`, spawn a trivial wrapper, wait, assert both files are gone
 
 **Existing test compatibility:** `spawn_worker_cwd_is_ticket_worktree` calls `build_spawn_command` directly. After the refactor, update it to call `spawn_worker` with a `WrapperContext`; the invariant (cwd == worktree path) is unchanged.
