@@ -4,12 +4,31 @@ use crate::wrapper::{WrapperContext, write_temp_file};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
+static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[cfg(test)]
+static DEPRECATION_TEST_LOG: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+#[cfg(test)]
+static DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn emit_deprecation_warning() {
+    use std::sync::atomic::Ordering;
+    if DEPRECATION_WARNED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+        let msg = "apm: deprecated: `[workers] command`, `args`, and `model` fields are deprecated — migrate to `agent` and `[workers.options]`";
+        eprintln!("{msg}");
+        #[cfg(test)]
+        DEPRECATION_TEST_LOG.lock().unwrap().push(msg.to_string());
+    }
+}
+
 pub struct EffectiveWorkerParams {
     pub command: String,
     pub args: Vec<String>,
     pub model: Option<String>,
     pub env: std::collections::HashMap<String, String>,
     pub container: Option<String>,
+    pub agent: String,
+    pub options: std::collections::HashMap<String, String>,
 }
 
 fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a Config, warnings: &mut Vec<String>) -> Option<&'a WorkerProfileConfig> {
@@ -24,17 +43,54 @@ fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a
 }
 
 pub fn effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams {
-    let command = profile.and_then(|p| p.command.clone()).unwrap_or_else(|| workers.command.clone());
-    let args = profile.and_then(|p| p.args.clone()).unwrap_or_else(|| workers.args.clone());
-    let model = profile.and_then(|p| p.model.clone()).or_else(|| workers.model.clone());
-    let container = profile.and_then(|p| p.container.clone()).or_else(|| workers.container.clone());
+    // Legacy command/args (kept for check_output_format_supported backward compat)
+    let command = profile.and_then(|p| p.command.clone())
+        .or_else(|| workers.command.clone())
+        .unwrap_or_else(|| "claude".to_string());
+    let args = profile.and_then(|p| p.args.clone())
+        .or_else(|| workers.args.clone())
+        .unwrap_or_else(|| vec!["--print".to_string()]);
+
+    // Agent resolution: profile > workers > default "claude"
+    let raw_agent = profile.and_then(|p| p.agent.clone())
+        .or_else(|| workers.agent.clone());
+
+    // Emit deprecation warning when legacy fields present but agent absent
+    let has_legacy = workers.command.is_some()
+        || workers.args.is_some()
+        || workers.model.is_some()
+        || profile.map(|p| p.command.is_some() || p.args.is_some() || p.model.is_some()).unwrap_or(false);
+    if raw_agent.is_none() && has_legacy {
+        emit_deprecation_warning();
+    }
+
+    let agent = raw_agent.unwrap_or_else(|| "claude".to_string());
+
+    // Options merge: workers.options base, profile.options overrides on collision
+    let mut options = workers.options.clone();
+    if let Some(p) = profile {
+        for (k, v) in &p.options {
+            options.insert(k.clone(), v.clone());
+        }
+    }
+
+    // Model: options.model > legacy profile.model > legacy workers.model
+    let model = options.get("model").cloned()
+        .or_else(|| profile.and_then(|p| p.model.clone()))
+        .or_else(|| workers.model.clone());
+
+    // Env merge
     let mut env = workers.env.clone();
     if let Some(p) = profile {
         for (k, v) in &p.env {
             env.insert(k.clone(), v.clone());
         }
     }
-    EffectiveWorkerParams { command, args, model, env, container }
+
+    let container = profile.and_then(|p| p.container.clone())
+        .or_else(|| workers.container.clone());
+
+    EffectiveWorkerParams { command, args, model, env, container, agent, options }
 }
 
 pub struct StartOutput {
@@ -106,10 +162,11 @@ impl Drop for ManagedChild {
     }
 }
 
-fn spawn_worker(ctx: &WrapperContext) -> Result<std::process::Child> {
-    crate::wrapper::resolve_builtin("claude")
-        .expect("claude is always registered")
-        .spawn(ctx)
+fn spawn_worker(ctx: &WrapperContext, agent: &str) -> Result<std::process::Child> {
+    match crate::wrapper::resolve_builtin(agent) {
+        Some(wrapper) => wrapper.spawn(ctx),
+        None => anyhow::bail!("unknown built-in agent {:?}; custom wrapper resolution is not yet supported (see ticket 2c32a282)", agent),
+    }
 }
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
@@ -243,7 +300,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         skip_permissions,
         profile: profile_name,
         role_prefix,
-        options: std::collections::HashMap::new(),
+        options: params.options.clone(),
         model: params.model.clone(),
         log_path: log_path.clone(),
         container: params.container.clone(),
@@ -252,7 +309,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         keychain: config.workers.keychain.clone(),
     };
     check_output_format_supported(&params.command)?;
-    let mut child = spawn_worker(&ctx)?;
+    let mut child = spawn_worker(&ctx, &params.agent)?;
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -437,7 +494,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         skip_permissions,
         profile: profile_name2,
         role_prefix: role_prefix2,
-        options: std::collections::HashMap::new(),
+        options: params.options.clone(),
         model: params.model.clone(),
         log_path: log_path.clone(),
         container: params.container.clone(),
@@ -446,7 +503,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         keychain: config.workers.keychain.clone(),
     };
     check_output_format_supported(&params.command)?;
-    let mut child = spawn_worker(&ctx)?;
+    let mut child = spawn_worker(&ctx, &params.agent)?;
     let pid = child.id();
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -621,7 +678,7 @@ pub fn spawn_next_worker(
         skip_permissions,
         profile: profile_name2,
         role_prefix: role_prefix2,
-        options: std::collections::HashMap::new(),
+        options: params.options.clone(),
         model: params.model.clone(),
         log_path: log_path.clone(),
         container: params.container.clone(),
@@ -630,7 +687,7 @@ pub fn spawn_next_worker(
         keychain: config.workers.keychain.clone(),
     };
     check_output_format_supported(&params.command)?;
-    let child = spawn_worker(&ctx)?;
+    let child = spawn_worker(&ctx, &params.agent)?;
     let pid = child.id();
 
     let managed = ManagedChild {
@@ -718,7 +775,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, ManagedChild};
+    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, ManagedChild, DEPRECATION_WARNED, DEPRECATION_TEST_LOG, DEPRECATION_TEST_LOCK};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -748,12 +805,14 @@ mod tests {
 
     fn make_workers(command: &str, model: Option<&str>) -> WorkersConfig {
         WorkersConfig {
-            command: command.to_string(),
-            args: vec!["--print".to_string()],
+            command: Some(command.to_string()),
+            args: None,
             model: model.map(|s| s.to_string()),
             env: HashMap::new(),
             container: None,
             keychain: HashMap::new(),
+            agent: None,
+            options: HashMap::new(),
         }
     }
 
@@ -1254,5 +1313,123 @@ mod tests {
 
         assert!(!sys_file.exists(), "sys_file should be removed after ManagedChild is dropped");
         assert!(!msg_file.exists(), "msg_file should be removed after ManagedChild is dropped");
+    }
+
+    // --- agent/options resolution ---
+
+    #[test]
+    fn resolution_agent_profile_overrides_global() {
+        let workers = WorkersConfig { agent: Some("codex".into()), ..Default::default() };
+        let profile = WorkerProfileConfig { agent: Some("mock-happy".into()), ..Default::default() };
+        let params = effective_spawn_params(Some(&profile), &workers);
+        assert_eq!(params.agent, "mock-happy");
+    }
+
+    #[test]
+    fn resolution_agent_falls_back_to_claude() {
+        let params = effective_spawn_params(None, &WorkersConfig::default());
+        assert_eq!(params.agent, "claude");
+    }
+
+    #[test]
+    fn resolution_options_merge() {
+        let mut workers = WorkersConfig { agent: Some("claude".into()), ..Default::default() };
+        workers.options.insert("model".into(), "opus".into());
+        workers.options.insert("timeout".into(), "30".into());
+        let mut profile_opts = HashMap::new();
+        profile_opts.insert("model".into(), "sonnet".into());
+        let profile = WorkerProfileConfig { options: profile_opts, ..Default::default() };
+        let params = effective_spawn_params(Some(&profile), &workers);
+        assert_eq!(params.options.get("model").map(|s| s.as_str()), Some("sonnet"), "profile model should override workers model");
+        assert_eq!(params.options.get("timeout").map(|s| s.as_str()), Some("30"), "non-overlapping key should survive");
+    }
+
+    #[test]
+    fn deprecation_warning_emitted_once() {
+        let _guard = DEPRECATION_TEST_LOCK.lock().unwrap();
+        DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
+        DEPRECATION_TEST_LOG.lock().unwrap().clear();
+
+        let workers = WorkersConfig { command: Some("claude".into()), ..Default::default() };
+        effective_spawn_params(None, &workers);
+        effective_spawn_params(None, &workers);
+
+        let log = DEPRECATION_TEST_LOG.lock().unwrap();
+        let count = log.iter().filter(|m: &&String| m.contains("deprecated")).count();
+        assert_eq!(count, 1, "deprecated message should appear exactly once, found {count}");
+    }
+
+    #[test]
+    fn legacy_model_forwarded_to_ctx() {
+        let workers = WorkersConfig { model: Some("opus".into()), ..Default::default() };
+        let params = effective_spawn_params(None, &workers);
+        assert_eq!(params.model.as_deref(), Some("opus"));
+    }
+
+    #[test]
+    fn options_model_takes_precedence_over_legacy() {
+        let mut workers = WorkersConfig { model: Some("opus".into()), agent: Some("claude".into()), ..Default::default() };
+        workers.options.insert("model".into(), "sonnet".into());
+        let params = effective_spawn_params(None, &workers);
+        assert_eq!(params.model.as_deref(), Some("sonnet"));
+    }
+
+    // --- APM_OPT_ env vars ---
+
+    #[test]
+    fn apm_opt_env_vars_set() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let wt = tempfile::tempdir().unwrap();
+        let log_dir = tempfile::tempdir().unwrap();
+        let mock_dir = tempfile::tempdir().unwrap();
+        let env_output = wt.path().join("env-output.txt");
+
+        let mock_claude = mock_dir.path().join("claude");
+        let script = format!("#!/bin/sh\nprintenv > \"{}\"\n", env_output.display());
+        std::fs::write(&mock_claude, &script).unwrap();
+        std::fs::set_permissions(&mock_claude, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let sys_file = crate::wrapper::write_temp_file("sys", "system prompt").unwrap();
+        let msg_file = crate::wrapper::write_temp_file("msg", "ticket content").unwrap();
+
+        let mut extra_env = HashMap::new();
+        extra_env.insert(
+            "PATH".to_string(),
+            format!("{}:{}", mock_dir.path().display(), std::env::var("PATH").unwrap_or_default()),
+        );
+
+        let mut options = HashMap::new();
+        options.insert("model".to_string(), "sonnet".to_string());
+
+        let ctx = crate::wrapper::WrapperContext {
+            worker_name: "test-worker".to_string(),
+            ticket_id: "abc123".to_string(),
+            ticket_branch: "ticket/abc123".to_string(),
+            worktree_path: wt.path().to_path_buf(),
+            system_prompt_file: sys_file.clone(),
+            user_message_file: msg_file.clone(),
+            skip_permissions: false,
+            profile: "default".to_string(),
+            role_prefix: None,
+            options,
+            model: None,
+            log_path: log_dir.path().join("worker.log"),
+            container: None,
+            extra_env,
+            root: wt.path().to_path_buf(),
+            keychain: HashMap::new(),
+        };
+
+        let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
+        let mut child = wrapper.spawn(&ctx).unwrap();
+        child.wait().unwrap();
+        let _ = std::fs::remove_file(&sys_file);
+        let _ = std::fs::remove_file(&msg_file);
+
+        let env_content = std::fs::read_to_string(&env_output)
+            .expect("env-output.txt not written");
+
+        assert!(env_content.contains("APM_OPT_MODEL=sonnet"), "APM_OPT_MODEL=sonnet must be set\n{env_content}");
     }
 }

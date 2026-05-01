@@ -79,18 +79,21 @@ pub struct WorkersConfig {
     /// Map of secret names to keychain item names resolved at worker launch time.
     #[serde(default)]
     pub keychain: std::collections::HashMap<String, String>,
-    /// Executable used to run worker agents.
-    #[serde(default = "default_command")]
-    pub command: String,
-    /// Default arguments passed to the worker command.
-    #[serde(default = "default_args")]
-    pub args: Vec<String>,
+    /// Executable used to run worker agents (deprecated — use `agent` instead).
+    pub command: Option<String>,
+    /// Default arguments passed to the worker command (deprecated — use `agent` instead).
+    pub args: Option<Vec<String>>,
     /// AI model override passed to the worker command; empty means use the command default.
     #[serde(default)]
     pub model: Option<String>,
     /// Environment variables injected into every worker process.
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
+    /// Built-in agent identifier (e.g. `"claude"`). Takes precedence over `command`/`args`.
+    pub agent: Option<String>,
+    /// Key-value options forwarded to the agent wrapper as `APM_OPT_<KEY>` env vars.
+    #[serde(default)]
+    pub options: std::collections::HashMap<String, String>,
 }
 
 impl Default for WorkersConfig {
@@ -98,22 +101,21 @@ impl Default for WorkersConfig {
         Self {
             container: None,
             keychain: std::collections::HashMap::new(),
-            command: default_command(),
-            args: default_args(),
+            command: None,
+            args: None,
             model: None,
             env: std::collections::HashMap::new(),
+            agent: None,
+            options: std::collections::HashMap::new(),
         }
     }
 }
 
-fn default_command() -> String { "claude".to_string() }
-fn default_args() -> Vec<String> { vec!["--print".to_string()] }
-
 #[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct WorkerProfileConfig {
-    /// Override the worker command for this profile.
+    /// Override the worker command for this profile (deprecated — use `agent` instead).
     pub command: Option<String>,
-    /// Override the worker command arguments for this profile.
+    /// Override the worker command arguments for this profile (deprecated — use `agent` instead).
     pub args: Option<Vec<String>>,
     /// Override the AI model for this profile.
     pub model: Option<String>,
@@ -126,6 +128,11 @@ pub struct WorkerProfileConfig {
     pub instructions: Option<String>,
     /// Role label prepended to the worker identity string for this profile.
     pub role_prefix: Option<String>,
+    /// Built-in agent identifier for this profile. Overrides `[workers] agent`.
+    pub agent: Option<String>,
+    /// Key-value options for this profile, merged over `[workers.options]`.
+    #[serde(default)]
+    pub options: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize, Default, JsonSchema)]
@@ -601,10 +608,10 @@ pub fn resolve_collaborators(config: &Config, local: &LocalConfig) -> (Vec<Strin
 impl WorkersConfig {
     pub fn merge_local(&mut self, local: &LocalWorkersOverride) {
         if let Some(ref cmd) = local.command {
-            self.command = cmd.clone();
+            self.command = Some(cmd.clone());
         }
         if let Some(ref args) = local.args {
-            self.args = args.clone();
+            self.args = Some(args.clone());
         }
         if let Some(ref model) = local.model {
             self.model = Some(model.clone());
@@ -922,8 +929,10 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
-        assert_eq!(config.workers.command, "claude");
-        assert_eq!(config.workers.args, vec!["--print"]);
+        assert!(config.workers.command.is_none());
+        assert!(config.workers.args.is_none());
+        assert!(config.workers.agent.is_none());
+        assert!(config.workers.options.is_empty());
         assert!(config.workers.model.is_none());
         assert!(config.workers.env.is_empty());
     }
@@ -946,8 +955,8 @@ model = "o3"
 CUSTOM_VAR = "value"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
-        assert_eq!(config.workers.command, "codex");
-        assert_eq!(config.workers.args, vec!["--full-auto"]);
+        assert_eq!(config.workers.command.as_deref(), Some("codex"));
+        assert_eq!(config.workers.args.as_deref(), Some(["--full-auto".to_string()][..].as_ref()));
         assert_eq!(config.workers.model.as_deref(), Some("o3"));
         assert_eq!(config.workers.env.get("CUSTOM_VAR").map(|s| s.as_str()), Some("value"));
     }
@@ -972,8 +981,8 @@ OPENAI_API_KEY = "sk-test"
     #[test]
     fn merge_local_overrides_and_extends() {
         let mut wc = WorkersConfig::default();
-        assert_eq!(wc.command, "claude");
-        assert_eq!(wc.args, vec!["--print"]);
+        assert!(wc.command.is_none());
+        assert!(wc.args.is_none());
 
         let local = LocalWorkersOverride {
             command: Some("aider".to_string()),
@@ -983,8 +992,8 @@ OPENAI_API_KEY = "sk-test"
         };
         wc.merge_local(&local);
 
-        assert_eq!(wc.command, "aider");
-        assert_eq!(wc.args, vec!["--print"]); // unchanged
+        assert_eq!(wc.command.as_deref(), Some("aider"));
+        assert!(wc.args.is_none()); // unchanged
         assert_eq!(wc.model.as_deref(), Some("gpt-4"));
         assert_eq!(wc.env.get("KEY").map(|s| s.as_str()), Some("val"));
     }
@@ -1364,5 +1373,70 @@ dir = "tickets"
         std::env::remove_var("USER");
         std::env::remove_var("USERNAME");
         assert_eq!(resolve_caller_name(), "apm");
+    }
+
+    #[test]
+    fn config_round_trip_new_shape() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+agent = "claude"
+
+[workers.options]
+model = "sonnet"
+timeout = "30"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.workers.agent.as_deref(), Some("claude"));
+        assert_eq!(config.workers.options.get("model").map(|s| s.as_str()), Some("sonnet"));
+        assert_eq!(config.workers.options.get("timeout").map(|s| s.as_str()), Some("30"));
+        assert!(config.workers.command.is_none());
+        assert!(config.workers.args.is_none());
+    }
+
+    #[test]
+    fn config_round_trip_legacy_shape() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+command = "claude"
+args = ["--print"]
+model = "opus"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.workers.agent.is_none());
+        assert_eq!(config.workers.command.as_deref(), Some("claude"));
+        assert_eq!(config.workers.model.as_deref(), Some("opus"));
+    }
+
+    #[test]
+    fn worker_profile_config_new_fields() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worker_profiles.my_agent]
+agent = "mock-happy"
+
+[worker_profiles.my_agent.options]
+model = "sonnet"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let profile = config.worker_profiles.get("my_agent").unwrap();
+        assert_eq!(profile.agent.as_deref(), Some("mock-happy"));
+        assert_eq!(profile.options.get("model").map(|s| s.as_str()), Some("sonnet"));
     }
 }

@@ -306,18 +306,16 @@ max_workers_on_default = 1
 instructions = ".apm/agents.md"
 
 [workers]
-command = "claude"
-args = ["--print"]
+agent = "claude"
+
+[workers.options]
+model = "sonnet"
 
 [worker_profiles.spec_agent]
-command = "claude"
-args = ["--print"]
 instructions = ".apm/apm.spec-writer.md"
 role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
 
 [worker_profiles.impl_agent]
-command = "claude"
-args = ["--print"]
 instructions = ".apm/apm.worker.md"
 role_prefix = "You are a Worker agent assigned to ticket #<id>."
 
