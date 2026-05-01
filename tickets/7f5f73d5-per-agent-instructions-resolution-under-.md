@@ -34,7 +34,7 @@ The silent hardcoded fallback and the `StateConfig.instructions`-as-system-promp
 
 ### Acceptance criteria
 
-- [ ] When `[worker_profiles.<P>].instructions` is set and the referenced file exists, its content is used as the system prompt.
+- [x] When `[worker_profiles.<P>].instructions` is set and the referenced file exists, its content is used as the system prompt.
 - [ ] When `[worker_profiles.<P>].instructions` is absent (or the profile is not resolved) and `[workers].instructions` is set and the referenced file exists, its content is used as the system prompt.
 - [ ] When neither profile nor global `[workers].instructions` resolves and `.apm/agents/<A>/apm.<role>.md` exists in the project, its content is used as the system prompt.
 - [ ] When the first three levels all fail and agent A is the `claude` built-in, APM's bundled default for `apm.<role>.md` (compiled in via `include_str!`) is used as the system prompt.
