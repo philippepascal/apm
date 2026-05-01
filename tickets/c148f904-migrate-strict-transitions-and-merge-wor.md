@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c148f904-migrate-strict-transitions-and-merge-wor"
 created_at = "2026-05-01T20:26:55.674729Z"
-updated_at = "2026-05-01T20:26:55.674729Z"
+updated_at = "2026-05-01T20:28:56.731899Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
