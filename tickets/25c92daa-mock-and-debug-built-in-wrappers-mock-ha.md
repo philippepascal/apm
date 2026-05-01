@@ -143,7 +143,278 @@ Ship three mock built-in wrappers for testing the harness without burning credit
 
 ### Approach
 
-How the implementation will work.
+### Background constraint: workflow.toml annotation gap
+
+The default workflow's `in_design → specd` and `ammend → specd` transitions have no `completion` strategy, so `resolve_outcome` (ticket a1b94ea4) infers `"needs_input"` for them by default. That makes `mock-happy` unable to find any success transition when running in the spec-writer state — it would always exit non-zero.
+
+Fix: this ticket explicitly annotates both transitions with `outcome = "success"` in `apm-core/src/default/workflow.toml` and `.apm/workflow.toml`. This override is intentional — completing a spec IS the success outcome for the spec-writer agent, even though it involves no git merge.
+
+### 1. WrapperContext extensions (`wrapper/mod.rs`)
+
+Add two fields to `WrapperContext`:
+
+```rust
+pub root_path: PathBuf,       // project root (not the worktree)
+pub current_state: String,    // ticket's state at spawn time
+```
+
+Callers in `start.rs` set `root_path = root.to_path_buf()` and `current_state = ticket.frontmatter.state.clone()`.
+
+Add `APM_PROJECT_ROOT` to the wrapper contract env vars set by `ClaudeWrapper::spawn()` (both local and container paths). All four new wrappers also set it.
+
+### 2. workflow.toml annotation (`apm-core/src/default/workflow.toml` and `.apm/workflow.toml`)
+
+In each file, find the two transition blocks and add the `outcome` field:
+
+```toml
+# under [[workflow.states]] id = "in_design"
+[[workflow.states.transitions]]
+to      = "specd"
+trigger = "manual"
+outcome = "success"     # explicit override — spec completion is a success
+
+# under [[workflow.states]] id = "ammend"
+[[workflow.states.transitions]]
+to      = "specd"
+trigger = "manual"
+outcome = "success"     # explicit override — amendment completion is a success
+```
+
+Both workflow files get the same change. Note: ticket a1b94ea4 also modifies workflow.toml. Implementers must merge cleanly; there is no logical conflict (a1b94ea4 adds `outcome` to transitions that match their implicit defaults; this ticket adds `outcome = "success"` to the two that override the default).
+
+### 3. Module layout
+
+Create `apm-core/src/wrapper/builtin/` with:
+
+```
+wrapper/builtin/mod.rs         — shared helpers, pub use for all built-ins
+wrapper/builtin/mock_happy.rs  — MockHappyWrapper
+wrapper/builtin/mock_sad.rs    — MockSadWrapper
+wrapper/builtin/mock_random.rs — MockRandomWrapper
+wrapper/builtin/debug.rs       — DebugWrapper
+```
+
+If d3b93b95's implementation placed `claude.rs` at `wrapper/claude.rs`, move it to `wrapper/builtin/claude.rs` and update all `use` paths. If d3b93b95 already used `wrapper/builtin/`, no move is needed.
+
+Add `pub mod builtin;` to `wrapper/mod.rs`.
+
+Update `resolve_builtin()` in `wrapper/mod.rs`:
+```rust
+"mock-happy"  => Some(Box::new(MockHappyWrapper)),
+"mock-sad"    => Some(Box::new(MockSadWrapper)),
+"mock-random" => Some(Box::new(MockRandomWrapper)),
+"debug"       => Some(Box::new(DebugWrapper)),
+```
+
+### 4. Shared helpers in `wrapper/builtin/mod.rs`
+
+#### `load_transitions_with_outcomes`
+
+```rust
+fn load_transitions_with_outcomes(
+    ctx: &WrapperContext,
+) -> anyhow::Result<Vec<(TransitionConfig, StateConfig)>>
+```
+
+1. `Config::load(&ctx.root_path)` — loads project config + workflow
+2. Find the `StateConfig` matching `ctx.current_state` in the workflow; return `Err` if not found
+3. Build a `HashMap<&str, &StateConfig>` keyed by state id for O(1) target lookup
+4. For each transition in the current state, clone the pair `(TransitionConfig, target StateConfig)` and return the vec
+
+#### `is_impl_mode`
+
+```rust
+fn is_impl_mode(transitions: &[(TransitionConfig, StateConfig)]) -> bool {
+    transitions.iter().any(|(t, _)| t.completion != CompletionStrategy::None)
+}
+```
+
+Returns `true` when at least one transition has a completion strategy (indicates the current state expects git work).
+
+#### `write_and_spawn_script`
+
+```rust
+fn write_and_spawn_script(
+    name: &str,
+    script: &str,
+    ctx: &WrapperContext,
+) -> anyhow::Result<std::process::Child>
+```
+
+1. Write `script` to `<worktree>/.apm-mock-<name>-<rand_u16()>.sh` (using `rand_u16()` from d3b93b95)
+2. Set permissions to 0o755 (`std::fs::set_permissions(..., Permissions::from_mode(0o755))`)
+3. Build `Command::new("/bin/sh")`, arg = script path
+4. Set all APM contract env vars (same set as ClaudeWrapper), including `APM_PROJECT_ROOT`
+5. `.current_dir(&ctx.worktree_path)`, `.process_group(0)`
+6. Redirect stdout + stderr to `File::create(&ctx.log_path)?` / `try_clone()`
+7. `.spawn()`; return `Child`
+8. The script's last line is `rm -f "$0"` (self-cleanup); no separate cleanup thread needed for the script file
+
+#### `apm_bin`
+
+```rust
+fn apm_bin() -> anyhow::Result<String>
+```
+
+Returns `std::env::current_exe()?.to_str().ok_or_else(...)?.to_string()`. Used so scripts shell out to the same `apm` binary that spawned them.
+
+#### `seed_from_ctx`
+
+```rust
+fn seed_from_ctx(ctx: &WrapperContext) -> u64
+```
+
+Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a random `u64` from `rand::thread_rng()`.
+
+### 5. MockHappyWrapper (`mock_happy.rs`)
+
+`spawn()` steps:
+1. Call `load_transitions_with_outcomes(ctx)`.
+2. Filter to success outcomes: `transitions.iter().filter(|(t, s)| resolve_outcome(t, s) == "success")`.
+3. Match on count: 0 → `anyhow::bail!("mock-happy: no success-outcome transition from state '{}'", ctx.current_state)`, 2+ → `anyhow::bail!("mock-happy: {} success-outcome transitions; expected 1", n)`.
+4. Extract `target_state = success_transitions[0].0.to.clone()`.
+5. `let impl_mode = is_impl_mode(&transitions)`.
+6. `let apm = apm_bin()?`.
+7. Generate `script`:
+
+   **Spec mode** (not impl mode):
+   ```sh
+   #!/bin/sh
+   set -e
+   APM="<apm_bin>"
+   ID="<ticket_id>"
+   "$APM" spec "$ID" --section "Problem" \
+     --set "Mock spec — no real problem analyzed."
+   printf '- [ ] Mock criterion 1\n- [ ] Mock criterion 2\n' \
+     > ".apm-mock-ac-$$.txt"
+   "$APM" spec "$ID" --section "Acceptance criteria" \
+     --set-file ".apm-mock-ac-$$.txt"
+   rm -f ".apm-mock-ac-$$.txt"
+   "$APM" spec "$ID" --section "Out of scope" \
+     --set "- Nothing in scope for this mock run"
+   "$APM" spec "$ID" --section "Approach" \
+     --set "Mock approach — no real implementation analyzed."
+   "$APM" set "$ID" effort 1
+   "$APM" set "$ID" risk 1
+   printf '{"type":"tool_use","id":"mock-1","name":"write_spec","input":{}}\n'
+   printf '{"type":"tool_use","id":"mock-2","name":"apm_state","input":{}}\n'
+   "$APM" state "$ID" <target_state>
+   rm -f "$0"
+   ```
+
+   **Impl mode** (is_impl_mode is true):
+   ```sh
+   #!/bin/sh
+   set -e
+   APM="<apm_bin>"
+   ID="<ticket_id>"
+   printf 'mock: placeholder implementation for ticket %s\n' "$ID" \
+     > mock-implementation.txt
+   git add mock-implementation.txt
+   git commit -m "mock: placeholder commit for ticket $ID"
+   printf '{"type":"tool_use","id":"mock-1","name":"git_commit","input":{}}\n'
+   printf '{"type":"tool_use","id":"mock-2","name":"apm_state","input":{}}\n'
+   "$APM" state "$ID" <target_state>
+   rm -f "$0"
+   ```
+
+8. Call `write_and_spawn_script("happy", &script, ctx)`.
+
+### 6. MockSadWrapper (`mock_sad.rs`)
+
+`spawn()` steps:
+1. `load_transitions_with_outcomes(ctx)`.
+2. Filter to non-success: `resolve_outcome(t, s) != "success"`.
+3. If empty: `anyhow::bail!("mock-sad: no non-success transitions from state '{}'", ctx.current_state)`.
+4. `let seed = seed_from_ctx(ctx)`.
+5. `let rng = rand::rngs::StdRng::seed_from_u64(seed)`.
+6. Pick index = `(seed as usize) % eligible.len()` (no need for a shuffle; modulo gives deterministic pick for a given seed and list length).
+7. `target_state = eligible[idx].0.to.clone()`.
+8. Generate script (writes only Problem section, adds an open question, emits one JSONL event, calls `apm state`):
+
+   ```sh
+   #!/bin/sh
+   set -e
+   APM="<apm_bin>"
+   ID="<ticket_id>"
+   "$APM" spec "$ID" --section "Problem" \
+     --set "Mock sad run — spec intentionally incomplete."
+   "$APM" spec "$ID" --section "Open questions" \
+     --set "- [ ] Mock open question — why did this fail?"
+   printf '{"type":"tool_use","id":"mock-1","name":"write_partial_spec","input":{}}\n'
+   "$APM" state "$ID" <target_state>
+   rm -f "$0"
+   ```
+
+9. `write_and_spawn_script("sad", &script, ctx)`.
+
+Note: `apm spec --section "Open questions"` must be a valid section name for `apm spec --set`. Verify the exact section name against the `apm spec` command's accepted sections; if "Open questions" isn't a named section, write to it via the ticket file directly or skip the question step.
+
+### 7. MockRandomWrapper (`mock_random.rs`)
+
+`spawn()` steps:
+1. `load_transitions_with_outcomes(ctx)`.
+2. If empty: `anyhow::bail!("mock-random: no valid transitions from state '{}'", ctx.current_state)`.
+3. `seed_from_ctx(ctx)`.
+4. Pick index via `seed as usize % all.len()`.
+5. Inspect chosen transition's `resolve_outcome`:
+   - `"success"` → generate the mock-happy script for the chosen `target_state` (spec or impl mode determined by `is_impl_mode(&all)`)
+   - anything else → generate the mock-sad script for the chosen `target_state`
+6. `write_and_spawn_script("random", &script, ctx)`.
+
+Rather than duplicating script generation, extract private functions `happy_script(apm: &str, id: &str, target: &str, impl_mode: bool) -> String` and `sad_script(apm: &str, id: &str, target: &str) -> String` into `builtin/mod.rs` and call them from all three wrappers.
+
+### 8. DebugWrapper (`debug.rs`)
+
+`spawn()` steps:
+1. No config loading. No transition resolution.
+2. `apm_bin()`.
+3. Script:
+
+   ```sh
+   #!/bin/sh
+   env | grep '^APM_' >&2
+   printf '\n=== SYSTEM PROMPT ===\n' >&2
+   cat "$APM_SYSTEM_PROMPT_FILE" >&2
+   printf '\n=== USER MESSAGE ===\n' >&2
+   cat "$APM_USER_MESSAGE_FILE" >&2
+   printf '{"type":"tool_use","id":"debug-1","name":"noop","input":{}}\n'
+   rm -f "$0"
+   ```
+
+4. `write_and_spawn_script("debug", &script, ctx)`.
+
+No `apm state` call. The ticket state is not modified.
+
+### 9. Tests
+
+**Unit tests in `wrapper/builtin/mod.rs` (or `wrapper/mod.rs`)**
+- `resolve_builtin_mock_happy_returns_some` — `assert!(resolve_builtin("mock-happy").is_some())`
+- `resolve_builtin_mock_sad_returns_some` — `assert!(resolve_builtin("mock-sad").is_some())`
+- `resolve_builtin_mock_random_returns_some` — `assert!(resolve_builtin("mock-random").is_some())`
+- `resolve_builtin_debug_returns_some` — `assert!(resolve_builtin("debug").is_some())`
+
+**Integration tests in `apm-core/src/start.rs` `#[cfg(test)]` or a dedicated `tests/mock_wrappers.rs`**
+
+Each test uses the same fixture helper (inline, no external files):
+- Create a `tempfile::TempDir` for the project root
+- Write a minimal `.apm/config.toml` with `agent = "mock-happy"` (or the wrapper under test)
+- Copy (or write inline) the default workflow.toml to `.apm/workflow.toml` — including the two new `outcome = "success"` annotations
+- Create a ticket file in `tickets/` in the correct starting state
+- `git init`, add + commit the files (required for worktree and state operations)
+- Build a `WrapperContext` pointing at the fixture with `current_state` set
+- Call `spawn_worker(ctx)` (the private fn from d3b93b95), `child.wait()`, then read the updated ticket
+
+Test list:
+- `mock_happy_spec_mode_transitions_to_specd` — ticket in `in_design`; assert state = `specd`; assert all four spec section headers are present in the ticket file; assert effort = 1; assert risk = 1
+- `mock_happy_impl_mode_creates_commit_and_transitions` — ticket in `in_progress`; assert state = `implemented`; assert `git log --oneline` in worktree has a commit containing "mock"
+- `mock_happy_zero_success_transitions_exits_nonzero` — use a custom inline workflow where the current state has only non-success transitions; assert `child.wait().status.success() == false`; assert log contains "no success-outcome transition"
+- `mock_sad_transitions_to_non_success_state` — ticket in `in_design`; assert resulting state is NOT `specd`; assert only Problem section is present in ticket spec
+- `mock_sad_seed_reproducibility` — two separate spawn calls with `APM_OPT_SEED=42`; assert both end in the same target state
+- `mock_random_seed_reproducibility` — same as above with `mock-random`
+- `debug_does_not_change_state` — ticket in `in_design`; run debug; assert state is still `in_design`; assert log contains `APM_TICKET_ID`; assert log contains the system prompt text; assert log contains a line matching `{"type":"tool_use"...}`
+
+All tests that require `apm` CLI calls in the script must resolve `current_exe()` correctly — in the test binary environment, `current_exe()` returns the test runner, not `apm`. Use the same workaround as the existing `spawn_worker_cwd_is_ticket_worktree` test: set a fixture env var or pass an `apm_override_bin` through `WrapperContext.options` (key `"apm_bin"`) that the mock script uses when set. The `apm_bin()` helper checks `ctx.options.get("apm_bin")` first, then falls back to `current_exe()`.
 
 ### Open questions
 
