@@ -38,6 +38,7 @@ Four files change, plus tests.\n\n### 1. apm-core/src/config.rs\n\nWorkersConfig
 
 ### Amendment requests
 
+- [ ] The deprecation-warning test AC currently asserts on internal `AtomicBool` state ("check AtomicBool state shows the warning fired exactly once"). This is implementation-aware and brittle — any refactor that changes the gating mechanism breaks the test even if behaviour is correct. Rewrite the AC to assert on captured stderr: "stderr contains the substring `deprecated` exactly once across the process lifetime, regardless of how many times legacy fields are read." The internal `AtomicBool` becomes an implementation detail, not a tested contract.
 
 ### Code review
 
