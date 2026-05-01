@@ -222,6 +222,7 @@ Test fixtures are small inline TOML strings written to a `tempdir`; no external 
 
 ### Amendment requests
 
+- [ ] Add a one-line note to the Approach explicitly stating this ticket presupposes ticket `6cac8518`'s runtime backward-compat fallback is already in place (the dep-chain wires this correctly, but the Approach should say so). Specifically: when `apm validate --fix` runs, the legacy fields it's about to migrate are still being read by `6cac8518`'s fallback path and emitting the deprecation warning — that's the intended state, and the migration removes the fallback's input by rewriting the config. Without the note, a reviewer might wonder whether the migration is racing with the runtime read; saying the order out loud removes the doubt.
 
 ### Code review
 
