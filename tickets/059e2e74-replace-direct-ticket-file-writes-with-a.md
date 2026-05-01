@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/059e2e74-replace-direct-ticket-file-writes-with-a"
 created_at = "2026-05-01T20:27:29.576253Z"
-updated_at = "2026-05-01T20:27:29.576253Z"
+updated_at = "2026-05-01T20:29:24.557989Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
