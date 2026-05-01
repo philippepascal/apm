@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/cc154ee4-migrate-setup-for-prompt-dispatch-to-ini"
 created_at = "2026-05-01T20:27:03.975333Z"
-updated_at = "2026-05-01T20:27:03.975333Z"
+updated_at = "2026-05-01T20:29:07.168442Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
