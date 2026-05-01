@@ -190,22 +190,25 @@ Extend `resolve_builtin()` in `wrapper/mod.rs`:
 `is_impl_mode(transitions: &[(TransitionConfig, StateConfig)]) -> bool`:
 Returns true when any transition has `completion != CompletionStrategy::None`. True for `in_progress` (has `pr_or_epic_merge`); false for `in_design`.
 
-`happy_script(apm: &str, id: &str, target: &str, impl_mode: bool) -> String` and `sad_script(apm: &str, id: &str, target: &str) -> String`:
-Private functions that return the shell script strings (see below). Called by all three mocks to avoid duplication.
+`happy_script(id: &str, target: &str, impl_mode: bool) -> String` and `sad_script(id: &str, target: &str) -> String`:
+Private functions that return the shell script strings (see below). Called by all three mocks to avoid duplication. Neither takes an `apm` path parameter — scripts use `${APM_BIN:?...}` at runtime.
 
 `write_and_spawn_script(name: &str, script: &str, ctx: &WrapperContext) -> anyhow::Result<Child>`:
 1. Write script to `<worktree>/.apm-mock-<name>-<rand_u16()>.sh`, chmod 0o755.
 2. `Command::new("/bin/sh")` with the script path as arg.
 3. Set all APM contract env vars (same set as `ClaudeWrapper`, including `APM_PROJECT_ROOT`).
+   **`APM_BIN` override for tests:** when setting `APM_BIN`, check `ctx.options.get("apm_bin")` first; if present, use that value instead of `std::env::current_exe()`. Shell scripts always use `$APM_BIN` — the override lives in the spawn helper, not in the mock logic.
 4. `.current_dir(&ctx.worktree_path)`, `.process_group(0)`.
 5. Redirect stdout + stderr to `File::create(&ctx.log_path)?` / `try_clone()`.
 6. `.spawn()` and return `Child`. The script ends with `rm -f "$0"` (self-cleanup; no separate thread needed).
 
-`apm_bin() -> anyhow::Result<String>`: returns `std::env::current_exe()?.to_str()…?`. Used so scripts shell out to the same `apm` binary that spawned them.
+`seed_from_env() -> u64`: reads `std::env::var("APM_OPT_SEED").ok().and_then(|s| s.parse().ok())`, falls back to `rand::thread_rng().gen::<u64>()`. The user-facing config is `[workers.options] seed = "42"`, which 6cac8518's spawn glue translates to `APM_OPT_SEED=42`. Test note: seed reproducibility tests call `std::env::set_var("APM_OPT_SEED", "42")` before each spawn and `std::env::remove_var` after; run serially.
 
-`apm_bin_from_ctx(ctx: &WrapperContext) -> anyhow::Result<String>`: checks `ctx.options.get("apm_bin")` first (allows test override), then falls back to `apm_bin()`.
-
-`seed_from_ctx(ctx: &WrapperContext) -> u64`: reads `ctx.options.get("seed").and_then(|s| s.parse().ok())`, falls back to `rand::thread_rng().gen::<u64>()`.
+**Shell script preamble (all mocks):** every script reads the `apm` binary path from the environment — no hard-coded path interpolation:
+```sh
+APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
+```
+The `:?` expansion exits non-zero immediately with a clear error if `APM_BIN` is absent.
 
 **4. MockHappyWrapper spawn() steps**
 
@@ -213,15 +216,14 @@ Private functions that return the shell script strings (see below). Called by al
 2. Filter to success: `resolve_outcome(t, s) == "success"`.
 3. Match count: 0 → bail with diagnostic naming the current state; 2+ → bail with count.
 4. `target = success[0].0.to.clone()`, `impl_mode = is_impl_mode(&all)`.
-5. `apm = apm_bin_from_ctx(ctx)?`.
-6. `script = happy_script(&apm, &ctx.ticket_id, &target, impl_mode)`.
-7. `write_and_spawn_script("happy", &script, ctx)`.
+5. `script = happy_script(&ctx.ticket_id, &target, impl_mode)`.
+6. `write_and_spawn_script("happy", &script, ctx)`.
 
 `happy_script` spec mode (not impl_mode):
 ```sh
 #!/bin/sh
 set -e
-APM="<apm_bin>"
+APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
 ID="<ticket_id>"
 "$APM" spec "$ID" --section "Problem" --set "Mock spec — no real problem analyzed."
 printf '- [ ] Mock criterion 1\n- [ ] Mock criterion 2\n' > ".apm-mock-ac-$$.txt"
@@ -241,7 +243,7 @@ rm -f "$0"
 ```sh
 #!/bin/sh
 set -e
-APM="<apm_bin>"
+APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
 ID="<ticket_id>"
 printf 'mock: placeholder implementation for ticket %s\n' "$ID" > mock-implementation.txt
 git add mock-implementation.txt
@@ -257,15 +259,15 @@ rm -f "$0"
 1. `load_transitions_with_outcomes(ctx)`.
 2. Filter to non-success: `resolve_outcome(t, s) != "success"`.
 3. Empty → bail with diagnostic.
-4. `seed = seed_from_ctx(ctx)`, pick `idx = seed as usize % eligible.len()`, `target = eligible[idx].0.to.clone()`.
-5. `script = sad_script(&apm, &ctx.ticket_id, &target)`.
+4. `seed = seed_from_env()`, pick `idx = seed as usize % eligible.len()`, `target = eligible[idx].0.to.clone()`.
+5. `script = sad_script(&ctx.ticket_id, &target)`.
 6. `write_and_spawn_script("sad", &script, ctx)`.
 
 `sad_script`:
 ```sh
 #!/bin/sh
 set -e
-APM="<apm_bin>"
+APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
 ID="<ticket_id>"
 "$APM" spec "$ID" --section "Problem" --set "Mock sad run — spec intentionally incomplete."
 printf '{"type":"tool_use","id":"mock-1","name":"write_partial_spec","input":{}}\n'
@@ -277,7 +279,7 @@ rm -f "$0"
 
 1. `load_transitions_with_outcomes(ctx)`.
 2. Empty → bail.
-3. `seed = seed_from_ctx(ctx)`, pick `idx = seed as usize % all.len()`, chosen = `all[idx]`.
+3. `seed = seed_from_env()`, pick `idx = seed as usize % all.len()`, chosen = `all[idx]`.
 4. `outcome = resolve_outcome(&chosen.0, &chosen.1)`.
 5. If `outcome == "success"` → `happy_script(...)`, else → `sad_script(...)`.
 6. `write_and_spawn_script("random", &script, ctx)`.
@@ -415,27 +417,35 @@ fn write_and_spawn_script(
 1. Write `script` to `<worktree>/.apm-mock-<name>-<rand_u16()>.sh` (using `rand_u16()` from d3b93b95)
 2. Set permissions to 0o755 (`std::fs::set_permissions(..., Permissions::from_mode(0o755))`)
 3. Build `Command::new("/bin/sh")`, arg = script path
-4. Set all APM contract env vars (same set as ClaudeWrapper), including `APM_PROJECT_ROOT`
+4. Set all APM contract env vars (same set as ClaudeWrapper), including `APM_PROJECT_ROOT`.
+   **`APM_BIN` override for tests:** when setting `APM_BIN`, check `ctx.options.get("apm_bin")` first; if present, use that value instead of `std::env::current_exe()`. Shell scripts always use `$APM_BIN` — the override lives in the spawn helper, not in the mock logic.
 5. `.current_dir(&ctx.worktree_path)`, `.process_group(0)`
 6. Redirect stdout + stderr to `File::create(&ctx.log_path)?` / `try_clone()`
 7. `.spawn()`; return `Child`
 8. The script's last line is `rm -f "$0"` (self-cleanup); no separate cleanup thread needed for the script file
 
-#### `apm_bin`
+#### `seed_from_env`
 
 ```rust
-fn apm_bin() -> anyhow::Result<String>
+fn seed_from_env() -> u64 {
+    std::env::var("APM_OPT_SEED")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_else(|| rand::thread_rng().gen::<u64>())
+}
 ```
 
-Returns `std::env::current_exe()?.to_str().ok_or_else(...)?.to_string()`. Used so scripts shell out to the same `apm` binary that spawned them.
+Reads `APM_OPT_SEED` from the current process environment — consistent with how wrapper-specific options are consumed by external wrappers (ticket 6cac8518 maps `[workers.options] seed = "42"` → `APM_OPT_SEED=42`). Falls back to a random `u64`. Tests that need a fixed seed call `std::env::set_var("APM_OPT_SEED", "42")` before spawning and `std::env::remove_var` after; run those tests serially since `set_var` is not thread-safe.
 
-#### `seed_from_ctx`
+#### Shell script preamble
 
-```rust
-fn seed_from_ctx(ctx: &WrapperContext) -> u64
+Every mock script reads the `apm` binary path from the environment — no hard-coded path interpolation:
+
+```sh
+APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
 ```
 
-Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a random `u64` from `rand::thread_rng()`.
+`APM_BIN` is guaranteed present because `write_and_spawn_script` always sets it. The `:?` expansion exits non-zero immediately with a clear error if the variable is somehow absent.
 
 ### 5. MockHappyWrapper (`mock_happy.rs`)
 
@@ -445,14 +455,13 @@ Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a r
 3. Match on count: 0 → `anyhow::bail!("mock-happy: no success-outcome transition from state '{}'", ctx.current_state)`, 2+ → `anyhow::bail!("mock-happy: {} success-outcome transitions; expected 1", n)`.
 4. Extract `target_state = success_transitions[0].0.to.clone()`.
 5. `let impl_mode = is_impl_mode(&transitions)`.
-6. `let apm = apm_bin()?`.
-7. Generate `script`:
+6. Generate `script` via `happy_script(&ctx.ticket_id, &target_state, impl_mode)`:
 
    **Spec mode** (not impl mode):
    ```sh
    #!/bin/sh
    set -e
-   APM="<apm_bin>"
+   APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
    ID="<ticket_id>"
    "$APM" spec "$ID" --section "Problem" \
      --set "Mock spec — no real problem analyzed."
@@ -477,7 +486,7 @@ Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a r
    ```sh
    #!/bin/sh
    set -e
-   APM="<apm_bin>"
+   APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
    ID="<ticket_id>"
    printf 'mock: placeholder implementation for ticket %s\n' "$ID" \
      > mock-implementation.txt
@@ -489,7 +498,7 @@ Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a r
    rm -f "$0"
    ```
 
-8. Call `write_and_spawn_script("happy", &script, ctx)`.
+7. Call `write_and_spawn_script("happy", &script, ctx)`.
 
 ### 6. MockSadWrapper (`mock_sad.rs`)
 
@@ -497,16 +506,15 @@ Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a r
 1. `load_transitions_with_outcomes(ctx)`.
 2. Filter to non-success: `resolve_outcome(t, s) != "success"`.
 3. If empty: `anyhow::bail!("mock-sad: no non-success transitions from state '{}'", ctx.current_state)`.
-4. `let seed = seed_from_ctx(ctx)`.
-5. `let rng = rand::rngs::StdRng::seed_from_u64(seed)`.
-6. Pick index = `(seed as usize) % eligible.len()` (no need for a shuffle; modulo gives deterministic pick for a given seed and list length).
-7. `target_state = eligible[idx].0.to.clone()`.
-8. Generate script (writes only Problem section, adds an open question, emits one JSONL event, calls `apm state`):
+4. `let seed = seed_from_env()`.
+5. Pick index = `(seed as usize) % eligible.len()` (modulo gives deterministic pick for a given seed and list length).
+6. `target_state = eligible[idx].0.to.clone()`.
+7. Generate script via `sad_script(&ctx.ticket_id, &target_state)` (writes only Problem section, adds an open question, emits one JSONL event, calls `apm state`):
 
    ```sh
    #!/bin/sh
    set -e
-   APM="<apm_bin>"
+   APM="${APM_BIN:?APM_BIN not set — see wrapper contract}"
    ID="<ticket_id>"
    "$APM" spec "$ID" --section "Problem" \
      --set "Mock sad run — spec intentionally incomplete."
@@ -517,7 +525,7 @@ Reads `ctx.options.get("seed")` → parse as `u64`; on failure falls back to a r
    rm -f "$0"
    ```
 
-9. `write_and_spawn_script("sad", &script, ctx)`.
+8. `write_and_spawn_script("sad", &script, ctx)`.
 
 Note: `apm spec --section "Open questions"` must be a valid section name for `apm spec --set`. Verify the exact section name against the `apm spec` command's accepted sections; if "Open questions" isn't a named section, write to it via the ticket file directly or skip the question step.
 
@@ -526,21 +534,20 @@ Note: `apm spec --section "Open questions"` must be a valid section name for `ap
 `spawn()` steps:
 1. `load_transitions_with_outcomes(ctx)`.
 2. If empty: `anyhow::bail!("mock-random: no valid transitions from state '{}'", ctx.current_state)`.
-3. `seed_from_ctx(ctx)`.
+3. `let seed = seed_from_env()`.
 4. Pick index via `seed as usize % all.len()`.
 5. Inspect chosen transition's `resolve_outcome`:
    - `"success"` → generate the mock-happy script for the chosen `target_state` (spec or impl mode determined by `is_impl_mode(&all)`)
    - anything else → generate the mock-sad script for the chosen `target_state`
 6. `write_and_spawn_script("random", &script, ctx)`.
 
-Rather than duplicating script generation, extract private functions `happy_script(apm: &str, id: &str, target: &str, impl_mode: bool) -> String` and `sad_script(apm: &str, id: &str, target: &str) -> String` into `builtin/mod.rs` and call them from all three wrappers.
+Rather than duplicating script generation, extract private functions `happy_script(id: &str, target: &str, impl_mode: bool) -> String` and `sad_script(id: &str, target: &str) -> String` into `builtin/mod.rs` and call them from all three wrappers. Neither takes an `apm` path parameter — scripts use `${APM_BIN:?...}` at runtime.
 
 ### 8. DebugWrapper (`debug.rs`)
 
 `spawn()` steps:
-1. No config loading. No transition resolution.
-2. `apm_bin()`.
-3. Script:
+1. No config loading. No transition resolution. No `apm` CLI calls.
+2. Script:
 
    ```sh
    #!/bin/sh
@@ -573,19 +580,43 @@ Each test uses the same fixture helper (inline, no external files):
 - Copy (or write inline) the default workflow.toml to `.apm/workflow.toml` — including the two new `outcome = "success"` annotations
 - Create a ticket file in `tickets/` in the correct starting state
 - `git init`, add + commit the files (required for worktree and state operations)
-- Build a `WrapperContext` pointing at the fixture with `current_state` set
+- Build a `WrapperContext` pointing at the fixture with `current_state` set, and **`options["apm_bin"] = <path_to_real_apm_binary>`** so `write_and_spawn_script` uses that path for `APM_BIN` in the child env instead of the test runner's `current_exe()`. Locate the real binary via the same method the existing `spawn_worker_cwd_is_ticket_worktree` test uses (compile-time env var, `which`, or test-dep build artifact).
 - Call `spawn_worker(ctx)` (the private fn from d3b93b95), `child.wait()`, then read the updated ticket
+
+**Seed injection for reproducibility tests:** call `std::env::set_var("APM_OPT_SEED", "42")` immediately before each spawn that needs a fixed seed; call `std::env::remove_var("APM_OPT_SEED")` after. Mark these tests `#[serial]` (via the `serial_test` crate or equivalent) since `set_var` is not thread-safe.
 
 Test list:
 - `mock_happy_spec_mode_transitions_to_specd` — ticket in `in_design`; assert state = `specd`; assert all four spec section headers are present in the ticket file; assert effort = 1; assert risk = 1
 - `mock_happy_impl_mode_creates_commit_and_transitions` — ticket in `in_progress`; assert state = `implemented`; assert `git log --oneline` in worktree has a commit containing "mock"
 - `mock_happy_zero_success_transitions_exits_nonzero` — use a custom inline workflow where the current state has only non-success transitions; assert `child.wait().status.success() == false`; assert log contains "no success-outcome transition"
 - `mock_sad_transitions_to_non_success_state` — ticket in `in_design`; assert resulting state is NOT `specd`; assert only Problem section is present in ticket spec
-- `mock_sad_seed_reproducibility` — two separate spawn calls with `APM_OPT_SEED=42`; assert both end in the same target state
-- `mock_random_seed_reproducibility` — same as above with `mock-random`
-- `debug_does_not_change_state` — ticket in `in_design`; run debug; assert state is still `in_design`; assert log contains `APM_TICKET_ID`; assert log contains the system prompt text; assert log contains a line matching `{"type":"tool_use"...}`
+- `mock_sad_seed_reproducibility` — two separate spawn calls with `APM_OPT_SEED=42` (via `set_var`); assert both end in the same target state; run serially
+- `mock_random_seed_reproducibility` — same as above with `mock-random`; run serially
+- `debug_does_not_change_state` — ticket in `in_design`; run debug (no `apm_bin` override needed — debug never calls `$APM`); assert state is still `in_design`; assert log contains `APM_TICKET_ID`; assert log contains the system prompt text; assert log contains a line matching `{"type":"tool_use"`
 
-All tests that require `apm` CLI calls in the script must resolve `current_exe()` correctly — in the test binary environment, `current_exe()` returns the test runner, not `apm`. Use the same workaround as the existing `spawn_worker_cwd_is_ticket_worktree` test: set a fixture env var or pass an `apm_override_bin` through `WrapperContext.options` (key `"apm_bin"`) that the mock script uses when set. The `apm_bin()` helper checks `ctx.options.get("apm_bin")` first, then falls back to `current_exe()`.
+### 10. Per-agent instruction file stubs
+
+Each of the four built-in wrappers needs `apm.worker.md` and `apm.spec-writer.md` stubs so that ticket 7f5f73d5's resolution chain does not fall through to a level-5 hard error when a project is configured to use a mock.
+
+**Files to create** under `apm-core/src/default/agents/`:
+
+```
+mock-happy/apm.worker.md
+mock-happy/apm.spec-writer.md
+mock-sad/apm.worker.md
+mock-sad/apm.spec-writer.md
+mock-random/apm.worker.md
+mock-random/apm.spec-writer.md
+debug/apm.worker.md
+debug/apm.spec-writer.md
+```
+
+**Content for each file** (identical stub — mocks ignore the prompt entirely):
+```
+This wrapper is a mock — see docs/agent-wrappers.md.
+```
+
+**Embedding:** follow the same mechanism used for other default agent files in `apm-core/src/default/`. If defaults are embedded via `include_str!` in Rust, add the corresponding entries. If they are copied during `apm init`, add them to the copy manifest. Mirror the pattern established by existing default agent files (e.g., `claude/`).
 
 ### Open questions
 
