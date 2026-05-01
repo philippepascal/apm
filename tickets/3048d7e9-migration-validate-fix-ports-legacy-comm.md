@@ -27,20 +27,20 @@ This ticket adds that migration to `apm validate --fix`. A developer who upgrade
 
 ### Acceptance criteria
 
-- [ ] `apm validate --fix` on a config with `[workers] command = "claude"` rewrites it to `[workers] agent = "claude"` and removes the `command` key
-- [ ] `apm validate --fix` on a config with `[workers] model = "sonnet"` moves the value to `[workers.options] model = "sonnet"` and removes the top-level `model` key
-- [ ] `apm validate --fix` on a config with `[workers] args = [...]` removes the `args` key regardless of its contents
-- [ ] `apm validate --fix` on a config with `[worker_profiles.X] model = "opus"` moves the value to `[worker_profiles.X.options] model = "opus"` and removes the profile-level `model` key
-- [ ] `apm validate --fix` on a config with `[worker_profiles.X] command = "claude"` removes the profile-level `command` key (profile inherits `agent` from global)
-- [ ] `apm validate --fix` on a config with `[worker_profiles.X] args = [...]` removes the profile-level `args` key
-- [ ] `apm validate --fix` on a config where `[workers] command` is anything other than `"claude"` prints a warning naming the offending command and does not modify the config file
-- [ ] `apm validate --fix` on a config where any `[worker_profiles.X] command` is anything other than `"claude"` prints a warning naming the profile and command, and does not modify the config file
-- [ ] After a successful migration `apm validate` (without `--fix`) exits zero on the rewritten config
-- [ ] `apm validate --fix` on a config that has no legacy fields (`agent` already set, no `command`/`args`/`model`) makes no changes to the file
-- [ ] `apm validate --fix` on a config with both legacy fields and new fields (e.g. `agent` already present alongside a leftover `model`) removes the legacy fields and leaves the new fields intact
-- [ ] A successful migration prints exactly the line: `migrated [workers] config to agent-driven shape; legacy command/args/model removed`
-- [ ] TOML comments present in the config file survive the migration unchanged
-- [ ] Key ordering of unrelated sections (e.g. `[keychain]`, `[env]`) is preserved after migration
+- [x] `apm validate --fix` on a config with `[workers] command = "claude"` rewrites it to `[workers] agent = "claude"` and removes the `command` key
+- [x] `apm validate --fix` on a config with `[workers] model = "sonnet"` moves the value to `[workers.options] model = "sonnet"` and removes the top-level `model` key
+- [x] `apm validate --fix` on a config with `[workers] args = [...]` removes the `args` key regardless of its contents
+- [x] `apm validate --fix` on a config with `[worker_profiles.X] model = "opus"` moves the value to `[worker_profiles.X.options] model = "opus"` and removes the profile-level `model` key
+- [x] `apm validate --fix` on a config with `[worker_profiles.X] command = "claude"` removes the profile-level `command` key (profile inherits `agent` from global)
+- [x] `apm validate --fix` on a config with `[worker_profiles.X] args = [...]` removes the profile-level `args` key
+- [x] `apm validate --fix` on a config where `[workers] command` is anything other than `"claude"` prints a warning naming the offending command and does not modify the config file
+- [x] `apm validate --fix` on a config where any `[worker_profiles.X] command` is anything other than `"claude"` prints a warning naming the profile and command, and does not modify the config file
+- [x] After a successful migration `apm validate` (without `--fix`) exits zero on the rewritten config
+- [x] `apm validate --fix` on a config that has no legacy fields (`agent` already set, no `command`/`args`/`model`) makes no changes to the file
+- [x] `apm validate --fix` on a config with both legacy fields and new fields (e.g. `agent` already present alongside a leftover `model`) removes the legacy fields and leaves the new fields intact
+- [x] A successful migration prints exactly the line: `migrated [workers] config to agent-driven shape; legacy command/args/model removed`
+- [x] TOML comments present in the config file survive the migration unchanged
+- [x] Key ordering of unrelated sections (e.g. `[keychain]`, `[env]`) is preserved after migration
 
 ### Out of scope
 
