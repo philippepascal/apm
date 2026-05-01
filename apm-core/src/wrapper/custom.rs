@@ -315,6 +315,7 @@ mod tests {
             extra_env: HashMap::new(),
             root: wt.to_path_buf(),
             keychain: HashMap::new(),
+            current_state: "test".to_string(),
         }
     }
 
