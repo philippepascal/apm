@@ -12,7 +12,7 @@ pub fn run_engine_loop(
     skip_permissions: bool,
     epic_filter: Option<String>,
 ) -> Result<()> {
-    let mut workers: Vec<(String, Option<String>, std::process::Child, std::path::PathBuf)> = Vec::new();
+    let mut workers: Vec<(String, Option<String>, crate::start::ManagedChild, std::path::PathBuf)> = Vec::new();
     let mut no_more = false;
     let mut next_poll = Instant::now();
 
