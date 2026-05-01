@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/094838b6-migrate-remote-merge-test-setups-to-init"
 created_at = "2026-05-01T20:27:20.736073Z"
-updated_at = "2026-05-01T20:27:20.736073Z"
+updated_at = "2026-05-01T20:29:17.859154Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
