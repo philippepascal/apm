@@ -1,7 +1,7 @@
 +++
 id = "2c32a282"
 title = "Custom wrapper resolution from .apm/agents/<name>/"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2c32a282-custom-wrapper-resolution-from-apm-agent"
 created_at = "2026-04-30T20:02:50.794362Z"
-updated_at = "2026-05-01T01:32:15.431797Z"
+updated_at = "2026-05-01T17:38:03.266489Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95"]
@@ -259,3 +259,4 @@ Integration test in apm-core/tests/custom_wrapper_integration.rs:
 | 2026-05-01T01:10Z | specd | ammend | philippepascal |
 | 2026-05-01T01:29Z | ammend | in_design | philippepascal |
 | 2026-05-01T01:32Z | in_design | specd | claude-0501-0129-2a50 |
+| 2026-05-01T17:38Z | specd | ready | philippepascal |
