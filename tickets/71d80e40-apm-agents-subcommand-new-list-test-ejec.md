@@ -71,7 +71,7 @@ Add the `apm agents` subcommand family for discovering, scaffolding, smoke-testi
 - [x] `apm agents new <name>` creates `.apm/agents/<name>/wrapper.sh` with the execute bit set (mode `0o755` on Unix)
 - [x] `apm agents new <name>` creates `.apm/agents/<name>/apm.worker.md` with content copied from `.apm/apm.worker.md` or the built-in default when the project file is absent
 - [x] `apm agents new <name>` creates `.apm/agents/<name>/apm.spec-writer.md` with content copied from `.apm/apm.spec-writer.md` or the built-in default when the project file is absent
-- [ ] `apm agents new <name>` creates `.apm/agents/<name>/manifest.toml` containing `contract_version = 1` and `parser = "canonical"`
+- [x] `apm agents new <name>` creates `.apm/agents/<name>/manifest.toml` containing `contract_version = 1` and `parser = "canonical"`
 - [ ] `apm agents new <name>` exits non-zero with a message that mentions `--force` when `.apm/agents/<name>/` already exists
 - [ ] `apm agents new <name> --force` succeeds when the directory already exists and overwrites the scaffolded files
 - [ ] `apm agents new <name>` prints next-step guidance directing the user to edit `wrapper.sh` and run `apm agents test <name>`
