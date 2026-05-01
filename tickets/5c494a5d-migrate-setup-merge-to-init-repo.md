@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5c494a5d-migrate-setup-merge-to-init-repo"
 created_at = "2026-05-01T20:26:46.198163Z"
-updated_at = "2026-05-01T20:26:46.198163Z"
+updated_at = "2026-05-01T20:28:49.929482Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
+depends_on = ["795dce11"]
 +++
 
 ## Spec
