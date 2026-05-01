@@ -9,6 +9,208 @@ use std::collections::HashSet;
 use std::path::Path;
 use crate::ctx::CmdContext;
 
+/// Rewrites `.apm/config.toml` (or `apm.toml`) to replace legacy
+/// `[workers] command/args/model` fields with the agent-wrapper shape.
+///
+/// Returns `true` when the file was rewritten, `false` when no legacy fields
+/// were detected (no-op) or when migration was blocked by a non-Claude command.
+pub fn apply_config_migration_fixes(root: &Path) -> Result<bool> {
+    use std::fs;
+
+    // 1. Locate config file
+    let config_path = {
+        let p = root.join(".apm").join("config.toml");
+        if p.exists() {
+            p
+        } else {
+            let p = root.join("apm.toml");
+            if p.exists() {
+                p
+            } else {
+                return Ok(false);
+            }
+        }
+    };
+
+    // 2. Parse with toml_edit (preserves comments, whitespace, key order)
+    let content = fs::read_to_string(&config_path)
+        .with_context(|| format!("reading {}", config_path.display()))?;
+    let mut doc = content
+        .parse::<toml_edit::DocumentMut>()
+        .with_context(|| format!("parsing {}", config_path.display()))?;
+
+    // 3. Detect legacy fields.
+    // Use .get() throughout: DocumentMut::index panics for missing top-level keys.
+    let has_workers_legacy = doc
+        .get("workers")
+        .and_then(|v| v.as_table())
+        .map_or(false, |t| {
+            t.contains_key("command") || t.contains_key("args") || t.contains_key("model")
+        });
+
+    let profiles_with_legacy: Vec<String> = doc
+        .get("worker_profiles")
+        .and_then(|v| v.as_table())
+        .map(|wp| {
+            wp.iter()
+                .filter_map(|(name, item)| {
+                    item.as_table()
+                        .filter(|t| {
+                            t.contains_key("command")
+                                || t.contains_key("args")
+                                || t.contains_key("model")
+                        })
+                        .map(|_| name.to_string())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    if !has_workers_legacy && profiles_with_legacy.is_empty() {
+        return Ok(false);
+    }
+
+    // 4. Guard: non-claude command — block migration and warn if any command
+    //    is not "claude" (we can't safely choose a wrapper for unknown tools).
+    if let Some(cmd) = doc
+        .get("workers")
+        .and_then(|v| v.as_table())
+        .and_then(|t| t.get("command"))
+        .and_then(|v| v.as_str())
+    {
+        if cmd != "claude" {
+            #[allow(clippy::print_stderr)]
+            {
+                eprintln!(
+                    "warning: [workers] command = {:?} is not \"claude\" \u{2014} cannot auto-migrate; choose a wrapper manually",
+                    cmd
+                );
+            }
+            return Ok(false);
+        }
+    }
+
+    for name in &profiles_with_legacy {
+        if let Some(cmd) = doc
+            .get("worker_profiles")
+            .and_then(|v| v.as_table())
+            .and_then(|wp| wp.get(name.as_str()))
+            .and_then(|p| p.as_table())
+            .and_then(|t| t.get("command"))
+            .and_then(|v| v.as_str())
+        {
+            if cmd != "claude" {
+                #[allow(clippy::print_stderr)]
+                {
+                    eprintln!(
+                        "warning: [worker_profiles.{}] command = {:?} is not \"claude\" \u{2014} cannot auto-migrate; choose a wrapper manually",
+                        name, cmd
+                    );
+                }
+                return Ok(false);
+            }
+        }
+    }
+
+    // 5. Migrate [workers]
+    if has_workers_legacy {
+        let has_command;
+        let model_val: Option<String>;
+        let has_args;
+        {
+            let workers = doc
+                .get("workers")
+                .and_then(|v| v.as_table())
+                .expect("workers is a table (checked in step 3)");
+            has_command = workers.contains_key("command");
+            model_val = workers.get("model").and_then(|v| v.as_str()).map(|s| s.to_string());
+            has_args = workers.contains_key("args");
+        }
+
+        let workers = doc
+            .get_mut("workers")
+            .and_then(|v| v.as_table_mut())
+            .expect("workers is a table");
+
+        if has_command {
+            workers.remove("command");
+            workers.insert("agent", toml_edit::value("claude"));
+        }
+        if has_args {
+            workers.remove("args");
+        }
+        if let Some(ref model) = model_val {
+            workers.remove("model");
+            if !workers.contains_key("options") {
+                workers.insert("options", toml_edit::Item::Table(toml_edit::Table::new()));
+            }
+            // workers is &mut Table; Table::IndexMut creates keys when missing.
+            // options was just inserted as Item::Table, so ["options"] returns &mut Item::Table.
+            // ["model"] on Item::Table creates the "model" entry via Item::IndexMut.
+            workers["options"]["model"] = toml_edit::value(model.as_str());
+        }
+    }
+
+    // 6. Migrate each [worker_profiles.<name>]
+    for name in &profiles_with_legacy {
+        let name = name.as_str();
+
+        let has_command;
+        let model_val: Option<String>;
+        let has_args;
+        {
+            let profile = doc
+                .get("worker_profiles")
+                .and_then(|v| v.as_table())
+                .and_then(|wp| wp.get(name))
+                .and_then(|v| v.as_table())
+                .expect("profile is a table (checked in step 3)");
+            has_command = profile.contains_key("command");
+            model_val = profile.get("model").and_then(|v| v.as_str()).map(|s| s.to_string());
+            has_args = profile.contains_key("args");
+        }
+
+        let profile = doc
+            .get_mut("worker_profiles")
+            .and_then(|v| v.as_table_mut())
+            .and_then(|wp| wp.get_mut(name))
+            .and_then(|v| v.as_table_mut())
+            .expect("profile is a table");
+
+        if has_command {
+            // Remove command; do NOT add agent at profile level (inherits from [workers])
+            profile.remove("command");
+        }
+        if has_args {
+            profile.remove("args");
+        }
+        if let Some(ref model) = model_val {
+            profile.remove("model");
+            if !profile.contains_key("options") {
+                profile.insert("options", toml_edit::Item::Table(toml_edit::Table::new()));
+            }
+            profile["options"]["model"] = toml_edit::value(model.as_str());
+        }
+    }
+
+    // 7. Write back (toml_edit preserves comments, whitespace, and unrelated sections)
+    fs::write(&config_path, doc.to_string())
+        .with_context(|| format!("writing {}", config_path.display()))?;
+
+    // 8. Re-validate: confirm the migration did not produce an invalid config.
+    let migrated_config = apm_core::config::Config::load(root)
+        .context("migration produced an unparseable config (this is a bug)")?;
+    let errors = apm_core::validate::validate_config(&migrated_config, root);
+    if !errors.is_empty() {
+        anyhow::bail!(
+            "migration produced an invalid config:\n{}",
+            errors.join("\n")
+        );
+    }
+
+    Ok(true)
+}
+
 #[derive(Debug, Serialize)]
 struct Issue {
     kind: String,
@@ -17,6 +219,11 @@ struct Issue {
 }
 
 pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive: bool) -> Result<()> {
+    // Config migration runs first so the freshly-written config is loaded below.
+    if fix && apply_config_migration_fixes(root)? {
+        println!("migrated [workers] config to agent-driven shape; legacy command/args/model removed");
+    }
+
     let config_errors;
     let config_warnings;
     let mut ticket_issues: Vec<Issue> = Vec::new();
