@@ -70,7 +70,95 @@ Add wrapper-contract versioning so future contract changes (new env vars, new ou
 
 ### Approach
 
-How the implementation will work.
+**Files changed:** `apm-core/src/wrapper/mod.rs`, `apm-core/src/wrapper/claude.rs`, `apm-core/src/wrapper/custom.rs`
+
+---
+
+**1. Define the constant — `wrapper/mod.rs`**
+
+Add at module scope (after imports, before the trait definition):
+
+```rust
+pub const CONTRACT_VERSION: u32 = 1;
+```
+
+This is the single source of truth. Every comparison in the spawn path and every `APM_WRAPPER_VERSION` env var value derives from it.
+
+---
+
+**2. Use the constant in `ClaudeWrapper` — `wrapper/claude.rs`**
+
+Add `use super::CONTRACT_VERSION;`.
+
+In `ClaudeWrapper::spawn`, replace the hardcoded string literal `"1"` for the `APM_WRAPPER_VERSION` env key with `CONTRACT_VERSION.to_string()`. Both the local-path and container-path branches need this change.
+
+---
+
+**3. Extend `CustomWrapper` — `wrapper/custom.rs`**
+
+Add `use super::CONTRACT_VERSION;`.
+
+**Extract a private helper** (keeps the version logic independently testable):
+
+```rust
+fn check_contract_version(
+    declared: u32,
+    apm_version: u32,
+    log_path: &Path,
+) -> anyhow::Result<()> {
+    match declared.cmp(&apm_version) {
+        std::cmp::Ordering::Greater => anyhow::bail!(
+            "wrapper targets contract version {} but this APM build supports up to \
+             version {}; upgrade APM",
+            declared,
+            apm_version,
+        ),
+        std::cmp::Ordering::Less => {
+            // Non-fatal: append a warning to the log and continue.
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(log_path)
+            {
+                let _ = writeln!(
+                    f,
+                    "[apm] warning: wrapper targets contract version {} but this APM \
+                     build is version {}; the wrapper may not use newer env vars",
+                    declared, apm_version,
+                );
+            }
+        }
+        std::cmp::Ordering::Equal => {}
+    }
+    Ok(())
+}
+```
+
+**Update `CustomWrapper::spawn`:**
+
+- Derive `declared`: `let declared = self.manifest.as_ref().map_or(1, |m| m.contract_version);`
+- Replace the existing `if contract_version > 1 { bail!(...) }` block introduced by 2c32a282 with a single call: `check_contract_version(declared, CONTRACT_VERSION, &ctx.log_path)?;`
+- Replace the hardcoded `"1"` for `APM_WRAPPER_VERSION` with `CONTRACT_VERSION.to_string()`.
+
+The helper subsumes the old bail — no net behaviour change for the `> 1` case, and it adds the new `< CONTRACT_VERSION` warning path.
+
+---
+
+**4. Tests — `wrapper/custom.rs` under `#[cfg(test)]`**
+
+Four unit tests against the helper (no subprocess needed):
+
+- `check_version_equal` — `check_contract_version(1, 1, &log)` returns `Ok(())`, log is empty.
+- `check_version_older_writes_warning` — `check_contract_version(1, 2, &log)` returns `Ok(())`, log file contains the word `"warning"` and both version numbers.
+- `check_version_too_high_returns_err` — `check_contract_version(2, 1, &log)` returns `Err`, error string contains `"upgrade APM"`, `"2"`, and `"1"`.
+- `check_version_no_manifest_defaults_to_1` — set `declared = None::<Manifest>.map_or(1, |m| m.contract_version)`, assert it equals 1 (documents the default assumption without spawning).
+
+Two integration tests using a real subprocess (same fixture pattern as 2c32a282's `integration_echo_test_wrapper`):
+
+- `spawn_matching_contract_succeeds` — fixture wrapper with `manifest.toml` declaring `contract_version = 1`; assert spawn returns `Ok`, exit code 0, log contains no `"warning"` line.
+- `spawn_future_contract_rejected` — fixture wrapper with `manifest.toml` declaring `contract_version = 2`; assert `CustomWrapper::spawn` returns `Err` before a child is created.
+
+The `check_version_older_writes_warning` unit test covers the older-version path by calling the helper directly with `apm_version = 2`; no integration test is needed for this branch since `CONTRACT_VERSION = 1` makes it currently unreachable in production.
 
 ### Open questions
 
