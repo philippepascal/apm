@@ -240,7 +240,7 @@ Integration test in apm-core/tests/custom_wrapper_integration.rs:
 
 ### Amendment requests
 
-- [ ] Make the two-layer manifest validation explicit in the Approach: (a) `apm validate` parses every project wrapper's `manifest.toml` and reports errors at validate time so users find problems early, before any worker is spawned; (b) `CustomWrapper::spawn` re-checks the manifest at spawn time as a safety net (the file could have been edited between validate and spawn). Both layers are necessary — early surfacing is the load-bearing UX, but spawn-time check prevents silent crashes when a user edits a manifest mid-session. The current spec implements both but doesn't say so explicitly; an implementer might be tempted to drop one.
+- [x] Make the two-layer manifest validation explicit in the Approach: (a) `apm validate` parses every project wrapper's `manifest.toml` and reports errors at validate time so users find problems early, before any worker is spawned; (b) `CustomWrapper::spawn` re-checks the manifest at spawn time as a safety net (the file could have been edited between validate and spawn). Both layers are necessary — early surfacing is the load-bearing UX, but spawn-time check prevents silent crashes when a user edits a manifest mid-session. The current spec implements both but doesn't say so explicitly; an implementer might be tempted to drop one.
 
 ### Code review
 
