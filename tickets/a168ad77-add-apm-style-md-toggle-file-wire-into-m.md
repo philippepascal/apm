@@ -40,16 +40,73 @@ A checkbox-toggle file at `.apm/style.md` provides that mechanism. All rules sta
 
 ### Approach
 
-**Prerequisite:** confirm the wrapper epic (4312fbd4) is merged before starting; the `.apm/agents/claude/` directory must exist.
+**Prerequisite:** confirm the wrapper epic (4312fbd4) is merged; `.apm/agents/claude/apm.spec-writer.md` must exist before starting.
 
 #### 1. Create `.apm/style.md`
 
-New file at repo root `.apm/style.md`. Content:
+New file at repo root `.apm/style.md`:
 
 ```markdown
 # APM Style Rules
 
 Rules are opt-in. Check a box (`[x]`) to activate a rule. Default: all unchecked.
+
+## Conversation
+
+- [ ] Skip preamble — reply without restating the request or summarising what you are about to do
+- [ ] No end-of-turn check-ins — omit "Let me know if …" or "Does this look right?" closings
+- [ ] One-liners only for one-line questions — do not expand a simple yes/no into a paragraph
+- [ ] No bullet-point rewrites of prose — if the answer is a single sentence, give a single sentence
+
+## Specs
+
+- [ ] Limit the Problem section to two paragraphs
+- [ ] Cap the AC list at eight items — merge closely related checks rather than splitting
+- [ ] Omit trivial boundary ACs when the main-path AC implies them
+- [ ] Limit the Approach section to 400 words
+```
+
+#### 2. Update `CLAUDE.md`
+
+Two edits:
+- Add `@.apm/style.md` on a new line immediately after the `@.apm/agents.md` import
+- Add a `## Style rules` section after the @imports block and before `## Commits`:
+
+```markdown
+## Style rules
+
+@.apm/style.md contains opt-in output-style rules for this session. On startup:
+- Read `.apm/style.md` and identify every rule marked `[x]` in `## Conversation`
+- Apply those rules to your own replies for the entire session
+- Rules marked `[ ]` are inactive — do not apply or reference them
+- When spawning subagents via the Agent tool, prepend the text of each active `## Conversation` rule to the subagent prompt
+```
+
+#### 3. Update both spec-writer `.md` files
+
+Append an identical `## Style rules` section to each of:
+- `apm-core/src/default/agents/claude/apm.spec-writer.md`
+- `.apm/agents/claude/apm.spec-writer.md`
+
+The section to append (byte-for-byte identical in both files):
+
+```markdown
+## Style rules
+
+Before writing or amending a spec, read `.apm/style.md` if present. Apply every rule marked `[x]` under `## Specs` to the spec you are writing. Rules marked `[ ]` are inactive — do not apply or reference them.
+```
+
+#### 4. Add Rust test `apm-core/tests/spec_writer_md_sync.rs`
+
+The test:
+1. Reads both spec-writer `.md` files:
+   - Default: `env!("CARGO_MANIFEST_DIR")/src/default/agents/claude/apm.spec-writer.md`
+   - Project: `env!("CARGO_MANIFEST_DIR")/../../.apm/agents/claude/apm.spec-writer.md`
+2. From each file, extracts lines from the `## Style rules` heading to the next `##`-level heading or EOF
+3. Asserts the two extracted slices are identical
+4. On failure, prints each line with a `+`/`-` prefix to show the diff (no external crate; iterate lines with zip_longest-style comparison)
+
+The test must not check whole-file byte identity — the project file (`.apm/agents/claude/apm.spec-writer.md`) may be legitimately customised beyond this section.
 
 ### Open questions
 
