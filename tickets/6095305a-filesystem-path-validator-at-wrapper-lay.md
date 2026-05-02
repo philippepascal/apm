@@ -251,6 +251,19 @@ Unit tests in `path_guard.rs` cover:
 
 ### Amendment requests
 
+- [ ] The wrapper epic does not expose a `set_tool_intercept` hook. The spec at §1/§4 assumes the canonical parser calls a registered callback per `tool_use` event, but reading `wrapper/mod.rs` and `ClaudeWrapper::spawn_local` shows the canonical parser is just stdout-tee'd to the log — there is no per-event interception layer. Either add ACs that build the hook in this ticket (more scope), or split out a prerequisite ticket. Without it, `claude` runs unsupervised and the rejection-injection back into the agent's tool stream cannot land.
+
+- [ ] `-P` (`--dangerously-skip-permissions`) enforcement claim is unimplementable as written. The flag bypasses Claude Code's allowlist *inside* the claude binary; APM cannot intercept the inner tool dispatch unless it parses the JSONL stream and round-trips a synthetic `tool_result` — which requires an interactive `--input-format=stream-json` link, not the current one-shot `--print`. AC #1 needs to specify the IPC mode change, or the threat model needs to drop to "log-and-warn" rather than block.
+
+- [ ] The Bash heuristic regex is too loose to be testable. AC says "embedded paths in subshells / variables not caught" is OOS, but the spec doesn't list the specific shapes that ARE caught. Add a small canonical table — at least 6 examples each of "this fires" and "this does not" — so the integration test set is bounded.
+
+- [ ] `canonicalize_lenient` for write checks is racey. If the path doesn't exist yet, the validator resolves `..` lexically — but a parent symlink could redirect after the check. Add an AC: "intermediate components that exist must be canonicalised; the final non-existent leaf is appended after parent resolution."
+
+- [ ] No AC verifies APM_BIN write protection works when APM_BIN is *under* the worktree (e.g. local cargo build placed in `target/`). Pin this edge case.
+
+- [ ] `isolation.read_allow` glob support (e.g. `/etc/ssl/certs/**`) implies a glob crate dep. The spec does not pick one or specify semantics. Decide: literal-prefix match vs globset, and state which crate is added.
+
+- [ ] After the above amendments, re-evaluate effort/risk. Effort 5 / risk 5 is plausible only if the wrapper-hook gap is split out into a prerequisite ticket; otherwise risk → 8.
 
 ### Code review
 
