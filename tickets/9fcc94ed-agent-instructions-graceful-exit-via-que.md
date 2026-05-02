@@ -1,7 +1,7 @@
 +++
 id = "9fcc94ed"
 title = "Agent instructions: graceful exit via question/blocked state when stuck on capability limits"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9fcc94ed-agent-instructions-graceful-exit-via-que"
 created_at = "2026-05-01T02:34:11.627171Z"
-updated_at = "2026-05-02T03:07:20.231714Z"
+updated_at = "2026-05-02T03:40:13.248519Z"
 +++
 
 ## Spec
@@ -90,3 +90,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T02:34Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
+| 2026-05-02T03:40Z | groomed | in_design | philippepascal |
