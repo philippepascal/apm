@@ -219,7 +219,7 @@ No config schema changes, no new structs, no migration needed. All changes are a
 
 - [x] The "project-level `.apm/apm.*.md` contains the same Scope-limits content as the bundled default" AC is unverifiable as written. Add a concrete check, e.g. `diff <(awk '/## Scope limits/,/^## /' .apm/apm.worker.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.worker.md)` returns empty. Otherwise drift is invisible.
 
-- [ ] The "blocked + diagnostic" instruction has no enforcement — a worker that ignored the descriptive text in the 2803bf07 incident can ignore this one too. Either accept this is purely soft and say so in Out of scope, or note explicitly that ticket f06272f1 (permission-denial diagnostics) is the structural backstop. Without that pointer, the AC reads as if it actually prevents the loop.
+- [x] The "blocked + diagnostic" instruction has no enforcement — a worker that ignored the descriptive text in the 2803bf07 incident can ignore this one too. Either accept this is purely soft and say so in Out of scope, or note explicitly that ticket f06272f1 (permission-denial diagnostics) is the structural backstop. Without that pointer, the AC reads as if it actually prevents the loop.
 
 - [ ] The worker's permitted-command list omits `apm spec --append "..."`, but the blocking flow needs to write the question into `### Open questions` first. Either add `apm spec` to the permitted list or change the instruction to use `apm new --side-note`.
 
