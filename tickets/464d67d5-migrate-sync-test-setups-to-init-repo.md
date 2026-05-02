@@ -1,7 +1,7 @@
 +++
 id = "464d67d5"
 title = "Migrate sync test setups to init_repo()"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/464d67d5-migrate-sync-test-setups-to-init-repo"
 created_at = "2026-05-01T20:27:11.656953Z"
-updated_at = "2026-05-02T04:05:29.756024Z"
+updated_at = "2026-05-02T04:05:34.596526Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -125,3 +125,4 @@ No callers of either helper need editing.
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
 | 2026-05-02T04:03Z | groomed | in_design | philippepascal |
+| 2026-05-02T04:05Z | in_design | specd | claude-0502-0403-5420 |
