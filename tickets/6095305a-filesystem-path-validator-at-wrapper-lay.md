@@ -517,7 +517,7 @@ Unit tests in `path_guard.rs` cover:
 
 - [x] `-P` (`--dangerously-skip-permissions`) enforcement claim is unimplementable as written. The flag bypasses Claude Code's allowlist *inside* the claude binary; APM cannot intercept the inner tool dispatch unless it parses the JSONL stream and round-trips a synthetic `tool_result` — which requires an interactive `--input-format=stream-json` link, not the current one-shot `--print`. AC #1 needs to specify the IPC mode change, or the threat model needs to drop to "log-and-warn" rather than block.
 
-- [ ] The Bash heuristic regex is too loose to be testable. AC says "embedded paths in subshells / variables not caught" is OOS, but the spec doesn't list the specific shapes that ARE caught. Add a small canonical table — at least 6 examples each of "this fires" and "this does not" — so the integration test set is bounded.
+- [x] The Bash heuristic regex is too loose to be testable. AC says "embedded paths in subshells / variables not caught" is OOS, but the spec doesn't list the specific shapes that ARE caught. Add a small canonical table — at least 6 examples each of "this fires" and "this does not" — so the integration test set is bounded.
 
 - [ ] `canonicalize_lenient` for write checks is racey. If the path doesn't exist yet, the validator resolves `..` lexically — but a parent symlink could redirect after the check. Add an AC: "intermediate components that exist must be canonicalised; the final non-existent leaf is appended after parent resolution."
 
