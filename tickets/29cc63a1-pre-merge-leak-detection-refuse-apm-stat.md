@@ -75,7 +75,14 @@ When a worker writes to the main worktree (intentional leak or bug), the bad cha
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-recovery of leaked edits (stashing, reverting, or moving changes on behalf of the user)
+- Pre-spawn checks to prevent workers from leaking in the first place
+- Wrapper-layer tool-call interception (separate ticket in epic 4312fbd4)
+- Checking for leaks in worktrees other than the merge target (e.g. other ticket worktrees)
+- The `Pull` completion strategy (pulls upstream into ticket branch; no merge of ticket into target)
+- The `Pr` strategy's no-merge path (no worktree merge is attempted)
+- Detecting leaks that have already been committed to the main branch (those cause a normal merge conflict, not a worker leak)
+- `apm verify` command (referenced in the diagnostic as a follow-up tool; implementation is out of scope here)
 
 ### Approach
 
