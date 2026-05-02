@@ -18,7 +18,11 @@ target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 
 ### Problem
 
-Tests in apm/tests/integration.rs hand-roll their own apm.toml, write ticket frontmatter directly, and bypass apm CLI commands ad hoc, with no policy on when bypass is acceptable. Add a short doc (apm/tests/README.md or similar) stating: tests must drive APM via real `apm` commands by default; bypass (raw filesystem ops, hand-built frontmatter, direct git porcelain on ticket branches) is only permitted when no command path exists, and every bypass must be flagged inline with `// BYPASS: <one-line reason>` so we can grep-audit them. Foundational ticket — sets the principle the migration tickets enforce.
+apm/tests/integration.rs has no documented convention for how tests should interact with APM. Every setup helper hand-rolls an `apm.toml`, writes ticket frontmatter directly via `std::fs::write`, and invokes raw git porcelain — with no policy on when that is acceptable. Changes to the production init template, ticket frontmatter rules, or CLI behaviour go unexercised and are invisible to the test suite.
+
+The epic containing this ticket migrates those helpers to drive APM via real `apm` commands. That migration requires a documented standard: what is the default approach, what constitutes a legitimate bypass, and how do bypasses get flagged so they can be grepped and audited. Without this document, each migration ticket makes its own call, producing inconsistent patterns across the file.
+
+This ticket produces the policy document. It is a prerequisite for all sibling migration tickets and establishes the principle they enforce.
 
 ### Acceptance criteria
 
