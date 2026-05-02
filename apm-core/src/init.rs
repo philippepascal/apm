@@ -306,18 +306,17 @@ max_workers_on_default = 1
 instructions = ".apm/agents.md"
 
 [workers]
-command = "claude"
-args = ["--print"]
+agent = "claude"
+
+[workers.options]
+model = "sonnet"
 
 [worker_profiles.spec_agent]
-command = "claude"
-args = ["--print"]
 instructions = ".apm/apm.spec-writer.md"
+role = "spec-writer"
 role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
 
 [worker_profiles.impl_agent]
-command = "claude"
-args = ["--print"]
 instructions = ".apm/apm.worker.md"
 role_prefix = "You are a Worker agent assigned to ticket #<id>."
 
@@ -836,6 +835,37 @@ mod tests {
         for id in ["specd", "ammend", "ready", "in_progress", "implemented"] {
             let s = states.iter().find(|s| s.id == id).unwrap();
             assert_ne!(s.satisfies_deps, SatisfiesDeps::Bool(false), "state {id} should have satisfies_deps");
+        }
+    }
+
+    #[test]
+    fn default_workflow_all_transitions_have_valid_outcomes() {
+        use crate::config::{resolve_outcome, WorkflowFile};
+
+        let parsed: WorkflowFile = toml::from_str(default_workflow_toml()).unwrap();
+        let states = &parsed.workflow.states;
+        let state_map: std::collections::HashMap<&str, &crate::config::StateConfig> =
+            states.iter().map(|s| (s.id.as_str(), s)).collect();
+
+        let valid_outcomes = ["success", "needs_input", "blocked", "rejected", "cancelled"];
+
+        for state in states {
+            for t in &state.transitions {
+                let target = state_map
+                    .get(t.to.as_str())
+                    .unwrap_or_else(|| panic!("target state '{}' not found in map", t.to));
+                let outcome = resolve_outcome(t, target);
+                assert!(
+                    !outcome.is_empty(),
+                    "transition {} → {} has empty outcome",
+                    state.id, t.to
+                );
+                assert!(
+                    valid_outcomes.contains(&outcome),
+                    "transition {} → {} has unexpected outcome '{outcome}'",
+                    state.id, t.to
+                );
+            }
         }
     }
 
