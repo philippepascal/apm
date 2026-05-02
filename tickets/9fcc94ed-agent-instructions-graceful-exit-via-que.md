@@ -1,7 +1,7 @@
 +++
 id = "9fcc94ed"
 title = "Agent instructions: graceful exit via question/blocked state when stuck on capability limits"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9fcc94ed-agent-instructions-graceful-exit-via-que"
 created_at = "2026-05-01T02:34:11.627171Z"
-updated_at = "2026-05-02T18:21:42.408427Z"
+updated_at = "2026-05-02T18:22:00.441532Z"
 +++
 
 ## Spec
@@ -224,3 +224,4 @@ fn default_and_project_apm_spec_writer_md_are_identical() {
 | 2026-05-02T07:21Z | ammend | in_design | philippepascal |
 | 2026-05-02T07:29Z | in_design | specd | claude-0502-0721-4c68 |
 | 2026-05-02T18:21Z | specd | ready | philippepascal |
+| 2026-05-02T18:22Z | ready | in_progress | philippepascal |
