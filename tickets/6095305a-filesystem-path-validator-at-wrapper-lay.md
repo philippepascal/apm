@@ -61,7 +61,14 @@ wrappers, and backs the allow-list with a project-level config section.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Process-level sandboxing (bwrap, sandbox-exec, containers, seccomp) — heavier mechanism; only justified if this tool-level filter proves insufficient
+- Network egress filtering — the agent's Anthropic API traffic is out of scope
+- Read-only filesystem access outside the worktree — reads are information-only; this ticket blocks writes, not reads (other than through the explicit write-only exceptions)
+- Enforcement in custom wrappers that use `parser = "external"` — external parsers implement their own enforcement; the manifest field signals intent but APM core does not enforce on their behalf
+- Retroactive enforcement on already-running workers — enforcement applies only to tool calls dispatched after the worker has been spawned with the flag active
+- Windows or non-POSIX path handling — all path logic assumes POSIX absolute paths
+- Bash false-negative elimination — paths embedded in shell variables, subshell expansions, or indirect redirections will not be caught; documented as a known limitation
+- Changing the default of `enforce_worktree_isolation` to `true` — left as a follow-on decision after this ticket ships and any friction is observed
 
 ### Approach
 
