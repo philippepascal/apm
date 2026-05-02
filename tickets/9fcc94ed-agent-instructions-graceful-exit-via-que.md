@@ -203,7 +203,7 @@ fn default_and_project_apm_spec_writer_md_are_identical() {
 
 ### Amendment requests
 
-- [ ] AC #5's three-step exit is wrong. It says: `apm spec --append`, then `git -C <worktree> add/commit`, then `apm state blocked`. But `apm spec --append` already auto-commits to the ticket branch (per `.apm/agents.md`'s "each `apm spec` call auto-commits" rule). The manual `git add/commit` step in the middle is redundant and would fail (nothing to commit). Drop step 2 entirely — `apm spec --append` is enough; `apm state blocked` follows.
+- [x] AC #5's three-step exit is wrong. It says: `apm spec --append`, then `git -C <worktree> add/commit`, then `apm state blocked`. But `apm spec --append` already auto-commits to the ticket branch (per `.apm/agents.md`'s "each `apm spec` call auto-commits" rule). The manual `git add/commit` step in the middle is redundant and would fail (nothing to commit). Drop step 2 entirely — `apm spec --append` is enough; `apm state blocked` follows.
 
 - [ ] Out-of-scope section has literal `\n` escapes instead of newlines, rendering as a single line. Visible in the spec output between "decides whether..." and "Tooling to distinguish...". Re-set the section with proper newlines so the supervisor can read it. Same root cause as the rendering issue flagged in 40fdde3b and a168ad77.
 
