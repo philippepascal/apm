@@ -19,7 +19,13 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:1725 setup_with_local_worktrees() and apm/tests/integration.rs:3578 setup_with_worktrees() override [worktrees] dir to keep parallel tests isolated inside the tempdir. Production now writes a worktrees.dir default during apm init; rewrite both helpers to compose on init_repo() and override only the dir setting.
+setup_with_local_worktrees() (line 1725) and setup_with_worktrees() (line 3578) in apm/tests/integration.rs both hand-write a full apm.toml at the repo root. Neither calls apm init. As a result, the fixtures diverge from the production repo shape in two ways: the config file is at the legacy apm.toml location instead of .apm/config.toml, and the hand-crafted workflow states are a smaller, frozen subset of the production default.
+
+The [worktrees] dir = worktrees present in both helpers is included to keep worktrees inside the tempdir during tests. That value happens to be identical to what apm init now writes by default, so no override of this field is needed after migration -- init_repo() already provides it.
+
+setup_with_local_worktrees() additionally sets [workers] command to a mock binary. There is no CLI command that configures workers.command post-init, so this one field must be injected via a direct edit to .apm/config.toml with a // BYPASS: annotation per the epic bypass policy.
+
+setup_with_local_worktrees() is called by 15 tests (start / work commands). setup_with_worktrees() is called by 3 tests (workers kill-process commands).
 
 ### Acceptance criteria
 
