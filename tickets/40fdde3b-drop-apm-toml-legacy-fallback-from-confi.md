@@ -1,7 +1,7 @@
 +++
 id = "40fdde3b"
 title = "Drop apm.toml legacy fallback from Config::load"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/40fdde3b-drop-apm-toml-legacy-fallback-from-confi"
 created_at = "2026-05-01T20:27:33.796162Z"
-updated_at = "2026-05-02T07:22:51.058879Z"
+updated_at = "2026-05-02T16:55:59.235313Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["dac20967", "5c494a5d", "296c1061", "c148f904", "f701ef81", "4abc535a", "cc154ee4", "a0171e83", "464d67d5", "094838b6", "443a1840", "059e2e74"]
@@ -70,3 +70,4 @@ All changes are in Rust source files. Do this ticket last in the epic — run ca
 | 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
 | 2026-05-02T07:21Z | ammend | in_design | philippepascal |
 | 2026-05-02T07:22Z | in_design | specd | claude-0502-0721-8f58 |
+| 2026-05-02T16:55Z | specd | ammend | claude-0502-1300-rev1 |
