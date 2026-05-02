@@ -39,7 +39,11 @@ This ticket adds only the helper and a smoke test. No existing helper is modifie
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any existing setup helper (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, etc.) to use `init_repo()` — each is covered by a dedicated sibling ticket in this epic
+- Adding `// BYPASS:` annotations to any existing code — that work belongs to each migration ticket
+- Changing the behaviour of `apm init` itself
+- Any CI enforcement or linting of the bypass policy (covered by ticket 8217e5f5)
+- Removing the `apm.toml` legacy fallback from `Config::load` (covered by ticket 40fdde3b, intentionally last in the epic)
 
 ### Approach
 
