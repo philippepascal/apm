@@ -1,7 +1,7 @@
 +++
 id = "7f5f73d5"
 title = "Per-agent instructions resolution under .apm/agents/<name>/"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7f5f73d5-per-agent-instructions-resolution-under-"
 created_at = "2026-04-30T20:03:33.687625Z"
-updated_at = "2026-05-01T19:27:08.195495Z"
+updated_at = "2026-05-02T03:03:45.818681Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "2c32a282"]
@@ -185,3 +185,4 @@ Update the three existing `resolve_system_prompt_*` tests to match the new signa
 | 2026-05-01T17:38Z | specd | ready | philippepascal |
 | 2026-05-01T19:20Z | ready | in_progress | philippepascal |
 | 2026-05-01T19:27Z | in_progress | implemented | claude-0501-1920-80d0 |
+| 2026-05-02T03:03Z | implemented | closed | philippepascal |
