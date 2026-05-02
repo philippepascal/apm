@@ -27,7 +27,26 @@ The two helpers serve 5 tests in total: `state_force_bypasses_transition_rules` 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] **setup_with_strict_transitions()**
+
+- [ ] `setup_with_strict_transitions()` calls `init_repo()` and no longer contains any hand-written TOML string or `std::fs::write` for `apm.toml` / `config.toml` / `workflow.toml`
+- [ ] The rewritten helper includes a `// BYPASS:` comment explaining that the production workflow has no `new → in_progress` transition and a full replacement is required
+- [ ] `.apm/workflow.toml` in the returned repo has `new → in_progress` as the only `[[workflow.states.transitions]]` block under the `new` state
+- [ ] `.apm/workflow.toml` in the returned repo has no transition from `in_progress` to `new`
+- [ ] The patched `.apm/workflow.toml` is committed before `setup_with_strict_transitions()` returns (working tree is clean)
+- [ ] `state_force_bypasses_transition_rules` passes
+- [ ] `state_force_implemented_from_in_progress` passes
+
+- [ ] **setup_with_merge_workflow()**
+
+- [ ] `setup_with_merge_workflow()` calls `init_repo()` and no longer contains any hand-written TOML string or `std::fs::write` for `apm.toml` / `config.toml` / `workflow.toml`
+- [ ] The rewritten helper includes a `// BYPASS:` comment explaining that the production workflow has no `new → implemented` transition and a full replacement is required
+- [ ] `.apm/workflow.toml` in the returned repo has a `new → implemented` transition with `completion = "merge"` and `on_failure = "merge_failed"`
+- [ ] The patched `.apm/workflow.toml` is committed before `setup_with_merge_workflow()` returns (working tree is clean)
+- [ ] `merge_failure_transitions_ticket_to_merge_failed` passes
+- [ ] `merge_failed_to_implemented_does_not_trigger_another_merge` passes
+- [ ] `merge_failed_to_in_progress_succeeds` passes
+- [ ] No other test in `integration.rs` regresses
 
 ### Out of scope
 
