@@ -39,7 +39,12 @@ Both helpers should use `init_repo()` for the local clone. The bare-origin creat
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating `push_to_origin()` or `rev_parse()` — these are support functions, not config-carrying setup helpers
+- Migrating any other setup helper (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, etc.) — each has its own sibling ticket in this epic
+- Changing any test function body (only the two helper bodies are in scope)
+- Adding an `apm` command to seed branches into a remote or bare origin
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- The `init_repo()` implementation itself — covered by dependency ticket 795dce11
 
 ### Approach
 
