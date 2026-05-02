@@ -36,7 +36,11 @@ One test — sync_no_close_when_nothing_to_close (line 1016) — reads "apm.toml
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other helper (setup(), setup_merge(), setup_aggressive(), etc.) — each is covered by a dedicated sibling ticket in this epic
+- Replacing write_ticket_to_branch() direct file writes with apm new + state commands — covered by sibling ticket 059e2e74
+- Removing the apm.toml legacy fallback from Config::load — covered by ticket 40fdde3b, intentionally last in the epic
+- Adding new apm commands to configure individual workflow states or transitions
+- Changing any apm sync behavior or the sync auto-close detection logic itself
 
 ### Approach
 
