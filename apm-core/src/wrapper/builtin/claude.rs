@@ -26,6 +26,7 @@ pub(crate) fn build_claude_args(model: Option<&str>, skip_permissions: bool, sys
         "--output-format".into(),
         "stream-json".into(),
         "--verbose".into(),
+        "--disable-slash-commands".into(),
         "--system-prompt".into(),
         sys.into(),
     ];
@@ -216,5 +217,37 @@ mod tests {
     fn args_msg_is_last() {
         let args = build_claude_args(Some("opus"), true, "sys", "the-message");
         assert_eq!(args.last().map(String::as_str), Some("the-message"));
+    }
+
+    #[test]
+    fn args_always_include_disable_slash_commands() {
+        for (model, skip) in [
+            (None, false), (None, true),
+            (Some("sonnet"), false), (Some("sonnet"), true),
+        ] {
+            let args = build_claude_args(model, skip, "sys", "msg");
+            assert!(
+                args.iter().any(|a| a == "--disable-slash-commands"),
+                "missing --disable-slash-commands for model={model:?} skip={skip}: {args:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn installed_claude_binary_supports_disable_slash_commands() {
+        let Ok(out) = std::process::Command::new("claude").arg("--help").output() else {
+            eprintln!("claude not in PATH — skipping flag-existence check");
+            return;
+        };
+        let combined = format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(
+            combined.contains("--disable-slash-commands"),
+            "installed claude binary does not recognise --disable-slash-commands; \
+             flag may have been renamed. Update build_claude_args() to match."
+        );
     }
 }
