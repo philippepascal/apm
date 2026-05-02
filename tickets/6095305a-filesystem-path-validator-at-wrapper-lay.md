@@ -31,14 +31,19 @@ expectation unenforceable today:
    files, `.apm/` directories) share a prefix with the actual repo root, which
    inadvertently permits writes to the main worktree as well.
 
-The wrapper epic (4312fbd4) introduces an interception layer that sees every
-tool-call event before it is dispatched. That is the correct surface for
-enforcement: check the target path before the tool executes, and inject a
-synthetic `tool_result` error if the path violates policy.
+The natural enforcement surface is a `PreToolUse` hook: Claude Code invokes a
+configured shell command before every tool execution. The command can block the
+call by exiting with code 2; Claude Code converts this into a synthetic
+`tool_result` error sent back to the model. This hook fires **regardless of
+`--dangerously-skip-permissions`**, making it the only mechanism that enforces
+write boundaries on both `-P` and non-`-P` workers without changing the process
+IPC model or spawning in interactive mode.
 
-This ticket wires a `PathGuard` into that interception hook for the
-`claude` built-in wrapper, adds a per-manifest opt-in field for custom
-wrappers, and backs the allow-list with a project-level config section.
+This ticket builds the enforcement layer end-to-end: a `PathGuard` struct, an
+`apm path-guard` CLI subcommand invoked by the hook, a settings-file writer that
+injects the hook before spawning, and an opt-in manifest field for custom
+wrappers. No dependency on any other in-flight wrapper ticket is required; the
+mechanism is fully self-contained.
 
 ### Acceptance criteria
 
