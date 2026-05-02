@@ -31,7 +31,14 @@ The desired state is that all four helpers use `init_repo()` for their repo scaf
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `setup_with_epic()` calls `init_repo()` instead of `setup()`
+- [ ] `setup_epic_list()` body is replaced entirely by `init_repo()`
+- [ ] `setup_epic_show()` body is replaced entirely by `init_repo()`
+- [ ] `setup_with_epic_for_owner_tests()` requires no structural change: it inherits `init_repo()` via its call to `setup_with_epic()`
+- [ ] The inline epic branch creation inside `setup_with_epic()` carries a `// BYPASS: apm epic new requires a remote origin` comment
+- [ ] `create_epic_branch()` carries a `// BYPASS: apm epic new requires a remote origin` comment at its first git line
+- [ ] No `apm.toml` hand-write or `git init` call remains in any of the four helpers
+- [ ] All 9 tests that call these helpers pass: `new_epic_sets_frontmatter_fields`, `new_epic_branch_created_from_epic_tip`, `epic_list_no_epics_exits_zero_no_output`, `epic_list_shows_epics_with_derived_state_and_counts`, `epic_show_displays_header_and_ticket_table`, `epic_show_prefix_resolves_correctly`, `epic_bulk_owner_change_succeeds`, `epic_bulk_owner_change_skips_closed`, `epic_bulk_owner_change_blocked_non_owner`
 
 ### Out of scope
 
