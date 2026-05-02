@@ -1,7 +1,7 @@
 +++
 id = "66c51e24"
 title = "Worker scope hardening: disable skills + tighten role system prompts"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/66c51e24-worker-scope-hardening-disable-skills-ti"
 created_at = "2026-05-01T02:29:52.048624Z"
-updated_at = "2026-05-02T03:14:03.587898Z"
+updated_at = "2026-05-02T07:20:15.139021Z"
 +++
 
 ## Spec
@@ -130,3 +130,4 @@ Add the following section to both the bundled defaults and the project-level fil
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
 | 2026-05-02T03:08Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:14Z | in_design | specd | claude-0502-0308-3dd0 |
+| 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
