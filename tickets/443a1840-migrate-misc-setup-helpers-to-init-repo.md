@@ -1,7 +1,7 @@
 +++
 id = "443a1840"
 title = "Migrate misc setup helpers to init_repo()"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/443a1840-migrate-misc-setup-helpers-to-init-repo"
 created_at = "2026-05-01T20:27:23.868607Z"
-updated_at = "2026-05-02T03:08:03.233296Z"
+updated_at = "2026-05-02T04:17:07.491518Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:08Z | new | groomed | philippepascal |
+| 2026-05-02T04:17Z | groomed | in_design | philippepascal |
