@@ -48,7 +48,11 @@ These are in scope for this ticket. Several error messages and help strings in p
 
 ### Out of scope
 
-- Removing the apm init --migrate path (init.rs lines 156-169); that still moves apm.toml to .apm/config.toml for real users migrating old repos\n- Changing any test behaviour — only fixture setup code changes\n- Adding new apm commands\n- Migrating the integration.rs helpers already covered by sibling tickets (dac20967, 5c494a5d, 296c1061, c148f904, f701ef81, 4abc535a, cc154ee4, a0171e83, 464d67d5, 094838b6, 443a1840, 059e2e74)\n- The e2e.rs first setup (lines 43-115) that writes apm.toml then calls apm init; that is testing migration and remains valid
+- Removing the `apm init --migrate` path (`init.rs` lines 156–169); that still moves `apm.toml` to `.apm/config.toml` for real users migrating old repos
+- Changing any test behaviour — only fixture setup code changes
+- Adding new apm commands
+- Migrating the `integration.rs` helpers already covered by sibling tickets (dac20967, 5c494a5d, 296c1061, c148f904, f701ef81, 4abc535a, cc154ee4, a0171e83, 464d67d5, 094838b6, 443a1840, 059e2e74)
+- The `e2e.rs` first setup (lines 43–115) that writes `apm.toml` then calls `apm init`; that is testing migration and remains valid
 
 ### Approach
 
