@@ -64,7 +64,13 @@ custom wrappers that may not pass `--disable-slash-commands`.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Filesystem path validator at the tool-call layer (separate ticket — defense-in-depth below the system prompt)
+- Pre-merge leak detection (separate ticket)
+- Permission-denial diagnostics surfacing to the supervisor (separate ticket)
+- Config-driven per-profile `disable_skills` opt-out — the flag is always on for the built-in `ClaudeWrapper`; projects that genuinely need skills can use a custom wrapper
+- Manifest `disable_skills` field for custom wrappers — future extension once there is a known use case
+- Non-claude built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) — they do not invoke the claude CLI and are unaffected
+- Changes to `APM_DISABLE_SKILLS` env var or wrapper contract version bump — no contract change needed
 
 ### Approach
 
