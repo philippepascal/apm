@@ -43,7 +43,10 @@ This ticket adds an explicit "## Capability limitations" section to the spec-wri
 
 ### Out of scope
 
-- Auto-detecting when an agent is in a stuck loop and forcing the transition (the agent decides; instructions only provide the option)\n- Tooling to distinguish capability-limitation blocks from design-ambiguity blocks in the supervisor queue (the supervisor reads the Open questions text)\n- Per-agent prompt tightening for non-Claude wrappers; the guidance lands in the claude wrapper files only — future wrappers inherit it via apm agents new scaffolding\n- Migrating the project config from the flat .apm/ layout to .apm/agents/claude/; that is owned by epic 4312fbd4
+- Auto-detecting when an agent is in a stuck loop and forcing the transition (the agent decides; instructions only provide the option)
+- Tooling to distinguish capability-limitation blocks from design-ambiguity blocks in the supervisor queue (the supervisor reads the Open questions text)
+- Per-agent prompt tightening for non-Claude wrappers; the guidance lands in the claude wrapper files only — future wrappers inherit it via apm agents new scaffolding
+- Migrating the project config from the flat .apm/ layout to .apm/agents/claude/; that is owned by epic 4312fbd4
 
 ### Approach
 
