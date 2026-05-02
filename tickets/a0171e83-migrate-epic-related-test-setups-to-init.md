@@ -1,7 +1,7 @@
 +++
 id = "a0171e83"
 title = "Migrate epic-related test setups to init_repo() + real apm epic"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a0171e83-migrate-epic-related-test-setups-to-init"
 created_at = "2026-05-01T20:27:07.814641Z"
-updated_at = "2026-05-02T03:07:54.067460Z"
+updated_at = "2026-05-02T03:56:54.108340Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
+| 2026-05-02T03:56Z | groomed | in_design | philippepascal |
