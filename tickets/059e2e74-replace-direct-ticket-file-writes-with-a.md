@@ -49,7 +49,12 @@ The desired state is that every ticket fixture goes through the real `apm` CLI (
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating setup helpers (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, `setup_with_local_worktrees()`, `setup_with_worktrees()`, `setup_sync_repo()`, etc.) — each has a dedicated sibling ticket in the epic
+- Adding or removing test functions — only helper bodies and their call sites change
+- Adding new `apm` CLI commands to support fields that currently have no setter (e.g., `focus_section`, standalone `target_branch`)
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Migrating `commit_ticket_to_branch()`, `push_to_origin()`, `remote_ref_sha()`, or other utility/support functions that are not ticket-content helpers
+- Writing new test scenarios — scope is migrating existing direct writes, not expanding test coverage
 
 ### Approach
 
