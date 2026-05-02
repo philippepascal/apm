@@ -1,7 +1,7 @@
 +++
 id = "f06272f1"
 title = "Worker permission-denial diagnostics: surface what was denied and classify (especially apm commands)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f06272f1-worker-permission-denial-diagnostics-sur"
 created_at = "2026-05-01T02:31:05.749604Z"
-updated_at = "2026-05-02T03:07:17.223685Z"
+updated_at = "2026-05-02T03:30:32.013461Z"
 +++
 
 ## Spec
@@ -76,3 +76,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T02:31Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
+| 2026-05-02T03:30Z | groomed | in_design | philippepascal |
