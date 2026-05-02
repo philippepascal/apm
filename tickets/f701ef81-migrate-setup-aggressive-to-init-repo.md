@@ -44,7 +44,31 @@ Crucially, `sync.aggressive` already defaults to `true` in production: `SyncConf
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm/tests/integration.rs`, `setup_aggressive()` at line ~1584.
+
+Replace the entire function body with a single delegation to `init_repo()`:
+
+```rust
+fn setup_aggressive() -> TempDir {
+    init_repo()
+}
+```
+
+**Why no bypass is needed:** `SyncConfig::aggressive` carries `#[serde(default = "default_true")]` and its `Default` impl returns `true`. The `apm init` template writes no `[sync]` section, so TOML deserialization falls back to the serde default — aggressive mode is on in every `init_repo()` repo without an explicit config entry.
+
+**Why removing the extra git config calls is safe:** The hand-written body calls `git(p, &["config", "user.email", "..."])` and `git(p, &["config", "user.name", "..."])` after `git init`. These are redundant — the `git()` helper already injects `GIT_AUTHOR_*` / `GIT_COMMITTER_*` env vars for every invocation, which is how `init_repo()` handles identity. Dropping these calls has no effect on test behaviour.
+
+**Workflow divergence (benign):** The old helper used a hand-rolled 5-state workflow (new, specd, ready, in_progress, closed). After migration the repo carries the full production workflow (~12 states). All 6 tests exercise only `apm new`, `apm next`, `apm list`, `apm close`, `apm spec`, and `apm set` — none of which are sensitive to extra workflow states. No test changes are expected.
+
+**Verification:** Run `cargo test --test integration -- aggressive` to confirm all 6 tests pass:
+- `aggressive_no_remote_does_not_abort_next`
+- `aggressive_no_remote_does_not_abort_list`
+- `aggressive_no_remote_does_not_abort_close`
+- `no_aggressive_flag_suppresses_fetch_on_next`
+- `no_aggressive_flag_suppresses_fetch_on_spec`
+- `no_aggressive_flag_suppresses_fetch_on_set`
+
+**Dependency note:** This ticket depends on 795dce11 (`init_repo()` helper). Implement only after 795dce11 is closed and `init_repo()` is available in `integration.rs`.
 
 ### Open questions
 
