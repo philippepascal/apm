@@ -215,7 +215,7 @@ No config schema changes, no new structs, no migration needed. All changes are a
 
 ### Amendment requests
 
-- [ ] Verify `--disable-slash-commands` actually exists in the installed `claude` CLI before committing to it. The spec asserts the flag ships, but the unit test only checks argv assembly, so a missing/renamed flag would silently pass tests and break every worker spawn at runtime. Either (a) paste the matching `claude --help | grep -- --disable-slash-commands` line into the ticket history before marking implemented, or (b) run the probe at startup and fail fast with an actionable error.
+- [x] Verify `--disable-slash-commands` actually exists in the installed `claude` CLI before committing to it. The spec asserts the flag ships, but the unit test only checks argv assembly, so a missing/renamed flag would silently pass tests and break every worker spawn at runtime. Either (a) paste the matching `claude --help | grep -- --disable-slash-commands` line into the ticket history before marking implemented, or (b) run the probe at startup and fail fast with an actionable error.
 
 - [ ] The "project-level `.apm/apm.*.md` contains the same Scope-limits content as the bundled default" AC is unverifiable as written. Add a concrete check, e.g. `diff <(awk '/## Scope limits/,/^## /' .apm/apm.worker.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.worker.md)` returns empty. Otherwise drift is invisible.
 
