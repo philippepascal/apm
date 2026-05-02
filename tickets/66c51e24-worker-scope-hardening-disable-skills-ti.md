@@ -1,7 +1,7 @@
 +++
 id = "66c51e24"
 title = "Worker scope hardening: disable skills + tighten role system prompts"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/66c51e24-worker-scope-hardening-disable-skills-ti"
 created_at = "2026-05-01T02:29:52.048624Z"
-updated_at = "2026-05-02T18:21:29.880684Z"
+updated_at = "2026-05-02T18:44:54.153130Z"
 +++
 
 ## Spec
@@ -238,3 +238,4 @@ No config schema changes, no new structs, no migration needed. All changes are a
 | 2026-05-02T07:36Z | ammend | in_design | philippepascal |
 | 2026-05-02T07:43Z | in_design | specd | claude-0502-0736-1ce0 |
 | 2026-05-02T18:21Z | specd | ready | philippepascal |
+| 2026-05-02T18:44Z | ready | in_progress | philippepascal |
