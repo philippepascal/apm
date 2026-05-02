@@ -61,7 +61,157 @@ helper) and override only what the test needs via real commands or marked bypass
 
 ### Approach
 
-How the implementation will work.
+**Key insight from reading the code:** The production default `workflow.toml` (written by
+`apm init`) already has `completion = "pr_or_epic_merge"` on the `in_progress → implemented`
+transition. Only `setup_merge_strategy_remote` needs a bypass (to change it to
+`completion = "merge"`). The other two helpers need no completion strategy override at all —
+the production default is sufficient.
+
+---
+
+### Step 1 — Add `fn init_remote_repo() -> (TempDir, TempDir)`
+
+Place it just before `setup_squash_remote` (near the `// --- squash-merge detection ---`
+comment, around line 3912). This is the shared core for all three migrated helpers.
+
+```rust
+fn init_remote_repo() -> (TempDir, TempDir) {
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let local = tempfile::tempdir().unwrap();
+    let p = local.path();
+    git(p, &["clone", "-q", &bp.to_string_lossy(), "."]);
+
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--no-claude", "--quiet"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "apm init failed: {}", String::from_utf8_lossy(&out.stderr));
+
+    git(p, &["add", "."]);
+    git(p, &["commit", "-m", "init"]);
+    git(p, &["push", "origin", "main"]);
+
+    (bare, local)
+}
+```
+
+Notes:
+- `git clone -q` suppresses the "empty repository" warning.
+- `apm init` runs `maybe_initial_commit` internally (commits `.apm/config.toml`,
+  `.apm/workflow.toml`, `.apm/ticket.toml`, `.gitignore`). The subsequent
+  `git add . && git commit` captures any remaining files (`CLAUDE.md`,
+  `.apm/agents.md`, `.apm/apm.spec-writer.md`, `.apm/apm.worker.md`). If
+  `maybe_initial_commit` staged everything first, `git commit` exits non-zero
+  and `git()` silently ignores it (`.status().unwrap()` only panics on I/O error,
+  not on non-zero exit code).
+- `git push origin main` uses the explicit remote+branch form, so no upstream
+  tracking configuration is required.
+- No manual `git config user.email/name` needed — the `git()` helper already
+  injects `GIT_AUTHOR_*` / `GIT_COMMITTER_*`.
+- No `tickets/` mkdir needed — `apm init` creates `tickets/` automatically.
+
+---
+
+### Step 2 — Rewrite `setup_squash_remote()`
+
+The squash-detection tests only need `Config::load` to succeed and find
+`default_branch = "main"`. The production default workflow already has `new`,
+`implemented`, and `closed` states, which is all `sync::detect` needs (it checks
+`terminal_state_ids()` and `state == "implemented"` by hard-coded string). No bypass
+required.
+
+Replace the entire body:
+
+```rust
+fn setup_squash_remote() -> (TempDir, TempDir) {
+    init_remote_repo()
+}
+```
+
+Remove the now-dead `squash_merge_config()` function.
+
+---
+
+### Step 3 — Rewrite `setup_pr_or_epic_merge_remote()`
+
+The production default `workflow.toml` already declares the `in_progress → implemented`
+transition with `completion = "pr_or_epic_merge"` and `on_failure = "merge_failed"`.
+The `on_failure` field is present in the production default but was absent in the
+old hand-written config; this does not affect the existing tests:
+
+- `pr_or_epic_merge_with_target_branch_merges_into_target`: merge succeeds → `on_failure`
+  is never consulted.
+- `pr_or_epic_merge_without_target_branch_attempts_pr`: the no-target-branch code path
+  calls `gh_pr_create_or_update(…)?` and propagates errors directly with `?`, bypassing
+  `on_failure` entirely — the test still gets `Err`.
+
+Replace the entire body:
+
+```rust
+fn setup_pr_or_epic_merge_remote() -> (TempDir, TempDir) {
+    init_remote_repo()
+}
+```
+
+Remove the now-dead `pr_or_epic_merge_config_toml()` function.
+
+---
+
+### Step 4 — Rewrite `setup_merge_strategy_remote()`
+
+The production default has `completion = "pr_or_epic_merge"` but this helper needs
+`completion = "merge"`. No `apm` CLI command exists to override a transition's
+completion strategy, so a bypass is required.
+
+The bypass reads `.apm/workflow.toml`, replaces the single occurrence of
+`completion = "pr_or_epic_merge"` with `completion = "merge"`, and writes it back.
+The `on_failure = "merge_failed"` line is kept because `completion = "merge"` also
+requires `on_failure` (enforced by `apm_core::validate`). The `merge_failed` state
+is declared in the production default workflow, so config validation passes.
+
+```rust
+fn setup_merge_strategy_remote() -> (TempDir, TempDir) {
+    let (bare, local) = init_remote_repo();
+    let p = local.path();
+
+    // BYPASS: no apm CLI command exists to override completion strategy on a
+    // specific transition; edit .apm/workflow.toml directly to change
+    // pr_or_epic_merge → merge on in_progress → implemented.
+    // on_failure = "merge_failed" is kept — completion = "merge" also requires it.
+    let wf_path = p.join(".apm/workflow.toml");
+    let wf = std::fs::read_to_string(&wf_path).unwrap();
+    let patched = wf.replace(r#"completion = "pr_or_epic_merge""#, r#"completion = "merge""#);
+    std::fs::write(&wf_path, &patched).unwrap();
+    git(p, &["add", ".apm/workflow.toml"]);
+    git(p, &["commit", "-m", "override: use merge completion strategy"]);
+    git(p, &["push", "origin", "main"]);
+
+    (bare, local)
+}
+```
+
+The replacement is unambiguous: `completion = "pr_or_epic_merge"` appears exactly once
+in the default `workflow.toml`.
+
+Remove the now-dead `merge_strategy_config_toml()` function.
+
+---
+
+### File changes summary
+
+- `apm/tests/integration.rs`:
+  - **Add** `fn init_remote_repo()` (just before `setup_squash_remote`, ~line 3912)
+  - **Replace** `setup_squash_remote()` body with `init_remote_repo()` delegation
+  - **Remove** `squash_merge_config()` static string function (~line 3882)
+  - **Replace** `setup_pr_or_epic_merge_remote()` body with `init_remote_repo()` delegation
+  - **Remove** `pr_or_epic_merge_config_toml()` static string function (~line 4687)
+  - **Replace** `setup_merge_strategy_remote()` body with bypass-patched version
+  - **Remove** `merge_strategy_config_toml()` static string function (~line 5278)
 
 ### Open questions
 
