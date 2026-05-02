@@ -4,12 +4,12 @@ title = "Pre-merge leak detection: refuse apm state implemented when main has un
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29cc63a1-pre-merge-leak-detection-refuse-apm-stat"
 created_at = "2026-05-01T02:30:13.061854Z"
-updated_at = "2026-05-02T03:19:54.862853Z"
+updated_at = "2026-05-02T03:19:57.879228Z"
 +++
 
 ## Spec
