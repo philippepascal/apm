@@ -18,7 +18,11 @@ target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 
 ### Problem
 
-All current setup helpers in apm/tests/integration.rs (setup, setup_merge, setup_with_close_workflow, setup_aggressive, etc.) hand-write a minimal apm.toml at repo root and never invoke `apm init`. Changes to the production init template (default workflow states, ticket sections, completion strategies, gitignore entries) are not exercised in tests. Add a single `init_repo()` helper that creates a tempdir, runs git init, runs `apm init`, returns the path. Other setup helpers will compose on top via small targeted overrides. No migration of existing helpers in this ticket — only the helper exists and is unit-tested. Foundational for the rewrite.
+All current setup helpers in `apm/tests/integration.rs` (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, etc.) hand-write a minimal `apm.toml` at repo root using a hard-coded string literal and never invoke `apm init`. Because the config is synthesised offline, changes to the production init template — default workflow states, ticket section names, completion strategies, `.gitignore` entries — are invisible to the test suite. Tests pass against a fixture that diverges from what real users get.
+
+The desired state is a single `init_repo()` helper that creates a temporary git repository by running the actual `apm init` binary, producing the same `.apm/config.toml`, `.apm/workflow.toml`, and supporting files that a real project gets. All subsequent migration tickets in this epic will compose on top of `init_repo()` rather than synthesising config from scratch.
+
+This ticket adds only the helper and a smoke test. No existing helper is modified.
 
 ### Acceptance criteria
 
