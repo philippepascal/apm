@@ -19,7 +19,15 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs has four epic-related setups: setup_with_epic (line 2535), setup_with_epic_for_owner_tests (5465), setup_epic_list (4311), setup_epic_show (4431). All hand-roll the configuration and synthesize epic state directly. Rewrite each to use init_repo() for config and `apm epic new` for epic creation; mark any unavoidable bypass with `// BYPASS:`. Four helpers in scope, all using the same epic primitives.
+Four setup helpers in `apm/tests/integration.rs` build their fixture repos without calling `apm init`, so changes to the production init template — default workflow states, config file layout, `.gitignore` entries — are invisible to the 9 tests that depend on them.
+
+- **`setup_with_epic()` (line 2535)** delegates to `setup()`, which hand-writes `apm.toml` at the repo root. The epic branch is created with raw `git checkout -b epic/<id>-…` calls.
+- **`setup_with_epic_for_owner_tests()` (line 5460)** is a thin wrapper around `setup_with_epic()` that adds `.apm/local.toml`; it inherits the same problem.
+- **`setup_epic_list()` (line 4311)** and **`setup_epic_show()` (line 4431)** each build a fresh tempdir, write a hard-coded 3-state `apm.toml` (ready / implemented / closed), and commit it — never calling `apm init`.
+
+In all four cases the fixture diverges from what real users get: the config lives at the legacy `apm.toml` path instead of `.apm/config.toml`, the workflow is a frozen subset of the production default, and any addition of a required field or state to the init template will not surface in these tests.
+
+The desired state is that all four helpers use `init_repo()` for their repo scaffolding. Because `apm epic new` requires a remote origin (it runs `git fetch` and pushes the new branch), direct epic branch creation via git must remain — but must be marked `// BYPASS:` per the epic's bypass policy, making the workaround explicit and searchable.
 
 ### Acceptance criteria
 
