@@ -53,15 +53,15 @@ custom wrappers that may not pass `--disable-slash-commands`.
 
 - [x] `build_claude_args()` in `apm-core/src/wrapper/builtin/claude.rs` always includes `--disable-slash-commands` in its output, verified by a unit test that checks every call path (with and without model, with and without skip-permissions)
 - [x] A test `installed_claude_binary_supports_disable_slash_commands` in the same test module runs `claude --help` and asserts the flag appears, catching version drift at CI time
-- [ ] The bundled default `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a `## Scope limits` section that explicitly states skill/slash-command invocation is prohibited
-- [ ] The bundled default `apm-core/src/default/agents/claude/apm.worker.md` contains a `## Scope limits` section that explicitly states skill/slash-command invocation is prohibited
-- [ ] The spec-writer `## Scope limits` section lists exactly the permitted `apm` commands for that role: `apm spec`, `apm state`, `apm set`, `apm new --side-note`, `apm show`
-- [ ] The worker `## Scope limits` section lists exactly the permitted `apm` commands for that role: `apm show`, `apm state`, `apm new --side-note`, `apm spec --section "Open questions"` (blocked flow only)
-- [ ] Both `## Scope limits` sections name the off-limits paths: `.claude/`, `.apm/config.toml` (and any file in `.apm/` other than the ticket), `.gitignore`, `.github/`
-- [ ] Both `## Scope limits` sections instruct the agent: on a permission prompt for an `apm` command, set the ticket to `blocked` and include a diagnostic naming the missing allowlist entry — never invoke a skill or attempt to edit `settings.json`
-- [ ] `diff <(awk '/## Scope limits/,/^## /' .apm/apm.spec-writer.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.spec-writer.md)` returns empty (no output)
-- [ ] `diff <(awk '/## Scope limits/,/^## /' .apm/apm.worker.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.worker.md)` returns empty (no output)
-- [ ] `cargo test --workspace` passes after all changes
+- [x] The bundled default `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a `## Scope limits` section that explicitly states skill/slash-command invocation is prohibited
+- [x] The bundled default `apm-core/src/default/agents/claude/apm.worker.md` contains a `## Scope limits` section that explicitly states skill/slash-command invocation is prohibited
+- [x] The spec-writer `## Scope limits` section lists exactly the permitted `apm` commands for that role: `apm spec`, `apm state`, `apm set`, `apm new --side-note`, `apm show`
+- [x] The worker `## Scope limits` section lists exactly the permitted `apm` commands for that role: `apm show`, `apm state`, `apm new --side-note`, `apm spec --section "Open questions"` (blocked flow only)
+- [x] Both `## Scope limits` sections name the off-limits paths: `.claude/`, `.apm/config.toml` (and any file in `.apm/` other than the ticket), `.gitignore`, `.github/`
+- [x] Both `## Scope limits` sections instruct the agent: on a permission prompt for an `apm` command, set the ticket to `blocked` and include a diagnostic naming the missing allowlist entry — never invoke a skill or attempt to edit `settings.json`
+- [x] `diff <(awk '/## Scope limits/,/^## /' .apm/apm.spec-writer.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.spec-writer.md)` returns empty (no output)
+- [x] `diff <(awk '/## Scope limits/,/^## /' .apm/apm.worker.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.worker.md)` returns empty (no output)
+- [x] `cargo test --workspace` passes after all changes
 
 ### Out of scope
 
