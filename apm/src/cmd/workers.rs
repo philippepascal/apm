@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, ticket, ticket_fmt, worker, worktree};
+use apm_core::{config::Config, denial, ticket, ticket_fmt, worker, worktree};
 use std::path::Path;
 use crate::util::worktree_for_ticket;
 
@@ -11,6 +11,85 @@ pub fn run(root: &Path, log_id: Option<&str>, kill_id: Option<&str>) -> Result<(
         return tail_log(root, id_arg);
     }
     list(root)
+}
+
+pub fn run_diag(root: &Path, ticket_id: &str) -> Result<()> {
+    let (wt, id) = worktree_for_ticket(root, ticket_id)?;
+    let log_path = wt.join(".apm-worker.log");
+    let summary_path = wt.join(".apm-worker.summary.json");
+
+    let summary = if summary_path.exists() {
+        denial::read_summary(&summary_path)
+            .ok_or_else(|| anyhow::anyhow!("failed to parse {}", summary_path.display()))?
+    } else if log_path.exists() {
+        denial::scan_transcript(&log_path, &wt, &id)
+    } else {
+        bail!(
+            "no worker log or summary found for ticket {id} (expected {} or {})",
+            log_path.display(),
+            summary_path.display()
+        );
+    };
+
+    print_diag_report(&summary, &log_path);
+    Ok(())
+}
+
+fn print_diag_report(summary: &denial::DenialSummary, log_path: &std::path::Path) {
+    // Use the log_path recorded in the summary if it looks valid, otherwise
+    // fall back to the path we derived from the worktree.
+    let log_display = if !summary.log_path.is_empty() {
+        summary.log_path.clone()
+    } else {
+        log_path.to_string_lossy().into_owned()
+    };
+
+    #[allow(clippy::print_stdout)]
+    {
+        println!("Worker denial report — {}", summary.ticket_id);
+        println!("Log: {log_display}");
+        println!();
+
+        if summary.denial_count == 0 {
+            println!("No denials detected.");
+            return;
+        }
+
+        let apm_count = summary.denials.iter()
+            .filter(|d| d.classification == denial::DenialClass::ApmCommandDenial)
+            .count();
+        let outside_count = summary.denials.iter()
+            .filter(|d| d.classification == denial::DenialClass::OutsideWorktree)
+            .count();
+        let unknown_count = summary.denials.iter()
+            .filter(|d| d.classification == denial::DenialClass::UnknownPattern)
+            .count();
+
+        println!("Total denials: {}", summary.denial_count);
+        println!("  apm_command_denial : {apm_count}");
+        println!("  outside_worktree   : {outside_count}");
+        println!("  unknown_pattern    : {unknown_count}");
+
+        if apm_count > 0 {
+            println!();
+            println!("APM command denials (allowlist gaps):");
+            let unique_cmds = denial::collect_unique_apm_commands(summary);
+            for cmd in &unique_cmds {
+                // Find the first entry for this command to get its timestamp
+                let ts = summary.denials.iter()
+                    .find(|d| d.classification == denial::DenialClass::ApmCommandDenial && d.input == *cmd)
+                    .map(|d| d.timestamp.as_str())
+                    .unwrap_or("");
+                if ts.is_empty() {
+                    println!("  {cmd}");
+                } else {
+                    println!("  {cmd}  ({ts})");
+                }
+                println!("  \u{2192} Add \"Bash({cmd}*)\" to .claude/settings.json");
+                println!("    and to APM_ALLOW_ENTRIES in apm-core/src/init.rs");
+            }
+        }
+    }
 }
 
 fn list(root: &Path) -> Result<()> {
