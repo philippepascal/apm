@@ -28,7 +28,7 @@ A checkbox-toggle file at `.apm/style.md` provides that mechanism. All rules sta
 - [x] `CLAUDE.md` contains an `@.apm/style.md` import line alongside the existing `@.apm/agents.md` import
 - [x] `CLAUDE.md` contains a `## Style rules` paragraph (committed in-repo, not in user-memory) instructing the main agent to apply active `## Conversation` rules to its own output and to prepend active Conversation rules to subagent prompts when spawning via the Agent tool
 - [x] The `## Style rules` paragraph in `CLAUDE.md` explicitly states that `[ ]`-unchecked rules are inactive and must not be applied or referenced
-- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a `## Style rules` paragraph instructing the spec-writer to read `.apm/style.md` (if present) before writing or amending a spec, apply every `[x]`-checked rule under `## Specs`, and treat `[ ]`-unchecked rules as inactive
+- [x] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a `## Style rules` paragraph instructing the spec-writer to read `.apm/style.md` (if present) before writing or amending a spec, apply every `[x]`-checked rule under `## Specs`, and treat `[ ]`-unchecked rules as inactive
 - [ ] `.apm/agents/claude/apm.spec-writer.md` (project file, post-wrapper-epic) contains the identical `## Style rules` paragraph
 - [ ] A new Rust test in `apm-core/tests/spec_writer_md_sync.rs` extracts the `## Style rules` section from both spec-writer `.md` files and asserts those sections are identical; the test fails with a line-level diff of that section if they diverge
 
