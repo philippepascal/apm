@@ -1,7 +1,7 @@
 +++
 id = "a168ad77"
 title = "Add .apm/style.md toggle file; wire into main agent and spec-writer"
-state = "in_design"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a168ad77-add-apm-style-md-toggle-file-wire-into-m"
 created_at = "2026-05-01T19:39:37.765619Z"
-updated_at = "2026-05-02T07:29:51.436351Z"
+updated_at = "2026-05-02T07:40:07.954383Z"
 +++
 
 ## Spec
@@ -74,3 +74,4 @@ Rules are opt-in. Check a box (`[x]`) to activate a rule. Default: all unchecked
 | 2026-05-02T03:50Z | in_design | specd | claude-0502-0346-e438 |
 | 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
 | 2026-05-02T07:29Z | ammend | in_design | philippepascal |
+| 2026-05-02T07:40Z | in_design | ammend | philippepascal |
