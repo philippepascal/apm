@@ -35,7 +35,12 @@ Crucially, `sync.aggressive` already defaults to `true` in production: `SyncConf
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other setup helper — each has its own ticket in this epic
+- Changing any of the 6 test function bodies beyond what the helper change requires
+- Adding an `apm config set` command to modify `sync.aggressive` at runtime — that is a product feature decision
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Migrating `setup_sync_repo()` or `setup_branch_in_origin()` — covered by ticket 464d67d5
+- Changing the behaviour of `apm init` itself
 
 ### Approach
 
