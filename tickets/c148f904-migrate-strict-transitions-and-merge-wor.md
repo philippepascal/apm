@@ -50,7 +50,10 @@ The two helpers serve 5 tests in total: `state_force_bypasses_transition_rules` 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other helper (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, `setup_aggressive()`, etc.) — each has its own sibling ticket in this epic
+- Changing any test function body that calls `setup_with_strict_transitions()` or `setup_with_merge_workflow()` — only the helper bodies are in scope
+- Adding an `apm` command to configure workflow transitions or completion strategies post-init — that is a product feature decision
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
 
 ### Approach
 
