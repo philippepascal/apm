@@ -1,7 +1,7 @@
 +++
 id = "795dce11"
 title = "Add init_repo() test helper that runs real apm init"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/795dce11-add-init-repo-test-helper-that-runs-real"
 created_at = "2026-05-01T20:26:41.678324Z"
-updated_at = "2026-05-01T20:26:41.678324Z"
+updated_at = "2026-05-02T03:07:29.350554Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 +++
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T20:26Z | — | new | philippepascal |
+| 2026-05-02T03:07Z | new | groomed | philippepascal |
