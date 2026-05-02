@@ -56,7 +56,79 @@ These are in scope for this ticket. Several error messages and help strings in p
 
 ### Approach
 
-All changes are in Rust source files. Do this ticket last in the epic — run cargo test first to confirm all sibling tickets have landed and the suite is green.\n\n**Step 1 — Remove the primary fallback (apm-core/src/config.rs, lines 685-689)**\n\nReplace:\n    let path = if apm_dir_config.exists() {\n        apm_dir_config\n    } else {\n        repo_root.join("apm.toml")\n    };\n\nWith:\n    let path = apm_dir_config;\n\nAlso update the with_context message on the read_to_string call (line ~691) to include a hint:\n    .with_context(|| format!(\n        "cannot read {} -- run 'apm init' to initialise this repository",\n        path.display()\n    ))?;\n\n**Step 2 — Remove the secondary fallback (apm/src/cmd/validate.rs, lines 21-32)**\n\nIn apply_config_migration_fixes, replace the if/else block that tries both .apm/config.toml and apm.toml:\n\n    let config_path = root.join(".apm").join("config.toml");\n    if !config_path.exists() {\n        return Ok(false);\n    }\n\nThe rest of the function (read, parse, rewrite) is unchanged.\n\n**Step 3 — Fix four non-integration test fixtures**\n\nIn each of the four helpers listed in the Problem section, change the write target from p.join("apm.toml") to p.join(".apm/config.toml"). Each needs create_dir_all(".apm") before the write. Update git add arguments from "apm.toml" to ".apm/config.toml" where the file is committed.\n\napm-core/src/validate.rs, setup_verify_repo (~line 644):\n- create_dir_all(p.join(".apm")).unwrap();\n- write to p.join(".apm/config.toml")\n- git_cmd add ".apm/config.toml"\n\napm-core/tests/ticket_create.rs, setup (~line 22):\n- create_dir_all(p.join(".apm")).unwrap();\n- write to p.join(".apm/config.toml")\n- git add ".apm/config.toml"\n\napm-core/src/context.rs, inline test write (~line 386):\n- create_dir_all(p.join(".apm")).unwrap();\n- write to p.join(".apm/config.toml")\n- no git commit needed (that test does not commit)\n\napm/tests/e2e.rs, second setup helper (~line 590):\n- create_dir_all(p.join(".apm")).unwrap();\n- write to p.join(".apm/config.toml")\n- update git add to ".apm/config.toml"\nLeave the first setup (~line 43-115) unchanged — it writes apm.toml then calls apm init, specifically testing the migration path, and stays valid.\n\n**Step 4 — Update error messages and help text**\n\napm-core/src/start.rs (~line 173): change "apm.toml [workers] section" to ".apm/config.toml [workers] section"\napm/src/cmd/new.rs (~line 34): change "disabled in apm.toml" to "disabled in .apm/config.toml"\napm/src/main.rs (~line 272, 276): change ".apm/apm.toml" and "apm.toml" to ".apm/workflow.toml" (these describe workflow transitions)\napm/src/main.rs (~line 508): change "Validate apm.toml correctness" to "Validate .apm/config.toml correctness"\napm/src/main.rs (~line 745): change "defined in apm.toml" to "defined in .apm/ticket.toml"\n\n**Step 5 — Verify**\n\ncargo test must exit 0. Any failure indicates a sibling migration is incomplete; fix the missed fixture rather than re-adding the fallback.\n\nDo not touch apm-core/src/init.rs lines 156-169 (the apm init --migrate path that moves apm.toml to .apm/config.toml for real users). That code intentionally reads apm.toml and must remain.
+All changes are in Rust source files. Do this ticket last in the epic — run `cargo test` first to confirm all sibling tickets have landed and the suite is green.
+
+**Step 1 — Remove the primary fallback (`apm-core/src/config.rs`, lines 685–689)**
+
+Replace:
+
+    let path = if apm_dir_config.exists() {
+        apm_dir_config
+    } else {
+        repo_root.join("apm.toml")
+    };
+
+With:
+
+    let path = apm_dir_config;
+
+Also update the `with_context` message on the `read_to_string` call (line ~691) to include a hint:
+
+    .with_context(|| format!(
+        "cannot read {} -- run 'apm init' to initialise this repository",
+        path.display()
+    ))?;
+
+**Step 2 — Remove the secondary fallback (`apm/src/cmd/validate.rs`, lines 21–32)**
+
+In `apply_config_migration_fixes`, replace the if/else block that tries both `.apm/config.toml` and `apm.toml`:
+
+    let config_path = root.join(".apm").join("config.toml");
+    if !config_path.exists() {
+        return Ok(false);
+    }
+
+The rest of the function (read, parse, rewrite) is unchanged.
+
+**Step 3 — Fix four non-integration test fixtures**
+
+In each of the four helpers listed in the Problem section, change the write target from `p.join("apm.toml")` to `p.join(".apm/config.toml")`. Each needs `create_dir_all(".apm")` before the write. Update `git add` arguments from `"apm.toml"` to `".apm/config.toml"` where the file is committed.
+
+`apm-core/src/validate.rs`, `setup_verify_repo` (~line 644):
+- `create_dir_all(p.join(".apm")).unwrap();`
+- write to `p.join(".apm/config.toml")`
+- `git_cmd add ".apm/config.toml"`
+
+`apm-core/tests/ticket_create.rs`, `setup` (~line 22):
+- `create_dir_all(p.join(".apm")).unwrap();`
+- write to `p.join(".apm/config.toml")`
+- `git add ".apm/config.toml"`
+
+`apm-core/src/context.rs`, inline test write (~line 386):
+- `create_dir_all(p.join(".apm")).unwrap();`
+- write to `p.join(".apm/config.toml")`
+- no git commit needed (that test does not commit)
+
+`apm/tests/e2e.rs`, second setup helper (~line 590):
+- `create_dir_all(p.join(".apm")).unwrap();`
+- write to `p.join(".apm/config.toml")`
+- update `git add` to `".apm/config.toml"`
+
+Leave the first setup (~lines 43–115) unchanged — it writes `apm.toml` then calls `apm init`, specifically testing the migration path, and stays valid.
+
+**Step 4 — Update error messages and help text**
+
+- `apm-core/src/start.rs` (~line 173): change `"apm.toml [workers] section"` to `".apm/config.toml [workers] section"`
+- `apm/src/cmd/new.rs` (~line 34): change `"disabled in apm.toml"` to `"disabled in .apm/config.toml"`
+- `apm/src/main.rs` (~line 272, 276): change `".apm/apm.toml"` and `"apm.toml"` to `".apm/workflow.toml"` (these describe workflow transitions)
+- `apm/src/main.rs` (~line 508): change `"Validate apm.toml correctness"` to `"Validate .apm/config.toml correctness"`
+- `apm/src/main.rs` (~line 745): change `"defined in apm.toml"` to `"defined in .apm/ticket.toml"`
+
+**Step 5 — Verify**
+
+`cargo test` must exit 0. Any failure indicates a sibling migration is incomplete; fix the missed fixture rather than re-adding the fallback.
+
+Do not touch `apm-core/src/init.rs` lines 156–169 (the `apm init --migrate` path that moves `apm.toml` to `.apm/config.toml` for real users). That code intentionally reads `apm.toml` and must remain.
 
 ### Open questions
 
