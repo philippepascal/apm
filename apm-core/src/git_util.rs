@@ -1234,6 +1234,98 @@ pub fn main_worktree_root(root: &Path) -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+/// Returns the list of files that are both modified on `ticket_branch`
+/// (since its merge-base with `target_branch`) AND dirty (uncommitted) in the
+/// target worktree.  Returns an empty Vec when the check cannot be performed
+/// (no shared history, target worktree not found on disk).
+///
+/// Porcelain v1 entries with `R` or `C` in either status column are skipped:
+/// their line format (`XY old -> new`) cannot be parsed with a simple col-3
+/// slice.  Known limitation: a leaked file staged as a rename in the target
+/// worktree will not be detected.
+///
+/// `??` (untracked) entries ARE included: a file added by the ticket branch
+/// that appears untracked in the target worktree is a genuine leak signal.
+pub fn check_leaked_files(
+    root: &Path,
+    ticket_branch: &str,
+    target_branch: &str,
+) -> Result<Vec<String>> {
+    // 1. Resolve the target worktree directory.
+    let current = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()?;
+    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
+
+    let merge_dir = if current_branch == target_branch {
+        root.to_path_buf()
+    } else {
+        match crate::worktree::find_worktree_for_branch(root, target_branch) {
+            Some(p) => p,
+            None => return Ok(vec![]),  // target worktree absent -> cannot be dirty
+        }
+    };
+
+    // 2. Compute merge-base between target and ticket.
+    let base = match merge_base(root, target_branch, ticket_branch) {
+        Ok(s) => s.trim().to_string(),
+        Err(_) => return Ok(vec![]),  // no shared history -> don't block
+    };
+    if base.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // 3. Files touched by the ticket branch since the merge-base (includes newly
+    //    added files, which appear as untracked in the target if leaked).
+    let diff_out = Command::new("git")
+        .args(["diff", "--name-only", &base, ticket_branch])
+        .current_dir(root)
+        .output()?;
+    let ticket_files: std::collections::HashSet<String> =
+        String::from_utf8_lossy(&diff_out.stdout)
+            .lines()
+            .map(|s| s.to_string())
+            .collect();
+
+    // 4. Dirty files in the target worktree.
+    //    Porcelain v1 format: "XY <path>" -- path starts at column 3.
+    //    "??" (untracked) entries are intentionally included: a file added by the
+    //    ticket branch that sits untracked in the target is a genuine leak signal.
+    //    "R " and "C " (staged rename/copy) entries are skipped: their line format
+    //    is "XY orig -> dest", so col-3 slicing produces "orig -> dest", not a
+    //    matchable path.  Known limitation: leaks of staged-renamed files are not
+    //    detected.
+    let status_out = Command::new("git")
+        .args(["status", "--porcelain", "--untracked-files=all"])
+        .current_dir(&merge_dir)
+        .output()?;
+    let dirty_files: std::collections::HashSet<String> =
+        String::from_utf8_lossy(&status_out.stdout)
+            .lines()
+            .filter_map(|line| {
+                if line.len() < 3 {
+                    return None;
+                }
+                let x = line.as_bytes()[0] as char;
+                let y = line.as_bytes()[1] as char;
+                // Skip rename/copy entries: cannot be parsed with a simple col-3 slice.
+                if x == 'R' || x == 'C' || y == 'R' || y == 'C' {
+                    return None;
+                }
+                Some(line[3..].to_string())
+            })
+            .collect();
+
+    // 5. Intersection, sorted for stable output.
+    let mut overlap: Vec<String> = ticket_files
+        .intersection(&dirty_files)
+        .cloned()
+        .collect();
+    overlap.sort();
+    Ok(overlap)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1425,6 +1517,74 @@ mod tests {
         assert!(is_file_tracked(dir.path(), "tracked.txt"));
         std::fs::write(dir.path().join("untracked.txt"), "new").unwrap();
         assert!(!is_file_tracked(dir.path(), "untracked.txt"));
+    }
+
+    #[test]
+    fn check_leaked_files_detects_overlap() {
+        let dir = git_init();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        std::fs::write(p.join("src/foo.rs"), "original").unwrap();
+        git_cmd(p, &["add", "src/foo.rs"]);
+        git_cmd(p, &["commit", "-m", "add foo"]);
+
+        git_cmd(p, &["checkout", "-b", "ticket/overlap-test"]);
+        std::fs::write(p.join("src/foo.rs"), "ticket-change").unwrap();
+        git_cmd(p, &["add", "src/foo.rs"]);
+        git_cmd(p, &["commit", "-m", "ticket: change foo"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        // Simulate a leaked edit on main without committing.
+        std::fs::write(p.join("src/foo.rs"), "leaked").unwrap();
+
+        let leaked = check_leaked_files(p, "ticket/overlap-test", "main").unwrap();
+        assert_eq!(leaked, vec!["src/foo.rs".to_string()]);
+    }
+
+    #[test]
+    fn check_leaked_files_no_overlap() {
+        let dir = git_init();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        std::fs::write(p.join("src/foo.rs"), "original").unwrap();
+        std::fs::write(p.join("src/bar.rs"), "bar").unwrap();
+        git_cmd(p, &["add", "src/foo.rs", "src/bar.rs"]);
+        git_cmd(p, &["commit", "-m", "add foo and bar"]);
+
+        // Ticket branch modifies only src/foo.rs.
+        git_cmd(p, &["checkout", "-b", "ticket/no-overlap"]);
+        std::fs::write(p.join("src/foo.rs"), "ticket-change").unwrap();
+        git_cmd(p, &["add", "src/foo.rs"]);
+        git_cmd(p, &["commit", "-m", "ticket: change foo"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        // Main has src/bar.rs dirty — not touched by the ticket.
+        std::fs::write(p.join("src/bar.rs"), "dirty").unwrap();
+
+        let leaked = check_leaked_files(p, "ticket/no-overlap", "main").unwrap();
+        assert!(leaked.is_empty(), "no overlap expected; got {leaked:?}");
+    }
+
+    #[test]
+    fn check_leaked_files_detects_untracked_overlap() {
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "existing.rs", "base");
+
+        // Ticket branch adds src/new.rs as a new file.
+        git_cmd(p, &["checkout", "-b", "ticket/untracked-overlap"]);
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        std::fs::write(p.join("src/new.rs"), "new file").unwrap();
+        git_cmd(p, &["add", "src/new.rs"]);
+        git_cmd(p, &["commit", "-m", "ticket: add new file"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        // Leak: src/new.rs dropped untracked on main.
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        std::fs::write(p.join("src/new.rs"), "leaked untracked").unwrap();
+
+        let leaked = check_leaked_files(p, "ticket/untracked-overlap", "main").unwrap();
+        assert_eq!(leaked, vec!["src/new.rs".to_string()]);
     }
 
     /// Regression test: a local ticket branch regular-merged into local
