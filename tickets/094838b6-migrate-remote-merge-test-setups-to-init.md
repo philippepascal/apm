@@ -1,7 +1,7 @@
 +++
 id = "094838b6"
 title = "Migrate remote-merge test setups to init_repo()"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/094838b6-migrate-remote-merge-test-setups-to-init"
 created_at = "2026-05-01T20:27:20.736073Z"
-updated_at = "2026-05-01T20:29:17.859154Z"
+updated_at = "2026-05-02T03:08:00.174397Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
+| 2026-05-02T03:08Z | new | groomed | philippepascal |
