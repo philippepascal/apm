@@ -72,6 +72,8 @@ When a worker writes to the main worktree (intentional leak or bug), the bad cha
 - [ ] `apm state X implemented` is unaffected when the completion strategy is `Pr`, `Pull`, or `None` (no merge is attempted; no check runs)
 - [ ] When `check_leaked_files` cannot resolve the merge-base (e.g. no shared history), it returns an empty list and the transition is not blocked
 - [ ] When the merge-target worktree does not exist on disk yet, the check returns empty and does not block the transition
+- [ ] `git status --porcelain` entries with `R` or `C` in the X column (staged renames/copies) in the target worktree are skipped during dirty-file enumeration and are never reported as leaks (known limitation: a leaked file staged as a rename in the target worktree will not be detected)
+- [ ] An untracked file (`??` prefix in `git status --porcelain`) in the target worktree is included in the dirty set; if the ticket branch also added that same file, it is reported as a potential leak
 
 ### Out of scope
 
