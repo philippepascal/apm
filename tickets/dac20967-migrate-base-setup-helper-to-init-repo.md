@@ -19,7 +19,11 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:34 setup() hand-writes a 6-state workflow that does not match the 12-state production default. Replace its body with a call to init_repo() (added by upstream ticket) plus any minimal overrides the tests using it actually need. Expect test fallout from tests that depended on the legacy minimal workflow — that fallout is the point: those tests are papering over real coverage gaps. Each broken test should either be updated to work with the production workflow, or be deleted if the scenario it covers no longer makes sense, with a one-line note on which is which.
+The `setup()` helper at `apm/tests/integration.rs:34` hand-writes a 6-state `apm.toml` at repo root using a hard-coded string literal. Its workflow contains: `new`, `specd`, `ammend`, `ready`, `in_progress`, `closed`. The production default — produced by `apm init` — contains 12 states: `new`, `groomed`, `question`, `specd`, `ammend`, `in_design`, `ready`, `in_progress`, `blocked`, `implemented`, `merge_failed`, `closed`.
+
+Because the test fixture diverges from production, two categories of problem arise. First, changes to the production init template (new states, changed transitions, new config keys) are completely invisible to the ~122 tests that use `setup()`. Second, the 6-state workflow has transition rules that do not exist in production: `new → specd`, `new → ready`, and `new → in_progress` are all reachable in the test fixture but are not valid transitions in production. Tests that exercise those paths are silently asserting behaviour that real users cannot trigger.
+
+The fix is to replace `setup()` body with a call to `init_repo()` (added by upstream ticket 795dce11). This will surface test failures for any test that relied on the non-production transition rules or the reduced state set. Those failures are not noise — they represent real coverage gaps. Each broken test must be triaged: updated to work with production workflow semantics, or deleted if the scenario it covers no longer makes sense, with a short inline note explaining the decision.
 
 ### Acceptance criteria
 
