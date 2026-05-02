@@ -1,7 +1,7 @@
 +++
 id = "f701ef81"
 title = "Migrate setup_aggressive() to init_repo()"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f701ef81-migrate-setup-aggressive-to-init-repo"
 created_at = "2026-05-01T20:26:58.392091Z"
-updated_at = "2026-05-01T20:29:00.151714Z"
+updated_at = "2026-05-02T03:07:44.809305Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T20:26Z | — | new | philippepascal |
+| 2026-05-02T03:07Z | new | groomed | philippepascal |
