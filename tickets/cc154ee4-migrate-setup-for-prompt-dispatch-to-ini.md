@@ -42,7 +42,11 @@ There are 7 tests that depend on this helper. They cover owner-preservation sema
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other setup helper (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, etc.) — each has its own sibling ticket in this epic
+- Replacing `write_ticket_to_branch()` / `write_ticket_with_owner()` direct file writes with real `apm new` + `apm state` calls — covered by sibling ticket 059e2e74
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Adding a CLI command to configure `workers.command` post-init — that is a product feature decision
+- Changing any test assertion or the behavior being tested — only the fixture setup is in scope
 
 ### Approach
 
