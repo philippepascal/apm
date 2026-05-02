@@ -4,12 +4,12 @@ title = "Document integration-test best practices and bypass policy"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8217e5f5-document-integration-test-best-practices"
 created_at = "2026-05-01T20:26:39.470083Z"
-updated_at = "2026-05-02T03:12:05.985676Z"
+updated_at = "2026-05-02T03:12:10.824522Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 +++
