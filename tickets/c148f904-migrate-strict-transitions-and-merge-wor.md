@@ -57,7 +57,69 @@ The two helpers serve 5 tests in total: `state_force_bypasses_transition_rules` 
 
 ### Approach
 
-How the implementation will work.
+Both helpers follow the same pattern: call `init_repo()`, overwrite `.apm/workflow.toml` with the custom table (BYPASS), commit the change, return `dir`. The function signatures are unchanged; all callers are unchanged.
+
+**File changed:** `apm/tests/integration.rs` — two function bodies replaced (lines 3747–3804 and 6845–6909).
+
+---
+
+**setup_with_strict_transitions() — new body (lines 3747–3804)**
+
+Replace the body of `setup_with_strict_transitions()`. The function signature is unchanged.
+
+1. Call `init_repo()` to obtain a properly shaped repo (`.apm/` layout, `tickets/`, HEAD committed).
+
+2. BYPASS — overwrite `.apm/workflow.toml` with the custom 5-state restricted-transition table:
+   ```rust
+   // BYPASS: no apm command can replace the workflow post-init.
+   // The production default has no new → in_progress transition (new only goes to groomed
+   // or closed); this 5-state restricted workflow is intentionally minimal to isolate
+   // --force bypass behaviour without the full spec/review lifecycle.
+   let wf = "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\n...";
+   std::fs::write(dir.path().join(".apm/workflow.toml"), wf).unwrap();
+   ```
+   The TOML content is the same 5-state table as the original fixture (new, specd, in_progress, implemented, closed) with exactly the same transitions. `specd` is kept to avoid state-membership panics if the parser validates state names on load.
+
+3. Stage and commit the patched file:
+   ```rust
+   git(dir.path(), &["add", ".apm/workflow.toml"]);
+   git(dir.path(), &["commit", "-m", "strict transitions workflow"]);
+   ```
+
+4. Return `dir`.
+
+The key invariant preserved: `new → in_progress` is the only valid transition from `new`, and no `in_progress → new` transition exists. Both callers assert that `state::run` without `--force` rejects `in_progress → new` and that `--force` allows it.
+
+---
+
+**setup_with_merge_workflow() — new body (lines 6845–6909)**
+
+Replace the body of `setup_with_merge_workflow()`. The function signature is unchanged.
+
+1. Call `init_repo()` to obtain a properly shaped repo.
+
+2. BYPASS — overwrite `.apm/workflow.toml` with the custom 5-state merge-workflow table:
+   ```rust
+   // BYPASS: no apm command can add a new → implemented transition with completion = "merge"
+   // post-init. The production default has no such path; a direct new → implemented route
+   // is required so tests can trigger merge-failure without the full spec/worktree lifecycle.
+   std::fs::write(dir.path().join(".apm/workflow.toml"), wf).unwrap();
+   ```
+   The TOML content is the same table as the original fixture (states: new, implemented, merge_failed, in_progress, closed) with the `new → implemented` transition carrying `completion = "merge"` and `on_failure = "merge_failed"`.
+
+3. Stage and commit:
+   ```rust
+   git(dir.path(), &["add", ".apm/workflow.toml"]);
+   git(dir.path(), &["commit", "-m", "merge workflow"]);
+   ```
+
+4. Return `dir`.
+
+---
+
+**Dependency note**
+
+Both helpers call `init_repo()`, which is defined by ticket 795dce11. That ticket is in `specd` state and must land on the epic branch first (or be implemented inline if the branches are merged). The `depends_on` field already captures this ordering.
 
 ### Open questions
 
