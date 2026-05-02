@@ -51,7 +51,12 @@ Each helper should be rewritten to call `init_repo()` and then apply only the on
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating `commit_ticket_to_branch()` — utility function, not a config-carrying setup helper
+- Migrating `setup_epic_list()` (line 4311) or any other helper not listed in the Problem section
+- Migrating `setup()`, `setup_merge()`, `setup_with_close_workflow()`, `setup_with_local_worktrees()`, `setup_with_worktrees()` — each has a dedicated sibling ticket in the epic
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Adding `apm` commands to set `server.url`, remove workflow states, or toggle `archive_dir`
+- Changing any test function body (only the four helper bodies are in scope)
 
 ### Approach
 
