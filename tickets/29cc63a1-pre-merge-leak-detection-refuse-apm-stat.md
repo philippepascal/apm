@@ -1,7 +1,7 @@
 +++
 id = "29cc63a1"
 title = "Pre-merge leak detection: refuse apm state implemented when main has uncommitted overlap"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29cc63a1-pre-merge-leak-detection-refuse-apm-stat"
 created_at = "2026-05-01T02:30:13.061854Z"
-updated_at = "2026-05-01T02:30:13.061854Z"
+updated_at = "2026-05-02T03:07:11.139384Z"
 +++
 
 ## Spec
@@ -84,3 +84,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T02:30Z | — | new | philippepascal |
+| 2026-05-02T03:07Z | new | groomed | philippepascal |
