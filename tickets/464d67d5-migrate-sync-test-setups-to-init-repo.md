@@ -19,7 +19,11 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:5716 setup_sync_repo() and apm/tests/integration.rs:5894 setup_branch_in_origin() build bare-origin + clone fixtures for sync tests, with hand-rolled config in both halves. Rewrite to use init_repo() in the local clone and minimise the bare-origin scaffolding to only what cannot be done via real commands (likely a small marked bypass since you have to seed branches into a bare repo).
+`setup_sync_repo()` (line 5711) and `setup_branch_in_origin()` (line 5889) in `apm/tests/integration.rs` are the two setup helpers backing the sync integration tests. `setup_sync_repo()` calls `setup()` for the local clone — which hand-writes a minimal `apm.toml` string literal and never invokes `apm init`. `setup_branch_in_origin()` creates a plain local repo containing only a `README` file, also bypassing `apm init` entirely.
+
+Because neither fixture goes through `apm init`, the repos they produce diverge from the shape real users get: the config is at the legacy `apm.toml` root location instead of `.apm/config.toml`, the workflow states are a frozen subset of the production default, and the `.gitignore` and other init-generated files are absent. Changes to the production init template — config file layout, new default states, `.gitignore` entries — are invisible to the 10+ tests that depend on these helpers.
+
+Both helpers should use `init_repo()` for the local clone. The bare-origin creation (`git init --bare`) and the disposable-clone branch-seeding approach have no real-`apm` alternative and should be retained with `// BYPASS:` annotations.
 
 ### Acceptance criteria
 
