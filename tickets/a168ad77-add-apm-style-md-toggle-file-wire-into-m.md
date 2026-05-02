@@ -26,10 +26,11 @@ A checkbox-toggle file at `.apm/style.md` provides that mechanism. All rules sta
 
 - [ ] `.apm/style.md` exists with a `## Conversation` section and a `## Specs` section; every rule is a `- [ ]` checkbox; all boxes are unchecked by default
 - [ ] `CLAUDE.md` contains an `@.apm/style.md` import line alongside the existing `@.apm/agents.md` import
-- [ ] A user-memory file in `.claude/projects/…/memory/` describes `.apm/style.md`, instructs the main agent to apply active `## Conversation` rules to its own output, and instructs it to prepend active Conversation rules to prompts when spawning subagents via the Agent tool
-- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a paragraph instructing the spec-writer to read `.apm/style.md` (if present) before writing or amending a spec and apply every `[x]`-checked rule under `## Specs`
-- [ ] `.apm/agents/claude/apm.spec-writer.md` (project file, post-wrapper-epic) contains the identical paragraph
-- [ ] A new Rust test in `apm-core/tests/spec_writer_md_sync.rs` asserts the two spec-writer `.md` files are byte-identical and fails with a line-level diff if they diverge
+- [ ] `CLAUDE.md` contains a `## Style rules` paragraph (committed in-repo, not in user-memory) instructing the main agent to apply active `## Conversation` rules to its own output and to prepend active Conversation rules to subagent prompts when spawning via the Agent tool
+- [ ] The `## Style rules` paragraph in `CLAUDE.md` explicitly states that `[ ]`-unchecked rules are inactive and must not be applied or referenced
+- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a `## Style rules` paragraph instructing the spec-writer to read `.apm/style.md` (if present) before writing or amending a spec, apply every `[x]`-checked rule under `## Specs`, and treat `[ ]`-unchecked rules as inactive
+- [ ] `.apm/agents/claude/apm.spec-writer.md` (project file, post-wrapper-epic) contains the identical `## Style rules` paragraph
+- [ ] A new Rust test in `apm-core/tests/spec_writer_md_sync.rs` extracts the `## Style rules` section from both spec-writer `.md` files and asserts those sections are identical; the test fails with a line-level diff of that section if they diverge
 
 ### Out of scope
 
