@@ -52,7 +52,7 @@ custom wrappers that may not pass `--disable-slash-commands`.
 ### Acceptance criteria
 
 - [x] `build_claude_args()` in `apm-core/src/wrapper/builtin/claude.rs` always includes `--disable-slash-commands` in its output, verified by a unit test that checks every call path (with and without model, with and without skip-permissions)
-- [ ] A test `installed_claude_binary_supports_disable_slash_commands` in the same test module runs `claude --help` and asserts the flag appears, catching version drift at CI time
+- [x] A test `installed_claude_binary_supports_disable_slash_commands` in the same test module runs `claude --help` and asserts the flag appears, catching version drift at CI time
 - [ ] The bundled default `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a `## Scope limits` section that explicitly states skill/slash-command invocation is prohibited
 - [ ] The bundled default `apm-core/src/default/agents/claude/apm.worker.md` contains a `## Scope limits` section that explicitly states skill/slash-command invocation is prohibited
 - [ ] The spec-writer `## Scope limits` section lists exactly the permitted `apm` commands for that role: `apm spec`, `apm state`, `apm set`, `apm new --side-note`, `apm show`
