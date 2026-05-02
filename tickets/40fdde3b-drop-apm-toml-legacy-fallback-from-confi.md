@@ -132,6 +132,12 @@ Do not touch `apm-core/src/init.rs` lines 156–169 (the `apm init --migrate` pa
 
 ### Open questions
 
+**Q:** **`apm init --migrate` confirmed** (2026-05-02): Flag verified via `apm init --help`:
+
+**Q:** --migrate
+**Q:** Migrate root-level apm.toml -> .apm/config.toml and apm.agents.md -> .apm/agents.md
+
+**Q:** AC item 10 is valid. The flag exists today; no sibling ticket needed.
 
 ### Amendment requests
 
