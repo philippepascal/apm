@@ -186,6 +186,7 @@ Remove the entire function (it has zero callers and is annotated `#[allow(dead_c
 
 ### Amendment requests
 
+- [ ] Enumerate the migrated test functions by name in the AC, the way 5c494a5d and c148f904 do for their helpers. With effort 7 and the highest scope of any migration ticket, partial migration is invisible without a per-test pass list. AC #4 names a function to delete (`write_ticket_with_agent`) but the call sites need to be listed too.
 
 ### Code review
 
