@@ -1,7 +1,7 @@
 +++
 id = "9fcc94ed"
 title = "Agent instructions: graceful exit via question/blocked state when stuck on capability limits"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9fcc94ed-agent-instructions-graceful-exit-via-que"
 created_at = "2026-05-01T02:34:11.627171Z"
-updated_at = "2026-05-02T07:20:27.137447Z"
+updated_at = "2026-05-02T07:21:28.744056Z"
 +++
 
 ## Spec
@@ -75,3 +75,4 @@ Add a new `## Capability limitations` section immediately after the existing `##
 | 2026-05-02T03:40Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:46Z | in_design | specd | claude-0502-0340-59f0 |
 | 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
+| 2026-05-02T07:21Z | ammend | in_design | philippepascal |
