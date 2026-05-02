@@ -519,7 +519,7 @@ Unit tests in `path_guard.rs` cover:
 
 - [x] The Bash heuristic regex is too loose to be testable. AC says "embedded paths in subshells / variables not caught" is OOS, but the spec doesn't list the specific shapes that ARE caught. Add a small canonical table — at least 6 examples each of "this fires" and "this does not" — so the integration test set is bounded.
 
-- [ ] `canonicalize_lenient` for write checks is racey. If the path doesn't exist yet, the validator resolves `..` lexically — but a parent symlink could redirect after the check. Add an AC: "intermediate components that exist must be canonicalised; the final non-existent leaf is appended after parent resolution."
+- [x] `canonicalize_lenient` for write checks is racey. If the path doesn't exist yet, the validator resolves `..` lexically — but a parent symlink could redirect after the check. Add an AC: "intermediate components that exist must be canonicalised; the final non-existent leaf is appended after parent resolution."
 
 - [ ] No AC verifies APM_BIN write protection works when APM_BIN is *under* the worktree (e.g. local cargo build placed in `target/`). Pin this edge case.
 
