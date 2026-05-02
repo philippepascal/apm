@@ -34,7 +34,9 @@ A checkbox-toggle file at `.apm/style.md` provides that mechanism. All rules sta
 
 ### Out of scope
 
-- Auto-sync between `.apm/style.md` and the agent .md files (future `apm style sync` command)\n- Applying style rules to `apm.worker.md` (impl-agent brevity is not the concern)\n- A schema or parser for `.apm/style.md` — the file is human-read, no code validation needed
+- Auto-sync between `.apm/style.md` and the agent .md files (future `apm style sync` command)
+- Applying style rules to `apm.worker.md` (impl-agent brevity is not the concern)
+- A schema or parser for `.apm/style.md` — the file is human-read, no code validation needed
 
 ### Approach
 
