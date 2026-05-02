@@ -438,7 +438,7 @@ Add to `apm-core/src/git_util.rs` (inside the `#[cfg(test)]` block) a unit test 
 
 - [x] Porcelain path slicing is wrong for renames. `line[3..]` works for `M `, `??`, etc., but `R ` and `C ` entries use `R  old -> new` — slicing at column 3 captures `old -> new` as one path string and silently misses leaks of renamed files. Either filter out R/C entries (acceptable simplification with an AC noting the limitation) or parse the rename arrow. Pick one and state it in the spec; do not leave the bug latent.
 
-- [ ] Untracked-file overlap semantics are ambiguous. Step 4 includes `??` lines in `dirty_files`, but step 3's diff against merge-base only enumerates tracked files. Pin the behaviour with an AC, e.g. "untracked file in target worktree that the ticket branch added is reported as a leak", and a corresponding test — or explicitly exclude `??` from the dirty set with an AC noting the gap.
+- [x] Untracked-file overlap semantics are ambiguous. Step 4 includes `??` lines in `dirty_files`, but step 3's diff against merge-base only enumerates tracked files. Pin the behaviour with an AC, e.g. "untracked file in target worktree that the ticket branch added is reported as a leak", and a corresponding test — or explicitly exclude `??` from the dirty set with an AC noting the gap.
 
 ### Code review
 
