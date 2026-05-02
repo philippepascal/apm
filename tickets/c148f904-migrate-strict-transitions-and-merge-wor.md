@@ -1,7 +1,7 @@
 +++
 id = "c148f904"
 title = "Migrate strict-transitions and merge-workflow setups to init_repo()"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c148f904-migrate-strict-transitions-and-merge-wor"
 created_at = "2026-05-01T20:26:55.674729Z"
-updated_at = "2026-05-02T03:39:16.358176Z"
+updated_at = "2026-05-02T03:39:22.344351Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -137,3 +137,4 @@ Both helpers call `init_repo()`, which is defined by ticket 795dce11. That ticke
 | 2026-05-01T20:26Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
 | 2026-05-02T03:35Z | groomed | in_design | philippepascal |
+| 2026-05-02T03:39Z | in_design | specd | claude-0502-0335-3828 |
