@@ -142,13 +142,18 @@ pub fn list_wrappers(root: &Path, config: &Config) -> Result<Vec<WrapperEntry>> 
         }
     }
 
-    // Configured marker
-    // TODO post-6cac8518: switch to config.workers.agent and iterate
-    // config.worker_profiles for per-profile markers.
-    let configured_name = config.workers.command.as_deref().unwrap_or("claude");
+    // Configured marker: global [workers].agent plus per-profile [worker_profiles.*].agent.
+    let global_agent = config.workers.agent.as_deref().unwrap_or("claude").to_string();
     for entry in &mut entries {
-        if entry.name == configured_name {
+        if entry.name == global_agent {
             entry.configured_as.push("(configured)".to_string());
+        }
+        for (profile_name, profile) in &config.worker_profiles {
+            if let Some(ref agent) = profile.agent {
+                if entry.name == *agent {
+                    entry.configured_as.push(format!("({profile_name})"));
+                }
+            }
         }
     }
 

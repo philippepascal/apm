@@ -20,6 +20,26 @@ impl Wrapper for ClaudeWrapper {
     }
 }
 
+pub(crate) fn build_claude_args(model: Option<&str>, skip_permissions: bool, sys: &str, msg: &str) -> Vec<String> {
+    let mut args: Vec<String> = vec![
+        "--print".into(),
+        "--output-format".into(),
+        "stream-json".into(),
+        "--verbose".into(),
+        "--system-prompt".into(),
+        sys.into(),
+    ];
+    if let Some(m) = model {
+        args.push("--model".into());
+        args.push(m.into());
+    }
+    if skip_permissions {
+        args.push("--dangerously-skip-permissions".into());
+    }
+    args.push(msg.into());
+    args
+}
+
 fn spawn_local(
     ctx: &WrapperContext,
     sys: &str,
@@ -27,17 +47,7 @@ fn spawn_local(
     apm_bin: &str,
 ) -> anyhow::Result<std::process::Child> {
     let mut cmd = std::process::Command::new("claude");
-    cmd.arg("--print");
-    cmd.args(["--output-format", "stream-json"]);
-    cmd.arg("--verbose");
-    cmd.args(["--system-prompt", sys]);
-    if let Some(ref model) = ctx.model {
-        cmd.args(["--model", model]);
-    }
-    if ctx.skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-    cmd.arg(msg);
+    cmd.args(build_claude_args(ctx.model.as_deref(), ctx.skip_permissions, sys, msg));
 
     set_apm_env(&mut cmd, ctx, apm_bin);
     for (k, v) in &ctx.extra_env {
@@ -143,17 +153,7 @@ fn spawn_container(
 
     cmd.arg(image);
     cmd.arg("claude");
-    cmd.arg("--print");
-    cmd.args(["--output-format", "stream-json"]);
-    cmd.arg("--verbose");
-    cmd.args(["--system-prompt", sys]);
-    if let Some(ref model) = ctx.model {
-        cmd.args(["--model", model]);
-    }
-    if ctx.skip_permissions {
-        cmd.arg("--dangerously-skip-permissions");
-    }
-    cmd.arg(msg);
+    cmd.args(build_claude_args(ctx.model.as_deref(), ctx.skip_permissions, sys, msg));
 
     let log_file = std::fs::File::create(&ctx.log_path)?;
     let log_clone = log_file.try_clone()?;
@@ -185,5 +185,35 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
             k.to_uppercase().replace('.', "_").replace('-', "_")
         );
         cmd.env(&env_key, v);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_claude_args;
+
+    #[test]
+    fn args_include_model_flag_when_set() {
+        let args = build_claude_args(Some("sonnet"), false, "sys", "msg");
+        let pos = args.iter().position(|a| a == "--model").expect("--model flag must be in argv");
+        assert_eq!(args.get(pos + 1).map(String::as_str), Some("sonnet"), "value must follow --model");
+    }
+
+    #[test]
+    fn args_omit_model_flag_when_unset() {
+        let args = build_claude_args(None, false, "sys", "msg");
+        assert!(!args.iter().any(|a| a == "--model"), "--model must be absent when no model configured: {args:?}");
+    }
+
+    #[test]
+    fn args_include_skip_permissions_when_set() {
+        let args = build_claude_args(None, true, "sys", "msg");
+        assert!(args.iter().any(|a| a == "--dangerously-skip-permissions"), "{args:?}");
+    }
+
+    #[test]
+    fn args_msg_is_last() {
+        let args = build_claude_args(Some("opus"), true, "sys", "the-message");
+        assert_eq!(args.last().map(String::as_str), Some("the-message"));
     }
 }

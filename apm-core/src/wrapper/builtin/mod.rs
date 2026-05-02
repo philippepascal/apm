@@ -170,3 +170,120 @@ pub(crate) fn write_and_spawn_script(
 
     Ok(cmd.spawn()?)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+
+    fn make_ctx_with_options(opts: HashMap<String, String>) -> WrapperContext {
+        WrapperContext {
+            worker_name: "test".into(),
+            ticket_id: "t".into(),
+            ticket_branch: "b".into(),
+            worktree_path: PathBuf::from("/tmp"),
+            system_prompt_file: PathBuf::from("/tmp/sys"),
+            user_message_file: PathBuf::from("/tmp/msg"),
+            skip_permissions: false,
+            profile: "default".into(),
+            role_prefix: None,
+            options: opts,
+            model: None,
+            log_path: PathBuf::from("/tmp/log"),
+            container: None,
+            extra_env: HashMap::new(),
+            root: PathBuf::from("/tmp"),
+            keychain: HashMap::new(),
+            current_state: "test".into(),
+        }
+    }
+
+    #[test]
+    fn seed_from_ctx_uses_explicit_option() {
+        let mut opts = HashMap::new();
+        opts.insert("seed".into(), "12345".into());
+        let ctx = make_ctx_with_options(opts);
+        assert_eq!(seed_from_ctx(&ctx), 12345);
+    }
+
+    #[test]
+    fn seed_from_ctx_falls_back_when_no_option() {
+        // Without an explicit seed and no APM_OPT_SEED env, returns
+        // a time-based value — just assert that it doesn't panic.
+        let ctx = make_ctx_with_options(HashMap::new());
+        let _ = seed_from_ctx(&ctx);
+    }
+
+    #[test]
+    fn happy_script_includes_target_state_and_id() {
+        let s = happy_script("abc123", "implemented", true);
+        assert!(s.contains("ID=\"abc123\""), "id must appear: {s}");
+        assert!(s.contains("apm\" state \"$ID\" implemented") || s.contains("$APM\" state \"$ID\" implemented"),
+            "target transition must appear: {s}");
+    }
+
+    #[test]
+    fn happy_script_spec_mode_writes_spec_sections() {
+        let s = happy_script("abc123", "specd", false);
+        assert!(s.contains("--section \"Problem\""), "spec mode must populate Problem: {s}");
+        assert!(s.contains("--section \"Acceptance criteria\""), "spec mode must populate AC: {s}");
+    }
+
+    #[test]
+    fn happy_script_impl_mode_creates_commit() {
+        let s = happy_script("abc123", "implemented", true);
+        assert!(s.contains("git commit"), "impl mode must create commit: {s}");
+    }
+
+    #[test]
+    fn sad_script_includes_target_state() {
+        let s = sad_script("abc123", "blocked");
+        assert!(s.contains("ID=\"abc123\""), "id must appear: {s}");
+        assert!(s.contains("apm\" state \"$ID\" blocked") || s.contains("$APM\" state \"$ID\" blocked"),
+            "sad target must appear: {s}");
+    }
+
+    fn make_transition(to: &str, completion: crate::config::CompletionStrategy) -> crate::config::TransitionConfig {
+        crate::config::TransitionConfig {
+            to: to.into(),
+            trigger: "command:state".into(),
+            label: String::new(),
+            hint: String::new(),
+            completion,
+            focus_section: None,
+            context_section: None,
+            warning: None,
+            on_failure: None,
+            outcome: None,
+            profile: None,
+        }
+    }
+
+    fn make_state(id: &str) -> crate::config::StateConfig {
+        crate::config::StateConfig {
+            id: id.into(),
+            label: id.into(),
+            description: String::new(),
+            actionable: vec![],
+            terminal: false,
+            worker_end: false,
+            satisfies_deps: crate::config::SatisfiesDeps::Bool(false),
+            dep_requires: None,
+            transitions: vec![],
+            instructions: None,
+        }
+    }
+
+    #[test]
+    fn is_impl_mode_true_when_any_completion_strategy() {
+        use crate::config::CompletionStrategy;
+        assert!(is_impl_mode(&[(make_transition("implemented", CompletionStrategy::Merge), make_state("implemented"))]));
+    }
+
+    #[test]
+    fn is_impl_mode_false_when_all_none() {
+        use crate::config::CompletionStrategy;
+        assert!(!is_impl_mode(&[(make_transition("specd", CompletionStrategy::None), make_state("specd"))]));
+    }
+}

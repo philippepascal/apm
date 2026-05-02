@@ -157,9 +157,17 @@ fn gitignore_covers_dir(content: &str, dir: &str) -> bool {
 
 /// Layer 1 of the two-layer manifest validation design.
 /// Validates all configured agent names and scans `.apm/agents/` for issues.
-/// Errors (not-found agents, invalid manifests, unsupported contract versions) go into `errors`.
-/// Warnings (non-executable scripts, unknown manifest keys) go into `warnings`.
-fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warnings: &mut Vec<String>) {
+/// Returns (errors, warnings) so callers can route them — keeps this single
+/// directory scan from running twice when both validate_config and
+/// validate_warnings are invoked.
+pub fn validate_agents(config: &Config, root: &Path) -> (Vec<String>, Vec<String>) {
+    let mut errors: Vec<String> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
+    validate_agents_into(config, root, &mut errors, &mut warnings);
+    (errors, warnings)
+}
+
+fn validate_agents_into(config: &Config, root: &Path, errors: &mut Vec<String>, warnings: &mut Vec<String>) {
     // Collect configured agent names
     let mut names: std::collections::HashSet<String> = std::collections::HashSet::new();
     let primary = config.workers.agent.clone()
@@ -172,10 +180,11 @@ fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warni
     }
 
     // Validate each configured agent name (Layer 1 error check)
+    let builtins = wrapper::list_builtin_names().join(", ");
     for name in &names {
         match wrapper::resolve_wrapper(root, name) {
             Ok(None) => errors.push(format!(
-                "agent '{}' not found: checked built-ins {{claude}} and '.apm/agents/{}/'",
+                "agent '{}' not found: checked built-ins {{{builtins}}} and '.apm/agents/{}/'",
                 name, name
             )),
             Err(e) => errors.push(format!("agent '{name}': {e}")),
@@ -263,6 +272,13 @@ fn validate_agents(config: &Config, root: &Path, errors: &mut Vec<String>, warni
 }
 
 pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
+    let mut errors = validate_config_no_agents(config, root);
+    let (agent_errors, _) = validate_agents(config, root);
+    errors.extend(agent_errors);
+    errors
+}
+
+fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
 
     let state_ids: HashSet<&str> = config.workflow.states.iter()
@@ -403,9 +419,6 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
         }
     }
 
-    let mut agent_warnings: Vec<String> = Vec::new();
-    validate_agents(config, root, &mut errors, &mut agent_warnings);
-
     errors
 }
 
@@ -523,6 +536,13 @@ pub fn verify_tickets(
 }
 
 pub fn validate_warnings(config: &crate::config::Config, root: &Path) -> Vec<String> {
+    let mut warnings = validate_warnings_no_agents(config, root);
+    let (_, agent_warnings) = validate_agents(config, root);
+    warnings.extend(agent_warnings);
+    warnings
+}
+
+fn validate_warnings_no_agents(config: &crate::config::Config, _root: &Path) -> Vec<String> {
     let mut warnings = config.load_warnings.clone();
     if let Some(container) = &config.workers.container {
         if !container.is_empty() {
@@ -563,33 +583,17 @@ pub fn validate_warnings(config: &crate::config::Config, root: &Path) -> Vec<Str
         }
 
         'bfs: while let Some(state_id) = queue.pop_front() {
-            if let Some(state) = state_map.get(state_id) {
-                for t in &state.transitions {
-                    let outcome = if let Some(target_state) = state_map.get(t.to.as_str()) {
-                        resolve_outcome(t, target_state)
-                    } else {
-                        // Target not in map (e.g., built-in "closed" if not declared).
-                        // Inline the resolve_outcome fallback treating unknown targets as terminal.
-                        if let Some(ref o) = t.outcome {
-                            o.as_str()
-                        } else if t.completion != CompletionStrategy::None {
-                            "success"
-                        } else {
-                            "cancelled"
-                        }
-                    };
-
-                    if outcome == "success" {
-                        found_success = true;
-                        break 'bfs;
-                    }
-
-                    // Enqueue non-terminal target states for further exploration.
-                    if let Some(target) = state_map.get(t.to.as_str()) {
-                        if !target.terminal && visited.insert(t.to.as_str()) {
-                            queue.push_back(t.to.as_str());
-                        }
-                    }
+            let Some(state) = state_map.get(state_id) else { continue };
+            for t in &state.transitions {
+                // Unknown targets are reported as errors by validate_config; skip
+                // here so reachability isn't computed against malformed transitions.
+                let Some(&target) = state_map.get(t.to.as_str()) else { continue };
+                if resolve_outcome(t, target) == "success" {
+                    found_success = true;
+                    break 'bfs;
+                }
+                if !target.terminal && visited.insert(t.to.as_str()) {
+                    queue.push_back(t.to.as_str());
                 }
             }
         }
@@ -602,10 +606,18 @@ pub fn validate_warnings(config: &crate::config::Config, root: &Path) -> Vec<Str
         }
     }
 
-    let mut agent_errors: Vec<String> = Vec::new();
-    validate_agents(config, root, &mut agent_errors, &mut warnings);
-
     warnings
+}
+
+/// Single-pass equivalent of calling `validate_config` followed by
+/// `validate_warnings` — runs the agent-directory scan once and dedupes.
+pub fn validate_all(config: &Config, root: &Path) -> (Vec<String>, Vec<String>) {
+    let mut errors = validate_config_no_agents(config, root);
+    let mut warnings = validate_warnings_no_agents(config, root);
+    let (agent_errors, agent_warnings) = validate_agents(config, root);
+    errors.extend(agent_errors);
+    warnings.extend(agent_warnings);
+    (errors, warnings)
 }
 
 #[cfg(test)]

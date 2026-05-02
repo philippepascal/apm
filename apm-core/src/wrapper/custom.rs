@@ -50,7 +50,7 @@ fn find_binary(cmd: &str) -> anyhow::Result<PathBuf> {
     anyhow::bail!("parser binary not found: {}", cmd);
 }
 
-fn default_contract_version() -> u32 { 1 }
+fn default_contract_version() -> u32 { CONTRACT_VERSION }
 fn default_parser() -> String { "canonical".to_string() }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -492,9 +492,10 @@ mod tests {
     }
 
     #[test]
-    fn check_version_no_manifest_defaults_to_1() {
-        let declared = None::<Manifest>.map_or(1, |m| m.contract_version);
-        assert_eq!(declared, 1);
+    fn default_contract_version_tracks_apm_version() {
+        // Ensures that bumping CONTRACT_VERSION also updates the manifest serde
+        // default, so older manifests don't silently parse with a stale version.
+        assert_eq!(default_contract_version(), CONTRACT_VERSION);
     }
 
     // --- ParserStrategy tests ---

@@ -18,18 +18,19 @@ const DEBUG_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/debug/apm.s
 static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 #[cfg(test)]
-static DEPRECATION_TEST_LOG: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
-#[cfg(test)]
 static DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-fn emit_deprecation_warning() {
+const DEPRECATION_MSG: &str = "apm: deprecated: `[workers] command`, `args`, and `model` fields are deprecated — migrate to `agent` and `[workers.options]`";
+
+fn emit_deprecation_warning_to(out: &mut dyn std::io::Write) {
     use std::sync::atomic::Ordering;
     if DEPRECATION_WARNED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
-        let msg = "apm: deprecated: `[workers] command`, `args`, and `model` fields are deprecated — migrate to `agent` and `[workers.options]`";
-        eprintln!("{msg}");
-        #[cfg(test)]
-        DEPRECATION_TEST_LOG.lock().unwrap().push(msg.to_string());
+        let _ = writeln!(out, "{DEPRECATION_MSG}");
     }
+}
+
+fn emit_deprecation_warning() {
+    emit_deprecation_warning_to(&mut std::io::stderr().lock());
 }
 
 pub struct EffectiveWorkerParams {
@@ -139,6 +140,16 @@ pub struct RunNextOutput {
     pub log_path: Option<PathBuf>,
 }
 
+/// True when `agent` resolves to the built-in claude wrapper (no custom shadow).
+/// The compatibility probe is only meaningful in that case.
+pub(crate) fn should_check_claude_compat(root: &Path, agent: &str) -> bool {
+    if agent != "claude" { return false; }
+    matches!(
+        crate::wrapper::resolve_wrapper(root, "claude"),
+        Ok(Some(crate::wrapper::WrapperKind::Builtin(_)))
+    )
+}
+
 pub(crate) fn check_output_format_supported(binary: &str) -> Result<()> {
     let out = std::process::Command::new(binary)
         .arg("--help")
@@ -198,8 +209,9 @@ fn spawn_worker(ctx: &WrapperContext, agent: &str, project_root: &Path) -> Resul
             resolve_builtin(&name).expect("known built-in").spawn(ctx)
         }
         None => anyhow::bail!(
-            "agent {:?} not found: checked built-ins {{claude}} and '.apm/agents/{agent}/'",
-            agent
+            "agent {:?} not found: checked built-ins {{{}}} and '.apm/agents/{agent}/'",
+            agent,
+            crate::wrapper::list_builtin_names().join(", ")
         ),
     }
 }
@@ -312,12 +324,12 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .to_string();
     let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let worker_system = resolve_system_prompt(root, profile, &config.workers, "claude", role)?;
+    let mut params = effective_spawn_params(profile, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
+    let worker_system = resolve_system_prompt(root, profile, &config.workers, &params.agent, role)?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(profile, &id));
     let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
-    let mut params = effective_spawn_params(profile, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
     let role_prefix = profile.and_then(|p| p.role_prefix.clone());
 
     let log_path = wt_display.join(".apm-worker.log");
@@ -343,7 +355,9 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         keychain: config.workers.keychain.clone(),
         current_state: new_state.clone(),
     };
-    check_output_format_supported(&params.command)?;
+    if should_check_claude_compat(root, &params.agent) {
+        check_output_format_supported("claude")?;
+    }
     let mut child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
@@ -495,15 +509,15 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let worker_system = resolve_system_prompt(root, profile2, &config.workers, "claude", role2)?;
+    let mut params = effective_spawn_params(profile2, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
+    let worker_system = resolve_system_prompt(root, profile2, &config.workers, &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
     let raw_prompt_next = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
     let with_epic_next = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_next);
     let ticket_content = with_dependency_bundle(root, &dep_ids_next, &config, with_epic_next);
-    let mut params = effective_spawn_params(profile2, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
     let role_prefix2 = profile2.and_then(|p| p.role_prefix.clone());
 
     let branch = t.frontmatter.branch.clone()
@@ -537,7 +551,9 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         keychain: config.workers.keychain.clone(),
         current_state: t.frontmatter.state.clone(),
     };
-    check_output_format_supported(&params.command)?;
+    if should_check_claude_compat(root, &params.agent) {
+        check_output_format_supported("claude")?;
+    }
     let mut child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
@@ -679,15 +695,15 @@ pub fn spawn_next_worker(
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, warnings));
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let worker_system = resolve_system_prompt(root, profile2, &config.workers, "claude", role2)?;
+    let mut params = effective_spawn_params(profile2, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
+    let worker_system = resolve_system_prompt(root, profile2, &config.workers, &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
     let raw_prompt_snw = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
     let with_epic_snw = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_snw);
     let ticket_content = with_dependency_bundle(root, &dep_ids_snw, &config, with_epic_snw);
-    let mut params = effective_spawn_params(profile2, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
     let role_prefix2 = profile2.and_then(|p| p.role_prefix.clone());
 
     let branch = t.frontmatter.branch.clone()
@@ -721,7 +737,9 @@ pub fn spawn_next_worker(
         keychain: config.workers.keychain.clone(),
         current_state: t.frontmatter.state.clone(),
     };
-    check_output_format_supported(&params.command)?;
+    if should_check_claude_compat(root, &params.agent) {
+        check_output_format_supported("claude")?;
+    }
     let child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
@@ -850,7 +868,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_TEST_LOG, DEPRECATION_TEST_LOCK};
+    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_MSG, DEPRECATION_TEST_LOCK, emit_deprecation_warning_to};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -1493,18 +1511,33 @@ mod tests {
     }
 
     #[test]
-    fn deprecation_warning_emitted_once() {
+    fn deprecation_warning_writes_to_stream_once() {
         let _guard = DEPRECATION_TEST_LOCK.lock().unwrap();
         DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
-        DEPRECATION_TEST_LOG.lock().unwrap().clear();
+
+        // Capture what would otherwise go to stderr — proves the message hits
+        // the writer (i.e. stderr in production), not just an in-memory log.
+        let mut buf: Vec<u8> = Vec::new();
+        emit_deprecation_warning_to(&mut buf);
+        emit_deprecation_warning_to(&mut buf);
+
+        let captured = String::from_utf8(buf).unwrap();
+        let count = captured.matches(DEPRECATION_MSG).count();
+        assert_eq!(count, 1, "deprecated message should appear exactly once on the writer, found {count}\n{captured}");
+    }
+
+    #[test]
+    fn deprecation_warning_triggered_by_legacy_workers_config() {
+        let _guard = DEPRECATION_TEST_LOCK.lock().unwrap();
+        DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
 
         let workers = WorkersConfig { command: Some("claude".into()), ..Default::default() };
         effective_spawn_params(None, &workers);
-        effective_spawn_params(None, &workers);
 
-        let log = DEPRECATION_TEST_LOG.lock().unwrap();
-        let count = log.iter().filter(|m: &&String| m.contains("deprecated")).count();
-        assert_eq!(count, 1, "deprecated message should appear exactly once, found {count}");
+        assert!(
+            DEPRECATION_WARNED.load(std::sync::atomic::Ordering::SeqCst),
+            "legacy [workers].command must trigger the deprecation warning"
+        );
     }
 
     #[test]
