@@ -4,12 +4,12 @@ title = "Worker permission-denial diagnostics: surface what was denied and class
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 4
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f06272f1-worker-permission-denial-diagnostics-sur"
 created_at = "2026-05-01T02:31:05.749604Z"
-updated_at = "2026-05-02T03:38:35.712556Z"
+updated_at = "2026-05-02T03:38:38.629015Z"
 +++
 
 ## Spec
