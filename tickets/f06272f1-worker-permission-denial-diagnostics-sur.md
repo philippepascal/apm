@@ -82,7 +82,120 @@ When a worker hits a permission denial mid-run, today the only signal is a burie
 
 ### Approach
 
-How the implementation will work.
+### Dependencies
+
+This ticket builds on the wrapper epic (4312fbd4). The Claude wrapper already captures `claude --output-format stream-json` stdout to `.apm-worker.log` (`apm-core/src/wrapper/builtin/claude.rs`, `spawn_local()`, lines 60-62). Confirm the epic branch is merged before starting.
+
+### Step 1 — Pin the JSONL denial event format
+
+Before writing scanner code, examine an actual `.apm-worker.log` that captured a permission denial:
+
+- Find one in `.apm--worktrees/` from a past incident, or trigger one in a controlled test by running a worker with `--skip-permissions=false` and manually denying a tool prompt.
+- In Claude's `stream-json` output, a permission denial appears as a `tool_result` (or equivalent) event with `is_error: true`. The content field contains a human-readable message — likely something like `"This tool call was not executed"` or `"denied"`. A regular command failure also has `is_error: true`, but its content is the stderr/stdout of the failed command.
+- Identify the distinguishing substring(s) in the content that uniquely mark a denial vs. a failure.
+- Record the exact event shape in a block comment at the top of the new module so future maintainers understand the contract.
+
+If this cannot be determined before coding, open an `### Open questions` entry instead of guessing.
+
+### Step 2 — New module `apm-core/src/denial.rs`
+
+Expose via `apm-core/src/lib.rs` (`pub mod denial;`).
+
+**Data structures** (derive `Serialize`, `Deserialize`, `Debug`, `Clone`):
+
+```rust
+pub enum DenialClass {
+    ApmCommandDenial,
+    OutsideWorktree,
+    UnknownPattern,
+}
+
+pub struct DenialEntry {
+    pub timestamp: String,       // ISO-8601, from the log event
+    pub tool: String,            // e.g. "Bash", "Edit", "Write"
+    pub input: String,           // truncated to ≤200 chars
+    pub classification: DenialClass,
+}
+
+pub struct DenialSummary {
+    pub ticket_id: String,
+    pub worker_exited_at: String,  // ISO-8601 (current time at scan)
+    pub log_path: String,          // absolute path to .apm-worker.log
+    pub denial_count: usize,
+    pub denials: Vec<DenialEntry>,
+}
+```
+
+**`pub fn scan_transcript(log_path: &Path, worktree: &Path, ticket_id: &str) -> DenialSummary`:**
+
+1. Read `log_path` line by line; return an empty summary if the file is missing or unreadable.
+2. First pass: build `HashMap<String, (String, String, String)>` mapping `tool_use_id → (tool_name, tool_input, timestamp)` from tool_use events. In the `stream-json` format, tool use appears inside the `content` array of `assistant` message events — parse each line, check `type == "assistant"`, then walk `message.content[]` for items with `type == "tool_use"`.
+3. Second pass: for each `tool_result` event (or equivalent) with `is_error: true` whose content matches the denial indicator string (from Step 1), look up the `tool_use_id` to retrieve name, input, and timestamp.
+4. Classify each match:
+   - Tool is `Bash` and `input` (trimmed) starts with `"apm "` → `ApmCommandDenial`
+   - Tool is `Edit` or `Write` and the path in `input` does not start with `worktree.to_string_lossy().as_ref()` → `OutsideWorktree`
+   - Otherwise → `UnknownPattern`
+5. Truncate `input` to 200 characters.
+6. Return `DenialSummary { ticket_id, worker_exited_at: now(), log_path: absolute, denial_count, denials }`.
+
+**`pub fn write_summary(summary_path: &Path, summary: &DenialSummary)`:**
+
+Serialize to pretty-printed JSON via `serde_json::to_string_pretty` and write to `summary_path`. Log and swallow errors (best-effort — don't crash the wrapper exit path).
+
+### Step 3 — Wire into Claude wrapper exit
+
+File: `apm-core/src/wrapper/builtin/claude.rs`
+
+After the subprocess exits (after the `wait()` call in `spawn_local()` or its caller):
+
+1. Derive `summary_path` from `ctx.log_path` by replacing the `.log` extension with `.summary.json` (or appending `.summary.json` if no `.log` suffix).
+2. Call `denial::scan_transcript(&ctx.log_path, &ctx.worktree_path, &ctx.ticket_id)`.
+3. Call `denial::write_summary(&summary_path, &summary)`.
+4. If `summary.denials` contains any `ApmCommandDenial` entry, call `logger::log("worker-diag", "apm_command_denial", &format!("ticket {} denied apm commands: {}", ctx.ticket_id, unique_commands))` — where `unique_commands` is a comma-joined list of the unique `apm ...` strings from those entries.
+
+### Step 4 — `apm workers diag <id>` subcommand
+
+**`apm/src/cmd/workers.rs` — add `pub fn run_diag(root: &Path, ticket_id: &str)`:**
+
+1. Resolve `ticket_id` to a worktree path using the same scan of `.apm-worker.pid` files that `run()` uses, or via the ticket index. If not found, print an error to stderr and `std::process::exit(1)`.
+2. Derive paths: `log_path = worktree/.apm-worker.log`, `summary_path = worktree/.apm-worker.summary.json`.
+3. Load summary: try `denial::read_summary(&summary_path)`; if absent, call `denial::scan_transcript(&log_path, &worktree, ticket_id)`. If both fail (files absent), print an error and exit non-zero.
+4. Print the report:
+
+```
+Worker denial report — <ticket_id>
+Log: <absolute .apm-worker.log path>
+
+Total denials: N
+  apm_command_denial : X
+  outside_worktree   : Y
+  unknown_pattern    : Z
+
+APM command denials (allowlist gaps):
+  apm doesnotexist  (2026-05-01T12:34:50Z)
+  → Add "Bash(apm doesnotexist*)" to .claude/settings.json
+    and to APM_ALLOW_ENTRIES in apm-core/src/init.rs
+
+No denials detected.   ← replaces the block above when denial_count == 0
+```
+
+**`apm/src/main.rs`:** Add `--diag <id>` flag to the `workers` subcommand (follow the existing `--log` / `--kill` pattern in the clap setup). Route to `workers::run_diag(root, id)`.
+
+### Step 5 — Tests
+
+**Fixture files** under `apm-core/tests/fixtures/`:
+
+- `transcript_apm_denial.jsonl` — minimal valid stream-json with one assistant tool_use (`Bash`, `apm doesnotexist`) followed by a denied tool_result. Use the exact format confirmed in Step 1.
+- `transcript_no_denials.jsonl` — clean transcript, no errors.
+- `transcript_outside_worktree.jsonl` — one denied Edit to `/etc/passwd`.
+
+**Unit tests in `apm-core/src/denial.rs`** (or `apm-core/tests/denial_test.rs`):
+
+- `test_apm_command_denial`: scan `transcript_apm_denial.jsonl` with worktree = `/fake/worktree`; assert `denial_count == 1`, `denials[0].classification == ApmCommandDenial`, `denials[0].tool == "Bash"`, `denials[0].input` starts with `"apm "`.
+- `test_no_denials`: scan `transcript_no_denials.jsonl`; assert `denial_count == 0`.
+- `test_outside_worktree`: scan `transcript_outside_worktree.jsonl` with worktree = `/fake/worktree`; assert `denial_count == 1`, `denials[0].classification == OutsideWorktree`.
+
+The three integration-test acceptance criteria are satisfied by these unit tests operating on fixture transcripts — no live Claude run required.
 
 ### Open questions
 
