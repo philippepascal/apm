@@ -47,7 +47,7 @@ All changes are in Rust source files. Do this ticket last in the epic — run ca
 
 ### Amendment requests
 
-- [ ] AC body got rendered as a single line with literal `\n` separators (a TOML-string-vs-newline bug from how the text was submitted). Re-set the AC section so each checkbox is its own line and individually toggleable.
+- [x] AC body got rendered as a single line with literal `\n` separators (a TOML-string-vs-newline bug from how the text was submitted). Re-set the AC section so each checkbox is its own line and individually toggleable.
 
 - [ ] One AC item references `apm init --migrate` — that flag does not appear to be designed elsewhere in this epic. Either confirm it exists today, file a sibling ticket to add it, or remove the AC item.
 
