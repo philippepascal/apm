@@ -60,7 +60,18 @@ When a worker writes to the main worktree (intentional leak or bug), the bad cha
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm state X implemented` exits non-zero and prints a diagnostic when the merge-target worktree has uncommitted changes to at least one file that also appears in `git diff --name-only <merge-base>..<ticket-branch>`
+- [ ] The diagnostic names every overlapping file (one per line, indented)
+- [ ] The diagnostic includes the ticket id
+- [ ] The diagnostic includes the path `<ticket-worktree>/.apm-worker.log` (or a generic placeholder when the worktree is not found)
+- [ ] When the check fires, the ticket state on the branch remains unchanged (no `implemented` commit, no `on_failure` rollback commit)
+- [ ] `apm state X implemented` succeeds normally when the merge-target worktree has no uncommitted changes
+- [ ] `apm state X implemented` succeeds normally when the merge-target worktree has uncommitted changes to files that are NOT on the ticket branch (no false positives)
+- [ ] The check runs for the `Merge` completion strategy (direct merge to `target_branch` or `default_branch`)
+- [ ] The check runs for the `PrOrEpicMerge` completion strategy when `target_branch` is set (epic-branch merge path)
+- [ ] `apm state X implemented` is unaffected when the completion strategy is `Pr`, `Pull`, or `None` (no merge is attempted; no check runs)
+- [ ] When `check_leaked_files` cannot resolve the merge-base (e.g. no shared history), it returns an empty list and the transition is not blocked
+- [ ] When the merge-target worktree does not exist on disk yet, the check returns empty and does not block the transition
 
 ### Out of scope
 
