@@ -16,30 +16,38 @@ updated_at = "2026-05-02T03:08:19.995299Z"
 
 ### Problem
 
-Workers are full Claude Code instances and inherit every skill the host has. Today the only constraint on worker behaviour is the text in `apm.worker.md` / `apm.spec-writer.md` ("stay on your ticket"), which the agent can disregard.
+Workers are full Claude Code instances and inherit every skill the host has.
+The only current constraint on worker behaviour is descriptive text in
+`apm.worker.md` / `apm.spec-writer.md`, which the agent can ignore — there is
+no hard enforcement layer.
 
-**Concrete incident (ticket 2803bf07's amendment round, 2026-04-30):** the spec-writer worker hit a Bash permission prompt during legitimate amendment work, then invoked the `fewer-permission-prompts` skill — which scanned past Claude Code transcripts at `~/.claude/projects/` and tried to Edit `.claude/settings.json` to add allowlist entries. The Edit was denied by the permission system (so no leak landed), but the worker spent ~124 KB of transcript on the off-topic side-quest and never returned to transition state. The mismatch: the worker thought project-improvement work was within its scope. It wasn't.
+The concrete incident that motivates this ticket (ticket 2803bf07 amendment
+round, 2026-04-30): the spec-writer worker hit a Bash permission prompt during
+legitimate amendment work, then invoked the `fewer-permission-prompts` skill.
+That skill scanned `~/.claude/projects/` for past transcripts and attempted to
+edit `.claude/settings.json` with new allowlist entries. The Edit was denied by
+the permission system, so no leak landed — but the worker consumed ~124 KB of
+transcript on an off-ticket side-quest and never returned to complete the state
+transition. The mismatch: the worker interpreted project-improvement work as
+within its scope. It was not.
 
-**Should land after the wrapper epic (4312fbd4) so the wrapper layer is the natural enforcement point.**
+Two enforcement layers close this gap:
 
-**Two enforcement layers proposed in this ticket:**
+1. **Hard enforcement — CLI flag.** The `claude` CLI already ships a
+   `--disable-slash-commands` flag that disables all skill invocation for the
+   session. Adding this flag to the built-in `ClaudeWrapper` makes skill
+   invocation structurally impossible, regardless of what text is in the system
+   prompt.
 
-1. **Disable skill invocation for spawned workers.** Either via a Claude CLI flag (verify what `claude --print` supports — `--no-skills` or equivalent), or by adding an explicit clause to the system prompt: "Do not invoke any Claude Code skill. Ignore any skill availability information in your environment. Your only tool surface is the standard tool calls (Bash, Edit, Write, Read, Grep, etc.) directly applied to your ticket." The wrapper layer (post-epic) is the natural place — wrappers can pre-process the system prompt before passing to the agent.
+2. **Soft enforcement — system prompt tightening.** Each role's default system
+   prompt (`apm.worker.md`, `apm.spec-writer.md`) gains a "Scope limits"
+   section that explicitly lists the permitted `apm` subcommands, names the
+   off-limits paths, and tells the agent what to do on a permission prompt
+   (block with a diagnostic note) rather than leaving it to improvise.
 
-2. **Per-role system-prompt tightening.** spec-writer doesn't need broad Bash; impl-agent needs more. Lock down each role's system prompt with an explicit, narrow allow-list of behaviours: "You may run apm spec, apm state, apm set, apm new --side-note. You may not run anything that modifies project configuration, the .apm/ directory beyond ticket files, the .claude/ directory, or .gitignore. If you encounter a permission prompt for an apm command, exit with a diagnostic noting the missing allowlist entry — do not invoke any skill or attempt to edit settings.json."
-
-**Implementation pointers:**
-- The role-specific system prompts live in `.apm/agents/<wrapper>/apm.<role>.md` post-epic (per ticket 7f5f73d5).
-- The wrapper-layer pre-processing hook is the natural extension point — Claude built-in can strip skill metadata from the prompt; custom wrappers can opt in via a manifest flag (`disable_skills = true`).
-
-**Out of scope:**
-- The filesystem path validator (separate ticket — defense in depth at the tool-call layer).
-- Pre-merge leak detection (separate ticket — defense at the apm state implemented layer).
-- Permission-denial diagnostics (separate ticket — surfacing what the worker tried to do).
-
-**Acceptance pointers:**
-- A test that confirms a spawned worker cannot invoke an arbitrary skill (e.g., the worker's transcript does not contain task_notification entries for skills outside its role).
-- The shipped `apm.worker.md` and `apm.spec-writer.md` defaults explicitly forbid skill invocation and project-tool modification.
+The system prompt layer is defense-in-depth: it guides agents that see the
+hard block before they waste transcript on a forbidden path, and it covers
+custom wrappers that may not pass `--disable-slash-commands`.
 
 ### Acceptance criteria
 
