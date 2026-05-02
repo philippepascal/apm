@@ -60,20 +60,20 @@ When a worker writes to the main worktree (intentional leak or bug), the bad cha
 
 ### Acceptance criteria
 
-- [ ] `apm state X implemented` exits non-zero and prints a diagnostic when the merge-target worktree has uncommitted changes to at least one file that also appears in `git diff --name-only <merge-base>..<ticket-branch>`
-- [ ] The diagnostic names every overlapping file (one per line, indented)
-- [ ] The diagnostic includes the ticket id
-- [ ] The diagnostic includes the path `<ticket-worktree>/.apm-worker.log` (or a generic placeholder when the worktree is not found)
-- [ ] When the check fires, the ticket state on the branch remains unchanged (no `implemented` commit, no `on_failure` rollback commit)
-- [ ] `apm state X implemented` succeeds normally when the merge-target worktree has no uncommitted changes
-- [ ] `apm state X implemented` succeeds normally when the merge-target worktree has uncommitted changes to files that are NOT on the ticket branch (no false positives)
-- [ ] The check runs for the `Merge` completion strategy (direct merge to `target_branch` or `default_branch`)
-- [ ] The check runs for the `PrOrEpicMerge` completion strategy when `target_branch` is set (epic-branch merge path)
-- [ ] `apm state X implemented` is unaffected when the completion strategy is `Pr`, `Pull`, or `None` (no merge is attempted; no check runs)
-- [ ] When `check_leaked_files` cannot resolve the merge-base (e.g. no shared history), it returns an empty list and the transition is not blocked
-- [ ] When the merge-target worktree does not exist on disk yet, the check returns empty and does not block the transition
-- [ ] `git status --porcelain` entries with `R` or `C` in the X column (staged renames/copies) in the target worktree are skipped during dirty-file enumeration and are never reported as leaks (known limitation: a leaked file staged as a rename in the target worktree will not be detected)
-- [ ] An untracked file (`??` prefix in `git status --porcelain`) in the target worktree is included in the dirty set; if the ticket branch also added that same file, it is reported as a potential leak
+- [x] `apm state X implemented` exits non-zero and prints a diagnostic when the merge-target worktree has uncommitted changes to at least one file that also appears in `git diff --name-only <merge-base>..<ticket-branch>`
+- [x] The diagnostic names every overlapping file (one per line, indented)
+- [x] The diagnostic includes the ticket id
+- [x] The diagnostic includes the path `<ticket-worktree>/.apm-worker.log` (or a generic placeholder when the worktree is not found)
+- [x] When the check fires, the ticket state on the branch remains unchanged (no `implemented` commit, no `on_failure` rollback commit)
+- [x] `apm state X implemented` succeeds normally when the merge-target worktree has no uncommitted changes
+- [x] `apm state X implemented` succeeds normally when the merge-target worktree has uncommitted changes to files that are NOT on the ticket branch (no false positives)
+- [x] The check runs for the `Merge` completion strategy (direct merge to `target_branch` or `default_branch`)
+- [x] The check runs for the `PrOrEpicMerge` completion strategy when `target_branch` is set (epic-branch merge path)
+- [x] `apm state X implemented` is unaffected when the completion strategy is `Pr`, `Pull`, or `None` (no merge is attempted; no check runs)
+- [x] When `check_leaked_files` cannot resolve the merge-base (e.g. no shared history), it returns an empty list and the transition is not blocked
+- [x] When the merge-target worktree does not exist on disk yet, the check returns empty and does not block the transition
+- [x] `git status --porcelain` entries with `R` or `C` in the X column (staged renames/copies) in the target worktree are skipped during dirty-file enumeration and are never reported as leaks (known limitation: a leaked file staged as a rename in the target worktree will not be detected)
+- [x] An untracked file (`??` prefix in `git status --porcelain`) in the target worktree is included in the dirty set; if the ticket branch also added that same file, it is reported as a potential leak
 
 ### Out of scope
 
