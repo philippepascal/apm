@@ -24,7 +24,7 @@ A checkbox-toggle file at `.apm/style.md` provides that mechanism. All rules sta
 
 ### Acceptance criteria
 
-- [ ] `.apm/style.md` exists with a `## Conversation` section and a `## Specs` section; every rule is a `- [ ]` checkbox; all boxes are unchecked by default
+- [x] `.apm/style.md` exists with a `## Conversation` section and a `## Specs` section; every rule is a `- [ ]` checkbox; all boxes are unchecked by default
 - [ ] `CLAUDE.md` contains an `@.apm/style.md` import line alongside the existing `@.apm/agents.md` import
 - [ ] `CLAUDE.md` contains a `## Style rules` paragraph (committed in-repo, not in user-memory) instructing the main agent to apply active `## Conversation` rules to its own output and to prepend active Conversation rules to subagent prompts when spawning via the Agent tool
 - [ ] The `## Style rules` paragraph in `CLAUDE.md` explicitly states that `[ ]`-unchecked rules are inactive and must not be applied or referenced
