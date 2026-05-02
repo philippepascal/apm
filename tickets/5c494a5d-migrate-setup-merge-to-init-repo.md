@@ -47,7 +47,50 @@ The `merge` completion strategy is intentional and must be preserved. The 6 `dep
 
 ### Approach
 
-How the implementation will work.
+Replace the body of `setup_merge()` at `apm/tests/integration.rs:134–236`. The function signature (`fn setup_merge() -> TempDir`) and all callers are unchanged.
+
+**New body — ordered steps**
+
+1. Call `init_repo()` to obtain a fully initialised repo with `.apm/config.toml`, `.apm/workflow.toml`, `tickets/`, `.gitignore`, and a committed HEAD.
+
+2. Read `.apm/workflow.toml`, apply the BYPASS, and write it back:
+   ```rust
+   // BYPASS: no apm command can change a workflow completion strategy post-init.
+   // Change pr_or_epic_merge → merge so that depends_on is allowed for tickets
+   // that share the same target_branch without belonging to an epic.
+   let wf_path = dir.path().join(".apm/workflow.toml");
+   let wf = std::fs::read_to_string(&wf_path).unwrap();
+   assert!(
+       wf.contains("completion = \"pr_or_epic_merge\""),
+       "expected pr_or_epic_merge in workflow.toml — default template may have changed"
+   );
+   let patched = wf.replace(
+       "completion = \"pr_or_epic_merge\"",
+       "completion = \"merge\"",
+   );
+   std::fs::write(&wf_path, patched).unwrap();
+   ```
+   The `assert!` guards against silent drift if the default template is ever renamed; a clear panic message is better than a subtly wrong test fixture.
+
+3. Stage and commit the patched file so HEAD is clean when the function returns:
+   ```rust
+   git(dir.path(), &["add", ".apm/workflow.toml"]);
+   git(dir.path(), &["commit", "-m", "set merge completion"]);
+   ```
+
+4. Return `dir`.
+
+**Why `pr_or_epic_merge` → `merge` is the only change needed**
+
+The 6 callers create tickets with `apm new` (no epic, no explicit `target_branch`), then call `apm set depends_on` or pass `depends_on` to `apm new`. The validation in `apm-core/src/validate.rs` (`check_depends_on_rules`) only inspects the completion field:
+- `merge` → allows `depends_on` when all deps share the same `target_branch` (both default to `main` ✓)
+- `pr_or_epic_merge` → requires all deps to belong to the same epic (none do ✗)
+
+The extra states in the production workflow (`groomed`, `in_design`, `ready`, `blocked`, `merge_failed`, etc.) are irrelevant: none of the 6 tests advance tickets past `new`, and `depends_on` validation does not gate on current state.
+
+**File changed**
+
+`apm/tests/integration.rs` — lines 134–236 replaced in full (the `setup_merge` function body only).
 
 ### Open questions
 
