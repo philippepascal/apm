@@ -521,7 +521,7 @@ Unit tests in `path_guard.rs` cover:
 
 - [x] `canonicalize_lenient` for write checks is racey. If the path doesn't exist yet, the validator resolves `..` lexically — but a parent symlink could redirect after the check. Add an AC: "intermediate components that exist must be canonicalised; the final non-existent leaf is appended after parent resolution."
 
-- [ ] No AC verifies APM_BIN write protection works when APM_BIN is *under* the worktree (e.g. local cargo build placed in `target/`). Pin this edge case.
+- [x] No AC verifies APM_BIN write protection works when APM_BIN is *under* the worktree (e.g. local cargo build placed in `target/`). Pin this edge case.
 
 - [ ] `isolation.read_allow` glob support (e.g. `/etc/ssl/certs/**`) implies a glob crate dep. The spec does not pick one or specify semantics. Decide: literal-prefix match vs globset, and state which crate is added.
 
