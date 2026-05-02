@@ -37,7 +37,10 @@ This ticket produces the policy document. It is a prerequisite for all sibling m
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any existing setup helpers to `init_repo()` — covered by sibling tickets in this epic
+- Adding `// BYPASS:` annotations to existing direct-write code — each migration ticket handles its own bypasses
+- Changing any Rust test code or test logic
+- Enforcing the policy via CI linting or automated checks
 
 ### Approach
 
