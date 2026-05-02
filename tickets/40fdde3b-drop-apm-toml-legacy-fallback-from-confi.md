@@ -19,7 +19,19 @@ depends_on = ["dac20967", "5c494a5d", "296c1061", "c148f904", "f701ef81", "4abc5
 
 ### Problem
 
-apm-core/src/config.rs (lines 685-689) falls back to repo_root/apm.toml when .apm/config.toml does not exist. A second fallback exists in apm/src/cmd/validate.rs (lines 21-32) inside apply_config_migration_fixes, which also checks apm.toml before .apm/config.toml.\n\nBoth fallbacks were introduced to keep tests working while they still hand-wrote apm.toml instead of calling apm init. The sibling tickets in this epic migrate all of those tests. Once they are merged, no production user or test should rely on the fallback; it becomes dead code that silently hides migration bugs and lets hand-crafted fixtures drift from the real repo shape.\n\nAfter this ticket, .apm/config.toml produced by apm init is the only config location Config::load accepts. A missing config returns a clear error directing the user to run apm init.\n\nFour non-integration test files outside the sibling tickets scope still write apm.toml directly and will break when the fallback is removed:\n- apm-core/src/validate.rs test module (setup_verify_repo)\n- apm-core/tests/ticket_create.rs (setup function)\n- apm-core/src/context.rs test module (inline write before Config::load)\n- apm/tests/e2e.rs second setup helper (~line 590, does not call apm init)\n\nThese are in scope for this ticket. Several error messages and help strings in production code also reference apm.toml as the config path; updating them is cosmetic cleanup that belongs in this same pass.
+`apm-core/src/config.rs` (lines 685–689) falls back to `repo_root/apm.toml` when `.apm/config.toml` does not exist. A second fallback exists in `apm/src/cmd/validate.rs` (lines 21–32) inside `apply_config_migration_fixes`, which also checks `apm.toml` before `.apm/config.toml`.
+
+Both fallbacks were introduced to keep tests working while they still hand-wrote `apm.toml` instead of calling `apm init`. The sibling tickets in this epic migrate all of those tests. Once they are merged, no production user or test should rely on the fallback; it becomes dead code that silently hides migration bugs and lets hand-crafted fixtures drift from the real repo shape.
+
+After this ticket, `.apm/config.toml` produced by `apm init` is the only config location `Config::load` accepts. A missing config returns a clear error directing the user to run `apm init`.
+
+Four non-integration test files outside the sibling tickets' scope still write `apm.toml` directly and will break when the fallback is removed:
+- `apm-core/src/validate.rs` test module (`setup_verify_repo`)
+- `apm-core/tests/ticket_create.rs` (`setup` function)
+- `apm-core/src/context.rs` test module (inline write before `Config::load`)
+- `apm/tests/e2e.rs` second setup helper (~line 590, does not call `apm init`)
+
+These are in scope for this ticket. Several error messages and help strings in production code also reference `apm.toml` as the config path; updating them is cosmetic cleanup that belongs in this same pass.
 
 ### Acceptance criteria
 
