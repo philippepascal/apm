@@ -25,7 +25,17 @@ The `merge` completion strategy is intentional and must be preserved. The 6 `dep
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `setup_merge()` calls `init_repo()` and no longer contains any hand-written TOML string or `std::fs::write` for `apm.toml` / `config.toml` / `workflow.toml`
+- [ ] The rewritten helper includes a `// BYPASS:` comment explaining that no `apm` command can set a completion strategy post-init
+- [ ] `.apm/workflow.toml` in the returned repo has `completion = "merge"` on the `in_progress → implemented` transition
+- [ ] The patched `.apm/workflow.toml` is committed before `setup_merge()` returns (working tree is clean)
+- [ ] `set_depends_on_single_id` passes
+- [ ] `set_depends_on_comma_separated` passes
+- [ ] `set_depends_on_clear` passes
+- [ ] `set_depends_on_trims_whitespace` passes
+- [ ] `new_depends_on_sets_frontmatter` passes
+- [ ] `new_depends_on_comma_separated` passes
+- [ ] No other test in `integration.rs` regresses
 
 ### Out of scope
 
