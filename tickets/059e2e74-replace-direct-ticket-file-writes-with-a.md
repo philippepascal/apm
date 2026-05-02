@@ -1,7 +1,7 @@
 +++
 id = "059e2e74"
 title = "Replace direct ticket-file writes with apm new"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/059e2e74-replace-direct-ticket-file-writes-with-a"
 created_at = "2026-05-01T20:27:29.576253Z"
-updated_at = "2026-05-02T03:08:06.325458Z"
+updated_at = "2026-05-02T04:25:18.763612Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:08Z | new | groomed | philippepascal |
+| 2026-05-02T04:25Z | groomed | in_design | philippepascal |
