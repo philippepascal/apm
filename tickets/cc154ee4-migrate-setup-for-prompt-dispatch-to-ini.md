@@ -1,7 +1,7 @@
 +++
 id = "cc154ee4"
 title = "Migrate setup_for_prompt_dispatch() to init_repo()"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/cc154ee4-migrate-setup-for-prompt-dispatch-to-ini"
 created_at = "2026-05-01T20:27:03.975333Z"
-updated_at = "2026-05-02T03:07:50.948950Z"
+updated_at = "2026-05-02T03:49:50.299843Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
+| 2026-05-02T03:49Z | groomed | in_design | philippepascal |
