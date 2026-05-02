@@ -178,6 +178,9 @@ pub(crate) fn check_output_format_supported(binary: &str) -> Result<()> {
 pub struct ManagedChild {
     pub inner: std::process::Child,
     temp_files: Vec<PathBuf>,
+    /// When set, denial scanning is run on drop (claude wrapper only).
+    /// Tuple: (log_path, worktree_path, ticket_id).
+    denial_ctx: Option<(PathBuf, PathBuf, String)>,
 }
 
 impl std::ops::Deref for ManagedChild {
@@ -193,6 +196,9 @@ impl Drop for ManagedChild {
     fn drop(&mut self) {
         for f in &self.temp_files {
             let _ = std::fs::remove_file(f);
+        }
+        if let Some((log_path, worktree_path, ticket_id)) = &self.denial_ctx {
+            run_denial_scan(log_path, worktree_path, ticket_id);
         }
     }
 }
@@ -213,6 +219,25 @@ fn spawn_worker(ctx: &WrapperContext, agent: &str, project_root: &Path) -> Resul
             agent,
             crate::wrapper::list_builtin_names().join(", ")
         ),
+    }
+}
+
+/// Scan the worker transcript for permission denials, write the summary file,
+/// and emit a warning to the APM log when apm-command denials are found.
+fn run_denial_scan(log_path: &Path, worktree: &Path, ticket_id: &str) {
+    let summary = crate::denial::scan_transcript(log_path, worktree, ticket_id);
+    let summary_path = crate::denial::summary_path_for(log_path);
+    crate::denial::write_summary(&summary_path, &summary);
+    let unique_cmds = crate::denial::collect_unique_apm_commands(&summary);
+    if !unique_cmds.is_empty() {
+        crate::logger::log(
+            "worker-diag",
+            &format!(
+                "apm_command_denial ticket {} denied apm commands: {}",
+                ticket_id,
+                unique_cmds.join(", ")
+            ),
+        );
     }
 }
 
@@ -365,10 +390,17 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
 
+    let denial_log_path = log_path.clone();
+    let denial_worktree = wt_display.clone();
+    let denial_ticket_id = id.clone();
+    let agent_for_diag = params.agent.clone();
     std::thread::spawn(move || {
         let _ = child.wait();
         let _ = std::fs::remove_file(&sys_file);
         let _ = std::fs::remove_file(&msg_file);
+        if agent_for_diag == "claude" {
+            run_denial_scan(&denial_log_path, &denial_worktree, &denial_ticket_id);
+        }
     });
 
     Ok(StartOutput {
@@ -561,10 +593,17 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
+    let denial_log_path2 = log_path.clone();
+    let denial_worktree2 = wt_display.clone();
+    let denial_ticket_id2 = id.clone();
+    let agent_for_diag2 = params.agent.clone();
     std::thread::spawn(move || {
         let _ = child.wait();
         let _ = std::fs::remove_file(&sys_file);
         let _ = std::fs::remove_file(&msg_file);
+        if agent_for_diag2 == "claude" {
+            run_denial_scan(&denial_log_path2, &denial_worktree2, &denial_ticket_id2);
+        }
     });
 
     messages.push(format!("Worker spawned: PID={pid}, log={}", log_path.display()));
@@ -746,9 +785,15 @@ pub fn spawn_next_worker(
     let child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
 
+    let denial_ctx = if params.agent == "claude" {
+        Some((log_path.clone(), wt_display.clone(), id.clone()))
+    } else {
+        None
+    };
     let managed = ManagedChild {
         inner: child,
         temp_files: vec![sys_file, msg_file],
+        denial_ctx,
     };
 
     let pid_path = wt_display.join(".apm-worker.pid");
@@ -1479,6 +1524,7 @@ mod tests {
         let mut managed = ManagedChild {
             inner: child,
             temp_files: vec![sys_file.clone(), msg_file.clone()],
+            denial_ctx: None,
         };
         managed.inner.wait().unwrap();
         drop(managed);

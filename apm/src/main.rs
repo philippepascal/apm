@@ -96,6 +96,15 @@ enum EpicCommand {
 }
 
 #[derive(Subcommand)]
+enum WorkersCommand {
+    /// Show permission-denial diagnostics for a worker transcript
+    Diag {
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+        id: String,
+    },
+}
+
+#[derive(Subcommand)]
 enum AgentsCommand {
     /// List available wrappers (built-in and project-defined)
     List,
@@ -720,6 +729,8 @@ ac.txt) are always removed automatically without needing --untracked.")]
         /// Kill the worker for the given ticket ID
         #[arg(long, value_name = "ID")]
         kill: Option<String>,
+        #[command(subcommand)]
+        subcmd: Option<WorkersCommand>,
     },
     /// Manage epics
     Epic {
@@ -896,7 +907,13 @@ fn main() -> Result<()> {
         Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
         Command::Clean { dry_run, yes, force, branches, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, older_than, untracked, epics),
         Command::Spec { id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive),
-        Command::Workers { log, kill } => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
+        Command::Workers { log, kill, subcmd } => {
+            if let Some(WorkersCommand::Diag { id }) = subcmd {
+                cmd::workers::run_diag(&root, &id)
+            } else {
+                cmd::workers::run(&root, log.as_deref(), kill.as_deref())
+            }
+        }
         Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
         Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
         Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),

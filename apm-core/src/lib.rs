@@ -1,5 +1,6 @@
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 pub mod agents;
+pub mod denial;
 pub mod archive;
 pub mod wrapper;
 pub mod help_schema;
