@@ -1,7 +1,7 @@
 +++
 id = "8217e5f5"
 title = "Document integration-test best practices and bypass policy"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8217e5f5-document-integration-test-best-practices"
 created_at = "2026-05-01T20:26:39.470083Z"
-updated_at = "2026-05-01T20:26:39.470083Z"
+updated_at = "2026-05-02T03:07:26.300432Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 +++
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T20:26Z | — | new | philippepascal |
+| 2026-05-02T03:07Z | new | groomed | philippepascal |
