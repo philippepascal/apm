@@ -1,7 +1,7 @@
 +++
 id = "a168ad77"
 title = "Add .apm/style.md toggle file; wire into main agent and spec-writer"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a168ad77-add-apm-style-md-toggle-file-wire-into-m"
 created_at = "2026-05-01T19:39:37.765619Z"
-updated_at = "2026-05-01T19:39:37.765619Z"
+updated_at = "2026-05-02T03:07:23.251856Z"
 +++
 
 ## Spec
@@ -70,3 +70,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T19:39Z | — | new | philippepascal |
+| 2026-05-02T03:07Z | new | groomed | philippepascal |
