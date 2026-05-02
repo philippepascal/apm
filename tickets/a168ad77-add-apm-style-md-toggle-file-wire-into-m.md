@@ -3,13 +3,13 @@ id = "a168ad77"
 title = "Add .apm/style.md toggle file; wire into main agent and spec-writer"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a168ad77-add-apm-style-md-toggle-file-wire-into-m"
 created_at = "2026-05-01T19:39:37.765619Z"
-updated_at = "2026-05-02T03:46:35.921856Z"
+updated_at = "2026-05-02T03:49:59.423957Z"
 +++
 
 ## Spec
