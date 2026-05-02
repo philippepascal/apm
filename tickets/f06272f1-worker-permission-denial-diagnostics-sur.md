@@ -305,6 +305,11 @@ The three integration-test acceptance criteria are satisfied by these unit tests
 
 ### Amendment requests
 
+- [ ] Step 1 (denial-event format) was left unresolved at spec time. The Approach says "if this cannot be determined, open `### Open questions`" — but it wasn't, even though resolving it is a hard prerequisite for the parse logic in Step 2 and the fixture transcripts in Step 5. Either (a) actually capture a real `.apm-worker.log` denial, paste the exact JSONL event into the spec, and pin the `is_error: true` discriminator string, or (b) add an open question now so it gets resolved before implementation.
+
+- [ ] `outside_worktree` classification needs a path-resolution rule. The spec says "path does not start with `worktree.to_string_lossy()`", but Edit/Write inputs may be relative (resolved against worker cwd = worktree) or contain symlinks (`/tmp/foo` → inside worktree on macOS). Add an AC: paths are canonicalised before the prefix check; relative paths are joined with `worktree` first. Otherwise expect false positives ("Edit src/foo.rs" classified as outside) or false negatives (symlinked tempdir classified as inside).
+
+- [ ] Subcommand routing is inconsistent across the spec. ACs 7–11 say `apm workers diag <id>` (subcommand form), but Step 4 says "Add `--diag <id>` flag to the `workers` subcommand" (flag form). Pick one — `apm workers diag <id>` matches the rest of `apm workers` ergonomics. Fix Step 4 to add `diag` as a clap subcommand under `workers`.
 
 ### Code review
 
