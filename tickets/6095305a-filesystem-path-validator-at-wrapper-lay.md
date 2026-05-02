@@ -80,14 +80,268 @@ mechanism is fully self-contained.
 
 ### Approach
 
-**Prerequisite**: The wrapper epic (4312fbd4) must be merged first; it provides
-the interception hook that this ticket plugs into. The hook is a callback
-registered in `WrapperContext` (or equivalent) that the canonical parser calls
-for each `tool_use` event before dispatching execution. The callback receives
-the parsed event and returns either `Ok(())` (allow) or `Err(String)` (inject
-a synthetic `tool_result` error with that message back to the agent).
+### Overview
+
+Enforcement uses Claude Code's `PreToolUse` hook API. Before spawning the worker
+process, APM writes a hook entry to `<worktree>/.claude/settings.json`. Claude
+Code invokes this hook before every tool call; the hook runs `apm path-guard`,
+which reads the tool name and input from stdin, evaluates `PathGuard`, and exits
+0 (allow) or 2 (reject, message on stdout). Claude Code converts exit-2 into a
+synthetic `tool_result` error sent back to the model. The hook fires regardless
+of `--dangerously-skip-permissions` -- that flag disables interactive permission
+prompts, not hooks. No wrapper epic or external IPC mechanism is required; this
+ticket is self-contained.
 
 ---
+
+### 1. `PathGuard` -- `apm-core/src/wrapper/path_guard.rs`
+
+```rust
+pub struct PathGuard {
+    worktree: PathBuf,             // canonicalised APM_TICKET_WORKTREE
+    read_allow: globset::GlobSet,  // compiled patterns for read-only Bash cmds
+    write_protected: Vec<PathBuf>, // APM_BIN, APM_SYSTEM_PROMPT_FILE, APM_USER_MESSAGE_FILE
+}
+```
+
+Key functions:
+
+- `PathGuard::new(worktree: &Path, read_allow_patterns: &[String], write_protected: &[PathBuf]) -> anyhow::Result<Self>`
+  Canonicalises `worktree`. Expands `~` in each pattern to `$HOME`, then compiles
+  into a `globset::GlobSet` (crate `globset = "0.4"`, added to
+  `apm-core/Cargo.toml`). Populates `write_protected` from the provided paths.
+
+- `PathGuard::check_write(&self, path: &Path) -> Result<(), String>`
+  1. Resolve: `canonicalize_lenient(path)`.
+  2. If resolved starts with `self.worktree` AND is not in `self.write_protected`
+     -> `Ok(())`.
+  3. Otherwise -> `Err(rejection_msg)`. (`write_protected` entries are rejected
+     even when they happen to be inside the worktree, e.g. `target/debug/apm`.)
+
+- `PathGuard::check_bash(&self, cmd: &str) -> Result<(), String>`
+  Applies write-detection heuristic (see canonical table). For each detected
+  write-target path, calls `check_write`. Returns the first rejection or `Ok(())`.
+
+- `canonicalize_lenient(path: &Path) -> PathBuf`
+  Walk path components from root. For each prefix that exists, call
+  `std::fs::canonicalize()` to follow symlinks. For components that do not yet
+  exist, append them lexically (no syscall). This ensures existing intermediate
+  symlinks are resolved while non-existent leaf paths are handled without TOCTOU.
+
+**Bash write-target detection -- canonical table**
+
+Token regex finds tokens starting with `/` or `~/` in the command string.
+Classification of detected tokens:
+
+| Detected as write target -- check_write fires | Trigger |
+|----------------------------------------------|---------|
+| `echo foo > /outside/file` | `>` redirect target |
+| `cat data >> /outside/append.log` | `>>` redirect target |
+| `tee /outside/output.txt` | `tee` first non-flag arg |
+| `cp /inside/src /outside/dest` | `cp` destination (last operand) |
+| `mv /inside/file /outside/dest` | `mv` destination (last operand) |
+| `truncate -s 0 /outside/file` | `truncate` path operand |
+
+| Not detected as write target -- check_write does not fire | Reason |
+|----------------------------------------------------------|--------|
+| `cat /etc/resolv.conf` | read-only cat, no redirect |
+| `grep pattern /etc/hosts` | grep reads only |
+| `ls /outside/dir` | listing, no write |
+| `diff /file1 /file2` | comparison, no write |
+| `wc -l /var/log/syslog` | read-only word count |
+| `echo hello` | no absolute path |
+
+Known false negatives (documented limitation, not in scope):
+
+| Command | Why missed |
+|---------|-----------|
+| `OUT=/outside/file; echo foo > "$OUT"` | variable interpolation |
+| `echo foo > $(cat /tmp/path)` | subshell expansion |
+| `eval "echo foo > /outside/file"` | eval |
+
+**Rejection message template**:
+
+```
+path outside ticket worktree; isolation enforced by APM wrapper.
+  Requested: {requested_path}
+  APM_TICKET_WORKTREE = {worktree}
+```
+
+---
+
+### 2. `IsolationConfig` -- `apm-core/src/config.rs`
+
+```rust
+#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
+pub struct IsolationConfig {
+    #[serde(default)]
+    pub read_allow: Vec<String>,   // globset patterns; ~ expanded before compilation
+}
+```
+
+Add `pub isolation: IsolationConfig` to `ApmConfig` with `#[serde(default)]`.
+
+Example `.apm/config.toml`:
+
+```toml
+[isolation]
+read_allow = [
+  "/etc/resolv.conf",
+  "~/.gitconfig",
+  "~/.ssh/config",
+  "/etc/ssl/certs/**",
+]
+```
+
+Default when `[isolation]` is absent: `read_allow = ["/etc/resolv.conf", "~/.gitconfig"]`.
+
+**Glob semantics**: `globset` crate (`globset = "0.4"` in `apm-core/Cargo.toml`).
+`~` expanded to `$HOME` before `GlobSet::build()`. `**` matches zero or more path
+components. Literal patterns (no wildcards) match exactly.
+
+---
+
+### 3. Manifest field -- `apm-core/src/wrapper/custom.rs`
+
+Add to `Manifest`:
+
+```rust
+#[serde(default)]
+pub enforce_worktree_isolation: bool,  // default false
+```
+
+Add `"enforce_worktree_isolation"` to the `known` array in `manifest_unknown_keys()`.
+
+In `CustomWrapper::spawn()`, after contract-version check: if
+`manifest.enforce_worktree_isolation` is true, call `write_hook_config` (SS4)
+before spawning. Wrappers with `parser = "external"` are exempt (out of scope).
+
+---
+
+### 4. Hook configuration -- `apm-core/src/wrapper/hook_config.rs`
+
+New module.
+
+```rust
+pub fn write_hook_config(worktree: &Path, apm_bin: &str) -> anyhow::Result<()>
+pub fn remove_hook_config(worktree: &Path) -> anyhow::Result<()>
+```
+
+`write_hook_config`:
+
+1. Path: `<worktree>/.claude/settings.json`. Create `.claude/` if absent.
+2. Read and parse as `serde_json::Value`; default to `{}` if file missing.
+3. Navigate to `hooks.PreToolUse` (create as JSON array if absent).
+4. If no entry already has `command` ending in `"apm path-guard"`, append:
+   ```json
+   {
+     "matcher": "Edit|Write|Bash",
+     "hooks": [{"type": "command", "command": "<apm_bin> path-guard"}]
+   }
+   ```
+5. Write back (pretty-printed JSON).
+
+`remove_hook_config`: re-read the file, filter out any hook entry whose nested
+`command` ends with `"apm path-guard"`, write back. Called after the child
+process exits (or on spawn failure) to avoid leaving stale hooks in long-lived
+worktrees. `<worktree>/.claude/settings.json` is not git-tracked (`.gitignore`
+covers `.claude/`), so writes do not pollute the ticket branch.
+
+---
+
+### 5. `apm path-guard` subcommand -- `apm/src/cmd/path_guard.rs`
+
+New CLI subcommand. The hook command written to settings.json is
+`<apm_bin> path-guard`.
+
+**Stdin** (Claude Code PreToolUse hook contract):
+
+```json
+{"tool_name": "Edit", "tool_input": {"file_path": "/some/path"}}
+```
+
+**Environment** (already set by APM before spawning the worker):
+
+- `APM_TICKET_WORKTREE` -- worktree root
+- `APM_SYSTEM_PROMPT_FILE`, `APM_USER_MESSAGE_FILE` -- write-protected paths
+- `APM_BIN` -- write-protected (the apm binary itself)
+
+**Logic**:
+
+1. Parse JSON from stdin. On parse failure -> exit 0 (do not block on malformed).
+2. Walk upward from `APM_TICKET_WORKTREE` until `.apm/config.toml` found; load
+   `IsolationConfig` (or use defaults).
+3. Build `PathGuard` from env vars + config.
+4. Dispatch on `tool_name`:
+   - `"Edit"` or `"Write"`: extract `tool_input.file_path`, call `check_write`
+   - `"Bash"`: extract `tool_input.command`, call `check_bash`
+   - anything else: exit 0
+5. `Ok(())` -> exit 0; `Err(msg)` -> print msg to stdout, exit 2
+
+---
+
+### 6. Built-in claude wrapper -- `apm-core/src/wrapper/builtin/claude.rs`
+
+In `spawn_local()`:
+
+- If `ctx.skip_permissions` is `true`: call `write_hook_config` unconditionally
+  (mandatory enforcement for `-P` workers).
+- Else if `cfg.isolation.enforce_worktree_isolation` is `true`: call
+  `write_hook_config`.
+- After child exits: call `remove_hook_config`.
+
+Apply the same logic in `spawn_container()` -- hook config must be written before
+the container mounts the worktree volume.
+
+---
+
+### 7. Integration tests -- `apm-core/tests/path_guard_integration.rs`
+
+Most ACs are exercised by invoking `apm path-guard` as a subprocess with crafted
+JSON on stdin and env vars set in the test harness -- no full claude worker spawn
+needed. Pattern:
+
+```rust
+let output = Command::new(apm_bin())
+    .arg("path-guard")
+    .env("APM_TICKET_WORKTREE", &worktree)
+    .env("APM_BIN", apm_bin())
+    .env("APM_SYSTEM_PROMPT_FILE", &sys_file)
+    .env("APM_USER_MESSAGE_FILE", &msg_file)
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    // ... pipe payload, then collect output
+    .output()?;
+assert_eq!(output.status.code(), Some(2));
+assert!(String::from_utf8_lossy(&output.stdout).contains("path outside ticket worktree"));
+```
+
+One end-to-end test (gated `#[ignore]` if requiring the real `claude` binary):
+write a sentinel file in the main worktree, spawn the worker with the mock-happy
+wrapper and a fabricated tool_use event targeting that file, assert it is
+unmodified after the worker exits.
+
+Unit tests in `path_guard.rs` cover:
+
+- `check_write` paths inside/outside worktree, symlink traversal, `write_protected` matches
+- Each row of the canonical bash table (fires and does-not-fire cases)
+- `canonicalize_lenient` with `..` escapes, symlinks in intermediate components, non-existent leaves
+- APM_BIN-under-worktree edge case
+
+---
+
+### Order of steps
+
+1. Add `globset = "0.4"` to `apm-core/Cargo.toml`.
+2. Add `IsolationConfig` to `config.rs`; parse in `ApmConfig::load()`; update `JsonSchema` derive.
+3. Implement `path_guard.rs` with unit tests passing.
+4. Implement `hook_config.rs` (`write_hook_config`, `remove_hook_config`).
+5. Implement `apm path-guard` subcommand in `apm/src/cmd/path_guard.rs`; wire into CLI.
+6. Add `enforce_worktree_isolation` to `Manifest`; update `manifest_unknown_keys`; wire `write_hook_config` into `CustomWrapper::spawn()`.
+7. Wire into `ClaudeWrapper::spawn_local()` (mandatory for `-P`, opt-in otherwise) and `spawn_container()`.
+8. Write integration tests; confirm all acceptance criteria pass.
+
+No wrapper-epic merge is required before starting; this ticket is fully self-contained.
 
 ### 1. `PathGuard` — new module `apm-core/src/wrapper/path_guard.rs`
 
