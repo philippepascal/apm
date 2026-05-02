@@ -48,83 +48,18 @@ New file at repo root `.apm/style.md`. Content:
 
 Rules are opt-in. Check a box (`[x]`) to activate a rule. Default: all unchecked.
 
-## Conversation
-
-- [ ] Limit replies to 1–3 sentences unless depth is genuinely needed
-- [ ] No preamble — do not restate the task or explain what you are about to do
-- [ ] No end-of-turn offers ("Let me know if…", "Feel free to ask…")
-- [ ] No bullet lists for simple factual answers; use prose
-
-## Specs
-
-- [ ] Problem section: ≤3 paragraphs
-- [ ] Acceptance criteria: ≤6 items per ticket
-- [ ] Do not restate the ticket title in the Problem section
-- [ ] Skip "Out of scope" when the boundary is obvious from context
-```
-
-#### 2. Add import to `CLAUDE.md`
-
-Insert `@.apm/style.md` immediately after the existing `@.apm/agents.md` line (line 3). Result:
-
-```
-@.apm/agents.md
-@.apm/style.md
-```
-
-#### 3. Create user-memory note
-
-Create `.claude/projects/-Users-philippepascal-repos-apm/memory/project_style_rules.md`:
-
-```markdown
-# Style Rules (`.apm/style.md`)
-
-The file `.apm/style.md` contains opt-in brevity rules for this project.
-
-- Before every reply, check which rules under `## Conversation` are marked `[x]` and apply them to your own output.
-- When spawning subagents via the Agent tool, prepend a note listing all active (checked) Conversation rules to the subagent prompt.
-- When writing or amending a spec, apply every rule under `## Specs` that is marked `[x]`.
-```
-
-Also add a line to the memory index (`MEMORY.md`):
-
-```
-- [Style rules toggle file](project_style_rules.md) — `.apm/style.md` opt-in brevity rules; apply active Conversation rules to own output and subagent prompts
-```
-
-#### 4. Update both spec-writer `.md` files
-
-Add the following new section to **both** files immediately after the opening intro paragraph (after line 6, before `## How to save spec sections`):
-
-```markdown
-## Style rules
-
-Before writing or amending a spec, read `.apm/style.md` (if present) and apply
-every rule under `## Specs` that is marked `[x]`.
-
----
-```
-
-Files to edit:
-- `apm-core/src/default/agents/claude/apm.spec-writer.md`
-- `.apm/agents/claude/apm.spec-writer.md`
-
-Both edits must be identical. Edit the default template first, then copy the same diff to the project file.
-
-#### 5. Add `spec_writer_md_sync.rs` test
-
-Create `apm-core/tests/spec_writer_md_sync.rs` following the exact same pattern as `worker_md_sync.rs`:
-- Paths: `apm-core/src/default/agents/claude/apm.spec-writer.md` (default) and `.apm/agents/claude/apm.spec-writer.md` (project)
-- Same byte-comparison logic and line-level diff on failure
-- Same panic message style, substituting "apm.spec-writer.md" for "apm.worker.md"
-
-Run `cargo test --workspace` to confirm both the new test and `default_and_project_apm_worker_md_are_identical` pass before marking implemented.
-
 ### Open questions
 
 
 ### Amendment requests
 
+- [ ] Wiring leaks into private user-memory state. AC #3 puts the operating instructions in `.claude/projects/.../memory/project_style_rules.md` — this is the supervisor's per-machine memory, not in-repo. A second supervisor cloning the repo gets `style.md` and `CLAUDE.md @import` but no instructions on what to do with them; the rules become inert. Either (a) move the operating instructions into `CLAUDE.md` itself (or a sibling tracked file like `.apm/agents.md`) so they ship with the repo, or (b) state explicitly in Out of scope that this ticket only configures the supervisor's own machine.
+
+- [ ] `@.apm/style.md` import behaviour with checkbox text is unspecified. The file is human-targeted Markdown with both checked and unchecked rules. When `@import` pulls it into context, the agent sees both — the spec doesn't say how the agent distinguishes "active" from "candidate". The user-memory note (AC #3) says "check which rules are marked `[x]` and apply them" but nothing prevents the agent from soft-applying unchecked ones too. Add an AC: the user-memory note must explicitly say "treat `[ ]` rules as inactive — do not apply or reference them".
+
+- [ ] AC #6 (byte-identity check on `.apm/apm.spec-writer.md`) is brittle for a project file users may legitimately customise. After this ticket lands, any supervisor who edits `.apm/agents/claude/apm.spec-writer.md` (the entire purpose of the per-agent override layer) breaks the test. Either narrow the assertion to "the `## Style rules` section is identical" (grep both files for that section, diff just that block), or drop AC #6 / move the check to a `cargo xtask`-style optional verification not in the test suite.
+
+- [ ] Out of scope items 1 and 2 contain literal `\n` instead of newlines — re-set with proper line breaks so the checklist renders as three items, not one paragraph. Same root cause as 40fdde3b and 9fcc94ed.
 
 ### Code review
 
