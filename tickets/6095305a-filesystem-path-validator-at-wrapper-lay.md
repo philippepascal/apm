@@ -42,7 +42,22 @@ wrappers, and backs the allow-list with a project-level config section.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm start` with `enforce_worktree_isolation = true` spawns the worker with path enforcement active; a worker that issues `Edit` against a path in the main worktree receives a `tool_result` error whose message contains "path outside ticket worktree"
+- [ ] The rejection `tool_result` message includes the value of `APM_TICKET_WORKTREE` so the agent can self-correct
+- [ ] The main-worktree file targeted by the rejected `Edit` call is unmodified after the rejection
+- [ ] A worker issues `Edit` against a path inside `APM_TICKET_WORKTREE`; the call succeeds and the file is modified
+- [ ] A worker issues `Write` against a path outside `APM_TICKET_WORKTREE`; the call is rejected with the same error format
+- [ ] A worker issues `Bash` with command `echo foo > /path/outside/worktree`; the command is rejected before execution; the target file is unmodified
+- [ ] A worker issues `Bash` with command `cat /etc/resolv.conf`; the call is allowed (default read-allow-list entry)
+- [ ] A worker issues `Bash` with command `cat ~/.gitconfig`; the call is allowed (default read-allow-list entry)
+- [ ] A worker issues `Bash` whose only absolute paths are inside `APM_TICKET_WORKTREE`; the call is allowed
+- [ ] A custom wrapper with `enforce_worktree_isolation = false` in its `manifest.toml` runs without path interception; the worker can write outside `APM_TICKET_WORKTREE` unobstructed
+- [ ] A custom wrapper whose `manifest.toml` omits `enforce_worktree_isolation` behaves identically to `false` (opt-in, backward-compatible default)
+- [ ] Path resolution canonicalises `..` components before comparison; a path like `<worktree>/../../../etc/passwd` is rejected
+- [ ] Path resolution follows symlinks before comparison; a symlink inside `APM_TICKET_WORKTREE` that resolves outside it is rejected
+- [ ] A `Write` call targeting `APM_BIN` is rejected even when `APM_BIN` has no path relationship to the worktree
+- [ ] A `Write` call targeting `APM_SYSTEM_PROMPT_FILE` or `APM_USER_MESSAGE_FILE` is rejected (those paths are read-only exceptions, not writable)
+- [ ] The read-allow-list is configurable in `.apm/config.toml` under `[isolation] read_allow`; entries added there permit the corresponding `Bash cat` calls through enforcement
 
 ### Out of scope
 
