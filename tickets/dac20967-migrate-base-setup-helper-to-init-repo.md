@@ -38,7 +38,12 @@ The fix is to replace `setup()` body with a call to `init_repo()` (added by upst
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other setup helper (`setup_merge()`, `setup_with_close_workflow()`, `setup_aggressive()`, etc.) — each is covered by a dedicated sibling ticket in this epic
+- Changing the behaviour of `apm init` itself
+- The `init_repo()` implementation (covered by upstream ticket 795dce11)
+- Adding new tests for the production-only states (`groomed`, `in_design`, `blocked`, `implemented`, `merge_failed`) — those belong to feature tickets
+- Removing the `apm.toml` legacy fallback from `Config::load` (covered by ticket 40fdde3b, intentionally last in the epic)
+- CI enforcement or linting of the bypass policy (covered by ticket 8217e5f5)
 
 ### Approach
 
