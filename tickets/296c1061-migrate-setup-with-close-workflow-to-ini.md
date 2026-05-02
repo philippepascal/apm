@@ -44,7 +44,38 @@ One test — sync_no_close_when_nothing_to_close (line 1016) — reads "apm.toml
 
 ### Approach
 
-How the implementation will work.
+File: apm/tests/integration.rs
+
+**Step 1 — Replace the helper body (around line 910)**
+
+Delete the entire body of setup_with_close_workflow() and replace with:
+
+    fn setup_with_close_workflow() -> TempDir {
+        init_repo()
+    }
+
+No workflow overrides needed. The production 12-state workflow produced by apm init already includes both "implemented" (non-terminal) and "closed" (terminal), which is all the sync tests require. The git user config calls (git config user.email / user.name) and manual create_dir_all for tickets/ are also unnecessary — init_repo() handles them via the git() helper and apm init.
+
+**Step 2 — Fix sync_no_close_when_nothing_to_close (line ~1016)**
+
+This test calls branch_content(p, "main", "apm.toml") solely to hold a reference to a file on main. After migration, apm.toml does not exist. Change the filename argument from "apm.toml" to ".apm/config.toml":
+
+    // Before
+    let log_before = branch_content(p, "main", "apm.toml");
+    // After
+    let log_before = branch_content(p, "main", ".apm/config.toml");
+
+The variable is used only via drop(log_before) at the end; its value is irrelevant.
+
+**Step 3 — No changes to the other 6 tests**
+
+All remaining tests use write_ticket_to_branch() to inject tickets with state = "implemented" directly via file write. The sync logic matches on the state name string, not workflow position, so the expanded state list in the production workflow does not affect them. These direct writes are already a known bypass pattern; annotating them with // BYPASS: is out of scope for this ticket (covered by 059e2e74).
+
+**Step 4 — Verify**
+
+Run: cargo test sync_
+
+All 7 tests in the sync group should pass.
 
 ### Open questions
 
