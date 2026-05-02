@@ -19,7 +19,11 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:1584 setup_aggressive() hand-writes a config with [sync] aggressive = true. Rewrite to call init_repo() then flip the single sync.aggressive field via the proper command (or marked bypass). The sync.aggressive default may differ from what existing tests assume — note any test divergence.
+`setup_aggressive()` at line 1584 of `apm/tests/integration.rs` hand-writes a minimal `apm.toml` at the repo root with a 5-state workflow and `[sync] aggressive = true`. Like all the hand-written helpers in this epic, it never calls `apm init`, so its fixture diverges from what real users get: the config lives at the legacy root-level path (`apm.toml`) instead of `.apm/config.toml`, and the workflow has fewer states than the production default.
+
+Six tests depend on this helper. They test two behaviours: (a) when `aggressive = true`, commands that attempt a remote fetch do not abort when no remote is configured; and (b) when the caller passes `--no-aggressive`, the fetch is suppressed entirely. Neither behaviour is tied to specific workflow states — the tests exercise `apm new`, `apm next`, `apm list`, `apm close`, `apm spec`, and `apm set`.
+
+Crucially, `sync.aggressive` already defaults to `true` in production: `SyncConfig` carries `#[serde(default = "default_true")]` on the field, and its `Default` impl sets `aggressive: true`. The `apm init` template does not write a `[sync]` section at all, so every repo created by `init_repo()` inherits the default — aggressive mode is on without any explicit config entry. This means the migration requires no bypass: replacing the helper body with `init_repo()` is sufficient.
 
 ### Acceptance criteria
 
