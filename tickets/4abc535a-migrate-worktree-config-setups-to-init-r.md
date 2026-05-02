@@ -42,7 +42,12 @@ setup_with_local_worktrees() is called by 15 tests (start / work commands). setu
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other setup helper (setup(), setup_merge(), setup_aggressive(), etc.) -- each has its own sibling ticket in the epic
+- Adding a CLI command to configure workers.command or other config fields post-init
+- Removing the apm.toml legacy fallback from Config::load -- covered by ticket 40fdde3b, intentionally last in the epic
+- Changing the behaviour of any test that calls these helpers
+- Migrating setup_merge_strategy_remote(), setup_squash_remote(), or any remote/clone fixture -- covered by sibling ticket 094838b6
+- The init_repo() implementation itself -- covered by ticket 795dce11
 
 ### Approach
 
