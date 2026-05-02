@@ -3,13 +3,13 @@ id = "66c51e24"
 title = "Worker scope hardening: disable skills + tighten role system prompts"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/66c51e24-worker-scope-hardening-disable-skills-ti"
 created_at = "2026-05-01T02:29:52.048624Z"
-updated_at = "2026-05-02T03:08:19.995299Z"
+updated_at = "2026-05-02T03:13:54.729939Z"
 +++
 
 ## Spec
