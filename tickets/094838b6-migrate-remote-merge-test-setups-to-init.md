@@ -51,7 +51,13 @@ helper) and override only what the test needs via real commands or marked bypass
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating `write_implemented_ticket` or `write_in_progress_ticket` to use `apm new` / `apm state` — those are ticket-content helpers covered by sibling ticket 059e2e74
+- Adding an `apm` CLI command to configure completion strategy on a specific transition — product feature decision, not in scope here
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Migrating any other setup helper (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, etc.) — each has its own sibling ticket in this epic
+- Changing any test function body (only the three setup helper bodies are in scope)
+- Migrating `push_to_origin()`, `remote_ref_sha()`, or `local_ref_sha()` — those are support utilities, not config-carrying setup helpers
+- Adding the `init_repo()` helper (covered by dependency ticket 795dce11); `init_remote_repo()` follows the same pattern but is a separate bare+clone variant
 
 ### Approach
 
