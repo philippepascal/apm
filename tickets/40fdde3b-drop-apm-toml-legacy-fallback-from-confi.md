@@ -144,7 +144,7 @@ Do not touch `apm-core/src/init.rs` lines 156–169 (the `apm init --migrate` pa
 - [x] AC body got rendered as a single line with literal `\n` separators (a TOML-string-vs-newline bug from how the text was submitted). Re-set the AC section so each checkbox is its own line and individually toggleable.
 
 - [x] One AC item references `apm init --migrate` — that flag does not appear to be designed elsewhere in this epic. Either confirm it exists today, file a sibling ticket to add it, or remove the AC item.
-- [ ] **Round 1 amendments were marked done but not actually addressed.** The previous worker checked the boxes without doing the work. Specific gaps below — verify by `apm show 40fdde3b` after completing each.
+- [x] **Round 1 amendments were marked done but not actually addressed.** The previous worker checked the boxes without doing the work. Specific gaps below — verify by `apm show 40fdde3b` after completing each.
 
 - [ ] Rendering bug persists outside the AC. The Problem, Out of scope, and Approach sections still contain literal `\n` strings instead of newlines (e.g. `"Both fallbacks were introduced...\n\nAfter this ticket..."`). The previous round only fixed the AC. Re-set Problem, Out of scope, and Approach with proper newlines so each paragraph/bullet is on its own line. **Verification: after the amendment round, `apm show 40fdde3b | grep -c '\\n'` returns 0.**
 
