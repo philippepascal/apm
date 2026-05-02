@@ -26,7 +26,16 @@ This ticket adds only the helper and a smoke test. No existing helper is modifie
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `init_repo()` compiles and is accessible to all tests in `integration.rs`
+- [ ] `init_repo()` returns `TempDir` (the same type returned by existing helpers such as `setup()`)
+- [ ] After `init_repo()` returns, `.apm/config.toml` exists inside the tempdir
+- [ ] After `init_repo()` returns, `.apm/workflow.toml` exists inside the tempdir
+- [ ] After `init_repo()` returns, a `tickets/` directory exists inside the tempdir
+- [ ] After `init_repo()` returns, `.gitignore` inside the tempdir contains at least one apm-specific entry (e.g. `.apm/local.toml`)
+- [ ] After `init_repo()` returns, `Config::load(dir.path())` succeeds without error
+- [ ] After `init_repo()` returns, the tempdir is a valid git repository with at least one commit (HEAD resolves)
+- [ ] A dedicated `#[test] fn test_init_repo_helper()` test calls `init_repo()`, asserts all of the above criteria, and passes under `cargo test`
+- [ ] `init_repo()` does not emit unexpected output to stdout/stderr when run in the test harness (assertion failure on non-zero exit from `apm init` is acceptable)
 
 ### Out of scope
 
