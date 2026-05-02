@@ -4,12 +4,12 @@ title = "Filesystem path validator at wrapper layer (worktree isolation enforcem
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 5
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6095305a-filesystem-path-validator-at-wrapper-lay"
 created_at = "2026-05-01T02:30:34.552318Z"
-updated_at = "2026-05-02T03:30:03.389686Z"
+updated_at = "2026-05-02T03:30:08.178238Z"
 +++
 
 ## Spec
