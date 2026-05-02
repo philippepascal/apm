@@ -103,6 +103,11 @@ leaves the implementer guessing; too detailed becomes stale.
 followed by a detailed per-step breakdown — that produces duplication. Pick one
 level of detail and cover every step once.
 
+Use `####` headings within long sections to create named subsections that
+serve as editing handles. Example: inside `### Approach`, add `#### Phase 1`
+so a future `apm spec <id> --section "Approach > Phase 1"` can update that
+block without touching the rest.
+
 ---
 
 ## Effort scale
@@ -169,6 +174,30 @@ transition to `question`. Do not guess and proceed.
 
 Once an answer arrives, reflect the decision in `### Approach` before
 transitioning back to `specd`.
+
+---
+
+## Capability limitations
+
+If you are blocked by a tool limitation, permission denial, or any other
+capability constraint — not a spec ambiguity — do not attempt workarounds.
+Specifically, do not:
+
+- Invoke skills (e.g. `fewer-permission-prompts`, `update-config`)
+- Edit `.claude/settings.json` or any file under `.apm/`
+- Attempt changes outside the ticket worktree
+
+Exit cleanly in two steps:
+
+1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation and what you needed>"`
+2. `apm state <id> question`
+
+`apm spec --append` auto-commits to the ticket branch — no manual git commit needed.
+The supervisor will see the ticket in the queue and resolve the blocker.
+
+This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
+which includes `### Open questions`. Projects with customised schemas that omit this
+section are out of scope.
 
 ---
 
