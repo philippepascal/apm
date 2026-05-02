@@ -1,7 +1,7 @@
 +++
 id = "464d67d5"
 title = "Migrate sync test setups to init_repo()"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/464d67d5-migrate-sync-test-setups-to-init-repo"
 created_at = "2026-05-01T20:27:11.656953Z"
-updated_at = "2026-05-02T03:07:57.157498Z"
+updated_at = "2026-05-02T04:03:02.661491Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
+| 2026-05-02T04:03Z | groomed | in_design | philippepascal |
