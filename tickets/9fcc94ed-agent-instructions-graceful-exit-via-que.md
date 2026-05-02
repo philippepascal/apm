@@ -30,7 +30,7 @@ This ticket adds an explicit "## Capability limitations" section to the spec-wri
 - [ ] The spec-writer capability-limitations section explicitly prohibits invoking skills, editing `.claude/settings.json`, editing `.apm/` files, and attempting workarounds outside the worktree
 - [ ] The spec-writer capability-limitations section gives the two-step clean exit: `apm spec <id> --section "Open questions" --append "..."` then `apm state <id> question`
 - [ ] `apm-core/src/default/agents/claude/apm.worker.md` contains a new "## Capability limitations" section placed after the existing "## Blocked state" section
-- [ ] The worker capability-limitations section gives the three-step clean exit: append to Open questions, commit the update, then `apm state <id> blocked`
+- [ ] The worker capability-limitations section gives the two-step clean exit: `apm spec <id> --section "Open questions" --append "..."` then `apm state <id> blocked` (no manual git commit — `apm spec --append` auto-commits)
 - [ ] `apm-core/src/default/apm.spec-writer.md` (flat default) is byte-for-byte identical to `apm-core/src/default/agents/claude/apm.spec-writer.md`
 - [ ] `apm-core/src/default/apm.worker.md` (flat default) is byte-for-byte identical to `apm-core/src/default/agents/claude/apm.worker.md`
 - [ ] `.apm/apm.spec-writer.md` is byte-for-byte identical to `apm-core/src/default/apm.spec-writer.md`
@@ -39,6 +39,7 @@ This ticket adds an explicit "## Capability limitations" section to the spec-wri
 - [ ] `apm-core/src/default/apm.agents.md` contains the identical sentence as `.apm/agents.md`
 - [ ] `apm-core/tests/worker_md_sync.rs` contains a test function that asserts `apm-core/src/default/apm.spec-writer.md` and `.apm/apm.spec-writer.md` are byte-for-byte identical and produces a readable diff on failure
 - [ ] `cargo test --workspace` passes including both the existing worker sync test and the new spec-writer sync test
+- [ ] Both `## Capability limitations` sections state that the instructions assume the default ticket schema includes `### Open questions`; projects with customised schemas that omit it are explicitly noted as out of scope within the section
 
 ### Out of scope
 
