@@ -41,10 +41,22 @@ The desired state is that every ticket fixture goes through the real `apm` CLI (
 ### Acceptance criteria
 
 - [ ] `cargo test -p apm --test integration` passes with no new failures after all changes
-- [ ] Every migrated helper body invokes `apm new` via `env!("CARGO_BIN_EXE_apm")` instead of constructing raw `+++\n` frontmatter strings
-- [ ] Ticket IDs in migrated fixtures are dynamically generated 8-char hex strings (as produced by `apm new`), not hardcoded integers or fixed string literals
-- [ ] No helper function or test body calls `write_ticket_with_agent` (the function is deleted)
-- [ ] Every direct TOML write that cannot be replaced has a `// BYPASS: <specific reason>` comment on the immediately preceding line
+
+- [ ] **`write_ticket_to_branch`** body uses `apm new` + `apm state` via `env!("CARGO_BIN_EXE_apm")`; drops `branch`/`filename`/`id` params and returns `(String, String)`; all 17 call sites updated to pass only `(dir, state, title)` and capture `(id, branch)`
+- [ ] **`write_closed_ticket`** body uses `apm new` + `apm state closed`; drops `id: u32` param; all 21 call sites updated to capture the returned `(branch, rel_path)` pair
+- [ ] **`write_spec_ticket`** body uses `apm new` + four `apm spec` section calls (Problem, AC, Out-of-scope, Approach) + `apm state in_progress`; drops `id: u32` param; all 17 call sites updated
+- [ ] **`write_implemented_ticket`** body uses `apm new` + `apm spec --section "Acceptance criteria" --set "- [x] Done"` + `apm state implemented`; drops `branch`/`filename` params; all 4 call sites updated
+- [ ] **`write_in_progress_ticket`** body uses `apm new` + `apm state in_progress` for the `target_branch = None` variant; drops `id`/`branch`/`filename`/`target_branch` params, adds `title: &str`, returns `(String, String)`; the two `target_branch = Some(...)` call sites retain a direct write annotated `// BYPASS:`; all 4 call sites updated accordingly
+- [ ] **`write_ticket_with_amendment_requests`** body uses `apm new` + four `apm spec` section calls + `apm state specd` + `apm spec` Amendment-requests section + `apm state ammend`; drops `id: u32` param; all 5 call sites updated
+- [ ] **`write_ticket_with_owner`** body uses `apm new` + `apm set owner` + `apm state`; drops `branch`/`filename`/`id` params and returns `(String, String)`; all 7 call sites updated to capture `(id, branch)`
+- [ ] **`write_ticket_with_epic`** body uses `apm new --epic` (or `create_ticket` when `epic = None`) + `apm state`; drops `branch`/`filename`/`id` params and returns `(String, String)`; all 3 call sites updated to capture `(id, branch)`
+- [ ] **`write_ticket_in_epic`** body uses `apm new --epic` + `apm set owner` + `apm state`; drops `branch`/`filename`/`id` params and returns `(String, String)`; all 6 call sites updated to capture `(id, branch)`
+- [ ] **`write_ticket_with_agent`** is deleted entirely; confirmed 0 call sites exist in `integration.rs` (function is annotated `#[allow(dead_code)]` and nothing references it)
+
+- [ ] Ticket IDs in all migrated fixtures are dynamically generated 8-char hex strings (as produced by `apm new`), not hardcoded integers or fixed string literals
+- [ ] The two primitive helpers `run_apm` and `create_ticket` are added near the `git()` helper
+- [ ] All five inline direct ticket-file constructions (lines ~660, ~999, ~1318, ~1879, ~3141) have a `// BYPASS: <specific reason>` comment on the immediately preceding line
+- [ ] Each `concat!`-based construction (lines ~393–430) is either replaced with `apm new` + `apm state` (if the test does not assert on the specific ID string) or annotated `// BYPASS: test asserts on specific ticket ID string that apm new cannot produce deterministically` (if it does)
 - [ ] No migrated call site passes a hardcoded integer ID or pre-computed branch name as ticket identity; callers use the `(id, branch)` tuple returned by the helper
 
 ### Out of scope
