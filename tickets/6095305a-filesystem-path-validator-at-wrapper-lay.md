@@ -63,6 +63,9 @@ mechanism is fully self-contained.
 - [ ] A `Write` call targeting `APM_BIN` is rejected even when `APM_BIN` has no path relationship to the worktree
 - [ ] A `Write` call targeting `APM_SYSTEM_PROMPT_FILE` or `APM_USER_MESSAGE_FILE` is rejected (those paths are read-only exceptions, not writable)
 - [ ] The read-allow-list is configurable in `.apm/config.toml` under `[isolation] read_allow`; entries added there permit the corresponding `Bash cat` calls through enforcement
+- [ ] A worker spawned with `-P` (`--dangerously-skip-permissions`) and `enforce_worktree_isolation = true` that issues `Edit` against the main worktree receives the same `tool_result` error as a non-`-P` worker; the `PreToolUse` hook fires regardless of the skip-permissions flag
+- [ ] When a write target path does not yet exist, `PathGuard` canonicalises all existing ancestor components by following symlinks, then appends the non-existent filename lexically; a path `<worktree>/subdir/../../etc/passwd` where `<worktree>/subdir` exists as a real directory is rejected
+- [ ] A `Write` call targeting a path that canonicalises to `APM_BIN` is rejected even when `APM_BIN` happens to reside inside `APM_TICKET_WORKTREE` (e.g. a local Cargo build at `target/debug/apm`)
 
 ### Out of scope
 
