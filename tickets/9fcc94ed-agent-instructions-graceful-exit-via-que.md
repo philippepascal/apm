@@ -4,12 +4,12 @@ title = "Agent instructions: graceful exit via question/blocked state when stuck
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9fcc94ed-agent-instructions-graceful-exit-via-que"
 created_at = "2026-05-01T02:34:11.627171Z"
-updated_at = "2026-05-02T03:46:12.666389Z"
+updated_at = "2026-05-02T03:46:15.739978Z"
 +++
 
 ## Spec
