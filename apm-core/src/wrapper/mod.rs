@@ -1,7 +1,10 @@
 pub mod builtin;
 pub mod custom;
+pub mod path_guard;
+pub mod hook_config;
 pub use builtin::ClaudeWrapper;
 pub use custom::{WrapperKind, Manifest};
+pub use path_guard::PathGuard;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

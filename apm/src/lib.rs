@@ -10,6 +10,7 @@ pub mod cmd {
     pub mod epic;
     pub mod hook;
     pub mod init;
+    pub mod path_guard;
     pub mod start;
     pub mod validate;
     pub mod list;

@@ -557,6 +557,9 @@ merged-branch and worktree checks.")]
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         _extra: Vec<String>,
     },
+    /// PreToolUse hook: enforce worktree write isolation (called by Claude Code)
+    #[command(name = "path-guard", hide = true)]
+    PathGuard,
     /// Manage agent wrappers (list, new, test, eject)
     Agents {
         #[command(subcommand)]
@@ -822,6 +825,14 @@ pub fn repo_root() -> Result<PathBuf> {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // path-guard is called by Claude Code's PreToolUse hook and must not depend
+    // on repo_root(). Dispatch it early before any git or config I/O.
+    if matches!(cli.command, Command::PathGuard) {
+        cmd::path_guard::run();
+        return Ok(());
+    }
+
     let root = repo_root()?;
     if let Ok(ref config) = apm_core::config::Config::load(&root) {
         if config.logging.enabled {
@@ -886,6 +897,7 @@ fn main() -> Result<()> {
         Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
         Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
         Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
+        Command::PathGuard => unreachable!("handled before repo_root()"),
         Command::Agents { command: AgentsCommand::List } => cmd::agents::run_list(&root),
         Command::Agents { command: AgentsCommand::New { name, force } } => cmd::agents::run_new(&root, &name, force),
         Command::Agents { command: AgentsCommand::Test { name } } => cmd::agents::run_test(&root, &name),
