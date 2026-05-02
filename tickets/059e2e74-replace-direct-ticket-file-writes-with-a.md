@@ -58,7 +58,128 @@ The desired state is that every ticket fixture goes through the real `apm` CLI (
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/tests/integration.rs`.
+
+**Step 1 — Add `run_apm` and `create_ticket` primitives**
+
+Insert these two helpers near the existing `git()` helper (around line 34), before any ticket-writing helper:
+
+```rust
+fn run_apm(dir: &std::path::Path, args: &[&str]) -> std::process::Output {
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm {:?} failed:\nstdout: {}\nstderr: {}",
+        args,
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    out
+}
+
+/// Create a ticket via `apm new` and return (id, branch).
+fn create_ticket(dir: &std::path::Path, title: &str) -> (String, String) {
+    let out = run_apm(dir, &["new", "--no-edit", "--no-aggressive", title]);
+    // stdout format: "Created ticket {id}: {filename} (branch: {branch})\n"
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
+    // e.g. "Created ticket a1b2c3d4: a1b2c3d4-my-title.md (branch: ticket/a1b2c3d4-my-title)"
+    let id = line.split_whitespace().nth(2).unwrap().to_string();
+    let branch = line
+        .split("(branch: ").nth(1).unwrap()
+        .trim_end_matches(')')
+        .to_string();
+    (id, branch)
+}
+```
+
+**Step 2 — Replace helper bodies**
+
+Rewrite each helper body in-place. Signature changes where noted; update call sites afterwards (Step 3).
+
+`write_ticket_to_branch(dir, state, title) -> (String, String)`
+- Drop parameters `branch: &str`, `filename: &str`, `id: u32`; add return type
+- Body: `create_ticket(dir, title)` → `(id, branch)`. If state is `implemented`, first call `run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [x] Done"])`. Then `run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"])`. Return `(id, branch)`.
+
+`write_closed_ticket(dir, slug) -> (String, String)`
+- Drop parameter `id: u32`; return remains `(String, String)` = (branch, rel_path)
+- Body: `create_ticket(dir, slug)` → `(id, branch)`. `run_apm(dir, &["state", &id, "closed", "--no-aggressive"])`. Compute `rel_path` from `branch` (strip `ticket/` prefix, append `.md`). Return `(branch, rel_path)`.
+
+`write_implemented_ticket(dir)`
+- Drop parameters `branch: &str`, `filename: &str`
+- Body: `run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--section", "Acceptance criteria", "--set", "- [x] Done", "Squash test"])`. Parse id from stdout. `run_apm(dir, &["state", &id, "implemented", "--force", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`.
+
+`write_in_progress_ticket(dir, title) -> (String, String)` — for `target_branch = None` call sites only
+- Drop parameters `id: &str`, `branch: &str`, `filename: &str`, `target_branch: Option<&str>`; add `title: &str`, return `(String, String)`
+- Body: `create_ticket(dir, title)` → `(id, branch)`. `run_apm(dir, &["state", &id, "in_progress", "--force", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`. Return `(id, branch)`.
+- Call sites where `target_branch = Some(...)`: keep existing direct-write body for those specific calls, mark with `// BYPASS: target_branch field has no CLI setter independent of epic setup; the test needs a specific target_branch value without creating a real epic`.
+
+`write_spec_ticket(dir, problem, approach)` — drop `id: u32`
+- Body: `create_ticket(dir, "spec test")` → `(id, branch)`. Set spec sections via `run_apm`: `--section Problem --set <problem>`, `--section "Acceptance criteria" --set "- [ ] criterion one"`, `--section "Out of scope" --set "nothing"`, `--section Approach --set <approach>`. `run_apm(dir, &["state", &id, "in_progress", "--force", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`.
+
+`write_ticket_with_amendment_requests(dir)` — drop `id: u32`
+- Body: `create_ticket(dir, "spec test")` → `(id, branch)`. Set Problem, AC, Out of scope, Approach via `run_apm`. `run_apm(dir, &["state", &id, "specd", "--force", "--no-aggressive"])`. `run_apm(dir, &["spec", &id, "--section", "Amendment requests", "--set", "- [ ] Add error handling\n- [ ] Fix the bug"])`. `run_apm(dir, &["state", &id, "ammend", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`.
+
+`write_ticket_with_owner(dir, state, title, owner) -> (String, String)` — drop `branch`, `filename`, `id`; add return
+- Body: `create_ticket(dir, title)` → `(id, branch)`. `run_apm(dir, &["set", &id, "owner", owner])`. `run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`. Return `(id, branch)`.
+
+`write_ticket_with_epic(dir, state, title, epic: Option<&str>) -> (String, String)` — drop `branch`, `filename`, `id`; add return
+- Body: If `epic = Some(e)`, call `run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--epic", e, title])` and parse `(id, branch)` from stdout. If `epic = None`, call `create_ticket(dir, title)`. Then `run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`. Return `(id, branch)`.
+
+`write_ticket_in_epic(dir, state, title, owner, epic_id) -> (String, String)` — drop `branch`, `filename`, `id`; add return
+- Body: `run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--epic", epic_id, title])` → `(id, branch)`. `run_apm(dir, &["set", &id, "owner", owner])`. `run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"])`. `git(dir, &["checkout", "main"])`. Return `(id, branch)`.
+
+**Step 3 — Update all call sites**
+
+For every helper whose signature changed, update each call site to:
+- Pass the new parameters (drop `branch`, `filename`, `id` args)
+- Capture `(id, branch)` from the return value
+- Replace any later reference to the old hardcoded branch string with the captured `branch`
+
+Key locations: `write_ticket_to_branch` has 17 call sites; `write_closed_ticket` has 21 (already captures return); `write_ticket_with_owner` has 7; `write_ticket_with_epic` has 3; `write_ticket_in_epic` has 6.
+
+For `write_in_progress_ticket` call sites where `target_branch = Some(...)` (lines ~4768 and ~5377): keep the direct-write body inline at the call site and annotate with `// BYPASS:`.
+
+**Step 4 — Apply `// BYPASS:` annotations to inline constructions**
+
+Five inline constructions cannot cleanly use `apm new`. Add the comment on the line immediately before the frontmatter string:
+
+- Line ~999 (`sync_closes_implemented_ticket_with_no_branch`):
+  `// BYPASS: ticket.branch references a branch that does not exist; apm new always creates the branch, making this scenario impossible without a direct write`
+- Line ~660 (`show_displays_epic_target_branch_depends_on_when_set`):
+  `// BYPASS: requires specific target_branch and depends_on values; target_branch has no CLI setter independent of epic, and depends_on IDs do not correspond to real tickets`
+- Line ~1318 (`spec_fixup_with_amendment_requests_converts_checkbox`):
+  `// BYPASS: tests that apm auto-converts plain bullet items to checkboxes; file must contain the pre-conversion format that apm spec would rewrite`
+- Line ~1879 (`start_owner_guard_allows_owner`):
+  `// BYPASS: focus_section field has no apm set subcommand`
+- Line ~3141 (`clean_detects_mismatch_branch_state`):
+  `// BYPASS: deliberately overwrites ticket on main with a different state than what is on the ticket branch to test mismatch detection in apm clean`
+
+**Step 5 — Handle `concat!`-based constructions (lines ~393–430)**
+
+These create sibling tickets with specific hardcoded IDs (`"aaaa1111"`, `"bbbb2222"`, `"cccc3333"`) that may be asserted in test output. Inspect each test function:
+- If the test asserts on the specific ID string in command output → keep the `apm_core::git::commit_to_branch` call and annotate `// BYPASS: test asserts on specific ticket ID string that apm new cannot produce deterministically`
+- If the test only checks count or presence without checking the specific ID → replace with `apm new --no-edit --no-aggressive --epic <id>` + `apm state --force <state>`
+
+**Step 6 — Delete `write_ticket_with_agent`**
+
+Remove the entire function (it has zero callers and is annotated `#[allow(dead_code)]`).
+
+**Step 7 — Verify**
+
+`cargo test -p apm --test integration` must pass. All `--force` transitions must succeed in CI without a remote (the `--no-aggressive` flag prevents any fetch/push).
+
+**Known constraints**
+
+- `apm state <state> --force` bypasses workflow transition rules but still enforces spec-content validation for `implemented` (all acceptance criteria must be `[x]`). Always seed at least one checked criterion before forcing to `implemented`.
+- `apm new` title is a positional argument; confirm exact invocation with `apm new --help` during implementation.
+- Parsing `apm new` stdout is fragile to format changes; the parse lives in exactly one place (`create_ticket`) so a format change breaks only that helper.
+- `--no-aggressive` must be passed to every `apm new` and `apm state` call in tests; test repos have no remote and aggressive mode would hang or error.
 
 ### Open questions
 
