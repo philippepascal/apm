@@ -39,7 +39,11 @@ The `merge` completion strategy is intentional and must be preserved. The 6 `dep
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Migrating any other helper (`setup()`, `setup_with_close_workflow()`, `setup_aggressive()`, etc.) — each has its own sibling ticket in this epic
+- Changing any test function that calls `setup_merge()` — only the helper body is in scope
+- Adding an `apm` command to configure completion strategy post-init — that is a product feature decision
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Migrating `setup_merge_strategy_remote()` (line 5301) — that is a distinct helper unrelated to `setup_merge()`
 
 ### Approach
 
