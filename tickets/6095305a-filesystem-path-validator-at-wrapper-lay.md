@@ -523,7 +523,7 @@ Unit tests in `path_guard.rs` cover:
 
 - [x] No AC verifies APM_BIN write protection works when APM_BIN is *under* the worktree (e.g. local cargo build placed in `target/`). Pin this edge case.
 
-- [ ] `isolation.read_allow` glob support (e.g. `/etc/ssl/certs/**`) implies a glob crate dep. The spec does not pick one or specify semantics. Decide: literal-prefix match vs globset, and state which crate is added.
+- [x] `isolation.read_allow` glob support (e.g. `/etc/ssl/certs/**`) implies a glob crate dep. The spec does not pick one or specify semantics. Decide: literal-prefix match vs globset, and state which crate is added.
 
 - [ ] After the above amendments, re-evaluate effort/risk. Effort 5 / risk 5 is plausible only if the wrapper-hook gap is split out into a prerequisite ticket; otherwise risk → 8.
 
