@@ -67,6 +67,7 @@ When a worker hits a permission denial mid-run, today the only signal is a burie
 - [ ] Integration test: a fixture JSONL transcript containing a denied `apm doesnotexist` Bash call produces one `apm_command_denial` entry; `apm workers diag` surfaces it in its report
 - [ ] Integration test: a fixture JSONL transcript with no denials produces a zero-entry summary; `apm workers diag` reports "no denials detected"
 - [ ] Integration test: a fixture JSONL transcript containing a denied Edit to `/etc/passwd` produces one `outside_worktree` entry
+- [ ] Before applying the `outside_worktree` classification check, the implementation canonicalizes the target path; relative paths in Edit/Write inputs are resolved against the worktree root before canonicalization; a path that does not yet exist is compared using its joined form (worktree root + relative path) rather than a failed canonicalization result
 
 ### Out of scope
 
