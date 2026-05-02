@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 fn deserialize_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
@@ -60,6 +61,10 @@ pub struct Frontmatter {
     pub target_branch: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent: Option<String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub agent_overrides: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -681,6 +686,36 @@ mod tests {
         let msgs: Vec<String> = errs.iter().map(|e| e.to_string()).collect();
         assert!(msgs.iter().any(|m| m.contains("Context")), "required config section should be validated");
         assert!(!msgs.iter().any(|m| m.contains("Problem")), "present section should not error");
+    }
+
+    #[test]
+    fn frontmatter_agent_round_trip() {
+        let raw = minimal_raw(
+            "agent = \"mock-happy\"\n\n[agent_overrides]\nspec_agent = \"claude\"\nimpl_agent = \"mock-sad\"\n",
+            "## Spec\n\ncontent\n",
+        );
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert_eq!(t.frontmatter.agent, Some("mock-happy".to_string()));
+        assert_eq!(t.frontmatter.agent_overrides.get("spec_agent").map(|s| s.as_str()), Some("claude"));
+        assert_eq!(t.frontmatter.agent_overrides.get("impl_agent").map(|s| s.as_str()), Some("mock-sad"));
+
+        let serialized = t.serialize().unwrap();
+        let t2 = Ticket::parse(dummy_path(), &serialized).unwrap();
+        assert_eq!(t2.frontmatter.agent, Some("mock-happy".to_string()));
+        assert_eq!(t2.frontmatter.agent_overrides.get("spec_agent").map(|s| s.as_str()), Some("claude"));
+        assert_eq!(t2.frontmatter.agent_overrides.get("impl_agent").map(|s| s.as_str()), Some("mock-sad"));
+    }
+
+    #[test]
+    fn frontmatter_agent_omitted_when_unset() {
+        let raw = minimal_raw("", "## Spec\n\ncontent\n");
+        let t = Ticket::parse(dummy_path(), &raw).unwrap();
+        assert!(t.frontmatter.agent.is_none());
+        assert!(t.frontmatter.agent_overrides.is_empty());
+
+        let serialized = t.serialize().unwrap();
+        assert!(!serialized.contains("agent"), "agent field must not appear in serialized output");
+        assert!(!serialized.contains("agent_overrides"), "agent_overrides must not appear in serialized output");
     }
 
     #[test]
