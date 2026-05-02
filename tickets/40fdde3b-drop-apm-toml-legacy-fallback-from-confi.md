@@ -23,7 +23,7 @@ apm-core/src/config.rs:644-648 falls back to apm.toml at repo root when .apm/con
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] cargo test passes with zero failures after all sibling epic tickets are merged\n- [ ] Config::load in apm-core/src/config.rs does not reference repo_root/apm.toml; path is always .apm/config.toml\n- [ ] When .apm/config.toml is absent, Config::load returns an error whose message contains the phrase apm init\n- [ ] apply_config_migration_fixes in apm/src/cmd/validate.rs does not check apm.toml; it returns Ok(false) immediately when .apm/config.toml is absent\n- [ ] apm-core/src/validate.rs setup_verify_repo writes .apm/config.toml, not apm.toml\n- [ ] apm-core/tests/ticket_create.rs setup writes .apm/config.toml, not apm.toml\n- [ ] apm-core/src/context.rs test inline write targets .apm/config.toml, not apm.toml\n- [ ] apm/tests/e2e.rs second setup helper writes .apm/config.toml, not apm.toml\n- [ ] No non-test Rust source file references apm.toml as a runtime config path (error messages and help text updated to name .apm/config.toml)\n- [ ] apm init --migrate still works: running it on a repo with a root-level apm.toml moves the file to .apm/config.toml
 
 ### Out of scope
 
