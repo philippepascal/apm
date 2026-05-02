@@ -24,7 +24,12 @@ A checkbox-toggle file at `.apm/style.md` provides that mechanism. All rules sta
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `.apm/style.md` exists with a `## Conversation` section and a `## Specs` section; every rule is a `- [ ]` checkbox; all boxes are unchecked by default
+- [ ] `CLAUDE.md` contains an `@.apm/style.md` import line alongside the existing `@.apm/agents.md` import
+- [ ] A user-memory file in `.claude/projects/…/memory/` describes `.apm/style.md`, instructs the main agent to apply active `## Conversation` rules to its own output, and instructs it to prepend active Conversation rules to prompts when spawning subagents via the Agent tool
+- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a paragraph instructing the spec-writer to read `.apm/style.md` (if present) before writing or amending a spec and apply every `[x]`-checked rule under `## Specs`
+- [ ] `.apm/agents/claude/apm.spec-writer.md` (project file, post-wrapper-epic) contains the identical paragraph
+- [ ] A new Rust test in `apm-core/tests/spec_writer_md_sync.rs` asserts the two spec-writer `.md` files are byte-identical and fails with a line-level diff if they diverge
 
 ### Out of scope
 
