@@ -19,7 +19,9 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:134 setup_merge() hand-writes a workflow that adds in_progress→implemented to enable depends_on tests. Rewrite to call init_repo() then apply only the delta (the depends_on/implemented hookup) via real apm commands or, where unavoidable, a marked `// BYPASS:` filesystem edit. All tests using setup_merge must pass against the production workflow shape.
+`setup_merge()` at `apm/tests/integration.rs:134` hand-writes an `apm.toml` at the repo root containing a 7-state workflow and `completion = "merge"` on the `in_progress → implemented` transition. It never calls `apm init`, so the fixture diverges from the production repo shape: the file is written to the legacy `apm.toml` location (not `.apm/workflow.toml`), the state list is smaller than the production default, and changes to the init template — new states, field renames, config file layout — are invisible to the 6 tests that depend on this helper.
+
+The `merge` completion strategy is intentional and must be preserved. The 6 `depends_on` tests create tickets with no epic, relying on identical `target_branch` values (both defaulting to `main`) to satisfy validation. The production default `completion = "pr_or_epic_merge"` would reject those tickets because they lack an epic. There is no `apm` command to change a workflow completion strategy post-init, so a `// BYPASS:` filesystem edit is required after `init_repo()` runs.
 
 ### Acceptance criteria
 
