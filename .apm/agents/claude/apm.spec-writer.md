@@ -177,30 +177,6 @@ transitioning back to `specd`.
 
 ---
 
-## Capability limitations
-
-If you are blocked by a tool limitation, permission denial, or any other
-capability constraint — not a spec ambiguity — do not attempt workarounds.
-Specifically, do not:
-
-- Invoke skills (e.g. `fewer-permission-prompts`, `update-config`)
-- Edit `.claude/settings.json` or any file under `.apm/`
-- Attempt changes outside the ticket worktree
-
-Exit cleanly in two steps:
-
-1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation and what you needed>"`
-2. `apm state <id> question`
-
-`apm spec --append` auto-commits to the ticket branch — no manual git commit needed.
-The supervisor will see the ticket in the queue and resolve the blocker.
-
-This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
-which includes `### Open questions`. Projects with customised schemas that omit this
-section are out of scope.
-
----
-
 **Frontmatter agent override** (supervisor tool): A supervisor may add `agent = "<name>"` or an `[agent_overrides]` table to a ticket's frontmatter to select a specific agent for that ticket or for individual profiles. Do not set these fields yourself — they are a supervisor-level escape hatch for debugging or per-ticket specialisation.
 
 ---
