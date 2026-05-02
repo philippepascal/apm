@@ -119,7 +119,7 @@ The test must not check whole-file byte identity — the project file (`.apm/age
 
 - [x] AC #6 (byte-identity check on `.apm/apm.spec-writer.md`) is brittle for a project file users may legitimately customise. After this ticket lands, any supervisor who edits `.apm/agents/claude/apm.spec-writer.md` (the entire purpose of the per-agent override layer) breaks the test. Either narrow the assertion to "the `## Style rules` section is identical" (grep both files for that section, diff just that block), or drop AC #6 / move the check to a `cargo xtask`-style optional verification not in the test suite.
 
-- [ ] Out of scope items 1 and 2 contain literal `\n` instead of newlines — re-set with proper line breaks so the checklist renders as three items, not one paragraph. Same root cause as 40fdde3b and 9fcc94ed.
+- [x] Out of scope items 1 and 2 contain literal `\n` instead of newlines — re-set with proper line breaks so the checklist renders as three items, not one paragraph. Same root cause as 40fdde3b and 9fcc94ed.
 
 ### Code review
 
