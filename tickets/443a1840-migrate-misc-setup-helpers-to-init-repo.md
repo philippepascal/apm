@@ -19,7 +19,16 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs has four leftover setup helpers: setup_with_server_url (4859), setup_with_archive_dir (5106), setup_with_satisfies_deps (4156), setup_on_failure_fix_project (2852). Each tests one orthogonal config feature. Rewrite each to use init_repo() and override only the relevant feature via real commands or marked bypass. Four helpers, low coupling.
+Four setup helpers in `apm/tests/integration.rs` still hand-write config files instead of calling `apm init`:
+
+- **`setup_with_satisfies_deps`** (line 4156): writes a legacy `apm.toml` at repo root with a 3-state workflow (`ready`, `implemented`, `closed`). Used by 3 `pick_next` tests that exercise `satisfies_deps` scheduling.
+- **`setup_with_server_url`** (line 4854): calls `setup()` and appends a `[server]` block to `apm.toml`. Used by 7 auth/server tests (`register`, `sessions`, `revoke`).
+- **`setup_with_archive_dir`** (line 5101): calls `setup()` and edits `apm.toml` to inject `archive_dir = "archive/tickets"`. Used by 6 archive tests.
+- **`setup_on_failure_fix_project`** (line 2852): manually creates `.apm/config.toml` and a hand-crafted `.apm/workflow.toml` with 2-3 states. Used by 4 `validate --fix` tests.
+
+All four create fixtures that diverge from what `apm init` produces: wrong config file location (legacy `apm.toml` vs `.apm/config.toml`), truncated workflow state lists, and no `.gitignore` entry. Changes to the production init template are invisible to these tests.
+
+Each helper should be rewritten to call `init_repo()` and then apply only the one setting the tests actually exercise, using a marked `// BYPASS:` comment only where no `apm` command can make the required change.
 
 ### Acceptance criteria
 
