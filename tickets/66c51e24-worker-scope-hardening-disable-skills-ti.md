@@ -221,7 +221,7 @@ No config schema changes, no new structs, no migration needed. All changes are a
 
 - [x] The "blocked + diagnostic" instruction has no enforcement — a worker that ignored the descriptive text in the 2803bf07 incident can ignore this one too. Either accept this is purely soft and say so in Out of scope, or note explicitly that ticket f06272f1 (permission-denial diagnostics) is the structural backstop. Without that pointer, the AC reads as if it actually prevents the loop.
 
-- [ ] The worker's permitted-command list omits `apm spec --append "..."`, but the blocking flow needs to write the question into `### Open questions` first. Either add `apm spec` to the permitted list or change the instruction to use `apm new --side-note`.
+- [x] The worker's permitted-command list omits `apm spec --append "..."`, but the blocking flow needs to write the question into `### Open questions` first. Either add `apm spec` to the permitted list or change the instruction to use `apm new --side-note`.
 
 ### Code review
 
