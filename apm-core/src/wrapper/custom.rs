@@ -316,6 +316,7 @@ mod tests {
             root: wt.to_path_buf(),
             keychain: HashMap::new(),
             current_state: "test".to_string(),
+            command: None,
         }
     }
 

@@ -231,6 +231,7 @@ pub fn test_wrapper(root: &Path, name: &str) -> Result<TestReport> {
         root: root.to_path_buf(),
         keychain: HashMap::new(),
         current_state: "test".to_string(),
+            command: None,
     };
 
     let start = std::time::Instant::now();

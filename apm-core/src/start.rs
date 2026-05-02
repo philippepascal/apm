@@ -354,6 +354,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         root: root.to_path_buf(),
         keychain: config.workers.keychain.clone(),
         current_state: new_state.clone(),
+        command: Some(params.command.clone()),
     };
     if should_check_claude_compat(root, &params.agent) {
         check_output_format_supported(&params.command)?;
@@ -550,6 +551,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         root: root.to_path_buf(),
         keychain: config.workers.keychain.clone(),
         current_state: t.frontmatter.state.clone(),
+        command: Some(params.command.clone()),
     };
     if should_check_claude_compat(root, &params.agent) {
         check_output_format_supported(&params.command)?;
@@ -736,6 +738,7 @@ pub fn spawn_next_worker(
         root: root.to_path_buf(),
         keychain: config.workers.keychain.clone(),
         current_state: t.frontmatter.state.clone(),
+        command: Some(params.command.clone()),
     };
     if should_check_claude_compat(root, &params.agent) {
         check_output_format_supported(&params.command)?;
@@ -1295,6 +1298,7 @@ mod tests {
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
             current_state: "in_progress".to_string(),
+            command: None,
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1391,6 +1395,7 @@ mod tests {
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
             current_state: "in_progress".to_string(),
+            command: None,
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1465,6 +1470,7 @@ mod tests {
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
             current_state: "in_progress".to_string(),
+            command: None,
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1601,6 +1607,7 @@ mod tests {
             root: wt.path().to_path_buf(),
             keychain: HashMap::new(),
             current_state: "in_progress".to_string(),
+            command: None,
         };
 
         let wrapper = crate::wrapper::resolve_builtin("claude").unwrap();
@@ -1893,6 +1900,7 @@ Some approach.
             root: project_root.to_path_buf(),
             keychain: HashMap::new(),
             current_state: ticket_state.to_string(),
+            command: None,
         }
     }
 
@@ -2020,6 +2028,7 @@ updated_at = "2026-01-01T00:00:00Z"
             root: root.to_path_buf(),
             keychain: HashMap::new(),
             current_state: "in_design".to_string(),
+            command: None,
         };
         let wrapper = crate::wrapper::resolve_builtin("mock-happy").unwrap();
         let result = wrapper.spawn(&ctx);
@@ -2086,6 +2095,7 @@ updated_at = "2026-01-01T00:00:00Z"
                 root: root.to_path_buf(),
                 keychain: HashMap::new(),
                 current_state: "in_design".to_string(),
+            command: None,
             };
             let wrapper = crate::wrapper::resolve_builtin("mock-sad").unwrap();
             let mut child = wrapper.spawn(&ctx).unwrap();
@@ -2139,6 +2149,7 @@ updated_at = "2026-01-01T00:00:00Z"
             root: root.to_path_buf(),
             keychain: HashMap::new(),
             current_state: "in_design".to_string(),
+            command: None,
         };
         let wrapper = crate::wrapper::resolve_builtin("debug").unwrap();
         let mut child = wrapper.spawn(&ctx).unwrap();

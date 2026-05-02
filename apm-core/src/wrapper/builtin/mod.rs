@@ -196,6 +196,7 @@ mod tests {
             root: PathBuf::from("/tmp"),
             keychain: HashMap::new(),
             current_state: "test".into(),
+            command: None,
         }
     }
 

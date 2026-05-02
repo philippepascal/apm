@@ -26,6 +26,10 @@ pub struct WrapperContext {
     pub root: PathBuf,
     pub keychain: HashMap<String, String>,
     pub current_state: String,
+    /// Override for the wrapper-specific binary (e.g. for ClaudeWrapper, the
+    /// claude binary path). Honoured by built-ins that shell out to a fixed
+    /// binary; legacy `[workers].command` flows in here.
+    pub command: Option<String>,
 }
 
 pub trait Wrapper {

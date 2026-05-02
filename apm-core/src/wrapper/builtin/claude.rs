@@ -46,7 +46,8 @@ fn spawn_local(
     msg: &str,
     apm_bin: &str,
 ) -> anyhow::Result<std::process::Child> {
-    let mut cmd = std::process::Command::new("claude");
+    let binary = ctx.command.as_deref().unwrap_or("claude");
+    let mut cmd = std::process::Command::new(binary);
     cmd.args(build_claude_args(ctx.model.as_deref(), ctx.skip_permissions, sys, msg));
 
     set_apm_env(&mut cmd, ctx, apm_bin);
