@@ -19,7 +19,22 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs has three bare-origin + clone variants for merge-strategy testing: setup_squash_remote (3914), setup_pr_or_epic_merge_remote (4710), setup_merge_strategy_remote (5306). All hand-roll completion strategy configs. Rewrite each to use init_repo() and override the [completion] section via real commands or marked bypass. Three helpers, similar mechanics.
+Three setup helpers in `apm/tests/integration.rs` back the merge-strategy integration tests:
+`setup_squash_remote` (line 3914), `setup_pr_or_epic_merge_remote` (line 4710), and
+`setup_merge_strategy_remote` (line 5301). All three follow the same bare-remote + local-clone
+pattern, but each hand-writes a minimal `apm.toml` at repo root and never calls `apm init`.
+
+As a result each fixture diverges from a real user repo in two ways:
+
+1. Config is written to the legacy `apm.toml` location instead of `.apm/config.toml` /
+   `.apm/workflow.toml`.
+2. The hand-crafted workflow states are a small, frozen subset of the production default
+   (3–4 states vs. the 12-state production default).
+
+Any change to the init template — new required states, renamed fields, config file layout —
+is invisible to the 4 tests backed by these helpers. The helpers should instead call the real
+`apm init` binary (same pattern established by dependency ticket 795dce11's `init_repo()`
+helper) and override only what the test needs via real commands or marked bypass.
 
 ### Acceptance criteria
 
