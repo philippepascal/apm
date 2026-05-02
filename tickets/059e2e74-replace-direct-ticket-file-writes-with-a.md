@@ -19,7 +19,24 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-Several tests in apm/tests/integration.rs build ticket frontmatter directly as a string (e.g. lines 999, 1113, write_ticket_to_branch usages) and write it to disk on a branch. Changes to required ticket fields, frontmatter format, or branch-naming rules don't surface in tests. Replace these direct writes with `apm new` invocations followed by `apm state` / `apm spec` calls to reach the desired state. Where the test specifically needs to inject corrupted or legacy ticket state, mark the bypass with `// BYPASS:` per the policy.
+The integration test file `apm/tests/integration.rs` contains ten helper functions that build ticket TOML frontmatter as raw string literals and write them directly to disk:
+
+- `write_ticket_to_branch` (17 call sites) — generic helper covering states `new`, `ready`, `in_progress`, `implemented`, `ammend`
+- `write_closed_ticket` (21 call sites) — always state `closed`
+- `write_spec_ticket` (17 call sites) — state `in_progress` with Problem and Approach content
+- `write_implemented_ticket` (4 call sites) — state `implemented`, used by squash/merge tests
+- `write_in_progress_ticket` (4 call sites) — state `in_progress`, optional `target_branch` field
+- `write_ticket_with_amendment_requests` (5 call sites) — state `ammend` with checkbox amendment content
+- `write_ticket_with_owner` (7 call sites) — any state, adds `owner` field
+- `write_ticket_with_epic` (3 call sites) — any state, optional `epic` field
+- `write_ticket_in_epic` (6 call sites) — any state, `epic` + `owner` fields
+- `write_ticket_with_agent` (0 call sites, dead code) — writes `agent` field
+
+Beyond the helpers, five inline ticket constructions write frontmatter directly inside specific test bodies (lines ~660, ~999, ~1318, ~1879, ~3141). Three further constructions use `apm_core::git::commit_to_branch` with `concat!`-built frontmatter strings (lines ~393–430).
+
+All of these share the same flaw: the frontmatter is synthesised offline, so tests use legacy integer IDs (`1`, `2`) rather than the production 8-character hex format, and silently stay green when required fields are added, field names change, or branch-naming rules evolve.
+
+The desired state is that every ticket fixture goes through the real `apm` CLI (`apm new`, `apm state`, `apm set`, `apm spec`) so the test fixtures track production behaviour. Where a test deliberately requires a state that is unreachable through normal CLI flows — a ticket whose `branch` field references a non-existent remote branch, a field with no CLI setter — the direct write is retained and annotated `// BYPASS: <specific reason>`.
 
 ### Acceptance criteria
 
