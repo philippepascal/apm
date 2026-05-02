@@ -19,7 +19,11 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:3747 setup_with_strict_transitions() and apm/tests/integration.rs:6850 setup_with_merge_workflow() each hand-roll workflow tables to test specific transition or completion behaviour. Rewrite both to start from init_repo() and override only the delta. Two helpers in scope, similar mechanics.
+`setup_with_strict_transitions()` at `apm/tests/integration.rs:3747` and `setup_with_merge_workflow()` at `apm/tests/integration.rs:6845` each hand-write a full TOML config string to `apm.toml` at the repo root and never call `apm init`. The result is the same class of divergence as every other helper in this epic: the config lives at the legacy location, the repo has no committed HEAD before the helpers return, and changes to the production init template are invisible to the tests that depend on these fixtures.
+
+Both helpers need custom workflow tables that differ structurally from the production default — not just a single field flip. `setup_with_strict_transitions()` needs `new → in_progress` as the only valid transition out of `new`, which the production workflow does not provide (`new` only goes to `groomed` or `closed`). `setup_with_merge_workflow()` needs a `new → implemented` transition carrying `completion = "merge"` and `on_failure = "merge_failed"`, which also does not exist in the production default (`in_progress → implemented` is the completion transition there). Neither delta can be achieved with a targeted `str::replace()` on the production workflow output; both require a full workflow overwrite via a marked `// BYPASS:` edit after `init_repo()` runs.
+
+The two helpers serve 5 tests in total: `state_force_bypasses_transition_rules` and `state_force_implemented_from_in_progress` depend on the strict-transitions fixture; `merge_failure_transitions_ticket_to_merge_failed`, `merge_failed_to_implemented_does_not_trigger_another_merge`, and `merge_failed_to_in_progress_succeeds` depend on the merge-workflow fixture.
 
 ### Acceptance criteria
 
