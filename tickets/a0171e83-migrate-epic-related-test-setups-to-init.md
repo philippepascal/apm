@@ -1,7 +1,7 @@
 +++
 id = "a0171e83"
 title = "Migrate epic-related test setups to init_repo() + real apm epic"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a0171e83-migrate-epic-related-test-setups-to-init"
 created_at = "2026-05-01T20:27:07.814641Z"
-updated_at = "2026-05-02T04:02:39.209529Z"
+updated_at = "2026-05-02T04:02:44.687295Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -140,3 +140,4 @@ Run `cargo test --test integration` and confirm all 9 affected tests pass. No ot
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
 | 2026-05-02T03:56Z | groomed | in_design | philippepascal |
+| 2026-05-02T04:02Z | in_design | specd | claude-0502-0356-0e78 |
