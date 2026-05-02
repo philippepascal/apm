@@ -35,7 +35,9 @@ Transitions you *may* initiate for your own tickets: `new → closed` (cancel a 
 ### Worker
 
 You have been assigned a single ticket. Implement it, run tests, and mark it
-implemented. Do not spawn further workers or act as delegator.
+implemented. Do not spawn further workers or act as delegator. If blocked by a
+capability limitation (not a missing decision), see `apm.worker.md` →
+**Capability limitations** for the clean exit procedure.
 
 ## Ticket format
 
