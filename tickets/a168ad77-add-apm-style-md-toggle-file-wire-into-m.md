@@ -1,7 +1,7 @@
 +++
 id = "a168ad77"
 title = "Add .apm/style.md toggle file; wire into main agent and spec-writer"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a168ad77-add-apm-style-md-toggle-file-wire-into-m"
 created_at = "2026-05-01T19:39:37.765619Z"
-updated_at = "2026-05-02T07:43:17.105803Z"
+updated_at = "2026-05-02T07:50:16.823438Z"
 +++
 
 ## Spec
@@ -136,3 +136,4 @@ The test must not check whole-file byte identity — the project file (`.apm/age
 | 2026-05-02T07:29Z | ammend | in_design | philippepascal |
 | 2026-05-02T07:40Z | in_design | ammend | philippepascal |
 | 2026-05-02T07:43Z | ammend | in_design | philippepascal |
+| 2026-05-02T07:50Z | in_design | specd | claude-0502-0743-90e0 |
