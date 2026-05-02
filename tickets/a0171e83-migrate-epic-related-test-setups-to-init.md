@@ -42,7 +42,11 @@ The desired state is that all four helpers use `init_repo()` for their repo scaf
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Replacing `write_ticket_in_epic()` or `commit_ticket_to_branch()` direct TOML writes with `apm new` — covered by ticket 059e2e74
+- Migrating any other helper (`setup()`, `setup_merge()`, `setup_with_close_workflow()`, etc.) — each has its own sibling ticket in the epic
+- Making `apm epic new` work without a remote origin — that is a product-feature decision
+- Removing the `apm.toml` legacy fallback from `Config::load` — covered by ticket 40fdde3b, intentionally last in the epic
+- Adding a `// BYPASS:` annotation anywhere outside the four helpers and `create_epic_branch()` named in this ticket
 
 ### Approach
 
