@@ -47,7 +47,69 @@ The fix is to replace `setup()` body with a call to `init_repo()` (added by upst
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm/tests/integration.rs`
+
+**Step 1 — Replace `setup()` body**
+
+Remove the entire body of `setup()` (lines 34–129: git init, git config calls, `std::fs::write` for `apm.toml`, git add/commit, `create_dir_all` for `tickets/`) and replace it with a single delegation to `init_repo()`:
+
+```rust
+fn setup() -> TempDir {
+    init_repo()
+}
+```
+
+`init_repo()` (from ticket 795dce11) already handles: tempdir creation, `git init -q -b main`, `apm init --no-claude --quiet`, initial commit. `tickets/` is created by `apm init` itself.
+
+**Step 2 — Run the test suite and triage failures**
+
+Run `cargo test --test integration 2>&1 | grep -E "^(test |FAILED|error)"` to collect all failing tests.
+
+Failures will fall into three categories:
+
+**Category A — Invalid transition (e.g. `new → specd`, `new → ready`, `new → in_progress`)**
+
+These tests call `apm::cmd::state::run(p, &id, "specd".into(), false, false)` (or similar) directly from `new`. Production workflow does not allow these direct hops. Fix: pass `force: true` as the last argument. `--force` still validates that the target state exists in the config and (for `specd`) that a valid spec is present, so the test remains meaningful.
+
+```rust
+// Before
+apm::cmd::state::run(p, &id, "specd".into(), false, false).unwrap();
+// After
+apm::cmd::state::run(p, &id, "specd".into(), false, true).unwrap();
+```
+
+**Category B — Test checks workflow structure (state list, transition list, or state count)**
+
+Tests that assert things like "workflow has 6 states" or "valid transitions from `new` are `[specd, ready, in_progress, closed]`" must be updated to reflect the production 12-state workflow. Update the expected values; do not delete these tests — they are now exercising the real workflow shape.
+
+**Category C — Test scenario no longer makes sense**
+
+If a test was written specifically to exercise a workflow edge that only existed in the 6-state fixture (e.g., a test that verified a state name unique to the old fixture), delete the test and add a `// DELETED: <reason>` comment at the callsite. Examples of likely deletions: tests checking that exactly 6 states exist, or tests asserting specific transition behaviour that was an artefact of the simplified fixture.
+
+**Step 3 — Verify no `apm.toml` at root**
+
+After migration, the config lives at `.apm/config.toml` (produced by `apm init`). Any test that opens `p.join("apm.toml")` directly must be updated to `p.join(".apm/config.toml")`. If such a direct open is legitimately testing legacy-fallback behaviour, mark it `// BYPASS: testing legacy apm.toml fallback` and note it will be removed with ticket 40fdde3b.
+
+**Step 4 — Final check**
+
+`cargo test --test integration` must exit 0. Confirm `setup()` contains no `std::fs::write` and no git config calls.
+
+**Known transition delta (production workflow)**
+
+Transitions valid in the old 6-state fixture but NOT in production (require `force: true` or path update):
+- `new → specd`
+- `new → ready`
+- `new → in_progress`
+- `new → ammend`
+
+Transitions valid in both (no change needed for these):
+- `new → closed`
+- `specd → ready`
+- `specd → ammend`
+- `specd → closed`
+- `ready → in_progress` (production uses `command:start` trigger, but `force: false` still works for manual calls in tests)
+- `in_progress → closed`
+- `ammend → specd`
 
 ### Open questions
 
