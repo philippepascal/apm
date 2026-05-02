@@ -1,7 +1,7 @@
 +++
 id = "6095305a"
 title = "Filesystem path validator at wrapper layer (worktree isolation enforcement)"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 5
 risk = 5
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6095305a-filesystem-path-validator-at-wrapper-lay"
 created_at = "2026-05-01T02:30:34.552318Z"
-updated_at = "2026-05-02T07:20:21.140048Z"
+updated_at = "2026-05-02T08:02:47.238266Z"
 +++
 
 ## Spec
@@ -277,3 +277,4 @@ Unit tests in `path_guard.rs` cover:
 | 2026-05-02T03:21Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:30Z | in_design | specd | claude-0502-0321-0790 |
 | 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
+| 2026-05-02T08:02Z | ammend | in_design | philippepascal |
