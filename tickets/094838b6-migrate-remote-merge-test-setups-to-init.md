@@ -38,7 +38,16 @@ helper) and override only what the test needs via real commands or marked bypass
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `setup_squash_remote()` body contains no `std::fs::write` call that writes `apm.toml`
+- [ ] `setup_pr_or_epic_merge_remote()` body contains no `std::fs::write` call that writes `apm.toml`
+- [ ] `setup_merge_strategy_remote()` body contains no `std::fs::write` call that writes `apm.toml`
+- [ ] A new private helper `init_remote_repo() -> (TempDir, TempDir)` exists that creates a bare remote + local clone via `apm init --no-claude --quiet`
+- [ ] `squash_merge_config()`, `pr_or_epic_merge_config_toml()`, and `merge_strategy_config_toml()` are removed (they become dead code after migration)
+- [ ] The squash-merge detection tests `sync_detect_squash_merged_branch_remote_ref_present` and `sync_detect_squash_merged_branch_remote_ref_deleted` pass
+- [ ] The pr_or_epic_merge tests `pr_or_epic_merge_with_target_branch_merges_into_target`, `pr_or_epic_merge_without_target_branch_attempts_pr`, and `pr_or_epic_merge_with_target_branch_pushes_target_to_origin` pass
+- [ ] The merge-strategy test `merge_strategy_merges_locally_without_push` passes
+- [ ] `setup_merge_strategy_remote()` includes a `// BYPASS:` comment explaining why `.apm/workflow.toml` is edited directly
+- [ ] The bypass in `setup_merge_strategy_remote()` edits `.apm/workflow.toml` (not `apm.toml`)
 
 ### Out of scope
 
