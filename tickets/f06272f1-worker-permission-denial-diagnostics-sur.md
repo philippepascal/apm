@@ -51,23 +51,23 @@ When a worker hits a permission denial mid-run, today the only signal is a burie
 
 ### Acceptance criteria
 
-- [ ] When a worker exits with ≥1 permission-denial event in its transcript, the wrapper writes `.apm-worker.summary.json` alongside `.apm-worker.log` in the ticket worktree
-- [ ] When a worker exits with zero permission-denial events in its transcript, `.apm-worker.summary.json` is written with an empty `denials` array and `denial_count: 0`
-- [ ] Each entry in `denials` contains: `timestamp` (ISO-8601), `tool` (tool name e.g. "Bash"), `input` (truncated to ≤200 chars), and `classification`
-- [ ] A denied Bash call whose `command` starts with `apm ` is classified as `apm_command_denial`
-- [ ] A denied Edit or Write call whose path falls outside the ticket worktree root is classified as `outside_worktree`
-- [ ] Any denial not matching the above two patterns is classified as `unknown_pattern`
-- [ ] `apm workers diag <id>` reads `.apm-worker.summary.json` if it exists; falls back to scanning `.apm-worker.log` directly if the summary is absent
-- [ ] `apm workers diag <id>` prints a report with total denial count and a per-category breakdown (`apm_command_denial`, `outside_worktree`, `unknown_pattern`)
-- [ ] When `apm_command_denial` entries are present, the report lists each unique denied apm command and recommends adding it to `.claude/settings.json` and to APM's init template (`apm-core/src/init.rs` `APM_ALLOW_ENTRIES`)
-- [ ] The report includes the absolute path to `.apm-worker.log`
-- [ ] When there are no denials, `apm workers diag <id>` prints "no denials detected"
-- [ ] `apm workers diag <id>` exits non-zero with an error message if `<id>` cannot be resolved to a ticket worktree
-- [ ] When a worker exits with ≥1 `apm_command_denial` entry, a one-line warning is appended to the APM main log (default `/tmp/apm.log`) via the existing `logger::log` facility
-- [ ] Integration test: a fixture JSONL transcript containing a denied `apm doesnotexist` Bash call produces one `apm_command_denial` entry; `apm workers diag` surfaces it in its report
-- [ ] Integration test: a fixture JSONL transcript with no denials produces a zero-entry summary; `apm workers diag` reports "no denials detected"
-- [ ] Integration test: a fixture JSONL transcript containing a denied Edit to `/etc/passwd` produces one `outside_worktree` entry
-- [ ] Before applying the `outside_worktree` classification check, the implementation canonicalizes the target path; relative paths in Edit/Write inputs are resolved against the worktree root before canonicalization; a path that does not yet exist is compared using its joined form (worktree root + relative path) rather than a failed canonicalization result
+- [x] When a worker exits with ≥1 permission-denial event in its transcript, the wrapper writes `.apm-worker.summary.json` alongside `.apm-worker.log` in the ticket worktree
+- [x] When a worker exits with zero permission-denial events in its transcript, `.apm-worker.summary.json` is written with an empty `denials` array and `denial_count: 0`
+- [x] Each entry in `denials` contains: `timestamp` (ISO-8601), `tool` (tool name e.g. "Bash"), `input` (truncated to ≤200 chars), and `classification`
+- [x] A denied Bash call whose `command` starts with `apm ` is classified as `apm_command_denial`
+- [x] A denied Edit or Write call whose path falls outside the ticket worktree root is classified as `outside_worktree`
+- [x] Any denial not matching the above two patterns is classified as `unknown_pattern`
+- [x] `apm workers diag <id>` reads `.apm-worker.summary.json` if it exists; falls back to scanning `.apm-worker.log` directly if the summary is absent
+- [x] `apm workers diag <id>` prints a report with total denial count and a per-category breakdown (`apm_command_denial`, `outside_worktree`, `unknown_pattern`)
+- [x] When `apm_command_denial` entries are present, the report lists each unique denied apm command and recommends adding it to `.claude/settings.json` and to APM's init template (`apm-core/src/init.rs` `APM_ALLOW_ENTRIES`)
+- [x] The report includes the absolute path to `.apm-worker.log`
+- [x] When there are no denials, `apm workers diag <id>` prints "no denials detected"
+- [x] `apm workers diag <id>` exits non-zero with an error message if `<id>` cannot be resolved to a ticket worktree
+- [x] When a worker exits with ≥1 `apm_command_denial` entry, a one-line warning is appended to the APM main log (default `/tmp/apm.log`) via the existing `logger::log` facility
+- [x] Integration test: a fixture JSONL transcript containing a denied `apm doesnotexist` Bash call produces one `apm_command_denial` entry; `apm workers diag` surfaces it in its report
+- [x] Integration test: a fixture JSONL transcript with no denials produces a zero-entry summary; `apm workers diag` reports "no denials detected"
+- [x] Integration test: a fixture JSONL transcript containing a denied Edit to `/etc/passwd` produces one `outside_worktree` entry
+- [x] Before applying the `outside_worktree` classification check, the implementation canonicalizes the target path; relative paths in Edit/Write inputs are resolved against the worktree root before canonicalization; a path that does not yet exist is compared using its joined form (worktree root + relative path) rather than a failed canonicalization result
 
 ### Out of scope
 
