@@ -1,7 +1,7 @@
 +++
 id = "0ca3e019"
 title = "Frontmatter agent + agent_overrides for per-ticket wrapper choice"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0ca3e019-frontmatter-agent-agent-overrides-for-pe"
 created_at = "2026-04-30T20:03:58.532325Z"
-updated_at = "2026-05-01T18:57:20.211382Z"
+updated_at = "2026-05-02T03:03:09.426984Z"
 epic = "4312fbd4"
 target_branch = "epic/4312fbd4-agent-wrapper-architecture"
 depends_on = ["d3b93b95", "6cac8518"]
@@ -274,3 +274,4 @@ Append a short note to each file near the end:
 | 2026-05-01T17:38Z | specd | ready | philippepascal |
 | 2026-05-01T18:46Z | ready | in_progress | philippepascal |
 | 2026-05-01T18:57Z | in_progress | implemented | claude-0501-1846-c6a8 |
+| 2026-05-02T03:03Z | implemented | closed | philippepascal |
