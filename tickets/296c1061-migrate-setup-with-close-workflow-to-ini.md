@@ -1,7 +1,7 @@
 +++
 id = "296c1061"
 title = "Migrate setup_with_close_workflow() to init_repo()"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/296c1061-migrate-setup-with-close-workflow-to-ini"
 created_at = "2026-05-01T20:26:48.501162Z"
-updated_at = "2026-05-01T20:28:53.353222Z"
+updated_at = "2026-05-02T03:07:38.634772Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-01T20:26Z | — | new | philippepascal |
+| 2026-05-02T03:07Z | new | groomed | philippepascal |
