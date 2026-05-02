@@ -434,7 +434,7 @@ Add to `apm-core/src/git_util.rs` (inside the `#[cfg(test)]` block) a unit test 
 
 ### Amendment requests
 
-- [ ] Drop the `Config` parameter from `check_leaked_files`. The Approach itself admits "the `Config` parameter is needed only to satisfy a possible future signature extension; the current implementation uses only `root` and the git commands." That is speculative-design — narrow the signature to `(root, ticket_branch, target_branch)`. If a future caller needs config, add it then.
+- [x] Drop the `Config` parameter from `check_leaked_files`. The Approach itself admits "the `Config` parameter is needed only to satisfy a possible future signature extension; the current implementation uses only `root` and the git commands." That is speculative-design — narrow the signature to `(root, ticket_branch, target_branch)`. If a future caller needs config, add it then.
 
 - [ ] Porcelain path slicing is wrong for renames. `line[3..]` works for `M `, `??`, etc., but `R ` and `C ` entries use `R  old -> new` — slicing at column 3 captures `old -> new` as one path string and silently misses leaks of renamed files. Either filter out R/C entries (acceptable simplification with an AC noting the limitation) or parse the rename arrow. Pick one and state it in the spec; do not leave the bug latent.
 
