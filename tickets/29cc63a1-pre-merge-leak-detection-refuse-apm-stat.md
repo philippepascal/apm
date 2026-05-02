@@ -88,11 +88,11 @@ When a worker writes to the main worktree (intentional leak or bug), the bad cha
 
 ### Approach
 
-Two files change: `apm-core/src/git_util.rs` (new function) and `apm-core/src/state.rs` (call site + branch-computation move). Three integration tests are added.
+Two files change: `apm-core/src/git_util.rs` (new function) and `apm-core/src/state.rs` (call site + branch-computation move). Four integration tests are added.
 
 #### New function: `git_util::check_leaked_files`
 
-Add to `apm-core/src/git_util.rs`:
+Signature — no `Config` parameter; the function needs only the repo root and branch names:
 
 ```rust
 /// Returns the list of files that are both modified on `ticket_branch`
@@ -101,12 +101,10 @@ Add to `apm-core/src/git_util.rs`:
 /// (no shared history, target worktree not found on disk).
 pub fn check_leaked_files(
     root: &Path,
-    config: &Config,
     ticket_branch: &str,
     target_branch: &str,
 ) -> Result<Vec<String>> {
-    // 1. Resolve the target worktree — same logic as merge_into_default but
-    //    without creating the worktree (read-only; no side effects).
+    // 1. Resolve the target worktree directory.
     let current = Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .current_dir(root)
@@ -118,20 +116,21 @@ pub fn check_leaked_files(
     } else {
         match crate::worktree::find_worktree_for_branch(root, target_branch) {
             Some(p) => p,
-            None => return Ok(vec![]),  // target worktree absent → cannot be dirty
+            None => return Ok(vec![]),  // target worktree absent -> cannot be dirty
         }
     };
 
-    // 2. Merge-base between target and ticket.
+    // 2. Compute merge-base between target and ticket.
     let base = match merge_base(root, target_branch, ticket_branch) {
         Ok(s) => s.trim().to_string(),
-        Err(_) => return Ok(vec![]),  // no shared history → don't block
+        Err(_) => return Ok(vec![]),  // no shared history -> don't block
     };
     if base.is_empty() {
         return Ok(vec![]);
     }
 
-    // 3. Files touched by the ticket branch since the merge-base.
+    // 3. Files touched by the ticket branch since the merge-base (includes newly
+    //    added files, which appear as untracked in the target if leaked).
     let diff_out = Command::new("git")
         .args(["diff", "--name-only", &base, ticket_branch])
         .current_dir(root)
@@ -142,8 +141,14 @@ pub fn check_leaked_files(
             .map(|s| s.to_string())
             .collect();
 
-    // 4. Dirty files in the target worktree (staged, unstaged, untracked).
-    //    Porcelain format: "XY <path>" — path starts at col 3.
+    // 4. Dirty files in the target worktree.
+    //    Porcelain v1 format: "XY <path>" -- path starts at column 3.
+    //    "??" (untracked) entries are intentionally included: a file added by the
+    //    ticket branch that sits untracked in the target is a genuine leak signal.
+    //    "R " and "C " (staged rename/copy) entries are skipped: their line format
+    //    is "XY orig -> dest", so col-3 slicing produces "orig -> dest", not a
+    //    matchable path.  Known limitation: leaks of staged-renamed files are not
+    //    detected.
     let status_out = Command::new("git")
         .args(["status", "--porcelain"])
         .current_dir(&merge_dir)
@@ -152,7 +157,16 @@ pub fn check_leaked_files(
         String::from_utf8_lossy(&status_out.stdout)
             .lines()
             .filter_map(|line| {
-                if line.len() > 3 { Some(line[3..].to_string()) } else { None }
+                if line.len() < 3 {
+                    return None;
+                }
+                let x = line.as_bytes()[0] as char;
+                let y = line.as_bytes()[1] as char;
+                // Skip rename/copy entries: cannot be parsed with a simple col-3 slice.
+                if x == 'R' || x == 'C' || y == 'R' || y == 'C' {
+                    return None;
+                }
+                Some(line[3..].to_string())
             })
             .collect();
 
@@ -187,7 +201,7 @@ let should_check = match &completion {
 if should_check {
     let merge_target = t.frontmatter.target_branch.as_deref()
         .unwrap_or(config.project.default_branch.as_str());
-    let leaked = git::check_leaked_files(root, &config, &branch, merge_target)?;
+    let leaked = git::check_leaked_files(root, &branch, merge_target)?;
     if !leaked.is_empty() {
         let file_list = leaked
             .iter()
@@ -198,12 +212,13 @@ if should_check {
             .map(|p| p.join(".apm-worker.log").to_string_lossy().into_owned())
             .unwrap_or_else(|| "<ticket-worktree>/.apm-worker.log".to_string());
         bail!(
-            "cannot complete {new_state}: the target worktree has uncommitted changes \
-             to files this ticket also modified:\n{file_list}\n\
+            "cannot complete {}: the target worktree has uncommitted changes \
+             to files this ticket also modified:\n{}\n\
              This usually means a worker leaked edits outside its worktree.\n\
-             Inspect the worker's transcript: {log_hint}\n\
+             Inspect the worker's transcript: {}\n\
              Then either commit/restore the leaked files and re-run \
-             `apm state {id} implemented`, or run `apm verify` to investigate."
+             `apm state {} implemented`, or run `apm verify` to investigate.",
+            new_state, file_list, log_hint, id
         );
     }
 }
@@ -215,11 +230,36 @@ Placing the check inside `"implemented"` (before the state mutation) ensures the
 
 Use the existing `setup_merge()` helper (already configures `merge` completion strategy, `in_progress → implemented` transition).
 
-- **`state_implemented_refuses_when_main_dirty_overlap`**: commit `src/foo.rs` on main; create ticket branch that modifies it; switch back to main; leave `src/foo.rs` modified-but-uncommitted (simulated leak); run `apm state <id> implemented`; assert exit non-zero; assert output contains `src/foo.rs`; assert ticket state is still `in_progress`.
-- **`state_implemented_proceeds_when_main_clean`**: same setup without the uncommitted edit; assert success.
-- **`state_implemented_proceeds_when_dirty_no_overlap`**: ticket branch modifies only `src/foo.rs`; `src/bar.rs` is left dirty in main (no overlap); assert success (no false positive).
+**`state_implemented_refuses_when_main_dirty_overlap`**
+1. `setup_merge()` → repo root `p`.
+2. Create and commit `src/foo.rs` on `main`.
+3. Create ticket branch; check it out; modify `src/foo.rs`; commit.
+4. Switch back to `main`.
+5. Modify `src/foo.rs` in the working tree — do NOT commit (simulates leaked edit).
+6. Create a ticket file in `in_progress` state on the ticket branch.
+7. Run `apm state <id> implemented`; assert exit code is non-zero; assert output contains `src/foo.rs`; assert ticket state is still `in_progress`.
 
-Also add a unit test for `check_leaked_files` in `apm-core/src/git_util.rs` (`#[cfg(test)]` block) covering the overlap and no-overlap cases, using the existing `git_init()` / `git_cmd()` helpers.
+**`state_implemented_proceeds_when_main_clean`**
+1. `setup_merge()`.
+2. Commit `src/foo.rs` on `main`.
+3. Create ticket branch; modify `src/foo.rs`; commit; check all AC boxes.
+4. Run `apm state <id> implemented`; assert success.
+
+**`state_implemented_proceeds_when_dirty_no_overlap`**
+1. `setup_merge()`.
+2. Commit `src/foo.rs` and `src/bar.rs` on `main`.
+3. Ticket branch modifies only `src/foo.rs`.
+4. `src/bar.rs` is left dirty (uncommitted) in `main` — no overlap with ticket.
+5. Run `apm state <id> implemented`; assert success (no false positive).
+
+**`state_implemented_refuses_when_main_has_untracked_overlap`**
+1. `setup_merge()`.
+2. On `main`, do NOT create `src/new.rs` (file does not exist there yet).
+3. Create ticket branch; add `src/new.rs` as a new file; commit.
+4. Switch back to `main`; create `src/new.rs` in the working tree without staging it (simulates a worker dropping a new file in main).
+5. Run `apm state <id> implemented`; assert exit code is non-zero; assert output contains `src/new.rs`.
+
+Add to `apm-core/src/git_util.rs` (inside the `#[cfg(test)]` block) a unit test for `check_leaked_files` covering: overlap case, no-overlap case, and untracked-file overlap case. Use the existing `git_init()` / `git_cmd()` helpers.
 
 #### No changes required
 
