@@ -48,7 +48,66 @@ Both helpers should use `init_repo()` for the local clone. The bare-origin creat
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm/tests/integration.rs`
+
+---
+
+### `setup_sync_repo()` (line 5711)
+
+Annotate the bare-origin block:
+```rust
+// BYPASS: no apm command creates a bare origin repo; bare-init is infrastructure only
+let origin = tempfile::tempdir().unwrap();
+std::process::Command::new("git")
+    .args(["init", "--bare", "-q", "-b", "main"])
+    .current_dir(origin.path())
+    .status()
+    .unwrap();
+```
+
+Replace:
+```rust
+let local = setup();
+```
+with:
+```rust
+let local = init_repo();
+```
+
+The remainder of the function is unchanged: write `shared.txt`, `git add shared.txt`, `git commit`, `git remote add origin`, `git push -u origin main`.
+
+---
+
+### `setup_branch_in_origin()` (line 5889)
+
+Annotate the bare-origin block the same way:
+```rust
+// BYPASS: no apm command creates a bare origin repo; bare-init is infrastructure only
+```
+
+Replace the local-init block (currently: `let local = tempfile::tempdir()`, `git init -q -b main`, `git config user.email`, `git config user.name`, `git remote add origin`, `fs::write README`, `git add`, `git commit`, `git push HEAD:main`) with:
+
+```rust
+// init_repo() runs real `apm init`, makes an initial commit, and returns the TempDir
+let local = init_repo();
+git(local.path(), &["remote", "add", "origin", &origin.path().to_string_lossy()]);
+git(local.path(), &["push", "origin", "HEAD:main"]);
+```
+
+The `README` write and the explicit `git init` / `config user.*` calls are dropped — `init_repo()` already handles git init, author identity via env vars, and the initial commit.
+
+Annotate the disposable-clone block that seeds the target branch:
+```rust
+// BYPASS: no apm command pushes a branch into a bare origin; disposable clone is the only option
+```
+
+The rest of the function (the clone block itself, `rev_parse`, `apm_core::git::fetch_all`) is unchanged.
+
+Return type `(TempDir, TempDir, String)` is unchanged; the local `TempDir` is now bound from `init_repo()` rather than `tempfile::tempdir()`.
+
+---
+
+No callers of either helper need editing.
 
 ### Open questions
 
