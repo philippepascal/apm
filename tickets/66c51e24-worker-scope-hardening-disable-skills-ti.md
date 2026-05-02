@@ -105,70 +105,19 @@ Add the following section to both the bundled defaults and the project-level fil
 **Spec-writer "Scope limits" content:**
 
 ```markdown
-## Scope limits
-
-This session was started with `--disable-slash-commands`. Skill and slash
-command invocation is disabled. If you see skill availability information in
-your environment, ignore it entirely.
-
-**Permitted `apm` commands:**
-- `apm spec` — write spec sections
-- `apm state` — transition ticket state
-- `apm set` — set ticket fields (effort, risk)
-- `apm new --side-note` — file an out-of-scope observation
-- `apm show` — read a ticket
-
-**Off-limits (never modify these):**
-- Any file under `.claude/` (settings, memory, CLAUDE.md)
-- `.apm/config.toml` or any file in `.apm/` other than your ticket
-- `.gitignore`, `.github/`, or other project-config files
-
-**On a permission prompt for an `apm` command:** do not invoke any skill or
-attempt to edit `settings.json`. Instead, set the ticket to `blocked` with a
-diagnostic noting which `apm` command triggered the prompt and what allowlist
-entry is missing.
-```
-
-**Worker "Scope limits" content** (same structure, narrower command list):
-
-```markdown
-## Scope limits
-
-This session was started with `--disable-slash-commands`. Skill and slash
-command invocation is disabled. If you see skill availability information in
-your environment, ignore it entirely.
-
-**Permitted `apm` commands:**
-- `apm show` — read a ticket
-- `apm state` — transition ticket state
-- `apm new --side-note` — file an out-of-scope observation
-
-**Off-limits (never modify these):**
-- Any file under `.claude/` (settings, memory, CLAUDE.md)
-- `.apm/config.toml` or any file in `.apm/` other than your ticket
-- `.gitignore`, `.github/`, or other project-config files
-
-**On a permission prompt for an `apm` command:** do not invoke any skill or
-attempt to edit `settings.json`. Instead, set the ticket to `blocked` with a
-diagnostic noting which `apm` command triggered the prompt and what allowlist
-entry is missing.
-```
-
-#### Files changed
-
-1. `apm-core/src/wrapper/builtin/claude.rs` — add flag + unit test
-2. `apm-core/src/default/agents/claude/apm.spec-writer.md` — add spec-writer Scope limits section
-3. `apm-core/src/default/agents/claude/apm.worker.md` — add worker Scope limits section
-4. `.apm/apm.spec-writer.md` — mirror the bundled default change (project-level override used by this project)
-5. `.apm/apm.worker.md` — mirror the bundled default change
-
-No config schema changes, no new structs, no migration needed. All changes are additive except for the single line inserted into `build_claude_args()`.
 
 ### Open questions
 
 
 ### Amendment requests
 
+- [ ] Verify `--disable-slash-commands` actually exists in the installed `claude` CLI before committing to it. The spec asserts the flag ships, but the unit test only checks argv assembly, so a missing/renamed flag would silently pass tests and break every worker spawn at runtime. Either (a) paste the matching `claude --help | grep -- --disable-slash-commands` line into the ticket history before marking implemented, or (b) run the probe at startup and fail fast with an actionable error.
+
+- [ ] The "project-level `.apm/apm.*.md` contains the same Scope-limits content as the bundled default" AC is unverifiable as written. Add a concrete check, e.g. `diff <(awk '/## Scope limits/,/^## /' .apm/apm.worker.md) <(awk '/## Scope limits/,/^## /' apm-core/src/default/agents/claude/apm.worker.md)` returns empty. Otherwise drift is invisible.
+
+- [ ] The "blocked + diagnostic" instruction has no enforcement — a worker that ignored the descriptive text in the 2803bf07 incident can ignore this one too. Either accept this is purely soft and say so in Out of scope, or note explicitly that ticket f06272f1 (permission-denial diagnostics) is the structural backstop. Without that pointer, the AC reads as if it actually prevents the loop.
+
+- [ ] The worker's permitted-command list omits `apm spec --append "..."`, but the blocking flow needs to write the question into `### Open questions` first. Either add `apm spec` to the permitted list or change the instruction to use `apm new --side-note`.
 
 ### Code review
 
