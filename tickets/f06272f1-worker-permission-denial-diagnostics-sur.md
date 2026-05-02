@@ -70,7 +70,15 @@ When a worker hits a permission denial mid-run, today the only signal is a burie
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-editing `.claude/settings.json` to fix missing allowlist entries (that is the worker side-quest we are explicitly preventing)
+- Real-time denial interception — pausing or rerouting the worker mid-run when a denial occurs; the transcript is scanned after exit, which is sufficient
+- Privacy redaction of tool inputs beyond truncation to ≤200 characters
+- Surfacing denials from non-Claude wrappers (mock-happy, mock-sad, debug) — only the Claude wrapper produces a parseable stream-json JSONL transcript
+- Automatically filing issues or PRs for `apm_command_denial` entries; the report recommends action but takes none
+- Modifying the Claude binary or Claude Code SDK's permission-prompt behaviour
+- Any UI beyond the CLI report (`apm workers diag`)
+- Retrospective scanning of historical worker logs written before this feature lands (no guarantee of format consistency)
+- Classifying or reporting on tool errors that are not permission denials (e.g. Bash commands that exit non-zero for other reasons)
 
 ### Approach
 
