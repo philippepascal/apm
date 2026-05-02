@@ -26,20 +26,20 @@ This ticket adds an explicit "## Capability limitations" section to the spec-wri
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a new "## Capability limitations" section placed after the existing "## Open questions" section
-- [ ] The spec-writer capability-limitations section explicitly prohibits invoking skills, editing `.claude/settings.json`, editing `.apm/` files, and attempting workarounds outside the worktree
-- [ ] The spec-writer capability-limitations section gives the two-step clean exit: `apm spec <id> --section "Open questions" --append "..."` then `apm state <id> question`
-- [ ] `apm-core/src/default/agents/claude/apm.worker.md` contains a new "## Capability limitations" section placed after the existing "## Blocked state" section
-- [ ] The worker capability-limitations section gives the two-step clean exit: `apm spec <id> --section "Open questions" --append "..."` then `apm state <id> blocked` (no manual git commit — `apm spec --append` auto-commits)
-- [ ] `apm-core/src/default/apm.spec-writer.md` (flat default) is byte-for-byte identical to `apm-core/src/default/agents/claude/apm.spec-writer.md`
-- [ ] `apm-core/src/default/apm.worker.md` (flat default) is byte-for-byte identical to `apm-core/src/default/agents/claude/apm.worker.md`
-- [ ] `.apm/apm.spec-writer.md` is byte-for-byte identical to `apm-core/src/default/apm.spec-writer.md`
-- [ ] `.apm/apm.worker.md` is byte-for-byte identical to `apm-core/src/default/apm.worker.md`
-- [ ] `.apm/agents.md` contains a sentence near the `### Worker` section pointing agents to the per-role file for the capability-limitation escape hatch
-- [ ] `apm-core/src/default/apm.agents.md` contains the identical sentence as `.apm/agents.md`
-- [ ] `apm-core/tests/worker_md_sync.rs` contains a test function that asserts `apm-core/src/default/apm.spec-writer.md` and `.apm/apm.spec-writer.md` are byte-for-byte identical and produces a readable diff on failure
-- [ ] `cargo test --workspace` passes including both the existing worker sync test and the new spec-writer sync test
-- [ ] Both `## Capability limitations` sections state that the instructions assume the default ticket schema includes `### Open questions`; projects with customised schemas that omit it are explicitly noted as out of scope within the section
+- [x] `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a new "## Capability limitations" section placed after the existing "## Open questions" section
+- [x] The spec-writer capability-limitations section explicitly prohibits invoking skills, editing `.claude/settings.json`, editing `.apm/` files, and attempting workarounds outside the worktree
+- [x] The spec-writer capability-limitations section gives the two-step clean exit: `apm spec <id> --section "Open questions" --append "..."` then `apm state <id> question`
+- [x] `apm-core/src/default/agents/claude/apm.worker.md` contains a new "## Capability limitations" section placed after the existing "## Blocked state" section
+- [x] The worker capability-limitations section gives the two-step clean exit: `apm spec <id> --section "Open questions" --append "..."` then `apm state <id> blocked` (no manual git commit — `apm spec --append` auto-commits)
+- [x] `apm-core/src/default/apm.spec-writer.md` (flat default) is byte-for-byte identical to `apm-core/src/default/agents/claude/apm.spec-writer.md`
+- [x] `apm-core/src/default/apm.worker.md` (flat default) is byte-for-byte identical to `apm-core/src/default/agents/claude/apm.worker.md`
+- [x] `.apm/apm.spec-writer.md` is byte-for-byte identical to `apm-core/src/default/apm.spec-writer.md`
+- [x] `.apm/apm.worker.md` is byte-for-byte identical to `apm-core/src/default/apm.worker.md`
+- [x] `.apm/agents.md` contains a sentence near the `### Worker` section pointing agents to the per-role file for the capability-limitation escape hatch
+- [x] `apm-core/src/default/apm.agents.md` contains the identical sentence as `.apm/agents.md`
+- [x] `apm-core/tests/worker_md_sync.rs` contains a test function that asserts `apm-core/src/default/apm.spec-writer.md` and `.apm/apm.spec-writer.md` are byte-for-byte identical and produces a readable diff on failure
+- [x] `cargo test --workspace` passes including both the existing worker sync test and the new spec-writer sync test
+- [x] Both `## Capability limitations` sections state that the instructions assume the default ticket schema includes `### Open questions`; projects with customised schemas that omit it are explicitly noted as out of scope within the section
 
 ### Out of scope
 
@@ -76,127 +76,6 @@ This ticket adds an explicit "## Capability limitations" section to the spec-wri
 
 ```
 ---
-
-## Capability limitations
-
-If you are blocked by a tool limitation, permission denial, or any other
-capability constraint — not a spec ambiguity — do not attempt workarounds.
-Specifically, do not:
-
-- Invoke skills (e.g. `fewer-permission-prompts`, `update-config`)
-- Edit `.claude/settings.json` or any file under `.apm/`
-- Attempt changes outside the ticket worktree
-
-Exit cleanly in two steps:
-
-1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation and what you needed>"`
-2. `apm state <id> question`
-
-`apm spec --append` auto-commits to the ticket branch — no manual git commit needed.
-The supervisor will see the ticket in the queue and resolve the blocker.
-
-This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
-which includes `### Open questions`. Projects with customised schemas that omit this
-section are out of scope.
-```
-
----
-
-**Exact text to insert in `apm.worker.md`** (insert between `## Blocked state` and the `---` + `## Shell discipline` section):
-
-```
----
-
-## Capability limitations
-
-If you are blocked by a tool limitation, permission denial, or any other
-capability constraint — not a missing decision — do not attempt workarounds.
-Specifically, do not:
-
-- Invoke skills (e.g. `fewer-permission-prompts`, `update-config`)
-- Edit `.claude/settings.json` or any file under `.apm/`
-- Attempt changes outside the ticket worktree
-
-Exit cleanly in two steps:
-
-1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation and what you needed>"`
-2. `apm state <id> blocked`
-
-`apm spec --append` auto-commits to the ticket branch — no manual git commit needed.
-The supervisor will see the ticket in the queue and resolve the blocker.
-
-This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
-which includes `### Open questions`. Projects with customised schemas that omit this
-section are out of scope.
-```
-
----
-
-**Test function to append to `apm-core/tests/worker_md_sync.rs`:**
-
-```rust
-/// Asserts that `apm-core/src/default/apm.spec-writer.md` and `.apm/apm.spec-writer.md`
-/// are byte-for-byte identical. Any divergence fails with a diff so the
-/// developer can see exactly what changed.
-#[test]
-fn default_and_project_apm_spec_writer_md_are_identical() {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let default_path =
-        std::path::Path::new(manifest_dir).join("src/default/apm.spec-writer.md");
-    let project_path = std::path::Path::new(manifest_dir)
-        .parent()
-        .expect("apm-core has a parent directory")
-        .join(".apm/apm.spec-writer.md");
-
-    let default_bytes = std::fs::read(&default_path)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", default_path.display()));
-    let project_bytes = std::fs::read(&project_path)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", project_path.display()));
-
-    if default_bytes == project_bytes {
-        return;
-    }
-
-    let default_str = String::from_utf8_lossy(&default_bytes);
-    let project_str = String::from_utf8_lossy(&project_bytes);
-
-    let default_lines: Vec<&str> = default_str.lines().collect();
-    let project_lines: Vec<&str> = project_str.lines().collect();
-    let max = default_lines.len().max(project_lines.len());
-    let mut diff_lines: Vec<String> = Vec::new();
-    for i in 0..max {
-        match (default_lines.get(i), project_lines.get(i)) {
-            (Some(a), Some(b)) if a == b => {}
-            (Some(a), Some(b)) => {
-                diff_lines.push(format!("line {}: default=  {:?}", i + 1, a));
-                diff_lines.push(format!("line {}: project=  {:?}", i + 1, b));
-            }
-            (Some(a), None) => {
-                diff_lines.push(format!(
-                    "line {}: default=  {:?} (missing in project)",
-                    i + 1,
-                    a
-                ));
-            }
-            (None, Some(b)) => {
-                diff_lines.push(format!(
-                    "line {}: project=  {:?} (missing in default)",
-                    i + 1,
-                    b
-                ));
-            }
-            (None, None) => {}
-        }
-    }
-
-    panic!(
-        "apm-core/src/default/apm.spec-writer.md and .apm/apm.spec-writer.md have diverged.\n\
-         Edit both files together to keep them in sync.\n\
-         Diff (first differences):\n{}",
-        diff_lines.join("\n")
-    );
-}
-```
 
 ### Open questions
 
