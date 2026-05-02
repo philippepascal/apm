@@ -19,7 +19,11 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:910 setup_with_close_workflow() hand-rolls a workflow that includes implemented→closed for sync tests. Rewrite to compose on init_repo() output. Expected test fallout — fix or delete on a per-test basis with notes.
+setup_with_close_workflow() at line 910 of apm/tests/integration.rs hand-writes an apm.toml at the repo root containing a 4-state workflow (new, in_progress, implemented, closed). It never calls apm init, so the fixture diverges from the production repo shape: the config is at the legacy apm.toml location instead of .apm/workflow.toml, the state list is much smaller than the production default (4 vs 12 states), and any change to the production init template — new states, field renames, config layout — is invisible to the 7 tests that depend on this helper.
+
+The sync auto-close behavior the tests exercise depends on exactly two things from the workflow config: (1) "implemented" being a recognized non-terminal state, and (2) "closed" being a terminal state. Both are satisfied by the 12-state workflow that apm init produces, so the migration is structurally straightforward.
+
+One test — sync_no_close_when_nothing_to_close (line 1016) — reads "apm.toml" by name to obtain a git-blob reference point. After migration this file will not exist; the path must be updated to a file that init_repo() actually writes (e.g. .apm/config.toml).
 
 ### Acceptance criteria
 
