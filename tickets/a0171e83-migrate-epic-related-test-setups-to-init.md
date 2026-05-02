@@ -50,7 +50,79 @@ The desired state is that all four helpers use `init_repo()` for their repo scaf
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/tests/integration.rs`. The dependency ticket 795dce11 must be merged first so `init_repo()` exists in the file.
+
+**State compatibility check (done at spec time)**
+
+The production `workflow.toml` (`.apm-core/src/default/workflow.toml`) includes `ready`, `implemented` (with `satisfies_deps = true`), and `closed` (with `terminal = true`) — exactly the states the epic list and epic show tests depend on for derived-state assertions (`in_progress`, `implemented`, `empty`, `done`). No state aliases or config overrides are needed.
+
+---
+
+**1. `setup_with_epic()` (line 2535) — replace `setup()` with `init_repo()`**
+
+Replace the function body:
+
+```rust
+fn setup_with_epic() -> (tempfile::TempDir, String) {
+    let dir = init_repo();
+    let p = dir.path();
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
+    git(p, &["checkout", "-b", &epic_branch]);
+    std::fs::write(p.join("EPIC.md"), "# my-epic\n").unwrap();
+    git(p, &["add", "EPIC.md"]);
+    git(p, &["commit", "-m", &format!("epic({epic_id}): create my-epic")]);
+    git(p, &["checkout", "main"]);
+    (dir, epic_id.to_string())
+}
+```
+
+Drop the old `git(p, &["config", "user.email", …])` and `git(p, &["config", "user.name", …])` lines — `init_repo()` handles those via the `git()` helper's injected env vars. Drop the `-c commit.gpgsign=false` flags for the same reason (the `git()` helper already sets `GIT_AUTHOR_*` / `GIT_COMMITTER_*`).
+
+**2. `setup_with_epic_for_owner_tests()` (line 5460) — no structural change**
+
+This function calls `setup_with_epic()` and writes `.apm/local.toml`. After step 1, `.apm/` already exists (created by `apm init`), so `create_dir_all` is harmless. No edits required.
+
+**3. `setup_epic_list()` (line 4311) — replace entire body**
+
+```rust
+fn setup_epic_list() -> TempDir {
+    init_repo()
+}
+```
+
+Remove the hand-written `apm.toml`, the `git init`, `git config`, and `create_dir_all("tickets")` calls. `init_repo()` handles all of them.
+
+**4. `setup_epic_show()` (line 4431) — replace entire body**
+
+```rust
+fn setup_epic_show() -> tempfile::TempDir {
+    init_repo()
+}
+```
+
+Same rationale as step 3.
+
+**5. `create_epic_branch()` (line 4355) — add BYPASS comment**
+
+Add the comment as the first line inside the function body:
+
+```rust
+fn create_epic_branch(dir: &std::path::Path, branch: &str) {
+    // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
+    git(dir, &["checkout", "-b", branch]);
+    …
+}
+```
+
+No other lines in `create_epic_branch` change.
+
+---
+
+**Verification**
+
+Run `cargo test --test integration` and confirm all 9 affected tests pass. No other tests should regress because the four helpers are only called by those 9 tests.
 
 ### Open questions
 
