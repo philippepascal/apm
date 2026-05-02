@@ -40,7 +40,12 @@ The desired state is that every ticket fixture goes through the real `apm` CLI (
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo test -p apm --test integration` passes with no new failures after all changes
+- [ ] Every migrated helper body invokes `apm new` via `env!("CARGO_BIN_EXE_apm")` instead of constructing raw `+++\n` frontmatter strings
+- [ ] Ticket IDs in migrated fixtures are dynamically generated 8-char hex strings (as produced by `apm new`), not hardcoded integers or fixed string literals
+- [ ] No helper function or test body calls `write_ticket_with_agent` (the function is deleted)
+- [ ] Every direct TOML write that cannot be replaced has a `// BYPASS: <specific reason>` comment on the immediately preceding line
+- [ ] No migrated call site passes a hardcoded integer ID or pre-computed branch name as ticket identity; callers use the `(id, branch)` tuple returned by the helper
 
 ### Out of scope
 
