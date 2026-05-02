@@ -51,7 +51,36 @@ setup_with_local_worktrees() is called by 15 tests (start / work commands). setu
 
 ### Approach
 
-How the implementation will work.
+Both helpers are in apm/tests/integration.rs. Changes are isolated to those two function bodies; no callers are modified.
+
+**setup_with_worktrees() (line 3578) -- no workers, simpler**
+
+Replace the entire function body with:
+
+1. Call init_repo() and bind its return: let dir = init_repo(); let p = dir.path();
+2. Return dir.
+
+No config override is required. apm init already writes [worktrees] dir = "worktrees" inside the repo, which is inside the tempdir, achieving the same isolation the hand-written config provided. The production workflow has all states the three worker-kill tests need (they only exercise the git-worktree and PID-file machinery, not state transitions).
+
+**setup_with_local_worktrees() (line 1725) -- has workers config**
+
+1. Call init_repo(): let dir = init_repo(); let p = dir.path();
+2. Create the mock worker (order unchanged): let mock_worker = make_mock_worker(p);
+3. BYPASS: append the workers section to .apm/config.toml -- no CLI command exists for this field:
+   - Read the existing config: std::fs::read_to_string(p.join(".apm/config.toml"))
+   - Append the [workers] table: push_str with a newline + [workers] + newline + command = "<mock_worker_path>" + newline
+   - Write the file back with std::fs::write
+   - Annotate the block with // BYPASS: no CLI command to set workers.command post-init
+4. Commit the config change so HEAD stays valid for worktree operations:
+   git(p, &["add", ".apm/config.toml"]);
+   git(p, &["commit", "-m", "add workers config"]);
+5. Return dir.
+
+The production workflow provides new, ready (actionable, with command:start transition to in_progress), in_progress, closed -- all states exercised by the 15 callers. No state-level override is needed.
+
+**File**
+
+Only apm/tests/integration.rs changes. No other files are touched.
 
 ### Open questions
 
