@@ -47,7 +47,54 @@ This ticket adds only the helper and a smoke test. No existing helper is modifie
 
 ### Approach
 
-How the implementation will work.
+Add `init_repo()` near the top of `apm/tests/integration.rs`, alongside the existing `setup()` and `git()` helpers (roughly line 34 area).
+
+**Function signature**
+
+```rust
+fn init_repo() -> TempDir
+```
+
+Returns `TempDir` so callers hold the directory alive via RAII, identical to the existing `setup()` convention. Callers access the path via `.path()`.
+
+**Function body — ordered steps**
+
+1. Create tempdir: `let dir = tempfile::tempdir().unwrap();`
+2. Run `git init -q -b main` via the existing `git()` helper (it already injects `GIT_AUTHOR_*` / `GIT_COMMITTER_*` env vars so commits work without a global git config)
+3. Invoke the real `apm init` binary:
+   ```rust
+   let bin = env!("CARGO_BIN_EXE_apm");
+   let out = std::process::Command::new(bin)
+       .args(["init", "--no-claude", "--quiet"])
+       .current_dir(dir.path())
+       .output()
+       .unwrap();
+   assert!(out.status.success(), "apm init failed: {}", String::from_utf8_lossy(&out.stderr));
+   ```
+   - `--no-claude` skips writing `.claude/settings.json` (irrelevant in tempdir and avoids touching real user config)
+   - `--quiet` suppresses informational output; the assert provides a clear failure message if init exits non-zero
+   - stdin is not a TTY in the test harness, so `apm init` skips all interactive prompts automatically
+4. Commit the generated files so HEAD resolves (required for worktree and branch operations used by sibling tests):
+   ```rust
+   git(dir.path(), &["add", "."]);
+   git(dir.path(), &["commit", "-m", "init"]);
+   ```
+5. Return `dir`
+
+**Smoke test**
+
+Add `#[test] fn test_init_repo_helper()` immediately after the helper. It should:
+- Call `init_repo()`, bind to `let dir = init_repo(); let p = dir.path();`
+- Assert `.apm/config.toml` exists: `assert!(p.join(".apm/config.toml").exists())`
+- Assert `.apm/workflow.toml` exists
+- Assert `tickets/` dir exists
+- Assert `.gitignore` contains `".apm/local.toml"` (a known apm-injected entry)
+- Assert `Config::load(p).is_ok()`
+- Assert HEAD resolves: run `git(p, &["rev-parse", "HEAD"])` succeeds (or use `std::process::Command` with a status check)
+
+**Placement in file**
+
+Insert after the `git()` helper and before the `setup()` helper so it is visible to all callers without a forward-reference issue. No existing function is removed or changed.
 
 ### Open questions
 
