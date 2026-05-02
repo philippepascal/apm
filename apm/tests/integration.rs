@@ -4811,7 +4811,7 @@ fn pr_or_epic_merge_without_target_branch_attempts_pr() {
 }
 
 #[test]
-fn agents_prints_instructions_file() {
+fn agents_list_shows_claude_builtin() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
@@ -4827,10 +4827,6 @@ name = "test"
 [tickets]
 dir = "tickets"
 
-[agents]
-instructions = "agents-instructions.md"
-max_concurrent = 1
-
 [[workflow.states]]
 id         = "new"
 label      = "New"
@@ -4844,16 +4840,15 @@ terminal = true
     )
     .unwrap();
 
-    std::fs::write(p.join("agents-instructions.md"), "hello from agents\n").unwrap();
-
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
-        .args(["agents"])
+        .args(["agents", "list"])
         .current_dir(p)
         .output()
         .unwrap();
     assert!(out.status.success(), "expected exit 0, got: {}\nstderr: {}", out.status, String::from_utf8_lossy(&out.stderr));
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert_eq!(stdout, "hello from agents\n", "unexpected output: {stdout}");
+    assert!(stdout.contains("claude"), "expected claude in output: {stdout}");
+    assert!(stdout.contains("built-in"), "expected built-in in output: {stdout}");
 }
 
 fn setup_with_server_url(url: &str) -> TempDir {
