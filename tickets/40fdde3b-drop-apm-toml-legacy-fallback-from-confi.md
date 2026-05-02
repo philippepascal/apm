@@ -1,7 +1,7 @@
 +++
 id = "40fdde3b"
 title = "Drop apm.toml legacy fallback from Config::load"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/40fdde3b-drop-apm-toml-legacy-fallback-from-confi"
 created_at = "2026-05-01T20:27:33.796162Z"
-updated_at = "2026-05-02T03:08:09.485796Z"
+updated_at = "2026-05-02T04:38:13.572145Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["dac20967", "5c494a5d", "296c1061", "c148f904", "f701ef81", "4abc535a", "cc154ee4", "a0171e83", "464d67d5", "094838b6", "443a1840", "059e2e74"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-01T20:27Z | — | new | philippepascal |
 | 2026-05-02T03:08Z | new | groomed | philippepascal |
+| 2026-05-02T04:38Z | groomed | in_design | philippepascal |
