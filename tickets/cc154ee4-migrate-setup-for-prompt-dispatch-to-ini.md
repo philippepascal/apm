@@ -19,7 +19,11 @@ depends_on = ["795dce11"]
 
 ### Problem
 
-apm/tests/integration.rs:2099 setup_for_prompt_dispatch() hand-rolls a workflow with start/dispatch transitions for prompt-dispatch tests. Rewrite to start from init_repo() and add only the prompt-dispatch deltas via real commands.
+`setup_for_prompt_dispatch()` at `apm/tests/integration.rs:2099` hand-rolls a 6-state workflow (`new`, `in_design`, `ammend`, `ready`, `in_progress`, `closed`) with `trigger = "command:start"` transitions on `new`, `ammend`, and `ready`. It writes the config to the legacy `apm.toml` root location, never calls `apm init`, and creates the `.apm/` directory manually.
+
+This diverges from the production repo shape in two ways. First, the config file is at the wrong location (`apm.toml` instead of `.apm/config.toml`). Second, the `new` state having `command:start → in_design` is a custom invention — in production, the dispatch path for spec-writing is `groomed → in_design`. Tests `spawn_new_ticket_transitions_to_in_design` and `start_next_spawn_new_ticket_transitions_correctly` therefore exercise dispatch against a non-production state, masking any breakage in the real `groomed` dispatch path.
+
+There are 7 tests that depend on this helper. They cover owner-preservation semantics on `in_design` transitions, and the prompt-dispatch mechanism for `ammend → in_design`, `ready → in_progress`, and the `groomed → in_design` path (currently exercised via the ersatz `new` state).
 
 ### Acceptance criteria
 
