@@ -51,7 +51,16 @@ custom wrappers that may not pass `--disable-slash-commands`.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `build_claude_args()` in `apm-core/src/wrapper/builtin/claude.rs` always includes `--disable-slash-commands` in its output, verified by a unit test that checks every call path (with and without model, with and without skip-permissions)
+- [ ] The bundled default `apm-core/src/default/agents/claude/apm.spec-writer.md` contains a "Scope limits" section that explicitly states skill/slash-command invocation is prohibited
+- [ ] The bundled default `apm-core/src/default/agents/claude/apm.worker.md` contains a "Scope limits" section that explicitly states skill/slash-command invocation is prohibited
+- [ ] The spec-writer "Scope limits" section lists exactly the permitted `apm` commands for that role: `apm spec`, `apm state`, `apm set`, `apm new --side-note`, `apm show`
+- [ ] The worker "Scope limits" section lists exactly the permitted `apm` commands for that role: `apm show`, `apm state`, `apm new --side-note`
+- [ ] Both "Scope limits" sections name the off-limits paths: `.claude/`, `.apm/config.toml` (and any file in `.apm/` other than the ticket), `.gitignore`, `.github/`
+- [ ] Both "Scope limits" sections instruct the agent: on a permission prompt for an `apm` command, set the ticket to `blocked` and include a diagnostic naming the missing allowlist entry — never invoke a skill or attempt to edit `settings.json`
+- [ ] The project-level `.apm/apm.spec-writer.md` contains the same "Scope limits" content as the bundled default
+- [ ] The project-level `.apm/apm.worker.md` contains the same "Scope limits" content as the bundled default
+- [ ] `cargo test --workspace` passes after all changes
 
 ### Out of scope
 
