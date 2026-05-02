@@ -356,7 +356,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         current_state: new_state.clone(),
     };
     if should_check_claude_compat(root, &params.agent) {
-        check_output_format_supported("claude")?;
+        check_output_format_supported(&params.command)?;
     }
     let mut child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
@@ -552,7 +552,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         current_state: t.frontmatter.state.clone(),
     };
     if should_check_claude_compat(root, &params.agent) {
-        check_output_format_supported("claude")?;
+        check_output_format_supported(&params.command)?;
     }
     let mut child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
@@ -738,7 +738,7 @@ pub fn spawn_next_worker(
         current_state: t.frontmatter.state.clone(),
     };
     if should_check_claude_compat(root, &params.agent) {
-        check_output_format_supported("claude")?;
+        check_output_format_supported(&params.command)?;
     }
     let child = spawn_worker(&ctx, &params.agent, root)?;
     let pid = child.id();
