@@ -16,38 +16,29 @@ updated_at = "2026-05-02T03:21:24.434090Z"
 
 ### Problem
 
-The wrapper layer (post-epic 4312fbd4) sees every tool call the underlying agent makes — that is the natural intercept point for filesystem isolation. This ticket adds a worktree-isolation enforcement: workers cannot make Edit/Write/Bash calls with absolute paths outside their assigned ticket worktree.
+Workers spawn inside a dedicated git worktree (`APM_TICKET_WORKTREE`) and are
+expected to confine all filesystem writes to that tree. Two gaps make this
+expectation unenforceable today:
 
-**Why this is needed even with the existing permission system:**
-- Default-spawn workers get partial protection from Claude Code's permission allowlist — calls with paths not matching project allowlist patterns get denied.
-- `-P` (`--dangerously-skip-permissions`) workers bypass the allowlist entirely. Today such a worker can write anywhere on the filesystem.
-- The permission system catches paths it doesn't recognise; explicit project allowlist entries (e.g. for `apm spec` paths) accidentally cover legitimate ticket-worktree paths but also extend to main-worktree paths with the same prefix.
+1. **`-P` workers have no write boundary.** Spawning with
+   `--dangerously-skip-permissions` bypasses Claude Code's permission allowlist
+   entirely. Such a worker can `Write`, `Edit`, or `Bash`-redirect to any path
+   on the filesystem — including the main worktree, other ticket worktrees, or
+   paths outside the repo.
 
-**Should land after the wrapper epic (4312fbd4) — the wrapper-layer interception is the implementation surface.**
+2. **Default-permission workers have accidental coverage leaks.** Explicit
+   allowlist entries added for legitimate APM paths (e.g. `apm spec` temp
+   files, `.apm/` directories) share a prefix with the actual repo root, which
+   inadvertently permits writes to the main worktree as well.
 
-**Scope:**
-- In each shipped wrapper (claude built-in initially), parse the underlying agent's tool-call stream. For `Edit`, `Write`, and `Bash` invocations that reference filesystem paths:
-  - Resolve the path to absolute, canonicalised form.
-  - If it falls outside `APM_TICKET_WORKTREE`, intercept and reject before forwarding to the agent's tool dispatcher. The agent receives a tool-result error: "path outside ticket worktree; isolation enforced by APM wrapper. APM_TICKET_WORKTREE = <path>".
-  - If it falls inside, allow.
-- Allow-list of legitimate exceptions (paths the wrapper still permits writes/reads to):
-  - `APM_BIN` itself (read for shellouts, never written).
-  - The temp files APM provides via `APM_SYSTEM_PROMPT_FILE` and `APM_USER_MESSAGE_FILE`.
-  - System paths the agent may legitimately need to read (e.g. `/etc/resolv.conf`, `~/.gitconfig`) — read-only, configurable.
-- Custom wrappers opt in via a manifest field: `enforce_worktree_isolation = true` (default off for backward compat; flag in spec phase whether to flip the default).
-- Bash calls are trickier — paths are inside the command string. Heuristic: parse the command for absolute paths and check those. False positives are fine (worse case, agent retries with a relative path); false negatives are the failure mode to avoid.
+The wrapper epic (4312fbd4) introduces an interception layer that sees every
+tool-call event before it is dispatched. That is the correct surface for
+enforcement: check the target path before the tool executes, and inject a
+synthetic `tool_result` error if the path violates policy.
 
-**Out of scope:**
-- Process-level filesystem sandboxing (bwrap, sandbox-exec, containers). Heavier; only justified if this tool-level filter proves insufficient.
-- Network egress filtering. The agent talks to the Anthropic API; that traffic is separate.
-- Read-only filesystem access protections beyond the explicit allow-list. Reads outside the worktree are mostly information-only; the more important class is writes.
-
-**Acceptance pointers:**
-- Integration test: a wrapper running an agent that issues an Edit against `/Users/.../repos/apm/.apm/config.toml` (the main worktree) → call rejected, agent receives error, ticket worktree unmodified, main worktree unmodified.
-- Integration test: the same Edit against a path inside `APM_TICKET_WORKTREE` → allowed.
-- Integration test: a Bash call `cat /etc/resolv.conf` → allowed (in default read-allowlist).
-- Integration test: a Bash call `echo foo > /tmp/leak` with `/tmp/*` not in allowlist → rejected.
-- Per-wrapper opt-in respected: a custom wrapper with `enforce_worktree_isolation = false` does not intercept (backward compat).
+This ticket wires a `PathGuard` into that interception hook for the
+`claude` built-in wrapper, adds a per-manifest opt-in field for custom
+wrappers, and backs the allow-list with a project-level config section.
 
 ### Acceptance criteria
 
