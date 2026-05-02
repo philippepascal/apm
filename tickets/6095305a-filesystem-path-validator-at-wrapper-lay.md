@@ -72,7 +72,179 @@ wrappers, and backs the allow-list with a project-level config section.
 
 ### Approach
 
-How the implementation will work.
+**Prerequisite**: The wrapper epic (4312fbd4) must be merged first; it provides
+the interception hook that this ticket plugs into. The hook is a callback
+registered in `WrapperContext` (or equivalent) that the canonical parser calls
+for each `tool_use` event before dispatching execution. The callback receives
+the parsed event and returns either `Ok(())` (allow) or `Err(String)` (inject
+a synthetic `tool_result` error with that message back to the agent).
+
+---
+
+### 1. `PathGuard` — new module `apm-core/src/wrapper/path_guard.rs`
+
+```rust
+pub struct PathGuard {
+    worktree: PathBuf,              // canonicalised APM_TICKET_WORKTREE
+    read_allow: Vec<PathBuf>,       // paths allowed for read-only Bash cmds
+    write_protected: Vec<PathBuf>,  // APM_BIN, APM_SYSTEM_PROMPT_FILE, APM_USER_MESSAGE_FILE
+}
+```
+
+Key functions:
+
+- `PathGuard::new(ctx: &WrapperContext, cfg: &IsolationConfig) -> Self`
+  Canonicalises `ctx.worktree_path` (resolving symlinks). Builds `read_allow`
+  from `cfg.read_allow` expanded with `~`. Populates `write_protected` from
+  `ctx.system_prompt_file`, `ctx.user_message_file`, and
+  `std::env::current_exe()` (APM_BIN).
+
+- `PathGuard::check_write(&self, path: &Path) -> Result<(), String>`
+  1. Resolve the path: call `canonicalize_lenient(path)` (see below) to handle
+     non-existent targets.
+  2. If the resolved path starts with `self.worktree` → `Ok(())`.
+  3. If it matches any entry in `self.write_protected` → `Err(rejection_msg)`.
+  4. Otherwise → `Err(rejection_msg)`.
+
+- `PathGuard::check_bash(&self, cmd: &str) -> Result<(), String>`
+  Extract candidate absolute paths from the command string using the regex
+  `/(?:^|[\s=<>|;&`'"])(\~?\/[^\s"';<>|&`]+)/` (find tokens starting with `/`
+  or `~/`). For each candidate:
+  - Expand `~` to the user's home directory.
+  - Check if the token appears to be a write target: present in a redirect
+    (`>`, `>>`, `tee`) or in `rm`, `mv`, `cp`, `truncate`, `echo …>`, `cat …>`.
+  - If write target: call `check_write(candidate_path)`.
+  - If read-only: check against `self.read_allow`; if the resolved path is under
+    `self.worktree` or in `read_allow` → allow; else → allow (reads are not
+    blocked by this policy).
+  Return the first write rejection encountered, or `Ok(())`.
+
+- `canonicalize_lenient(path: &Path) -> PathBuf`
+  Walk path components and resolve each symlink that exists; for components that
+  don't exist yet (new file writes), resolve `..` lexically without syscalls.
+  This avoids TOCTOU between `canonicalize()` failing on absent paths and the
+  tool creating them.
+
+**Rejection message template**:
+```
+path outside ticket worktree; isolation enforced by APM wrapper.
+  Requested: {requested_path}
+  APM_TICKET_WORKTREE = {worktree}
+```
+
+---
+
+### 2. `IsolationConfig` — extend `apm-core/src/config.rs`
+
+Add a new optional table to `ApmConfig`:
+
+```toml
+# .apm/config.toml
+[isolation]
+read_allow = [
+  "/etc/resolv.conf",
+  "~/.gitconfig",
+  "~/.ssh/config",
+  "/etc/ssl/certs/**",
+]
+```
+
+```rust
+#[derive(Deserialize, Default)]
+pub struct IsolationConfig {
+    #[serde(default)]
+    pub read_allow: Vec<String>,   // glob patterns; ~ is expanded
+}
+```
+
+Default (when `[isolation]` is absent): `read_allow` = `["/etc/resolv.conf", "~/.gitconfig"]`.
+
+---
+
+### 3. Manifest field — `apm-core/src/wrapper/custom.rs`
+
+Add to `Manifest`:
+
+```rust
+#[serde(default)]
+pub enforce_worktree_isolation: bool,  // default false
+```
+
+Layer 1 (`validate_agents`): no change needed — unknown keys already emit a
+warning; the new known key will simply be parsed.
+
+Layer 2 (spawn time): in `CustomWrapper::spawn()`, after parsing the manifest,
+if `manifest.enforce_worktree_isolation` is true, register `PathGuard` with the
+interception hook from the wrapper epic.
+
+---
+
+### 4. Built-in claude wrapper — `apm-core/src/wrapper/builtin/claude.rs`
+
+In `spawn_local()` (and `spawn_container()` if applicable):
+
+- Check `ctx.skip_permissions` (the `-P` flag). When `true`, enforcement is
+  **mandatory** regardless of any manifest field — this is the primary threat
+  model.
+- When `ctx.skip_permissions` is false, enforcement is opt-in (manifest field
+  controls it; default false).
+- In both cases, construct `PathGuard::new(&ctx, &cfg)` and register it with
+  the epic's interception hook before spawning the claude process.
+
+Concretely, the hook registration likely looks like (exact API TBD per epic):
+
+```rust
+let guard = PathGuard::new(&ctx, &isolation_cfg);
+let hook = move |event: &ToolUseEvent| -> Result<(), String> {
+    match event.name.as_str() {
+        "Edit" => {
+            let path = event.input["file_path"].as_str()?;
+            guard.check_write(Path::new(path))
+        }
+        "Write" => {
+            let path = event.input["file_path"].as_str()?;
+            guard.check_write(Path::new(path))
+        }
+        "Bash" => {
+            let cmd = event.input["command"].as_str()?;
+            guard.check_bash(cmd)
+        }
+        _ => Ok(()),
+    }
+};
+ctx_builder.set_tool_intercept(hook);  // or equivalent epic API
+```
+
+---
+
+### 5. Integration tests — `apm-core/tests/path_guard_integration.rs`
+
+One test per acceptance criterion that requires a subprocess. Pattern mirrors
+`custom_wrapper_integration.rs`:
+
+- Spawn a worker using the mock-happy or debug wrapper modified to emit
+  specific `tool_use` events.
+- Assert rejection or allowance based on the path.
+- For the unmodified-file assertions, write a sentinel file in the main worktree
+  before the test and assert it is unchanged after.
+
+Unit tests in `path_guard.rs` cover:
+- `check_write` with paths inside/outside the worktree
+- `check_write` with symlink traversal
+- `check_bash` with write redirects, read-only commands, mixed commands
+- `canonicalize_lenient` with `..` escapes and non-existent paths
+
+---
+
+### Order of steps
+
+1. Merge wrapper epic (4312fbd4) — provides `ToolUseEvent` type and
+   `set_tool_intercept` hook.
+2. Add `IsolationConfig` to `config.rs` and parse it in `ApmConfig::load()`.
+3. Implement `path_guard.rs` with unit tests passing.
+4. Add `enforce_worktree_isolation` to `Manifest`; wire into `CustomWrapper::spawn()`.
+5. Wire into `ClaudeWrapper::spawn_local()` (mandatory for `-P`, opt-in otherwise).
+6. Write integration tests; confirm all acceptance criteria pass.
 
 ### Open questions
 
