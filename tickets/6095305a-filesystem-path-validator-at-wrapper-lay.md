@@ -47,25 +47,25 @@ mechanism is fully self-contained.
 
 ### Acceptance criteria
 
-- [ ] `apm start` with `enforce_worktree_isolation = true` spawns the worker with path enforcement active; a worker that issues `Edit` against a path in the main worktree receives a `tool_result` error whose message contains "path outside ticket worktree"
-- [ ] The rejection `tool_result` message includes the value of `APM_TICKET_WORKTREE` so the agent can self-correct
-- [ ] The main-worktree file targeted by the rejected `Edit` call is unmodified after the rejection
-- [ ] A worker issues `Edit` against a path inside `APM_TICKET_WORKTREE`; the call succeeds and the file is modified
-- [ ] A worker issues `Write` against a path outside `APM_TICKET_WORKTREE`; the call is rejected with the same error format
-- [ ] A worker issues `Bash` with command `echo foo > /path/outside/worktree`; the command is rejected before execution; the target file is unmodified
-- [ ] A worker issues `Bash` with command `cat /etc/resolv.conf`; the call is allowed (default read-allow-list entry)
-- [ ] A worker issues `Bash` with command `cat ~/.gitconfig`; the call is allowed (default read-allow-list entry)
-- [ ] A worker issues `Bash` whose only absolute paths are inside `APM_TICKET_WORKTREE`; the call is allowed
-- [ ] A custom wrapper with `enforce_worktree_isolation = false` in its `manifest.toml` runs without path interception; the worker can write outside `APM_TICKET_WORKTREE` unobstructed
-- [ ] A custom wrapper whose `manifest.toml` omits `enforce_worktree_isolation` behaves identically to `false` (opt-in, backward-compatible default)
-- [ ] Path resolution canonicalises `..` components before comparison; a path like `<worktree>/../../../etc/passwd` is rejected
-- [ ] Path resolution follows symlinks before comparison; a symlink inside `APM_TICKET_WORKTREE` that resolves outside it is rejected
-- [ ] A `Write` call targeting `APM_BIN` is rejected even when `APM_BIN` has no path relationship to the worktree
-- [ ] A `Write` call targeting `APM_SYSTEM_PROMPT_FILE` or `APM_USER_MESSAGE_FILE` is rejected (those paths are read-only exceptions, not writable)
-- [ ] The read-allow-list is configurable in `.apm/config.toml` under `[isolation] read_allow`; entries added there permit the corresponding `Bash cat` calls through enforcement
-- [ ] A worker spawned with `-P` (`--dangerously-skip-permissions`) and `enforce_worktree_isolation = true` that issues `Edit` against the main worktree receives the same `tool_result` error as a non-`-P` worker; the `PreToolUse` hook fires regardless of the skip-permissions flag
-- [ ] When a write target path does not yet exist, `PathGuard` canonicalises all existing ancestor components by following symlinks, then appends the non-existent filename lexically; a path `<worktree>/subdir/../../etc/passwd` where `<worktree>/subdir` exists as a real directory is rejected
-- [ ] A `Write` call targeting a path that canonicalises to `APM_BIN` is rejected even when `APM_BIN` happens to reside inside `APM_TICKET_WORKTREE` (e.g. a local Cargo build at `target/debug/apm`)
+- [x] `apm start` with `enforce_worktree_isolation = true` spawns the worker with path enforcement active; a worker that issues `Edit` against a path in the main worktree receives a `tool_result` error whose message contains "path outside ticket worktree"
+- [x] The rejection `tool_result` message includes the value of `APM_TICKET_WORKTREE` so the agent can self-correct
+- [x] The main-worktree file targeted by the rejected `Edit` call is unmodified after the rejection
+- [x] A worker issues `Edit` against a path inside `APM_TICKET_WORKTREE`; the call succeeds and the file is modified
+- [x] A worker issues `Write` against a path outside `APM_TICKET_WORKTREE`; the call is rejected with the same error format
+- [x] A worker issues `Bash` with command `echo foo > /path/outside/worktree`; the command is rejected before execution; the target file is unmodified
+- [x] A worker issues `Bash` with command `cat /etc/resolv.conf`; the call is allowed (default read-allow-list entry)
+- [x] A worker issues `Bash` with command `cat ~/.gitconfig`; the call is allowed (default read-allow-list entry)
+- [x] A worker issues `Bash` whose only absolute paths are inside `APM_TICKET_WORKTREE`; the call is allowed
+- [x] A custom wrapper with `enforce_worktree_isolation = false` in its `manifest.toml` runs without path interception; the worker can write outside `APM_TICKET_WORKTREE` unobstructed
+- [x] A custom wrapper whose `manifest.toml` omits `enforce_worktree_isolation` behaves identically to `false` (opt-in, backward-compatible default)
+- [x] Path resolution canonicalises `..` components before comparison; a path like `<worktree>/../../../etc/passwd` is rejected
+- [x] Path resolution follows symlinks before comparison; a symlink inside `APM_TICKET_WORKTREE` that resolves outside it is rejected
+- [x] A `Write` call targeting `APM_BIN` is rejected even when `APM_BIN` has no path relationship to the worktree
+- [x] A `Write` call targeting `APM_SYSTEM_PROMPT_FILE` or `APM_USER_MESSAGE_FILE` is rejected (those paths are read-only exceptions, not writable)
+- [x] The read-allow-list is configurable in `.apm/config.toml` under `[isolation] read_allow`; entries added there permit the corresponding `Bash cat` calls through enforcement
+- [x] A worker spawned with `-P` (`--dangerously-skip-permissions`) and `enforce_worktree_isolation = true` that issues `Edit` against the main worktree receives the same `tool_result` error as a non-`-P` worker; the `PreToolUse` hook fires regardless of the skip-permissions flag
+- [x] When a write target path does not yet exist, `PathGuard` canonicalises all existing ancestor components by following symlinks, then appends the non-existent filename lexically; a path `<worktree>/subdir/../../etc/passwd` where `<worktree>/subdir` exists as a real directory is rejected
+- [x] A `Write` call targeting a path that canonicalises to `APM_BIN` is rejected even when `APM_BIN` happens to reside inside `APM_TICKET_WORKTREE` (e.g. a local Cargo build at `target/debug/apm`)
 
 ### Out of scope
 
