@@ -1,7 +1,7 @@
 +++
 id = "a168ad77"
 title = "Add .apm/style.md toggle file; wire into main agent and spec-writer"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a168ad77-add-apm-style-md-toggle-file-wire-into-m"
 created_at = "2026-05-01T19:39:37.765619Z"
-updated_at = "2026-05-02T03:50:04.410606Z"
+updated_at = "2026-05-02T03:50:10.416301Z"
 +++
 
 ## Spec
@@ -136,3 +136,4 @@ Run `cargo test --workspace` to confirm both the new test and `default_and_proje
 | 2026-05-01T19:39Z | — | new | philippepascal |
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
 | 2026-05-02T03:46Z | groomed | in_design | philippepascal |
+| 2026-05-02T03:50Z | in_design | specd | claude-0502-0346-e438 |
