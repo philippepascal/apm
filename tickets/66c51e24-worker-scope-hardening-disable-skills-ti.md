@@ -67,7 +67,8 @@ custom wrappers that may not pass `--disable-slash-commands`.
 
 - Filesystem path validator at the tool-call layer (separate ticket — defense-in-depth below the system prompt)
 - Pre-merge leak detection (separate ticket)
-- Permission-denial diagnostics surfacing to the supervisor (separate ticket)
+- Permission-denial diagnostics surfacing to the supervisor (ticket f06272f1 — the structural backstop for the soft "blocked + diagnostic" instruction in the Scope limits sections)
+- The "blocked + diagnostic" instruction is soft enforcement only — a worker that ignores system prompt text could bypass it; ticket f06272f1 is where structural enforcement lands
 - Config-driven per-profile `disable_skills` opt-out — the flag is always on for the built-in `ClaudeWrapper`; projects that genuinely need skills can use a custom wrapper
 - Manifest `disable_skills` field for custom wrappers — future extension once there is a known use case
 - Non-claude built-in wrappers (`mock-happy`, `mock-sad`, `mock-random`, `debug`) — they do not invoke the claude CLI and are unaffected
