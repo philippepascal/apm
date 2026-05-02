@@ -1,7 +1,7 @@
 +++
 id = "f06272f1"
 title = "Worker permission-denial diagnostics: surface what was denied and classify (especially apm commands)"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 5
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f06272f1-worker-permission-denial-diagnostics-sur"
 created_at = "2026-05-01T02:31:05.749604Z"
-updated_at = "2026-05-02T07:20:24.098754Z"
+updated_at = "2026-05-02T07:56:12.999113Z"
 +++
 
 ## Spec
@@ -323,3 +323,4 @@ The three integration-test acceptance criteria are satisfied by these unit tests
 | 2026-05-02T03:30Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:39Z | in_design | specd | claude-0502-0330-3b10 |
 | 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
+| 2026-05-02T07:56Z | ammend | in_design | philippepascal |
