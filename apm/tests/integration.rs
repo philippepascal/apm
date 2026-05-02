@@ -7416,3 +7416,199 @@ fn help_commands_shows_defaults() {
     let count = stdout.matches("(default: 30)").count();
     assert_eq!(count, 1, "default annotation appeared {} times (expected 1)", count);
 }
+
+// --- pre-merge leak detection ---
+
+/// Local-only repo with the `merge` completion strategy for `in_progress →
+/// implemented`.  "implemented" is intentionally NOT terminal so that the
+/// completion strategy is actually loaded from the transition config (the
+/// `target_is_terminal` guard in state.rs skips the completion path when the
+/// target state is terminal).
+fn setup_merge_local() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["init", "-q", "-b", "main"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    std::fs::write(
+        p.join("apm.toml"),
+        r#"[project]
+name = "test"
+default_branch = "main"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#,
+    )
+    .unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    dir
+}
+
+/// Write a minimal in_progress ticket file directly on the given branch and
+/// return to `main`.  The ticket has all AC boxes checked so the AC guard
+/// passes and only the leak check can block the transition.
+fn write_leak_test_ticket(dir: &std::path::Path, id: &str, branch: &str) {
+    let rel = format!("tickets/{}.md", branch.strip_prefix("ticket/").unwrap_or(branch));
+    let content = format!(
+        "+++\nid = \"{id}\"\ntitle = \"Leak test\"\nstate = \"in_progress\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+    let exists = std::process::Command::new("git")
+        .args(["rev-parse", "--verify", branch])
+        .current_dir(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !exists {
+        git(dir, &["checkout", "-b", branch]);
+    } else {
+        git(dir, &["checkout", branch]);
+    }
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&rel), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &rel]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {id}")]);
+    git(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn state_implemented_refuses_when_main_dirty_overlap() {
+    let dir = setup_merge_local();
+    let p = dir.path();
+
+    // Commit src/foo.rs on main.
+    std::fs::create_dir_all(p.join("src")).unwrap();
+    std::fs::write(p.join("src/foo.rs"), "original").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/foo.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add foo"]);
+
+    // Create ticket branch that modifies src/foo.rs.
+    let id = "ab000001";
+    let branch = "ticket/ab000001-leak-overlap";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::write(p.join("src/foo.rs"), "ticket change").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/foo.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: change foo"]);
+    git(p, &["checkout", "main"]);
+
+    // Write the in_progress ticket file on the ticket branch.
+    write_leak_test_ticket(p, id, branch);
+
+    // Simulate a leaked edit: modify src/foo.rs on main without committing.
+    std::fs::write(p.join("src/foo.rs"), "leaked edit").unwrap();
+
+    let result = apm_core::state::transition(p, id, "implemented".into(), true, false);
+    assert!(result.is_err(), "should refuse with leak diagnostic; got Ok");
+    let err_msg = result.err().unwrap().to_string();
+    assert!(err_msg.contains("src/foo.rs"), "error should name leaked file: {err_msg}");
+    assert!(err_msg.contains("ab000001"), "error should include ticket id: {err_msg}");
+
+    // Ticket state on the branch must still be in_progress — no transition committed.
+    let ticket_rel = format!("tickets/{}.md", branch.strip_prefix("ticket/").unwrap());
+    let content = branch_content(p, branch, &ticket_rel);
+    assert!(content.contains("state = \"in_progress\""), "ticket state must remain in_progress: {content}");
+}
+
+#[test]
+fn state_implemented_proceeds_when_main_clean() {
+    let dir = setup_merge_local();
+    let p = dir.path();
+
+    // Commit src/foo.rs on main.
+    std::fs::create_dir_all(p.join("src")).unwrap();
+    std::fs::write(p.join("src/foo.rs"), "original").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/foo.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add foo"]);
+
+    // Create ticket branch that modifies src/foo.rs.
+    let id = "ab000002";
+    let branch = "ticket/ab000002-clean-main";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::write(p.join("src/foo.rs"), "ticket change").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/foo.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: change foo"]);
+    git(p, &["checkout", "main"]);
+
+    write_leak_test_ticket(p, id, branch);
+
+    // Main is clean — no leaked edit.
+    let result = apm_core::state::transition(p, id, "implemented".into(), true, false);
+    assert!(result.is_ok(), "clean main should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+}
+
+#[test]
+fn state_implemented_proceeds_when_dirty_no_overlap() {
+    let dir = setup_merge_local();
+    let p = dir.path();
+
+    // Commit both src/foo.rs and src/bar.rs on main.
+    std::fs::create_dir_all(p.join("src")).unwrap();
+    std::fs::write(p.join("src/foo.rs"), "original").unwrap();
+    std::fs::write(p.join("src/bar.rs"), "bar").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/foo.rs", "src/bar.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add foo and bar"]);
+
+    // Ticket branch modifies only src/foo.rs.
+    let id = "ab000003";
+    let branch = "ticket/ab000003-no-overlap";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::write(p.join("src/foo.rs"), "ticket change").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/foo.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: change foo"]);
+    git(p, &["checkout", "main"]);
+
+    write_leak_test_ticket(p, id, branch);
+
+    // Main has src/bar.rs dirty — no overlap with ticket branch.
+    std::fs::write(p.join("src/bar.rs"), "dirty bar").unwrap();
+
+    let result = apm_core::state::transition(p, id, "implemented".into(), true, false);
+    assert!(result.is_ok(), "no overlap should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
+}
+
+#[test]
+fn state_implemented_refuses_when_main_has_untracked_overlap() {
+    let dir = setup_merge_local();
+    let p = dir.path();
+
+    // Initial commit so there is at least one file on main.
+    std::fs::write(p.join("existing.rs"), "base").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "existing.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "base"]);
+
+    // Ticket branch adds src/new.rs as a brand-new file.
+    let id = "ab000004";
+    let branch = "ticket/ab000004-untracked-overlap";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::create_dir_all(p.join("src")).unwrap();
+    std::fs::write(p.join("src/new.rs"), "new file").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "src/new.rs"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: add new file"]);
+    git(p, &["checkout", "main"]);
+
+    write_leak_test_ticket(p, id, branch);
+
+    // Leak: src/new.rs dropped untracked on main (worker wrote it to the wrong worktree).
+    std::fs::create_dir_all(p.join("src")).unwrap();
+    std::fs::write(p.join("src/new.rs"), "leaked untracked").unwrap();
+
+    let result = apm_core::state::transition(p, id, "implemented".into(), true, false);
+    assert!(result.is_err(), "untracked overlap should be detected: got Ok");
+    let err_msg = result.err().unwrap().to_string();
+    assert!(err_msg.contains("src/new.rs"), "error should name the leaked file: {err_msg}");
+}

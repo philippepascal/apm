@@ -81,6 +81,13 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         (CompletionStrategy::None, None)
     };
 
+    let branch = t
+        .frontmatter
+        .branch
+        .clone()
+        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
+        .unwrap_or_else(|| format!("ticket/{id}"));
+
     match new_state.as_str() {
         "specd" => {
             if let Ok(doc) = t.document() {
@@ -106,6 +113,36 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
                     );
                 }
             }
+            // Pre-merge leak detection: refuse if the target worktree has uncommitted
+            // overlap with files this ticket modified.
+            let should_check = match &completion {
+                CompletionStrategy::Merge => true,
+                CompletionStrategy::PrOrEpicMerge => t.frontmatter.target_branch.is_some(),
+                _ => false,
+            };
+            if should_check {
+                let merge_target = t.frontmatter.target_branch.as_deref()
+                    .unwrap_or(config.project.default_branch.as_str());
+                let leaked = git::check_leaked_files(root, &branch, merge_target)?;
+                if !leaked.is_empty() {
+                    let file_list = leaked
+                        .iter()
+                        .map(|f| format!("  {f}"))
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    let log_hint = crate::worktree::find_worktree_for_branch(root, &branch)
+                        .map(|p| p.join(".apm-worker.log").to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "<ticket-worktree>/.apm-worker.log".to_string());
+                    bail!(
+                        "cannot complete {new_state}: the target worktree has uncommitted changes \
+                         to files this ticket also modified:\n{file_list}\n\
+                         This usually means a worker leaked edits outside its worktree.\n\
+                         Inspect the worker's transcript: {log_hint}\n\
+                         Then either commit/restore the leaked files and re-run \
+                         `apm state {id} implemented`, or run `apm verify` to investigate."
+                    );
+                }
+            }
         }
         _ => {}
     }
@@ -125,12 +162,6 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
         config.tickets.dir.to_string_lossy(),
         t.path.file_name().unwrap().to_string_lossy()
     );
-    let branch = t
-        .frontmatter
-        .branch
-        .clone()
-        .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
-        .unwrap_or_else(|| format!("ticket/{id}"));
 
     git::commit_to_branch(
         root,
