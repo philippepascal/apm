@@ -27,11 +27,11 @@ Crucially, `sync.aggressive` already defaults to `true` in production: `SyncConf
 
 ### Acceptance criteria
 
-- [ ] `setup_aggressive()` no longer hand-writes `apm.toml`, calls `git init` directly, or configures `git user.email` / `git user.name`
-- [ ] `setup_aggressive()` delegates repo creation entirely to `init_repo()`
-- [ ] All 6 tests that call `setup_aggressive()` pass without modification to the test bodies
-- [ ] No `// BYPASS:` annotation is required (the production default for `sync.aggressive` is already `true`)
-- [ ] `cargo test --test integration -- aggressive` passes with the migrated helper
+- [x] `setup_aggressive()` no longer hand-writes `apm.toml`, calls `git init` directly, or configures `git user.email` / `git user.name`
+- [x] `setup_aggressive()` delegates repo creation entirely to `init_repo()`
+- [x] All 6 tests that call `setup_aggressive()` pass without modification to the test bodies
+- [x] No `// BYPASS:` annotation is required (the production default for `sync.aggressive` is already `true`)
+- [x] `cargo test --test integration -- aggressive` passes with the migrated helper
 
 ### Out of scope
 
