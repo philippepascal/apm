@@ -31,6 +31,34 @@ fn make_mock_worker(dir: &std::path::Path) -> std::path::PathBuf {
     bin
 }
 
+fn init_repo() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    git(dir.path(), &["init", "-q", "-b", "main"]);
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--no-claude", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "apm init failed: {}", String::from_utf8_lossy(&out.stderr));
+    git(dir.path(), &["add", "."]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    dir
+}
+
+#[test]
+fn test_init_repo_helper() {
+    let dir = init_repo();
+    let p = dir.path();
+    assert!(p.join(".apm/config.toml").exists());
+    assert!(p.join(".apm/workflow.toml").exists());
+    assert!(p.join("tickets").is_dir());
+    let gitignore = std::fs::read_to_string(p.join(".gitignore")).unwrap();
+    assert!(gitignore.contains(".apm/local.toml"), ".gitignore missing .apm/local.toml entry");
+    assert!(apm_core::config::Config::load(p).is_ok());
+    git(p, &["rev-parse", "HEAD"]);
+}
+
 fn setup() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
@@ -132,106 +160,26 @@ required = false
 /// `in_progress → implemented` so that depends_on is allowed when tickets
 /// share the same target_branch (or both default to main).
 fn setup_merge() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
+    let dir = init_repo();
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    // BYPASS: no apm command can change a workflow completion strategy post-init.
+    // Change pr_or_epic_merge → merge so that depends_on is allowed for tickets
+    // that share the same target_branch without belonging to an epic.
+    let wf_path = dir.path().join(".apm/workflow.toml");
+    let wf = std::fs::read_to_string(&wf_path).unwrap();
+    assert!(
+        wf.contains("completion = \"pr_or_epic_merge\""),
+        "expected pr_or_epic_merge in workflow.toml — default template may have changed"
+    );
+    let patched = wf.replace(
+        "completion = \"pr_or_epic_merge\"",
+        "completion = \"merge\"",
+    );
+    std::fs::write(&wf_path, patched).unwrap();
 
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["commit", "-m", "set merge completion"]);
 
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states.transitions]]
-to         = "implemented"
-completion = "merge"
-
-[[workflow.states]]
-id       = "implemented"
-label    = "Implemented"
-terminal = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-
-[[ticket.sections]]
-name     = "Problem"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Acceptance criteria"
-type     = "tasks"
-required = true
-
-[[ticket.sections]]
-name     = "Out of scope"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Approach"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Open questions"
-type     = "qa"
-required = false
-
-[[ticket.sections]]
-name     = "Amendment requests"
-type     = "tasks"
-required = false
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &[
-        "-c", "commit.gpgsign=false",
-        "commit", "-m", "init", "--allow-empty",
-    ]);
-
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
     dir
 }
 
@@ -908,46 +856,7 @@ fn config_default_branch_defaults_to_main_when_absent() {
 // --- sync bulk close ---
 
 fn setup_with_close_workflow() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id    = "new"
-label = "New"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#).unwrap();
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 fn write_ticket_to_branch(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str) {
@@ -1013,7 +922,7 @@ fn sync_no_close_when_nothing_to_close() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
     // No tickets at all
-    let log_before = branch_content(p, "main", "apm.toml"); // just to get a ref point
+    let log_before = branch_content(p, "main", ".apm/config.toml"); // just to get a ref point
     apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
     // main should have no new commits (same HEAD)
     let head = std::process::Command::new("git")
@@ -1582,62 +1491,7 @@ fn state_to_closed_bypasses_transition_rules() {
 
 /// Build a minimal apm.toml with sync.aggressive = true.
 fn setup_aggressive() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[sync]
-aggressive = true
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 /// Commands with aggressive=true but no remote must not abort — fetch/push
@@ -1723,68 +1577,22 @@ fn no_aggressive_flag_suppresses_fetch_on_set() {
 
 /// Setup that puts the worktrees dir inside the temp dir to avoid parallel-test collisions.
 fn setup_with_local_worktrees() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
     let mock_worker = make_mock_worker(p);
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    // BYPASS: no CLI command to set workers.command post-init; replace all worker
+    // command references (including profiles) with the mock binary for test isolation
+    let config_path = p.join(".apm/config.toml");
+    let config = std::fs::read_to_string(&config_path).unwrap();
+    let config = config.replace(
+        "command = \"claude\"",
+        &format!("command = \"{}\"", mock_worker.display()),
+    );
+    std::fs::write(&config_path, config).unwrap();
 
-    std::fs::write(
-        p.join("apm.toml"),
-        format!(
-            r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worktrees]
-dir = "worktrees"
-
-[workers]
-command = "{}"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "command:start"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-            mock_worker.display()
-        ),
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    git(p, &["add", ".apm/config.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add workers config"]);
     dir
 }
 
@@ -2070,7 +1878,7 @@ fn start_does_not_modify_owner_when_already_owned() {
 fn in_design_does_not_set_owner_when_unowned() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "alice");
     apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
@@ -2083,7 +1891,7 @@ fn in_design_does_not_set_owner_when_unowned() {
 fn in_design_does_not_overwrite_different_owner() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "alice");
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me", "alice");
 
     std::env::set_var("APM_AGENT_NAME", "bob");
     apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
@@ -2095,88 +1903,25 @@ fn in_design_does_not_overwrite_different_owner() {
 
 // ── system prompt dispatch ───────────────────────────────────────────────────
 
-/// A config with new/ammend/ready all startable, plus in_design/in_progress destinations.
+/// Sets up a repo using the real production workflow (via init_repo()) with a
+/// mock worker injected so that apm start --spawn exercises dispatch paths.
 fn setup_for_prompt_dispatch() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
     let mock_worker = make_mock_worker(p);
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    // BYPASS: no apm CLI command to set workers.command; inject directly into
+    // .apm/config.toml which apm init has already created at this location.
+    // Replace all occurrences of `command = "claude"` (covering [workers] and
+    // both [worker_profiles.*] sections) so every dispatch path uses the mock.
+    let config_path = p.join(".apm/config.toml");
+    let cfg = std::fs::read_to_string(&config_path).unwrap();
+    let patched = cfg.replace(
+        "command = \"claude\"\n",
+        &format!("command = \"{}\"\n", mock_worker.display()),
+    );
+    std::fs::write(&config_path, patched).unwrap();
 
-    std::fs::write(
-        p.join("apm.toml"),
-        format!(
-            r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worktrees]
-dir = "worktrees"
-
-[workers]
-command = "{}"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-
-[[workflow.states]]
-id    = "in_design"
-label = "In Design"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "command:start"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-            mock_worker.display()
-        ),
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    std::fs::create_dir_all(p.join(".apm")).unwrap();
     dir
 }
 
@@ -2185,7 +1930,7 @@ fn spawn_new_ticket_transitions_to_in_design() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
@@ -2228,7 +1973,7 @@ fn start_next_spawn_new_ticket_transitions_correctly() {
     let p = dir.path();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "test-agent");
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
@@ -2533,17 +2278,15 @@ fn new_section_unknown_name_is_error() {
 // --- --epic / --depends-on ---
 
 fn setup_with_epic() -> (tempfile::TempDir, String) {
-    let dir = setup();
+    let dir = init_repo();
     let p = dir.path();
-    // Create an epic branch: epic/<8-hex-id>-my-epic
     let epic_id = "ab12cd34";
     let epic_branch = format!("epic/{epic_id}-my-epic");
-    git(p, &["-c", "commit.gpgsign=false", "checkout", "-b", &epic_branch]);
-    // Add a commit on the epic branch so it has a distinct tip
-    std::fs::write(p.join("epic.txt"), "epic content").unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "epic.txt"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic commit"]);
-    // Return to main
+    // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
+    git(p, &["checkout", "-b", &epic_branch]);
+    std::fs::write(p.join("EPIC.md"), "# my-epic\n").unwrap();
+    git(p, &["add", "EPIC.md"]);
+    git(p, &["commit", "-m", &format!("epic({epic_id}): create my-epic")]);
     git(p, &["checkout", "main"]);
     (dir, epic_id.to_string())
 }
@@ -2847,45 +2590,39 @@ terminal = true
 
 // --- on_failure fix tests ---
 
-/// Helper: create a minimal APM project with `.apm/config.toml` + `.apm/workflow.toml`.
-/// The workflow uses `pr_or_epic_merge` (no provider required for validate).
 fn setup_on_failure_fix_project(
     on_failure: Option<&str>,
     declare_merge_failed: bool,
 ) -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
+    let wf_path = p.join(".apm/workflow.toml");
+    let mut content = std::fs::read_to_string(&wf_path).unwrap();
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    if on_failure.is_none() {
+        // BYPASS: no apm command removes on_failure from a workflow transition
+        content = content
+            .lines()
+            .filter(|l| !l.trim().starts_with("on_failure"))
+            .collect::<Vec<_>>()
+            .join("\n");
+    }
 
-    std::fs::create_dir_all(p.join(".apm")).unwrap();
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    if !declare_merge_failed {
+        // BYPASS: no apm command removes a workflow state
+        let segments: Vec<&str> = content.split("[[workflow.states]]").collect();
+        let filtered: Vec<&str> = segments
+            .iter()
+            .copied()
+            .filter(|seg| {
+                !seg.lines()
+                    .any(|l| l.trim().starts_with("id") && l.contains("merge_failed"))
+            })
+            .collect();
+        content = filtered.join("[[workflow.states]]");
+    }
 
-    std::fs::write(
-        p.join(".apm").join("config.toml"),
-        "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n",
-    )
-    .unwrap();
-
-    let on_failure_line = on_failure
-        .map(|v| format!("on_failure = \"{v}\"\n"))
-        .unwrap_or_default();
-
-    let merge_failed_block = if declare_merge_failed {
-        "\n[[workflow.states]]\nid         = \"merge_failed\"\nlabel      = \"Merge failed\"\nactionable = [\"supervisor\"]\n\n  [[workflow.states.transitions]]\n  to      = \"implemented\"\n  trigger = \"manual\"\n\n  [[workflow.states.transitions]]\n  to      = \"in_progress\"\n  trigger = \"manual\"\n"
-    } else {
-        ""
-    };
-
-    let workflow_toml = format!(
-        "[workflow]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n  [[workflow.states.transitions]]\n  to         = \"implemented\"\n  completion = \"pr_or_epic_merge\"\n  {on_failure_line}\n[[workflow.states]]\nid       = \"implemented\"\nlabel    = \"Implemented\"\nterminal = true\n{merge_failed_block}"
-    );
-    std::fs::write(p.join(".apm").join("workflow.toml"), &workflow_toml).unwrap();
-
-    git(p, &["add", ".apm/config.toml", ".apm/workflow.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::write(&wf_path, &content).unwrap();
     dir
 }
 
@@ -3576,71 +3313,15 @@ fn start_without_apm_agent_name_uses_fallback() {
 // ---------------------------------------------------------------------------
 
 fn setup_with_worktrees() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    // worktrees dir inside the tempdir to keep tests self-contained.
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worktrees]
-dir = "worktrees"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &[
-        "-c", "commit.gpgsign=false",
-        "commit", "-m", "init", "--allow-empty",
-    ]);
-
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    // BYPASS: production workflow has explicit new → groomed → ... transitions that
+    // block the workers tests' direct new → ready transition; override with a minimal
+    // workflow that has no transitions on "new" (any transition is then allowed)
+    std::fs::write(p.join(".apm/workflow.toml"), "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\nlabel = \"New\"\n\n[[workflow.states]]\nid         = \"ready\"\nlabel      = \"Ready\"\nactionable = [\"agent\"]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n[[workflow.states]]\nid       = \"closed\"\nlabel    = \"Closed\"\nterminal = true\n\n[workflow.prioritization]\npriority_weight = 10.0\neffort_weight   = -2.0\nrisk_weight     = -1.0\n").unwrap();
+    git(p, &["add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "simplify workflow for worktree tests"]);
     dir
 }
 
@@ -3745,24 +3426,12 @@ fn workers_kill_stale_pid_errors() {
 }
 
 fn setup_with_strict_transitions() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
+    let dir = init_repo();
+    // BYPASS: no apm command can replace the workflow post-init.
+    // The production default has no new → in_progress transition (new only goes to groomed
+    // or closed); this 5-state restricted workflow is intentionally minimal to isolate
+    // --force bypass behaviour without the full spec/review lifecycle.
+    std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
 
 [[workflow.states]]
 id    = "new"
@@ -3797,9 +3466,8 @@ id       = "closed"
 label    = "Closed"
 terminal = true
 "#).unwrap();
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "strict transitions workflow"]);
     dir
 }
 
@@ -3878,57 +3546,34 @@ fn state_force_does_not_skip_doc_validation() {
 
 // --- squash-merge detection ---
 
-/// Minimal apm.toml with implemented state for squash-merge tests.
-fn squash_merge_config() -> &'static str {
-    r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 1
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id    = "new"
-label = "New"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#
-}
-
-/// Set up a bare remote + local clone for squash-merge tests.
+/// Set up a bare remote + local clone initialised with real `apm init`.
 /// Returns (bare_dir, local_dir). Both TempDirs must be kept alive.
-fn setup_squash_remote() -> (TempDir, TempDir) {
+fn init_remote_repo() -> (TempDir, TempDir) {
     let bare = tempfile::tempdir().unwrap();
     let bp = bare.path();
     git(bp, &["init", "--bare", "-q"]);
 
     let local = tempfile::tempdir().unwrap();
     let p = local.path();
-    git(p, &["clone", &bp.to_string_lossy(), "."]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    git(p, &["clone", "-q", &bp.to_string_lossy(), "."]);
 
-    std::fs::write(p.join("apm.toml"), squash_merge_config()).unwrap();
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--no-claude", "--quiet"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "apm init failed: {}", String::from_utf8_lossy(&out.stderr));
+
+    git(p, &["add", "."]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
     git(p, &["push", "origin", "main"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
 
     (bare, local)
+}
+
+fn setup_squash_remote() -> (TempDir, TempDir) {
+    init_remote_repo()
 }
 
 /// Write an "implemented" ticket to a branch and return the branch name.
@@ -4154,43 +3799,7 @@ label = "In Progress"
 // ── depends_on scheduling ─────────────────────────────────────────────────────
 
 fn setup_with_satisfies_deps() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id             = "implemented"
-label          = "Implemented"
-satisfies_deps = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 fn commit_ticket_to_branch(dir: &std::path::Path, branch: &str, path: &str, content: &str) {
@@ -4309,50 +3918,12 @@ fn next_picks_low_priority_blocker_before_higher_raw_independent() {
 // --- epic list ---
 
 fn setup_epic_list() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[sync]
-aggressive = false
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id             = "implemented"
-label          = "Implemented"
-satisfies_deps = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 /// Create a bare local branch (simulates an epic branch).
 fn create_epic_branch(dir: &std::path::Path, branch: &str) {
+    // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
     git(dir, &["checkout", "-b", branch]);
     // Write a placeholder file so the branch has a commit.
     std::fs::write(dir.join("EPIC.md"), format!("# {branch}\n")).unwrap();
@@ -4429,46 +4000,7 @@ fn epic_list_shows_epics_with_derived_state_and_counts() {
 // --- epic show ---
 
 fn setup_epic_show() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[sync]
-aggressive = false
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id             = "implemented"
-label          = "Implemented"
-satisfies_deps = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 #[test]
@@ -4684,45 +4216,8 @@ fn work_dry_run_no_flag_shows_epic_ticket() {
 
 // --- pr_or_epic_merge completion strategy ---
 
-fn pr_or_epic_merge_config_toml() -> &'static str {
-    r#"[project]
-name = "test"
-default_branch = "main"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-  [[workflow.states.transitions]]
-  to         = "implemented"
-  trigger    = "manual"
-  completion = "pr_or_epic_merge"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-"#
-}
-
 fn setup_pr_or_epic_merge_remote() -> (TempDir, TempDir) {
-    let bare = tempfile::tempdir().unwrap();
-    let bp = bare.path();
-    git(bp, &["init", "--bare", "-q"]);
-
-    let local = tempfile::tempdir().unwrap();
-    let p = local.path();
-    git(p, &["clone", &bp.to_string_lossy(), "."]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), pr_or_epic_merge_config_toml()).unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
-    git(p, &["push", "origin", "main"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    (bare, local)
+    init_remote_repo()
 }
 
 fn write_in_progress_ticket(dir: &std::path::Path, id: &str, branch: &str, filename: &str, target_branch: Option<&str>) {
@@ -4857,11 +4352,12 @@ terminal = true
 }
 
 fn setup_with_server_url(url: &str) -> TempDir {
-    let dir = setup();
+    let dir = init_repo();
     let p = dir.path();
-    let server_block = format!("\n[server]\nurl = \"{url}\"\n");
-    let apm_toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    std::fs::write(p.join("apm.toml"), format!("{apm_toml}{server_block}")).unwrap();
+    // BYPASS: no apm command configures server.url — append directly to config
+    let config_path = p.join(".apm/config.toml");
+    let existing = std::fs::read_to_string(&config_path).unwrap();
+    std::fs::write(&config_path, format!("{existing}\n[server]\nurl = \"{url}\"\n")).unwrap();
     dir
 }
 
@@ -5104,16 +4600,7 @@ fn assign_force_skips_prompt_when_no_owner() {
 // --- archive ---
 
 fn setup_with_archive_dir() -> TempDir {
-    let dir = setup();
-    let p = dir.path();
-    // Append archive_dir to the [tickets] section in apm.toml.
-    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    let updated = toml.replace(
-        "[tickets]\ndir = \"tickets\"",
-        "[tickets]\ndir = \"tickets\"\narchive_dir = \"archive/tickets\"",
-    );
-    std::fs::write(p.join("apm.toml"), updated).unwrap();
-    dir
+    init_repo()
 }
 
 #[test]
@@ -5280,44 +4767,22 @@ fn archive_falls_back_to_ticket_branch_for_stale_main() {
 
 // --- merge completion strategy: push to origin after merge ---
 
-fn merge_strategy_config_toml() -> &'static str {
-    r#"[project]
-name = "test"
-default_branch = "main"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-  [[workflow.states.transitions]]
-  to         = "implemented"
-  trigger    = "manual"
-  completion = "merge"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-"#
-}
-
 fn setup_merge_strategy_remote() -> (TempDir, TempDir) {
-    let bare = tempfile::tempdir().unwrap();
-    let bp = bare.path();
-    git(bp, &["init", "--bare", "-q"]);
-
-    let local = tempfile::tempdir().unwrap();
+    let (bare, local) = init_remote_repo();
     let p = local.path();
-    git(p, &["clone", &bp.to_string_lossy(), "."]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), merge_strategy_config_toml()).unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    // BYPASS: no apm CLI command exists to override completion strategy on a
+    // specific transition; edit .apm/workflow.toml directly to change
+    // pr_or_epic_merge → merge on in_progress → implemented.
+    // on_failure = "merge_failed" is kept — completion = "merge" also requires it.
+    let wf_path = p.join(".apm/workflow.toml");
+    let wf = std::fs::read_to_string(&wf_path).unwrap();
+    let patched = wf.replace(r#"completion = "pr_or_epic_merge""#, r#"completion = "merge""#);
+    std::fs::write(&wf_path, &patched).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "override: use merge completion strategy"]);
     git(p, &["push", "origin", "main"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
     (bare, local)
 }
 
@@ -5714,7 +5179,7 @@ fn sync_bails_on_mid_merge_state() {
 /// (via setup()) plus "shared.txt".  Both TempDirs must stay alive for the
 /// duration of each test.
 fn setup_sync_repo() -> (TempDir, TempDir) {
-    // Bare repo acts as the network-free origin.
+    // BYPASS: no apm command creates a bare origin repo; bare-init is infrastructure only
     let origin = tempfile::tempdir().unwrap();
     std::process::Command::new("git")
         .args(["init", "--bare", "-q", "-b", "main"])
@@ -5722,8 +5187,7 @@ fn setup_sync_repo() -> (TempDir, TempDir) {
         .status()
         .unwrap();
 
-    // Local repo via the shared setup() helper (writes apm.toml + initial commit).
-    let local = setup();
+    let local = init_repo();
     let l = local.path();
 
     // A plain text file that tests can dirty without affecting Config::load.
@@ -5892,27 +5356,20 @@ fn sync_main_no_remote_skips() {
 /// Create a bare origin and a local clone; push one commit on the given branch to origin.
 /// Returns (origin_dir, local_dir, origin_sha).
 fn setup_branch_in_origin(branch: &str) -> (TempDir, TempDir, String) {
+    // BYPASS: no apm command creates a bare origin repo; bare-init is infrastructure only
     let origin = tempfile::tempdir().unwrap();
-    let local = tempfile::tempdir().unwrap();
-
-    // Init bare origin.
     std::process::Command::new("git")
         .args(["init", "--bare", "-q", "-b", "main"])
         .current_dir(origin.path())
         .status()
         .unwrap();
 
-    // Init local, add remote, push an initial main commit.
-    git(local.path(), &["init", "-q", "-b", "main"]);
-    git(local.path(), &["config", "user.email", "test@test.com"]);
-    git(local.path(), &["config", "user.name", "test"]);
+    // init_repo() runs real `apm init`, makes an initial commit, and returns the TempDir
+    let local = init_repo();
     git(local.path(), &["remote", "add", "origin", &origin.path().to_string_lossy()]);
-    std::fs::write(local.path().join("README"), "init").unwrap();
-    git(local.path(), &["add", "README"]);
-    git(local.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
     git(local.path(), &["push", "origin", "HEAD:main"]);
 
-    // Create the target branch on origin via a disposable clone.
+    // BYPASS: no apm command pushes a branch into a bare origin; disposable clone is the only option
     let tmp = tempfile::tempdir().unwrap();
     let t = tmp.path();
     std::process::Command::new("git")
@@ -6848,20 +6305,11 @@ fn move_rebase_conflict_fails_cleanly() {
 // --- merge_failed ---
 
 fn setup_with_merge_workflow() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
+    let dir = init_repo();
+    // BYPASS: no apm command can add a new → implemented transition with completion = "merge"
+    // post-init. The production default has no such path; a direct new → implemented route
+    // is required so tests can trigger merge-failure without the full spec/worktree lifecycle.
+    std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
 
 [[workflow.states]]
 id    = "new"
@@ -6903,13 +6351,9 @@ label = "In Progress"
 id       = "closed"
 label    = "Closed"
 terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+"#).unwrap();
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "merge workflow"]);
     dir
 }
 
