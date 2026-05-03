@@ -1,7 +1,7 @@
 +++
 id = "df5c0ddb"
 title = "UI: clicking a column with only 1 ticket doesn't select ticket"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/df5c0ddb-ui-clicking-a-column-with-only-1-ticket-"
 created_at = "2026-05-03T19:01:41.363530Z"
-updated_at = "2026-05-03T19:27:14.528623Z"
+updated_at = "2026-05-03T19:31:50.327166Z"
 +++
 
 ## Spec
@@ -120,3 +120,4 @@ No changes required in `useLayoutStore.ts` or any other file. `someSelected` and
 | 2026-05-03T19:04Z | groomed | in_design | philippepascal |
 | 2026-05-03T19:13Z | in_design | specd | claude-0503-1904-9e70 |
 | 2026-05-03T19:27Z | specd | ready | philippepascal |
+| 2026-05-03T19:31Z | ready | in_progress | philippepascal |
