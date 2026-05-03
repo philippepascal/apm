@@ -591,12 +591,14 @@ pub async fn create_ticket(
     let result = tokio::task::spawn_blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
         let author = apm_core::config::resolve_identity(&root);
+        let actor = apm_core::config::resolve_caller_name();
         let mut _warnings = Vec::new();
         apm_core::ticket::create(
             &root,
             &config,
             title,
             author,
+            actor,
             None,
             None,
             false,

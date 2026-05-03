@@ -1122,6 +1122,7 @@ label = "In Progress"
             &config,
             "test ticket".to_string(),
             "test".to_string(),
+            "test".to_string(),
             None,
             None,
             false,
@@ -1168,7 +1169,7 @@ label = "In Progress"
         let config = apm_core::config::Config::load(&p).unwrap();
         let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
-            &p, &config, "test ticket".to_string(), "test".to_string(),
+            &p, &config, "test ticket".to_string(), "test".to_string(), "test".to_string(),
             None, None, false, vec![], None, None, None, None, &mut _warnings,
         ).unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
@@ -1205,7 +1206,7 @@ label = "In Progress"
         let config = apm_core::config::Config::load(&p).unwrap();
         let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
-            &p, &config, "test ticket".to_string(), "test".to_string(),
+            &p, &config, "test ticket".to_string(), "test".to_string(), "test".to_string(),
             None, None, false, vec![], None, None, None, None, &mut _warnings,
         ).unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
@@ -1252,7 +1253,7 @@ label = "In Progress"
         let config = apm_core::config::Config::load(&p).unwrap();
         let mut _warnings = Vec::new();
         let ticket = apm_core::ticket::create(
-            &p, &config, "test ticket".to_string(), "test".to_string(),
+            &p, &config, "test ticket".to_string(), "test".to_string(), "test".to_string(),
             None, None, false, vec![], None, None, None, None, &mut _warnings,
         ).unwrap();
         let ticket_id = ticket.frontmatter.id.clone();
