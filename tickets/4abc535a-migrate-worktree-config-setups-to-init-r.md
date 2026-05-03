@@ -29,16 +29,16 @@ setup_with_local_worktrees() is called by 15 tests (start / work commands). setu
 
 ### Acceptance criteria
 
-- [ ] setup_with_worktrees() calls init_repo() instead of manually calling git init and writing apm.toml
-- [ ] setup_with_local_worktrees() calls init_repo() instead of manually calling git init and writing apm.toml
-- [ ] Neither helper writes apm.toml at the repo root; config lives at .apm/config.toml as produced by apm init
-- [ ] Neither helper performs its own git init or initial commit
-- [ ] setup_with_local_worktrees() adds [workers] command to .apm/config.toml via a direct file edit annotated with // BYPASS: no CLI command to set workers.command post-init
-- [ ] The workers config edit is committed to git before the helper returns
-- [ ] No [worktrees] dir override is written by either helper (the apm init default dir = worktrees already satisfies test isolation)
-- [ ] make_mock_worker() is still called and its path is used in the workers.command bypass write
-- [ ] All 15 callers of setup_with_local_worktrees() continue to pass without modification
-- [ ] All 3 callers of setup_with_worktrees() continue to pass without modification
+- [x] setup_with_worktrees() calls init_repo() instead of manually calling git init and writing apm.toml
+- [x] setup_with_local_worktrees() calls init_repo() instead of manually calling git init and writing apm.toml
+- [x] Neither helper writes apm.toml at the repo root; config lives at .apm/config.toml as produced by apm init
+- [x] Neither helper performs its own git init or initial commit
+- [x] setup_with_local_worktrees() adds [workers] command to .apm/config.toml via a direct file edit annotated with // BYPASS: no CLI command to set workers.command post-init
+- [x] The workers config edit is committed to git before the helper returns
+- [x] No [worktrees] dir override is written by either helper (the apm init default dir = worktrees already satisfies test isolation)
+- [x] make_mock_worker() is still called and its path is used in the workers.command bypass write
+- [x] All 15 callers of setup_with_local_worktrees() continue to pass without modification
+- [x] All 3 callers of setup_with_worktrees() continue to pass without modification
 
 ### Out of scope
 
