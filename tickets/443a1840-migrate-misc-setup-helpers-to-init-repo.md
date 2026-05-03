@@ -32,22 +32,22 @@ Each helper should be rewritten to call `init_repo()` and then apply only the on
 
 ### Acceptance criteria
 
-- [ ] `setup_with_satisfies_deps()` body is replaced with `init_repo()` only — no `git init`, no `std::fs::write`, no `apm.toml` reference remains
-- [ ] `next_skips_dep_blocked_returns_unblocked` passes
-- [ ] `next_returns_dep_blocked_after_dep_satisfies` passes
-- [ ] `next_picks_low_priority_blocker_before_higher_raw_independent` passes
-- [ ] `setup_with_archive_dir()` body is replaced with `init_repo()` only — no `apm.toml` read/write remains
-- [ ] All 6 tests calling `setup_with_archive_dir` pass
-- [ ] `setup_with_server_url(url)` calls `init_repo()` and appends the `[server]` block to `.apm/config.toml` (not `apm.toml`)
-- [ ] The `[server]` block injection in `setup_with_server_url` carries a `// BYPASS: no apm command configures server.url` comment
-- [ ] All 7 tests calling `setup_with_server_url` pass
-- [ ] `setup_on_failure_fix_project` calls `init_repo()` instead of hand-writing git init, config.toml, and workflow.toml
-- [ ] Each filesystem mutation in `setup_on_failure_fix_project` (stripping `on_failure` line, removing `merge_failed` block) carries a `// BYPASS:` comment explaining why no apm command can do it
-- [ ] `test_fix_adds_field_only` passes
-- [ ] `test_fix_adds_state_only` passes
-- [ ] `test_fix_adds_both_atomically` passes
-- [ ] `test_fix_is_idempotent` passes
-- [ ] No test function body is changed — only the four helper bodies are modified
+- [x] `setup_with_satisfies_deps()` body is replaced with `init_repo()` only — no `git init`, no `std::fs::write`, no `apm.toml` reference remains
+- [x] `next_skips_dep_blocked_returns_unblocked` passes
+- [x] `next_returns_dep_blocked_after_dep_satisfies` passes
+- [x] `next_picks_low_priority_blocker_before_higher_raw_independent` passes
+- [x] `setup_with_archive_dir()` body is replaced with `init_repo()` only — no `apm.toml` read/write remains
+- [x] All 6 tests calling `setup_with_archive_dir` pass
+- [x] `setup_with_server_url(url)` calls `init_repo()` and appends the `[server]` block to `.apm/config.toml` (not `apm.toml`)
+- [x] The `[server]` block injection in `setup_with_server_url` carries a `// BYPASS: no apm command configures server.url` comment
+- [x] All 7 tests calling `setup_with_server_url` pass
+- [x] `setup_on_failure_fix_project` calls `init_repo()` instead of hand-writing git init, config.toml, and workflow.toml
+- [x] Each filesystem mutation in `setup_on_failure_fix_project` (stripping `on_failure` line, removing `merge_failed` block) carries a `// BYPASS:` comment explaining why no apm command can do it
+- [x] `test_fix_adds_field_only` passes
+- [x] `test_fix_adds_state_only` passes
+- [x] `test_fix_adds_both_atomically` passes
+- [x] `test_fix_is_idempotent` passes
+- [x] No test function body is changed — only the four helper bodies are modified
 
 ### Out of scope
 
