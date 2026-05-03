@@ -1571,62 +1571,7 @@ fn state_to_closed_bypasses_transition_rules() {
 
 /// Build a minimal apm.toml with sync.aggressive = true.
 fn setup_aggressive() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[sync]
-aggressive = true
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 /// Commands with aggressive=true but no remote must not abort — fetch/push
