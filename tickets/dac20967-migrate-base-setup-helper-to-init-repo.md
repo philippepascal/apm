@@ -1,7 +1,7 @@
 +++
 id = "dac20967"
 title = "Migrate base setup() helper to init_repo()"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 6
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/dac20967-migrate-base-setup-helper-to-init-repo"
 created_at = "2026-05-01T20:26:43.905437Z"
-updated_at = "2026-05-03T21:36:55.210635Z"
+updated_at = "2026-05-03T22:03:51.106918Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -130,3 +130,4 @@ Transitions valid in both (no change needed for these):
 | 2026-05-02T03:22Z | in_design | specd | claude-0502-0317-5c38 |
 | 2026-05-03T20:16Z | specd | ready | philippepascal |
 | 2026-05-03T21:36Z | ready | in_progress | philippepascal |
+| 2026-05-03T22:03Z | in_progress | implemented | claude-0503-2136-bb20 |
