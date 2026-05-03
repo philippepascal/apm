@@ -31,7 +31,36 @@ When apm start fetches origin/main before merging into the ticket branch, a narr
 
 ### Approach
 
-How the implementation will work.
+One file changes: `apm-core/src/start.rs`.
+
+Add a named constant near the top of the file (with the other constants or just before the `start()` function):
+
+```rust
+/// Delay inserted between `git fetch` and `git merge` in aggressive mode to let
+/// remote-propagation settle and reduce the fetch-race window.
+const POST_FETCH_SETTLE_MS: u64 = 1_000;
+```
+
+Inside the `if aggressive { ... }` block (lines 307-314), append the sleep as the last statement so it only fires when a fetch actually ran:
+
+```rust
+if aggressive {
+    if let Err(e) = git::fetch_branch(root, &branch) {
+        warnings.push(format!("warning: fetch failed: {e:#}"));
+    }
+    if let Err(e) = git::fetch_branch(root, default_branch) {
+        warnings.push(format!("warning: fetch {} failed: {e:#}", default_branch));
+    }
+    std::thread::sleep(std::time::Duration::from_millis(POST_FETCH_SETTLE_MS));
+}
+```
+
+No other files need to change. `std::thread` and `std::time` are in the standard library and can be referenced with their full paths inline — no new `use` imports required.
+
+Order of steps:
+1. Add the `POST_FETCH_SETTLE_MS` constant
+2. Insert the `sleep` call as the last line inside the `if aggressive` block
+3. Run `cargo test -p apm-core` to confirm no regressions
 
 ### Open questions
 
