@@ -12,9 +12,12 @@ interface SwimlaneProps {
 
 export default function Swimlane({ state, tickets, showAuthor }: SwimlaneProps) {
   const colors = getStateColors(state)
-  const { selectedTicketIds, selectColumn, deselectColumn } = useLayoutStore()
+  const { selectedTicketId, selectedTicketIds, selectColumn, deselectColumn, setSelectedTicketId } = useLayoutStore()
   const columnIds = tickets.map((t) => t.id)
-  const allSelected = tickets.length > 0 && columnIds.every((id) => selectedTicketIds.includes(id))
+  const allSelected =
+    tickets.length > 0 &&
+    (columnIds.every((id) => selectedTicketIds.includes(id)) ||
+      (columnIds.length === 1 && selectedTicketId === columnIds[0]))
   const someSelected = columnIds.some((id) => selectedTicketIds.includes(id))
   const checkboxRef = useRef<HTMLInputElement>(null)
 
@@ -25,10 +28,19 @@ export default function Swimlane({ state, tickets, showAuthor }: SwimlaneProps) 
   }, [someSelected, allSelected])
 
   function handleHeaderCheckbox() {
-    if (allSelected) {
-      deselectColumn(columnIds)
+    if (columnIds.length === 1) {
+      // Single-ticket column: toggle single-select (opens/closes detail panel)
+      if (allSelected) {
+        setSelectedTicketId(null)
+      } else {
+        setSelectedTicketId(columnIds[0])
+      }
     } else {
-      selectColumn(columnIds)
+      if (allSelected) {
+        deselectColumn(columnIds)
+      } else {
+        selectColumn(columnIds)
+      }
     }
   }
 
