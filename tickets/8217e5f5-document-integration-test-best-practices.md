@@ -70,6 +70,7 @@ No Rust code changes. No existing tests are modified.
 
 ### Open questions
 
+**Q:** - Blocked: Edit tool denied permission to write CLAUDE.md (path outside the worktree). CLAUDE.md is in gitignore as intentional AI-agent-local config and cannot be committed. The acceptance criterion requiring the CLAUDE.md Tests section update needs supervisor resolution: either grant write permission for the gitignored CLAUDE.md outside the worktree, or waive the CLAUDE.md criterion given it is not committable.
 
 ### Amendment requests
 
