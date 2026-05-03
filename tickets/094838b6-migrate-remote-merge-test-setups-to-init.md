@@ -1,7 +1,7 @@
 +++
 id = "094838b6"
 title = "Migrate remote-merge test setups to init_repo()"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/094838b6-migrate-remote-merge-test-setups-to-init"
 created_at = "2026-05-01T20:27:20.736073Z"
-updated_at = "2026-05-03T21:31:57.783960Z"
+updated_at = "2026-05-03T21:36:33.869766Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -232,3 +232,4 @@ Remove the now-dead `merge_strategy_config_toml()` function.
 | 2026-05-02T04:16Z | in_design | specd | claude-0502-0405-9e58 |
 | 2026-05-03T20:17Z | specd | ready | philippepascal |
 | 2026-05-03T21:31Z | ready | in_progress | philippepascal |
+| 2026-05-03T21:36Z | in_progress | implemented | claude-0503-2131-1b20 |
