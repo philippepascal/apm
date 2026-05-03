@@ -2421,17 +2421,15 @@ fn new_section_unknown_name_is_error() {
 // --- --epic / --depends-on ---
 
 fn setup_with_epic() -> (tempfile::TempDir, String) {
-    let dir = setup();
+    let dir = init_repo();
     let p = dir.path();
-    // Create an epic branch: epic/<8-hex-id>-my-epic
     let epic_id = "ab12cd34";
     let epic_branch = format!("epic/{epic_id}-my-epic");
-    git(p, &["-c", "commit.gpgsign=false", "checkout", "-b", &epic_branch]);
-    // Add a commit on the epic branch so it has a distinct tip
-    std::fs::write(p.join("epic.txt"), "epic content").unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "epic.txt"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic commit"]);
-    // Return to main
+    // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
+    git(p, &["checkout", "-b", &epic_branch]);
+    std::fs::write(p.join("EPIC.md"), "# my-epic\n").unwrap();
+    git(p, &["add", "EPIC.md"]);
+    git(p, &["commit", "-m", &format!("epic({epic_id}): create my-epic")]);
     git(p, &["checkout", "main"]);
     (dir, epic_id.to_string())
 }
@@ -4128,50 +4126,12 @@ fn next_picks_low_priority_blocker_before_higher_raw_independent() {
 // --- epic list ---
 
 fn setup_epic_list() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[sync]
-aggressive = false
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id             = "implemented"
-label          = "Implemented"
-satisfies_deps = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 /// Create a bare local branch (simulates an epic branch).
 fn create_epic_branch(dir: &std::path::Path, branch: &str) {
+    // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
     git(dir, &["checkout", "-b", branch]);
     // Write a placeholder file so the branch has a commit.
     std::fs::write(dir.join("EPIC.md"), format!("# {branch}\n")).unwrap();
@@ -4248,46 +4208,7 @@ fn epic_list_shows_epics_with_derived_state_and_counts() {
 // --- epic show ---
 
 fn setup_epic_show() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[sync]
-aggressive = false
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id             = "implemented"
-label          = "Implemented"
-satisfies_deps = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 #[test]
