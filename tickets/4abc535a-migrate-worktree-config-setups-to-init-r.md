@@ -1,7 +1,7 @@
 +++
 id = "4abc535a"
 title = "Migrate worktree-config setups to init_repo()"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4abc535a-migrate-worktree-config-setups-to-init-r"
 created_at = "2026-05-01T20:27:01.767841Z"
-updated_at = "2026-05-03T20:17:00.263407Z"
+updated_at = "2026-05-03T20:54:45.058621Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -100,3 +100,4 @@ Only apm/tests/integration.rs changes. No other files are touched.
 | 2026-05-02T03:44Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:49Z | in_design | specd | claude-0502-0344-1308 |
 | 2026-05-03T20:17Z | specd | ready | philippepascal |
+| 2026-05-03T20:54Z | ready | in_progress | philippepascal |
