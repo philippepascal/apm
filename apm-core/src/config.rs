@@ -52,6 +52,32 @@ pub enum CompletionStrategy {
     None,
 }
 
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+pub struct IsolationConfig {
+    /// Glob patterns for paths that workers are allowed to read from outside the worktree.
+    /// `~` is expanded to $HOME before matching. `**` matches any number of path components.
+    /// Default: ["/etc/resolv.conf", "~/.gitconfig"]
+    #[serde(default = "default_read_allow")]
+    pub read_allow: Vec<String>,
+    /// When true, a PreToolUse hook is installed in the worker's `.claude/settings.json`
+    /// that blocks writes outside `APM_TICKET_WORKTREE`. Default: false.
+    #[serde(default)]
+    pub enforce_worktree_isolation: bool,
+}
+
+fn default_read_allow() -> Vec<String> {
+    vec!["/etc/resolv.conf".to_string(), "~/.gitconfig".to_string()]
+}
+
+impl Default for IsolationConfig {
+    fn default() -> Self {
+        Self {
+            read_allow: default_read_allow(),
+            enforce_worktree_isolation: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
 pub struct LoggingConfig {
     /// When true, apm writes a debug log file for each run.
@@ -222,6 +248,8 @@ pub struct Config {
     pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
     #[serde(default)]
     pub context: ContextConfig,
+    #[serde(default)]
+    pub isolation: IsolationConfig,
     /// Warnings generated during load (e.g. conflicting split/monolithic files).
     #[serde(skip)]
     pub load_warnings: Vec<String>,

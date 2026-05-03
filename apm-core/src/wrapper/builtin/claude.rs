@@ -41,12 +41,26 @@ pub(crate) fn build_claude_args(model: Option<&str>, skip_permissions: bool, sys
     args
 }
 
+fn should_enforce_isolation(ctx: &WrapperContext) -> bool {
+    if ctx.skip_permissions {
+        // -P workers: mandatory enforcement regardless of config
+        return true;
+    }
+    crate::config::Config::load(&ctx.root)
+        .map(|c| c.isolation.enforce_worktree_isolation)
+        .unwrap_or(false)
+}
+
 fn spawn_local(
     ctx: &WrapperContext,
     sys: &str,
     msg: &str,
     apm_bin: &str,
 ) -> anyhow::Result<std::process::Child> {
+    if should_enforce_isolation(ctx) {
+        crate::wrapper::hook_config::write_hook_config(&ctx.worktree_path, apm_bin)?;
+    }
+
     let binary = ctx.command.as_deref().unwrap_or("claude");
     let mut cmd = std::process::Command::new(binary);
     cmd.args(build_claude_args(ctx.model.as_deref(), ctx.skip_permissions, sys, msg));
@@ -74,6 +88,9 @@ fn spawn_container(
     msg: &str,
     apm_bin: &str,
 ) -> anyhow::Result<std::process::Child> {
+    if should_enforce_isolation(ctx) {
+        crate::wrapper::hook_config::write_hook_config(&ctx.worktree_path, apm_bin)?;
+    }
     let api_key = crate::credentials::resolve(
         "ANTHROPIC_API_KEY",
         ctx.keychain.get("ANTHROPIC_API_KEY").map(|s| s.as_str()),

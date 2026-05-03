@@ -390,6 +390,8 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
 
+    let enforce_isolation = skip_permissions || config.isolation.enforce_worktree_isolation;
+    let wt_for_cleanup = wt_display.clone();
     let denial_log_path = log_path.clone();
     let denial_worktree = wt_display.clone();
     let denial_ticket_id = id.clone();
@@ -400,6 +402,9 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         let _ = std::fs::remove_file(&msg_file);
         if agent_for_diag == "claude" {
             run_denial_scan(&denial_log_path, &denial_worktree, &denial_ticket_id);
+        }
+        if enforce_isolation {
+            let _ = crate::wrapper::hook_config::remove_hook_config(&wt_for_cleanup);
         }
     });
 
@@ -593,6 +598,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
     let pid_path = wt_display.join(".apm-worker.pid");
     write_pid_file(&pid_path, pid, &id)?;
+    let enforce_isolation_next = skip_permissions || config.isolation.enforce_worktree_isolation;
+    let wt_for_cleanup_next = wt_display.clone();
     let denial_log_path2 = log_path.clone();
     let denial_worktree2 = wt_display.clone();
     let denial_ticket_id2 = id.clone();
@@ -603,6 +610,9 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         let _ = std::fs::remove_file(&msg_file);
         if agent_for_diag2 == "claude" {
             run_denial_scan(&denial_log_path2, &denial_worktree2, &denial_ticket_id2);
+        }
+        if enforce_isolation_next {
+            let _ = crate::wrapper::hook_config::remove_hook_config(&wt_for_cleanup_next);
         }
     });
 
@@ -982,6 +992,7 @@ mod tests {
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
             context: Default::default(),
+            isolation: Default::default(),
             load_warnings: vec![],
         };
         let profile = make_profile(Some(".apm/spec.md"), Some("Spec-Writer for #<id>"));
@@ -1014,6 +1025,7 @@ mod tests {
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
             context: Default::default(),
+            isolation: Default::default(),
             load_warnings: vec![],
         };
         let tr = make_transition(Some("nonexistent_profile"));
@@ -1043,6 +1055,7 @@ mod tests {
             git_host: Default::default(),
             worker_profiles: HashMap::new(),
             context: Default::default(),
+            isolation: Default::default(),
             load_warnings: vec![],
         };
         let tr = make_transition(None);

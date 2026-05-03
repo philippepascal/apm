@@ -63,6 +63,10 @@ pub struct Manifest {
     pub parser: String,
     #[serde(default)]
     pub parser_command: Option<String>,
+    /// When true, APM installs a `PreToolUse` hook that blocks writes outside
+    /// `APM_TICKET_WORKTREE`. Only applies to `parser = "canonical"` wrappers.
+    #[serde(default)]
+    pub enforce_worktree_isolation: bool,
 }
 
 pub enum WrapperKind {
@@ -116,6 +120,13 @@ impl Wrapper for CustomWrapper {
             .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_default();
 
+        // Write the path-guard hook for canonical wrappers that request isolation.
+        let enforce = self.manifest.as_ref().map_or(false, |m| m.enforce_worktree_isolation);
+        let strategy = ParserStrategy::from_manifest(self.manifest.as_ref());
+        if enforce && strategy == ParserStrategy::Canonical {
+            crate::wrapper::hook_config::write_hook_config(&ctx.worktree_path, &apm_bin)?;
+        }
+
         let mut cmd = std::process::Command::new(&self.script_path);
 
         set_apm_env(&mut cmd, ctx, &apm_bin);
@@ -123,8 +134,6 @@ impl Wrapper for CustomWrapper {
             cmd.env(k, v);
         }
         cmd.current_dir(&ctx.worktree_path);
-
-        let strategy = ParserStrategy::from_manifest(self.manifest.as_ref());
 
         #[cfg(unix)]
         use std::os::unix::process::CommandExt;
@@ -272,7 +281,7 @@ pub(crate) fn parse_manifest(root: &Path, name: &str) -> anyhow::Result<Option<M
     Ok(Some(file.wrapper))
 }
 
-pub(crate) fn manifest_unknown_keys(root: &Path, name: &str) -> anyhow::Result<Vec<String>> {
+pub fn manifest_unknown_keys(root: &Path, name: &str) -> anyhow::Result<Vec<String>> {
     let path = root.join(".apm").join("agents").join(name).join("manifest.toml");
     if !path.exists() {
         return Ok(vec![]);
@@ -281,7 +290,7 @@ pub(crate) fn manifest_unknown_keys(root: &Path, name: &str) -> anyhow::Result<V
         .with_context(|| format!("reading {}", path.display()))?;
     let table: toml::Value = content.parse::<toml::Value>()
         .with_context(|| format!("parsing {}", path.display()))?;
-    let known = ["name", "contract_version", "parser", "parser_command"];
+    let known = ["name", "contract_version", "parser", "parser_command", "enforce_worktree_isolation"];
     let unknown = match table.get("wrapper").and_then(|v| v.as_table()) {
         Some(t) => t.keys()
             .filter(|k| !known.contains(&k.as_str()))
@@ -513,6 +522,7 @@ mod tests {
             contract_version: 1,
             parser: "canonical".to_string(),
             parser_command: None,
+            enforce_worktree_isolation: false,
         };
         assert_eq!(ParserStrategy::from_manifest(Some(&m)), ParserStrategy::Canonical);
     }
@@ -524,6 +534,7 @@ mod tests {
             contract_version: 1,
             parser: "external".to_string(),
             parser_command: Some("my-parser".to_string()),
+            enforce_worktree_isolation: false,
         };
         assert_eq!(ParserStrategy::from_manifest(Some(&m)), ParserStrategy::External);
     }
@@ -535,6 +546,7 @@ mod tests {
             contract_version: 1,
             parser: "foobar".to_string(),
             parser_command: None,
+            enforce_worktree_isolation: false,
         };
         assert_eq!(ParserStrategy::from_manifest(Some(&m)), ParserStrategy::Canonical);
     }
@@ -556,6 +568,7 @@ mod tests {
             contract_version: 1,
             parser: "external".to_string(),
             parser_command: None,
+            enforce_worktree_isolation: false,
         };
         let wrapper = CustomWrapper {
             script_path: script,
@@ -586,6 +599,7 @@ mod tests {
             contract_version: 1,
             parser: "external".to_string(),
             parser_command: Some("nonexistent-binary-xyzzy-2803".to_string()),
+            enforce_worktree_isolation: false,
         };
         let wrapper = CustomWrapper {
             script_path: script,
@@ -618,6 +632,7 @@ mod tests {
             contract_version: 2,
             parser: "canonical".to_string(),
             parser_command: None,
+            enforce_worktree_isolation: false,
         };
 
         let wrapper = CustomWrapper {
