@@ -44,7 +44,7 @@ These are in scope for this ticket. Several error messages and help strings in p
 - [x] `apm-core/src/context.rs` test inline write targets `.apm/config.toml`, not `apm.toml`
 - [x] `apm/tests/e2e.rs` second setup helper writes `.apm/config.toml`, not `apm.toml`
 - [x] No non-test Rust source file references `apm.toml` as a runtime config path (error messages and help text updated to name `.apm/config.toml`)
-- [ ] `apm init --migrate` still works: running it on a repo with a root-level `apm.toml` moves the file to `.apm/config.toml`
+- [x] `apm init --migrate` still works: running it on a repo with a root-level `apm.toml` moves the file to `.apm/config.toml`
 
 ### Out of scope
 
