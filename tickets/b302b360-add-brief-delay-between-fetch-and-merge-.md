@@ -20,10 +20,10 @@ When apm start fetches origin/main before merging into the ticket branch, a narr
 
 ### Acceptance criteria
 
-- [ ] When `apm start` runs with `--aggressive`, a sleep of at least 1 second occurs after the fetch block completes and before `merge_ref` is called
-- [ ] When `apm start` runs without `--aggressive` (no fetch), no sleep is introduced
-- [ ] The sleep duration is expressed as a named constant (not an inline magic number) in `start.rs`
-- [ ] `apm start --aggressive` still succeeds end-to-end after the delay is added
+- [x] When `apm start` runs with `--aggressive`, a sleep of at least 1 second occurs after the fetch block completes and before `merge_ref` is called
+- [x] When `apm start` runs without `--aggressive` (no fetch), no sleep is introduced
+- [x] The sleep duration is expressed as a named constant (not an inline magic number) in `start.rs`
+- [x] `apm start --aggressive` still succeeds end-to-end after the delay is added
 
 ### Out of scope
 
