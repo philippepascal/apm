@@ -278,7 +278,7 @@ impl Default for TicketsConfig {
     }
 }
 
-/// Defines the ticket state machine and prioritization weights. Loaded from `.apm/workflow.toml` or the `[workflow]` section of `apm.toml`.
+/// Defines the ticket state machine and prioritization weights. Loaded from `.apm/workflow.toml` or the `[workflow]` section of `.apm/config.toml`.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkflowConfig {
     /// Ordered list of ticket states. Users define their own state IDs and transition graph.
@@ -642,13 +642,12 @@ impl Config {
     pub fn load(repo_root: &Path) -> Result<Self> {
         let apm_dir = repo_root.join(".apm");
         let apm_dir_config = apm_dir.join("config.toml");
-        let path = if apm_dir_config.exists() {
-            apm_dir_config
-        } else {
-            repo_root.join("apm.toml")
-        };
+        let path = apm_dir_config;
         let contents = std::fs::read_to_string(&path)
-            .with_context(|| format!("cannot read {}", path.display()))?;
+            .with_context(|| format!(
+                "cannot read {} -- run 'apm init' to initialise this repository",
+                path.display()
+            ))?;
         let mut config: Config = toml::from_str(&contents)
             .with_context(|| format!("cannot parse {}", path.display()))?;
 

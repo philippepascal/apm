@@ -23,8 +23,9 @@ fn setup() -> TempDir {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -56,7 +57,7 @@ label = "In Design"
     .unwrap();
 
     // Initial commit so the repo is not empty.
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
 
     dir

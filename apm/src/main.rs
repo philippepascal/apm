@@ -245,11 +245,11 @@ After creating a ticket the typical next step is:
     #[command(long_about = "Transition a ticket to a new state.
 
 Valid target states depend on the ticket's current state. The allowed
-transitions are defined in .apm/apm.toml under [[workflow.states]].
+transitions are defined in .apm/workflow.toml under [[workflow.states]].
 Illegal transitions are rejected with an error.
 
 Run `apm show <id>` first to check the current state, then choose a
-target from the edges listed for that state in apm.toml.
+target from the edges listed for that state in .apm/workflow.toml.
 
 Use --force to bypass the transition rules (escape hatch for stuck tickets).
 The target state must still exist in the config; document-level validations
@@ -481,7 +481,7 @@ is already decided before opening the editor.")]
         no_aggressive: bool,
     },
     /// Validate config and ticket integrity
-    #[command(long_about = "Validate apm.toml correctness and full ticket integrity.
+    #[command(long_about = "Validate .apm/config.toml correctness and full ticket integrity.
 
 Config checks:
   * .apm/ TOML files parse without errors
@@ -533,8 +533,8 @@ merged-branch and worktree checks.")]
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         _extra: Vec<String>,
     },
-    /// Print agent instructions configured in .apm/apm.toml
-    #[command(long_about = "Print the contents of the instructions file configured under [agents] instructions in .apm/apm.toml.
+    /// Print agent instructions configured in .apm/config.toml
+    #[command(long_about = "Print the contents of the instructions file configured under [agents] instructions in .apm/config.toml.
 
 Useful for onboarding a new agent subprocess: pipe or paste the output into
 the agent's context so it knows the workflow, branch conventions, and shell
@@ -724,7 +724,7 @@ to read the new content from stdin):
   apm spec 42 --section Approach --set \"New approach text\"
   echo \"text\" | apm spec 42 --section Approach --set -
 
---check validates that all required sections defined in apm.toml are
+--check validates that all required sections defined in .apm/config.toml are
 present and non-empty:
   apm spec 42 --check
 
