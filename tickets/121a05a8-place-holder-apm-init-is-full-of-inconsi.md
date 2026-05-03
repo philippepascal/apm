@@ -17,6 +17,12 @@ updated_at = "2026-05-03T20:29:23.302391Z"
 ### Problem
 
 strategy for agents md file is unclear. need generic linking to claude
+ The cleanup pile when you're ready:
+  - apm init is unaware of per-agent files
+  - .apm/agents/claude/apm.worker.md doesn't exist
+  - .apm/agents/claude/apm.spec-writer.md is missing the two sections added by 9fcc94ed
+  - No sync tests cover the per-agent apm.worker.md at all
+  - The spec_writer_md_sync test only compares the ## Style rules section, not the full file
 
 ### Acceptance criteria
 
@@ -37,8 +43,6 @@ How the implementation will work.
 
 
 ### Code review
-
-
 ## History
 
 | When | From | To | By |
