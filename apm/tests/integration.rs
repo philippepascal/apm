@@ -3734,24 +3734,12 @@ fn workers_kill_stale_pid_errors() {
 }
 
 fn setup_with_strict_transitions() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
+    let dir = init_repo();
+    // BYPASS: no apm command can replace the workflow post-init.
+    // The production default has no new → in_progress transition (new only goes to groomed
+    // or closed); this 5-state restricted workflow is intentionally minimal to isolate
+    // --force bypass behaviour without the full spec/review lifecycle.
+    std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
 
 [[workflow.states]]
 id    = "new"
@@ -3786,9 +3774,8 @@ id       = "closed"
 label    = "Closed"
 terminal = true
 "#).unwrap();
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "strict transitions workflow"]);
     dir
 }
 
@@ -6837,20 +6824,11 @@ fn move_rebase_conflict_fails_cleanly() {
 // --- merge_failed ---
 
 fn setup_with_merge_workflow() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
+    let dir = init_repo();
+    // BYPASS: no apm command can add a new → implemented transition with completion = "merge"
+    // post-init. The production default has no such path; a direct new → implemented route
+    // is required so tests can trigger merge-failure without the full spec/worktree lifecycle.
+    std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
 
 [[workflow.states]]
 id    = "new"
@@ -6892,13 +6870,9 @@ label = "In Progress"
 id       = "closed"
 label    = "Closed"
 terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+"#).unwrap();
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "merge workflow"]);
     dir
 }
 
