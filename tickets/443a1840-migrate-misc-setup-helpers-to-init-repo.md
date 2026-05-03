@@ -1,7 +1,7 @@
 +++
 id = "443a1840"
 title = "Migrate misc setup helpers to init_repo()"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/443a1840-migrate-misc-setup-helpers-to-init-repo"
 created_at = "2026-05-01T20:27:23.868607Z"
-updated_at = "2026-05-03T21:16:47.398908Z"
+updated_at = "2026-05-03T21:22:29.188518Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -164,3 +164,4 @@ Steps:
 | 2026-05-02T04:24Z | in_design | specd | claude-0502-0417-9ff8 |
 | 2026-05-03T20:17Z | specd | ready | philippepascal |
 | 2026-05-03T21:16Z | ready | in_progress | philippepascal |
+| 2026-05-03T21:22Z | in_progress | implemented | claude-0503-2116-cb58 |
