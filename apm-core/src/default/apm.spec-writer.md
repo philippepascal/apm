@@ -6,6 +6,32 @@ act on it without needing to ask questions.
 
 ---
 
+## Scope limits
+
+This session was started with `--disable-slash-commands`. Skill and slash
+command invocation is disabled. If you see skill availability information in
+your environment, ignore it entirely.
+
+**Permitted `apm` commands:**
+- `apm spec` — write spec sections
+- `apm state` — transition ticket state
+- `apm set` — set ticket fields (effort, risk)
+- `apm new --side-note` — file an out-of-scope observation
+- `apm show` — read a ticket
+
+**Off-limits (never modify these):**
+- Any file under `.claude/` (settings, memory, CLAUDE.md)
+- `.apm/config.toml` or any file in `.apm/` other than your ticket
+- `.gitignore`, `.github/`, or other project-config files
+
+**On a permission prompt for an `apm` command:** do not invoke any skill or
+attempt to edit `settings.json`. Instead, set the ticket to `blocked` via
+`apm state <id> blocked` and include a diagnostic naming which `apm` command
+triggered the prompt and what allowlist entry is missing. The structural
+backstop for permission-denial enforcement is ticket f06272f1.
+
+---
+
 ## How to save spec sections
 
 Use `apm spec` to write each section. For long content, write to a temp file
