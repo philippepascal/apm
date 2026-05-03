@@ -1,4 +1,0 @@
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_ok01","name":"Bash","input":{"command":"echo hello","description":"Echo"}}]}}
-{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_ok01","is_error":false,"content":"hello\n"}]},"timestamp":"2026-05-01T12:00:00.000Z"}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_ok02","name":"Bash","input":{"command":"cargo test","description":"Run tests"}}]}}
-{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_ok02","is_error":true,"content":"Exit code 1\ntest failed"}]},"timestamp":"2026-05-01T12:01:00.000Z"}

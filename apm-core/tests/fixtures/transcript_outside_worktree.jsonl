@@ -1,2 +1,0 @@
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_edit01","name":"Edit","input":{"file_path":"/etc/passwd","old_string":"root","new_string":"admin"}}]}}
-{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_edit01","is_error":true,"content":"but you haven't granted it yet"}]},"timestamp":"2026-05-01T12:35:00.000Z"}

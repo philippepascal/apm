@@ -15,7 +15,6 @@ pub mod worktree;
 pub use ticket::ticket_fmt;
 pub mod init;
 pub mod logger;
-pub mod denial;
 pub mod start;
 pub mod state;
 pub mod sync;

@@ -1,2 +1,0 @@
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_apm01","name":"Bash","input":{"command":"apm doesnotexist","description":"Run apm subcommand"}}]}}
-{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_apm01","is_error":true,"content":"apm doesnotexist cannot be auto-allowed"}]},"timestamp":"2026-05-01T12:34:50.000Z"}
