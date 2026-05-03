@@ -38,7 +38,7 @@ These are in scope for this ticket. Several error messages and help strings in p
 - [x] `cargo test` passes with zero failures after all sibling epic tickets are merged
 - [x] `Config::load` in `apm-core/src/config.rs` does not reference `repo_root/apm.toml`; path is always `.apm/config.toml`
 - [x] When `.apm/config.toml` is absent, `Config::load` returns an error whose message contains the phrase `apm init`
-- [ ] `apply_config_migration_fixes` in `apm/src/cmd/validate.rs` does not check `apm.toml`; it returns `Ok(false)` immediately when `.apm/config.toml` is absent
+- [x] `apply_config_migration_fixes` in `apm/src/cmd/validate.rs` does not check `apm.toml`; it returns `Ok(false)` immediately when `.apm/config.toml` is absent
 - [ ] `apm-core/src/validate.rs` `setup_verify_repo` writes `.apm/config.toml`, not `apm.toml`
 - [ ] `apm-core/tests/ticket_create.rs` `setup` writes `.apm/config.toml`, not `apm.toml`
 - [ ] `apm-core/src/context.rs` test inline write targets `.apm/config.toml`, not `apm.toml`
