@@ -27,7 +27,7 @@ When apm start fetches origin/main before merging into the ticket branch, a narr
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Retry logic or polling to verify the fetched ref is current\n- Making the sleep duration configurable at runtime or via apm config\n- Fixing the root cause of remote-propagation latency\n- Non-aggressive mode (no fetch runs, so no delay is needed)
 
 ### Approach
 
