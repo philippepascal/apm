@@ -1657,68 +1657,22 @@ fn no_aggressive_flag_suppresses_fetch_on_set() {
 
 /// Setup that puts the worktrees dir inside the temp dir to avoid parallel-test collisions.
 fn setup_with_local_worktrees() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
     let mock_worker = make_mock_worker(p);
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    // BYPASS: no CLI command to set workers.command post-init; replace all worker
+    // command references (including profiles) with the mock binary for test isolation
+    let config_path = p.join(".apm/config.toml");
+    let config = std::fs::read_to_string(&config_path).unwrap();
+    let config = config.replace(
+        "command = \"claude\"",
+        &format!("command = \"{}\"", mock_worker.display()),
+    );
+    std::fs::write(&config_path, config).unwrap();
 
-    std::fs::write(
-        p.join("apm.toml"),
-        format!(
-            r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worktrees]
-dir = "worktrees"
-
-[workers]
-command = "{}"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "command:start"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-            mock_worker.display()
-        ),
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    git(p, &["add", ".apm/config.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add workers config"]);
     dir
 }
 
@@ -3510,71 +3464,15 @@ fn start_without_apm_agent_name_uses_fallback() {
 // ---------------------------------------------------------------------------
 
 fn setup_with_worktrees() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    // worktrees dir inside the tempdir to keep tests self-contained.
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worktrees]
-dir = "worktrees"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &[
-        "-c", "commit.gpgsign=false",
-        "commit", "-m", "init", "--allow-empty",
-    ]);
-
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    // BYPASS: production workflow has explicit new → groomed → ... transitions that
+    // block the workers tests' direct new → ready transition; override with a minimal
+    // workflow that has no transitions on "new" (any transition is then allowed)
+    std::fs::write(p.join(".apm/workflow.toml"), "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\nlabel = \"New\"\n\n[[workflow.states]]\nid         = \"ready\"\nlabel      = \"Ready\"\nactionable = [\"agent\"]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n[[workflow.states]]\nid       = \"closed\"\nlabel    = \"Closed\"\nterminal = true\n\n[workflow.prioritization]\npriority_weight = 10.0\neffort_weight   = -2.0\nrisk_weight     = -1.0\n").unwrap();
+    git(p, &["add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "simplify workflow for worktree tests"]);
     dir
 }
 
