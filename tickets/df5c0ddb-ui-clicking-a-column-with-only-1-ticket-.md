@@ -26,7 +26,12 @@ A secondary issue: `allSelected` is computed solely from `selectedTicketIds`, so
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Clicking the column-header checkbox of a column containing exactly 1 ticket sets `selectedTicketId` to that ticket's ID in the layout store
+- [ ] After clicking the column-header checkbox of a 1-ticket column, the detail panel displays that ticket
+- [ ] After clicking the column-header checkbox of a 1-ticket column, the ticket card displays the single-select ring (ring-blue-500), not the multi-select ring (ring-blue-400)
+- [ ] The column-header checkbox of a 1-ticket column renders as checked when that ticket is the current `selectedTicketId`
+- [ ] Clicking the column-header checkbox of a 1-ticket column a second time (when the ticket is already selected) clears `selectedTicketId` (sets it to null) and the detail panel closes
+- [ ] Clicking the column-header checkbox of a column containing 2 or more tickets continues to multi-select all tickets in that column (populates `selectedTicketIds`), unchanged from current behaviour
 
 ### Out of scope
 
