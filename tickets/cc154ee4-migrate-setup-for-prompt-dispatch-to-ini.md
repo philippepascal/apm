@@ -27,18 +27,18 @@ There are 7 tests that depend on this helper. They cover owner-preservation sema
 
 ### Acceptance criteria
 
-- [ ] `setup_for_prompt_dispatch()` no longer writes `apm.toml`; it calls `init_repo()` as its first step
-- [ ] The test repo produced by `setup_for_prompt_dispatch()` has `.apm/config.toml` (not `apm.toml`) as its config file
-- [ ] The mock worker path is injected into `.apm/config.toml` so that `apm start --spawn` can invoke it
-- [ ] The injection is marked with a `// BYPASS:` comment explaining why direct file editing is used
-- [ ] `spawn_new_ticket_transitions_to_in_design` passes using a `groomed`-state ticket (matching the production dispatch path)
-- [ ] `start_next_spawn_new_ticket_transitions_correctly` passes using a `groomed`-state ticket
-- [ ] `spawn_ammend_ticket_transitions_to_in_design` passes unchanged (production workflow already has `ammend → in_design` via `command:start`)
-- [ ] `spawn_ready_ticket_transitions_to_in_progress` passes unchanged (production workflow already has `ready → in_progress` via `command:start`)
-- [ ] `start_next_spawn_ready_ticket_transitions_correctly` passes unchanged
-- [ ] `in_design_does_not_set_owner_when_unowned` passes unchanged
-- [ ] `in_design_does_not_overwrite_different_owner` passes unchanged
-- [ ] All 7 tests pass under `cargo test` with no modifications to test assertions
+- [x] `setup_for_prompt_dispatch()` no longer writes `apm.toml`; it calls `init_repo()` as its first step
+- [x] The test repo produced by `setup_for_prompt_dispatch()` has `.apm/config.toml` (not `apm.toml`) as its config file
+- [x] The mock worker path is injected into `.apm/config.toml` so that `apm start --spawn` can invoke it
+- [x] The injection is marked with a `// BYPASS:` comment explaining why direct file editing is used
+- [x] `spawn_new_ticket_transitions_to_in_design` passes using a `groomed`-state ticket (matching the production dispatch path)
+- [x] `start_next_spawn_new_ticket_transitions_correctly` passes using a `groomed`-state ticket
+- [x] `spawn_ammend_ticket_transitions_to_in_design` passes unchanged (production workflow already has `ammend → in_design` via `command:start`)
+- [x] `spawn_ready_ticket_transitions_to_in_progress` passes unchanged (production workflow already has `ready → in_progress` via `command:start`)
+- [x] `start_next_spawn_ready_ticket_transitions_correctly` passes unchanged
+- [x] `in_design_does_not_set_owner_when_unowned` passes unchanged
+- [x] `in_design_does_not_overwrite_different_owner` passes unchanged
+- [x] All 7 tests pass under `cargo test` with no modifications to test assertions
 
 ### Out of scope
 
