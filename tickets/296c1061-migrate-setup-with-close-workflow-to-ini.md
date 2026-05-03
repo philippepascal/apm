@@ -27,12 +27,12 @@ One test — sync_no_close_when_nothing_to_close (line 1016) — reads "apm.toml
 
 ### Acceptance criteria
 
-- [ ] setup_with_close_workflow() body is replaced with a single call to init_repo(); the hand-written apm.toml string literal is removed
-- [ ] The helper no longer creates a tempdir, runs git init, sets git config, or writes any file directly
-- [ ] sync_no_close_when_nothing_to_close (line 1016) is updated to reference .apm/config.toml instead of the deleted apm.toml
-- [ ] All 7 tests that call setup_with_close_workflow() pass after the migration: sync_closes_implemented_ticket_on_merged_branch, sync_closes_implemented_ticket_with_no_branch, sync_no_close_when_nothing_to_close, sync_closes_multiple_tickets_on_merged_branches, sync_handler_closes_merged_ticket, sync_handler_no_close_returns_zero, sync_closes_implemented_ticket_with_merged_branch_in_one_run
-- [ ] Any deviation from production behavior that cannot be replicated via a real apm command is annotated with // BYPASS:
-- [ ] cargo test passes with no regressions in the sync test group
+- [x] setup_with_close_workflow() body is replaced with a single call to init_repo(); the hand-written apm.toml string literal is removed
+- [x] The helper no longer creates a tempdir, runs git init, sets git config, or writes any file directly
+- [x] sync_no_close_when_nothing_to_close (line 1016) is updated to reference .apm/config.toml instead of the deleted apm.toml
+- [x] All 7 tests that call setup_with_close_workflow() pass after the migration: sync_closes_implemented_ticket_on_merged_branch, sync_closes_implemented_ticket_with_no_branch, sync_no_close_when_nothing_to_close, sync_closes_multiple_tickets_on_merged_branches, sync_handler_closes_merged_ticket, sync_handler_no_close_returns_zero, sync_closes_implemented_ticket_with_merged_branch_in_one_run
+- [x] Any deviation from production behavior that cannot be replicated via a real apm command is annotated with // BYPASS:
+- [x] cargo test passes with no regressions in the sync test group
 
 ### Out of scope
 
