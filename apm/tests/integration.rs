@@ -936,46 +936,7 @@ fn config_default_branch_defaults_to_main_when_absent() {
 // --- sync bulk close ---
 
 fn setup_with_close_workflow() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id    = "new"
-label = "New"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#).unwrap();
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 fn write_ticket_to_branch(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str) {
@@ -1041,7 +1002,7 @@ fn sync_no_close_when_nothing_to_close() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
     // No tickets at all
-    let log_before = branch_content(p, "main", "apm.toml"); // just to get a ref point
+    let log_before = branch_content(p, "main", ".apm/config.toml"); // just to get a ref point
     apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
     // main should have no new commits (same HEAD)
     let head = std::process::Command::new("git")
