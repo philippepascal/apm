@@ -793,7 +793,8 @@ fn config_default_branch_defaults_to_main_when_absent() {
     git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), "[project]\nname = \"test\"\n").unwrap();
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/config.toml"), "[project]\nname = \"test\"\n").unwrap();
     let config = apm_core::config::Config::load(p).unwrap();
     assert_eq!(config.project.default_branch, "main");
 }
@@ -1518,7 +1519,8 @@ fn start_next_with_instructions_includes_text_in_output() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     // Write a state with instructions pointing to a file
-    std::fs::write(p.join("apm.toml"),
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -1556,7 +1558,7 @@ label = "Closed"
 terminal = true
 "#).unwrap();
     std::fs::write(p.join("worker-instructions.txt"), "WORKER INSTRUCTIONS CONTENT").unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml", "worker-instructions.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/config.toml", "worker-instructions.txt"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add instructions"]);
 
     let (_id, _branch) = write_ticket_to_branch(p, "ready", "work");
@@ -1612,8 +1614,9 @@ fn start_next_claims_new_ticket_when_no_ready_tickets() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -1644,6 +1647,10 @@ actionable = ["agent"]
 id    = "in_design"
 label = "In Design"
 
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -1652,10 +1659,10 @@ terminal = true
     )
     .unwrap();
 
-    git(p, &["add", "apm.toml"]);
+    std::fs::write(p.join(".gitignore"), "/worktrees/\n").unwrap();
+    git(p, &["add", ".apm/config.toml", ".gitignore"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
-    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
 
     let (_id, branch) = write_ticket_with_owner(p, "new", "spec me", "test-agent");
@@ -2029,7 +2036,8 @@ fn context_section_from_transition_config() {
     git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), r#"[project]
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/config.toml"), r#"[project]
 name = "test"
 
 [tickets]
@@ -2052,7 +2060,7 @@ actionable = ["agent"]
 to              = "in_design"
 context_section = "Approach"
 "#).unwrap();
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
     apm::cmd::new::run(
@@ -2372,7 +2380,8 @@ fn new_body_scaffold_from_ticket_sections_config() {
     git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), r#"[project]
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/config.toml"), r#"[project]
 name = "test"
 
 [tickets]
@@ -2405,7 +2414,7 @@ required = true
 name = "Notes"
 type = "free"
 "#).unwrap();
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
@@ -2436,8 +2445,9 @@ fn validate_config_missing_instructions_and_bad_context_section() {
     // Config with:
     //   - state `new` with instructions pointing to a non-existent file
     //   - transition with context_section that doesn't exist in ticket.sections
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -2776,8 +2786,9 @@ fn clean_treats_closed_as_terminal_without_config_entry() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
     // Config with no terminal states defined
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -2797,7 +2808,7 @@ id    = "new"
 label = "New"
 "#,
     ).unwrap();
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
@@ -2836,8 +2847,9 @@ fn clean_skips_local_tip_ahead_of_remote() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -2853,12 +2865,20 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+
+[[workflow.states]]
 id       = "closed"
 label    = "Closed"
 terminal = true
 "#,
     ).unwrap();
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     git(p, &["push", "origin", "main"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
@@ -3048,8 +3068,9 @@ fn clean_force_removes_diverged_worktree() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -3065,12 +3086,20 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+
+[[workflow.states]]
 id       = "closed"
 label    = "Closed"
 terminal = true
 "#,
     ).unwrap();
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     git(p, &["push", "origin", "main"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
@@ -3596,8 +3625,9 @@ fn start_uses_target_branch_as_merge_source() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -3624,7 +3654,7 @@ label = "In Progress"
 
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    git(p, &["add", "apm.toml"]);
+    git(p, &["add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
 
     // Create epic/e1-foo branch with a unique commit.
@@ -4176,8 +4206,9 @@ fn agents_prints_instructions_file() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -4192,6 +4223,10 @@ max_concurrent = 1
 id         = "new"
 label      = "New"
 actionable = ["agent"]
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -6499,8 +6534,9 @@ fn external_layout_worktrees_provisioned_at_sibling_path() {
     git(&p, &["config", "user.email", "test@test.com"]);
     git(&p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -6545,7 +6581,7 @@ required = true
     )
     .unwrap();
 
-    git(&p, &["add", "apm.toml"]);
+    git(&p, &["add", ".apm/config.toml"]);
     git(&p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
     git(&p, &["branch", "ticket/ext-test"]);
 

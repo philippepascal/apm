@@ -383,8 +383,9 @@ mod tests {
             .current_dir(p)
             .status()
             .unwrap();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(
-            p.join("apm.toml"),
+            p.join(".apm/config.toml"),
             "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n",
         )
         .unwrap();

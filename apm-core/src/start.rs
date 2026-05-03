@@ -83,7 +83,7 @@ fn check_output_format_supported(binary: &str) -> Result<()> {
              --help output; the flag `--output-format stream-json` is required for \
              full transcript capture in .apm-worker.log.\n\
              Upgrade the binary to a version that supports this flag, or configure \
-             an alternative worker command in your apm.toml [workers] section."
+             an alternative worker command in your .apm/config.toml [workers] section."
         )
     }
 }

@@ -662,8 +662,9 @@ pub(crate) mod tests {
         }
 
         // config with `implemented` satisfying deps
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(
-            p.join("apm.toml"),
+            p.join(".apm/config.toml"),
             r#"[project]
 name = "test"
 
@@ -685,7 +686,7 @@ satisfies_deps = true
         std::fs::create_dir_all(p.join("tickets")).unwrap();
 
         for args in [
-            vec!["add", "apm.toml"],
+            vec!["add", ".apm/config.toml"],
             vec!["-c", "commit.gpgsign=false", "commit", "-m", "init"],
         ] {
             std::process::Command::new("git")
@@ -1063,8 +1064,9 @@ satisfies_deps = true
                 .status()
                 .unwrap();
         }
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(
-            p.join("apm.toml"),
+            p.join(".apm/config.toml"),
             r#"[project]
 name = "test"
 
@@ -1091,7 +1093,7 @@ label = "In Progress"
         )
         .unwrap();
         for args in [
-            vec!["add", "apm.toml"],
+            vec!["add", ".apm/config.toml"],
             vec!["-c", "commit.gpgsign=false", "commit", "-m", "init"],
         ] {
             std::process::Command::new("git")
