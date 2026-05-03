@@ -1878,7 +1878,7 @@ fn start_does_not_modify_owner_when_already_owned() {
 fn in_design_does_not_set_owner_when_unowned() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "alice");
     apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
@@ -1891,7 +1891,7 @@ fn in_design_does_not_set_owner_when_unowned() {
 fn in_design_does_not_overwrite_different_owner() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "alice");
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me", "alice");
 
     std::env::set_var("APM_AGENT_NAME", "bob");
     apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
@@ -1903,88 +1903,25 @@ fn in_design_does_not_overwrite_different_owner() {
 
 // ── system prompt dispatch ───────────────────────────────────────────────────
 
-/// A config with new/ammend/ready all startable, plus in_design/in_progress destinations.
+/// Sets up a repo using the real production workflow (via init_repo()) with a
+/// mock worker injected so that apm start --spawn exercises dispatch paths.
 fn setup_for_prompt_dispatch() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
     let mock_worker = make_mock_worker(p);
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    // BYPASS: no apm CLI command to set workers.command; inject directly into
+    // .apm/config.toml which apm init has already created at this location.
+    // Replace all occurrences of `command = "claude"` (covering [workers] and
+    // both [worker_profiles.*] sections) so every dispatch path uses the mock.
+    let config_path = p.join(".apm/config.toml");
+    let cfg = std::fs::read_to_string(&config_path).unwrap();
+    let patched = cfg.replace(
+        "command = \"claude\"\n",
+        &format!("command = \"{}\"\n", mock_worker.display()),
+    );
+    std::fs::write(&config_path, patched).unwrap();
 
-    std::fs::write(
-        p.join("apm.toml"),
-        format!(
-            r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worktrees]
-dir = "worktrees"
-
-[workers]
-command = "{}"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-
-[[workflow.states]]
-id    = "in_design"
-label = "In Design"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "command:start"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-            mock_worker.display()
-        ),
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    std::fs::create_dir_all(p.join(".apm")).unwrap();
     dir
 }
 
@@ -1993,7 +1930,7 @@ fn spawn_new_ticket_transitions_to_in_design() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me");
+    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
@@ -2036,7 +1973,7 @@ fn start_next_spawn_new_ticket_transitions_correctly() {
     let p = dir.path();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "test-agent");
+    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
