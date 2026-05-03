@@ -1,7 +1,7 @@
 +++
 id = "29cc63a1"
 title = "Pre-merge leak detection: refuse apm state implemented when main has uncommitted overlap"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29cc63a1-pre-merge-leak-detection-refuse-apm-stat"
 created_at = "2026-05-01T02:30:13.061854Z"
-updated_at = "2026-05-02T19:07:33.018481Z"
+updated_at = "2026-05-03T19:54:57.044843Z"
 +++
 
 ## Spec
@@ -457,3 +457,4 @@ Add to `apm-core/src/git_util.rs` (inside the `#[cfg(test)]` block) a unit test 
 | 2026-05-02T18:21Z | specd | ready | philippepascal |
 | 2026-05-02T18:53Z | ready | in_progress | philippepascal |
 | 2026-05-02T19:07Z | in_progress | implemented | claude-0502-1853-5758 |
+| 2026-05-03T19:54Z | implemented | closed | philippepascal(apm-sync) |
