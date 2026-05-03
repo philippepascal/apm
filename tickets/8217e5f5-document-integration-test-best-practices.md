@@ -33,7 +33,7 @@ This ticket produces the policy document. It is a prerequisite for all sibling m
 - [ ] The document specifies the exact inline annotation format: `// BYPASS: <one-line reason>`
 - [ ] The document includes the grep command to audit all bypasses (`grep -rn "BYPASS:" apm/tests/`)
 - [ ] The document names `init_repo()` as the canonical starting point for new integration tests
-- [ ] CLAUDE.md Tests section is updated with a one-liner pointing to `apm/tests/README.md`
+- [ ] `.apm/agents.md` Tests section is updated with a one-liner pointing to `apm/tests/README.md`
 
 ### Out of scope
 
