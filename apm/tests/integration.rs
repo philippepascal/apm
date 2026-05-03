@@ -5454,7 +5454,7 @@ fn sync_bails_on_mid_merge_state() {
 /// (via setup()) plus "shared.txt".  Both TempDirs must stay alive for the
 /// duration of each test.
 fn setup_sync_repo() -> (TempDir, TempDir) {
-    // Bare repo acts as the network-free origin.
+    // BYPASS: no apm command creates a bare origin repo; bare-init is infrastructure only
     let origin = tempfile::tempdir().unwrap();
     std::process::Command::new("git")
         .args(["init", "--bare", "-q", "-b", "main"])
@@ -5462,8 +5462,7 @@ fn setup_sync_repo() -> (TempDir, TempDir) {
         .status()
         .unwrap();
 
-    // Local repo via the shared setup() helper (writes apm.toml + initial commit).
-    let local = setup();
+    let local = init_repo();
     let l = local.path();
 
     // A plain text file that tests can dirty without affecting Config::load.
@@ -5632,27 +5631,20 @@ fn sync_main_no_remote_skips() {
 /// Create a bare origin and a local clone; push one commit on the given branch to origin.
 /// Returns (origin_dir, local_dir, origin_sha).
 fn setup_branch_in_origin(branch: &str) -> (TempDir, TempDir, String) {
+    // BYPASS: no apm command creates a bare origin repo; bare-init is infrastructure only
     let origin = tempfile::tempdir().unwrap();
-    let local = tempfile::tempdir().unwrap();
-
-    // Init bare origin.
     std::process::Command::new("git")
         .args(["init", "--bare", "-q", "-b", "main"])
         .current_dir(origin.path())
         .status()
         .unwrap();
 
-    // Init local, add remote, push an initial main commit.
-    git(local.path(), &["init", "-q", "-b", "main"]);
-    git(local.path(), &["config", "user.email", "test@test.com"]);
-    git(local.path(), &["config", "user.name", "test"]);
+    // init_repo() runs real `apm init`, makes an initial commit, and returns the TempDir
+    let local = init_repo();
     git(local.path(), &["remote", "add", "origin", &origin.path().to_string_lossy()]);
-    std::fs::write(local.path().join("README"), "init").unwrap();
-    git(local.path(), &["add", "README"]);
-    git(local.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
     git(local.path(), &["push", "origin", "HEAD:main"]);
 
-    // Create the target branch on origin via a disposable clone.
+    // BYPASS: no apm command pushes a branch into a bare origin; disposable clone is the only option
     let tmp = tempfile::tempdir().unwrap();
     let t = tmp.path();
     std::process::Command::new("git")
