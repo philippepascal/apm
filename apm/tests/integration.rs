@@ -13,6 +13,40 @@ fn git(dir: &std::path::Path, args: &[&str]) {
         .unwrap();
 }
 
+fn run_apm(dir: &std::path::Path, args: &[&str]) -> std::process::Output {
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(args)
+        .current_dir(dir)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm {:?} failed:\nstdout: {}\nstderr: {}",
+        args,
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    out
+}
+
+/// Create a ticket via `apm new` and return `(id, branch)`.
+fn create_ticket(dir: &std::path::Path, title: &str) -> (String, String) {
+    let out = run_apm(dir, &["new", "--no-edit", "--no-aggressive", title]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
+    let id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+    let branch = line
+        .split("(branch: ").nth(1).unwrap()
+        .trim_end_matches(')')
+        .to_string();
+    (id, branch)
+}
+
 /// Create a mock worker binary inside `dir/bin/mock-worker`.
 /// When called with `--help` it prints `--output-format stream-json` so the
 /// compatibility probe in `check_output_format_supported` passes.
@@ -510,7 +544,9 @@ fn show_displays_epic_target_branch_depends_on_when_set() {
     let dir = setup();
     let p = dir.path();
 
-    // Create a ticket with epic, target_branch, and depends_on set directly.
+    // BYPASS: apm new --epic sets target_branch to the epic branch but does not support
+    // pre-seeding depends_on with synthetic ticket IDs (validation would reject unknown IDs);
+    // the test needs all three fields (epic, target_branch, depends_on) set simultaneously.
     let ticket_content = "+++\nid = \"aabb1122\"\ntitle = \"Rich ticket\"\nstate = \"new\"\nbranch = \"ticket/aabb1122-rich-ticket\"\nepic = \"epic001\"\ntarget_branch = \"epic/epic001-user-auth\"\ndepends_on = [\"ccdd3344\", \"eeff5566\"]\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] One\n\n### Out of scope\n\nN/A.\n\n### Approach\n\nDirect.\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
     let ticket_dir = p.join("tickets");
     std::fs::create_dir_all(&ticket_dir).unwrap();
@@ -768,28 +804,25 @@ fn setup_with_close_workflow() -> TempDir {
     init_repo()
 }
 
-fn write_ticket_to_branch(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str) {
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    // Create branch if it doesn't exist
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", branch]);
-    } else {
-        git(dir, &["checkout", branch]);
+fn write_ticket_to_branch(dir: &std::path::Path, state: &str, title: &str) -> (String, String) {
+    // apm new always sets owner = resolved_identity. Temporarily configure a test
+    // identity so we can clear the owner immediately after creation, leaving the
+    // ticket with no owner field (matching the pre-migration raw TOML behaviour).
+    let local_toml = dir.join(".apm/local.toml");
+    let saved = if local_toml.exists() { Some(std::fs::read_to_string(&local_toml).unwrap()) } else { None };
+    std::fs::create_dir_all(dir.join(".apm")).unwrap();
+    std::fs::write(&local_toml, "username = \"test\"\n").unwrap();
+    let (id, branch) = create_ticket(dir, title);
+    run_apm(dir, &["set", &id, "owner", "-", "--no-aggressive"]);
+    match saved {
+        Some(content) => std::fs::write(&local_toml, content).unwrap(),
+        None => { let _ = std::fs::remove_file(&local_toml); }
     }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
-    git(dir, &["checkout", "main"]);
+    if state == "implemented" {
+        run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [x] Done", "--no-aggressive"]);
+    }
+    run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"]);
+    (id, branch)
 }
 
 #[test]
@@ -797,13 +830,13 @@ fn sync_closes_implemented_ticket_on_merged_branch() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
-    write_ticket_to_branch(p, "ticket/0001-my-ticket", "0001-my-ticket.md", "implemented", 1, "my ticket");
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "my ticket");
     // Merge the branch into main so sync detects it.
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-my-ticket", "--no-edit"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
 
     apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
-    let content = branch_content(p, "main", "tickets/0001-my-ticket.md");
+    let content = branch_content(p, "main", &ticket_rel_path(&branch));
     assert!(content.contains("state = \"closed\""), "ticket should be closed on main: {content}");
 }
 
@@ -812,7 +845,9 @@ fn sync_closes_implemented_ticket_with_no_branch() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
-    // Write ticket directly to main in implemented state (simulating stale ticket after branch deleted)
+    // BYPASS: apm new always creates a ticket branch; this test simulates a stale ticket
+    // whose branch was already deleted and the ticket exists only on main — that state
+    // cannot be produced by the CLI.
     let path = "tickets/0001-stale.md";
     let content = "+++\nid = 1\ntitle = \"stale\"\nstate = \"implemented\"\nbranch = \"ticket/0001-stale\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
     std::fs::write(p.join(path), content).unwrap();
@@ -849,15 +884,15 @@ fn sync_closes_multiple_tickets_on_merged_branches() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "implemented", 1, "alpha");
-    write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "implemented", 2, "beta");
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-alpha", "--no-edit"]);
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0002-beta", "--no-edit"]);
+    let (_id1, alpha_branch) = write_ticket_to_branch(p, "implemented", "alpha");
+    let (_id2, beta_branch) = write_ticket_to_branch(p, "implemented", "beta");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &alpha_branch, "--no-edit"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &beta_branch, "--no-edit"]);
 
     apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
-    let alpha = branch_content(p, "main", "tickets/0001-alpha.md");
-    let beta = branch_content(p, "main", "tickets/0002-beta.md");
+    let alpha = branch_content(p, "main", &ticket_rel_path(&alpha_branch));
+    let beta = branch_content(p, "main", &ticket_rel_path(&beta_branch));
     assert!(alpha.contains("state = \"closed\""), "alpha should be closed on main: {alpha}");
     assert!(beta.contains("state = \"closed\""), "beta should be closed on main: {beta}");
 }
@@ -871,8 +906,8 @@ fn sync_handler_closes_merged_ticket() {
     let dir = setup_with_close_workflow();
     let p = dir.path();
 
-    write_ticket_to_branch(p, "ticket/0001-server-sync", "0001-server-sync.md", "implemented", 1, "server sync");
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-server-sync", "--no-edit"]);
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "server sync");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
 
     let config = apm_core::config::Config::load(p).unwrap();
     let candidates = apm_core::sync::detect(p, &config).unwrap();
@@ -880,7 +915,7 @@ fn sync_handler_closes_merged_ticket() {
     let aggressive = config.sync.aggressive;
     apm_core::sync::apply(p, &config, &candidates, "apm-ui", aggressive).unwrap();
 
-    let content = branch_content(p, "main", "tickets/0001-server-sync.md");
+    let content = branch_content(p, "main", &ticket_rel_path(&branch));
     assert!(content.contains("state = \"closed\""), "ticket should be closed: {content}");
 }
 
@@ -897,81 +932,42 @@ fn sync_handler_no_close_returns_zero() {
 
 // --- take ---
 
-#[allow(dead_code)]
-fn write_ticket_with_agent(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, agent: &str) {
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\nagent = \"{agent}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", branch]);
-    } else {
-        git(dir, &["checkout", branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
-    git(dir, &["checkout", "main"]);
-}
-
 // ── apm spec ────────────────────────────────────────────────────────────────
 
-fn write_spec_ticket(dir: &std::path::Path, id: u32, problem: &str, approach: &str) {
-    let branch = format!("ticket/{id:04}-spec-test");
-    let filename = format!("{id:04}-spec-test.md");
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"spec test\"\nstate = \"in_progress\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\n{problem}\n\n### Acceptance criteria\n\n- [ ] criterion one\n\n### Out of scope\n\nnothing\n\n### Approach\n\n{approach}\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", &branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", &branch]);
-    } else {
-        git(dir, &["checkout", &branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: spec test"]);
-    git(dir, &["checkout", "main"]);
+fn write_spec_ticket(dir: &std::path::Path, problem: &str, approach: &str) -> (String, String) {
+    let (id, branch) = create_ticket(dir, "spec test");
+    run_apm(dir, &["spec", &id, "--section", "Problem", "--set", problem, "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [ ] criterion one", "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Out of scope", "--set", "nothing", "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Approach", "--set", approach, "--no-aggressive"]);
+    run_apm(dir, &["state", &id, "in_progress", "--force", "--no-aggressive"]);
+    (id, branch)
 }
 
 #[test]
 fn spec_prints_all_sections() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
     // Should succeed and not error
-    apm::cmd::spec::run(p, "1", None, None, None, false, None, None, None, None, true).unwrap();
+    apm::cmd::spec::run(p, &id, None, None, None, false, None, None, None, None, true).unwrap();
 }
 
 #[test]
 fn spec_prints_single_section() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "the problem text", "the approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, None, false, None, None, None, None, true).unwrap();
+    let (id, _branch) = write_spec_ticket(p, "the problem text", "the approach");
+    apm::cmd::spec::run(p, &id, Some("Problem".into()), None, None, false, None, None, None, None, true).unwrap();
 }
 
 #[test]
 fn spec_set_section_commits() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("new problem text".into()), None, false, None, None, None, None, true).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let (id, branch) = write_spec_ticket(p, "old problem", "old approach");
+    apm::cmd::spec::run(p, &id, Some("Problem".into()), Some("new problem text".into()), None, false, None, None, None, None, true).unwrap();
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("new problem text"), "updated problem not found: {content}");
 }
 
@@ -979,16 +975,16 @@ fn spec_set_section_commits() {
 fn spec_check_passes_full_ticket() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    apm::cmd::spec::run(p, "1", None, None, None, true, None, None, None, None, true).unwrap();
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    apm::cmd::spec::run(p, &id, None, None, None, true, None, None, None, None, true).unwrap();
 }
 
 #[test]
 fn spec_unknown_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", Some("NonExistent".into()), None, None, false, None, None, None, None, true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, Some("NonExistent".into()), None, None, false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("unknown section"));
 }
@@ -1006,8 +1002,8 @@ fn spec_nonexistent_ticket_errors() {
 fn spec_set_without_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, Some("some value".into()), None, false, None, None, None, None, true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, None, Some("some value".into()), None, false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set requires --section"));
 }
@@ -1016,9 +1012,9 @@ fn spec_set_without_section_errors() {
 fn spec_set_hyphen_value() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "old problem", "old approach");
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), Some("- [ ] Fix the thing".into()), None, false, None, None, None, None, true).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let (id, branch) = write_spec_ticket(p, "old problem", "old approach");
+    apm::cmd::spec::run(p, &id, Some("Problem".into()), Some("- [ ] Fix the thing".into()), None, false, None, None, None, None, true).unwrap();
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("- [ ] Fix the thing"), "hyphen value not stored: {content}");
 }
 
@@ -1026,11 +1022,11 @@ fn spec_set_hyphen_value() {
 fn spec_set_file_reads_content() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "old problem", "old approach");
+    let (id, branch) = write_spec_ticket(p, "old problem", "old approach");
     let tmp = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(tmp.path(), "content from file").unwrap();
-    apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some(tmp.path().to_string_lossy().into_owned()), false, None, None, None, None, true).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    apm::cmd::spec::run(p, &id, Some("Problem".into()), None, Some(tmp.path().to_string_lossy().into_owned()), false, None, None, None, None, true).unwrap();
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("content from file"), "file content not stored: {content}");
 }
 
@@ -1038,8 +1034,8 @@ fn spec_set_file_reads_content() {
 fn spec_set_file_nonexistent_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", Some("Problem".into()), None, Some("/nonexistent/path/to/file.txt".into()), false, None, None, None, None, true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, Some("Problem".into()), None, Some("/nonexistent/path/to/file.txt".into()), false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set-file"));
 }
@@ -1048,45 +1044,32 @@ fn spec_set_file_nonexistent_errors() {
 fn spec_set_file_without_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, None, Some("/some/file.txt".into()), false, None, None, None, None, true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, None, None, Some("/some/file.txt".into()), false, None, None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--set-file requires --section"));
 }
 
-fn write_ticket_with_amendment_requests(dir: &std::path::Path, id: u32) {
-    let branch = format!("ticket/{id:04}-spec-test");
-    let filename = format!("{id:04}-spec-test.md");
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"spec test\"\nstate = \"ammend\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] criterion one\n\n### Out of scope\n\nnothing\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- [ ] Add error handling\n- [ ] Fix the bug\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", &branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", &branch]);
-    } else {
-        git(dir, &["checkout", &branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: spec test with amendments"]);
-    git(dir, &["checkout", "main"]);
+fn write_ticket_with_amendment_requests(dir: &std::path::Path) -> (String, String) {
+    let (id, branch) = create_ticket(dir, "spec test");
+    run_apm(dir, &["spec", &id, "--section", "Problem", "--set", "Test.", "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [ ] criterion one", "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Out of scope", "--set", "nothing", "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Approach", "--set", "Direct.", "--no-aggressive"]);
+    run_apm(dir, &["state", &id, "specd", "--force", "--no-aggressive"]);
+    run_apm(dir, &["spec", &id, "--section", "Amendment requests", "--set", "- [ ] Add error handling\n- [ ] Fix the bug", "--no-aggressive"]);
+    run_apm(dir, &["state", &id, "ammend", "--no-aggressive"]);
+    (id, branch)
 }
 
 #[test]
 fn spec_mark_checks_off_item_in_amendment_requests() {
     let dir = setup();
     let p = dir.path();
-    write_ticket_with_amendment_requests(p, 1);
+    let (id, branch) = write_ticket_with_amendment_requests(p);
     apm::cmd::spec::run(
         p,
-        "1",
+        &id,
         Some("Amendment requests".into()),
         None,
         None,
@@ -1097,7 +1080,7 @@ fn spec_mark_checks_off_item_in_amendment_requests() {
         None,
         true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
     assert!(content.contains("- [ ] Fix the bug"), "other item should remain unchecked: {content}");
 }
@@ -1106,10 +1089,10 @@ fn spec_mark_checks_off_item_in_amendment_requests() {
 fn spec_mark_no_match_errors() {
     let dir = setup();
     let p = dir.path();
-    write_ticket_with_amendment_requests(p, 1);
+    let (id, _branch) = write_ticket_with_amendment_requests(p);
     let result = apm::cmd::spec::run(
         p,
-        "1",
+        &id,
         Some("Amendment requests".into()),
         None,
         None,
@@ -1129,6 +1112,9 @@ fn spec_mark_no_match_errors() {
 fn spec_mark_ambiguous_errors() {
     let dir = setup();
     let p = dir.path();
+    // BYPASS: the ambiguity test requires two amendment items both containing "error"
+    // ("Add error handling", "Fix the error"); write_ticket_with_amendment_requests uses
+    // "Fix the bug" (no "error") which cannot trigger the ambiguous-match path.
     // "error" matches both "Add error handling" and "Fix the error"
     let branch = "ticket/0001-spec-test";
     let filename = "0001-spec-test.md";
@@ -1163,8 +1149,8 @@ fn spec_mark_ambiguous_errors() {
 fn spec_mark_without_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_ticket_with_amendment_requests(p, 1);
-    let result = apm::cmd::spec::run(p, "1", None, None, None, false, Some("Add error handling".into()), None, None, None, true);
+    let (id, _branch) = write_ticket_with_amendment_requests(p);
+    let result = apm::cmd::spec::run(p, &id, None, None, None, false, Some("Add error handling".into()), None, None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--mark requires --section"));
 }
@@ -1173,10 +1159,10 @@ fn spec_mark_without_section_errors() {
 fn spec_mark_case_insensitive() {
     let dir = setup();
     let p = dir.path();
-    write_ticket_with_amendment_requests(p, 1);
+    let (id, branch) = write_ticket_with_amendment_requests(p);
     apm::cmd::spec::run(
         p,
-        "1",
+        &id,
         Some("Amendment requests".into()),
         None,
         None,
@@ -1187,7 +1173,7 @@ fn spec_mark_case_insensitive() {
         None,
         true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("- [x] Add error handling"), "item not checked: {content}");
 }
 
@@ -1197,8 +1183,8 @@ fn spec_mark_case_insensitive() {
 fn spec_append_without_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, None, None, false, None, Some("extra".into()), None, None, true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, None, None, None, false, None, Some("extra".into()), None, None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--append requires --section"));
 }
@@ -1207,8 +1193,8 @@ fn spec_append_without_section_errors() {
 fn spec_append_file_without_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, None, None, false, None, None, Some("/some/file.txt".into()), None, true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, None, None, None, false, None, None, Some("/some/file.txt".into()), None, true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--append-file requires --section"));
 }
@@ -1217,8 +1203,8 @@ fn spec_append_file_without_section_errors() {
 fn spec_add_task_without_section_errors() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
-    let result = apm::cmd::spec::run(p, "1", None, None, None, false, None, None, None, Some("new task".into()), true);
+    let (id, _branch) = write_spec_ticket(p, "a problem", "an approach");
+    let result = apm::cmd::spec::run(p, &id, None, None, None, false, None, None, None, Some("new task".into()), true);
     assert!(result.is_err());
     assert!(format!("{}", result.unwrap_err()).contains("--add-task requires --section"));
 }
@@ -1227,15 +1213,15 @@ fn spec_add_task_without_section_errors() {
 fn spec_append_adds_to_existing_section() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "original problem", "an approach");
+    let (id, branch) = write_spec_ticket(p, "original problem", "an approach");
     apm::cmd::spec::run(
-        p, "1",
+        p, &id,
         Some("Problem".into()),
         None, None, false, None,
         Some("extra line".into()),
         None, None, true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("original problem"), "original text missing: {content}");
     assert!(content.contains("extra line"), "appended text missing: {content}");
 }
@@ -1244,15 +1230,15 @@ fn spec_append_adds_to_existing_section() {
 fn spec_append_creates_absent_section() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
+    let (id, branch) = write_spec_ticket(p, "a problem", "an approach");
     apm::cmd::spec::run(
-        p, "1",
+        p, &id,
         Some("Open questions".into()),
         None, None, false, None,
         Some("Why does this happen?".into()),
         None, None, true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("Why does this happen?"), "new section content missing: {content}");
 }
 
@@ -1260,17 +1246,17 @@ fn spec_append_creates_absent_section() {
 fn spec_append_file_reads_and_appends() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "original", "an approach");
+    let (id, branch) = write_spec_ticket(p, "original", "an approach");
     let tmp = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(tmp.path(), "appended from file").unwrap();
     apm::cmd::spec::run(
-        p, "1",
+        p, &id,
         Some("Problem".into()),
         None, None, false, None, None,
         Some(tmp.path().to_string_lossy().into_owned()),
         None, true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("original"), "original text missing: {content}");
     assert!(content.contains("appended from file"), "file content missing: {content}");
 }
@@ -1279,15 +1265,15 @@ fn spec_append_file_reads_and_appends() {
 fn spec_add_task_appends_checkbox() {
     let dir = setup();
     let p = dir.path();
-    write_ticket_with_amendment_requests(p, 1);
+    let (id, branch) = write_ticket_with_amendment_requests(p);
     apm::cmd::spec::run(
-        p, "1",
+        p, &id,
         Some("Amendment requests".into()),
         None, None, false, None, None, None,
         Some("Handle edge case".into()),
         true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("- [ ] Handle edge case"), "new task missing: {content}");
     assert!(content.contains("- [ ] Add error handling"), "existing task missing: {content}");
 }
@@ -1296,16 +1282,16 @@ fn spec_add_task_appends_checkbox() {
 fn spec_add_task_creates_absent_section() {
     let dir = setup();
     let p = dir.path();
-    write_spec_ticket(p, 1, "a problem", "an approach");
+    let (id, branch) = write_spec_ticket(p, "a problem", "an approach");
     // "Amendment requests" is tasks-typed but absent from the write_spec_ticket fixture
     apm::cmd::spec::run(
-        p, "1",
+        p, &id,
         Some("Amendment requests".into()),
         None, None, false, None, None, None,
         Some("What is the scope?".into()),
         true,
     ).unwrap();
-    let content = branch_content(p, "ticket/0001-spec-test", "tickets/0001-spec-test.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("- [ ] What is the scope?"), "new task missing: {content}");
 }
 
@@ -1519,10 +1505,10 @@ fn start_next_claims_highest_priority_ticket() {
     let p = dir.path();
     std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
-    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "test-agent");
+    let (_id, branch) = write_ticket_with_owner(p, "ready", "alpha", "test-agent");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, false, false).unwrap();
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
@@ -1573,7 +1559,7 @@ terminal = true
     git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml", "worker-instructions.txt"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add instructions"]);
 
-    write_ticket_to_branch(p, "ticket/0001-work", "0001-work.md", "ready", 1, "work");
+    let (_id, _branch) = write_ticket_to_branch(p, "ready", "work");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
 
     // Capture stdout
@@ -1589,6 +1575,7 @@ fn start_next_clears_focus_section_from_ticket() {
     std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
 
+    // BYPASS: focus_section has no apm set subcommand; must write the TOML directly.
     // Write ticket with focus_section set
     let branch = "ticket/0001-focused";
     let filename = "0001-focused.md";
@@ -1671,11 +1658,11 @@ terminal = true
     std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
 
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "new", 1, "spec me", "test-agent");
+    let (_id, branch) = write_ticket_with_owner(p, "new", "spec me", "test-agent");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, false, false).unwrap();
 
-    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_design\""), "ticket should be in_design: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
@@ -1689,12 +1676,12 @@ terminal = true
 fn start_spawn_sets_agent_to_worker_pid() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    let (id, branch) = write_ticket_to_branch(p, "ready", "alpha");
 
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
-    apm::cmd::start::run(p, "1", true, true, false, "delegator-agent").unwrap();
+    apm::cmd::start::run(p, &id, true, true, false, "delegator-agent").unwrap();
 
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
@@ -1703,12 +1690,12 @@ fn start_spawn_sets_agent_to_worker_pid() {
 fn start_non_spawn_keeps_agent_name() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    let (id, branch) = write_ticket_to_branch(p, "ready", "alpha");
 
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
-    apm::cmd::start::run(p, "1", true, false, false, "delegator-agent").unwrap();
+    apm::cmd::start::run(p, &id, true, false, false, "delegator-agent").unwrap();
 
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
@@ -1719,51 +1706,48 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     let p = dir.path();
     std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(p.join(".apm/local.toml"), "username = \"delegator-agent\"\n").unwrap();
-    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "delegator-agent");
+    let (_id, branch) = write_ticket_with_owner(p, "ready", "alpha", "delegator-agent");
 
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
 
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
 // ── apm start: owner guard ───────────────────────────────────────────────────
 
-fn write_ticket_with_owner(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, owner: &str) {
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\nowner = \"{owner}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", branch]);
-    } else {
-        git(dir, &["checkout", branch]);
+fn write_ticket_with_owner(dir: &std::path::Path, state: &str, title: &str, owner: &str) -> (String, String) {
+    // apm new sets owner = resolved_identity. Configure the identity to match the
+    // desired owner so the ticket is created with the correct owner field, then
+    // restore the previous local.toml state (apm set owner requires a matching identity,
+    // which is unavailable in most test setups).
+    let local_toml = dir.join(".apm/local.toml");
+    let saved = if local_toml.exists() { Some(std::fs::read_to_string(&local_toml).unwrap()) } else { None };
+    std::fs::create_dir_all(dir.join(".apm")).unwrap();
+    std::fs::write(&local_toml, format!("username = \"{owner}\"\n")).unwrap();
+    let (id, branch) = create_ticket(dir, title);
+    match saved {
+        Some(content) => std::fs::write(&local_toml, content).unwrap(),
+        None => { let _ = std::fs::remove_file(&local_toml); }
     }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
-    git(dir, &["checkout", "main"]);
+    if state != "new" {
+        run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"]);
+    }
+    (id, branch)
 }
 
 #[test]
 fn start_does_not_set_owner_when_unowned() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
+    let (id, branch) = write_ticket_to_branch(p, "ready", "alpha");
 
     std::env::set_var("APM_AGENT_NAME", "alice");
-    apm::cmd::start::run(p, "1", true, false, false, "alice").unwrap();
+    apm::cmd::start::run(p, &id, true, false, false, "alice").unwrap();
 
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(!content.contains("owner ="), "owner should not be set by apm start when unowned: {content}");
 }
 
@@ -1771,12 +1755,12 @@ fn start_does_not_set_owner_when_unowned() {
 fn start_does_not_modify_owner_when_already_owned() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_with_owner(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha", "alice");
+    let (id, branch) = write_ticket_with_owner(p, "ready", "alpha", "alice");
 
     std::env::set_var("APM_AGENT_NAME", "bob");
-    apm::cmd::start::run(p, "1", true, false, false, "bob").unwrap();
+    apm::cmd::start::run(p, &id, true, false, false, "bob").unwrap();
 
-    let content = branch_content(p, "ticket/0001-alpha", "tickets/0001-alpha.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("owner = \"alice\""), "owner should stay alice, not be overwritten by bob: {content}");
     assert!(!content.contains("owner = \"bob\""), "bob must not become owner: {content}");
 }
@@ -1787,12 +1771,12 @@ fn start_does_not_modify_owner_when_already_owned() {
 fn in_design_does_not_set_owner_when_unowned() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me");
+    let (id, branch) = write_ticket_to_branch(p, "groomed", "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "alice");
-    apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
+    apm::cmd::state::run(p, &id, "in_design".into(), true, false).unwrap();
 
-    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(!content.contains("owner ="), "owner should not be set when transitioning to in_design unowned: {content}");
 }
 
@@ -1800,12 +1784,12 @@ fn in_design_does_not_set_owner_when_unowned() {
 fn in_design_does_not_overwrite_different_owner() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me", "alice");
+    let (id, branch) = write_ticket_with_owner(p, "groomed", "spec me", "alice");
 
     std::env::set_var("APM_AGENT_NAME", "bob");
-    apm::cmd::state::run(p, "1", "in_design".into(), true, false).unwrap();
+    apm::cmd::state::run(p, &id, "in_design".into(), true, false).unwrap();
 
-    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("owner = \"alice\""), "owner should stay alice when bob transitions to in_design: {content}");
     assert!(!content.contains("owner = \"bob\""), "bob must not become owner: {content}");
 }
@@ -1839,12 +1823,12 @@ fn spawn_new_ticket_transitions_to_in_design() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me");
+    let (id, branch) = write_ticket_to_branch(p, "groomed", "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
+    apm::cmd::start::run(p, &id, true, true, false, "test-agent").unwrap();
 
-    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_design\""), "new ticket should transition to in_design: {content}");
 }
 
@@ -1853,12 +1837,12 @@ fn spawn_ammend_ticket_transitions_to_in_design() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-fix-spec", "0001-fix-spec.md", "ammend", 1, "fix spec");
+    let (id, branch) = write_ticket_to_branch(p, "ammend", "fix spec");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
+    apm::cmd::start::run(p, &id, true, true, false, "test-agent").unwrap();
 
-    let content = branch_content(p, "ticket/0001-fix-spec", "tickets/0001-fix-spec.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_design\""), "ammend ticket should transition to in_design: {content}");
 }
 
@@ -1867,12 +1851,12 @@ fn spawn_ready_ticket_transitions_to_in_progress() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
-    write_ticket_to_branch(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me");
+    let (id, branch) = write_ticket_to_branch(p, "ready", "implement me");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run(p, "1", true, true, false, "test-agent").unwrap();
+    apm::cmd::start::run(p, &id, true, true, false, "test-agent").unwrap();
 
-    let content = branch_content(p, "ticket/0001-implement-me", "tickets/0001-implement-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "ready ticket should transition to in_progress: {content}");
 }
 
@@ -1882,12 +1866,12 @@ fn start_next_spawn_new_ticket_transitions_correctly() {
     let p = dir.path();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    write_ticket_with_owner(p, "ticket/0001-spec-me", "0001-spec-me.md", "groomed", 1, "spec me", "test-agent");
+    let (_id, branch) = write_ticket_with_owner(p, "groomed", "spec me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
 
-    let content = branch_content(p, "ticket/0001-spec-me", "tickets/0001-spec-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_design\""), "run_next on new ticket should go to in_design: {content}");
 }
 
@@ -1897,12 +1881,12 @@ fn start_next_spawn_ready_ticket_transitions_correctly() {
     let p = dir.path();
     std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
     std::fs::write(p.join(".apm/apm.worker.md"), "WORKER PROMPT").unwrap();
-    write_ticket_with_owner(p, "ticket/0001-implement-me", "0001-implement-me.md", "ready", 1, "implement me", "test-agent");
+    let (_id, branch) = write_ticket_with_owner(p, "ready", "implement me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     apm::cmd::start::run_next(p, true, true, false).unwrap();
 
-    let content = branch_content(p, "ticket/0001-implement-me", "tickets/0001-implement-me.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "run_next on ready ticket should go to in_progress: {content}");
 }
 
@@ -1912,8 +1896,8 @@ fn start_next_spawn_ready_ticket_transitions_correctly() {
 fn work_dry_run_lists_actionable_tickets() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-alpha", "0001-alpha.md", "ready", 1, "alpha");
-    write_ticket_to_branch(p, "ticket/0002-beta", "0002-beta.md", "ready", 2, "beta");
+    let (_id1, _branch1) = write_ticket_to_branch(p, "ready", "alpha");
+    let (_id2, _branch2) = write_ticket_to_branch(p, "ready", "beta");
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     // dry-run should succeed without touching worktrees or spawning anything
     apm::cmd::work::run(p, false, true, false, 30, None).unwrap();
@@ -1935,16 +1919,16 @@ fn sync_closes_implemented_ticket_with_merged_branch_in_one_run() {
     let p = dir.path();
 
     // Write a ticket in `implemented` state on its ticket branch.
-    write_ticket_to_branch(p, "ticket/0001-impl", "0001-impl.md", "implemented", 1, "impl ticket");
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "impl ticket");
 
     // Merge the ticket branch into main so it appears as merged.
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "ticket/0001-impl", "--no-edit"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
 
     // Run sync with auto_close — ticket should be closed in a single run.
     apm::cmd::sync::run(p, true, true, true, true, false, false).unwrap();
 
     // The ticket branch should now have state = "closed".
-    let content = branch_content(p, "ticket/0001-impl", "tickets/0001-impl.md");
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"closed\""), "ticket should be closed in one sync run: {content}");
 }
 
@@ -2682,29 +2666,10 @@ fn review_ammend_normalises_plain_bullets_to_checkboxes() {
 // ── apm clean ────────────────────────────────────────────────────────────────
 
 /// Write a closed ticket to a branch. Returns the branch name and rel_path.
-fn write_closed_ticket(dir: &std::path::Path, id: u32, slug: &str) -> (String, String) {
-    let branch = format!("ticket/{id:04}-{slug}");
-    let filename = format!("{id:04}-{slug}.md");
-    let rel_path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"{slug}\"\nstate = \"closed\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", &branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", &branch]);
-    } else {
-        git(dir, &["checkout", &branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&rel_path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &rel_path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({id}): close")]);
-    git(dir, &["checkout", "main"]);
+fn write_closed_ticket(dir: &std::path::Path, slug: &str) -> (String, String) {
+    let (id, branch) = create_ticket(dir, slug);
+    run_apm(dir, &["state", &id, "closed", "--no-aggressive"]);
+    let rel_path = ticket_rel_path(&branch);
     (branch, rel_path)
 }
 
@@ -2727,7 +2692,7 @@ fn clean_default_does_not_remove_local_branch() {
     // apm clean (without --branches) must leave the local branch intact.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "done");
+    let (branch, _) = write_closed_ticket(p, "done");
     merge_into_main(p, &branch);
 
     apm::cmd::clean::run(p, false, false, false, false, None, false, false).unwrap();
@@ -2740,7 +2705,7 @@ fn clean_branches_flag_removes_local_branch() {
     // apm clean --branches removes the local branch.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "branches-flag");
+    let (branch, _) = write_closed_ticket(p, "branches-flag");
     merge_into_main(p, &branch);
 
     apm::cmd::clean::run(p, false, false, false, true, None, false, false).unwrap();
@@ -2752,7 +2717,7 @@ fn clean_branches_flag_removes_local_branch() {
 fn clean_dry_run_includes_state_in_output() {
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "dry");
+    let (branch, _) = write_closed_ticket(p, "dry");
     merge_into_main(p, &branch);
 
     // dry_run=true should not actually delete anything
@@ -2767,7 +2732,7 @@ fn clean_skips_ticket_not_on_main() {
     // but the ticket file is NOT present on main — should warn and skip.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "ghost");
+    let (branch, _) = write_closed_ticket(p, "ghost");
 
     // -s ours: makes branch tip reachable from main without bringing content
     git(p, &["-c", "commit.gpgsign=false", "merge", "-s", "ours", &branch, "-m", "ours merge"]);
@@ -2784,7 +2749,7 @@ fn clean_proceeds_despite_state_mismatch_between_branch_and_main() {
     // trust the branch state and proceed — branch is authoritative.
     let dir = setup();
     let p = dir.path();
-    let (branch, rel_path) = write_closed_ticket(p, 1, "mismatch");
+    let (branch, rel_path) = write_closed_ticket(p, "mismatch");
     merge_into_main(p, &branch);
 
     // Overwrite the ticket on main to a different state
@@ -2836,7 +2801,20 @@ label = "New"
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
-    let (branch, _) = write_closed_ticket(p, 1, "no-terminal-config");
+    // BYPASS: the workflow only defines "new"; apm state "closed" would fail with
+    // "unknown state". Write the closed ticket directly to test that clean treats
+    // state="closed" as terminal even without a config entry for it.
+    let branch = {
+        let b = "ticket/nt000001-no-terminal-config";
+        let path = "tickets/nt000001-no-terminal-config.md";
+        let content = "+++\nid = \"nt000001\"\ntitle = \"no terminal config\"\nstate = \"closed\"\nbranch = \"ticket/nt000001-no-terminal-config\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        git(p, &["checkout", "-b", b]);
+        std::fs::write(p.join(path), content).unwrap();
+        git(p, &["-c", "commit.gpgsign=false", "add", path]);
+        git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: nt000001"]);
+        git(p, &["checkout", "main"]);
+        b.to_string()
+    };
     merge_into_main(p, &branch);
 
     apm::cmd::clean::run(p, false, false, false, true, None, false, false).unwrap();
@@ -2886,7 +2864,7 @@ terminal = true
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
     // Create closed ticket branch, merge into main, push both
-    let (branch, _) = write_closed_ticket(p, 1, "diverged");
+    let (branch, _) = write_closed_ticket(p, "diverged");
     git(p, &["push", "origin", &branch]);
     merge_into_main(p, &branch);
     git(p, &["push", "origin", "main"]);
@@ -2910,7 +2888,7 @@ fn clean_auto_removes_known_temp_files() {
     // branch is NOT removed without --branches.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "tempfiles");
+    let (branch, _) = write_closed_ticket(p, "tempfiles");
     merge_into_main(p, &branch);
 
     // Create a linked worktree for the branch
@@ -2931,7 +2909,7 @@ fn clean_auto_removes_known_temp_files() {
 fn clean_skips_modified_tracked_files() {
     let dir = setup();
     let p = dir.path();
-    let (branch, rel_path) = write_closed_ticket(p, 1, "modtracked");
+    let (branch, rel_path) = write_closed_ticket(p, "modtracked");
     merge_into_main(p, &branch);
 
     // Create a linked worktree for the branch
@@ -2952,7 +2930,7 @@ fn clean_skips_modified_tracked_files() {
 fn clean_dry_run_diagnoses_dirty_worktree() {
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "drydiagnose");
+    let (branch, _) = write_closed_ticket(p, "drydiagnose");
     merge_into_main(p, &branch);
 
     // Create a linked worktree for the branch
@@ -2978,7 +2956,7 @@ fn clean_untracked_flag_removes_other_untracked_files() {
     // Branch is NOT removed without --branches.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "otheruntracked");
+    let (branch, _) = write_closed_ticket(p, "otheruntracked");
     merge_into_main(p, &branch);
 
     // Create a linked worktree for the branch
@@ -3000,7 +2978,7 @@ fn clean_warns_about_untracked_without_flag() {
     // Without --untracked, a worktree with untracked non-temp files is skipped with a warning.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "warn-untracked");
+    let (branch, _) = write_closed_ticket(p, "warn-untracked");
     merge_into_main(p, &branch);
 
     let wt_path = p.join("worktrees").join("ticket-0001-warn-untracked");
@@ -3023,10 +3001,11 @@ fn clean_force_removes_unmerged_branch() {
     // Normal clean skips it; --force should remove it after confirmation.
     let dir = setup();
     let p = dir.path();
-    let (branch, rel_path) = write_closed_ticket(p, 1, "force-unmerged");
+    let (branch, rel_path) = write_closed_ticket(p, "force-unmerged");
 
-    // Write the closed ticket file to main directly so state_from_branch returns
-    // Some("closed"). The branch is NOT merged via git merge.
+    // BYPASS: the test requires the closed ticket to appear on main WITHOUT a git merge
+    // (simulating direct-close without PR); apm state closed creates the branch commit only,
+    // so the main-branch copy must be written directly for state_from_branch to return Some("closed").
     let closed_content = format!(
         "+++\nid = 1\ntitle = \"force-unmerged\"\nstate = \"closed\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
     );
@@ -3097,7 +3076,7 @@ terminal = true
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
     // Create closed ticket, merge into main, push both to remote.
-    let (branch, _) = write_closed_ticket(p, 1, "force-diverged");
+    let (branch, _) = write_closed_ticket(p, "force-diverged");
     git(p, &["push", "origin", &branch]);
     merge_into_main(p, &branch);
     git(p, &["push", "origin", "main"]);
@@ -3143,13 +3122,13 @@ fn clean_force_still_skips_non_terminal() {
     // A ticket in a non-terminal state should be skipped even with --force.
     let dir = setup();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-in-prog", "0001-in-prog.md", "in_progress", 1, "in progress");
+    let (_id, branch) = write_ticket_to_branch(p, "in_progress", "in progress");
 
     // No candidates (non-terminal) → no prompts needed; call library directly.
     apm::cmd::clean::run(p, false, false, true, false, None, false, false).unwrap();
 
     assert!(
-        branch_exists(p, "ticket/0001-in-prog"),
+        branch_exists(p, &branch),
         "non-terminal ticket should NOT be removed by --force clean"
     );
 }
@@ -3159,9 +3138,11 @@ fn clean_force_dry_run_shows_unmerged() {
     // --force --dry-run should print "would remove" for unmerged branches without touching anything.
     let dir = setup();
     let p = dir.path();
-    let (branch, rel_path) = write_closed_ticket(p, 1, "force-dryrun");
+    let (branch, rel_path) = write_closed_ticket(p, "force-dryrun");
 
-    // Write closed ticket to main so state_from_branch returns Some("closed").
+    // BYPASS: same as clean_force_removes_unmerged_branch — the closed ticket must exist
+    // on main without a git merge so state_from_branch returns Some("closed") while the
+    // branch remains unmerged; cannot be achieved via apm CLI alone.
     let closed_content = format!(
         "+++\nid = 1\ntitle = \"force-dryrun\"\nstate = \"closed\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
     );
@@ -3189,7 +3170,7 @@ fn clean_force_skips_modified_tracked() {
     // A ticket whose worktree has modified tracked files should be skipped even with --force.
     let dir = setup();
     let p = dir.path();
-    let (branch, rel_path) = write_closed_ticket(p, 1, "force-modtracked");
+    let (branch, rel_path) = write_closed_ticket(p, "force-modtracked");
     merge_into_main(p, &branch);
 
     let wt_path = p.join("worktrees").join("ticket-0001-force-modtracked");
@@ -3212,11 +3193,11 @@ fn clean_force_skips_modified_tracked() {
 fn start_without_apm_agent_name_uses_fallback() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
-    write_ticket_to_branch(p, "ticket/0001-fallback", "0001-fallback.md", "ready", 1, "fallback");
+    let (id, branch) = write_ticket_to_branch(p, "ready", "fallback");
     // Use a pre-resolved name to avoid env var manipulation in a concurrent test context.
     // The important thing is that run() accepts an explicit agent_name and stores it.
-    apm::cmd::start::run(p, "0001", true, false, false, "ci-agent").unwrap();
-    let content = branch_content(p, "ticket/0001-fallback", "tickets/0001-fallback.md");
+    apm::cmd::start::run(p, &id, true, false, false, "ci-agent").unwrap();
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
     assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
@@ -3489,28 +3470,11 @@ fn setup_squash_remote() -> (TempDir, TempDir) {
     init_remote_repo()
 }
 
-/// Write an "implemented" ticket to a branch and return the branch name.
-fn write_implemented_ticket(dir: &std::path::Path, branch: &str, filename: &str) {
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = 1\ntitle = \"Squash test\"\nstate = \"implemented\"\nbranch = \"{branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists_locally = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists_locally {
-        git(dir, &["checkout", "-b", branch]);
-    } else {
-        git(dir, &["checkout", branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "implement ticket"]);
-    git(dir, &["checkout", "main"]);
+/// Write an "implemented" ticket to a branch.
+fn write_implemented_ticket(dir: &std::path::Path) {
+    let (id, _branch) = create_ticket(dir, "Squash test");
+    run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [x] Done", "--no-aggressive"]);
+    run_apm(dir, &["state", &id, "implemented", "--force", "--no-aggressive"]);
 }
 
 /// Squash-merge `branch` into main: `git merge --squash` + `git commit`.
@@ -3524,12 +3488,12 @@ fn sync_detect_squash_merged_branch_remote_ref_present() {
     let (_bare, local) = setup_squash_remote();
     let p = local.path();
 
-    let branch = "ticket/0001-squash-test";
-    write_implemented_ticket(p, branch, "0001-squash-test.md");
-    git(p, &["push", "origin", branch]);
+    write_implemented_ticket(p);
+    let branch = find_ticket_branch(p, "squash-test");
+    git(p, &["push", "origin", &branch]);
 
     // Squash-merge into main locally and push main.
-    squash_merge_into_main(p, branch);
+    squash_merge_into_main(p, &branch);
     git(p, &["push", "origin", "main"]);
 
     // Fetch so local has up-to-date origin/main.
@@ -3541,7 +3505,7 @@ fn sync_detect_squash_merged_branch_remote_ref_present() {
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        close_branches.contains(&branch),
+        close_branches.contains(&branch.as_str()),
         "squash-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
 }
@@ -3551,15 +3515,15 @@ fn sync_detect_squash_merged_branch_remote_ref_deleted() {
     let (_bare, local) = setup_squash_remote();
     let p = local.path();
 
-    let branch = "ticket/0001-squash-gone";
-    write_implemented_ticket(p, branch, "0001-squash-gone.md");
-    git(p, &["push", "origin", branch]);
+    write_implemented_ticket(p);
+    let branch = find_ticket_branch(p, "squash-test");
+    git(p, &["push", "origin", &branch]);
 
-    squash_merge_into_main(p, branch);
+    squash_merge_into_main(p, &branch);
     git(p, &["push", "origin", "main"]);
 
     // Delete the remote branch (GitHub does this automatically after merge).
-    git(p, &["push", "origin", "--delete", branch]);
+    git(p, &["push", "origin", "--delete", &branch]);
     // Prune the deleted remote tracking ref.
     git(p, &["fetch", "--all", "--prune", "--quiet"]);
 
@@ -3570,7 +3534,7 @@ fn sync_detect_squash_merged_branch_remote_ref_deleted() {
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        close_branches.contains(&branch),
+        close_branches.contains(&branch.as_str()),
         "squash-merged ticket with deleted remote ref should appear in close candidates; got: {close_branches:?}"
     );
 }
@@ -3580,9 +3544,9 @@ fn sync_detect_does_not_falsely_detect_unmerged_branch() {
     let (_bare, local) = setup_squash_remote();
     let p = local.path();
 
-    let branch = "ticket/0001-not-merged";
-    write_implemented_ticket(p, branch, "0001-not-merged.md");
-    git(p, &["push", "origin", branch]);
+    write_implemented_ticket(p);
+    let branch = find_ticket_branch(p, "squash-test");
+    git(p, &["push", "origin", &branch]);
 
     // Do NOT merge into main — branch has commits not in main.
     git(p, &["fetch", "--all", "--quiet"]);
@@ -3593,7 +3557,7 @@ fn sync_detect_does_not_falsely_detect_unmerged_branch() {
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        !close_branches.contains(&branch),
+        !close_branches.contains(&branch.as_str()),
         "unmerged ticket should NOT appear in close candidates; got: {close_branches:?}"
     );
 }
@@ -3603,12 +3567,12 @@ fn sync_detect_regular_merge_still_detected() {
     let (_bare, local) = setup_squash_remote();
     let p = local.path();
 
-    let branch = "ticket/0001-regular-merge";
-    write_implemented_ticket(p, branch, "0001-regular-merge.md");
-    git(p, &["push", "origin", branch]);
+    write_implemented_ticket(p);
+    let branch = find_ticket_branch(p, "squash-test");
+    git(p, &["push", "origin", &branch]);
 
     // Regular (non-squash) merge.
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch, "--no-edit"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
     git(p, &["push", "origin", "main"]);
     git(p, &["fetch", "--all", "--quiet"]);
 
@@ -3618,7 +3582,7 @@ fn sync_detect_regular_merge_still_detected() {
         .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
         .collect();
     assert!(
-        close_branches.contains(&branch),
+        close_branches.contains(&branch.as_str()),
         "regular-merged ticket should appear in close candidates; got: {close_branches:?}"
     );
 }
@@ -3672,7 +3636,9 @@ label = "In Progress"
     // Back to main.
     git(p, &["checkout", "main"]);
 
-    // Create ticket branch with target_branch = "epic/e1-foo".
+    // BYPASS: this test uses a minimal repo without full epic infrastructure; apm new --epic
+    // requires an existing epic ticket branch and sets target_branch automatically, but here
+    // target_branch must be set to a non-existent epic branch for the rebase-source test.
     let ticket_branch = "ticket/abc1-epic-task";
     git(p, &["checkout", "-b", ticket_branch]);
     let ticket_content = concat!(
@@ -4046,28 +4012,19 @@ fn epic_show_no_tickets_prints_no_tickets() {
 
 // --- apm work --epic ---
 
-fn write_ticket_with_epic(dir: &std::path::Path, branch: &str, filename: &str, state: &str, id: u32, title: &str, epic: Option<&str>) {
-    let path = format!("tickets/{filename}");
-    let epic_line = epic.map(|e| format!("epic = \"{e}\"\n")).unwrap_or_default();
-    let content = format!(
-        "+++\nid = {id}\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\n{epic_line}created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", branch]);
+fn write_ticket_with_epic(dir: &std::path::Path, state: &str, title: &str, epic: Option<&str>) -> (String, String) {
+    let (id, branch) = if let Some(e) = epic {
+        let out = run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--epic", e, title]);
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
+        let id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+        let branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
+        (id, branch)
     } else {
-        git(dir, &["checkout", branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
-    git(dir, &["checkout", "main"]);
+        create_ticket(dir, title)
+    };
+    run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"]);
+    (id, branch)
 }
 
 #[test]
@@ -4075,8 +4032,9 @@ fn work_dry_run_epic_filter_shows_only_epic_ticket() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    write_ticket_with_epic(p, "ticket/0001-epic-ticket", "0001-epic-ticket.md", "ready", 1, "epic ticket", Some("ab12cd34"));
-    write_ticket_with_epic(p, "ticket/0002-free-ticket", "0002-free-ticket.md", "ready", 2, "free ticket", None);
+    create_epic_branch(p, "epic/ab12cd34-work-epic");
+    let (_id1, _branch1) = write_ticket_with_epic(p, "ready", "epic ticket", Some("ab12cd34"));
+    let (_id2, _branch2) = write_ticket_with_epic(p, "ready", "free ticket", None);
 
     // Capture stdout
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
@@ -4096,7 +4054,7 @@ fn work_dry_run_epic_filter_no_candidates() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    write_ticket_with_epic(p, "ticket/0001-free-ticket", "0001-free-ticket.md", "ready", 1, "free ticket", None);
+    let (_id, _branch) = write_ticket_with_epic(p, "ready", "free ticket", None);
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
         .args(["work", "--dry-run", "--epic", "ab12cd34"])
@@ -4114,7 +4072,8 @@ fn work_dry_run_no_flag_shows_epic_ticket() {
     let dir = setup_with_local_worktrees();
     let p = dir.path();
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    write_ticket_with_epic(p, "ticket/0001-epic-ticket", "0001-epic-ticket.md", "ready", 1, "epic ticket", Some("ab12cd34"));
+    create_epic_branch(p, "epic/ab12cd34-work-epic");
+    let (_id, _branch) = write_ticket_with_epic(p, "ready", "epic ticket", Some("ab12cd34"));
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
         .args(["work", "--dry-run"])
@@ -4133,31 +4092,11 @@ fn setup_pr_or_epic_merge_remote() -> (TempDir, TempDir) {
     init_remote_repo()
 }
 
-fn write_in_progress_ticket(dir: &std::path::Path, id: &str, branch: &str, filename: &str, target_branch: Option<&str>) {
-    let path = format!("tickets/{filename}");
-    let target_line = match target_branch {
-        Some(tb) => format!("target_branch = \"{tb}\"\n"),
-        None => String::new(),
-    };
-    let content = format!(
-        "+++\nid = \"{id}\"\ntitle = \"Test ticket\"\nstate = \"in_progress\"\nbranch = \"{branch}\"\n{target_line}created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", branch]);
-    } else {
-        git(dir, &["checkout", branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {id}")]);
-    git(dir, &["checkout", "main"]);
+fn write_in_progress_ticket(dir: &std::path::Path, title: &str) -> (String, String) {
+    let (id, branch) = create_ticket(dir, title);
+    run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [x] Done", "--no-aggressive"]);
+    run_apm(dir, &["state", &id, "in_progress", "--force", "--no-aggressive"]);
+    (id, branch)
 }
 
 #[test]
@@ -4172,8 +4111,19 @@ fn pr_or_epic_merge_with_target_branch_merges_into_target() {
     git(p, &["checkout", "main"]);
 
     // Write an in_progress ticket with target_branch set.
+    // BYPASS: target_branch field has no CLI setter independent of epic setup; the test
+    // needs a specific target_branch value (epic/test) without creating a real epic ticket.
     let branch = "ticket/aa000001-merge-test";
-    write_in_progress_ticket(p, "aa000001", branch, "aa000001-merge-test.md", Some("epic/test"));
+    {
+        let path = "tickets/aa000001-merge-test.md";
+        let content = "+++\nid = \"aa000001\"\ntitle = \"Test ticket\"\nstate = \"in_progress\"\nbranch = \"ticket/aa000001-merge-test\"\ntarget_branch = \"epic/test\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        git(p, &["checkout", "-b", branch]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        std::fs::write(p.join(path), content).unwrap();
+        git(p, &["-c", "commit.gpgsign=false", "add", path]);
+        git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: aa000001"]);
+        git(p, &["checkout", "main"]);
+    }
     git(p, &["push", "origin", branch]);
 
     // Check out epic/test so merge_into_default merges into it.
@@ -4198,19 +4148,18 @@ fn pr_or_epic_merge_without_target_branch_attempts_pr() {
     let p = local.path();
 
     // Write an in_progress ticket without target_branch.
-    let branch = "ticket/bb000002-pr-test";
-    write_in_progress_ticket(p, "bb000002", branch, "bb000002-pr-test.md", None);
-    git(p, &["push", "origin", branch]);
+    let (id, branch) = write_in_progress_ticket(p, "pr test");
+    git(p, &["push", "origin", &branch]);
 
     // Root stays on main — no target_branch → PR path.
-    let result = apm_core::state::transition(p, "bb000002", "implemented".into(), true, false);
+    let result = apm_core::state::transition(p, &id, "implemented".into(), true, false);
 
     // Push succeeds (bare remote available); gh fails → Err returned.
     assert!(result.is_err(), "PR path should fail (gh not available against local bare repo)");
 
     // Confirm the ticket branch was pushed before gh was attempted.
     let remote_refs = std::process::Command::new("git")
-        .args(["ls-remote", "origin", branch])
+        .args(["ls-remote", "origin", &branch])
         .current_dir(p)
         .output()
         .unwrap();
@@ -4735,12 +4684,20 @@ fn merge_strategy_merges_locally_without_push() {
     let (_bare, local) = setup_merge_strategy_remote();
     let p = local.path();
 
-    let branch = "ticket/cc000003-merge-push-test";
-    write_in_progress_ticket(p, "cc000003", branch, "cc000003-merge-push-test.md", None);
+    // BYPASS: setup_merge_strategy_remote patches workflow to completion="merge" which
+    // requires [git_host]; apm new rejects this invalid config, so we write the
+    // in_progress ticket directly to bypass CLI validation.
+    let id = {
+        let branch = "ticket/cafe0001-merge-push-test";
+        let rel = "tickets/cafe0001-merge-push-test.md";
+        let content = "+++\nid = \"cafe0001\"\ntitle = \"Merge push test\"\nstate = \"in_progress\"\nbranch = \"ticket/cafe0001-merge-push-test\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        apm_core::git::commit_to_branch(p, branch, rel, content, "add in_progress ticket").unwrap();
+        "cafe0001".to_string()
+    };
 
     let main_before = local_ref_sha(p, "main");
 
-    let result = apm_core::state::transition(p, "cc000003", "implemented".into(), true, false);
+    let result = apm_core::state::transition(p, &id, "implemented".into(), true, false);
     assert!(result.is_ok(), "merge strategy should succeed: {}", result.err().map(|e| e.to_string()).unwrap_or_default());
 
     let main_after = local_ref_sha(p, "main");
@@ -4760,8 +4717,19 @@ fn pr_or_epic_merge_with_target_branch_pushes_target_to_origin() {
     git(p, &["push", "origin", "epic/push-test"]);
     git(p, &["checkout", "main"]);
 
+    // BYPASS: target_branch field has no CLI setter independent of epic setup; the test
+    // needs a specific target_branch value (epic/push-test) without creating a real epic ticket.
     let branch = "ticket/dd000004-epic-push-test";
-    write_in_progress_ticket(p, "dd000004", branch, "dd000004-epic-push-test.md", Some("epic/push-test"));
+    {
+        let path = "tickets/dd000004-epic-push-test.md";
+        let content = "+++\nid = \"dd000004\"\ntitle = \"Test ticket\"\nstate = \"in_progress\"\nbranch = \"ticket/dd000004-epic-push-test\"\ntarget_branch = \"epic/push-test\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        git(p, &["checkout", "-b", branch]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        std::fs::write(p.join(path), content).unwrap();
+        git(p, &["-c", "commit.gpgsign=false", "add", path]);
+        git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: dd000004"]);
+        git(p, &["checkout", "main"]);
+    }
     git(p, &["push", "origin", branch]);
 
     git(p, &["checkout", "epic/push-test"]);
@@ -4819,34 +4787,19 @@ fn agents_max_workers_per_epic_defaults_to_one() {
 
 fn write_ticket_in_epic(
     dir: &std::path::Path,
-    branch: &str,
-    filename: &str,
     state: &str,
-    id: &str,
     title: &str,
     owner: &str,
     epic_id: &str,
-) {
-    let path = format!("tickets/{filename}");
-    let content = format!(
-        "+++\nid = \"{id}\"\ntitle = \"{title}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\nowner = \"{owner}\"\nepic = \"{epic_id}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    let branch_exists = std::process::Command::new("git")
-        .args(["rev-parse", "--verify", branch])
-        .current_dir(dir)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-    if !branch_exists {
-        git(dir, &["checkout", "-b", branch]);
-    } else {
-        git(dir, &["checkout", branch]);
-    }
-    std::fs::create_dir_all(dir.join("tickets")).unwrap();
-    std::fs::write(dir.join(&path), &content).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", &path]);
-    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket: {title}")]);
-    git(dir, &["checkout", "main"]);
+) -> (String, String) {
+    let out = run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--epic", epic_id, title]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
+    let id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+    let branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
+    run_apm(dir, &["set", &id, "owner", owner, "--no-aggressive"]);
+    run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"]);
+    (id, branch)
 }
 
 fn setup_with_epic_for_owner_tests() -> (tempfile::TempDir, String) {
@@ -4862,8 +4815,8 @@ fn epic_bulk_owner_change_succeeds() {
     let (dir, epic_id) = setup_with_epic_for_owner_tests();
     let p = dir.path();
 
-    write_ticket_in_epic(p, "ticket/aa000001-alpha", "aa000001-alpha.md", "ready", "aa000001", "Alpha", "alice", &epic_id);
-    write_ticket_in_epic(p, "ticket/aa000002-beta", "aa000002-beta.md", "ready", "aa000002", "Beta", "alice", &epic_id);
+    let (_id1, branch1) = write_ticket_in_epic(p, "ready", "Alpha", "alice", &epic_id);
+    let (_id2, branch2) = write_ticket_in_epic(p, "ready", "Beta", "alice", &epic_id);
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
         .args(["epic", "set", &epic_id, "owner", "bob"])
@@ -4879,10 +4832,10 @@ fn epic_bulk_owner_change_succeeds() {
     assert!(out.status.success(), "expected success; stderr: {stderr}");
     assert!(stdout.contains("updated 2 ticket(s), skipped 0"), "expected summary in output:\n{stdout}");
 
-    let content1 = branch_content(p, "ticket/aa000001-alpha", "tickets/aa000001-alpha.md");
-    assert!(content1.contains("owner = \"bob\""), "expected owner = bob in aa000001:\n{content1}");
-    let content2 = branch_content(p, "ticket/aa000002-beta", "tickets/aa000002-beta.md");
-    assert!(content2.contains("owner = \"bob\""), "expected owner = bob in aa000002:\n{content2}");
+    let content1 = branch_content(p, &branch1, &ticket_rel_path(&branch1));
+    assert!(content1.contains("owner = \"bob\""), "expected owner = bob in alpha:\n{content1}");
+    let content2 = branch_content(p, &branch2, &ticket_rel_path(&branch2));
+    assert!(content2.contains("owner = \"bob\""), "expected owner = bob in beta:\n{content2}");
 }
 
 #[test]
@@ -4890,8 +4843,8 @@ fn epic_bulk_owner_change_skips_closed() {
     let (dir, epic_id) = setup_with_epic_for_owner_tests();
     let p = dir.path();
 
-    write_ticket_in_epic(p, "ticket/bb000001-open", "bb000001-open.md", "ready", "bb000001", "Open ticket", "alice", &epic_id);
-    write_ticket_in_epic(p, "ticket/bb000002-closed", "bb000002-closed.md", "closed", "bb000002", "Closed ticket", "alice", &epic_id);
+    let (_id1, branch_open) = write_ticket_in_epic(p, "ready", "Open ticket", "alice", &epic_id);
+    let (_id2, branch_closed) = write_ticket_in_epic(p, "closed", "Closed ticket", "alice", &epic_id);
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
         .args(["epic", "set", &epic_id, "owner", "bob"])
@@ -4907,10 +4860,10 @@ fn epic_bulk_owner_change_skips_closed() {
     assert!(out.status.success(), "expected success; stderr: {stderr}");
     assert!(stdout.contains("updated 1 ticket(s), skipped 1"), "expected summary in output:\n{stdout}");
 
-    let content_open = branch_content(p, "ticket/bb000001-open", "tickets/bb000001-open.md");
+    let content_open = branch_content(p, &branch_open, &ticket_rel_path(&branch_open));
     assert!(content_open.contains("owner = \"bob\""), "expected owner = bob in open ticket:\n{content_open}");
 
-    let content_closed = branch_content(p, "ticket/bb000002-closed", "tickets/bb000002-closed.md");
+    let content_closed = branch_content(p, &branch_closed, &ticket_rel_path(&branch_closed));
     assert!(content_closed.contains("owner = \"alice\""), "expected owner = alice in closed ticket:\n{content_closed}");
 }
 
@@ -4919,8 +4872,8 @@ fn epic_bulk_owner_change_blocked_non_owner() {
     let (dir, epic_id) = setup_with_epic_for_owner_tests();
     let p = dir.path();
 
-    write_ticket_in_epic(p, "ticket/cc000001-mine", "cc000001-mine.md", "ready", "cc000001", "Mine", "alice", &epic_id);
-    write_ticket_in_epic(p, "ticket/cc000002-theirs", "cc000002-theirs.md", "ready", "cc000002", "Theirs", "carol", &epic_id);
+    let (_id1, branch1) = write_ticket_in_epic(p, "ready", "Mine", "alice", &epic_id);
+    let (_id2, branch2) = write_ticket_in_epic(p, "ready", "Theirs", "carol", &epic_id);
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
         .args(["epic", "set", &epic_id, "owner", "bob"])
@@ -4934,9 +4887,9 @@ fn epic_bulk_owner_change_blocked_non_owner() {
     assert!(!out.status.success(), "expected failure when a ticket is not owned by current user");
 
     // Neither ticket should have been modified
-    let content1 = branch_content(p, "ticket/cc000001-mine", "tickets/cc000001-mine.md");
+    let content1 = branch_content(p, &branch1, &ticket_rel_path(&branch1));
     assert!(content1.contains("owner = \"alice\""), "alice's ticket should be unchanged:\n{content1}");
-    let content2 = branch_content(p, "ticket/cc000002-theirs", "tickets/cc000002-theirs.md");
+    let content2 = branch_content(p, &branch2, &ticket_rel_path(&branch2));
     assert!(content2.contains("owner = \"carol\""), "carol's ticket should be unchanged:\n{content2}");
 }
 
@@ -4948,6 +4901,10 @@ fn build_dependency_bundle_with_direct_and_transitive_deps() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
+    // BYPASS: build_dependency_bundle requires tickets with stable, known IDs
+    // (trans001, dir0001a, etc.) that the test references by name; apm new generates
+    // random hex IDs, and depends_on validation rejects IDs that don't exist yet,
+    // making it impossible to construct this dependency graph via the CLI.
     // Transitive dependency (closed, no depends_on).
     let trans_ticket = concat!(
         "+++\nid = \"trans001\"\ntitle = \"Base Library\"\n",
@@ -6387,7 +6344,7 @@ fn clean_refuses_when_cwd_inside_worktree() {
     // non-zero exit and a message containing the expected phrase.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "cwd-guard");
+    let (branch, _) = write_closed_ticket(p, "cwd-guard");
     merge_into_main(p, &branch);
 
     let wt_path = p.join("worktrees").join("ticket-0001-cwd-guard");
@@ -6417,7 +6374,7 @@ fn clean_prunable_worktree_cleans_registry() {
     // must prune the dangling registry entry without attempting to delete files.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "prunable");
+    let (branch, _) = write_closed_ticket(p, "prunable");
     merge_into_main(p, &branch);
 
     let wt_path = p.join("worktrees").join("ticket-0001-prunable");
@@ -6462,7 +6419,7 @@ fn clean_untracked_does_not_affect_worktrees_dir_debris() {
     // directly under <repo>/worktrees/ (outside any registered worktree).
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "debris");
+    let (branch, _) = write_closed_ticket(p, "debris");
     merge_into_main(p, &branch);
 
     let wt_path = p.join("worktrees").join("ticket-0001-debris");
@@ -6489,7 +6446,7 @@ fn clean_removes_closed_ticket_worktree_in_repo_layout() {
     // entry must be gone after clean.
     let dir = setup();
     let p = dir.path();
-    let (branch, _) = write_closed_ticket(p, 1, "happy");
+    let (branch, _) = write_closed_ticket(p, "happy");
     merge_into_main(p, &branch);
 
     let wt_path = p.join("worktrees").join("ticket-0001-happy");
@@ -6621,8 +6578,21 @@ fn clean_older_than_filters_by_updated_at() {
     let dir = setup();
     let p = dir.path();
 
-    // Old ticket: updated_at = 2026-01-01 (write_closed_ticket helper default).
-    let (old_branch, _) = write_closed_ticket(p, 1, "old");
+    // BYPASS: write_closed_ticket sets updated_at = now (via apm new); this test
+    // requires updated_at = 2026-01-01 (before the 2026-03-01 threshold) and there
+    // is no CLI command to set a historical updated_at.
+    let old_branch = {
+        let b = "ticket/old001-old";
+        let path = "tickets/old001-old.md";
+        let content = "+++\nid = \"old001\"\ntitle = \"old\"\nstate = \"closed\"\nbranch = \"ticket/old001-old\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        git(p, &["checkout", "-b", b]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        std::fs::write(p.join(path), content).unwrap();
+        git(p, &["-c", "commit.gpgsign=false", "add", path]);
+        git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: old"]);
+        git(p, &["checkout", "main"]);
+        b.to_string()
+    };
     merge_into_main(p, &old_branch);
 
     // Recent ticket: updated_at = 2026-04-01, written inline.
