@@ -4,12 +4,12 @@ title = "UI: clicking a column with only 1 ticket doesn't select ticket"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/df5c0ddb-ui-clicking-a-column-with-only-1-ticket-"
 created_at = "2026-05-03T19:01:41.363530Z"
-updated_at = "2026-05-03T19:12:58.782833Z"
+updated_at = "2026-05-03T19:13:01.884276Z"
 +++
 
 ## Spec
