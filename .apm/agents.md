@@ -322,3 +322,7 @@ apm new --side-note "Brief title" --context "What you observed and why it matter
 ```
 
 Then immediately resume the current ticket. The supervisor will triage the side ticket separately.
+
+## Tests
+
+See `apm/tests/README.md` for integration-test conventions and the bypass policy.
