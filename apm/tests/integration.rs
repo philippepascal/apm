@@ -3546,57 +3546,34 @@ fn state_force_does_not_skip_doc_validation() {
 
 // --- squash-merge detection ---
 
-/// Minimal apm.toml with implemented state for squash-merge tests.
-fn squash_merge_config() -> &'static str {
-    r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 1
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id    = "new"
-label = "New"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#
-}
-
-/// Set up a bare remote + local clone for squash-merge tests.
+/// Set up a bare remote + local clone initialised with real `apm init`.
 /// Returns (bare_dir, local_dir). Both TempDirs must be kept alive.
-fn setup_squash_remote() -> (TempDir, TempDir) {
+fn init_remote_repo() -> (TempDir, TempDir) {
     let bare = tempfile::tempdir().unwrap();
     let bp = bare.path();
     git(bp, &["init", "--bare", "-q"]);
 
     let local = tempfile::tempdir().unwrap();
     let p = local.path();
-    git(p, &["clone", &bp.to_string_lossy(), "."]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    git(p, &["clone", "-q", &bp.to_string_lossy(), "."]);
 
-    std::fs::write(p.join("apm.toml"), squash_merge_config()).unwrap();
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--no-claude", "--quiet"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "apm init failed: {}", String::from_utf8_lossy(&out.stderr));
+
+    git(p, &["add", "."]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
     git(p, &["push", "origin", "main"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
 
     (bare, local)
+}
+
+fn setup_squash_remote() -> (TempDir, TempDir) {
+    init_remote_repo()
 }
 
 /// Write an "implemented" ticket to a branch and return the branch name.
@@ -4239,45 +4216,8 @@ fn work_dry_run_no_flag_shows_epic_ticket() {
 
 // --- pr_or_epic_merge completion strategy ---
 
-fn pr_or_epic_merge_config_toml() -> &'static str {
-    r#"[project]
-name = "test"
-default_branch = "main"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-  [[workflow.states.transitions]]
-  to         = "implemented"
-  trigger    = "manual"
-  completion = "pr_or_epic_merge"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-"#
-}
-
 fn setup_pr_or_epic_merge_remote() -> (TempDir, TempDir) {
-    let bare = tempfile::tempdir().unwrap();
-    let bp = bare.path();
-    git(bp, &["init", "--bare", "-q"]);
-
-    let local = tempfile::tempdir().unwrap();
-    let p = local.path();
-    git(p, &["clone", &bp.to_string_lossy(), "."]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), pr_or_epic_merge_config_toml()).unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
-    git(p, &["push", "origin", "main"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    (bare, local)
+    init_remote_repo()
 }
 
 fn write_in_progress_ticket(dir: &std::path::Path, id: &str, branch: &str, filename: &str, target_branch: Option<&str>) {
@@ -4827,44 +4767,22 @@ fn archive_falls_back_to_ticket_branch_for_stale_main() {
 
 // --- merge completion strategy: push to origin after merge ---
 
-fn merge_strategy_config_toml() -> &'static str {
-    r#"[project]
-name = "test"
-default_branch = "main"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-  [[workflow.states.transitions]]
-  to         = "implemented"
-  trigger    = "manual"
-  completion = "merge"
-
-[[workflow.states]]
-id    = "implemented"
-label = "Implemented"
-"#
-}
-
 fn setup_merge_strategy_remote() -> (TempDir, TempDir) {
-    let bare = tempfile::tempdir().unwrap();
-    let bp = bare.path();
-    git(bp, &["init", "--bare", "-q"]);
-
-    let local = tempfile::tempdir().unwrap();
+    let (bare, local) = init_remote_repo();
     let p = local.path();
-    git(p, &["clone", &bp.to_string_lossy(), "."]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-    std::fs::write(p.join("apm.toml"), merge_strategy_config_toml()).unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    // BYPASS: no apm CLI command exists to override completion strategy on a
+    // specific transition; edit .apm/workflow.toml directly to change
+    // pr_or_epic_merge → merge on in_progress → implemented.
+    // on_failure = "merge_failed" is kept — completion = "merge" also requires it.
+    let wf_path = p.join(".apm/workflow.toml");
+    let wf = std::fs::read_to_string(&wf_path).unwrap();
+    let patched = wf.replace(r#"completion = "pr_or_epic_merge""#, r#"completion = "merge""#);
+    std::fs::write(&wf_path, &patched).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "override: use merge completion strategy"]);
     git(p, &["push", "origin", "main"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
     (bare, local)
 }
 
