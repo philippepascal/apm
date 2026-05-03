@@ -1,7 +1,7 @@
 +++
 id = "8217e5f5"
 title = "Document integration-test best practices and bypass policy"
-state = "in_progress"
+state = "blocked"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8217e5f5-document-integration-test-best-practices"
 created_at = "2026-05-01T20:26:39.470083Z"
-updated_at = "2026-05-03T20:30:32.419161Z"
+updated_at = "2026-05-03T20:34:05.093343Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 +++
@@ -88,3 +88,4 @@ No Rust code changes. No existing tests are modified.
 | 2026-05-02T03:12Z | in_design | specd | claude-0502-0308-d680 |
 | 2026-05-03T20:16Z | specd | ready | philippepascal |
 | 2026-05-03T20:30Z | ready | in_progress | philippepascal |
+| 2026-05-03T20:34Z | in_progress | blocked | claude-0503-2030-99b8 |
