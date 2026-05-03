@@ -35,7 +35,7 @@ A secondary issue: `allSelected` is computed solely from `selectedTicketIds`, so
 
 ### Out of scope
 
-if more than one, all tickets in column are selected ,which is correct
+- Behaviour of the column-header checkbox for columns with 2+ tickets (already works correctly)\n- Keyboard navigation selection (arrow keys in WorkScreen), which uses setSelectedTicketId directly and is unaffected\n- Shift-click range selection within a column (selectTicketRange), unaffected\n- Any changes to useLayoutStore.ts store actions
 
 ### Approach
 
