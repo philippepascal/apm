@@ -28,7 +28,7 @@ This ticket produces the policy document. It is a prerequisite for all sibling m
 
 - [x] `apm/tests/README.md` exists and contains a "Test conventions" section
 - [x] The document states that tests must drive APM via real `apm` commands by default
-- [ ] The document defines what counts as a bypass (direct `std::fs::write` on a ticket branch, hand-built frontmatter strings, raw git porcelain substituting for an `apm` command)
+- [x] The document defines what counts as a bypass (direct `std::fs::write` on a ticket branch, hand-built frontmatter strings, raw git porcelain substituting for an `apm` command)
 - [ ] The document states bypass is permitted only when no `apm` command path exists
 - [ ] The document specifies the exact inline annotation format: `// BYPASS: <one-line reason>`
 - [ ] The document includes the grep command to audit all bypasses (`grep -rn "BYPASS:" apm/tests/`)
