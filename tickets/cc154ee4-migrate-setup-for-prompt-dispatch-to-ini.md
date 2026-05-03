@@ -1,7 +1,7 @@
 +++
 id = "cc154ee4"
 title = "Migrate setup_for_prompt_dispatch() to init_repo()"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/cc154ee4-migrate-setup-for-prompt-dispatch-to-ini"
 created_at = "2026-05-01T20:27:03.975333Z"
-updated_at = "2026-05-03T20:17:03.409749Z"
+updated_at = "2026-05-03T21:22:51.275988Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -135,3 +135,4 @@ Single commit: `ticket(cc154ee4): migrate setup_for_prompt_dispatch to init_repo
 | 2026-05-02T03:49Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:56Z | in_design | specd | claude-0502-0349-0838 |
 | 2026-05-03T20:17Z | specd | ready | philippepascal |
+| 2026-05-03T21:22Z | ready | in_progress | philippepascal |
