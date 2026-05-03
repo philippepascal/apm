@@ -60,100 +60,7 @@ fn test_init_repo_helper() {
 }
 
 fn setup() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    // Minimal apm.toml so Config::load succeeds.
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-
-[[ticket.sections]]
-name     = "Problem"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Acceptance criteria"
-type     = "tasks"
-required = true
-
-[[ticket.sections]]
-name     = "Out of scope"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Approach"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Open questions"
-type     = "qa"
-required = false
-
-[[ticket.sections]]
-name     = "Amendment requests"
-type     = "tasks"
-required = false
-"#,
-    )
-    .unwrap();
-
-    // Initial commit so git worktrees work.
-    git(p, &["add", "apm.toml"]);
-    git(p, &[
-        "-c", "commit.gpgsign=false",
-        "commit", "-m", "init", "--allow-empty",
-    ]);
-
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 /// Like setup() but configures the `merge` completion strategy for
@@ -422,13 +329,11 @@ fn build_epic_bundle_respects_sibling_cap() {
     let dir = setup();
     let p = dir.path();
 
-    // Config with sibling_cap = 1 so only the newest closed sibling is shown.
-    let config_toml = concat!(
-        "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n\n",
-        "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n\n",
-        "[context]\nepic_sibling_cap = 1\nepic_byte_cap = 0\n",
-    );
-    std::fs::write(p.join("apm.toml"), config_toml).unwrap();
+    // Append context config to .apm/config.toml to cap siblings at 1.
+    let config_path = p.join(".apm/config.toml");
+    let mut config_content = std::fs::read_to_string(&config_path).unwrap();
+    config_content.push_str("\n[context]\nepic_sibling_cap = 1\nepic_byte_cap = 0\n");
+    std::fs::write(&config_path, &config_content).unwrap();
     let config = apm_core::config::Config::load(p).unwrap();
 
     let epic_id = "ff001122";
@@ -551,7 +456,8 @@ fn list_state_filter() {
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
     write_valid_spec_to_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, false).unwrap();
+    // new → specd is not a valid transition in the production workflow; use force.
+    apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, true).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
     apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, false, true, None, None).unwrap();
@@ -661,7 +567,8 @@ fn state_transition_updates_file() {
     let id = find_ticket_id(dir.path(), "transition-test");
     let rel = ticket_rel_path(&branch);
     write_valid_spec_to_branch(dir.path(), &branch, &rel);
-    apm::cmd::state::run(dir.path(), &id, "specd".into(), false, false).unwrap();
+    // new → specd is not a valid transition in the production workflow; use force.
+    apm::cmd::state::run(dir.path(), &id, "specd".into(), false, true).unwrap();
     // Read the updated state from the ticket branch (not the working tree).
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("state = \"specd\""));
@@ -675,7 +582,8 @@ fn state_transition_appends_history_row() {
     let id = find_ticket_id(dir.path(), "history-test");
     let rel = ticket_rel_path(&branch);
     write_valid_spec_to_branch(dir.path(), &branch, &rel);
-    apm::cmd::state::run(dir.path(), &id, "specd".into(), false, false).unwrap();
+    // new → specd is not a valid transition in the production workflow; use force.
+    apm::cmd::state::run(dir.path(), &id, "specd".into(), false, true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("| new | specd |"));
 }
@@ -687,7 +595,8 @@ fn state_ammend_inserts_amendment_section() {
     let branch = find_ticket_branch(dir.path(), "ammend-test");
     let id = find_ticket_id(dir.path(), "ammend-test");
     let rel = ticket_rel_path(&branch);
-    apm::cmd::state::run(dir.path(), &id, "ammend".into(), false, false).unwrap();
+    // new → ammend is not a valid transition in the production workflow; use force.
+    apm::cmd::state::run(dir.path(), &id, "ammend".into(), false, true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Amendment requests"));
 }
@@ -2061,10 +1970,10 @@ fn context_section_approach_places_text_under_approach() {
     let rel = ticket_rel_path(&branch);
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Approach\n\nmy approach text\n\n"), "expected context under ### Approach");
-    // Problem section should be empty (no content between header and next section)
-    let after_problem = content.split("### Problem\n\n").nth(1).expect("Problem section not found in content");
-    let problem_body = after_problem.split("\n### ").next().unwrap_or("");
-    assert!(problem_body.trim().is_empty(), "Problem should be empty, got: {problem_body:?}");
+    // Problem section must not contain the custom context text — production template
+    // may pre-populate it with placeholder text, so we only verify the context
+    // went to the right section, not that Problem is empty.
+    assert!(!content.contains("### Problem\n\nmy approach text"), "context must not bleed into Problem section");
 }
 
 #[test]
@@ -2753,6 +2662,10 @@ fn review_ammend_normalises_plain_bullets_to_checkboxes() {
     git(p, &["-c", "commit.gpgsign=false", "add", &ticket_path]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add amendment requests"]);
     git(p, &["checkout", "-"]);
+
+    // Advance to specd first (new → specd not valid in production workflow; use force),
+    // so that ammend is a reachable transition for review.
+    apm::cmd::state::run(p, &id, "specd".into(), false, true).unwrap();
 
     // Use a no-op editor so the spec is not modified interactively.
     std::env::set_var("EDITOR", "true");
@@ -4606,7 +4519,16 @@ fn setup_with_archive_dir() -> TempDir {
 #[test]
 fn archive_no_archive_dir_errors() {
     let dir = setup();
-    let result = apm::cmd::archive::run(dir.path(), false, None);
+    let p = dir.path();
+    // Production config always sets archive_dir; remove it to test the error path.
+    let config_path = p.join(".apm/config.toml");
+    let config_content = std::fs::read_to_string(&config_path).unwrap();
+    let patched: String = config_content.lines()
+        .filter(|l| !l.contains("archive_dir"))
+        .collect::<Vec<_>>()
+        .join("\n") + "\n";
+    std::fs::write(&config_path, patched).unwrap();
+    let result = apm::cmd::archive::run(p, false, None);
     assert!(result.is_err());
     let msg = format!("{}", result.unwrap_err());
     assert!(msg.contains("archive_dir is not set"), "unexpected error: {msg}");
