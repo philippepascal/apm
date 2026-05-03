@@ -1,7 +1,7 @@
 +++
 id = "5c494a5d"
 title = "Migrate setup_merge() to init_repo()"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5c494a5d-migrate-setup-merge-to-init-repo"
 created_at = "2026-05-01T20:26:46.198163Z"
-updated_at = "2026-05-02T03:28:17.726496Z"
+updated_at = "2026-05-03T20:16:47.883624Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -109,3 +109,4 @@ The extra states in the production workflow (`groomed`, `in_design`, `ready`, `b
 | 2026-05-02T03:07Z | new | groomed | philippepascal |
 | 2026-05-02T03:22Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:28Z | in_design | specd | claude-0502-0322-dd20 |
+| 2026-05-03T20:16Z | specd | ready | philippepascal |
