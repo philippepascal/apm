@@ -1,7 +1,7 @@
 +++
 id = "9fcc94ed"
 title = "Agent instructions: graceful exit via question/blocked state when stuck on capability limits"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9fcc94ed-agent-instructions-graceful-exit-via-que"
 created_at = "2026-05-01T02:34:11.627171Z"
-updated_at = "2026-05-02T18:30:01.415402Z"
+updated_at = "2026-05-03T19:55:06.817378Z"
 +++
 
 ## Spec
@@ -105,3 +105,4 @@ This ticket adds an explicit "## Capability limitations" section to the spec-wri
 | 2026-05-02T18:21Z | specd | ready | philippepascal |
 | 2026-05-02T18:22Z | ready | in_progress | philippepascal |
 | 2026-05-02T18:30Z | in_progress | implemented | claude-0502-1822-w9f3 |
+| 2026-05-03T19:55Z | implemented | closed | philippepascal(apm-sync) |
