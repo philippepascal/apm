@@ -64,7 +64,7 @@ This ticket produces the policy document. It is a prerequisite for all sibling m
 
    **Starting point for new tests:** Use the `init_repo()` helper (added by ticket 795dce11) rather than hand-rolling setup. Compose targeted overrides on top of it.
 
-2. Update the Tests section in `CLAUDE.md` (currently lines 24–28) to append one sentence: "See `apm/tests/README.md` for integration-test conventions and the bypass policy."
+2. Update the `## Tests` section in `.apm/agents.md` to append one sentence: "See `apm/tests/README.md` for integration-test conventions and the bypass policy."
 
 No Rust code changes. No existing tests are modified.
 
