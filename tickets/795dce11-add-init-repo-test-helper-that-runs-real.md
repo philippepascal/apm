@@ -1,7 +1,7 @@
 +++
 id = "795dce11"
 title = "Add init_repo() test helper that runs real apm init"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/795dce11-add-init-repo-test-helper-that-runs-real"
 created_at = "2026-05-01T20:26:41.678324Z"
-updated_at = "2026-05-03T20:34:21.501119Z"
+updated_at = "2026-05-03T20:37:43.246198Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 +++
@@ -115,3 +115,4 @@ Insert after the `git()` helper and before the `setup()` helper so it is visible
 | 2026-05-02T03:17Z | in_design | specd | claude-0502-0312-5c20 |
 | 2026-05-03T20:16Z | specd | ready | philippepascal |
 | 2026-05-03T20:34Z | ready | in_progress | philippepascal |
+| 2026-05-03T20:37Z | in_progress | implemented | claude-0503-2034-bc50 |
