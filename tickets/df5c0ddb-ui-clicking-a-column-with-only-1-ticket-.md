@@ -16,7 +16,13 @@ updated_at = "2026-05-03T19:04:50.515486Z"
 
 ### Problem
 
-it should select the ticket
+When a user clicks the checkbox in a Swimlane column header, the handler calls `selectColumn(columnIds)`, which appends the ticket IDs to `selectedTicketIds` in the Zustand store. This triggers the multi-select visual state (blue-400 ring on the ticket card) but does **not** set `selectedTicketId` — the field that opens the ticket in the detail panel.
+
+For columns with two or more tickets this is the correct outcome: all tickets get the multi-select ring, none opens individually in the detail panel. But for a column with exactly one ticket, the expected behaviour is equivalent to clicking that ticket card directly — the ticket should be fully selected (`selectedTicketId` set, detail panel opened, blue-500 ring).
+
+Currently the column-header checkbox click for a 1-ticket column only adds the ID to `selectedTicketIds` and leaves `selectedTicketId` unchanged (null or pointing at a different ticket). The ticket appears with a multi-select ring but does not open in the detail panel, which users experience as "not selected."
+
+A secondary issue: `allSelected` is computed solely from `selectedTicketIds`, so when the ticket is already single-selected (via `setSelectedTicketId`, which clears `selectedTicketIds`), the checkbox renders as unchecked and the deselect path (`deselectColumn`) is a no-op, leaving the selection state inconsistent.
 
 ### Acceptance criteria
 
