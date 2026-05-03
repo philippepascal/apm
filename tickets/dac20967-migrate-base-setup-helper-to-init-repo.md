@@ -27,14 +27,14 @@ The fix is to replace `setup()` body with a call to `init_repo()` (added by upst
 
 ### Acceptance criteria
 
-- [ ] `setup()` body no longer contains any `std::fs::write` call for `apm.toml` or any hand-written config string
-- [ ] `setup()` delegates entirely to `init_repo()` and returns its `TempDir` directly
-- [ ] `setup()` still returns a `TempDir` so all call sites continue to use `dir.path()` without modification
-- [ ] `cargo test --test integration` exits 0 after the migration (all tests either pass or are explicitly removed)
-- [ ] Every test that was updated to accommodate production workflow semantics compiles and passes with its new transition path
-- [ ] Every test that was deleted has a `// DELETED: <one-line reason>` comment in its former location committed to history
-- [ ] No test calls `apm::cmd::state::run` with `force: false` on a transition that is not valid in the production workflow (e.g. `new → specd` without force)
-- [ ] The repo root no longer contains `apm.toml` after `setup()` runs (the production config lives at `.apm/config.toml`)
+- [x] `setup()` body no longer contains any `std::fs::write` call for `apm.toml` or any hand-written config string
+- [x] `setup()` delegates entirely to `init_repo()` and returns its `TempDir` directly
+- [x] `setup()` still returns a `TempDir` so all call sites continue to use `dir.path()` without modification
+- [x] `cargo test --test integration` exits 0 after the migration (all tests either pass or are explicitly removed)
+- [x] Every test that was updated to accommodate production workflow semantics compiles and passes with its new transition path
+- [x] Every test that was deleted has a `// DELETED: <one-line reason>` comment in its former location committed to history
+- [x] No test calls `apm::cmd::state::run` with `force: false` on a transition that is not valid in the production workflow (e.g. `new → specd` without force)
+- [x] The repo root no longer contains `apm.toml` after `setup()` runs (the production config lives at `.apm/config.toml`)
 
 ### Out of scope
 
