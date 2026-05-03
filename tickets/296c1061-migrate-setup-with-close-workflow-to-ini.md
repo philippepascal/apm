@@ -1,7 +1,7 @@
 +++
 id = "296c1061"
 title = "Migrate setup_with_close_workflow() to init_repo()"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/296c1061-migrate-setup-with-close-workflow-to-ini"
 created_at = "2026-05-01T20:26:48.501162Z"
-updated_at = "2026-05-03T20:16:50.949175Z"
+updated_at = "2026-05-03T20:37:57.181799Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -95,3 +95,4 @@ All 7 tests in the sync group should pass.
 | 2026-05-02T03:28Z | groomed | in_design | philippepascal |
 | 2026-05-02T03:34Z | in_design | specd | claude-0502-0328-6b08 |
 | 2026-05-03T20:16Z | specd | ready | philippepascal |
+| 2026-05-03T20:37Z | ready | in_progress | philippepascal |
