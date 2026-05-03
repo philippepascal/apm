@@ -1,7 +1,7 @@
 +++
 id = "6095305a"
 title = "Filesystem path validator at wrapper layer (worktree isolation enforcement)"
-state = "merge_failed"
+state = "implemented"
 priority = 0
 effort = 6
 risk = 6
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6095305a-filesystem-path-validator-at-wrapper-lay"
 created_at = "2026-05-01T02:30:34.552318Z"
-updated_at = "2026-05-03T08:00:27.612976Z"
+updated_at = "2026-05-03T08:06:56.338463Z"
 +++
 
 ## Spec
@@ -807,3 +807,4 @@ merge conflict — resolve manually and push:
 | 2026-05-03T08:00Z | implemented | in_progress | philippepascal |
 | 2026-05-03T08:00Z | in_progress | implemented | philippepascal |
 | 2026-05-03T08:00Z | implemented | merge_failed | philippepascal |
+| 2026-05-03T08:06Z | merge_failed | implemented | philippepascal |
