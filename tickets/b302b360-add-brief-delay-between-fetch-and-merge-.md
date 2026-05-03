@@ -1,7 +1,7 @@
 +++
 id = "b302b360"
 title = "Add brief delay between fetch and merge in apm start to reduce fetch-race window"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b302b360-add-brief-delay-between-fetch-and-merge-"
 created_at = "2026-05-03T08:07:25.634157Z"
-updated_at = "2026-05-03T19:27:41.307176Z"
+updated_at = "2026-05-03T19:31:37.261125Z"
 +++
 
 ## Spec
@@ -81,3 +81,4 @@ Order of steps:
 | 2026-05-03T19:04Z | in_design | specd | claude-0503-1902-f8f8 |
 | 2026-05-03T19:27Z | specd | ready | philippepascal |
 | 2026-05-03T19:27Z | ready | in_progress | philippepascal |
+| 2026-05-03T19:31Z | in_progress | implemented | claude-0503-1927-24c8 |
