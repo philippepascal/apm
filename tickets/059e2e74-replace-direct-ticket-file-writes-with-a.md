@@ -1,7 +1,7 @@
 +++
 id = "059e2e74"
 title = "Replace direct ticket-file writes with apm new"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 7
 risk = 4
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/059e2e74-replace-direct-ticket-file-writes-with-a"
 created_at = "2026-05-01T20:27:29.576253Z"
-updated_at = "2026-05-02T07:26:22.211159Z"
+updated_at = "2026-05-03T20:17:18.598289Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -214,3 +214,4 @@ Remove the entire function (it has zero callers and is annotated `#[allow(dead_c
 | 2026-05-02T07:20Z | specd | ammend | claude-0502-1300-rev1 |
 | 2026-05-02T07:23Z | ammend | in_design | philippepascal |
 | 2026-05-02T07:26Z | in_design | specd | claude-0502-0723-7758 |
+| 2026-05-03T20:17Z | specd | ready | philippepascal |
