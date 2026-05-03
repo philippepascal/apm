@@ -351,7 +351,8 @@ pub fn create(
         agent_overrides: std::collections::HashMap::new(),
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
-    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {actor} |\n");
+    let by = if actor != author { format!("{actor}|{author}") } else { actor.clone() };
+    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {by} |\n");
     let body_template = {
         let mut s = String::from("## Spec\n\n");
         for sec in &config.ticket.sections {
