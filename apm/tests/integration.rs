@@ -160,106 +160,26 @@ required = false
 /// `in_progress → implemented` so that depends_on is allowed when tickets
 /// share the same target_branch (or both default to main).
 fn setup_merge() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
+    let dir = init_repo();
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    // BYPASS: no apm command can change a workflow completion strategy post-init.
+    // Change pr_or_epic_merge → merge so that depends_on is allowed for tickets
+    // that share the same target_branch without belonging to an epic.
+    let wf_path = dir.path().join(".apm/workflow.toml");
+    let wf = std::fs::read_to_string(&wf_path).unwrap();
+    assert!(
+        wf.contains("completion = \"pr_or_epic_merge\""),
+        "expected pr_or_epic_merge in workflow.toml — default template may have changed"
+    );
+    let patched = wf.replace(
+        "completion = \"pr_or_epic_merge\"",
+        "completion = \"merge\"",
+    );
+    std::fs::write(&wf_path, patched).unwrap();
 
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["commit", "-m", "set merge completion"]);
 
-[tickets]
-dir = "tickets"
-
-[agents]
-max_concurrent = 3
-
-[workflow.prioritization]
-priority_weight = 10.0
-effort_weight = -2.0
-risk_weight = -1.0
-
-[[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "specd"
-label = "Specd"
-
-[[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
-
-[[workflow.states.transitions]]
-to         = "implemented"
-completion = "merge"
-
-[[workflow.states]]
-id       = "implemented"
-label    = "Implemented"
-terminal = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-
-[[ticket.sections]]
-name     = "Problem"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Acceptance criteria"
-type     = "tasks"
-required = true
-
-[[ticket.sections]]
-name     = "Out of scope"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Approach"
-type     = "free"
-required = true
-
-[[ticket.sections]]
-name     = "Open questions"
-type     = "qa"
-required = false
-
-[[ticket.sections]]
-name     = "Amendment requests"
-type     = "tasks"
-required = false
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &[
-        "-c", "commit.gpgsign=false",
-        "commit", "-m", "init", "--allow-empty",
-    ]);
-
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
     dir
 }
 
