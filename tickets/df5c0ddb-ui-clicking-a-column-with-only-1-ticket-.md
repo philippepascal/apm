@@ -39,7 +39,68 @@ A secondary issue: `allSelected` is computed solely from `selectedTicketIds`, so
 
 ### Approach
 
-How the implementation will work.
+Single file changes: `apm-ui/src/components/supervisor/Swimlane.tsx`
+
+#### 1. Extend the store destructure
+
+Add `selectedTicketId` and `setSelectedTicketId` to the values pulled from `useLayoutStore`:
+
+```typescript
+const { selectedTicketId, selectedTicketIds, selectColumn, deselectColumn, setSelectedTicketId } = useLayoutStore()
+```
+
+#### 2. Update `allSelected` to cover the single-ticket single-select case
+
+The current expression only checks `selectedTicketIds`. When a ticket was opened via a card click, `setSelectedTicketId` clears `selectedTicketIds` to `[]`, so `allSelected` evaluates to `false` even though the ticket is visually selected.
+
+Replace:
+```typescript
+const allSelected = tickets.length > 0 && columnIds.every((id) => selectedTicketIds.includes(id))
+```
+With:
+```typescript
+const allSelected =
+  tickets.length > 0 &&
+  (columnIds.every((id) => selectedTicketIds.includes(id)) ||
+    (columnIds.length === 1 && selectedTicketId === columnIds[0]))
+```
+
+#### 3. Branch `handleHeaderCheckbox` on column size
+
+For a 1-ticket column use `setSelectedTicketId` (single-select semantics).  
+For a multi-ticket column keep the existing `selectColumn`/`deselectColumn` (multi-select semantics).
+
+Replace:
+```typescript
+function handleHeaderCheckbox() {
+  if (allSelected) {
+    deselectColumn(columnIds)
+  } else {
+    selectColumn(columnIds)
+  }
+}
+```
+With:
+```typescript
+function handleHeaderCheckbox() {
+  if (columnIds.length === 1) {
+    // Single-ticket column: toggle single-select (opens/closes detail panel)
+    if (allSelected) {
+      setSelectedTicketId(null)
+    } else {
+      setSelectedTicketId(columnIds[0])
+    }
+  } else {
+    if (allSelected) {
+      deselectColumn(columnIds)
+    } else {
+      selectColumn(columnIds)
+    }
+  }
+}
+```
+
+No changes required in `useLayoutStore.ts` or any other file. `someSelected` and the `indeterminate` effect are unaffected: for a 1-ticket column `allSelected` and `someSelected` always agree (both true or both false), so `indeterminate` stays `false`.
 
 ### Open questions
 
