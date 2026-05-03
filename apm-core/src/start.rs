@@ -22,6 +22,10 @@ static DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 const DEPRECATION_MSG: &str = "apm: deprecated: `[workers] command`, `args`, and `model` fields are deprecated — migrate to `agent` and `[workers.options]`";
 
+/// Delay inserted between `git fetch` and `git merge` in aggressive mode to let
+/// remote-propagation settle and reduce the fetch-race window.
+const POST_FETCH_SETTLE_MS: u64 = 1_000;
+
 fn emit_deprecation_warning_to(out: &mut dyn std::io::Write) {
     use std::sync::atomic::Ordering;
     if DEPRECATION_WARNED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
@@ -311,6 +315,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         if let Err(e) = git::fetch_branch(root, default_branch) {
             warnings.push(format!("warning: fetch {} failed: {e:#}", default_branch));
         }
+        std::thread::sleep(std::time::Duration::from_millis(POST_FETCH_SETTLE_MS));
     }
 
     git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): start — {old_state} → {new_state}"))?;
