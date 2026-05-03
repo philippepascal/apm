@@ -2653,45 +2653,39 @@ terminal = true
 
 // --- on_failure fix tests ---
 
-/// Helper: create a minimal APM project with `.apm/config.toml` + `.apm/workflow.toml`.
-/// The workflow uses `pr_or_epic_merge` (no provider required for validate).
 fn setup_on_failure_fix_project(
     on_failure: Option<&str>,
     declare_merge_failed: bool,
 ) -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = init_repo();
     let p = dir.path();
+    let wf_path = p.join(".apm/workflow.toml");
+    let mut content = std::fs::read_to_string(&wf_path).unwrap();
 
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
+    if on_failure.is_none() {
+        // BYPASS: no apm command removes on_failure from a workflow transition
+        content = content
+            .lines()
+            .filter(|l| !l.trim().starts_with("on_failure"))
+            .collect::<Vec<_>>()
+            .join("\n");
+    }
 
-    std::fs::create_dir_all(p.join(".apm")).unwrap();
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    if !declare_merge_failed {
+        // BYPASS: no apm command removes a workflow state
+        let segments: Vec<&str> = content.split("[[workflow.states]]").collect();
+        let filtered: Vec<&str> = segments
+            .iter()
+            .copied()
+            .filter(|seg| {
+                !seg.lines()
+                    .any(|l| l.trim().starts_with("id") && l.contains("merge_failed"))
+            })
+            .collect();
+        content = filtered.join("[[workflow.states]]");
+    }
 
-    std::fs::write(
-        p.join(".apm").join("config.toml"),
-        "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n",
-    )
-    .unwrap();
-
-    let on_failure_line = on_failure
-        .map(|v| format!("on_failure = \"{v}\"\n"))
-        .unwrap_or_default();
-
-    let merge_failed_block = if declare_merge_failed {
-        "\n[[workflow.states]]\nid         = \"merge_failed\"\nlabel      = \"Merge failed\"\nactionable = [\"supervisor\"]\n\n  [[workflow.states.transitions]]\n  to      = \"implemented\"\n  trigger = \"manual\"\n\n  [[workflow.states.transitions]]\n  to      = \"in_progress\"\n  trigger = \"manual\"\n"
-    } else {
-        ""
-    };
-
-    let workflow_toml = format!(
-        "[workflow]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n  [[workflow.states.transitions]]\n  to         = \"implemented\"\n  completion = \"pr_or_epic_merge\"\n  {on_failure_line}\n[[workflow.states]]\nid       = \"implemented\"\nlabel    = \"Implemented\"\nterminal = true\n{merge_failed_block}"
-    );
-    std::fs::write(p.join(".apm").join("workflow.toml"), &workflow_toml).unwrap();
-
-    git(p, &["add", ".apm/config.toml", ".apm/workflow.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    std::fs::write(&wf_path, &content).unwrap();
     dir
 }
 
@@ -3891,43 +3885,7 @@ label = "In Progress"
 // ── depends_on scheduling ─────────────────────────────────────────────────────
 
 fn setup_with_satisfies_deps() -> TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let p = dir.path();
-
-    git(p, &["init", "-q", "-b", "main"]);
-    git(p, &["config", "user.email", "test@test.com"]);
-    git(p, &["config", "user.name", "test"]);
-
-    std::fs::write(
-        p.join("apm.toml"),
-        r#"[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-
-[[workflow.states]]
-id             = "implemented"
-label          = "Implemented"
-satisfies_deps = true
-
-[[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
-"#,
-    )
-    .unwrap();
-
-    git(p, &["add", "apm.toml"]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
-    std::fs::create_dir_all(p.join("tickets")).unwrap();
-    dir
+    init_repo()
 }
 
 fn commit_ticket_to_branch(dir: &std::path::Path, branch: &str, path: &str, content: &str) {
@@ -4517,11 +4475,12 @@ terminal = true
 }
 
 fn setup_with_server_url(url: &str) -> TempDir {
-    let dir = setup();
+    let dir = init_repo();
     let p = dir.path();
-    let server_block = format!("\n[server]\nurl = \"{url}\"\n");
-    let apm_toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    std::fs::write(p.join("apm.toml"), format!("{apm_toml}{server_block}")).unwrap();
+    // BYPASS: no apm command configures server.url — append directly to config
+    let config_path = p.join(".apm/config.toml");
+    let existing = std::fs::read_to_string(&config_path).unwrap();
+    std::fs::write(&config_path, format!("{existing}\n[server]\nurl = \"{url}\"\n")).unwrap();
     dir
 }
 
@@ -4764,16 +4723,7 @@ fn assign_force_skips_prompt_when_no_owner() {
 // --- archive ---
 
 fn setup_with_archive_dir() -> TempDir {
-    let dir = setup();
-    let p = dir.path();
-    // Append archive_dir to the [tickets] section in apm.toml.
-    let toml = std::fs::read_to_string(p.join("apm.toml")).unwrap();
-    let updated = toml.replace(
-        "[tickets]\ndir = \"tickets\"",
-        "[tickets]\ndir = \"tickets\"\narchive_dir = \"archive/tickets\"",
-    );
-    std::fs::write(p.join("apm.toml"), updated).unwrap();
-    dir
+    init_repo()
 }
 
 #[test]
