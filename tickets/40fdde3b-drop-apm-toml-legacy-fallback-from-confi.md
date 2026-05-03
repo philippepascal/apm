@@ -39,7 +39,7 @@ These are in scope for this ticket. Several error messages and help strings in p
 - [x] `Config::load` in `apm-core/src/config.rs` does not reference `repo_root/apm.toml`; path is always `.apm/config.toml`
 - [x] When `.apm/config.toml` is absent, `Config::load` returns an error whose message contains the phrase `apm init`
 - [x] `apply_config_migration_fixes` in `apm/src/cmd/validate.rs` does not check `apm.toml`; it returns `Ok(false)` immediately when `.apm/config.toml` is absent
-- [ ] `apm-core/src/validate.rs` `setup_verify_repo` writes `.apm/config.toml`, not `apm.toml`
+- [x] `apm-core/src/validate.rs` `setup_verify_repo` writes `.apm/config.toml`, not `apm.toml`
 - [ ] `apm-core/tests/ticket_create.rs` `setup` writes `.apm/config.toml`, not `apm.toml`
 - [ ] `apm-core/src/context.rs` test inline write targets `.apm/config.toml`, not `apm.toml`
 - [ ] `apm/tests/e2e.rs` second setup helper writes `.apm/config.toml`, not `apm.toml`
