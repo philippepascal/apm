@@ -31,6 +31,34 @@ fn make_mock_worker(dir: &std::path::Path) -> std::path::PathBuf {
     bin
 }
 
+fn init_repo() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    git(dir.path(), &["init", "-q", "-b", "main"]);
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["init", "--no-claude", "--quiet"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "apm init failed: {}", String::from_utf8_lossy(&out.stderr));
+    git(dir.path(), &["add", "."]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+    dir
+}
+
+#[test]
+fn test_init_repo_helper() {
+    let dir = init_repo();
+    let p = dir.path();
+    assert!(p.join(".apm/config.toml").exists());
+    assert!(p.join(".apm/workflow.toml").exists());
+    assert!(p.join("tickets").is_dir());
+    let gitignore = std::fs::read_to_string(p.join(".gitignore")).unwrap();
+    assert!(gitignore.contains(".apm/local.toml"), ".gitignore missing .apm/local.toml entry");
+    assert!(apm_core::config::Config::load(p).is_ok());
+    git(p, &["rev-parse", "HEAD"]);
+}
+
 fn setup() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
