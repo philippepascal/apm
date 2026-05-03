@@ -311,6 +311,7 @@ pub fn create(
     config: &crate::config::Config,
     title: String,
     author: String,
+    actor: String,
     context: Option<String>,
     context_section: Option<String>,
     aggressive: bool,
@@ -350,7 +351,7 @@ pub fn create(
         agent_overrides: std::collections::HashMap::new(),
     };
     let when = now.format("%Y-%m-%dT%H:%MZ");
-    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {author} |\n");
+    let history_footer = format!("## History\n\n| When | From | To | By |\n|------|------|----|----|\n| {when} | — | new | {actor} |\n");
     let body_template = {
         let mut s = String::from("## Spec\n\n");
         for sec in &config.ticket.sections {

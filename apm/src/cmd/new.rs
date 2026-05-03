@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::{Config, resolve_identity}, epic, ticket};
+use apm_core::{config::{Config, resolve_identity, resolve_caller_name}, epic, ticket};
 use std::path::Path;
 use crate::ctx::CmdContext;
 
@@ -35,6 +35,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     }
 
     let author = resolve_identity(root);
+    let actor = resolve_caller_name();
 
     let (epic_id, target_branch, base_branch) = if let Some(ref id) = epic {
         match epic::find_epic_branch(root, id) {
@@ -75,7 +76,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
 
     let section_sets: Vec<(String, String)> = sections.into_iter().zip(sets).collect();
     let mut warnings = Vec::new();
-    let t = ticket::create(root, &config, title, author, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch, &mut warnings)?;
+    let t = ticket::create(root, &config, title, author, actor, context, context_section, aggressive, section_sets, epic_id, target_branch, depends_on_parsed, base_branch, &mut warnings)?;
     for w in &warnings {
         eprintln!("{w}");
     }
