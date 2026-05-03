@@ -27,15 +27,15 @@ Both helpers should use `init_repo()` for the local clone. The bare-origin creat
 
 ### Acceptance criteria
 
-- [ ] `setup_sync_repo()` calls `init_repo()` instead of `setup()` for the local clone
-- [ ] `setup_sync_repo()`'s bare-origin `git init --bare` block is annotated with a `// BYPASS:` comment
-- [ ] `setup_branch_in_origin()` calls `init_repo()` instead of the inline `git init` + README block for the local repo
-- [ ] `setup_branch_in_origin()`'s bare-origin `git init --bare` block is annotated with a `// BYPASS:` comment
-- [ ] `setup_branch_in_origin()`'s disposable-clone branch-seeding block is annotated with a `// BYPASS:` comment
-- [ ] `setup_sync_repo()` returns `(TempDir, TempDir)` — signature is unchanged
-- [ ] `setup_branch_in_origin()` returns `(TempDir, TempDir, String)` — signature is unchanged
-- [ ] All five `sync_main_*` tests pass after migration
-- [ ] All `sync_ticket_ref_*` tests pass after migration
+- [x] `setup_sync_repo()` calls `init_repo()` instead of `setup()` for the local clone
+- [x] `setup_sync_repo()`'s bare-origin `git init --bare` block is annotated with a `// BYPASS:` comment
+- [x] `setup_branch_in_origin()` calls `init_repo()` instead of the inline `git init` + README block for the local repo
+- [x] `setup_branch_in_origin()`'s bare-origin `git init --bare` block is annotated with a `// BYPASS:` comment
+- [x] `setup_branch_in_origin()`'s disposable-clone branch-seeding block is annotated with a `// BYPASS:` comment
+- [x] `setup_sync_repo()` returns `(TempDir, TempDir)` — signature is unchanged
+- [x] `setup_branch_in_origin()` returns `(TempDir, TempDir, String)` — signature is unchanged
+- [x] All five `sync_main_*` tests pass after migration
+- [x] All `sync_ticket_ref_*` tests pass after migration
 
 ### Out of scope
 
