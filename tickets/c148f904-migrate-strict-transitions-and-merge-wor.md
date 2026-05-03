@@ -27,7 +27,7 @@ The two helpers serve 5 tests in total: `state_force_bypasses_transition_rules` 
 
 ### Acceptance criteria
 
-- [ ] **setup_with_strict_transitions()**
+- [x] **setup_with_strict_transitions()**
 
 - [ ] `setup_with_strict_transitions()` calls `init_repo()` and no longer contains any hand-written TOML string or `std::fs::write` for `apm.toml` / `config.toml` / `workflow.toml`
 - [ ] The rewritten helper includes a `// BYPASS:` comment explaining that the production workflow has no `new → in_progress` transition and a full replacement is required
