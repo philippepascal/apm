@@ -4,12 +4,12 @@ title = "Add brief delay between fetch and merge in apm start to reduce fetch-ra
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b302b360-add-brief-delay-between-fetch-and-merge-"
 created_at = "2026-05-03T08:07:25.634157Z"
-updated_at = "2026-05-03T19:04:27.158288Z"
+updated_at = "2026-05-03T19:04:30.401494Z"
 +++
 
 ## Spec
