@@ -61,7 +61,7 @@ Conflict: ticket 121a05a8 (specd) writes per-agent files from init.rs and adds s
 - [x] After the migration path above, CLAUDE.md references, `config.toml` `instructions` fields, and `workflow.toml` `instructions` fields are all rewritten from old paths to new paths
 - [x] `apm-core/src/default/workflow.toml` contains no references to `.apm/apm.spec-writer.md` or `.apm/apm.worker.md`
 - [x] This repo's `.apm/agents/default/` contains `agents.md`, `apm.spec-writer.md`, `apm.worker.md`, and `style.md`
-- [ ] This repo's `CLAUDE.md` imports `@.apm/agents/default/agents.md` and `@.apm/agents/default/style.md`
+- [x] This repo's `CLAUDE.md` imports `@.apm/agents/default/agents.md` and `@.apm/agents/default/style.md`
 - [ ] `cargo test --workspace` passes
 
 ### Out of scope
