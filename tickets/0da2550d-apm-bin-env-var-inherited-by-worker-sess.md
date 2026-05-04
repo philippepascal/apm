@@ -1,7 +1,7 @@
 +++
 id = "0da2550d"
 title = "APM_BIN env var inherited by worker sessions may point to stale Homebrew binary"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0da2550d-apm-bin-env-var-inherited-by-worker-sess"
 created_at = "2026-05-04T05:00:29.668572Z"
-updated_at = "2026-05-04T05:07:04.240144Z"
+updated_at = "2026-05-04T05:07:10.085185Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-04T05:00Z | — | new | claude-0504-0441-a918|philippepascal |
 | 2026-05-04T05:07Z | new | groomed | philippepascal |
+| 2026-05-04T05:07Z | groomed | in_design | philippepascal |
