@@ -96,6 +96,9 @@ Do Steps 1 and 4 before running tests — Step 1 fixes the project file so the S
 **Step 2b: Copy the default worker file into the project**
 
 Copy `apm-core/src/default/agents/claude/apm.worker.md` to `.apm/agents/claude/apm.worker.md` in the repo. Without this file present and matching, the sync test added in Step 3 fails on a clean checkout. Verify with `diff apm-core/src/default/agents/claude/apm.worker.md .apm/agents/claude/apm.worker.md` before moving on. This step belongs between Step 2 and Step 3; the updated ordering in "Order matters" below supersedes the original.
+**Order matters (updated)**
+
+Do Steps 1, 2, and 2b before running tests — Step 1 fixes the spec-writer project file so the Step 2 test passes; Step 2b creates the worker project file so the Step 3 test passes. Step 4 changes only runtime behavior, not test assertions, and can be done at any point. The original "Order matters" block above should be considered superseded by this one.
 
 ### Open questions
 
