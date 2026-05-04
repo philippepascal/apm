@@ -1,7 +1,7 @@
 +++
 id = "f701ef81"
 title = "Migrate setup_aggressive() to init_repo()"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f701ef81-migrate-setup-aggressive-to-init-repo"
 created_at = "2026-05-01T20:26:58.392091Z"
-updated_at = "2026-05-03T20:54:31.771385Z"
+updated_at = "2026-05-04T01:00:04.551485Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -90,3 +90,4 @@ fn setup_aggressive() -> TempDir {
 | 2026-05-03T20:16Z | specd | ready | philippepascal |
 | 2026-05-03T20:51Z | ready | in_progress | philippepascal |
 | 2026-05-03T20:54Z | in_progress | implemented | claude-0503-2051-b4d8 |
+| 2026-05-04T01:00Z | implemented | closed | philippepascal(apm-sync) |
