@@ -1360,7 +1360,7 @@ fn validate_does_not_flag_closed_state() {
     // apm validate should not flag the closed ticket as having an unknown state.
     // The test config is minimal and may produce config warnings (e.g. missing transitions),
     // but there must be zero ticket-level errors.
-    let result = apm::cmd::validate::run(p, false, false, false, true);
+    let result = apm::cmd::validate::run(p, false, false, false, true, false);
     if let Err(e) = &result {
         let msg = e.to_string();
         assert!(
@@ -2531,12 +2531,12 @@ fn test_fix_adds_field_only() {
 
     // validate fails before fix.
     assert!(
-        apm::cmd::validate::run(p, false, false, true, true).is_err(),
+        apm::cmd::validate::run(p, false, false, true, true, false).is_err(),
         "expected validate to fail before fix"
     );
 
     // --fix repairs the workflow.toml (may still report errors from before the fix).
-    let _ = apm::cmd::validate::run(p, true, false, true, true);
+    let _ = apm::cmd::validate::run(p, true, false, true, true, false);
 
     let wf_content = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
     assert!(
@@ -2545,7 +2545,7 @@ fn test_fix_adds_field_only() {
     );
 
     // Subsequent validate passes.
-    apm::cmd::validate::run(p, false, false, true, true).unwrap();
+    apm::cmd::validate::run(p, false, false, true, true, false).unwrap();
 }
 
 #[test]
@@ -2556,12 +2556,12 @@ fn test_fix_adds_state_only() {
 
     // validate fails before fix.
     assert!(
-        apm::cmd::validate::run(p, false, false, true, true).is_err(),
+        apm::cmd::validate::run(p, false, false, true, true, false).is_err(),
         "expected validate to fail before fix"
     );
 
     // --fix repairs the workflow.toml.
-    let _ = apm::cmd::validate::run(p, true, false, true, true);
+    let _ = apm::cmd::validate::run(p, true, false, true, true, false);
 
     let wf_content = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
     assert!(
@@ -2574,7 +2574,7 @@ fn test_fix_adds_state_only() {
     );
 
     // Subsequent validate passes.
-    apm::cmd::validate::run(p, false, false, true, true).unwrap();
+    apm::cmd::validate::run(p, false, false, true, true, false).unwrap();
 }
 
 #[test]
@@ -2585,12 +2585,12 @@ fn test_fix_adds_both_atomically() {
 
     // validate fails before fix.
     assert!(
-        apm::cmd::validate::run(p, false, false, true, true).is_err(),
+        apm::cmd::validate::run(p, false, false, true, true, false).is_err(),
         "expected validate to fail before fix"
     );
 
     // A SINGLE --fix adds both field and state.
-    let _ = apm::cmd::validate::run(p, true, false, true, true);
+    let _ = apm::cmd::validate::run(p, true, false, true, true, false);
 
     let wf_content = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
     assert!(
@@ -2603,7 +2603,7 @@ fn test_fix_adds_both_atomically() {
     );
 
     // Subsequent validate passes without needing another --fix.
-    apm::cmd::validate::run(p, false, false, true, true).unwrap();
+    apm::cmd::validate::run(p, false, false, true, true, false).unwrap();
 }
 
 #[test]
@@ -2613,11 +2613,11 @@ fn test_fix_is_idempotent() {
     let p = dir.path();
 
     // First fix: repairs the workflow.
-    let _ = apm::cmd::validate::run(p, true, false, true, true);
+    let _ = apm::cmd::validate::run(p, true, false, true, true, false);
     let after_first = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
 
     // Second fix on the already-fixed project: no changes.
-    apm::cmd::validate::run(p, true, false, true, true).unwrap();
+    apm::cmd::validate::run(p, true, false, true, true, false).unwrap();
     let after_second = std::fs::read_to_string(p.join(".apm").join("workflow.toml")).unwrap();
 
     assert_eq!(

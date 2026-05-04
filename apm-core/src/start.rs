@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use crate::{config::{Config, WorkerProfileConfig, WorkersConfig}, git, ticket, ticket_fmt};
 use crate::wrapper::{WrapperContext, write_temp_file};
 use chrono::Utc;
@@ -58,7 +58,7 @@ fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a
     }
 }
 
-pub fn effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams {
+pub fn effective_spawn_params(transition_agent: Option<&str>, profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams {
     // Legacy command/args (kept for check_output_format_supported backward compat)
     let command = profile.and_then(|p| p.command.clone())
         .or_else(|| workers.command.clone())
@@ -67,8 +67,10 @@ pub fn effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &W
         .or_else(|| workers.args.clone())
         .unwrap_or_else(|| vec!["--print".to_string()]);
 
-    // Agent resolution: profile > workers > default "claude"
-    let raw_agent = profile.and_then(|p| p.agent.clone())
+    // Agent resolution: transition > profile > workers > default "claude"
+    let raw_agent = transition_agent
+        .map(str::to_owned)
+        .or_else(|| profile.and_then(|p| p.agent.clone()))
         .or_else(|| workers.agent.clone());
 
     // Emit deprecation warning when legacy fields present but agent absent
@@ -354,13 +356,17 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .to_string();
     let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let mut params = effective_spawn_params(profile, &config.workers);
+    let mut params = effective_spawn_params(triggering_transition.and_then(|tr| tr.agent.as_deref()), profile, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
-    let worker_system = resolve_system_prompt(root, profile, &config.workers, &params.agent, role)?;
-    let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(profile, &id));
+    let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
+    let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
+    let worker_system = resolve_system_prompt(root, tr_instructions, profile, &config.workers, &params.agent, role)?;
+    let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(tr_role_prefix, profile, &id));
     let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
-    let role_prefix = profile.and_then(|p| p.role_prefix.clone());
+    let role_prefix = tr_role_prefix
+        .map(|p| p.replace("<id>", &id))
+        .or_else(|| profile.and_then(|p| p.role_prefix.clone()));
 
     let log_path = wt_display.join(".apm-worker.log");
 
@@ -552,16 +558,20 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let mut params = effective_spawn_params(profile2, &config.workers);
+    let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
-    let worker_system = resolve_system_prompt(root, profile2, &config.workers, &params.agent, role2)?;
+    let tr_instructions2 = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
+    let tr_role_prefix2 = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
+    let worker_system = resolve_system_prompt(root, tr_instructions2, profile2, &config.workers, &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
-    let raw_prompt_next = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
+    let raw_prompt_next = format!("{}\n\n{raw}", agent_role_prefix(tr_role_prefix2, profile2, &id));
     let with_epic_next = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_next);
     let ticket_content = with_dependency_bundle(root, &dep_ids_next, &config, with_epic_next);
-    let role_prefix2 = profile2.and_then(|p| p.role_prefix.clone());
+    let role_prefix2 = tr_role_prefix2
+        .map(|p| p.replace("<id>", &id))
+        .or_else(|| profile2.and_then(|p| p.role_prefix.clone()));
 
     let branch = t.frontmatter.branch.clone()
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
@@ -751,16 +761,20 @@ pub fn spawn_next_worker(
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, warnings));
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let mut params = effective_spawn_params(profile2, &config.workers);
+    let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
-    let worker_system = resolve_system_prompt(root, profile2, &config.workers, &params.agent, role2)?;
+    let tr_instructions_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
+    let tr_role_prefix_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
+    let worker_system = resolve_system_prompt(root, tr_instructions_snw, profile2, &config.workers, &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
-    let raw_prompt_snw = format!("{}\n\n{raw}", agent_role_prefix(profile2, &id));
+    let raw_prompt_snw = format!("{}\n\n{raw}", agent_role_prefix(tr_role_prefix_snw, profile2, &id));
     let with_epic_snw = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_snw);
     let ticket_content = with_dependency_bundle(root, &dep_ids_snw, &config, with_epic_snw);
-    let role_prefix2 = profile2.and_then(|p| p.role_prefix.clone());
+    let role_prefix2 = tr_role_prefix_snw
+        .map(|p| p.replace("<id>", &id))
+        .or_else(|| profile2.and_then(|p| p.role_prefix.clone()));
 
     let branch = t.frontmatter.branch.clone()
         .or_else(|| ticket_fmt::branch_name_from_path(&t.path))
@@ -845,7 +859,7 @@ fn with_epic_bundle(root: &Path, epic_id: Option<&str>, ticket_id: &str, config:
     }
 }
 
-fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
+pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
     match (agent, role) {
         ("claude", "worker") => Some(CLAUDE_WORKER_DEFAULT),
         ("claude", "spec-writer") => Some(CLAUDE_SPEC_WRITER_DEFAULT),
@@ -863,11 +877,17 @@ fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str>
 
 fn resolve_system_prompt(
     root: &Path,
+    transition_instructions: Option<&str>,
     profile: Option<&WorkerProfileConfig>,
     workers: &WorkersConfig,
     agent: &str,
     role: &str,
 ) -> Result<String> {
+    // Level 0: transition.instructions
+    if let Some(path) = transition_instructions {
+        return std::fs::read_to_string(root.join(path))
+            .with_context(|| format!("transition.instructions: file not found: {path}"));
+    }
     // Level 1: profile.instructions
     if let Some(p) = profile {
         if let Some(ref instr_path) = p.instructions {
@@ -903,7 +923,10 @@ fn resolve_system_prompt(
     )
 }
 
-fn agent_role_prefix(profile: Option<&WorkerProfileConfig>, id: &str) -> String {
+fn agent_role_prefix(transition_role_prefix: Option<&str>, profile: Option<&WorkerProfileConfig>, id: &str) -> String {
+    if let Some(prefix) = transition_role_prefix {
+        return prefix.replace("<id>", id);
+    }
     if let Some(p) = profile {
         if let Some(ref prefix) = p.role_prefix {
             return prefix.replace("<id>", id);
@@ -946,6 +969,9 @@ mod tests {
             context_section: None,
             warning: None,
             profile: profile.map(|s| s.to_string()),
+            instructions: None,
+            role_prefix: None,
+            agent: None,
             on_failure: None,
             outcome: None,
         }
@@ -1077,14 +1103,14 @@ mod tests {
             command: Some("my-claude".into()),
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.command, "my-claude");
     }
 
     #[test]
     fn effective_spawn_params_falls_back_to_global_command() {
         let workers = make_workers("claude", None);
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.command, "claude");
     }
 
@@ -1095,14 +1121,14 @@ mod tests {
             model: Some("opus".into()),
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.model.as_deref(), Some("opus"));
     }
 
     #[test]
     fn effective_spawn_params_falls_back_to_global_model() {
         let workers = make_workers("claude", Some("sonnet"));
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.model.as_deref(), Some("sonnet"));
     }
 
@@ -1118,7 +1144,7 @@ mod tests {
             env: profile_env,
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.env.get("FOO").map(|s| s.as_str()), Some("profile"));
         assert_eq!(params.env.get("BAR").map(|s| s.as_str()), Some("bar"));
     }
@@ -1131,8 +1157,23 @@ mod tests {
             container: Some("profile-image".into()),
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.container.as_deref(), Some("profile-image"));
+    }
+
+    #[test]
+    fn transition_agent_takes_precedence_over_profile() {
+        let workers = WorkersConfig::default();
+        let profile = WorkerProfileConfig { agent: Some("other".into()), ..Default::default() };
+        let params = effective_spawn_params(Some("custom"), Some(&profile), &workers);
+        assert_eq!(params.agent, "custom");
+    }
+
+    #[test]
+    fn effective_agent_defaults_to_claude() {
+        let workers = WorkersConfig::default();
+        let params = effective_spawn_params(None, None, &workers);
+        assert_eq!(params.agent, "claude");
     }
 
     // --- resolve_system_prompt ---
@@ -1146,7 +1187,7 @@ mod tests {
         let profile = make_profile(Some(".apm/spec.md"), None);
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, Some(&profile), &workers, "claude", "worker").unwrap(),
+            resolve_system_prompt(p, None, Some(&profile), &workers, "claude", "worker").unwrap(),
             "SPEC WRITER"
         );
     }
@@ -1162,7 +1203,7 @@ mod tests {
             ..WorkersConfig::default()
         };
         assert_eq!(
-            resolve_system_prompt(p, None, &workers, "claude", "worker").unwrap(),
+            resolve_system_prompt(p, None, None, &workers, "claude", "worker").unwrap(),
             "GLOBAL INSTRUCTIONS"
         );
     }
@@ -1175,7 +1216,7 @@ mod tests {
         std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WORKER").unwrap();
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, None, &workers, "claude", "worker").unwrap(),
+            resolve_system_prompt(p, None, None, &workers, "claude", "worker").unwrap(),
             "PER AGENT WORKER"
         );
     }
@@ -1185,7 +1226,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, &workers, "claude", "worker").unwrap();
+        let result = resolve_system_prompt(p, None, None, &workers, "claude", "worker").unwrap();
         assert_eq!(result, super::CLAUDE_WORKER_DEFAULT);
     }
 
@@ -1194,7 +1235,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, &workers, "claude", "spec-writer").unwrap();
+        let result = resolve_system_prompt(p, None, None, &workers, "claude", "spec-writer").unwrap();
         assert_eq!(result, super::CLAUDE_SPEC_WRITER_DEFAULT);
     }
 
@@ -1203,7 +1244,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, &workers, "custom-bot", "worker");
+        let result = resolve_system_prompt(p, None, None, &workers, "custom-bot", "worker");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("custom-bot"), "error should name the agent: {msg}");
@@ -1216,7 +1257,7 @@ mod tests {
         let p = dir.path();
         let profile = make_profile(Some(".apm/nonexistent.md"), None);
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, Some(&profile), &workers, "claude", "worker");
+        let result = resolve_system_prompt(p, None, Some(&profile), &workers, "claude", "worker");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("nonexistent.md"), "error should name the file: {msg}");
@@ -1231,7 +1272,7 @@ mod tests {
         let profile = make_profile(Some(".apm/apm.worker.md"), None);
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, Some(&profile), &workers, "claude", "worker").unwrap(),
+            resolve_system_prompt(p, None, Some(&profile), &workers, "claude", "worker").unwrap(),
             "LEGACY WORKER CONTENT"
         );
     }
@@ -1242,7 +1283,7 @@ mod tests {
     fn agent_role_prefix_uses_profile_role_prefix() {
         let profile = make_profile(None, Some("You are a Spec-Writer agent assigned to ticket #<id>."));
         assert_eq!(
-            agent_role_prefix(Some(&profile), "abc123"),
+            agent_role_prefix(None, Some(&profile), "abc123"),
             "You are a Spec-Writer agent assigned to ticket #abc123."
         );
     }
@@ -1250,11 +1291,49 @@ mod tests {
     #[test]
     fn agent_role_prefix_falls_back_to_worker_default() {
         assert_eq!(
-            agent_role_prefix(None, "abc123"),
+            agent_role_prefix(None, None, "abc123"),
             "You are a Worker agent assigned to ticket #abc123."
         );
     }
 
+    #[test]
+    fn agent_role_prefix_transition_takes_precedence_over_profile() {
+        let profile = make_profile(None, Some("You are a Spec-Writer agent assigned to ticket #<id>."));
+        assert_eq!(
+            agent_role_prefix(Some("You are a Custom agent for ticket #<id>."), Some(&profile), "abc123"),
+            "You are a Custom agent for ticket #abc123."
+        );
+    }
+
+    // --- transition-level instruction overrides ---
+
+    #[test]
+    fn transition_instructions_takes_precedence_over_profile() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/transition.md"), "TRANSITION CONTENT").unwrap();
+        std::fs::write(p.join(".apm/profile.md"), "PROFILE CONTENT").unwrap();
+        let profile = make_profile(Some(".apm/profile.md"), None);
+        let workers = WorkersConfig::default();
+        assert_eq!(
+            resolve_system_prompt(p, Some(".apm/transition.md"), Some(&profile), &workers, "claude", "worker").unwrap(),
+            "TRANSITION CONTENT"
+        );
+    }
+
+    #[test]
+    fn transition_instructions_no_profile_required() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/transition.md"), "TRANSITION ONLY").unwrap();
+        let workers = WorkersConfig::default();
+        assert_eq!(
+            resolve_system_prompt(p, Some(".apm/transition.md"), None, &workers, "claude", "worker").unwrap(),
+            "TRANSITION ONLY"
+        );
+    }
 
     #[test]
     fn epic_filter_keeps_only_matching_tickets() {
@@ -1557,13 +1636,13 @@ mod tests {
     fn resolution_agent_profile_overrides_global() {
         let workers = WorkersConfig { agent: Some("codex".into()), ..Default::default() };
         let profile = WorkerProfileConfig { agent: Some("mock-happy".into()), ..Default::default() };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.agent, "mock-happy");
     }
 
     #[test]
     fn resolution_agent_falls_back_to_claude() {
-        let params = effective_spawn_params(None, &WorkersConfig::default());
+        let params = effective_spawn_params(None, None, &WorkersConfig::default());
         assert_eq!(params.agent, "claude");
     }
 
@@ -1575,7 +1654,7 @@ mod tests {
         let mut profile_opts = HashMap::new();
         profile_opts.insert("model".into(), "sonnet".into());
         let profile = WorkerProfileConfig { options: profile_opts, ..Default::default() };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.options.get("model").map(|s| s.as_str()), Some("sonnet"), "profile model should override workers model");
         assert_eq!(params.options.get("timeout").map(|s| s.as_str()), Some("30"), "non-overlapping key should survive");
     }
@@ -1602,7 +1681,7 @@ mod tests {
         DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
 
         let workers = WorkersConfig { command: Some("claude".into()), ..Default::default() };
-        effective_spawn_params(None, &workers);
+        effective_spawn_params(None, None, &workers);
 
         assert!(
             DEPRECATION_WARNED.load(std::sync::atomic::Ordering::SeqCst),
@@ -1613,7 +1692,7 @@ mod tests {
     #[test]
     fn legacy_model_forwarded_to_ctx() {
         let workers = WorkersConfig { model: Some("opus".into()), ..Default::default() };
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.model.as_deref(), Some("opus"));
     }
 
@@ -1621,7 +1700,7 @@ mod tests {
     fn options_model_takes_precedence_over_legacy() {
         let mut workers = WorkersConfig { model: Some("opus".into()), agent: Some("claude".into()), ..Default::default() };
         workers.options.insert("model".into(), "sonnet".into());
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.model.as_deref(), Some("sonnet"));
     }
 

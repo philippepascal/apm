@@ -406,13 +406,7 @@ agent = "claude"
 model = "sonnet"
 
 [worker_profiles.spec_agent]
-instructions = ".apm/agents/default/apm.spec-writer.md"
 role = "spec-writer"
-role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
-
-[worker_profiles.impl_agent]
-instructions = ".apm/agents/default/apm.worker.md"
-role_prefix = "You are a Worker agent assigned to ticket #<id>."
 
 [logging]
 enabled = false
