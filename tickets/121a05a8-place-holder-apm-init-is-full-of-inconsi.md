@@ -26,7 +26,7 @@ No sync test covers `.apm/agents/claude/apm.worker.md` at all, leaving the per-a
 
 ### Acceptance criteria
 
-- [ ] `.apm/agents/claude/apm.spec-writer.md` in this project contains the `## Scope limits` section
+- [x] `.apm/agents/claude/apm.spec-writer.md` in this project contains the `## Scope limits` section
 - [ ] `.apm/agents/claude/apm.spec-writer.md` in this project contains the `## Capability limitations` section
 - [ ] `spec_writer_md_sync.rs` fails when `.apm/agents/claude/apm.spec-writer.md` differs from the default in any section
 - [ ] A new sync test fails when `.apm/agents/claude/apm.worker.md` differs from `apm-core/src/default/agents/claude/apm.worker.md`
