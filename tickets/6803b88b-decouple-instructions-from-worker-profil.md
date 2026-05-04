@@ -1,7 +1,7 @@
 +++
 id = "6803b88b"
 title = "Decouple instructions from worker_profiles; move to workflow transitions"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6803b88b-decouple-instructions-from-worker-profil"
 created_at = "2026-05-04T16:48:29.472278Z"
-updated_at = "2026-05-04T16:55:46.546146Z"
+updated_at = "2026-05-04T17:26:35.082353Z"
 epic = "5acea599"
 target_branch = "epic/5acea599-flexible-agent-configuration"
 +++
@@ -112,3 +112,4 @@ Update all call sites of both functions (`run()` and `spawn_next_worker()`) to p
 | 2026-05-04T16:50Z | new | groomed | philippepascal |
 | 2026-05-04T16:50Z | groomed | in_design | philippepascal |
 | 2026-05-04T16:55Z | in_design | specd | claude-0504-1650-1a08 |
+| 2026-05-04T17:26Z | specd | ammend | philippepascal |
