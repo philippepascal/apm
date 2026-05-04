@@ -30,7 +30,7 @@ No sync test covers `.apm/agents/claude/apm.worker.md` at all, leaving the per-a
 - [x] `.apm/agents/claude/apm.spec-writer.md` in this project contains the `## Capability limitations` section
 - [x] `spec_writer_md_sync.rs` fails when `.apm/agents/claude/apm.spec-writer.md` differs from the default in any section
 - [x] A new sync test fails when `.apm/agents/claude/apm.worker.md` differs from `apm-core/src/default/agents/claude/apm.worker.md`
-- [ ] `cargo test --workspace` passes with all new and modified tests
+- [x] `cargo test --workspace` passes with all new and modified tests
 
 ### Out of scope
 
