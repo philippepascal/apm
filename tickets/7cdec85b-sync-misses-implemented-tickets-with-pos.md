@@ -1,7 +1,7 @@
 +++
 id = "7cdec85b"
 title = "sync misses implemented tickets with post-merge state commits on the ticket branch"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7cdec85b-sync-misses-implemented-tickets-with-pos"
 created_at = "2026-05-03T20:15:04.114954Z"
-updated_at = "2026-05-04T02:01:13.635505Z"
+updated_at = "2026-05-04T02:36:39.444942Z"
 +++
 
 ## Spec
@@ -101,3 +101,4 @@ After the `println!("sync: {} ticket branch…")` line and before the close-prom
 | 2026-05-04T01:53Z | new | groomed | philippepascal |
 | 2026-05-04T01:55Z | groomed | in_design | philippepascal |
 | 2026-05-04T02:01Z | in_design | specd | claude-0504-0155-bf78 |
+| 2026-05-04T02:36Z | specd | ready | philippepascal |
