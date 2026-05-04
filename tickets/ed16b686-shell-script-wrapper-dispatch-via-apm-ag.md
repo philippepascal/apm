@@ -54,7 +54,101 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 
 ### Approach
 
-How the implementation will work.
+#### 1. Extend TransitionConfig — apm-core/src/config.rs
+
+Add one field to `TransitionConfig`:
+
+```rust
+#[serde(default)]
+pub agent: Option<String>,
+```
+
+No other struct changes are needed.
+
+#### 2. Update effective_spawn_params — apm-core/src/start.rs
+
+Change the function signature to accept a new first argument:
+
+```rust
+fn effective_spawn_params(
+    transition_agent: Option<&str>,
+    profile: Option<&WorkerProfileConfig>,
+    workers: &WorkersConfig,
+) -> EffectiveWorkerParams
+```
+
+Insert resolution at Level 0, before the existing profile and workers checks:
+
+```rust
+let agent = transition_agent
+    .map(str::to_owned)
+    .or_else(|| profile.and_then(|p| p.agent.clone()))
+    .or_else(|| workers.agent.clone())
+    .unwrap_or_else(|| "claude".to_owned());
+```
+
+Update both call sites (`run()` and `spawn_next_worker()`) to pass `triggering_transition.agent.as_deref()` as the first argument. The triggering transition is already captured at both sites (as `triggering_transition_owned` after the 6803b88b changes); extract `.agent.as_deref()` from it.
+
+#### 3. Expose APM_MODEL to custom wrapper scripts — apm-core/src/wrapper/custom.rs
+
+In the function that populates environment variables for custom wrapper invocations, add:
+
+```rust
+cmd.env("APM_MODEL", ctx.model.as_deref().unwrap_or(""));
+```
+
+Place it alongside the existing `APM_*` variables. This matches what the built-in claude wrapper already has access to via `ctx.model` when building CLI args.
+
+#### 4. Verify manifest.toml is optional — apm-core/src/wrapper/custom.rs
+
+Read `parse_manifest()`. If the function returns an error when `manifest.toml` is absent, change the not-found case to `Ok(ManifestConfig::default())` instead. A `wrapper.sh` with no manifest must be usable without any extra files.
+
+#### 5. Create .apm/agents/default/wrapper.sh
+
+Add the file at `.apm/agents/default/wrapper.sh` and make it executable:
+
+```sh
+#!/bin/sh
+# APM default wrapper — invokes the claude binary with standard APM arguments.
+# Edit this file to customise agent invocation for this project (binary path,
+# extra flags, model pinning, etc.).
+set -e
+
+sys=$(cat "$APM_SYSTEM_PROMPT_FILE")
+msg=$(cat "$APM_USER_MESSAGE_FILE")
+
+set --
+[ -n "$APM_MODEL" ] && set -- "$@" --model "$APM_MODEL"
+[ -n "$APM_SKIP_PERMISSIONS" ] && set -- "$@" --dangerously-skip-permissions
+
+exec claude \
+  --print \
+  --output-format stream-json \
+  --verbose \
+  --disable-slash-commands \
+  "$@" \
+  --system-prompt "$sys" \
+  "$msg"
+```
+
+The script builds args incrementally to avoid empty-string artefacts when optional flags are absent.
+
+#### 6. Update .apm/workflow.toml
+
+On the three `command:start` transitions that 6803b88b updates, add `agent = "default"`:
+
+- `groomed → in_design`
+- `ammend → in_design`
+- `ready → in_progress`
+
+#### 7. Tests — apm-core/src/start.rs
+
+Add two unit tests:
+
+- `transition_agent_takes_precedence_over_profile`: construct a profile with `agent = Some("other".into())` and call `effective_spawn_params(Some("custom"), Some(&profile), &workers_default)`. Assert the returned `agent` field is `"custom"`.
+- `effective_agent_defaults_to_claude`: call `effective_spawn_params(None, None, &workers_default)`. Assert the returned `agent` field is `"claude"`.
+
+Update any existing direct calls to `effective_spawn_params` that pass only two arguments to pass `None` as the new first argument — no behaviour change.
 
 ### Open questions
 
