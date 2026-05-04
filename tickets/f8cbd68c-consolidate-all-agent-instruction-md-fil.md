@@ -52,7 +52,7 @@ Conflict: ticket 121a05a8 (specd) writes per-agent files from init.rs and adds s
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/agents/default/` contains `agents.md`, `apm.spec-writer.md`, and `apm.worker.md`; the old flat files `apm-core/src/default/apm.agents.md`, `apm-core/src/default/apm.spec-writer.md`, and `apm-core/src/default/apm.worker.md` no longer exist
+- [x] `apm-core/src/default/agents/default/` contains `agents.md`, `apm.spec-writer.md`, and `apm.worker.md`; the old flat files `apm-core/src/default/apm.agents.md`, `apm-core/src/default/apm.spec-writer.md`, and `apm-core/src/default/apm.worker.md` no longer exist
 - [ ] `apm init` on a fresh project creates `.apm/agents/default/agents.md` and does not create `.apm/agents.md`
 - [ ] `apm init` on a fresh project creates `.apm/agents/default/apm.spec-writer.md` and does not create `.apm/apm.spec-writer.md`
 - [ ] `apm init` on a fresh project creates `.apm/agents/default/apm.worker.md` and does not create `.apm/apm.worker.md`
