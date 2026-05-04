@@ -1,7 +1,7 @@
 +++
 id = "7cdec85b"
 title = "sync misses implemented tickets with post-merge state commits on the ticket branch"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7cdec85b-sync-misses-implemented-tickets-with-pos"
 created_at = "2026-05-03T20:15:04.114954Z"
-updated_at = "2026-05-03T20:15:04.114954Z"
+updated_at = "2026-05-04T01:53:58.697984Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-03T20:15Z | — | new | philippepascal |
+| 2026-05-04T01:53Z | new | groomed | philippepascal |
