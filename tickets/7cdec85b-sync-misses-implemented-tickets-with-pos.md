@@ -42,7 +42,47 @@ Two gaps to close:
 
 ### Approach
 
-How the implementation will work.
+#### New helper: `git_util::content_merged_into_main`
+
+Add `pub fn content_merged_into_main(root: &Path, main_ref: &str, branch: &str, tickets_dir: &str) -> Result<bool>` to `apm-core/src/git_util.rs` (after `squash_merged`).
+
+1. `merge_base` ← `git merge-base <main_ref> <branch>`; on error return `Ok(false)`.
+2. `branch_tip` ← `git rev-parse <branch>^{commit}`.
+3. If `branch_tip == merge_base` return `Ok(false)` (ancestor; `--merged` handles it).
+4. `log_shas` ← `git log --pretty=%H <branch> ^<merge_base>` — SHAs newest-first.
+5. Walk from newest SHA: for each sha, `git diff-tree --no-commit-id -r --name-only <sha>`. If any changed path does **not** start with `<tickets_dir>/`, set `content_tip = sha` and stop.
+6. If no `content_tip` was set (every commit touched only ticket files) return `Ok(false)`.
+7. If `content_tip == branch_tip` return `Ok(false)` — no trailing state commits; `squash_merged` already ran on this and missed it, so the content is not in main.
+8. `squash_commit` ← `git commit-tree <content_tip>^{tree} -p <merge_base> -m squash`.
+9. `cherry_out` ← `git cherry <main_ref> <squash_commit>`.
+10. Return `Ok(cherry_out.trim().starts_with('-'))`.
+
+#### Case 3 in `sync::detect` (`apm-core/src/sync.rs`)
+
+Add `hints: Vec<String>` to the `Candidates` struct (initialize to `Vec::new()` in `detect()`).
+
+Determine `main_ref` at the top of `detect()`: if `refs/remotes/origin/<default>` resolves, use `"origin/<default>"`; otherwise use `"<default>"`. (Mirrors `merged_into_main`'s own preference logic.)
+
+After Case 1 and before Case 2, add Case 3:
+
+- Iterate `branches` not in `merged_set`.
+- Call `git::content_merged_into_main(root, &main_ref, branch, &tickets_dir)?`.
+- On `true`: read the ticket from the branch (same pattern as Case 1: `read_from_branch` → `Ticket::parse`). If not terminal, push `CloseCandidate { reason: "branch content merged" }`. Insert the branch name into `merged_set` so Case 2 and hint generation don't double-count it.
+
+#### Hint generation in `sync::detect`
+
+After Cases 1–3 (before `Ok(Candidates { ... })`), iterate `branches` still not in `merged_set`:
+
+- `read_from_branch` the ticket; skip parse errors.
+- If `state == "implemented"`, push to `candidates.hints`:
+  ```
+  "ticket #<id> is in `implemented` state but its branch was not detected as merged into \
+   main. If it was already merged, close it manually: apm state <id> closed"
+  ```
+
+#### Print hints in `apm/src/cmd/sync.rs`
+
+After the `println!("sync: {} ticket branch…")` line and before the close-prompt block, iterate `candidates.hints` and `eprintln!` each one.
 
 ### Open questions
 
