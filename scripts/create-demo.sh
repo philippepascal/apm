@@ -20,6 +20,14 @@
 
 set -euo pipefail
 
+MOCK_MODE=false
+for arg in "$@"; do
+  case "$arg" in
+    --mock) MOCK_MODE=true ;;
+    *) echo "ERROR: unknown flag: $arg"; exit 1 ;;
+  esac
+done
+
 GH_USER=$(gh api user --jq .login 2>/dev/null) || { echo "ERROR: cannot determine GitHub username"; exit 1; }
 REPO="${GH_USER}/apm-demo"
 REPO_URL="https://github.com/${REPO}.git"
@@ -195,7 +203,7 @@ echo ""
 echo "==> Initialising APM"
 mkdir -p .apm
 
-cat > .apm/config.toml << 'APM_CONFIG'
+cat > .apm/config.toml << 'APM_CONFIG_TOP'
 [project]
 name = "jot"
 description = "A minimal CLI notes tool"
@@ -213,14 +221,28 @@ agent_dirs = [".claude", ".cursor", ".windsurf"]
 max_concurrent = 3
 instructions = ".apm/agents.md"
 
+APM_CONFIG_TOP
+
+if "$MOCK_MODE"; then
+  cat >> .apm/config.toml << 'APM_WORKERS'
+[workers]
+command = "mock-happy"
+
+APM_WORKERS
+else
+  cat >> .apm/config.toml << 'APM_WORKERS'
 [workers]
 command = "claude"
 args = ["--print"]
 
+APM_WORKERS
+fi
+
+cat >> .apm/config.toml << 'APM_CONFIG_TAIL'
 [logging]
 enabled = false
 file = "~/.local/state/apm/jot.log"
-APM_CONFIG
+APM_CONFIG_TAIL
 
 # apm init reads the config above (non-interactive — no TTY in script context).
 # It creates workflow.toml, ticket.toml, agents.md, CLAUDE.md, .gitignore,
