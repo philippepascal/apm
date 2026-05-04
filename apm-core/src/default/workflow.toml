@@ -19,7 +19,7 @@ id           = "groomed"
 label        = "Groomed"
 actionable   = ["agent"]
 dep_requires = "spec"
-instructions = ".apm/apm.spec-writer.md"
+instructions = ".apm/agents/default/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to              = "in_design"
@@ -76,7 +76,7 @@ label          = "Ammend"
 actionable     = ["agent"]
 dep_requires   = "spec"
 satisfies_deps = "spec"
-instructions   = ".apm/apm.spec-writer.md"
+instructions   = ".apm/agents/default/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "specd"
@@ -102,7 +102,7 @@ instructions   = ".apm/apm.spec-writer.md"
 [[workflow.states]]
 id           = "in_design"
 label        = "In Design"
-instructions = ".apm/apm.spec-writer.md"
+instructions = ".apm/agents/default/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "specd"
@@ -129,7 +129,7 @@ id             = "ready"
 label          = "Ready"
 actionable     = ["agent"]
 satisfies_deps = "spec"
-instructions   = ".apm/apm.worker.md"
+instructions   = ".apm/agents/default/apm.worker.md"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -156,7 +156,7 @@ instructions   = ".apm/apm.worker.md"
 id             = "in_progress"
 label          = "In Progress"
 satisfies_deps = "spec"
-instructions   = ".apm/apm.worker.md"
+instructions   = ".apm/agents/default/apm.worker.md"
 
   [[workflow.states.transitions]]
   to         = "implemented"

@@ -16,7 +16,7 @@ repo = "philippepascal/apm"
 token_env = "APM_GITHUB_TOKEN"
 
 [agents]
-instructions          = ".apm/agents.md"
+instructions          = ".apm/agents/default/agents.md"
 max_concurrent        = 4
 max_workers_per_epic  = 1
 max_workers_on_default = 1
@@ -37,12 +37,12 @@ file = "/tmp/apm.log"
 command = "claude"
 args = ["--print"]
 model = "sonnet"
-instructions = ".apm/apm.spec-writer.md"
+instructions = ".apm/agents/default/apm.spec-writer.md"
 role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
 
 [worker_profiles.impl_agent]
 command = "claude"
 args = ["--print"]
 model = "sonnet"
-instructions = ".apm/apm.worker.md"
+instructions = ".apm/agents/default/apm.worker.md"
 role_prefix = "You are a Worker agent assigned to ticket #<id>."
