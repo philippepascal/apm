@@ -35,7 +35,10 @@ Two gaps to close:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Preventing the pattern by changing how state commits are written to ticket branches
+- Detecting partially-cherry-picked branches (only some implementation commits present in main)
+- Branches where the new commits include non-ticket file changes alongside state changes (these are correctly left undetected as the content diverges from what was merged)
+- Ticket branches with no implementation content at all (all commits since merge-base are ticket-file-only; return not-merged, nothing to detect)
 
 ### Approach
 
