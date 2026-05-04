@@ -43,7 +43,7 @@ The desired state is that `instructions` and `role_prefix` can be set directly o
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Moving other profile fields (model, agent, container, env, options) to transitions — those remain infrastructure concerns owned by worker_profiles\n- Changing the semantics of StateConfig.instructions, which is a user-message prefix used in non-spawn mode (unrelated to the system prompt)\n- Adding instructions/role_prefix to states (as opposed to transitions) — states already have instructions for a different purpose\n- Removing the worker_profiles mechanism; it stays as the path for infra-only overrides\n- Schema validation that a transition references a valid profile name (a separate concern)
 
 ### Approach
 
