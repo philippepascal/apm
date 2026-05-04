@@ -59,7 +59,7 @@ Conflict: ticket 121a05a8 (specd) writes per-agent files from init.rs and adds s
 - [x] `apm init` on a fresh project writes `CLAUDE.md` containing `@.apm/agents/default/agents.md`
 - [x] `apm init` on a project whose `.apm/` still has old flat files (`agents.md`, `apm.spec-writer.md`, `apm.worker.md`, `style.md`) moves each one to `.apm/agents/default/` and leaves no file at the old path
 - [x] After the migration path above, CLAUDE.md references, `config.toml` `instructions` fields, and `workflow.toml` `instructions` fields are all rewritten from old paths to new paths
-- [ ] `apm-core/src/default/workflow.toml` contains no references to `.apm/apm.spec-writer.md` or `.apm/apm.worker.md`
+- [x] `apm-core/src/default/workflow.toml` contains no references to `.apm/apm.spec-writer.md` or `.apm/apm.worker.md`
 - [ ] This repo's `.apm/agents/default/` contains `agents.md`, `apm.spec-writer.md`, `apm.worker.md`, and `style.md`
 - [ ] This repo's `CLAUDE.md` imports `@.apm/agents/default/agents.md` and `@.apm/agents/default/style.md`
 - [ ] `cargo test --workspace` passes
