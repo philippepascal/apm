@@ -93,6 +93,9 @@ The `include_str!()` paths are relative to `apm-core/src/`, matching the existin
 #### Order matters
 
 Do Steps 1 and 4 before running tests — Step 1 fixes the project file so the Step 2 test passes; Step 4 changes only runtime behavior, not test assertions.
+**Step 2b: Copy the default worker file into the project**
+
+Copy `apm-core/src/default/agents/claude/apm.worker.md` to `.apm/agents/claude/apm.worker.md` in the repo. Without this file present and matching, the sync test added in Step 3 fails on a clean checkout. Verify with `diff apm-core/src/default/agents/claude/apm.worker.md .apm/agents/claude/apm.worker.md` before moving on. This step belongs between Step 2 and Step 3; the updated ordering in "Order matters" below supersedes the original.
 
 ### Open questions
 
