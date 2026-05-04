@@ -29,7 +29,19 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `TransitionConfig` in `apm-core/src/config.rs` exposes `agent: Option<String>` with `#[serde(default)]`
+- [ ] `effective_spawn_params()` accepts `transition_agent: Option<&str>` as its first argument and checks it before `profile.agent` and `workers.agent`
+- [ ] When `transition.agent = "default"`, `spawn_worker()` dispatches through `.apm/agents/default/wrapper.sh`
+- [ ] A `wrapper.sh` in `.apm/agents/<name>/` with no accompanying `manifest.toml` is accepted without error (manifest defaults apply)
+- [ ] `.apm/agents/default/wrapper.sh` exists and is executable (`chmod +x`)
+- [ ] `wrapper.sh` invokes the claude binary with `--print --output-format stream-json --verbose --disable-slash-commands`, reading the system prompt from `$APM_SYSTEM_PROMPT_FILE` and the user message from `$APM_USER_MESSAGE_FILE`
+- [ ] `wrapper.sh` passes `--dangerously-skip-permissions` when `APM_SKIP_PERMISSIONS` is set
+- [ ] `wrapper.sh` passes `--model "$APM_MODEL"` when `APM_MODEL` is non-empty
+- [ ] The env-var setup for custom wrapper scripts includes `APM_MODEL` (set from `ctx.model`)
+- [ ] The `groomed → in_design`, `ammend → in_design`, and `ready → in_progress` transitions in `.apm/workflow.toml` each include `agent = "default"`
+- [ ] When no `transition.agent`, no `profile.agent`, and no `workers.agent` are set, the resolved agent name is `"claude"` (unchanged behaviour)
+- [ ] Unit test: `transition_agent_takes_precedence_over_profile` — `transition_agent = Some("custom")` with `profile.agent = Some("other")` resolves to `"custom"`
+- [ ] Unit test: `effective_agent_defaults_to_claude` — no transition agent, no profile, no workers agent resolves to `"claude"`
 
 ### Out of scope
 
