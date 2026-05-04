@@ -16,13 +16,13 @@ updated_at = "2026-05-04T02:01:31.032742Z"
 
 ### Problem
 
-strategy for agents md file is unclear. need generic linking to claude
- The cleanup pile when you're ready:
-  - apm init is unaware of per-agent files
-  - .apm/agents/claude/apm.worker.md doesn't exist
-  - .apm/agents/claude/apm.spec-writer.md is missing the two sections added by 9fcc94ed
-  - No sync tests cover the per-agent apm.worker.md at all
-  - The spec_writer_md_sync test only compares the ## Style rules section, not the full file
+The per-agent instruction files under `.apm/agents/claude/` have accumulated inconsistencies that existing tests do not catch.
+
+`apm init` never writes to `.apm/agents/claude/` — so any fresh project initialized from scratch would be missing both per-agent files entirely. The default templates (`apm-core/src/default/agents/claude/`) exist and are embedded in the binary via `include_str!()` in `start.rs`, but the `setup()` function in `init.rs` makes no `write_default()` calls for them.
+
+The project's `.apm/agents/claude/apm.spec-writer.md` is missing two sections — `## Scope limits` and `## Capability limitations` — that exist in the canonical default at `apm-core/src/default/agents/claude/apm.spec-writer.md`. These sections were added to the default in a prior commit but were never propagated to the project file. As a result, spec-writer agents operating on this repo receive instructions that omit scope restrictions and the graceful-exit protocol for capability blocks. The `spec_writer_md_sync.rs` test did not catch this because it only validates the `## Style rules` section.
+
+No sync test covers `.apm/agents/claude/apm.worker.md` at all, leaving the per-agent worker file free to diverge silently from its default.
 
 ### Acceptance criteria
 
@@ -43,6 +43,8 @@ How the implementation will work.
 
 
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
