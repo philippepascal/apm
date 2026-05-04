@@ -105,7 +105,7 @@ Do Steps 1, 2, and 2b before running tests — Step 1 fixes the spec-writer proj
 
 ### Amendment requests
 
-- [ ] Add a step to create the missing project file: copy `apm-core/src/default/agents/claude/apm.worker.md` to `.apm/agents/claude/apm.worker.md` in the repo. Without this, the test added in Step 3 fails immediately on a clean checkout. This should be an explicit step (e.g. Step 2b) in the Approach, before the test is added.
+- [x] Add a step to create the missing project file: copy `apm-core/src/default/agents/claude/apm.worker.md` to `.apm/agents/claude/apm.worker.md` in the repo. Without this, the test added in Step 3 fails immediately on a clean checkout. This should be an explicit step (e.g. Step 2b) in the Approach, before the test is added.
 - [ ] Resolve the contradiction between ACs #1–#2 and Out of Scope. Option A: remove 'Adding `apm init` integration tests' from Out of Scope and add a unit-level test that calls `init::setup()` directly in a temp dir, verifying the per-agent files are created. Option B: remove ACs #1 and #2, since the sync tests (ACs #5–#6) enforce file correctness and the init.rs code change is verified by code review. Pick one and update both the AC list and Out of Scope to be consistent.
 
 ### Code review
