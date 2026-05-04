@@ -157,6 +157,7 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         .ok()
         .and_then(|c| worktree_gitignore_pattern(&c.worktrees.dir));
     ensure_gitignore(&gitignore, wt_pattern.as_deref(), &mut messages)?;
+    ensure_gitattributes(&root.join(".gitattributes"), &mut messages)?;
     maybe_initial_commit(root, &mut messages)?;
     ensure_worktrees_dir(root, &mut messages)?;
     Ok(SetupOutput { messages })
@@ -329,6 +330,26 @@ pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &
     } else {
         std::fs::write(path, entries.join("\n") + "\n")?;
         messages.push("Created .gitignore".to_string());
+    }
+    Ok(())
+}
+
+pub fn ensure_gitattributes(path: &Path, messages: &mut Vec<String>) -> Result<()> {
+    let entry = "EPIC.md merge=ours";
+    if path.exists() {
+        let mut contents = std::fs::read_to_string(path)?;
+        if !contents.contains(entry) {
+            if !contents.ends_with('\n') {
+                contents.push('\n');
+            }
+            contents.push_str(entry);
+            contents.push('\n');
+            std::fs::write(path, &contents)?;
+            messages.push("Updated .gitattributes".to_string());
+        }
+    } else {
+        std::fs::write(path, format!("{entry}\n"))?;
+        messages.push("Created .gitattributes".to_string());
     }
     Ok(())
 }

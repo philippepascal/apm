@@ -1,0 +1,4 @@
+# Prevent EPIC.md conflicts when merging concurrent epic branches.
+# Each epic branch writes its own title to EPIC.md; the merge driver
+# keeps the current branch's version instead of conflicting.
+EPIC.md merge=ours
