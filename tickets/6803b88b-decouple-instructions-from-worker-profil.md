@@ -71,11 +71,13 @@ Levels 1–5 (profile → workers → agent file → built-in → error) remain 
 
 Update `agent_role_prefix` to accept a new first argument `transition_role_prefix: Option<&str>` before `profile`. Resolution order: transition_role_prefix → profile.role_prefix → default string.
 
-Update all call sites of both functions (`run()` and `spawn_next_worker()`) to pass the transition fields. The triggering transition is already captured as `triggering_transition_owned` at both sites; extract `.instructions.as_deref()` and `.role_prefix.as_deref()` from it.
+Update all call sites of `resolve_system_prompt` and `agent_role_prefix` in `run()` and `spawn_next_worker()` to pass the transition fields. The triggering transition is already captured at both sites; extract `.instructions.as_deref()` and `.role_prefix.as_deref()` from it.
+
+Also update the three `WrapperContext::role_prefix` assignments (one in `run()`, two in the `spawn_next_worker()` variants). These lines currently read `profile.and_then(|p| p.role_prefix.clone())`. Change each to resolve `transition.role_prefix` first (with `<id>` substituted), then fall back to `profile.role_prefix`, then `None`. This ensures the `APM_ROLE_PREFIX` env var forwarded to the wrapper reflects the transition-level override.
 
 #### 3. Migrate project configuration
 
-**.apm/workflow.toml** — add fields directly on the `command:start` transitions:
+**`.apm/workflow.toml`** (this project) — add fields directly on the `command:start` transitions:
 
 - `groomed → in_design` and `ammend → in_design`: add
       instructions = ".apm/agents/default/apm.spec-writer.md"
@@ -84,11 +86,17 @@ Update all call sites of both functions (`run()` and `spawn_next_worker()`) to p
       instructions = ".apm/agents/default/apm.worker.md"
       role_prefix  = "You are a Worker agent assigned to ticket #<id>."
 
-**`apm-core/src/default/workflow.toml`** — apply the same transition-level `instructions` and `role_prefix` additions as above. This file is what `apm init` writes to new projects; without updating it, projects created after this ticket lands will still use the old profile-based config.
+**`.apm/config.toml`** (this project) — remove `instructions` and `role_prefix` from `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]`. Each profile holds only those two fields plus `command`/`args` (deprecated) and `model` whose value mirrors the `[workers]` default; once stripped they have no meaningful non-redundant content, so remove both profile entries entirely and drop the corresponding `profile = ...` lines from the transitions.
 
-**.apm/workflow.toml** — apply the same additions.
+**`apm-core/src/default/workflow.toml`** (template written by `apm init`) — apply the same transition-level `instructions` and `role_prefix` additions as above. Additionally:
 
-**.apm/config.toml** — remove `instructions` and `role_prefix` from `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]`. Each profile currently holds only those two fields plus deprecated `command`/`args`/`model`; once stripped they have no non-deprecated content, so remove the profile entries entirely and drop the corresponding `profile = ...` references on the transitions.
+- Drop `profile = "impl_agent"` from the `ready → in_progress` transition (that profile will be removed from the generated config; see below).
+- Keep `profile = "spec_agent"` on `groomed → in_design` and `ammend → in_design` — the generated `spec_agent` profile retains `role = "spec-writer"` which is the fallback used when `transition.instructions` is absent.
+
+**`apm-core/src/init.rs` — `default_config()` string template** — update the generated `config.toml` for new projects:
+
+- `[worker_profiles.spec_agent]`: remove `instructions` and `role_prefix`; the profile retains `role = "spec-writer"` and remains in the template.
+- `[worker_profiles.impl_agent]`: remove `instructions` and `role_prefix`; the profile becomes empty — remove the entire entry from the template.
 
 #### 4. Update tests — apm-core/src/start.rs
 
