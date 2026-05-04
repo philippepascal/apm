@@ -132,6 +132,21 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
     write_default(&apm_dir.join("agents.md"), default_agents_md(), ".apm/agents.md", &mut messages)?;
     write_default(&apm_dir.join("apm.spec-writer.md"), include_str!("default/apm.spec-writer.md"), ".apm/apm.spec-writer.md", &mut messages)?;
     write_default(&apm_dir.join("apm.worker.md"), include_str!("default/apm.worker.md"), ".apm/apm.worker.md", &mut messages)?;
+    let agents_claude_dir = apm_dir.join("agents/claude");
+    std::fs::create_dir_all(&agents_claude_dir)
+        .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_claude_dir.display()))?;
+    write_default(
+        &agents_claude_dir.join("apm.spec-writer.md"),
+        include_str!("default/agents/claude/apm.spec-writer.md"),
+        ".apm/agents/claude/apm.spec-writer.md",
+        &mut messages,
+    )?;
+    write_default(
+        &agents_claude_dir.join("apm.worker.md"),
+        include_str!("default/agents/claude/apm.worker.md"),
+        ".apm/agents/claude/apm.worker.md",
+        &mut messages,
+    )?;
     ensure_claude_md(root, ".apm/agents.md", &mut messages)?;
     let gitignore = root.join(".gitignore");
     let wt_pattern = crate::config::Config::load(root)
@@ -534,6 +549,8 @@ mod tests {
         assert!(tmp.path().join(".apm/agents.md").exists());
         assert!(tmp.path().join(".apm/apm.spec-writer.md").exists());
         assert!(tmp.path().join(".apm/apm.worker.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
         assert!(tmp.path().join(".gitignore").exists());
         assert!(tmp.path().join("CLAUDE.md").exists());
     }
