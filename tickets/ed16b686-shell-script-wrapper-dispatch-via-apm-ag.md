@@ -33,7 +33,7 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 - [ ] `effective_spawn_params()` accepts `transition_agent: Option<&str>` as its first argument and checks it before `profile.agent` and `workers.agent`
 - [ ] When `transition.agent = "default"`, `spawn_worker()` dispatches through `.apm/agents/default/wrapper.sh`
 - [ ] A `wrapper.sh` in `.apm/agents/<name>/` with no accompanying `manifest.toml` is accepted without error (manifest defaults apply)
-- [ ] `.apm/agents/default/wrapper.sh` exists and is executable (`chmod +x`)
+- [ ] `.apm/agents/default/wrapper.sh` exists in this repo and is executable (`chmod +x`); `apm init` does not write it to new projects (see Out of scope)
 - [ ] `wrapper.sh` invokes the claude binary with `--print --output-format stream-json --verbose --disable-slash-commands`, reading the system prompt from `$APM_SYSTEM_PROMPT_FILE` and the user message from `$APM_USER_MESSAGE_FILE`
 - [ ] `wrapper.sh` passes `--dangerously-skip-permissions` when `APM_SKIP_PERMISSIONS` is set
 - [ ] `wrapper.sh` passes `--model "$APM_MODEL"` when `APM_MODEL` is non-empty
@@ -49,6 +49,7 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 - Per-transition model overrides in `TransitionConfig` — model is an infrastructure concern that stays in worker profiles and workers config
 - Any change to the built-in `claude`, `mock-happy`, `mock-sad`, or `debug` wrapper implementations
 - Creating `wrapper.sh` files for agent configs other than `default`
+- Updating `apm init` to write `wrapper.sh` into new projects — `apm init` does not create `.apm/agents/default/wrapper.sh`; projects that want to customise the wrapper must copy it manually. A follow-up ticket can add this to `init.rs` if needed.
 - Changes to the `manifest.toml` format or the "external" parser contract
 - Removing the `worker_profiles` mechanism — it remains as the path for infra-only overrides (covered by dependency 6803b88b's out-of-scope boundary)
 
