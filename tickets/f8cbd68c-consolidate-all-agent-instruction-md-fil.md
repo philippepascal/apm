@@ -66,7 +66,10 @@ Conflict: ticket 121a05a8 (specd) writes per-agent files from init.rs and adds s
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the content of any agent instruction file (agents.md, apm.spec-writer.md, apm.worker.md, style.md)
+- Per-agent overrides already at correct paths (`agents/claude/`, `agents/debug/`, `agents/mock-*/`)
+- Fallback path resolution at runtime — paths are explicit, no fallback logic is added
+- Ticket 121a05a8, which adds per-agent file writes from init.rs and new sync tests; that ticket must be rebased on top of this one
 
 ### Approach
 
