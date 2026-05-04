@@ -76,9 +76,67 @@ pub(crate) fn rand_u16() -> u16 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().subsec_nanos() as u16
 }
 
+pub(crate) fn resolve_apm_cli_bin() -> String {
+    std::env::current_exe()
+        .and_then(|p| p.canonicalize())
+        .ok()
+        .map(|exe| resolve_cli_bin_from_exe(&exe))
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+fn resolve_cli_bin_from_exe(exe: &std::path::Path) -> std::path::PathBuf {
+    let candidate = exe
+        .parent()
+        .map(|dir| dir.join("apm"))
+        .filter(|p| p.is_file() && *p != exe);
+    candidate.unwrap_or_else(|| exe.to_path_buf())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // --- resolve_cli_bin_from_exe ---
+
+    #[test]
+    fn resolve_cli_bin_from_exe_uses_sibling_apm_when_running_as_apm_server() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let apm_server = dir.path().join("apm-server");
+        std::fs::write(&apm_server, "#!/bin/sh").unwrap();
+        std::fs::set_permissions(&apm_server, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let apm = dir.path().join("apm");
+        std::fs::write(&apm, "#!/bin/sh").unwrap();
+        std::fs::set_permissions(&apm, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let result = resolve_cli_bin_from_exe(&apm_server);
+        assert_eq!(
+            result.file_stem().and_then(|s| s.to_str()),
+            Some("apm"),
+            "APM_BIN must point to the apm CLI binary, not apm-server: {result:?}"
+        );
+    }
+
+    #[test]
+    fn resolve_cli_bin_from_exe_no_change_when_already_apm() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let apm = dir.path().join("apm");
+        std::fs::write(&apm, "#!/bin/sh").unwrap();
+        std::fs::set_permissions(&apm, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let result = resolve_cli_bin_from_exe(&apm);
+        assert_eq!(result, apm);
+    }
+
+    #[test]
+    fn resolve_cli_bin_from_exe_falls_back_when_no_sibling_apm() {
+        let dir = tempfile::tempdir().unwrap();
+        let apm_server = dir.path().join("apm-server");
+        std::fs::write(&apm_server, "#!/bin/sh").unwrap();
+        // No sibling apm file — must fall back to the exe itself
+        let result = resolve_cli_bin_from_exe(&apm_server);
+        assert_eq!(result, apm_server);
+    }
 
     #[test]
     fn resolve_builtin_claude_returns_some() {

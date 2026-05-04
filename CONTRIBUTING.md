@@ -44,6 +44,20 @@ that:
 - No unnecessary abstractions — solve the specific problem
 - Add tests for new functionality
 
+## Testing inside a worker session
+
+When running `cargo test --workspace` from inside an APM worker session, the
+environment inherits `APM_BIN` which may point to the installed system binary
+rather than the freshly compiled one. If you are testing a feature that does
+not yet exist in the installed version, prefix the command with `env -u APM_BIN`:
+
+```sh
+env -u APM_BIN cargo test --workspace
+```
+
+This lets the test harness derive the correct binary from the build output
+directory.
+
 ## Reporting issues
 
 Open an issue on GitHub. Include:
