@@ -68,6 +68,8 @@ fn make_mock_worker(dir: &std::path::Path) -> std::path::PathBuf {
 fn init_repo() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     git(dir.path(), &["init", "-q", "-b", "main"]);
+    git(dir.path(), &["config", "user.name", "test"]);
+    git(dir.path(), &["config", "user.email", "test@test.com"]);
     let bin = env!("CARGO_BIN_EXE_apm");
     let out = std::process::Command::new(bin)
         .args(["init", "--no-claude", "--quiet"])
