@@ -221,6 +221,7 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
     cmd.env("APM_SYSTEM_PROMPT_FILE", ctx.system_prompt_file.to_string_lossy().as_ref());
     cmd.env("APM_USER_MESSAGE_FILE", ctx.user_message_file.to_string_lossy().as_ref());
     cmd.env("APM_SKIP_PERMISSIONS", if ctx.skip_permissions { "1" } else { "0" });
+    cmd.env("APM_MODEL", ctx.model.as_deref().unwrap_or(""));
     cmd.env("APM_PROFILE", &ctx.profile);
     if let Some(ref prefix) = ctx.role_prefix {
         cmd.env("APM_ROLE_PREFIX", prefix);

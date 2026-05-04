@@ -255,6 +255,7 @@ mod tests {
             profile: None,
             instructions: None,
             role_prefix: None,
+            agent: None,
         }
     }
 

@@ -25,6 +25,7 @@ instructions = ".apm/agents/default/apm.spec-writer.md"
   to              = "in_design"
   trigger         = "command:start"
   context_section = "Problem"
+  agent           = "default"
   instructions    = ".apm/agents/default/apm.spec-writer.md"
   role_prefix     = "You are a Spec-Writer agent assigned to ticket #<id>."
 
@@ -86,6 +87,7 @@ instructions   = ".apm/agents/default/apm.spec-writer.md"
   [[workflow.states.transitions]]
   to           = "in_design"
   trigger      = "command:start"
+  agent        = "default"
   instructions = ".apm/agents/default/apm.spec-writer.md"
   role_prefix  = "You are a Spec-Writer agent assigned to ticket #<id>."
 
@@ -125,6 +127,7 @@ instructions   = ".apm/agents/default/apm.worker.md"
   [[workflow.states.transitions]]
   to           = "in_progress"
   trigger      = "command:start"
+  agent        = "default"
   instructions = ".apm/agents/default/apm.worker.md"
   role_prefix  = "You are a Worker agent assigned to ticket #<id>."
 
