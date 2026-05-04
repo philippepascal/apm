@@ -25,7 +25,7 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 
 ### Acceptance criteria
 
-- [ ] `scripts/record-demo.sh` is a new executable shell script committed to the APM repo
+- [x] `scripts/record-demo.sh` is a new executable shell script committed to the APM repo
 - [ ] Running the script without arguments creates a complete demo environment in a temp directory, requiring no GitHub account, no Claude CLI, and no API credentials
 - [ ] The demo sequence runs `apm list` before processing, then `apm work` (which blocks until all workers complete in non-daemon mode), then `apm list` again
 - [ ] At least 3 tickets are visible in the final `apm list` output having transitioned from `ready` to `implemented`
