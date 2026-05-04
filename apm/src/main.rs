@@ -561,6 +561,9 @@ merged-branch and worktree checks."
         /// Skip automatic git fetch before reading ticket data
         #[arg(long)]
         no_aggressive: bool,
+        /// Show per-transition agent resolution audit
+        #[arg(long)]
+        verbose: bool,
     },
     /// Internal git hook dispatcher (used by .git/hooks/*)
     #[command(name = "_hook", hide = true)]
@@ -1032,7 +1035,8 @@ fn main() -> Result<()> {
             json,
             config_only,
             no_aggressive,
-        } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
+            verbose,
+        } => cmd::validate::run(&root, fix, json, config_only, no_aggressive, verbose),
         Command::Hook { hook_name, .. } => {
             cmd::hook::run(&root, &hook_name);
             Ok(())

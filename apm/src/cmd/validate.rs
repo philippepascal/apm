@@ -218,7 +218,7 @@ struct Issue {
     message: String,
 }
 
-pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive: bool) -> Result<()> {
+pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive: bool, verbose: bool) -> Result<()> {
     // Config migration runs first so the freshly-written config is loaded below.
     if fix && apply_config_migration_fixes(root)? {
         println!("migrated [workers] config to agent-driven shape; legacy command/args/model removed");
@@ -326,13 +326,22 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
 
     let has_errors = !config_errors.is_empty() || !ticket_issues.is_empty();
 
+    let audit = if verbose {
+        Some(apm_core::validate::audit_agent_resolution(&config, root))
+    } else {
+        None
+    };
+
     if json {
-        let out = serde_json::json!({
+        let mut out = serde_json::json!({
             "tickets_checked": tickets_checked,
             "config_errors": config_errors,
             "warnings": config_warnings,
             "errors": ticket_issues,
         });
+        if let Some(ref ar) = audit {
+            out["agent_resolution"] = serde_json::to_value(ar)?;
+        }
         println!("{}", serde_json::to_string_pretty(&out)?);
     } else {
         for e in &config_errors {
@@ -351,6 +360,9 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
             config_warnings.len(),
             ticket_issues.len(),
         );
+        if let Some(ref ar) = audit {
+            print_agent_resolution_audit(ar);
+        }
     }
 
     if config_errors.is_empty() && ticket_issues.is_empty() {
@@ -368,6 +380,61 @@ pub fn run(root: &Path, fix: bool, json: bool, config_only: bool, no_aggressive:
     }
 
     Ok(())
+}
+
+fn truncate_role_prefix(s: &str) -> String {
+    if s.chars().count() > 60 {
+        let truncated: String = s.chars().take(57).collect();
+        format!("{truncated}...")
+    } else {
+        s.to_string()
+    }
+}
+
+fn print_agent_resolution_audit(audit: &[apm_core::validate::TransitionAudit]) {
+    let n = audit.len();
+    println!("\nAgent resolution audit -- {n} spawn transition{}:", if n == 1 { "" } else { "s" });
+
+    for ta in audit {
+        let profile_str = match &ta.profile {
+            Some(p) => format!("  [profile: {p}]"),
+            None => String::new(),
+        };
+        println!("\n  {} -> {}{}", ta.from_state, ta.to_state, profile_str);
+
+        let role_prefix_display = truncate_role_prefix(&ta.role_prefix.value);
+
+        // Compute max value width across the 3 sourced fields for alignment.
+        let max_val = [
+            ta.agent.value.len(),
+            ta.instructions.value.len(),
+            role_prefix_display.len(),
+        ]
+        .into_iter()
+        .max()
+        .unwrap_or(0);
+
+        // Label column is 14 chars wide (matches "instructions: ").
+        println!(
+            "    {:<14}{:<max_val$}  ({})",
+            "agent:",
+            ta.agent.value,
+            ta.agent.source,
+        );
+        println!(
+            "    {:<14}{:<max_val$}  ({})",
+            "instructions:",
+            ta.instructions.value,
+            ta.instructions.source,
+        );
+        println!(
+            "    {:<14}{:<max_val$}  ({})",
+            "role prefix:",
+            role_prefix_display,
+            ta.role_prefix.source,
+        );
+        println!("    {:<14}{}", "wrapper:", ta.wrapper);
+    }
 }
 
 fn apply_branch_fixes(

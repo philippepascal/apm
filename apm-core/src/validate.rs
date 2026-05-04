@@ -3,8 +3,26 @@ use crate::ticket_fmt::Ticket;
 use crate::wrapper;
 use crate::wrapper::custom::{parse_manifest, manifest_unknown_keys};
 use anyhow::{bail, Result};
+use serde::Serialize;
 use std::collections::HashSet;
 use std::path::Path;
+
+#[derive(Debug, Serialize)]
+pub struct FieldAudit {
+    pub value: String,
+    pub source: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TransitionAudit {
+    pub from_state: String,
+    pub to_state: String,
+    pub profile: Option<String>,
+    pub agent: FieldAudit,
+    pub instructions: FieldAudit,
+    pub role_prefix: FieldAudit,
+    pub wrapper: String,
+}
 
 /// Return the completion strategy configured for the `in_progress → implemented`
 /// transition.  Falls back to `None` when the transition is absent.
@@ -607,6 +625,170 @@ fn validate_warnings_no_agents(config: &crate::config::Config, _root: &Path) -> 
     }
 
     warnings
+}
+
+/// Resolve the effective agent name for a spawn transition.
+fn resolve_audit_agent(
+    transition_agent: Option<&str>,
+    profile: Option<&crate::config::WorkerProfileConfig>,
+    profile_name: Option<&str>,
+    workers: &crate::config::WorkersConfig,
+) -> FieldAudit {
+    if let Some(a) = transition_agent {
+        return FieldAudit { value: a.to_string(), source: "transition".to_string() };
+    }
+    if let Some(p) = profile {
+        if let Some(ref a) = p.agent {
+            let src = format!("profile:{}", profile_name.unwrap_or(""));
+            return FieldAudit { value: a.clone(), source: src };
+        }
+    }
+    if let Some(ref a) = workers.agent {
+        return FieldAudit { value: a.clone(), source: "workers".to_string() };
+    }
+    FieldAudit { value: "claude".to_string(), source: "default".to_string() }
+}
+
+/// Resolve the effective instructions for a spawn transition.
+fn resolve_audit_instructions(
+    transition_instructions: Option<&str>,
+    profile: Option<&crate::config::WorkerProfileConfig>,
+    profile_name: Option<&str>,
+    workers: &crate::config::WorkersConfig,
+    agent: &str,
+    role: &str,
+    root: &Path,
+) -> FieldAudit {
+    // Level 0: transition.instructions
+    if let Some(path) = transition_instructions {
+        return FieldAudit { value: path.to_string(), source: "transition".to_string() };
+    }
+    // Level 1: profile.instructions
+    if let Some(p) = profile {
+        if let Some(ref path) = p.instructions {
+            let src = format!("profile:{}", profile_name.unwrap_or(""));
+            return FieldAudit { value: path.clone(), source: src };
+        }
+    }
+    // Level 2: workers.instructions
+    if let Some(ref path) = workers.instructions {
+        return FieldAudit { value: path.clone(), source: "workers".to_string() };
+    }
+    // Level 3: .apm/agents/<agent>/apm.<role>.md
+    let per_agent = root.join(format!(".apm/agents/{agent}/apm.{role}.md"));
+    if per_agent.exists() {
+        let display = format!(".apm/agents/{agent}/apm.{role}.md");
+        return FieldAudit { value: display, source: "project-agent-file".to_string() };
+    }
+    // Level 4: built-in
+    if crate::start::resolve_builtin_instructions(agent, role).is_some() {
+        return FieldAudit {
+            value: format!("built-in:{agent}:{role}"),
+            source: "built-in".to_string(),
+        };
+    }
+    // Level 5: none
+    FieldAudit { value: "(unresolved)".to_string(), source: "none".to_string() }
+}
+
+/// Resolve the effective role prefix for a spawn transition.
+fn resolve_audit_role_prefix(
+    transition_role_prefix: Option<&str>,
+    profile: Option<&crate::config::WorkerProfileConfig>,
+    profile_name: Option<&str>,
+) -> FieldAudit {
+    if let Some(rp) = transition_role_prefix {
+        return FieldAudit { value: rp.to_string(), source: "transition".to_string() };
+    }
+    if let Some(p) = profile {
+        if let Some(ref rp) = p.role_prefix {
+            let src = format!("profile:{}", profile_name.unwrap_or(""));
+            return FieldAudit { value: rp.clone(), source: src };
+        }
+    }
+    FieldAudit {
+        value: "You are a Worker agent assigned to ticket #<id>.".to_string(),
+        source: "default".to_string(),
+    }
+}
+
+/// Format the wrapper for display.
+fn format_wrapper(root: &Path, agent: &str) -> String {
+    match wrapper::resolve_wrapper(root, agent) {
+        Ok(Some(wrapper::WrapperKind::Builtin(ref name))) => format!("builtin:{name}"),
+        Ok(Some(wrapper::WrapperKind::Custom { ref script_path, .. })) => {
+            script_path.to_string_lossy().into_owned()
+        }
+        Ok(None) => "(not found)".to_string(),
+        Err(_) => "(error)".to_string(),
+    }
+}
+
+/// Build an agent-resolution audit for every `command:start` spawn transition in the config.
+pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAudit> {
+    let mut result = Vec::new();
+
+    for state in &config.workflow.states {
+        for transition in &state.transitions {
+            if transition.trigger != "command:start" {
+                continue;
+            }
+
+            let profile_name = transition.profile.clone();
+            let profile = profile_name
+                .as_deref()
+                .and_then(|name| config.worker_profiles.get(name));
+            let profile_missing = profile_name.is_some() && profile.is_none();
+
+            let (agent, instructions, role_prefix) = if profile_missing {
+                let not_found = || FieldAudit {
+                    value: "(profile not found)".to_string(),
+                    source: "none".to_string(),
+                };
+                (not_found(), not_found(), not_found())
+            } else {
+                let agent_audit = resolve_audit_agent(
+                    transition.agent.as_deref(),
+                    profile,
+                    profile_name.as_deref(),
+                    &config.workers,
+                );
+                let role = profile
+                    .and_then(|p| p.role.as_deref())
+                    .unwrap_or("worker");
+                let instructions_audit = resolve_audit_instructions(
+                    transition.instructions.as_deref(),
+                    profile,
+                    profile_name.as_deref(),
+                    &config.workers,
+                    &agent_audit.value,
+                    role,
+                    root,
+                );
+                let role_prefix_audit = resolve_audit_role_prefix(
+                    transition.role_prefix.as_deref(),
+                    profile,
+                    profile_name.as_deref(),
+                );
+                (agent_audit, instructions_audit, role_prefix_audit)
+            };
+
+            let agent_val = if profile_missing { "claude".to_string() } else { agent.value.clone() };
+            let wrapper_str = format_wrapper(root, &agent_val);
+
+            result.push(TransitionAudit {
+                from_state: state.id.clone(),
+                to_state: transition.to.clone(),
+                profile: profile_name,
+                agent,
+                instructions,
+                role_prefix,
+                wrapper: wrapper_str,
+            });
+        }
+    }
+
+    result
 }
 
 /// Single-pass equivalent of calling `validate_config` followed by
@@ -1888,5 +2070,230 @@ terminal = true
             !issues.iter().any(|i| i.contains("is not a known built-in")),
             "expected no agent error for known built-in; got: {issues:?}"
         );
+    }
+
+    // --- audit_agent_resolution tests ---
+
+    fn audit_config(extra_toml: &str) -> Config {
+        let base = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "../wt"
+"#;
+        toml::from_str(&format!("{base}{extra_toml}")).expect("config parse failed")
+    }
+
+    #[test]
+    fn audit_zero_spawn_transitions() {
+        let toml = r#"
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "command:review"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert!(result.is_empty(), "expected 0 audits, got {result:?}");
+    }
+
+    #[test]
+    fn audit_default_agent_resolution() {
+        let toml = r#"
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to      = "in_progress"
+trigger = "command:start"
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1, "expected 1 audit");
+        let ta = &result[0];
+        assert_eq!(ta.from_state, "ready");
+        assert_eq!(ta.to_state, "in_progress");
+        assert!(ta.profile.is_none());
+        assert_eq!(ta.agent.value, "claude");
+        assert_eq!(ta.agent.source, "default");
+        assert_eq!(ta.role_prefix.source, "default");
+        assert!(ta.wrapper.contains("claude"), "wrapper should mention claude: {}", ta.wrapper);
+    }
+
+    #[test]
+    fn audit_missing_profile_no_panic() {
+        let toml = r#"
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to      = "in_progress"
+trigger = "command:start"
+profile = "nonexistent_profile"
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1, "expected 1 audit even with missing profile");
+        let ta = &result[0];
+        assert_eq!(ta.profile.as_deref(), Some("nonexistent_profile"));
+        assert_eq!(ta.agent.value, "(profile not found)");
+        assert_eq!(ta.instructions.value, "(profile not found)");
+        assert_eq!(ta.role_prefix.value, "(profile not found)");
+    }
+
+    #[test]
+    fn audit_transition_instructions_source() {
+        let toml = r#"
+[workers]
+agent = "claude"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to           = "in_progress"
+trigger      = "command:start"
+instructions = ".apm/agents/default/apm.worker.md"
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1);
+        let ta = &result[0];
+        assert_eq!(ta.instructions.source, "transition");
+        assert_eq!(ta.instructions.value, ".apm/agents/default/apm.worker.md");
+    }
+
+    #[test]
+    fn audit_workers_agent_source() {
+        let toml = r#"
+[workers]
+agent = "mock-happy"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to      = "in_progress"
+trigger = "command:start"
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1);
+        let ta = &result[0];
+        assert_eq!(ta.agent.source, "workers");
+        assert_eq!(ta.agent.value, "mock-happy");
+    }
+
+    #[test]
+    fn audit_builtin_instructions_source() {
+        // No on-disk project-agent-file for "claude"/"worker" in /tmp,
+        // so falls through to built-in.
+        let toml = r#"
+[workers]
+agent = "claude"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to      = "in_progress"
+trigger = "command:start"
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1);
+        let ta = &result[0];
+        assert_eq!(ta.instructions.source, "built-in");
+        assert!(ta.instructions.value.starts_with("built-in:claude:"), "got {}", ta.instructions.value);
+    }
+
+    #[test]
+    fn audit_empty_worker_profiles_no_panic() {
+        // worker_profiles is empty — must not panic
+        let toml = r#"
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to      = "in_progress"
+trigger = "command:start"
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        assert!(config.worker_profiles.is_empty());
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1, "should not panic with empty worker_profiles");
+    }
+
+    #[test]
+    fn audit_transition_role_prefix_source() {
+        let toml = r#"
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to          = "in_progress"
+trigger     = "command:start"
+role_prefix = "You are a Spec-Writer agent assigned to ticket #<id>."
+
+[[workflow.states]]
+id       = "in_progress"
+label    = "In Progress"
+terminal = true
+"#;
+        let config = audit_config(toml);
+        let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
+        assert_eq!(result.len(), 1);
+        let ta = &result[0];
+        assert_eq!(ta.role_prefix.source, "transition");
+        assert!(ta.role_prefix.value.contains("Spec-Writer"));
     }
 }

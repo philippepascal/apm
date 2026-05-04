@@ -76,6 +76,7 @@ mod tests {
             json: false,
             config_only: false,
             no_aggressive: false,
+            verbose: false,
         };
         assert!(is_exempt_command(&cmd));
     }
