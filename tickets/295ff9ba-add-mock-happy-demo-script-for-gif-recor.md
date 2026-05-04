@@ -1,7 +1,7 @@
 +++
 id = "295ff9ba"
 title = "Add mock_happy demo script for GIF recording"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/295ff9ba-add-mock-happy-demo-script-for-gif-recor"
 created_at = "2026-05-04T16:48:42.740876Z"
-updated_at = "2026-05-04T17:00:29.211180Z"
+updated_at = "2026-05-04T17:00:34.421699Z"
 epic = "65af2998"
 target_branch = "epic/65af2998-apm-demo-enhancements"
 depends_on = ["e04e1b3f"]
@@ -119,3 +119,4 @@ The exact flag or text to detect "no workers running" should be verified against
 | 2026-05-04T16:48Z | — | new | philippepascal |
 | 2026-05-04T16:50Z | new | groomed | philippepascal |
 | 2026-05-04T16:55Z | groomed | in_design | philippepascal |
+| 2026-05-04T17:00Z | in_design | specd | claude-0504-1655-4030 |
