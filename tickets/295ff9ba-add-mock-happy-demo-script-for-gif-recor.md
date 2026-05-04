@@ -44,7 +44,64 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 
 ### Approach
 
-How the implementation will work.
+New file: `scripts/record-demo.sh` (chmod +x). No other files change.
+
+#### Flag parsing and cleanup trap
+
+After `set -euo pipefail`, parse flags and set up a cleanup trap:
+
+- `KEEP_DIR=false` by default; `--keep-dir` sets it true
+- Unknown flags print an error and exit 1
+- `WORKDIR=$(mktemp -d)` for the entire session
+- Unless `--keep-dir`, register an EXIT trap that removes `WORKDIR`
+
+#### Local bare-repo remote
+
+`apm work` calls `apm start --next --spawn` internally, which fetches and pushes branches. A local bare repository acts as a network-free remote:
+
+- `git init --bare "$WORKDIR/jot.git"`
+- `git clone "$WORKDIR/jot.git" "$WORKDIR/jot"`
+- `cd "$WORKDIR/jot"` and set `user.email` / `user.name` in the local config
+
+#### Minimal project setup
+
+Write three files into the cloned repo before running `apm init`:
+
+1. `Cargo.toml` — minimal `[package]` stanza, `name = "jot"`
+2. `src/main.rs` — single `fn main` that prints `"jot"`
+3. `.apm/config.toml` — full APM config; `[workers]` stanza uses `command = "mock-happy"`; `[worktrees] dir = "../jot--worktrees"` (sits inside `WORKDIR`)
+
+Run `apm init --no-claude`, commit the initial files, and push to `origin main`.
+
+#### Ticket creation
+
+Create 4 tickets with `--no-edit --no-aggressive`. For the 3 tickets that will be processed:
+
+- Fill all four required spec sections (`Problem`, `Acceptance criteria`, `Out of scope`, `Approach`) using `apm spec --section ... --set`
+- Set `effort` and `risk` via `apm set`
+- Force-advance to `ready` with `apm state --no-aggressive --force ready`
+
+Leave the fourth ticket in `groomed` so `apm list` shows a mixed board.
+
+Push all branches before the demo sequence: `git push origin --all`.
+
+#### Demo sequence
+
+Define a helper that prints the command with a `$ ` prefix before running it, with a brief sleep so a recorder can capture the prompt line:
+
+```
+run() — printf the command string, sleep 0.5s, then execute it
+```
+
+Steps:
+1. `run apm list` — shows 4 tickets in their starting states
+2. `sleep 1`
+3. `run apm work` — dispatches `mock-happy` workers on the 3 `ready` tickets; returns once slots are filled
+4. Poll `apm workers` in a loop until no running processes are reported (1 s between checks, 30 s hard timeout)
+5. `sleep 1`
+6. `run apm list` — shows the 3 processed tickets in `implemented` state
+
+The exact flag or text to detect "no workers running" should be verified against the running `apm workers` binary; the command outputs a list of active workers and the loop exits when that list is empty.
 
 ### Open questions
 
