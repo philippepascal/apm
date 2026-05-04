@@ -32,7 +32,7 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 - [x] `TransitionConfig` in `apm-core/src/config.rs` exposes `agent: Option<String>` with `#[serde(default)]`
 - [x] `effective_spawn_params()` accepts `transition_agent: Option<&str>` as its first argument and checks it before `profile.agent` and `workers.agent`
 - [x] When `transition.agent = "default"`, `spawn_worker()` dispatches through `.apm/agents/default/wrapper.sh`
-- [ ] A `wrapper.sh` in `.apm/agents/<name>/` with no accompanying `manifest.toml` is accepted without error (manifest defaults apply)
+- [x] A `wrapper.sh` in `.apm/agents/<name>/` with no accompanying `manifest.toml` is accepted without error (manifest defaults apply)
 - [ ] `.apm/agents/default/wrapper.sh` exists in this repo and is executable (`chmod +x`); `apm init` does not write it to new projects (see Out of scope)
 - [ ] `wrapper.sh` invokes the claude binary with `--print --output-format stream-json --verbose --disable-slash-commands`, reading the system prompt from `$APM_SYSTEM_PROMPT_FILE` and the user message from `$APM_USER_MESSAGE_FILE`
 - [ ] `wrapper.sh` passes `--dangerously-skip-permissions` when `APM_SKIP_PERMISSIONS` equals `"1"`
