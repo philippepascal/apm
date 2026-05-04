@@ -25,7 +25,14 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `scripts/record-demo.sh` is a new executable shell script committed to the APM repo
+- [ ] Running the script without arguments creates a complete demo environment in a temp directory, requiring no GitHub account, no Claude CLI, and no API credentials
+- [ ] The demo sequence runs `apm list` before processing, dispatches `apm work`, waits for workers to finish, and then runs `apm list` again
+- [ ] At least 3 tickets are visible in the final `apm list` output having transitioned from `ready` to `implemented`
+- [ ] The demo environment uses `mock-happy` as the configured worker (`command = "mock-happy"` in `config.toml`)
+- [ ] Each key `apm` command is preceded by a printed `$ <command>` line so the recording looks like a realistic shell session
+- [ ] The script accepts `--keep-dir` to suppress temp-directory cleanup on exit
+- [ ] The script exits 0 on successful completion
 
 ### Out of scope
 
