@@ -1,7 +1,7 @@
 +++
 id = "6803b88b"
 title = "Decouple instructions from worker_profiles; move to workflow transitions"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6803b88b-decouple-instructions-from-worker-profil"
 created_at = "2026-05-04T16:48:29.472278Z"
-updated_at = "2026-05-04T19:18:13.930192Z"
+updated_at = "2026-05-04T19:18:48.255929Z"
 epic = "5acea599"
 target_branch = "epic/5acea599-flexible-agent-configuration"
 +++
@@ -125,3 +125,4 @@ Also update the three `WrapperContext::role_prefix` assignments (one in `run()`,
 | 2026-05-04T17:32Z | ammend | in_design | philippepascal |
 | 2026-05-04T17:43Z | in_design | specd | claude-0504-1732-f5d0 |
 | 2026-05-04T19:18Z | specd | ready | philippepascal |
+| 2026-05-04T19:18Z | ready | in_progress | philippepascal |
