@@ -19,7 +19,9 @@ depends_on = ["e04e1b3f"]
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The APM project has no demo GIF showing `apm work` orchestrating mock workers across tickets. Producing one manually requires a live Claude session and a GitHub repository, making it slow, expensive, and non-reproducible. `mock-happy` is a built-in APM worker that completes tickets deterministically without any API credentials, making it ideal for scripted demos — but no script exists that drives a representative `apm work` session suitable for recording.
+
+Without such a script, every attempt to produce the README GIF is a manual process: set up a repo, create tickets, wire up mock-happy, record, discard. The script that should encapsulate this setup does not exist.
 
 ### Acceptance criteria
 
@@ -36,13 +38,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
