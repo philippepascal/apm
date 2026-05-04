@@ -3,13 +3,13 @@ id = "e04e1b3f"
 title = "Revise apm-demo creation script for mock worker support"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e04e1b3f-revise-apm-demo-creation-script-for-mock"
 created_at = "2026-05-04T16:48:32.146018Z"
-updated_at = "2026-05-04T16:50:43.622215Z"
+updated_at = "2026-05-04T16:55:23.802858Z"
 epic = "65af2998"
 target_branch = "epic/65af2998-apm-demo-enhancements"
 +++
