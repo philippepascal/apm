@@ -31,7 +31,7 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 - [x] At least 3 tickets are visible in the final `apm list` output having transitioned from `ready` to `implemented`
 - [x] The demo environment uses `mock-happy` as the configured worker (`command = "mock-happy"` in `config.toml`)
 - [x] Each key `apm` command is preceded by a printed `$ <command>` line so the recording looks like a realistic shell session
-- [ ] The script accepts `--keep-dir` to suppress temp-directory cleanup on exit
+- [x] The script accepts `--keep-dir` to suppress temp-directory cleanup on exit
 - [ ] The script exits 0 on successful completion
 
 ### Out of scope
