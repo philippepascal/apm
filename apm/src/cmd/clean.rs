@@ -41,6 +41,8 @@ pub fn run(
     }
 
     // Refuse to remove any worktree that contains the current working directory.
+    // Check both clean candidates and dirty candidates (dirty worktrees are skipped later,
+    // but we must still refuse if the caller is inside one of them).
     let cwd = std::env::current_dir().unwrap_or_default();
     let canonical_cwd = cwd.canonicalize().unwrap_or_else(|_| cwd.clone());
     for candidate in &candidates {
@@ -56,6 +58,19 @@ pub fn run(
                     wt_path.display()
                 );
             }
+        }
+    }
+    for dw in &dirty {
+        let canonical_wt = dw.path.canonicalize().unwrap_or_else(|_| dw.path.clone());
+        if canonical_cwd.starts_with(&canonical_wt) {
+            eprintln!(
+                "refusing to remove worktree containing the current working directory: {}",
+                dw.path.display()
+            );
+            anyhow::bail!(
+                "refusing to remove worktree containing the current working directory: {}",
+                dw.path.display()
+            );
         }
     }
 

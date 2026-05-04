@@ -587,8 +587,9 @@ fn state_rejects_illegal_transition() {
     git_ok(p, &["config", "user.email", "test@test.com"]);
     git_ok(p, &["config", "user.name", "test"]);
 
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 
@@ -625,6 +626,10 @@ id         = "ready"
 label      = "Ready"
 actionable = ["agent"]
 
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+
 [[workflow.states]]
 id = "closed"
 label = "Closed"
@@ -632,7 +637,7 @@ terminal = true
 "#,
     ).unwrap();
 
-    git_ok(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
+    git_ok(p, &["-c", "commit.gpgsign=false", "add", ".apm/config.toml"]);
     git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 

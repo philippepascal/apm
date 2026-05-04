@@ -31,7 +31,7 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
 
     let aggressive = config.sync.aggressive && !no_aggressive;
     if side_note && !config.agents.side_tickets {
-        anyhow::bail!("side tickets are disabled in apm.toml (agents.side_tickets = false)");
+        anyhow::bail!("side tickets are disabled in .apm/config.toml (agents.side_tickets = false)");
     }
 
     let author = resolve_identity(root);
