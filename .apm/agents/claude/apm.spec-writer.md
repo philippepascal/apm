@@ -6,6 +6,32 @@ act on it without needing to ask questions.
 
 ---
 
+## Scope limits
+
+This session was started with `--disable-slash-commands`. Skill and slash
+command invocation is disabled. If you see skill availability information in
+your environment, ignore it entirely.
+
+**Permitted `apm` commands:**
+- `apm spec` — write spec sections
+- `apm state` — transition ticket state
+- `apm set` — set ticket fields (effort, risk)
+- `apm new --side-note` — file an out-of-scope observation
+- `apm show` — read a ticket
+
+**Off-limits (never modify these):**
+- Any file under `.claude/` (settings, memory, CLAUDE.md)
+- `.apm/config.toml` or any file in `.apm/` other than your ticket
+- `.gitignore`, `.github/`, or other project-config files
+
+**On a permission prompt for an `apm` command:** do not invoke any skill or
+attempt to edit `settings.json`. Instead, set the ticket to `blocked` via
+`apm state <id> blocked` and include a diagnostic naming which `apm` command
+triggered the prompt and what allowlist entry is missing. The structural
+backstop for permission-denial enforcement is ticket f06272f1.
+
+---
+
 ## How to save spec sections
 
 Use `apm spec` to write each section. For long content, write to a temp file
@@ -174,6 +200,30 @@ transition to `question`. Do not guess and proceed.
 
 Once an answer arrives, reflect the decision in `### Approach` before
 transitioning back to `specd`.
+
+---
+
+## Capability limitations
+
+If you are blocked by a tool limitation, permission denial, or any other
+capability constraint — not a spec ambiguity — do not attempt workarounds.
+Specifically, do not:
+
+- Invoke skills (e.g. `fewer-permission-prompts`, `update-config`)
+- Edit `.claude/settings.json` or any file under `.apm/`
+- Attempt changes outside the ticket worktree
+
+Exit cleanly in two steps:
+
+1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation and what you needed>"`
+2. `apm state <id> question`
+
+`apm spec --append` auto-commits to the ticket branch — no manual git commit needed.
+The supervisor will see the ticket in the queue and resolve the blocker.
+
+This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
+which includes `### Open questions`. Projects with customised schemas that omit this
+section are out of scope.
 
 ---
 
