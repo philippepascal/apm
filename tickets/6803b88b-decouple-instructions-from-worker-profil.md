@@ -47,7 +47,49 @@ The desired state is that `instructions` and `role_prefix` can be set directly o
 
 ### Approach
 
-How the implementation will work.
+#### 1. Extend TransitionConfig — apm-core/src/config.rs
+
+Add two optional fields to `TransitionConfig`:
+
+    pub instructions: Option<String>,  // path to system-prompt file; overrides profile.instructions
+    pub role_prefix: Option<String>,   // identity prefix; overrides profile.role_prefix
+
+Both use `#[serde(default)]` so existing configs parse without change.
+
+#### 2. Update instruction resolution — apm-core/src/start.rs
+
+Change the signature of `resolve_system_prompt` to accept a new first argument `transition_instructions: Option<&str>` before `profile`. Insert Level 0 at the top of the function body, before the existing Level 1 (profile.instructions):
+
+    // Level 0: transition.instructions
+    if let Some(path) = transition_instructions {
+        return std::fs::read_to_string(root.join(path))
+            .with_context(|| format!("transition.instructions: file not found: {}", path));
+    }
+
+Levels 1–5 (profile → workers → agent file → built-in → error) remain unchanged.
+
+Update `agent_role_prefix` to accept a new first argument `transition_role_prefix: Option<&str>` before `profile`. Resolution order: transition_role_prefix → profile.role_prefix → default string.
+
+Update all call sites of both functions (`run()` and `spawn_next_worker()`) to pass the transition fields. The triggering transition is already captured as `triggering_transition_owned` at both sites; extract `.instructions.as_deref()` and `.role_prefix.as_deref()` from it.
+
+#### 3. Migrate project configuration
+
+**.apm/workflow.toml** — add fields directly on the `command:start` transitions:
+
+- `groomed → in_design` and `ammend → in_design`: add
+      instructions = ".apm/agents/default/apm.spec-writer.md"
+      role_prefix  = "You are a Spec-Writer agent assigned to ticket #<id>."
+- `ready → in_progress`: add
+      instructions = ".apm/agents/default/apm.worker.md"
+      role_prefix  = "You are a Worker agent assigned to ticket #<id>."
+
+**.apm/config.toml** — remove `instructions` and `role_prefix` from `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]`. Each profile currently holds only those two fields plus deprecated `command`/`args`/`model`; once stripped they have no non-deprecated content, so remove the profile entries entirely and drop the corresponding `profile = ...` references on the transitions.
+
+#### 4. Update tests — apm-core/src/start.rs
+
+- Add test `transition_instructions_takes_precedence_over_profile`: writes two temp files with distinct content, sets `transition.instructions` to one and `profile.instructions` to the other, asserts `resolve_system_prompt` returns the transition file content.
+- Add test `transition_instructions_no_profile_required`: sets `transition.instructions` with no profile reference, asserts `resolve_system_prompt` returns the file content without error.
+- Update existing direct calls to `resolve_system_prompt` to pass `None` as the new first argument — no behaviour change.
 
 ### Open questions
 
