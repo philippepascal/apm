@@ -1,7 +1,7 @@
 +++
 id = "121a05a8"
 title = "place holder: apm init is full of inconsistency"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/121a05a8-place-holder-apm-init-is-full-of-inconsi"
 created_at = "2026-05-03T20:29:23.302391Z"
-updated_at = "2026-05-04T02:25:20.979370Z"
+updated_at = "2026-05-04T02:36:42.481286Z"
 +++
 
 ## Spec
@@ -122,3 +122,4 @@ Do Steps 1, 2, and 2b before running tests — Step 1 fixes the spec-writer proj
 | 2026-05-04T02:14Z | specd | ammend | philippepascal |
 | 2026-05-04T02:20Z | ammend | in_design | philippepascal |
 | 2026-05-04T02:25Z | in_design | specd | claude-0504-0220-71c0 |
+| 2026-05-04T02:36Z | specd | ready | philippepascal |
