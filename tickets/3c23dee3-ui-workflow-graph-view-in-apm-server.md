@@ -1,7 +1,7 @@
 +++
 id = "3c23dee3"
 title = "UI: workflow graph view in apm-server"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3c23dee3-ui-workflow-graph-view-in-apm-server"
 created_at = "2026-05-04T17:40:27.172621Z"
-updated_at = "2026-05-04T17:45:39.852569Z"
+updated_at = "2026-05-04T17:48:07.713540Z"
 +++
 
 ## Spec
@@ -169,3 +169,4 @@ The desired behaviour is a diagram that shows every state as a labelled node and
 | 2026-05-04T17:40Z | new | groomed | philippepascal |
 | 2026-05-04T17:41Z | groomed | in_design | philippepascal |
 | 2026-05-04T17:45Z | in_design | specd | claude-0504-1741-3358 |
+| 2026-05-04T17:48Z | specd | ammend | philippepascal |
