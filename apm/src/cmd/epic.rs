@@ -88,8 +88,20 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     // 4. Derive a human-readable title from the branch name.
     let pr_title = branch_to_title(&epic_branch);
 
-    // 5. Push the epic branch and create or reuse an open PR.
+    // 5. Check whether the epic branch is already fully merged into default.
     let default_branch = &config.project.default_branch;
+    let ahead = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["log", "--oneline", &format!("{default_branch}..{epic_branch}")])
+        .output()?;
+    if String::from_utf8_lossy(&ahead.stdout).trim().is_empty() {
+        // Branch has no commits ahead of default — already merged.
+        println!("epic/{epic_id} is already merged into {default_branch}; skipping PR");
+        delete_epic_branch(root, &epic_branch)?;
+        return Ok(());
+    }
+
+    // 6. Push the epic branch and create or reuse an open PR.
     apm_core::git::push_branch_tracking(root, &epic_branch)?;
     let mut messages = vec![];
     apm_core::github::gh_pr_create_or_update(
@@ -270,6 +282,32 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
     Ok(())
 }
 
+
+fn delete_epic_branch(root: &Path, branch: &str) -> Result<()> {
+    if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, branch) {
+        apm_core::worktree::remove_worktree(root, &wt_path, false)?;
+    }
+    let del = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["branch", "-d", branch])
+        .output()?;
+    if del.status.success() {
+        println!("deleted local branch {branch}");
+    } else {
+        eprintln!("warning: could not delete local branch {branch}: {}", String::from_utf8_lossy(&del.stderr).trim());
+    }
+    let del_remote = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["push", "origin", "--delete", branch])
+        .output()?;
+    if !del_remote.status.success() {
+        let stderr = String::from_utf8_lossy(&del_remote.stderr);
+        if !stderr.contains("remote ref does not exist") && !stderr.contains("error: unable to delete") {
+            eprintln!("warning: could not delete remote branch {branch}: {}", stderr.trim());
+        }
+    }
+    Ok(())
+}
 
 pub(crate) fn run_epic_clean(
     root: &Path,
