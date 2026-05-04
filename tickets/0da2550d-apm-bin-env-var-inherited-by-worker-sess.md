@@ -24,7 +24,12 @@ The desired behaviour is that `APM_BIN` passed to workers always points to the `
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When the wrapper runs from an `apm-server` executable, `APM_BIN` set in the worker environment points to the sibling `apm` CLI binary in the same directory, not to `apm-server`
+- [ ] When the wrapper runs from an `apm` CLI executable, `APM_BIN` continues to point to that `apm` binary (no regression)
+- [ ] When no sibling `apm` binary exists next to `current_exe()`, `APM_BIN` falls back to `current_exe()` itself (graceful degradation)
+- [ ] The existing `mock_wrapper_receives_env_vars` test passes without modification
+- [ ] A test or assertion verifies that the resolved `APM_BIN` path's file stem is `apm`, not `apm-server`
+- [ ] `CONTRIBUTING.md` documents that running `cargo test --workspace` inside a worker session should be done as `env -u APM_BIN cargo test --workspace` when `APM_BIN` may point to an installed binary that predates the feature under test
 
 ### Out of scope
 
