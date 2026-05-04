@@ -6811,8 +6811,10 @@ fn setup_merge_local() -> TempDir {
     git(p, &["init", "-q", "-b", "main"]);
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
+    // BYPASS: minimal two-state workflow; apm init installs the full default workflow which is not suitable for leak-detection tests
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
-        p.join("apm.toml"),
+        p.join(".apm/config.toml"),
         r#"[project]
 name = "test"
 default_branch = "main"
@@ -6835,7 +6837,7 @@ label = "Implemented"
 "#,
     )
     .unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", "apm.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/config.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
     dir
