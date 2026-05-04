@@ -27,7 +27,7 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 
 - [ ] `scripts/record-demo.sh` is a new executable shell script committed to the APM repo
 - [ ] Running the script without arguments creates a complete demo environment in a temp directory, requiring no GitHub account, no Claude CLI, and no API credentials
-- [ ] The demo sequence runs `apm list` before processing, dispatches `apm work`, waits for workers to finish, and then runs `apm list` again
+- [ ] The demo sequence runs `apm list` before processing, then `apm work` (which blocks until all workers complete in non-daemon mode), then `apm list` again
 - [ ] At least 3 tickets are visible in the final `apm list` output having transitioned from `ready` to `implemented`
 - [ ] The demo environment uses `mock-happy` as the configured worker (`command = "mock-happy"` in `config.toml`)
 - [ ] Each key `apm` command is preceded by a printed `$ <command>` line so the recording looks like a realistic shell session
@@ -96,12 +96,9 @@ run() — printf the command string, sleep 0.5s, then execute it
 Steps:
 1. `run apm list` — shows 4 tickets in their starting states
 2. `sleep 1`
-3. `run apm work` — dispatches `mock-happy` workers on the 3 `ready` tickets; returns once slots are filled
-4. Poll `apm workers` in a loop until no running processes are reported (1 s between checks, 30 s hard timeout)
-5. `sleep 1`
-6. `run apm list` — shows the 3 processed tickets in `implemented` state
-
-The exact flag or text to detect "no workers running" should be verified against the running `apm workers` binary; the command outputs a list of active workers and the loop exits when that list is empty.
+3. `run apm work` — dispatches `mock-happy` workers on the 3 `ready` tickets and blocks until all workers have completed (non-daemon mode exits when `no_more && workers.is_empty()`)
+4. `sleep 1`
+5. `run apm list` — shows the 3 processed tickets in `implemented` state
 
 ### Open questions
 
