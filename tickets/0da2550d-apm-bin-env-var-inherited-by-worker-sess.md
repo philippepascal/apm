@@ -33,7 +33,11 @@ The desired behaviour is that `APM_BIN` passed to workers always points to the `
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Handling the case where both the sibling `apm` CLI binary and a freshly built dev binary coexist and the sibling is stale — the `env -u APM_BIN` workaround documented in `CONTRIBUTING.md` covers this
+- Changes to `find_apm_bin()` in `apm-core/src/start.rs`
+- Changes to mock-script shell templates that reference `${APM_BIN:?}`
+- Changes to the path-guard logic in `apm/src/cmd/path_guard.rs` that reads `APM_BIN`
+- Changing the wrapper environment contract version or the documented list of env vars in `apm-core/src/agents.rs`
 
 ### Approach
 
