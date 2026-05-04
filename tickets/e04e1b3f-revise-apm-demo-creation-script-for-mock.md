@@ -24,10 +24,10 @@ The sibling ticket 295ff9ba ("Add mock_happy demo script for GIF recording") dep
 
 ### Acceptance criteria
 
-- [ ] `create-demo.sh --mock` produces a demo repo whose `.apm/config.toml` `[workers]` block contains `command = "mock-happy"` with no `args` field
-- [ ] `create-demo.sh` with no flags produces a demo repo whose `[workers]` block contains `command = "claude"` and `args = ["--print"]` (existing behaviour unchanged)
-- [ ] `create-demo.sh --mock` runs to completion without error on a clean GitHub account that has `gh`, `apm`, and internet access
-- [ ] Passing an unrecognised flag to `create-demo.sh` prints an error message and exits non-zero
+- [x] `create-demo.sh --mock` produces a demo repo whose `.apm/config.toml` `[workers]` block contains `command = "mock-happy"` with no `args` field
+- [x] `create-demo.sh` with no flags produces a demo repo whose `[workers]` block contains `command = "claude"` and `args = ["--print"]` (existing behaviour unchanged)
+- [x] `create-demo.sh --mock` runs to completion without error on a clean GitHub account that has `gh`, `apm`, and internet access
+- [x] Passing an unrecognised flag to `create-demo.sh` prints an error message and exits non-zero
 
 ### Out of scope
 
