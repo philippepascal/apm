@@ -1,7 +1,7 @@
 +++
 id = "3c23dee3"
 title = "UI: workflow graph view in apm-server"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3c23dee3-ui-workflow-graph-view-in-apm-server"
 created_at = "2026-05-04T17:40:27.172621Z"
-updated_at = "2026-05-04T17:40:45.110570Z"
+updated_at = "2026-05-04T17:41:10.625488Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-04T17:40Z | — | new | philippepascal |
 | 2026-05-04T17:40Z | new | groomed | philippepascal |
+| 2026-05-04T17:41Z | groomed | in_design | philippepascal |
