@@ -30,7 +30,7 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 ### Acceptance criteria
 
 - [x] `TransitionConfig` in `apm-core/src/config.rs` exposes `agent: Option<String>` with `#[serde(default)]`
-- [ ] `effective_spawn_params()` accepts `transition_agent: Option<&str>` as its first argument and checks it before `profile.agent` and `workers.agent`
+- [x] `effective_spawn_params()` accepts `transition_agent: Option<&str>` as its first argument and checks it before `profile.agent` and `workers.agent`
 - [ ] When `transition.agent = "default"`, `spawn_worker()` dispatches through `.apm/agents/default/wrapper.sh`
 - [ ] A `wrapper.sh` in `.apm/agents/<name>/` with no accompanying `manifest.toml` is accepted without error (manifest defaults apply)
 - [ ] `.apm/agents/default/wrapper.sh` exists in this repo and is executable (`chmod +x`); `apm init` does not write it to new projects (see Out of scope)
