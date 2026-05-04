@@ -16,7 +16,11 @@ updated_at = "2026-05-04T05:07:10.085185Z"
 
 ### Problem
 
-During worker sessions started via apm start, APM_BIN is set to the installed binary (e.g. /opt/homebrew/Cellar/apm/0.1.18/bin/apm-server). Worker processes and their cargo test runs inherit this. If the installed binary predates the spec subcommand, mock-wrapper tests that respect APM_BIN priority will fail in the worker environment unless APM_BIN is cleared before test invocation. Consider either: (1) not setting APM_BIN in the worker env, (2) setting it to the CLI binary not the server binary, or (3) documenting that cargo test --workspace should be run with env -u APM_BIN in worker sessions.
+When a worker session is launched via `apm start`, both wrapper paths compute `APM_BIN` using `std::env::current_exe()`. In production (e.g. a Homebrew install), the running process may be `apm-server`, so `current_exe()` resolves to something like `/opt/homebrew/Cellar/apm/0.1.18/bin/apm-server`. That path is set as `APM_BIN` and propagated into the worker environment.
+
+This causes two failures in practice. First, the worker agent itself (Claude Code) attempts to invoke subcommands such as `apm spec` and `apm state` via `APM_BIN`; pointing at `apm-server` means those calls fail immediately because `apm-server` does not expose the CLI surface. Second, any `cargo test --workspace` run inside the worker session also inherits `APM_BIN`. The `find_apm_bin()` test helper in `apm-core/src/start.rs` honours `APM_BIN` first (if the path exists on disk), so tests resolve the stale or wrong binary instead of the freshly compiled `target/{profile}/apm`, causing mock-wrapper tests that invoke `apm spec` or `apm state` to fail.
+
+The desired behaviour is that `APM_BIN` passed to workers always points to the `apm` CLI binary (the one that exposes all subcommands), and that developers have a documented escape hatch for the residual case where even the CLI binary is an older installed version that predates a feature under active development.
 
 ### Acceptance criteria
 
