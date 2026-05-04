@@ -55,7 +55,7 @@ Server:
   revoke         Revoke sessions
 
 {options}
-",
+"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -278,11 +278,11 @@ After creating a ticket the typical next step is:
     #[command(long_about = "Transition a ticket to a new state.
 
 Valid target states depend on the ticket's current state. The allowed
-transitions are defined in .apm/apm.toml under [[workflow.states]].
+transitions are defined in .apm/workflow.toml under [[workflow.states]].
 Illegal transitions are rejected with an error.
 
 Run `apm show <id>` first to check the current state, then choose a
-target from the edges listed for that state in apm.toml.
+target from the edges listed for that state in .apm/workflow.toml.
 
 Use --force to bypass the transition rules (escape hatch for stuck tickets).
 The target state must still exist in the config; document-level validations
@@ -445,7 +445,8 @@ Examples:
         push_refs: bool,
     },
     /// Assign a ticket to an owner
-    #[command(long_about = "Set the owner field on any ticket, regardless of its current state.
+    #[command(
+        long_about = "Set the owner field on any ticket, regardless of its current state.
 
 Use this to assign a ticket to a user or agent, or to clear the owner field.
 
@@ -456,7 +457,8 @@ the dispatch loop.
 
 Examples:
   apm assign 42 alice        # assign ticket 42 to alice
-  apm assign 42 -            # clear the owner field")]
+  apm assign 42 -            # clear the owner field"
+    )]
     Assign {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -488,7 +490,8 @@ Examples:
         remove: Option<String>,
     },
     /// Supervisor: edit ticket spec and optionally transition state
-    #[command(long_about = "Supervisor command: review and edit a ticket spec, then transition state.
+    #[command(
+        long_about = "Supervisor command: review and edit a ticket spec, then transition state.
 
 Opens $EDITOR on the ticket file so the supervisor can read the spec, leave
 feedback in amendment-request boxes, or update acceptance criteria. After
@@ -501,7 +504,8 @@ Common review flows:
   apm review 42 --to implemented  # accept implementation
 
 --to skips the interactive prompt — useful in scripts or when the transition
-is already decided before opening the editor.")]
+is already decided before opening the editor."
+    )]
     Review {
         /// Ticket ID to review (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -514,7 +518,8 @@ is already decided before opening the editor.")]
         no_aggressive: bool,
     },
     /// Validate config and ticket integrity
-    #[command(long_about = "Validate apm.toml correctness and full ticket integrity.
+    #[command(
+        long_about = "Validate .apm/config.toml correctness and full ticket integrity.
 
 Config checks:
   * .apm/ TOML files parse without errors
@@ -541,7 +546,8 @@ never auto-recreated.
   apm validate --json | jq '.errors'
 
 --config-only skips all per-ticket and filesystem checks, including
-merged-branch and worktree checks.")]
+merged-branch and worktree checks."
+    )]
     Validate {
         /// Auto-fix repairable issues (branch field mismatches)
         #[arg(long)]
@@ -574,8 +580,22 @@ merged-branch and worktree checks.")]
         #[command(subcommand)]
         command: AgentsCommand,
     },
+    /// Print agent instructions configured in .apm/config.toml
+    #[command(
+        long_about = "Print the contents of the instructions file configured under [agents] instructions in .apm/config.toml.
+
+Useful for onboarding a new agent subprocess: pipe or paste the output into
+the agent's context so it knows the workflow, branch conventions, and shell
+discipline rules without needing file-system access to the repo.
+
+Example:
+  apm agents | pbcopy          # copy to clipboard
+  apm agents > /tmp/agents.md  # write to a temp file for injection"
+    )]
+    Agents,
     /// Orchestrate workers: dispatch apm start --next --spawn in a loop
-    #[command(long_about = "Orchestration loop: repeatedly dispatch agents until no work remains.
+    #[command(
+        long_about = "Orchestration loop: repeatedly dispatch agents until no work remains.
 
 Calls `apm start --next --spawn` in a loop, launching one Claude subprocess
 per actionable ticket, until `apm next` returns null (no more tickets).
@@ -595,7 +615,8 @@ Example:
   apm work                     # run with normal permissions
   apm work -P                  # run with skipped permissions
   apm work --daemon            # run forever, poll every 30s
-  apm work --daemon --interval 60  # poll every 60s")]
+  apm work --daemon --interval 60  # poll every 60s"
+    )]
     Work {
         /// Pass --dangerously-skip-permissions to spawned workers
         #[arg(long, short = 'P')]
@@ -664,7 +685,8 @@ Example:
         no_aggressive: bool,
     },
     /// Move closed ticket files to the archive directory
-    #[command(long_about = "Move terminal-state ticket files from tickets/ to the configured archive_dir.
+    #[command(
+        long_about = "Move terminal-state ticket files from tickets/ to the configured archive_dir.
 
 Requires `archive_dir` under the [tickets] section of .apm/config.toml:
 
@@ -675,7 +697,8 @@ Examples:
   apm archive                        # archive all closed tickets
   apm archive --dry-run              # preview which files would be moved
   apm archive --older-than 30d       # archive only tickets updated >30 days ago
-  apm archive --older-than 2026-01-01  # ISO date threshold")]
+  apm archive --older-than 2026-01-01  # ISO date threshold"
+    )]
     Archive {
         /// Print which files would be moved without modifying any branches
         #[arg(long)]
@@ -685,7 +708,8 @@ Examples:
         older_than: Option<String>,
     },
     /// Remove worktrees and (optionally) ticket branches for closed tickets
-    #[command(long_about = "Remove worktrees (and optionally branches) for terminal-state tickets.
+    #[command(
+        long_about = "Remove worktrees (and optionally branches) for terminal-state tickets.
 
 Default (no flags): removes worktrees only. Branches are never touched
 without --branches. APM only ever deletes branches matching `ticket/*`
@@ -700,7 +724,8 @@ or `epic/*` — never any other branch.
   apm clean --force                      # bypass merge/divergence checks
 
 Known temp files (.apm-worker.pid, .apm-worker.log, pr-body.md, body.md,
-ac.txt) are always removed automatically without needing --untracked.")]
+ac.txt) are always removed automatically without needing --untracked."
+    )]
     Clean {
         /// Print what would be removed without modifying anything
         #[arg(long)]
@@ -756,7 +781,7 @@ to read the new content from stdin):
   apm spec 42 --section Approach --set \"New approach text\"
   echo \"text\" | apm spec 42 --section Approach --set -
 
---check validates that all required sections defined in apm.toml are
+--check validates that all required sections defined in .apm/config.toml are
 present and non-empty:
   apm spec 42 --check
 
@@ -866,59 +891,230 @@ fn main() -> Result<()> {
             hash_trip::HashTripOutcome::Failed(issues) => {
                 for (subject, msg) in &issues {
                     #[allow(clippy::print_stderr)]
-                    { eprintln!("  {}: {}", subject, msg); }
+                    {
+                        eprintln!("  {}: {}", subject, msg);
+                    }
                 }
                 if hash_trip::is_read_only_command(&cli.command) {
                     #[allow(clippy::print_stderr)]
-                    { eprintln!("warning: config has changed and apm validate is failing."); }
+                    {
+                        eprintln!("warning: config has changed and apm validate is failing.");
+                    }
                     #[allow(clippy::print_stderr)]
-                    { eprintln!("Run apm validate to see details and fix the issues."); }
+                    {
+                        eprintln!("Run apm validate to see details and fix the issues.");
+                    }
                 } else {
                     #[allow(clippy::print_stderr)]
-                    { eprintln!("error: config has changed and validation is failing."); }
+                    {
+                        eprintln!("error: config has changed and validation is failing.");
+                    }
                     #[allow(clippy::print_stderr)]
-                    { eprintln!("Mutating commands are blocked. Run apm validate to fix."); }
+                    {
+                        eprintln!("Mutating commands are blocked. Run apm validate to fix.");
+                    }
                     std::process::exit(2);
                 }
             }
         }
     }
     match cli.command {
-        Command::Init { no_claude, migrate, with_docker, quiet } => cmd::init::run(&root, no_claude, migrate, with_docker, quiet),
-        Command::List { state, unassigned, all, actionable, no_aggressive, mine, author, owner } => cmd::list::run(&root, state, unassigned, all, actionable, no_aggressive, mine, author, owner),
-        Command::New { title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on } => cmd::new::run(&root, title, no_edit, side_note, context, context_section, no_aggressive, section, set, epic, depends_on),
-        Command::Show { id, no_aggressive, edit } => cmd::show::run(&root, &id, no_aggressive, edit),
-        Command::State { id, state, no_aggressive, force } => cmd::state::run(&root, &id, state, no_aggressive, force),
-        Command::Set { id, field, value, no_aggressive } => cmd::set::run(&root, &id, field, value, no_aggressive),
-        Command::Next { json, no_aggressive } => cmd::next::run(&root, json, no_aggressive),
-        Command::Start { id, no_aggressive, spawn, skip_permissions, next } => {
-            match (next, id) {
-                (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
-                (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
-                (false, Some(id)) => {
-                    let agent_name = apm_core::config::resolve_caller_name();
-                    cmd::start::run(&root, &id, no_aggressive, spawn, skip_permissions, &agent_name)
-                }
-                (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
+        Command::Init {
+            no_claude,
+            migrate,
+            with_docker,
+            quiet,
+        } => cmd::init::run(&root, no_claude, migrate, with_docker, quiet),
+        Command::List {
+            state,
+            unassigned,
+            all,
+            actionable,
+            no_aggressive,
+            mine,
+            author,
+            owner,
+        } => cmd::list::run(
+            &root,
+            state,
+            unassigned,
+            all,
+            actionable,
+            no_aggressive,
+            mine,
+            author,
+            owner,
+        ),
+        Command::New {
+            title,
+            no_edit,
+            side_note,
+            context,
+            context_section,
+            no_aggressive,
+            section,
+            set,
+            epic,
+            depends_on,
+        } => cmd::new::run(
+            &root,
+            title,
+            no_edit,
+            side_note,
+            context,
+            context_section,
+            no_aggressive,
+            section,
+            set,
+            epic,
+            depends_on,
+        ),
+        Command::Show {
+            id,
+            no_aggressive,
+            edit,
+        } => cmd::show::run(&root, &id, no_aggressive, edit),
+        Command::State {
+            id,
+            state,
+            no_aggressive,
+            force,
+        } => cmd::state::run(&root, &id, state, no_aggressive, force),
+        Command::Set {
+            id,
+            field,
+            value,
+            no_aggressive,
+        } => cmd::set::run(&root, &id, field, value, no_aggressive),
+        Command::Next {
+            json,
+            no_aggressive,
+        } => cmd::next::run(&root, json, no_aggressive),
+        Command::Start {
+            id,
+            no_aggressive,
+            spawn,
+            skip_permissions,
+            next,
+        } => match (next, id) {
+            (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
+            (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
+            (false, Some(id)) => {
+                let agent_name = apm_core::config::resolve_caller_name();
+                cmd::start::run(
+                    &root,
+                    &id,
+                    no_aggressive,
+                    spawn,
+                    skip_permissions,
+                    &agent_name,
+                )
             }
-        }
-        Command::Sync { offline, quiet, no_aggressive, auto_close, push_default, push_refs } => cmd::sync::run(&root, offline, quiet, no_aggressive, auto_close, push_default, push_refs),
-        Command::Assign { id, username, no_aggressive, force } => cmd::assign::run(&root, &id, &username, no_aggressive, force),
+            (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
+        },
+        Command::Sync {
+            offline,
+            quiet,
+            no_aggressive,
+            auto_close,
+            push_default,
+            push_refs,
+        } => cmd::sync::run(
+            &root,
+            offline,
+            quiet,
+            no_aggressive,
+            auto_close,
+            push_default,
+            push_refs,
+        ),
+        Command::Assign {
+            id,
+            username,
+            no_aggressive,
+            force,
+        } => cmd::assign::run(&root, &id, &username, no_aggressive, force),
         Command::Worktrees { remove } => cmd::worktrees::run(&root, remove.as_deref()),
-        Command::Review { id, to, no_aggressive } => cmd::review::run(&root, &id, to, no_aggressive),
-        Command::Validate { fix, json, config_only, no_aggressive } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
-        Command::Hook { hook_name, .. } => { cmd::hook::run(&root, &hook_name); Ok(()) }
+        Command::Review {
+            id,
+            to,
+            no_aggressive,
+        } => cmd::review::run(&root, &id, to, no_aggressive),
+        Command::Validate {
+            fix,
+            json,
+            config_only,
+            no_aggressive,
+        } => cmd::validate::run(&root, fix, json, config_only, no_aggressive),
+        Command::Hook { hook_name, .. } => {
+            cmd::hook::run(&root, &hook_name);
+            Ok(())
+        }
         Command::PathGuard => unreachable!("handled before repo_root()"),
-        Command::Agents { command: AgentsCommand::List } => cmd::agents::run_list(&root),
-        Command::Agents { command: AgentsCommand::New { name, force } } => cmd::agents::run_new(&root, &name, force),
-        Command::Agents { command: AgentsCommand::Test { name } } => cmd::agents::run_test(&root, &name),
-        Command::Agents { command: AgentsCommand::Eject { name } } => cmd::agents::run_eject(&root, &name),
-        Command::Work { skip_permissions, dry_run, daemon, interval, epic } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
+        Command::Agents {
+            command: AgentsCommand::List,
+        } => cmd::agents::run_list(&root),
+        Command::Agents {
+            command: AgentsCommand::New { name, force },
+        } => cmd::agents::run_new(&root, &name, force),
+        Command::Agents {
+            command: AgentsCommand::Test { name },
+        } => cmd::agents::run_test(&root, &name),
+        Command::Agents {
+            command: AgentsCommand::Eject { name },
+        } => cmd::agents::run_eject(&root, &name),
+        Command::Work {
+            skip_permissions,
+            dry_run,
+            daemon,
+            interval,
+            epic,
+        } => cmd::work::run(&root, skip_permissions, dry_run, daemon, interval, epic),
         Command::Move { ticket, target } => cmd::move_ticket::run(&root, &ticket, &target),
-        Command::Close { id, reason, no_aggressive } => cmd::close::run(&root, &id, reason, no_aggressive),
-        Command::Archive { dry_run, older_than } => cmd::archive::run(&root, dry_run, older_than),
-        Command::Clean { dry_run, yes, force, branches, older_than, untracked, epics } => cmd::clean::run(&root, dry_run, yes, force, branches, older_than, untracked, epics),
-        Command::Spec { id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive } => cmd::spec::run(&root, &id, section, set, set_file, check, mark, append, append_file, add_task, no_aggressive),
+        Command::Close {
+            id,
+            reason,
+            no_aggressive,
+        } => cmd::close::run(&root, &id, reason, no_aggressive),
+        Command::Archive {
+            dry_run,
+            older_than,
+        } => cmd::archive::run(&root, dry_run, older_than),
+        Command::Clean {
+            dry_run,
+            yes,
+            force,
+            branches,
+            older_than,
+            untracked,
+            epics,
+        } => cmd::clean::run(
+            &root, dry_run, yes, force, branches, older_than, untracked, epics,
+        ),
+        Command::Spec {
+            id,
+            section,
+            set,
+            set_file,
+            check,
+            mark,
+            append,
+            append_file,
+            add_task,
+            no_aggressive,
+        } => cmd::spec::run(
+            &root,
+            &id,
+            section,
+            set,
+            set_file,
+            check,
+            mark,
+            append,
+            append_file,
+            add_task,
+            no_aggressive,
+        ),
         Command::Workers { log, kill, subcmd } => {
             if let Some(WorkersCommand::Diag { id }) = subcmd {
                 cmd::workers::run_diag(&root, &id)
@@ -926,11 +1122,21 @@ fn main() -> Result<()> {
                 cmd::workers::run(&root, log.as_deref(), kill.as_deref())
             }
         }
-        Command::Epic { command: EpicCommand::New { title } } => cmd::epic::run_new(&root, title),
-        Command::Epic { command: EpicCommand::Close { id } } => cmd::epic::run_close(&root, &id),
-        Command::Epic { command: EpicCommand::List } => cmd::epic::run_list(&root),
-        Command::Epic { command: EpicCommand::Show { id, no_aggressive } } => cmd::epic::run_show(&root, &id, no_aggressive),
-        Command::Epic { command: EpicCommand::Set { id, field, value } } => cmd::epic::run_set(&root, &id, &field, &value),
+        Command::Epic {
+            command: EpicCommand::New { title },
+        } => cmd::epic::run_new(&root, title),
+        Command::Epic {
+            command: EpicCommand::Close { id },
+        } => cmd::epic::run_close(&root, &id),
+        Command::Epic {
+            command: EpicCommand::List,
+        } => cmd::epic::run_list(&root),
+        Command::Epic {
+            command: EpicCommand::Show { id, no_aggressive },
+        } => cmd::epic::run_show(&root, &id, no_aggressive),
+        Command::Epic {
+            command: EpicCommand::Set { id, field, value },
+        } => cmd::epic::run_set(&root, &id, &field, &value),
         Command::RefreshEpic { id } => cmd::epic::run_refresh_epic(&root, &id),
         Command::Register { username } => {
             let inferred = username.is_none();
@@ -942,14 +1148,21 @@ fn main() -> Result<()> {
             cmd::register::run(&root, &username, inferred)
         }
         Command::Sessions => cmd::sessions::run(&root),
-        Command::Revoke { username, device, all } => {
+        Command::Revoke {
+            username,
+            device,
+            all,
+        } => {
             if !all && username.is_none() {
                 eprintln!("error: provide a username or use --all");
                 std::process::exit(1);
             }
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
-        Command::Version => { cmd::version::run(); Ok(()) }
+        Command::Version => {
+            cmd::version::run();
+            Ok(())
+        }
         Command::Help { topic } => cmd::help::run(topic.as_deref(), Cli::command()),
     }
 }
