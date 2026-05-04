@@ -37,7 +37,12 @@ The desired behaviour is a diagram that shows every state as a labelled node and
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Interactive editing of the workflow graph (adding, removing, or relabelling states/transitions via the UI)
+- Ticket-count badges or live ticket data overlaid on state nodes
+- URL-based routing to the graph view (no React Router is in the stack)
+- Pan, zoom, or drag interaction on the SVG canvas
+- Export of the graph as an image or as TOML
+- Displaying transition `completion`, `profile`, `on_failure`, or other advanced fields in the graph
 
 ### Approach
 
