@@ -27,7 +27,7 @@ After ticket 6803b88b lands, `instructions` and `role_prefix` can be set directl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auditing non-`command:start` transitions (review, manual, close, approve, etc.)\n- Per-ticket frontmatter overrides (`agent`, `agent_overrides`) — those are ticket-level, not config-level\n- Changing what `apm validate` currently validates — this ticket only adds display\n- Changes to `resolve_system_prompt` or `agent_role_prefix` in `start.rs` beyond making `resolve_builtin_instructions` pub(crate)\n- Extending the audit to cover a `TransitionConfig.agent` field introduced by sibling ticket ed16b686 — that ticket can update the audit when it lands
 
 ### Approach
 
