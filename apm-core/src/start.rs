@@ -58,7 +58,7 @@ fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a
     }
 }
 
-pub fn effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams {
+pub fn effective_spawn_params(transition_agent: Option<&str>, profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams {
     // Legacy command/args (kept for check_output_format_supported backward compat)
     let command = profile.and_then(|p| p.command.clone())
         .or_else(|| workers.command.clone())
@@ -67,8 +67,10 @@ pub fn effective_spawn_params(profile: Option<&WorkerProfileConfig>, workers: &W
         .or_else(|| workers.args.clone())
         .unwrap_or_else(|| vec!["--print".to_string()]);
 
-    // Agent resolution: profile > workers > default "claude"
-    let raw_agent = profile.and_then(|p| p.agent.clone())
+    // Agent resolution: transition > profile > workers > default "claude"
+    let raw_agent = transition_agent
+        .map(str::to_owned)
+        .or_else(|| profile.and_then(|p| p.agent.clone()))
         .or_else(|| workers.agent.clone());
 
     // Emit deprecation warning when legacy fields present but agent absent
@@ -354,7 +356,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .to_string();
     let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let mut params = effective_spawn_params(profile, &config.workers);
+    let mut params = effective_spawn_params(triggering_transition.and_then(|tr| tr.agent.as_deref()), profile, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
@@ -556,7 +558,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, &mut warnings));
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let mut params = effective_spawn_params(profile2, &config.workers);
+    let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
     let tr_instructions2 = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix2 = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
@@ -759,7 +761,7 @@ pub fn spawn_next_worker(
         .to_string();
     let profile2 = triggering_transition_owned.as_ref().and_then(|tr| resolve_profile(tr, &config, warnings));
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let mut params = effective_spawn_params(profile2, &config.workers);
+    let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
     let tr_instructions_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
@@ -969,6 +971,7 @@ mod tests {
             profile: profile.map(|s| s.to_string()),
             instructions: None,
             role_prefix: None,
+            agent: None,
             on_failure: None,
             outcome: None,
         }
@@ -1100,14 +1103,14 @@ mod tests {
             command: Some("my-claude".into()),
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.command, "my-claude");
     }
 
     #[test]
     fn effective_spawn_params_falls_back_to_global_command() {
         let workers = make_workers("claude", None);
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.command, "claude");
     }
 
@@ -1118,14 +1121,14 @@ mod tests {
             model: Some("opus".into()),
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.model.as_deref(), Some("opus"));
     }
 
     #[test]
     fn effective_spawn_params_falls_back_to_global_model() {
         let workers = make_workers("claude", Some("sonnet"));
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.model.as_deref(), Some("sonnet"));
     }
 
@@ -1141,7 +1144,7 @@ mod tests {
             env: profile_env,
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.env.get("FOO").map(|s| s.as_str()), Some("profile"));
         assert_eq!(params.env.get("BAR").map(|s| s.as_str()), Some("bar"));
     }
@@ -1154,8 +1157,23 @@ mod tests {
             container: Some("profile-image".into()),
             ..Default::default()
         };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.container.as_deref(), Some("profile-image"));
+    }
+
+    #[test]
+    fn transition_agent_takes_precedence_over_profile() {
+        let workers = WorkersConfig::default();
+        let profile = WorkerProfileConfig { agent: Some("other".into()), ..Default::default() };
+        let params = effective_spawn_params(Some("custom"), Some(&profile), &workers);
+        assert_eq!(params.agent, "custom");
+    }
+
+    #[test]
+    fn effective_agent_defaults_to_claude() {
+        let workers = WorkersConfig::default();
+        let params = effective_spawn_params(None, None, &workers);
+        assert_eq!(params.agent, "claude");
     }
 
     // --- resolve_system_prompt ---
@@ -1618,13 +1636,13 @@ mod tests {
     fn resolution_agent_profile_overrides_global() {
         let workers = WorkersConfig { agent: Some("codex".into()), ..Default::default() };
         let profile = WorkerProfileConfig { agent: Some("mock-happy".into()), ..Default::default() };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.agent, "mock-happy");
     }
 
     #[test]
     fn resolution_agent_falls_back_to_claude() {
-        let params = effective_spawn_params(None, &WorkersConfig::default());
+        let params = effective_spawn_params(None, None, &WorkersConfig::default());
         assert_eq!(params.agent, "claude");
     }
 
@@ -1636,7 +1654,7 @@ mod tests {
         let mut profile_opts = HashMap::new();
         profile_opts.insert("model".into(), "sonnet".into());
         let profile = WorkerProfileConfig { options: profile_opts, ..Default::default() };
-        let params = effective_spawn_params(Some(&profile), &workers);
+        let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.options.get("model").map(|s| s.as_str()), Some("sonnet"), "profile model should override workers model");
         assert_eq!(params.options.get("timeout").map(|s| s.as_str()), Some("30"), "non-overlapping key should survive");
     }
@@ -1663,7 +1681,7 @@ mod tests {
         DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
 
         let workers = WorkersConfig { command: Some("claude".into()), ..Default::default() };
-        effective_spawn_params(None, &workers);
+        effective_spawn_params(None, None, &workers);
 
         assert!(
             DEPRECATION_WARNED.load(std::sync::atomic::Ordering::SeqCst),
@@ -1674,7 +1692,7 @@ mod tests {
     #[test]
     fn legacy_model_forwarded_to_ctx() {
         let workers = WorkersConfig { model: Some("opus".into()), ..Default::default() };
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.model.as_deref(), Some("opus"));
     }
 
@@ -1682,7 +1700,7 @@ mod tests {
     fn options_model_takes_precedence_over_legacy() {
         let mut workers = WorkersConfig { model: Some("opus".into()), agent: Some("claude".into()), ..Default::default() };
         workers.options.insert("model".into(), "sonnet".into());
-        let params = effective_spawn_params(None, &workers);
+        let params = effective_spawn_params(None, None, &workers);
         assert_eq!(params.model.as_deref(), Some("sonnet"));
     }
 
