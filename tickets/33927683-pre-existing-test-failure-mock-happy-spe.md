@@ -4,12 +4,12 @@ title = "Pre-existing test failure: mock_happy_spec_mode_transitions_to_specd"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/33927683-pre-existing-test-failure-mock-happy-spe"
 created_at = "2026-05-04T03:33:27.432606Z"
-updated_at = "2026-05-04T04:38:10.859031Z"
+updated_at = "2026-05-04T04:38:13.899682Z"
 +++
 
 ## Spec
