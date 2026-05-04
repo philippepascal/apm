@@ -39,7 +39,80 @@ The sibling ticket 295ff9ba ("Add mock_happy demo script for GIF recording") dep
 
 ### Approach
 
-How the implementation will work.
+All changes are in `scripts/create-demo.sh`.
+
+#### Flag parsing
+
+After `set -euo pipefail` (line 21), add:
+
+```bash
+MOCK_MODE=false
+for arg in "$@"; do
+  case "$arg" in
+    --mock) MOCK_MODE=true ;;
+    *) echo "ERROR: unknown flag: $arg"; exit 1 ;;
+  esac
+done
+```
+
+#### config.toml generation (step 4)
+
+The current step 4 writes `.apm/config.toml` as one single-quoted heredoc (`<< 'APM_CONFIG'`). Split it into three parts so the `[workers]` stanza can be written conditionally.
+
+**Part 1** — replace the existing `cat > .apm/config.toml << 'APM_CONFIG'` block with a heredoc that stops before `[workers]`:
+
+```bash
+cat > .apm/config.toml << 'APM_CONFIG_TOP'
+[project]
+name = "jot"
+description = "A minimal CLI notes tool"
+default_branch = "main"
+collaborators = []
+
+[tickets]
+dir = "tickets"
+
+[worktrees]
+dir = "../jot--worktrees"
+agent_dirs = [".claude", ".cursor", ".windsurf"]
+
+[agents]
+max_concurrent = 3
+instructions = ".apm/agents.md"
+
+APM_CONFIG_TOP
+```
+
+**Part 2** — append the workers stanza conditionally:
+
+```bash
+if "$MOCK_MODE"; then
+  cat >> .apm/config.toml << 'APM_WORKERS'
+[workers]
+command = "mock-happy"
+
+APM_WORKERS
+else
+  cat >> .apm/config.toml << 'APM_WORKERS'
+[workers]
+command = "claude"
+args = ["--print"]
+
+APM_WORKERS
+fi
+```
+
+**Part 3** — append the logging section (was the tail of the original heredoc):
+
+```bash
+cat >> .apm/config.toml << 'APM_CONFIG_TAIL'
+[logging]
+enabled = false
+file = "~/.local/state/apm/jot.log"
+APM_CONFIG_TAIL
+```
+
+No other parts of the script change. The rest of step 4 (`apm init --no-claude`) and all subsequent steps are unaffected.
 
 ### Open questions
 
