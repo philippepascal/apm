@@ -26,7 +26,20 @@ The desired state is that `instructions` and `role_prefix` can be set directly o
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `TransitionConfig` in `apm-core/src/config.rs` gains an `instructions: Option<String>` field
+- [ ] `TransitionConfig` gains a `role_prefix: Option<String>` field
+- [ ] When `transition.instructions` is set, it is used as the worker system prompt in place of `profile.instructions`
+- [ ] When `transition.role_prefix` is set, it is used as the worker identity prefix in place of `profile.role_prefix`
+- [ ] Resolution order for system prompt is: transition.instructions → profile.instructions → workers.instructions → `.apm/agents/<agent>/apm.<role>.md` → built-in default
+- [ ] Resolution order for role prefix is: transition.role_prefix → profile.role_prefix → built-in default string
+- [ ] A transition with only `instructions` and `role_prefix` (no `profile`) spawns a worker correctly with the specified system prompt and identity prefix
+- [ ] A transition with both `profile` and `instructions` uses `instructions` for the system prompt, ignoring `profile.instructions`
+- [ ] A transition with both `profile` and `role_prefix` uses `role_prefix` for the identity prefix, ignoring `profile.role_prefix`
+- [ ] `apm start` and `apm next --spawn` both apply the same resolution order
+- [ ] `.apm/workflow.toml` is updated: `groomed → in_design` and `ammend → in_design` transitions carry `instructions` and `role_prefix` directly
+- [ ] `.apm/workflow.toml` is updated: `ready → in_progress` transition carries `instructions` and `role_prefix` directly
+- [ ] `.apm/config.toml` is updated: `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` drop `instructions` and `role_prefix`; profiles that become empty are removed
+- [ ] Existing tests for instruction resolution pass without modification (backward compat with profile-only config)
 
 ### Out of scope
 
