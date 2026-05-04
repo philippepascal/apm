@@ -36,7 +36,11 @@ No sync test covers `.apm/agents/claude/apm.worker.md` at all, leaving the per-a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Content changes to the default agent instruction files (only the project file and tests change)
+- Per-agent files for non-Claude agents (debug, mock-happy, mock-random, mock-sad)
+- Top-level `.apm/apm.spec-writer.md` and `.apm/apm.worker.md` (already byte-for-byte tested by `worker_md_sync.rs`)
+- Changes to `config.toml` or how worker profiles reference instruction files
+- Adding `apm init` integration tests (unit-level sync tests are sufficient)
 
 ### Approach
 
