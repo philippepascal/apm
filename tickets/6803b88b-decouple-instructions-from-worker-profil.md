@@ -39,6 +39,7 @@ The desired state is that `instructions` and `role_prefix` can be set directly o
 - [ ] `.apm/workflow.toml` is updated: `groomed → in_design` and `ammend → in_design` transitions carry `instructions` and `role_prefix` directly
 - [ ] `.apm/workflow.toml` is updated: `ready → in_progress` transition carries `instructions` and `role_prefix` directly
 - [ ] `.apm/config.toml` is updated: `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` drop `instructions` and `role_prefix`; profiles that become empty are removed
+- [ ] Running `apm init` produces a `.apm/config.toml` where no worker profile retains an `instructions` or `role_prefix` field
 - [ ] Existing tests for instruction resolution pass without behavioural change (call sites updated to pass `None` as the new first argument; no assertion changes)
 
 ### Out of scope
