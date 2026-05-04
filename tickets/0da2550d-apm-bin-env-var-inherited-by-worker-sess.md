@@ -3,13 +3,13 @@ id = "0da2550d"
 title = "APM_BIN env var inherited by worker sessions may point to stale Homebrew binary"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0da2550d-apm-bin-env-var-inherited-by-worker-sess"
 created_at = "2026-05-04T05:00:29.668572Z"
-updated_at = "2026-05-04T05:07:10.085185Z"
+updated_at = "2026-05-04T05:13:38.912259Z"
 +++
 
 ## Spec
