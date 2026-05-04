@@ -16,7 +16,7 @@ updated_at = "2026-05-04T04:35:40.291779Z"
 
 ### Problem
 
-start::tests::mock_happy_spec_mode_transitions_to_specd in apm-core/src/start.rs fails because find_apm_bin() resolves to apm-server via which apm rather than the apm CLI binary. The script calls apm spec but apm-server does not know that subcommand. Pre-dates ticket f8cbd68c — confirmed by git stash.
+The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (and two sibling tests that share the same helper) fails because `find_apm_bin()` — a test-only helper in `apm-core/src/start.rs` — resolves to the wrong binary.\n\n`find_apm_bin()` first checks `APM_BIN`, then falls back to `which apm`. On any machine with Atom Package Manager installed via Homebrew, `which apm` returns `/opt/homebrew/bin/apm`, which does not recognise the `spec`, `state`, or `set` subcommands. The mock-happy shell script calls `"$APM" spec "$ID" ...`, which fails immediately, so the ticket never reaches `specd` state and the assertion fires.\n\nThe correct binary is the one this workspace builds: `target/debug/apm` (or `target/release/apm`). The fix is to replace the `which apm` fallback with a lookup that derives the target directory from `std::env::current_exe()`, which always points at the actual Cargo test binary regardless of PATH.\n\nThe failure pre-dates ticket f8cbd68c and is not a regression introduced by that branch.
 
 ### Acceptance criteria
 
