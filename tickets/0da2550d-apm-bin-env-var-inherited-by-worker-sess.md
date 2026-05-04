@@ -41,7 +41,95 @@ The desired behaviour is that `APM_BIN` passed to workers always points to the `
 
 ### Approach
 
-How the implementation will work.
+#### Shared helper
+
+Add a `resolve_apm_cli_bin() -> String` function to `apm-core/src/wrapper/mod.rs`. The function:
+
+1. Calls `std::env::current_exe()` and canonicalizes the result.
+2. Takes the parent directory of the canonicalized path.
+3. Constructs a candidate path by joining that directory with `"apm"`.
+4. If the candidate exists on disk AND differs from `current_exe()`, returns the candidate as a `String`.
+5. Otherwise returns `current_exe()` as a `String` (preserving today's fallback behaviour).
+6. If `current_exe()` itself fails, returns an empty `String` (same as today).
+
+```rust
+// apm-core/src/wrapper/mod.rs
+pub(crate) fn resolve_apm_cli_bin() -> String {
+    std::env::current_exe()
+        .and_then(|p| p.canonicalize())
+        .ok()
+        .map(|exe| {
+            let candidate = exe
+                .parent()
+                .map(|dir| dir.join("apm"))
+                .filter(|p| p.is_file() && *p != exe);
+            candidate.unwrap_or(exe)
+        })
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+```
+
+#### custom.rs call site
+
+In `apm-core/src/wrapper/custom.rs`, replace lines 118–121:
+
+```rust
+// before
+let apm_bin = std::env::current_exe()
+    .and_then(|p| p.canonicalize())
+    .map(|p| p.to_string_lossy().into_owned())
+    .unwrap_or_default();
+
+// after
+let apm_bin = super::resolve_apm_cli_bin();
+```
+
+#### builtin/mod.rs call site
+
+In `apm-core/src/wrapper/builtin/mod.rs`, replace lines 128–133 (the `unwrap_or_else` branch that calls `current_exe()`):
+
+```rust
+// before
+.unwrap_or_else(|| {
+    std::env::current_exe()
+        .and_then(|p| p.canonicalize())
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default()
+})
+
+// after
+.unwrap_or_else(|| super::resolve_apm_cli_bin())
+```
+
+The `ctx.options["apm_bin"]` override path (used by tests) is preserved unchanged.
+
+#### Test coverage
+
+In `apm-core/src/start.rs`, extend or companion the `mock_wrapper_receives_env_vars` test to assert that the `APM_BIN` value's file stem is `"apm"` and not `"apm-server"`:
+
+```rust
+if let Some(line) = env_content.lines().find(|l| l.starts_with("APM_BIN=")) {
+    let path = std::path::Path::new(line.trim_start_matches("APM_BIN="));
+    assert_eq!(
+        path.file_stem().and_then(|s| s.to_str()),
+        Some("apm"),
+        "APM_BIN must point to the apm CLI binary, not apm-server: {path:?}"
+    );
+}
+```
+
+#### CONTRIBUTING.md note
+
+Append a "Testing inside a worker session" paragraph to `CONTRIBUTING.md` stating:
+
+> When running `cargo test --workspace` from inside an APM worker session, the environment inherits `APM_BIN` which may point to the installed system binary rather than the freshly compiled one. If you are testing a feature that does not yet exist in the installed version, prefix the command with `env -u APM_BIN`:
+>
+> ```sh
+> env -u APM_BIN cargo test --workspace
+> ```
+>
+> This lets the test harness derive the correct binary from the build output directory.
 
 ### Open questions
 
