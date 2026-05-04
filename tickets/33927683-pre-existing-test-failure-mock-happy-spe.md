@@ -20,7 +20,7 @@ The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `start::tests::mock_happy_spec_mode_transitions_to_specd` passes when `target/debug/apm` exists (project has been built)\n- [ ] `start::tests::mock_sad_transitions_to_non_success_state` passes when `target/debug/apm` exists\n- [ ] `start::tests::mock_sad_seed_reproducibility` passes when `target/debug/apm` exists\n- [ ] All three tests skip (return without panic or assertion failure) when `APM_BIN` is unset and no cargo-built binary is found at the derived path\n- [ ] Setting `APM_BIN` to a valid path still takes priority over the cargo-relative lookup\n- [ ] `which apm` is no longer invoked by `find_apm_bin()`
 
 ### Out of scope
 
