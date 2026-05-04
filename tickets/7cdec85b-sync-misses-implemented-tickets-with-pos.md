@@ -16,13 +16,13 @@ updated_at = "2026-05-04T01:55:41.452324Z"
 
 ### Problem
 
-sync's merged_into_main() uses 'git branch --merged <default_branch>' to detect merged tickets. This misses any ticket whose branch tip is not an ancestor of main — specifically tickets that had a state-transition commit (e.g. merge_failed → implemented) added to the ticket branch AFTER the implementation content was already merged into main via a manual 'git merge'. The branch tip is ahead of the merge point, so git does not consider it merged, and sync silently skips it.
+`sync`'s `merged_into_main()` uses `git branch --merged <default_branch>` (and a squash-merge variant using `git commit-tree` + `git cherry`) to detect ticket branches that have been merged. Both checks compare the **branch tip** against main. Neither handles the case where a state-transition commit was pushed to the ticket branch *after* the implementation content was already merged into main: the tip is no longer an ancestor of main, and the tip tree differs from what was squash-checked, so both detection paths miss the branch silently.
 
-Observed in ticket 6095305a: content merged at 2442b358 (bdad99da^2), but f88b9ac0 (merge_failed → implemented) was committed to the ticket branch afterward. sync showed 7 of 8 implemented tickets ready to close; 6095305a was invisible.
+Observed in ticket 6095305a: implementation merged into main at `2442b358` (via merge commit `bdad99da`), then `f88b9ac0` (state: `merge_failed → implemented`) was committed to the ticket branch. `sync` showed 7 of 8 implemented tickets ready to close; 6095305a was invisible because its branch tip is one commit ahead of the merge point.
 
-Two fixes needed:
-1. Detection gap: when a ticket branch is not detected as merged by --merged, also check whether the branch tip's *content* (everything up to the merge point bdad99da^2) is present in main, ignoring any trailing state-transition-only commits.
-2. User message: when sync sees an implemented ticket it cannot determine was merged, emit a hint such as: 'If this ticket was already merged or you do not want to merge it, close it manually: apm state <id> closed'
+Two gaps to close:
+1. **Detection**: when neither detection path catches a branch, walk back from the tip skipping commits that touch only files under `tickets/`, find the last real-content commit, and re-run the squash check using that commit's tree. If that tree is in main, the branch content was merged.
+2. **Fallback message**: when `sync` cannot determine whether an `implemented` ticket was merged (branch exists but no detection path fires), print a hint directing the user to close it manually.
 
 ### Acceptance criteria
 
