@@ -1,7 +1,7 @@
 +++
 id = "8217e5f5"
 title = "Document integration-test best practices and bypass policy"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8217e5f5-document-integration-test-best-practices"
 created_at = "2026-05-01T20:26:39.470083Z"
-updated_at = "2026-05-03T20:51:31.443072Z"
+updated_at = "2026-05-04T00:59:42.573675Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 +++
@@ -91,3 +91,4 @@ A: CLAUDE.md is the wrong target. Acceptance Criteria has been updated.
 | 2026-05-03T20:42Z | blocked | ready | philippepascal |
 | 2026-05-03T20:49Z | ready | in_progress | philippepascal |
 | 2026-05-03T20:51Z | in_progress | implemented | claude-0503-2049-ab50 |
+| 2026-05-04T00:59Z | implemented | closed | philippepascal(apm-sync) |
