@@ -1,7 +1,7 @@
 +++
 id = "3c23dee3"
 title = "UI: workflow graph view in apm-server"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3c23dee3-ui-workflow-graph-view-in-apm-server"
 created_at = "2026-05-04T17:40:27.172621Z"
-updated_at = "2026-05-04T19:30:48.113809Z"
+updated_at = "2026-05-04T20:13:03.687186Z"
 +++
 
 ## Spec
@@ -175,3 +175,4 @@ The desired behaviour is a diagram that shows every state as a labelled node and
 | 2026-05-04T19:18Z | specd | ready | philippepascal |
 | 2026-05-04T19:18Z | ready | in_progress | philippepascal |
 | 2026-05-04T19:30Z | in_progress | implemented | claude-0504-1918-0c98 |
+| 2026-05-04T20:13Z | implemented | closed | philippepascal(apm-sync) |
