@@ -44,7 +44,57 @@ No sync test covers `.apm/agents/claude/apm.worker.md` at all, leaving the per-a
 
 ### Approach
 
-How the implementation will work.
+#### Step 1: Fix `.apm/agents/claude/apm.spec-writer.md`
+
+Copy the `## Scope limits` block (lines 9–32 in the default) and the `## Capability limitations` block (lines 206–227 in the default) from `apm-core/src/default/agents/claude/apm.spec-writer.md` into the project's `.apm/agents/claude/apm.spec-writer.md`. Insert them at the correct positions so the file is byte-for-byte identical to the default. Verify with `diff` before moving on.
+
+#### Step 2: Upgrade `spec_writer_md_sync.rs` to full-file comparison
+
+Replace the section-extraction approach with byte-for-byte comparison, matching the pattern already used in `worker_md_sync.rs`. Specifically:
+- Remove the `extract_style_rules_section()` helper
+- Rename the test to `default_and_per_agent_apm_spec_writer_md_are_identical`
+- Update the diff logic to produce line-level output on mismatch (copy the pattern from `worker_md_sync.rs`)
+- Update the doc comment to reflect that the full file must match
+
+The comparison paths are:
+- Default: `apm-core/src/default/agents/claude/apm.spec-writer.md`
+- Project: `.apm/agents/claude/apm.spec-writer.md`
+
+#### Step 3: Add per-agent worker sync test
+
+In `apm-core/tests/worker_md_sync.rs`, add a new test `default_and_per_agent_apm_worker_md_are_identical` that compares:
+- Default: `apm-core/src/default/agents/claude/apm.worker.md` (path relative to `CARGO_MANIFEST_DIR`)
+- Project: `.apm/agents/claude/apm.worker.md` (path via `CARGO_MANIFEST_DIR/../`)
+
+Use the same byte-for-byte diff-on-failure pattern as the existing two tests in that file.
+
+#### Step 4: Update `apm-core/src/init.rs` to write per-agent files
+
+In `setup()`, after the existing `write_default()` call for `.apm/apm.worker.md` (currently line 134), add directory creation and two new `write_default()` calls:
+
+```rust
+let agents_claude_dir = apm_dir.join("agents/claude");
+std::fs::create_dir_all(&agents_claude_dir)
+    .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_claude_dir.display()))?;
+write_default(
+    &agents_claude_dir.join("apm.spec-writer.md"),
+    include_str!("default/agents/claude/apm.spec-writer.md"),
+    ".apm/agents/claude/apm.spec-writer.md",
+    &mut messages,
+)?;
+write_default(
+    &agents_claude_dir.join("apm.worker.md"),
+    include_str!("default/agents/claude/apm.worker.md"),
+    ".apm/agents/claude/apm.worker.md",
+    &mut messages,
+)?;
+```
+
+The `include_str!()` paths are relative to `apm-core/src/`, matching the existing pattern. The `write_default()` signature is `(path: &Path, content: &str, display_name: &str, messages: &mut Vec<InitMessage>) -> Result<()>`.
+
+#### Order matters
+
+Do Steps 1 and 4 before running tests — Step 1 fixes the project file so the Step 2 test passes; Step 4 changes only runtime behavior, not test assertions.
 
 ### Open questions
 
