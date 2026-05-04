@@ -18,7 +18,11 @@ target_branch = "epic/5acea599-flexible-agent-configuration"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Spawning a worker agent for a workflow phase currently requires two coordinated edits in two different files. The transition in `workflow.toml` sets `profile = "spec_agent"`, and the profile in `config.toml` carries `instructions` (the system-prompt file path) and `role_prefix`. The profile was originally introduced for infrastructure overrides (agent binary, model, container), but `instructions` and `role_prefix` are workflow-level concerns: they describe what role the agent plays during a particular phase, not how it is executed.
+
+This coupling has two practical downsides. First, editing which instructions a spec-writer receives requires touching `config.toml`, not `workflow.toml`, where all other workflow-phase behaviour lives. Second, a project that wants distinct instructions per transition but identical infrastructure must create one profile entry per transition, inflating `config.toml` with boilerplate that adds no infrastructure value.
+
+The desired state is that `instructions` and `role_prefix` can be set directly on a `[[workflow.states.transitions]]` block in `workflow.toml`. Projects that need only a role change, without any infrastructure override, would no longer need a `[worker_profiles.*]` entry at all. Projects that need both can continue using a profile; transition-level fields simply take precedence.
 
 ### Acceptance criteria
 
@@ -35,13 +39,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
