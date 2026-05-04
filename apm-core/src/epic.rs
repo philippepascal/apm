@@ -151,8 +151,8 @@ mod tests {
     fn set_epic_owner_updates_non_terminal_skips_terminal() {
         let tmp = setup_repo();
         let p = tmp.path();
-        std::fs::write(p.join("apm.toml"), TOML_WITH_STATES).unwrap();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
         std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
 
         let config = crate::config::Config::load(p).unwrap();
@@ -178,7 +178,8 @@ mod tests {
     fn set_epic_owner_all_terminal_returns_zero_changed() {
         let tmp = setup_repo();
         let p = tmp.path();
-        std::fs::write(p.join("apm.toml"), TOML_WITH_STATES).unwrap();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
 
         let config = crate::config::Config::load(p).unwrap();
 
@@ -204,8 +205,8 @@ mod tests {
     fn epic_is_quiescent_all_done() {
         let tmp = setup_repo();
         let p = tmp.path();
-        std::fs::write(p.join("apm.toml"), TOML_WITH_WORKER_END).unwrap();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_WORKER_END).unwrap();
         std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
 
         let config = crate::config::Config::load(p).unwrap();
@@ -224,8 +225,8 @@ mod tests {
     fn epic_is_quiescent_state_blocker() {
         let tmp = setup_repo();
         let p = tmp.path();
-        std::fs::write(p.join("apm.toml"), TOML_WITH_WORKER_END).unwrap();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_WORKER_END).unwrap();
         std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
 
         let config = crate::config::Config::load(p).unwrap();
@@ -243,8 +244,8 @@ mod tests {
     fn epic_is_quiescent_live_worker_blocker() {
         let tmp = setup_repo();
         let p = tmp.path();
-        std::fs::write(p.join("apm.toml"), TOML_WITH_WORKER_END).unwrap();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_WORKER_END).unwrap();
         std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
 
         let config = crate::config::Config::load(p).unwrap();

@@ -228,3 +228,9 @@ section are out of scope.
 ---
 
 **Frontmatter agent override** (supervisor tool): A supervisor may add `agent = "<name>"` or an `[agent_overrides]` table to a ticket's frontmatter to select a specific agent for that ticket or for individual profiles. Do not set these fields yourself — they are a supervisor-level escape hatch for debugging or per-ticket specialisation.
+
+---
+
+## Style rules
+
+Before writing or amending a spec, read `.apm/style.md` if present. Apply every rule marked `[x]` under `## Specs` to the spec you are writing. Rules marked `[ ]` are inactive — do not apply or reference them.

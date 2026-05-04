@@ -649,8 +649,9 @@ mod tests {
         git_cmd(p, &["config", "user.email", "test@test.com"]);
         git_cmd(p, &["config", "user.name", "test"]);
 
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(
-            p.join("apm.toml"),
+            p.join(".apm/config.toml"),
             r#"[project]
 name = "test"
 
@@ -675,7 +676,7 @@ label = "Specd"
         )
         .unwrap();
 
-        git_cmd(p, &["add", "apm.toml"]);
+        git_cmd(p, &["add", ".apm/config.toml"]);
         git_cmd(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
 
         dir
