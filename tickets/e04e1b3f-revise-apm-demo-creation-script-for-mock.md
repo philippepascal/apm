@@ -31,7 +31,11 @@ The sibling ticket 295ff9ba ("Add mock_happy demo script for GIF recording") dep
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the tickets, epics, or specs written by the script
+- Changes to `src/main.rs` or `Cargo.toml`
+- Changes to the README written by the script
+- A `--mock` variant of the GitHub repo name or description
+- Validating that `mock-happy` is available at create time (it is a built-in — if `apm` is present, `mock-happy` is present)
 
 ### Approach
 
