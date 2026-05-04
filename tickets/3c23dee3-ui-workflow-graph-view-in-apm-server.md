@@ -113,14 +113,17 @@ The desired behaviour is a diagram that shows every state as a labelled node and
 
 4. **`apm-ui/src/lib/workflowLayout.ts`** (new file): pure-TS layer assignment and coordinate computation.
 
-   - `assignLayers(states, transitions)` → `Map<id, layer>`:
-     - Build in-degree map from transitions.
-     - Longest-path: initialise all layers to 0; iterate topologically (Kahn's algorithm), setting `layer[to] = max(layer[to], layer[from] + 1)`.
-     - Nodes with no incoming edges start at layer 0.
-   - `computePositions(states, transitions, nodeW, nodeH, colGap, rowGap)` → `Map<id, {x, y}>`:
+   - `classifyEdges(states, transitions)` → `{ forward: TransitionEdge[], back: TransitionEdge[] }`:
+     - Run Kahn's algorithm on the full transition set to produce a topological order. Edges whose `to` node precedes `from` in that order (or whose `to` node was never enqueued because it is part of a cycle) are **back-edges**; all others are **forward-edges**.
+     - Back-edges are excluded from the layer-assignment pass and rendered separately (see `WorkflowGraph.tsx` step 5).
+   - `assignLayers(states, forwardTransitions)` → `Map<id, layer>`:
+     - Build in-degree map from forward transitions only.
+     - Longest-path: initialise all layers to 0; iterate in topological order, setting `layer[to] = max(layer[to], layer[from] + 1)`.
+     - Nodes with no incoming forward edges start at layer 0.
+   - `computePositions(states, forwardTransitions, nodeW, nodeH, colGap, rowGap)` → `Map<id, {x, y}>`:
      - Group states by layer (preserving config order within each layer).
      - `x = layer * (nodeW + colGap)`.
-     - `y = index_in_layer * (nodeH + rowGap)`, centred vertically per layer.
+     - `y` is centred per layer: `offset + index_in_layer * (nodeH + rowGap)` where `offset = (maxNodesInAnyLayer - nodesInThisLayer) * (nodeH + rowGap) / 2`.
    - Returns a flat `{x, y, layer}` record per state id.
 
 #### Frontend — components
@@ -131,7 +134,8 @@ The desired behaviour is a diagram that shows every state as a labelled node and
    - Computes SVG `viewBox` from the bounding box of all positions.
    - Renders `<defs>` with a single `<marker id="arrowhead">` (filled triangle, ~8 px).
    - For each state: `<g>` containing a `<rect>` (rounded, stroke from `getStateColors(id).dot` converted to a border, double stroke or dashed for terminal), and a `<text>` label centred inside.
-   - For each transition: `<path>` with a cubic bezier from the right edge of the source rect to the left edge of the target rect (control points offset by `colGap / 2`); self-loops (same layer, adjacent) curve upward. `marker-end="url(#arrowhead)"`. A small `<text>` positioned at the midpoint of the bezier for the label.
+   - For each **forward** transition: `<path>` with a cubic bezier from the right edge of the source rect to the left edge of the target rect (control points offset by `colGap / 2`). `marker-end="url(#arrowhead)"`. A small `<text>` at the bezier midpoint for the label.
+   - For each **back-edge** transition: a curved arc that routes above the graph (control point `y` offset = `-60px` from the top of the higher node), rendered with a dashed stroke to visually distinguish it from forward edges. `marker-end="url(#arrowhead)"`. Label placed at the arc apex.
    - Empty state: when `states.length === 0`, renders `<p>No workflow configured</p>` instead of the SVG.
 
    **Colour mapping**: `stateColors.ts` exports `getStateColors(state)` which returns `{ dot: 'bg-<colour>-500', ... }`. The SVG needs actual hex colours, not Tailwind class strings. Add a small helper alongside the component (or in `stateColors.ts`) that maps the Tailwind dot class to an SVG-safe hex string (e.g. `'bg-blue-500' → '#3b82f6'`, covering the six palettes already in use: red, amber, blue, purple, green, gray).
