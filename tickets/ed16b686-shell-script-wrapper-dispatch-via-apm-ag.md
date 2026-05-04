@@ -41,7 +41,7 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 - [x] The `groomed → in_design`, `ammend → in_design`, and `ready → in_progress` transitions in `.apm/workflow.toml` each include `agent = "default"`
 - [x] When no `transition.agent`, no `profile.agent`, and no `workers.agent` are set, the resolved agent name is `"claude"` (unchanged behaviour)
 - [x] Unit test: `transition_agent_takes_precedence_over_profile` — `transition_agent = Some("custom")` with `profile.agent = Some("other")` resolves to `"custom"`
-- [ ] Unit test: `effective_agent_defaults_to_claude` — no transition agent, no profile, no workers agent resolves to `"claude"`
+- [x] Unit test: `effective_agent_defaults_to_claude` — no transition agent, no profile, no workers agent resolves to `"claude"`
 
 ### Out of scope
 
