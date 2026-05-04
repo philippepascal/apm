@@ -1,7 +1,7 @@
 +++
 id = "0da2550d"
 title = "APM_BIN env var inherited by worker sessions may point to stale Homebrew binary"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0da2550d-apm-bin-env-var-inherited-by-worker-sess"
 created_at = "2026-05-04T05:00:29.668572Z"
-updated_at = "2026-05-04T05:25:52.743384Z"
+updated_at = "2026-05-04T05:34:59.289559Z"
 +++
 
 ## Spec
@@ -168,3 +168,4 @@ Append a "Testing inside a worker session" paragraph to `CONTRIBUTING.md` statin
 | 2026-05-04T05:20Z | in_design | specd | claude-0504-0517-08d0 |
 | 2026-05-04T05:25Z | specd | ready | philippepascal |
 | 2026-05-04T05:25Z | ready | in_progress | philippepascal |
+| 2026-05-04T05:34Z | in_progress | implemented | claude-0504-0525-96d0 |
