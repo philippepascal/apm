@@ -1,7 +1,7 @@
 +++
 id = "f8cbd68c"
 title = "Consolidate all agent instruction .md files under agents/*/"
-state = "in_progress"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f8cbd68c-consolidate-all-agent-instruction-md-fil"
 created_at = "2026-05-04T02:41:12.168717Z"
-updated_at = "2026-05-04T03:19:50.666271Z"
+updated_at = "2026-05-04T04:43:31.015691Z"
 +++
 
 ## Spec
@@ -52,17 +52,17 @@ Conflict: ticket 121a05a8 (specd) writes per-agent files from init.rs and adds s
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/agents/default/` contains `agents.md`, `apm.spec-writer.md`, and `apm.worker.md`; the old flat files `apm-core/src/default/apm.agents.md`, `apm-core/src/default/apm.spec-writer.md`, and `apm-core/src/default/apm.worker.md` no longer exist
-- [ ] `apm init` on a fresh project creates `.apm/agents/default/agents.md` and does not create `.apm/agents.md`
-- [ ] `apm init` on a fresh project creates `.apm/agents/default/apm.spec-writer.md` and does not create `.apm/apm.spec-writer.md`
-- [ ] `apm init` on a fresh project creates `.apm/agents/default/apm.worker.md` and does not create `.apm/apm.worker.md`
-- [ ] `apm init` on a fresh project writes `CLAUDE.md` containing `@.apm/agents/default/agents.md`
-- [ ] `apm init` on a project whose `.apm/` still has old flat files (`agents.md`, `apm.spec-writer.md`, `apm.worker.md`, `style.md`) moves each one to `.apm/agents/default/` and leaves no file at the old path
-- [ ] After the migration path above, CLAUDE.md references, `config.toml` `instructions` fields, and `workflow.toml` `instructions` fields are all rewritten from old paths to new paths
-- [ ] `apm-core/src/default/workflow.toml` contains no references to `.apm/apm.spec-writer.md` or `.apm/apm.worker.md`
-- [ ] This repo's `.apm/agents/default/` contains `agents.md`, `apm.spec-writer.md`, `apm.worker.md`, and `style.md`
-- [ ] This repo's `CLAUDE.md` imports `@.apm/agents/default/agents.md` and `@.apm/agents/default/style.md`
-- [ ] `cargo test --workspace` passes
+- [x] `apm-core/src/default/agents/default/` contains `agents.md`, `apm.spec-writer.md`, and `apm.worker.md`; the old flat files `apm-core/src/default/apm.agents.md`, `apm-core/src/default/apm.spec-writer.md`, and `apm-core/src/default/apm.worker.md` no longer exist
+- [x] `apm init` on a fresh project creates `.apm/agents/default/agents.md` and does not create `.apm/agents.md`
+- [x] `apm init` on a fresh project creates `.apm/agents/default/apm.spec-writer.md` and does not create `.apm/apm.spec-writer.md`
+- [x] `apm init` on a fresh project creates `.apm/agents/default/apm.worker.md` and does not create `.apm/apm.worker.md`
+- [x] `apm init` on a fresh project writes `CLAUDE.md` containing `@.apm/agents/default/agents.md`
+- [x] `apm init` on a project whose `.apm/` still has old flat files (`agents.md`, `apm.spec-writer.md`, `apm.worker.md`, `style.md`) moves each one to `.apm/agents/default/` and leaves no file at the old path
+- [x] After the migration path above, CLAUDE.md references, `config.toml` `instructions` fields, and `workflow.toml` `instructions` fields are all rewritten from old paths to new paths
+- [x] `apm-core/src/default/workflow.toml` contains no references to `.apm/apm.spec-writer.md` or `.apm/apm.worker.md`
+- [x] This repo's `.apm/agents/default/` contains `agents.md`, `apm.spec-writer.md`, `apm.worker.md`, and `style.md`
+- [x] This repo's `CLAUDE.md` imports `@.apm/agents/default/agents.md` and `@.apm/agents/default/style.md`
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
@@ -173,3 +173,5 @@ Replace:
 | 2026-05-04T03:09Z | in_design | specd | claude-0503-1200-spec1 |
 | 2026-05-04T03:19Z | specd | ready | philippepascal |
 | 2026-05-04T03:19Z | ready | in_progress | philippepascal |
+| 2026-05-04T03:35Z | in_progress | implemented | claude-0503-1430-f8cb |
+| 2026-05-04T04:43Z | implemented | closed | philippepascal(apm-sync) |
