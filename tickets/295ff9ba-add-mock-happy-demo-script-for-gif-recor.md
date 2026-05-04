@@ -1,7 +1,7 @@
 +++
 id = "295ff9ba"
 title = "Add mock_happy demo script for GIF recording"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/295ff9ba-add-mock-happy-demo-script-for-gif-recor"
 created_at = "2026-05-04T16:48:42.740876Z"
-updated_at = "2026-05-04T17:00:34.421699Z"
+updated_at = "2026-05-04T17:26:44.739525Z"
 epic = "65af2998"
 target_branch = "epic/65af2998-apm-demo-enhancements"
 depends_on = ["e04e1b3f"]
@@ -117,3 +117,4 @@ Steps:
 | 2026-05-04T16:50Z | new | groomed | philippepascal |
 | 2026-05-04T16:55Z | groomed | in_design | philippepascal |
 | 2026-05-04T17:00Z | in_design | specd | claude-0504-1655-4030 |
+| 2026-05-04T17:26Z | specd | ammend | philippepascal |
