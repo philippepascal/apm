@@ -78,7 +78,7 @@ agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [agents]
 max_concurrent = 3
-instructions = ".apm/agents.md"
+instructions = ".apm/agents/default/agents.md"
 
 APM_CONFIG_TOP
 ```
