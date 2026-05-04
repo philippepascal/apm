@@ -1,7 +1,7 @@
 +++
 id = "44d0c999"
 title = "apm validate --verbose: per-transition agent resolution audit"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/44d0c999-apm-validate-verbose-per-transition-agen"
 created_at = "2026-05-04T17:40:24.657468Z"
-updated_at = "2026-05-04T19:53:35.897496Z"
+updated_at = "2026-05-04T20:20:38.608784Z"
 epic = "5acea599"
 target_branch = "epic/5acea599-flexible-agent-configuration"
 depends_on = ["6803b88b"]
@@ -63,3 +63,4 @@ After ticket 6803b88b lands, `instructions` and `role_prefix` can be set directl
 | 2026-05-04T19:18Z | specd | ready | philippepascal |
 | 2026-05-04T19:41Z | ready | in_progress | philippepascal |
 | 2026-05-04T19:53Z | in_progress | implemented | claude-0504-1941-06b8 |
+| 2026-05-04T20:20Z | implemented | closed | philippepascal(apm-sync) |
