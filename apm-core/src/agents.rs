@@ -86,8 +86,8 @@ fi
 exec claude "${ARGS[@]}" "$(cat "$APM_USER_MESSAGE_FILE")"
 "#;
 
-const DEFAULT_WORKER_MD: &str = include_str!("default/apm.worker.md");
-const DEFAULT_SPEC_WRITER_MD: &str = include_str!("default/apm.spec-writer.md");
+const DEFAULT_WORKER_MD: &str = include_str!("default/agents/default/apm.worker.md");
+const DEFAULT_SPEC_WRITER_MD: &str = include_str!("default/agents/default/apm.spec-writer.md");
 
 fn rand_u16() -> u16 {
     use std::time::{SystemTime, UNIX_EPOCH};
