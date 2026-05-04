@@ -26,12 +26,12 @@ Two gaps to close:
 
 ### Acceptance criteria
 
-- [ ] `sync` detects and offers to close a ticket whose branch has only state-transition commits (touching only files under `config.tickets.dir`) added after the implementation was merged into main via `git merge`
-- [ ] `sync` detects and offers to close a ticket whose branch has only state-transition commits added after the implementation was squash-merged into main
-- [ ] Tickets detected by the existing `--merged` and squash-merge paths continue to be detected and closed as before (no regression)
-- [ ] `sync` prints a hint message for any `implemented` ticket whose branch still exists locally but is not caught by any detection pass; the hint text includes `apm state <id> closed`
-- [ ] A ticket branch where non-ticket files were modified after the merge point is not falsely detected as merged by the new pass
-- [ ] The hint is not printed for tickets in any state other than `implemented`
+- [x] `sync` detects and offers to close a ticket whose branch has only state-transition commits (touching only files under `config.tickets.dir`) added after the implementation was merged into main via `git merge`
+- [x] `sync` detects and offers to close a ticket whose branch has only state-transition commits added after the implementation was squash-merged into main
+- [x] Tickets detected by the existing `--merged` and squash-merge paths continue to be detected and closed as before (no regression)
+- [x] `sync` prints a hint message for any `implemented` ticket whose branch still exists locally but is not caught by any detection pass; the hint text includes `apm state <id> closed`
+- [x] A ticket branch where non-ticket files were modified after the merge point is not falsely detected as merged by the new pass
+- [x] The hint is not printed for tickets in any state other than `implemented`
 
 ### Out of scope
 
