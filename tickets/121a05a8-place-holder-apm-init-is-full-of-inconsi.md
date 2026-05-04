@@ -4,12 +4,12 @@ title = "place holder: apm init is full of inconsistency"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/121a05a8-place-holder-apm-init-is-full-of-inconsi"
 created_at = "2026-05-03T20:29:23.302391Z"
-updated_at = "2026-05-04T02:07:42.780593Z"
+updated_at = "2026-05-04T02:07:47.465296Z"
 +++
 
 ## Spec
