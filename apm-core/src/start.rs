@@ -1737,15 +1737,23 @@ mod tests {
     // --- mock wrapper integration tests ---
 
     fn find_apm_bin() -> Option<String> {
+        // 1. Explicit override wins
         if let Ok(v) = std::env::var("APM_BIN") {
             if !v.is_empty() && std::path::Path::new(&v).exists() {
                 return Some(v);
             }
         }
-        let out = std::process::Command::new("which").arg("apm").output().ok()?;
-        if out.status.success() {
-            let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            if !s.is_empty() { return Some(s); }
+        // 2. Derive from the test binary path.
+        //    current_exe() -> <workspace>/target/{profile}/deps/apm_core-<hash>
+        //    two parents up -> <workspace>/target/{profile}/
+        //    sibling "apm"  -> <workspace>/target/{profile}/apm
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(target_dir) = exe.parent().and_then(|p| p.parent()) {
+                let candidate = target_dir.join("apm");
+                if candidate.is_file() {
+                    return Some(candidate.to_string_lossy().into_owned());
+                }
+            }
         }
         None
     }
