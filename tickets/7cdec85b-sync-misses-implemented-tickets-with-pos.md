@@ -3,13 +3,13 @@ id = "7cdec85b"
 title = "sync misses implemented tickets with post-merge state commits on the ticket branch"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7cdec85b-sync-misses-implemented-tickets-with-pos"
 created_at = "2026-05-03T20:15:04.114954Z"
-updated_at = "2026-05-04T01:55:41.452324Z"
+updated_at = "2026-05-04T02:01:05.568395Z"
 +++
 
 ## Spec
