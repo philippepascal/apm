@@ -1,7 +1,7 @@
 +++
 id = "121a05a8"
 title = "place holder: apm init is full of inconsistency"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/121a05a8-place-holder-apm-init-is-full-of-inconsi"
 created_at = "2026-05-03T20:29:23.302391Z"
-updated_at = "2026-05-04T02:14:17.142216Z"
+updated_at = "2026-05-04T02:20:22.668928Z"
 +++
 
 ## Spec
@@ -116,3 +116,4 @@ Do Steps 1 and 4 before running tests — Step 1 fixes the project file so the S
 | 2026-05-04T02:01Z | groomed | in_design | philippepascal |
 | 2026-05-04T02:07Z | in_design | specd | claude-0504-0201-d860 |
 | 2026-05-04T02:14Z | specd | ammend | philippepascal |
+| 2026-05-04T02:20Z | ammend | in_design | philippepascal |
