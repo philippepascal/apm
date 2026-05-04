@@ -1,7 +1,7 @@
 +++
 id = "f8cbd68c"
 title = "Consolidate all agent instruction .md files under agents/*/"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f8cbd68c-consolidate-all-agent-instruction-md-fil"
 created_at = "2026-05-04T02:41:12.168717Z"
-updated_at = "2026-05-04T03:35:43.815900Z"
+updated_at = "2026-05-04T04:43:31.015691Z"
 +++
 
 ## Spec
@@ -174,3 +174,4 @@ Replace:
 | 2026-05-04T03:19Z | specd | ready | philippepascal |
 | 2026-05-04T03:19Z | ready | in_progress | philippepascal |
 | 2026-05-04T03:35Z | in_progress | implemented | claude-0503-1430-f8cb |
+| 2026-05-04T04:43Z | implemented | closed | philippepascal(apm-sync) |
