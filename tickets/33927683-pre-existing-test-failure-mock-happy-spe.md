@@ -1,7 +1,7 @@
 +++
 id = "33927683"
 title = "Pre-existing test failure: mock_happy_spec_mode_transitions_to_specd"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/33927683-pre-existing-test-failure-mock-happy-spe"
 created_at = "2026-05-04T03:33:27.432606Z"
-updated_at = "2026-05-04T04:38:19.126835Z"
+updated_at = "2026-05-04T04:41:00.570246Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (
 | 2026-05-04T04:35Z | new | groomed | philippepascal |
 | 2026-05-04T04:35Z | groomed | in_design | philippepascal |
 | 2026-05-04T04:38Z | in_design | specd | claude-0504-0435-4348 |
+| 2026-05-04T04:41Z | specd | ready | philippepascal |
