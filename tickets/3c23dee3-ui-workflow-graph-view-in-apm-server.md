@@ -16,7 +16,9 @@ updated_at = "2026-05-04T17:41:10.625488Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+APM's ticket lifecycle is a user-configurable directed graph of states and transitions defined in `.apm/workflow.toml`. Currently, the only way to inspect this graph is to read the raw TOML file. The `apm-server` web UI offers no visual representation, which makes it hard to understand the overall lifecycle at a glance and to onboard new collaborators without pointing them at config files.
+
+The desired behaviour is a diagram that shows every state as a labelled node and every permitted transition as a directed, labelled arrow — rendered inside the existing `apm-server` React UI without requiring a page reload or leaving the board view. Because the workflow is user-defined, the graph must be derived from the live server configuration rather than hard-coded.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
