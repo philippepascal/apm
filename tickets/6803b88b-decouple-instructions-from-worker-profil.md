@@ -4,12 +4,12 @@ title = "Decouple instructions from worker_profiles; move to workflow transition
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6803b88b-decouple-instructions-from-worker-profil"
 created_at = "2026-05-04T16:48:29.472278Z"
-updated_at = "2026-05-04T16:55:37.213317Z"
+updated_at = "2026-05-04T16:55:40.671518Z"
 epic = "5acea599"
 target_branch = "epic/5acea599-flexible-agent-configuration"
 +++
