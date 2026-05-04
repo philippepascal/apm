@@ -35,7 +35,7 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 - [ ] A `wrapper.sh` in `.apm/agents/<name>/` with no accompanying `manifest.toml` is accepted without error (manifest defaults apply)
 - [ ] `.apm/agents/default/wrapper.sh` exists in this repo and is executable (`chmod +x`); `apm init` does not write it to new projects (see Out of scope)
 - [ ] `wrapper.sh` invokes the claude binary with `--print --output-format stream-json --verbose --disable-slash-commands`, reading the system prompt from `$APM_SYSTEM_PROMPT_FILE` and the user message from `$APM_USER_MESSAGE_FILE`
-- [ ] `wrapper.sh` passes `--dangerously-skip-permissions` when `APM_SKIP_PERMISSIONS` is set
+- [ ] `wrapper.sh` passes `--dangerously-skip-permissions` when `APM_SKIP_PERMISSIONS` equals `"1"`
 - [ ] `wrapper.sh` passes `--model "$APM_MODEL"` when `APM_MODEL` is non-empty
 - [ ] The env-var setup for custom wrapper scripts includes `APM_MODEL` (set from `ctx.model`)
 - [ ] The `groomed → in_design`, `ammend → in_design`, and `ready → in_progress` transitions in `.apm/workflow.toml` each include `agent = "default"`
