@@ -55,6 +55,12 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         std::fs::create_dir_all(&tickets_dir)?;
         messages.push("Created tickets/".to_string());
     }
+    write_default(
+        &tickets_dir.join("EPIC.md"),
+        EPIC_MD_PLACEHOLDER,
+        "tickets/EPIC.md",
+        &mut messages,
+    )?;
 
     let apm_dir = root.join(".apm");
     std::fs::create_dir_all(&apm_dir)?;
@@ -335,7 +341,7 @@ pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &
 }
 
 pub fn ensure_gitattributes(path: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let entry = "EPIC.md merge=ours";
+    let entry = "tickets/EPIC.md merge=ours";
     if path.exists() {
         let mut contents = std::fs::read_to_string(path)?;
         if !contents.contains(entry) {
@@ -370,6 +376,18 @@ fn ensure_claude_md(root: &Path, agents_path: &str, messages: &mut Vec<String>) 
     }
     Ok(())
 }
+
+const EPIC_MD_PLACEHOLDER: &str = "\
+# EPIC.md — per-epic context document
+
+Each epic branch writes its own `tickets/EPIC.md` with the epic title and any
+notes added by the supervisor. APM reads it from the epic branch to build the
+context bundle injected into worker prompts for tickets that belong to that epic.
+
+The copy on `main` is this placeholder and is never read by APM at runtime.
+The `tickets/EPIC.md merge=ours` rule in `.gitattributes` prevents merge
+conflicts when multiple epics are open simultaneously.
+";
 
 fn default_agents_md() -> &'static str {
     include_str!("default/agents/default/agents.md")

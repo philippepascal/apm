@@ -278,7 +278,7 @@ fn build_epic_bundle_includes_title_siblings_and_guidance() {
     let epic_id = "ab12cd34";
     let epic_branch = format!("epic/{epic_id}-test-epic");
     let epic_md = "# Test Epic\n\n## Goal\nBuild something great.\n\n## Non-goals\nDo not gold-plate.\n";
-    apm_core::git::commit_to_branch(p, &epic_branch, "EPIC.md", epic_md, "epic: init").unwrap();
+    apm_core::git::commit_to_branch(p, &epic_branch, "tickets/EPIC.md", epic_md, "epic: init").unwrap();
 
     // Active sibling in "specd" state with an Out of scope section.
     let sibling_active = concat!(
@@ -374,7 +374,7 @@ fn build_epic_bundle_respects_sibling_cap() {
 
     let epic_id = "ff001122";
     let epic_branch = format!("epic/{epic_id}-capped-epic");
-    apm_core::git::commit_to_branch(p, &epic_branch, "EPIC.md", "# Capped Epic\n", "init").unwrap();
+    apm_core::git::commit_to_branch(p, &epic_branch, "tickets/EPIC.md", "# Capped Epic\n", "init").unwrap();
 
     for (id, slug) in [("aaaa0001", "sib-a"), ("bbbb0002", "sib-b")] {
         let content = format!(
@@ -2179,8 +2179,8 @@ fn setup_with_epic() -> (tempfile::TempDir, String) {
     let epic_branch = format!("epic/{epic_id}-my-epic");
     // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
     git(p, &["checkout", "-b", &epic_branch]);
-    std::fs::write(p.join("EPIC.md"), "# my-epic\n").unwrap();
-    git(p, &["add", "EPIC.md"]);
+    std::fs::write(p.join("tickets/EPIC.md"), "# my-epic\n").unwrap();
+    git(p, &["add", "tickets/EPIC.md"]);
     git(p, &["commit", "-m", &format!("epic({epic_id}): create my-epic")]);
     git(p, &["checkout", "main"]);
     (dir, epic_id.to_string())
@@ -3831,12 +3831,10 @@ fn create_epic_branch(dir: &std::path::Path, branch: &str) {
     // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
     git(dir, &["checkout", "-b", branch]);
     // Write a placeholder file so the branch has a commit.
-    std::fs::write(dir.join("EPIC.md"), format!("# {branch}\n")).unwrap();
-    git(dir, &["-c", "commit.gpgsign=false", "add", "EPIC.md"]);
+    std::fs::write(dir.join("tickets/EPIC.md"), format!("# {branch}\n")).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", "tickets/EPIC.md"]);
     git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "create epic"]);
     git(dir, &["checkout", "-"]);
-    // Remove placeholder from main worktree.
-    let _ = std::fs::remove_file(dir.join("EPIC.md"));
 }
 
 #[test]

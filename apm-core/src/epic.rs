@@ -342,10 +342,13 @@ pub fn create(root: &Path, title: &str, config: &crate::config::Config) -> Resul
     git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, &format!("origin/{default_branch}")])?;
 
     let result = (|| -> Result<()> {
-        let epic_md = wt_path.join("EPIC.md");
+        let epic_md = wt_path.join("tickets/EPIC.md");
+        if let Some(parent) = epic_md.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         std::fs::write(&epic_md, format!("# {title}\n"))?;
 
-        git_util::stage_files(&wt_path, &["EPIC.md"])?;
+        git_util::stage_files(&wt_path, &["tickets/EPIC.md"])?;
 
         let commit_msg = format!("epic({id}): create {title}");
         git_util::commit(&wt_path, &commit_msg)?;
@@ -511,7 +514,7 @@ pub fn create_epic_branch(root: &Path, title: &str, config: &crate::config::Conf
     if crate::git_util::run(root, &["branch", &branch, &format!("origin/{default_branch}")]).is_err() {
         crate::git_util::run(root, &["branch", &branch, default_branch])?;
     }
-    crate::git_util::commit_to_branch(root, &branch, "EPIC.md", &format!("# {title}\n"), "epic: init")?;
+    crate::git_util::commit_to_branch(root, &branch, "tickets/EPIC.md", &format!("# {title}\n"), "epic: init")?;
     let _ = crate::git_util::push_branch(root, &branch);
     Ok((id, branch))
 }

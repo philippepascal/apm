@@ -53,6 +53,9 @@ pub fn archive(
             }
         };
 
+        if !content.starts_with("+++") {
+            continue;
+        }
         let dummy_path = root.join(rel_path);
         let t = match ticket::Ticket::parse(&dummy_path, &content) {
             Ok(t) => t,

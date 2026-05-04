@@ -19,7 +19,7 @@ pub fn build_epic_bundle(
     config: &Config,
 ) -> String {
     let epic_md = crate::epic::find_epic_branch(root, epic_id)
-        .and_then(|branch| crate::git::read_from_branch(root, &branch, "EPIC.md").ok())
+        .and_then(|branch| crate::git::read_from_branch(root, &branch, "tickets/EPIC.md").ok())
         .unwrap_or_default();
 
     let (epic_title, epic_body) = parse_epic_md(&epic_md, epic_id);
