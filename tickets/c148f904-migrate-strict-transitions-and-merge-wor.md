@@ -1,7 +1,7 @@
 +++
 id = "c148f904"
 title = "Migrate strict-transitions and merge-workflow setups to init_repo()"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c148f904-migrate-strict-transitions-and-merge-wor"
 created_at = "2026-05-01T20:26:55.674729Z"
-updated_at = "2026-05-03T20:49:14.415145Z"
+updated_at = "2026-05-04T00:59:51.250150Z"
 epic = "0b1c71db"
 target_branch = "epic/0b1c71db-integration-tests-use-real-apm-commands"
 depends_on = ["795dce11"]
@@ -141,3 +141,4 @@ Both helpers call `init_repo()`, which is defined by ticket 795dce11. That ticke
 | 2026-05-03T20:16Z | specd | ready | philippepascal |
 | 2026-05-03T20:41Z | ready | in_progress | philippepascal |
 | 2026-05-03T20:49Z | in_progress | implemented | claude-0503-2041-0f80 |
+| 2026-05-04T00:59Z | implemented | closed | philippepascal(apm-sync) |
