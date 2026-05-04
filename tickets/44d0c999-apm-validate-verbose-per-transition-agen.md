@@ -1,7 +1,7 @@
 +++
 id = "44d0c999"
 title = "apm validate --verbose: per-transition agent resolution audit"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/44d0c999-apm-validate-verbose-per-transition-agen"
 created_at = "2026-05-04T17:40:24.657468Z"
-updated_at = "2026-05-04T17:40:24.657468Z"
+updated_at = "2026-05-04T17:40:41.344099Z"
 epic = "5acea599"
 target_branch = "epic/5acea599-flexible-agent-configuration"
 depends_on = ["6803b88b"]
@@ -50,3 +50,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-04T17:40Z | — | new | philippepascal |
+| 2026-05-04T17:40Z | new | groomed | philippepascal |
