@@ -4,12 +4,12 @@ title = "Consolidate all agent instruction .md files under agents/*/"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f8cbd68c-consolidate-all-agent-instruction-md-fil"
 created_at = "2026-05-04T02:41:12.168717Z"
-updated_at = "2026-05-04T03:09:11.157217Z"
+updated_at = "2026-05-04T03:09:18.298953Z"
 +++
 
 ## Spec
