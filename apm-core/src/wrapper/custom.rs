@@ -115,10 +115,7 @@ impl Wrapper for CustomWrapper {
         check_contract_version(declared, CONTRACT_VERSION, &ctx.log_path)
             .map_err(|e| anyhow::anyhow!("wrapper '{}': {}", self.script_path.display(), e))?;
 
-        let apm_bin = std::env::current_exe()
-            .and_then(|p| p.canonicalize())
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_default();
+        let apm_bin = super::resolve_apm_cli_bin();
 
         // Write the path-guard hook for canonical wrappers that request isolation.
         let enforce = self.manifest.as_ref().map_or(false, |m| m.enforce_worktree_isolation);

@@ -8,10 +8,7 @@ impl Wrapper for ClaudeWrapper {
         let sys = std::fs::read_to_string(&ctx.system_prompt_file)?;
         let msg = std::fs::read_to_string(&ctx.user_message_file)?;
 
-        let apm_bin = std::env::current_exe()
-            .and_then(|p| p.canonicalize())
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_default();
+        let apm_bin = super::super::resolve_apm_cli_bin();
 
         match &ctx.container {
             None => spawn_local(ctx, &sys, &msg, &apm_bin),

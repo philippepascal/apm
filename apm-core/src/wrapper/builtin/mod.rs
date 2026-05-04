@@ -125,12 +125,7 @@ pub(crate) fn write_and_spawn_script(
     // Determine APM_BIN: ctx.options["apm_bin"] for tests, else current_exe
     let apm_bin = ctx.options.get("apm_bin")
         .cloned()
-        .unwrap_or_else(|| {
-            std::env::current_exe()
-                .and_then(|p| p.canonicalize())
-                .map(|p| p.to_string_lossy().into_owned())
-                .unwrap_or_default()
-        });
+        .unwrap_or_else(|| super::resolve_apm_cli_bin());
 
     let mut cmd = std::process::Command::new("/bin/sh");
     cmd.arg(&script_path);
