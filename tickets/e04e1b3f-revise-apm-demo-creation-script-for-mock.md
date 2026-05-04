@@ -1,7 +1,7 @@
 +++
 id = "e04e1b3f"
 title = "Revise apm-demo creation script for mock worker support"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e04e1b3f-revise-apm-demo-creation-script-for-mock"
 created_at = "2026-05-04T16:48:32.146018Z"
-updated_at = "2026-05-04T16:55:35.493633Z"
+updated_at = "2026-05-04T17:26:38.346566Z"
 epic = "65af2998"
 target_branch = "epic/65af2998-apm-demo-enhancements"
 +++
@@ -131,3 +131,4 @@ No other parts of the script change. The rest of step 4 (`apm init --no-claude`)
 | 2026-05-04T16:50Z | new | groomed | philippepascal |
 | 2026-05-04T16:50Z | groomed | in_design | philippepascal |
 | 2026-05-04T16:55Z | in_design | specd | claude-0504-1650-e758 |
+| 2026-05-04T17:26Z | specd | ammend | philippepascal |
