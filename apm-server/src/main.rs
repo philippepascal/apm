@@ -189,6 +189,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route("/api/log/stream", get(log::stream_handler))
         .route("/api/epics", get(handlers::epics::list_epics).post(handlers::epics::create_epic))
         .route("/api/epics/:id", get(handlers::epics::get_epic))
+        .route("/api/workflow", get(handlers::workflow::workflow_handler))
         .route("/api/me", get(me_handler))
         .route("/api/collaborators", get(collaborators_handler))
         .route("/api/auth/otp", post(auth::otp_handler))
@@ -253,6 +254,7 @@ pub(crate) fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> 
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/epics", get(handlers::epics::list_epics).post(handlers::epics::create_epic))
         .route("/api/epics/:id", get(handlers::epics::get_epic))
+        .route("/api/workflow", get(handlers::workflow::workflow_handler))
         .route("/api/me", get(me_handler))
         .with_state(state)
 }
@@ -2415,5 +2417,24 @@ label = "In Progress"
         req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 1], 8080))));
         let response = app.oneshot(req).await.unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn workflow_in_memory_returns_empty_states_and_transitions() {
+        let app = build_app_with_tickets(vec![]);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/workflow")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["states"], serde_json::json!([]));
+        assert_eq!(json["transitions"], serde_json::json!([]));
     }
 }
