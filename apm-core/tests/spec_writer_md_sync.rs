@@ -1,12 +1,8 @@
-/// Asserts that the `## Style rules` section in
-/// `apm-core/src/default/agents/claude/apm.spec-writer.md` and
-/// `.apm/agents/claude/apm.spec-writer.md` are identical.
-///
-/// The rest of each file may differ (the project file is legitimately
-/// customisable), but the style rules must stay in sync so both files
-/// give the spec-writer the same instructions.
+/// Asserts that `apm-core/src/default/agents/claude/apm.spec-writer.md` and
+/// `.apm/agents/claude/apm.spec-writer.md` are byte-for-byte identical. Any
+/// divergence fails with a diff so the developer can see exactly what changed.
 #[test]
-fn spec_writer_style_rules_section_is_identical() {
+fn default_and_per_agent_apm_spec_writer_md_are_identical() {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let default_path = std::path::Path::new(manifest_dir)
         .join("src/default/agents/claude/apm.spec-writer.md");
@@ -15,40 +11,40 @@ fn spec_writer_style_rules_section_is_identical() {
         .expect("apm-core has a parent directory")
         .join(".apm/agents/claude/apm.spec-writer.md");
 
-    let default_content = std::fs::read_to_string(&default_path)
+    let default_bytes = std::fs::read(&default_path)
         .unwrap_or_else(|e| panic!("cannot read {}: {e}", default_path.display()));
-    let project_content = std::fs::read_to_string(&project_path)
+    let project_bytes = std::fs::read(&project_path)
         .unwrap_or_else(|e| panic!("cannot read {}: {e}", project_path.display()));
 
-    let default_section = extract_style_rules_section(&default_content);
-    let project_section = extract_style_rules_section(&project_content);
-
-    if default_section == project_section {
+    if default_bytes == project_bytes {
         return;
     }
 
-    // Produce a line-level diff of just the diverging section.
-    let default_lines: Vec<&str> = default_section.lines().collect();
-    let project_lines: Vec<&str> = project_section.lines().collect();
+    let default_str = String::from_utf8_lossy(&default_bytes);
+    let project_str = String::from_utf8_lossy(&project_bytes);
+
+    // Produce a simple line-level diff so the developer sees what diverged.
+    let default_lines: Vec<&str> = default_str.lines().collect();
+    let project_lines: Vec<&str> = project_str.lines().collect();
     let max = default_lines.len().max(project_lines.len());
     let mut diff_lines: Vec<String> = Vec::new();
     for i in 0..max {
         match (default_lines.get(i), project_lines.get(i)) {
             (Some(a), Some(b)) if a == b => {}
             (Some(a), Some(b)) => {
-                diff_lines.push(format!("-line {}: {:?}", i + 1, a));
-                diff_lines.push(format!("+line {}: {:?}", i + 1, b));
+                diff_lines.push(format!("line {}: default=  {:?}", i + 1, a));
+                diff_lines.push(format!("line {}: project=  {:?}", i + 1, b));
             }
             (Some(a), None) => {
                 diff_lines.push(format!(
-                    "-line {}: {:?} (missing in project file)",
+                    "line {}: default=  {:?} (missing in project)",
                     i + 1,
                     a
                 ));
             }
             (None, Some(b)) => {
                 diff_lines.push(format!(
-                    "+line {}: {:?} (missing in default file)",
+                    "line {}: project=  {:?} (missing in default)",
                     i + 1,
                     b
                 ));
@@ -58,38 +54,10 @@ fn spec_writer_style_rules_section_is_identical() {
     }
 
     panic!(
-        "## Style rules section has diverged between:\n  \
-         {}\n  \
-         {}\n\
+        "apm-core/src/default/agents/claude/apm.spec-writer.md and \
+         .apm/agents/claude/apm.spec-writer.md have diverged.\n\
          Edit both files together to keep them in sync.\n\
-         Diff:\n{}",
-        default_path.display(),
-        project_path.display(),
+         Diff (first differences):\n{}",
         diff_lines.join("\n")
     );
-}
-
-/// Extracts lines from the `## Style rules` heading to the next `##`-level
-/// heading or EOF. Returns the extracted slice as a String.
-fn extract_style_rules_section(content: &str) -> String {
-    let mut lines = content.lines();
-    let mut in_section = false;
-    let mut result: Vec<&str> = Vec::new();
-
-    for line in lines.by_ref() {
-        if line.starts_with("## Style rules") {
-            in_section = true;
-            result.push(line);
-            continue;
-        }
-        if in_section {
-            // Stop at the next `##`-level heading (but not `###` or deeper).
-            if line.starts_with("## ") {
-                break;
-            }
-            result.push(line);
-        }
-    }
-
-    result.join("\n")
 }
