@@ -32,7 +32,7 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 - [x] The demo environment uses `mock-happy` as the configured worker (`command = "mock-happy"` in `config.toml`)
 - [x] Each key `apm` command is preceded by a printed `$ <command>` line so the recording looks like a realistic shell session
 - [x] The script accepts `--keep-dir` to suppress temp-directory cleanup on exit
-- [ ] The script exits 0 on successful completion
+- [x] The script exits 0 on successful completion
 
 ### Out of scope
 
