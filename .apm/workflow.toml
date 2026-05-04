@@ -22,10 +22,12 @@ dep_requires = "spec"
 instructions = ".apm/agents/default/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-  profile = "spec_agent"
+  to              = "in_design"
+  trigger         = "command:start"
   context_section = "Problem"
+  agent           = "default"
+  instructions    = ".apm/agents/default/apm.spec-writer.md"
+  role_prefix     = "You are a Spec-Writer agent assigned to ticket #<id>."
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -83,9 +85,11 @@ instructions   = ".apm/agents/default/apm.spec-writer.md"
   trigger = "manual"
 
   [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
-  profile = "spec_agent"
+  to           = "in_design"
+  trigger      = "command:start"
+  agent        = "default"
+  instructions = ".apm/agents/default/apm.spec-writer.md"
+  role_prefix  = "You are a Spec-Writer agent assigned to ticket #<id>."
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -121,9 +125,11 @@ satisfies_deps = "spec"
 instructions   = ".apm/agents/default/apm.worker.md"
 
   [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "command:start"
-  profile = "impl_agent"
+  to           = "in_progress"
+  trigger      = "command:start"
+  agent        = "default"
+  instructions = ".apm/agents/default/apm.worker.md"
+  role_prefix  = "You are a Worker agent assigned to ticket #<id>."
 
   [[workflow.states.transitions]]
   to      = "ammend"

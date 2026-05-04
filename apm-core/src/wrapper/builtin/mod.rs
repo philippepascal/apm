@@ -253,6 +253,9 @@ mod tests {
             on_failure: None,
             outcome: None,
             profile: None,
+            instructions: None,
+            role_prefix: None,
+            agent: None,
         }
     }
 
