@@ -219,6 +219,101 @@ fn squash_merged(root: &Path, main_ref: &str, candidates: Vec<String>) -> Result
     Ok(result)
 }
 
+/// Detect whether a ticket branch's *implementation content* has been merged into
+/// `main_ref` even when state-transition commits (touching only files under
+/// `tickets_dir/`) were pushed to the branch after the merge.
+///
+/// Returns `Ok(false)` in any ambiguous case so that false positives are
+/// impossible: a branch is only reported as merged when we are certain.
+pub fn content_merged_into_main(
+    root: &Path,
+    main_ref: &str,
+    branch: &str,
+    tickets_dir: &str,
+) -> Result<bool> {
+    // 1. Common ancestor of main and branch.
+    let merge_base = match run(root, &["merge-base", main_ref, branch]) {
+        Ok(mb) => mb,
+        Err(_) => return Ok(false),
+    };
+    // 2. Current tip of the branch.
+    let branch_tip = match run(root, &["rev-parse", &format!("{branch}^{{commit}}")]) {
+        Ok(t) => t,
+        Err(_) => return Ok(false),
+    };
+    // 3. Already an ancestor — `git branch --merged` handles it.
+    if branch_tip == merge_base {
+        return Ok(false);
+    }
+    // 4. Commits on branch since merge-base, newest first.
+    let log_out = match run(root, &["log", "--pretty=%H", branch, &format!("^{merge_base}")]) {
+        Ok(o) => o,
+        Err(_) => return Ok(false),
+    };
+    // 5. Walk newest-first; find the last commit that touches a non-ticket file.
+    let tickets_prefix = format!("{tickets_dir}/");
+    let mut content_tip: Option<String> = None;
+    for sha in log_out.lines() {
+        let diff_out = match run(root, &["diff-tree", "--no-commit-id", "-r", "--name-only", sha]) {
+            Ok(o) => o,
+            Err(_) => continue,
+        };
+        let has_non_ticket = diff_out.lines().any(|path| !path.starts_with(&tickets_prefix));
+        if has_non_ticket {
+            content_tip = Some(sha.to_string());
+            break;
+        }
+    }
+    // 6. All commits since merge-base touch only ticket files.
+    if content_tip.is_none() {
+        // Sub-case: regular (--no-ff) merge. After a regular merge the implementation
+        // commit C becomes the merge-base (it's now reachable from both main and branch),
+        // so it disappears from the log range above.
+        //
+        // Detection: if merge_base is on main's first-parent chain, it was a direct main
+        // commit (fork-point case — no implementation → return false). If merge_base is
+        // NOT on main's first-parent chain, it was pulled in via a merge commit's non-first
+        // parent → the ticket's implementation is in main → return true.
+        //
+        // We check by listing first-parent commits of main_ref after merge_base's first
+        // parent (`^merge_base^1`). The oldest entry in that list is the first-parent
+        // commit immediately after merge_base^1. If it equals merge_base, merge_base IS
+        // on the first-parent chain. If not, it was brought in via a side-parent merge.
+        let parent_spec = format!("{merge_base}^1");
+        if let Ok(fp_log) = run(root, &[
+            "rev-list", "--first-parent", main_ref, &format!("^{parent_spec}"),
+        ]) {
+            let oldest = fp_log.lines().last().unwrap_or("").trim();
+            if !oldest.is_empty() && oldest != merge_base {
+                // merge_base is not on the first-parent chain → was regular-merged.
+                return Ok(true);
+            }
+        }
+        return Ok(false);
+    }
+    let content_tip = content_tip.unwrap();
+    // 7. No trailing state commits: squash_merged already tried the branch tip's tree
+    //    and returned false, meaning the content really is not in main.
+    if content_tip == branch_tip {
+        return Ok(false);
+    }
+    // 8. Virtual squash commit: aggregate diff from merge_base → content_tip.
+    let squash_commit = match run(root, &[
+        "commit-tree", &format!("{content_tip}^{{tree}}"),
+        "-p", &merge_base,
+        "-m", "squash",
+    ]) {
+        Ok(c) => c,
+        Err(_) => return Ok(false),
+    };
+    // 9. `git cherry main squash`: `-` prefix means main already has that patch.
+    let cherry_out = match run(root, &["cherry", main_ref, &squash_commit]) {
+        Ok(o) => o,
+        Err(_) => return Ok(false),
+    };
+    Ok(cherry_out.trim().starts_with('-'))
+}
+
 /// Commit a file to a specific branch without disturbing the current working tree.
 ///
 /// If a permanent worktree exists for the branch, commits there directly.
@@ -1585,6 +1680,134 @@ mod tests {
 
         let leaked = check_leaked_files(p, "ticket/untracked-overlap", "main").unwrap();
         assert_eq!(leaked, vec!["src/new.rs".to_string()]);
+    }
+
+    // ---- content_merged_into_main tests ----
+
+    /// Helper: commit a file with given name and content on the current branch.
+    fn commit_file(dir: &Path, name: &str, content: &str) {
+        std::fs::write(dir.join(name), content).unwrap();
+        git_cmd(dir, &["add", name]);
+        git_cmd(dir, &["commit", "-m", &format!("add {name}")]);
+    }
+
+    /// Regular-merged branch with a trailing ticket-file state commit:
+    /// `content_merged_into_main` must return true.
+    #[test]
+    fn content_merged_into_main_regular_merge_with_state_commit() {
+        let dir = git_init();
+        let p = dir.path();
+
+        // Base commit on main.
+        commit_file(p, "README", "base");
+
+        // Ticket branch: add src/lib.rs (implementation).
+        git_cmd(p, &["checkout", "-b", "ticket/foo"]);
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        commit_file(p, "src/lib.rs", "impl");
+
+        // Regular-merge into main.
+        git_cmd(p, &["checkout", "main"]);
+        git_cmd(p, &["merge", "--no-ff", "ticket/foo", "-m", "Merge ticket/foo"]);
+
+        // Push a state-transition commit to the ticket branch (touches only tickets/).
+        git_cmd(p, &["checkout", "ticket/foo"]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        commit_file(p, "tickets/foo.md", "state: implemented");
+
+        // After this commit the branch tip is NOT an ancestor of main.
+        let result = content_merged_into_main(p, "main", "ticket/foo", "tickets").unwrap();
+        assert!(result, "should detect that content was merged despite trailing state commit");
+    }
+
+    /// Squash-merged branch with a trailing ticket-file commit:
+    /// `content_merged_into_main` must return true.
+    #[test]
+    fn content_merged_into_main_squash_merge_with_state_commit() {
+        let dir = git_init();
+        let p = dir.path();
+
+        commit_file(p, "README", "base");
+
+        // Ticket branch.
+        git_cmd(p, &["checkout", "-b", "ticket/bar"]);
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        commit_file(p, "src/lib.rs", "impl");
+
+        // Squash-merge into main (manually: merge --squash + commit).
+        git_cmd(p, &["checkout", "main"]);
+        git_cmd(p, &["merge", "--squash", "ticket/bar"]);
+        git_cmd(p, &["commit", "-m", "Squash ticket/bar"]);
+
+        // State-transition commit on ticket branch.
+        git_cmd(p, &["checkout", "ticket/bar"]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        commit_file(p, "tickets/bar.md", "state: implemented");
+
+        let result = content_merged_into_main(p, "main", "ticket/bar", "tickets").unwrap();
+        assert!(result, "should detect squash-merged content despite trailing state commit");
+    }
+
+    /// Branch tip is already the merge-base (i.e. is an ancestor of main):
+    /// return false — `--merged` handles it.
+    #[test]
+    fn content_merged_into_main_returns_false_when_ancestor() {
+        let dir = git_init();
+        let p = dir.path();
+        commit_file(p, "README", "base");
+        // ticket/anc is just pointing at main's tip — it IS an ancestor.
+        git_cmd(p, &["checkout", "-b", "ticket/anc"]);
+        // No extra commits — same SHA as main.
+        git_cmd(p, &["checkout", "main"]);
+        let result = content_merged_into_main(p, "main", "ticket/anc", "tickets").unwrap();
+        assert!(!result);
+    }
+
+    /// Branch has a non-ticket file commit after the merge point — must NOT be detected.
+    #[test]
+    fn content_merged_into_main_not_detected_when_non_ticket_file_modified_after_merge() {
+        let dir = git_init();
+        let p = dir.path();
+        commit_file(p, "README", "base");
+
+        // Ticket branch with implementation.
+        git_cmd(p, &["checkout", "-b", "ticket/extra"]);
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        commit_file(p, "src/lib.rs", "impl");
+
+        // Squash-merge.
+        git_cmd(p, &["checkout", "main"]);
+        git_cmd(p, &["merge", "--squash", "ticket/extra"]);
+        git_cmd(p, &["commit", "-m", "Squash ticket/extra"]);
+
+        // After merge: push BOTH a state commit AND a non-ticket source change.
+        git_cmd(p, &["checkout", "ticket/extra"]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        commit_file(p, "tickets/extra.md", "state: implemented");
+        // Non-ticket file added — this makes content_tip == branch_tip (the source change
+        // is the newest non-ticket commit), so the function should return false.
+        commit_file(p, "src/extra.rs", "extra code");
+
+        let result = content_merged_into_main(p, "main", "ticket/extra", "tickets").unwrap();
+        assert!(!result, "branch with non-ticket changes after merge must not be detected");
+    }
+
+    /// Branch where every commit since merge-base touches only ticket files:
+    /// return false (nothing to squash-check).
+    #[test]
+    fn content_merged_into_main_all_ticket_only_commits_returns_false() {
+        let dir = git_init();
+        let p = dir.path();
+        commit_file(p, "README", "base");
+
+        // Ticket branch that only ever touched tickets/.
+        git_cmd(p, &["checkout", "-b", "ticket/ticketonly"]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        commit_file(p, "tickets/ticketonly.md", "state: new");
+        git_cmd(p, &["checkout", "main"]);
+
+        let result = content_merged_into_main(p, "main", "ticket/ticketonly", "tickets").unwrap();
+        assert!(!result, "all-ticket-only commits should return false");
     }
 
     /// Regression test: a local ticket branch regular-merged into local
