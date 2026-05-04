@@ -1,7 +1,7 @@
 +++
 id = "f8cbd68c"
 title = "Consolidate all agent instruction .md files under agents/*/"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f8cbd68c-consolidate-all-agent-instruction-md-fil"
 created_at = "2026-05-04T02:41:12.168717Z"
-updated_at = "2026-05-04T03:09:24.888725Z"
+updated_at = "2026-05-04T03:19:29.752995Z"
 +++
 
 ## Spec
@@ -171,3 +171,4 @@ Replace:
 | 2026-05-04T02:56Z | new | groomed | philippepascal |
 | 2026-05-04T03:05Z | groomed | in_design | philippepascal |
 | 2026-05-04T03:09Z | in_design | specd | claude-0503-1200-spec1 |
+| 2026-05-04T03:19Z | specd | ready | philippepascal |
