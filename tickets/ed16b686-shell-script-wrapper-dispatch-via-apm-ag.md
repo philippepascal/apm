@@ -92,21 +92,21 @@ Update both call sites (`run()` and `spawn_next_worker()`) to pass `triggering_t
 
 #### 3. Expose APM_MODEL to custom wrapper scripts — apm-core/src/wrapper/custom.rs
 
-In the function that populates environment variables for custom wrapper invocations, add:
+In `set_apm_env`, add alongside the existing `APM_*` variables:
 
 ```rust
 cmd.env("APM_MODEL", ctx.model.as_deref().unwrap_or(""));
 ```
 
-Place it alongside the existing `APM_*` variables. This matches what the built-in claude wrapper already has access to via `ctx.model` when building CLI args.
+This matches what the built-in claude wrapper already has access to via `ctx.model` when building CLI args.
 
 #### 4. Verify manifest.toml is optional — apm-core/src/wrapper/custom.rs
 
-Read `parse_manifest()`. If the function returns an error when `manifest.toml` is absent, change the not-found case to `Ok(ManifestConfig::default())` instead. A `wrapper.sh` with no manifest must be usable without any extra files.
+Read `parse_manifest()`. It currently returns `Ok(None)` when `manifest.toml` is absent, so no code change is needed — a `wrapper.sh` with no manifest is already accepted. The `CustomWrapper::spawn()` handles `manifest: None` safely via `map_or` defaults throughout.
 
 #### 5. Create .apm/agents/default/wrapper.sh
 
-Add the file at `.apm/agents/default/wrapper.sh` and make it executable:
+Add the file at `.apm/agents/default/wrapper.sh` and make it executable (`chmod +x`):
 
 ```sh
 #!/bin/sh
@@ -120,7 +120,7 @@ msg=$(cat "$APM_USER_MESSAGE_FILE")
 
 set --
 [ -n "$APM_MODEL" ] && set -- "$@" --model "$APM_MODEL"
-[ -n "$APM_SKIP_PERMISSIONS" ] && set -- "$@" --dangerously-skip-permissions
+[ "$APM_SKIP_PERMISSIONS" = "1" ] && set -- "$@" --dangerously-skip-permissions
 
 exec claude \
   --print \
@@ -131,6 +131,8 @@ exec claude \
   --system-prompt "$sys" \
   "$msg"
 ```
+
+The `APM_SKIP_PERMISSIONS` check must use an equality test (`= "1"`) rather than a non-empty test (`-n`) because `set_apm_env` always sets the variable — to `"1"` when skip is enabled and `"0"` otherwise. A non-empty test would incorrectly append `--dangerously-skip-permissions` in every invocation.
 
 The script builds args incrementally to avoid empty-string artefacts when optional flags are absent.
 
