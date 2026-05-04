@@ -23,7 +23,7 @@ After ticket 6803b88b lands, `instructions` and `role_prefix` can be set directl
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm validate --verbose` is accepted without error on a valid project\n- [ ] Without `--verbose`, validate output is byte-for-byte identical to current behavior (no extra lines, no changed exit code)\n- [ ] The audit section lists exactly the transitions whose `trigger` equals `"command:start"`\n- [ ] For each spawn transition the text output shows: from-state ID, to-state ID, profile name (or none), resolved agent + source label, resolved instructions path or description + source label, resolved role prefix + source label, resolved wrapper\n- [ ] Source label for instructions is one of: `transition`, `profile:<name>`, `workers`, `project-agent-file`, `built-in`\n- [ ] Source label for role prefix is one of: `transition`, `profile:<name>`, `default`\n- [ ] Source label for agent is one of: `profile:<name>`, `workers`, `default`\n- [ ] When no `command:start` transitions exist, the audit section states "0 spawn transitions"\n- [ ] When a transition references a missing profile, the audit row shows "profile not found" for profile-dependent fields without panicking\n- [ ] `apm validate --verbose --json` adds an `"agent_resolution"` array to the JSON output; each element has `from_state`, `to_state`, `profile`, `agent`, `instructions`, `role_prefix`, `wrapper` keys; `agent`, `instructions`, and `role_prefix` each carry `value` and `source` subkeys\n- [ ] The code compiles and does not panic when `worker_profiles` is empty
 
 ### Out of scope
 
