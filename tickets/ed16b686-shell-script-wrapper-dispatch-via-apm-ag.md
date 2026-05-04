@@ -1,7 +1,7 @@
 +++
 id = "ed16b686"
 title = "Shell-script wrapper dispatch via .apm/agents/<name>/wrapper.sh"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ed16b686-shell-script-wrapper-dispatch-via-apm-ag"
 created_at = "2026-05-04T16:48:38.984881Z"
-updated_at = "2026-05-04T17:27:11.899447Z"
+updated_at = "2026-05-04T17:31:50.042075Z"
 epic = "5acea599"
 target_branch = "epic/5acea599-flexible-agent-configuration"
 depends_on = ["6803b88b"]
@@ -172,3 +172,4 @@ Update any existing direct calls to `effective_spawn_params` that pass only two 
 | 2026-05-04T17:03Z | in_design | specd | claude-0504-1656-9e50 |
 | 2026-05-04T17:26Z | specd | ammend | philippepascal |
 | 2026-05-04T17:27Z | ammend | in_design | philippepascal |
+| 2026-05-04T17:31Z | in_design | specd | claude-0504-1727-9ea8 |
