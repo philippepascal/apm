@@ -28,7 +28,7 @@ The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-core/src/start.rs` — `find_apm_bin()` (inside the `#[cfg(test)]` block, ~line 1739).\n\nReplace the `which apm` branch with a cargo-relative lookup. The resulting function:\n\n```rust\nfn find_apm_bin() -> Option<String> {\n    // 1. Explicit override wins\n    if let Ok(v) = std::env::var("APM_BIN") {\n        if !v.is_empty() && std::path::Path::new(&v).exists() {\n            return Some(v);\n        }\n    }\n    // 2. Derive from the test binary path.\n    //    current_exe() -> <workspace>/target/{profile}/deps/apm_core-<hash>\n    //    two parents up -> <workspace>/target/{profile}/\n    //    sibling "apm"  -> <workspace>/target/{profile}/apm\n    if let Ok(exe) = std::env::current_exe() {\n        if let Some(target_dir) = exe.parent().and_then(|p| p.parent()) {\n            let candidate = target_dir.join("apm");\n            if candidate.is_file() {\n                return Some(candidate.to_string_lossy().into_owned());\n            }\n        }\n    }\n    None\n}\n```\n\n`is_file()` (not `exists()`) rules out a directory accidentally named `apm`.\n\nNo other files change. The three affected tests already call `find_apm_bin()` and return early on `None`, so their guard logic is correct as-is.\n\n**Verify:** `cargo build -p apm && cargo test -p apm-core start::tests::mock_happy_spec_mode_transitions_to_specd` should pass. Without building first, the test skips silently.
 
 ### Open questions
 
