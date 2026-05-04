@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { RefreshCw, Plus, X, Minimize2, Trash2 } from 'lucide-react'
+import { RefreshCw, Plus, X, Minimize2, Trash2, GitBranch } from 'lucide-react'
 import Swimlane from './Swimlane'
 import type { Ticket } from './types'
 import { useLayoutStore } from '../../store/useLayoutStore'
+import WorkflowGraphModal from '../WorkflowGraphModal'
 
 async function fetchTickets(includeClosed: boolean): Promise<{ tickets: Ticket[]; supervisor_states: string[] }> {
   const url = includeClosed ? '/api/tickets?include_closed=true' : '/api/tickets'
@@ -31,6 +32,8 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const setNewEpicOpen = useLayoutStore((s) => s.setNewEpicOpen)
   const setCleanOpen = useLayoutStore((s) => s.setCleanOpen)
   const setSyncOpen = useLayoutStore((s) => s.setSyncOpen)
+  const workflowOpen = useLayoutStore((s) => s.workflowOpen)
+  const setWorkflowOpen = useLayoutStore((s) => s.setWorkflowOpen)
 
   const [showVersion, setShowVersion] = useState(false)
   const { data: versionData } = useQuery({ queryKey: ['version'], queryFn: fetchVersion, staleTime: Infinity })
@@ -164,6 +167,14 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
             <Trash2 className="w-3 h-3" />
             Clean
           </button>
+          <button
+            onClick={() => setWorkflowOpen(true)}
+            title="View workflow graph"
+            className="flex items-center gap-1 px-2 py-0.5 rounded border border-gray-600 bg-gray-800 text-xs hover:bg-gray-700"
+          >
+            <GitBranch className="w-3 h-3" />
+            Workflow
+          </button>
           {onMinimize && (
             <button onClick={onMinimize} className="p-1 rounded hover:bg-gray-700 text-gray-400">
               <Minimize2 className="w-4 h-4" />
@@ -252,6 +263,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           </div>
         )}
       </div>
+      <WorkflowGraphModal open={workflowOpen} onClose={() => setWorkflowOpen(false)} />
     </div>
   )
 }
