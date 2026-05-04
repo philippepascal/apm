@@ -1,7 +1,7 @@
 +++
 id = "33927683"
 title = "Pre-existing test failure: mock_happy_spec_mode_transitions_to_specd"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/33927683-pre-existing-test-failure-mock-happy-spe"
 created_at = "2026-05-04T03:33:27.432606Z"
-updated_at = "2026-05-04T03:33:27.432606Z"
+updated_at = "2026-05-04T04:35:27.112524Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-04T03:33Z | — | new | claude-0503-1430-f8cb|philippepascal |
+| 2026-05-04T04:35Z | new | groomed | philippepascal |
