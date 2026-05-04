@@ -1,7 +1,7 @@
 +++
 id = "e04e1b3f"
 title = "Revise apm-demo creation script for mock worker support"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e04e1b3f-revise-apm-demo-creation-script-for-mock"
 created_at = "2026-05-04T16:48:32.146018Z"
-updated_at = "2026-05-04T16:50:20.841359Z"
+updated_at = "2026-05-04T16:50:43.622215Z"
 epic = "65af2998"
 target_branch = "epic/65af2998-apm-demo-enhancements"
 +++
@@ -50,3 +50,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-04T16:48Z | — | new | philippepascal |
 | 2026-05-04T16:50Z | new | groomed | philippepascal |
+| 2026-05-04T16:50Z | groomed | in_design | philippepascal |
