@@ -14,4 +14,5 @@ declare module 'lucide-react' {
   export const Ban: FC<IconProps>
   export const Minimize2: FC<IconProps>
   export const Trash2: FC<IconProps>
+  export const GitBranch: FC<IconProps>
 }
