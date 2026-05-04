@@ -24,7 +24,7 @@ The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Fixing test failures unrelated to `find_apm_bin()`\n- Changing how `APM_BIN` is propagated to scripts at runtime (production path in `wrapper/builtin/mod.rs`)\n- Handling Windows paths or non-Unix test environments\n- Adding a CI step to pre-build `apm` before running `apm-core` tests (CI config concern, not a code concern)
 
 ### Approach
 
