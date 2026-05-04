@@ -77,6 +77,10 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         );
     }
 
+    for hint in &candidates.hints {
+        eprintln!("{hint}");
+    }
+
     if !candidates.close.is_empty() {
         let confirmed = auto_close || (!quiet && prompt_close(&candidates.close)?);
         if confirmed {
