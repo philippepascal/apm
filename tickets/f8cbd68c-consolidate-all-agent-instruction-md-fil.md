@@ -73,7 +73,86 @@ Conflict: ticket 121a05a8 (specd) writes per-agent files from init.rs and adds s
 
 ### Approach
 
-How the implementation will work.
+All changes are mechanical path renames — no content edits to any agent instruction file.
+
+#### Step 1 — Move embedded defaults
+
+In `apm-core/src/default/` use `git mv`:
+- `apm.agents.md` → `agents/default/agents.md`
+- `apm.spec-writer.md` → `agents/default/apm.spec-writer.md`
+- `apm.worker.md` → `agents/default/apm.worker.md`
+
+Create the `agents/default/` directory first if `git mv` requires it.
+
+#### Step 2 — Update init.rs
+
+`apm-core/src/init.rs`:
+
+- `default_agents_md()`: change `include_str!("default/apm.agents.md")` → `include_str!("default/agents/default/agents.md")`
+- Two `write_default` calls for spec-writer and worker: change `include_str!` paths to `"default/agents/default/apm.spec-writer.md"` and `"default/agents/default/apm.worker.md"`
+- In `setup()`, create `agents/default/` dir alongside the existing `agents/claude/` dir creation (line ~135)
+- Update the three `apm_dir.join(...)` calls:
+  - `"agents.md"` → `"agents/default/agents.md"`
+  - `"apm.spec-writer.md"` → `"agents/default/apm.spec-writer.md"`
+  - `"apm.worker.md"` → `"agents/default/apm.worker.md"`
+- Update `ensure_claude_md` call argument: `".apm/agents.md"` → `".apm/agents/default/agents.md"`
+- In `default_config()` template string (around line 321–336), update three `instructions =` values:
+  - `[agents] instructions = ".apm/agents.md"` → `".apm/agents/default/agents.md"`
+  - `[worker_profiles.spec_agent] instructions = ".apm/apm.spec-writer.md"` → `".apm/agents/default/apm.spec-writer.md"`
+  - `[worker_profiles.impl_agent] instructions = ".apm/apm.worker.md"` → `".apm/agents/default/apm.worker.md"`
+
+#### Step 3 — Add migration sub-routine in setup()
+
+Before the `write_default` calls in `setup()`, insert a block that handles existing projects:
+
+1. Ensure `agents/default/` dir exists
+2. For each old flat file (`.apm/agents.md`, `.apm/apm.spec-writer.md`, `.apm/apm.worker.md`, `.apm/style.md`): if the old path exists and the new path does not, `fs::rename` old → new and push a message
+3. Read `CLAUDE.md` if it exists; replace `@.apm/agents.md` → `@.apm/agents/default/agents.md` and `@.apm/style.md` → `@.apm/agents/default/style.md`; write back if changed
+4. Read `.apm/config.toml` if it exists; replace old `instructions =` strings with new ones using exact string substitution; write back if changed
+5. Read `.apm/workflow.toml` if it exists; replace old `instructions =` strings; write back if changed
+
+Use the same string-replace pattern as the existing CLAUDE.md rewrite in `migrate()`.
+
+#### Step 4 — Update default/workflow.toml
+
+`apm-core/src/default/workflow.toml` — five `instructions =` lines:
+- All occurrences of `.apm/apm.spec-writer.md` → `.apm/agents/default/apm.spec-writer.md`
+- All occurrences of `.apm/apm.worker.md` → `.apm/agents/default/apm.worker.md`
+
+#### Step 5 — Move project files (this repo)
+
+```
+git mv .apm/agents.md        .apm/agents/default/agents.md
+git mv .apm/apm.spec-writer.md .apm/agents/default/apm.spec-writer.md
+git mv .apm/apm.worker.md    .apm/agents/default/apm.worker.md
+git mv .apm/style.md         .apm/agents/default/style.md
+```
+
+#### Step 6 — Update project config and workflow (this repo)
+
+`.apm/config.toml` — update three `instructions =` fields to new paths.
+
+`.apm/workflow.toml` — update five `instructions =` fields to new paths (same strings as default/workflow.toml).
+
+#### Step 7 — Update CLAUDE.md (this repo)
+
+Replace:
+- `@.apm/agents.md` → `@.apm/agents/default/agents.md`
+- `@.apm/style.md` → `@.apm/agents/default/style.md`
+- Any prose reference to `.apm/style.md` → `.apm/agents/default/style.md`
+
+#### Step 8 — Update sync tests
+
+`apm-core/tests/worker_md_sync.rs`:
+- `default_and_project_apm_worker_md_are_identical`: change both path strings and the panic message from `apm.worker.md` (flat) to `agents/default/apm.worker.md`
+- `default_and_project_apm_spec_writer_md_are_identical`: same update for spec-writer
+- The `default_and_per_agent_apm_worker_md_are_identical` test (checks `agents/claude/`) is unchanged
+
+`apm-core/tests/spec_writer_md_sync.rs`: already checks `agents/claude/` — no change needed.
+
+#### Step 9 — Verify
+
+`cargo test --workspace` must pass. No `grep` hits for `.apm/apm.spec-writer.md`, `.apm/apm.worker.md`, or `.apm/agents.md` (outside of History/comments) should remain in Rust source files.
 
 ### Open questions
 
