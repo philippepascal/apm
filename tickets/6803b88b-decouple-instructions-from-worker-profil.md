@@ -39,7 +39,7 @@ The desired state is that `instructions` and `role_prefix` can be set directly o
 - [ ] `.apm/workflow.toml` is updated: `groomed → in_design` and `ammend → in_design` transitions carry `instructions` and `role_prefix` directly
 - [ ] `.apm/workflow.toml` is updated: `ready → in_progress` transition carries `instructions` and `role_prefix` directly
 - [ ] `.apm/config.toml` is updated: `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` drop `instructions` and `role_prefix`; profiles that become empty are removed
-- [ ] Existing tests for instruction resolution pass without modification (backward compat with profile-only config)
+- [ ] Existing tests for instruction resolution pass without behavioural change (call sites updated to pass `None` as the new first argument; no assertion changes)
 
 ### Out of scope
 
@@ -82,6 +82,10 @@ Update all call sites of both functions (`run()` and `spawn_next_worker()`) to p
 - `ready → in_progress`: add
       instructions = ".apm/agents/default/apm.worker.md"
       role_prefix  = "You are a Worker agent assigned to ticket #<id>."
+
+**`apm-core/src/default/workflow.toml`** — apply the same transition-level `instructions` and `role_prefix` additions as above. This file is what `apm init` writes to new projects; without updating it, projects created after this ticket lands will still use the old profile-based config.
+
+**.apm/workflow.toml** — apply the same additions.
 
 **.apm/config.toml** — remove `instructions` and `role_prefix` from `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]`. Each profile currently holds only those two fields plus deprecated `command`/`args`/`model`; once stripped they have no non-deprecated content, so remove the profile entries entirely and drop the corresponding `profile = ...` references on the transitions.
 
