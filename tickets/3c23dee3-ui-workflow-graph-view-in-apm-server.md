@@ -22,7 +22,18 @@ The desired behaviour is a diagram that shows every state as a labelled node and
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `GET /api/workflow` returns a JSON object with a `states` array (each entry: `id`, `label`, `terminal`, `actionable`) and a `transitions` array (each entry: `from`, `to`, `label`, `trigger`) reflecting the project's live `WorkflowConfig`
+- [ ] `GET /api/workflow` returns `{"states":[],"transitions":[]}` without error when the server is running in `InMemory` mode (no git root / no config file)
+- [ ] A "Workflow" button appears in the `SupervisorView` header alongside the existing Sync and Clean buttons
+- [ ] Clicking "Workflow" opens a modal that displays the workflow graph
+- [ ] The graph renders every state returned by `/api/workflow` as a labelled node
+- [ ] Terminal states are visually distinguished from non-terminal states (e.g. different border or opacity)
+- [ ] Node fill or border colour matches the colour already used for that state in `stateColors.ts` (the `dot` palette entry)
+- [ ] The graph renders every transition as a directed arrow from source node to target node
+- [ ] Each transition arrow carries a label (the transition's `label` field, falling back to `"→ <to>"` when blank)
+- [ ] Nodes are positioned using a layer-based layout computed at render time from the graph topology; no x/y coordinates are hard-coded in the component
+- [ ] The graph is rendered as plain SVG — no new npm graph-layout or rendering library is added to `package.json`
+- [ ] When `/api/workflow` returns an empty `states` array, the modal shows a "No workflow configured" message instead of a blank SVG
 
 ### Out of scope
 
