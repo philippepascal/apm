@@ -27,8 +27,8 @@ The desired behaviour is that `APM_BIN` passed to workers always points to the `
 - [ ] When the wrapper runs from an `apm-server` executable, `APM_BIN` set in the worker environment points to the sibling `apm` CLI binary in the same directory, not to `apm-server`
 - [ ] When the wrapper runs from an `apm` CLI executable, `APM_BIN` continues to point to that `apm` binary (no regression)
 - [ ] When no sibling `apm` binary exists next to `current_exe()`, `APM_BIN` falls back to `current_exe()` itself (graceful degradation)
-- [ ] The existing `mock_wrapper_receives_env_vars` test passes without modification
-- [ ] A test or assertion verifies that the resolved `APM_BIN` path's file stem is `apm`, not `apm-server`
+- [ ] The existing `claude_wrapper_sets_apm_env_vars` test (`apm-core/src/start.rs`) passes without modification
+- [ ] A new assertion in `claude_wrapper_sets_apm_env_vars` (or a companion test) verifies that the resolved `APM_BIN` path's file stem is `apm`, not `apm-server`
 - [ ] `CONTRIBUTING.md` documents that running `cargo test --workspace` inside a worker session should be done as `env -u APM_BIN cargo test --workspace` when `APM_BIN` may point to an installed binary that predates the feature under test
 
 ### Out of scope
@@ -68,6 +68,21 @@ pub(crate) fn resolve_apm_cli_bin() -> String {
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_default()
 }
+```
+
+#### claude.rs call site
+
+In `apm-core/src/wrapper/builtin/claude.rs`, replace the `current_exe()` block at the top of `spawn()`:
+
+```rust
+// before
+let apm_bin = std::env::current_exe()
+    .and_then(|p| p.canonicalize())
+    .map(|p| p.to_string_lossy().into_owned())
+    .unwrap_or_default();
+
+// after
+let apm_bin = super::super::resolve_apm_cli_bin();
 ```
 
 #### custom.rs call site
