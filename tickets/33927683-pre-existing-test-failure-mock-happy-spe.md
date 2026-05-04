@@ -1,7 +1,7 @@
 +++
 id = "33927683"
 title = "Pre-existing test failure: mock_happy_spec_mode_transitions_to_specd"
-state = "in_progress"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/33927683-pre-existing-test-failure-mock-happy-spe"
 created_at = "2026-05-04T03:33:27.432606Z"
-updated_at = "2026-05-04T04:41:10.499104Z"
+updated_at = "2026-05-04T05:11:12.683960Z"
 +++
 
 ## Spec
@@ -20,7 +20,12 @@ The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (
 
 ### Acceptance criteria
 
-- [ ] `start::tests::mock_happy_spec_mode_transitions_to_specd` passes when `target/debug/apm` exists (project has been built)\n- [ ] `start::tests::mock_sad_transitions_to_non_success_state` passes when `target/debug/apm` exists\n- [ ] `start::tests::mock_sad_seed_reproducibility` passes when `target/debug/apm` exists\n- [ ] All three tests skip (return without panic or assertion failure) when `APM_BIN` is unset and no cargo-built binary is found at the derived path\n- [ ] Setting `APM_BIN` to a valid path still takes priority over the cargo-relative lookup\n- [ ] `which apm` is no longer invoked by `find_apm_bin()`
+- [x] `start::tests::mock_happy_spec_mode_transitions_to_specd` passes when `target/debug/apm` exists (project has been built)
+- [x] `start::tests::mock_sad_transitions_to_non_success_state` passes when `target/debug/apm` exists
+- [x] `start::tests::mock_sad_seed_reproducibility` passes when `target/debug/apm` exists
+- [x] All three tests skip (return without panic or assertion failure) when `APM_BIN` is unset and no cargo-built binary is found at the derived path
+- [x] Setting `APM_BIN` to a valid path still takes priority over the cargo-relative lookup
+- [x] `which apm` is no longer invoked by `find_apm_bin()`
 
 ### Out of scope
 
@@ -49,3 +54,5 @@ The integration test `start::tests::mock_happy_spec_mode_transitions_to_specd` (
 | 2026-05-04T04:38Z | in_design | specd | claude-0504-0435-4348 |
 | 2026-05-04T04:41Z | specd | ready | philippepascal |
 | 2026-05-04T04:41Z | ready | in_progress | philippepascal |
+| 2026-05-04T05:00Z | in_progress | implemented | claude-0504-0441-a918 |
+| 2026-05-04T05:11Z | implemented | closed | philippepascal(apm-sync) |
