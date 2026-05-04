@@ -14,7 +14,8 @@ export default function WorkflowGraphModal({ open, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg shadow-xl max-w-[90vw] max-h-[90vh] overflow-auto relative p-4"
+        className="bg-white rounded-lg shadow-xl overflow-auto relative p-4"
+        style={{ resize: 'both', width: '70vw', height: '80vh', minWidth: 320, minHeight: 240 }}
         onClick={(e) => e.stopPropagation()}
       >
         <button

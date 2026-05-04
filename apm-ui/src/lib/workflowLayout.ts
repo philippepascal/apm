@@ -17,95 +17,111 @@ export interface EdgeClassification {
   back: TransitionEdge[]
 }
 
-export function classifyEdges(
-  states: StateNode[],
-  transitions: TransitionEdge[],
-): EdgeClassification {
-  const ids = states.map((s) => s.id)
-  const inDegree = new Map<string, number>()
-  for (const id of ids) inDegree.set(id, 0)
-  for (const tr of transitions) {
-    if (inDegree.has(tr.to)) inDegree.set(tr.to, (inDegree.get(tr.to) ?? 0) + 1)
-  }
-
-  // Kahn's algorithm
-  const queue: string[] = []
-  for (const [id, deg] of inDegree) {
-    if (deg === 0) queue.push(id)
-  }
-  const topoOrder: string[] = []
-  const remaining = new Map(inDegree)
-  while (queue.length > 0) {
-    const node = queue.shift()!
-    topoOrder.push(node)
-    for (const tr of transitions) {
-      if (tr.from === node && remaining.has(tr.to)) {
-        const next = (remaining.get(tr.to) ?? 1) - 1
-        remaining.set(tr.to, next)
-        if (next === 0) queue.push(tr.to)
-      }
-    }
-  }
-
-  const topoIndex = new Map<string, number>()
-  for (let i = 0; i < topoOrder.length; i++) topoIndex.set(topoOrder[i], i)
-
-  const forward: TransitionEdge[] = []
-  const back: TransitionEdge[] = []
-  for (const tr of transitions) {
-    const fi = topoIndex.get(tr.from)
-    const ti = topoIndex.get(tr.to)
-    if (fi === undefined || ti === undefined || ti <= fi) {
-      back.push(tr)
-    } else {
-      forward.push(tr)
-    }
-  }
-  return { forward, back }
-}
-
-export function assignLayers(
-  states: StateNode[],
-  forwardTransitions: TransitionEdge[],
-): Map<string, number> {
-  const ids = states.map((s) => s.id)
-  const inDegree = new Map<string, number>()
-  for (const id of ids) inDegree.set(id, 0)
-  for (const tr of forwardTransitions) {
-    if (inDegree.has(tr.to)) inDegree.set(tr.to, (inDegree.get(tr.to) ?? 0) + 1)
-  }
-
-  const queue: string[] = []
-  for (const [id, deg] of inDegree) {
-    if (deg === 0) queue.push(id)
-  }
-
-  const layer = new Map<string, number>()
-  for (const id of ids) layer.set(id, 0)
-
-  const remaining = new Map(inDegree)
-  while (queue.length > 0) {
-    const node = queue.shift()!
-    const nodeLayer = layer.get(node) ?? 0
-    for (const tr of forwardTransitions) {
-      if (tr.from === node && remaining.has(tr.to)) {
-        const next = (remaining.get(tr.to) ?? 1) - 1
-        remaining.set(tr.to, next)
-        const candidate = nodeLayer + 1
-        if (candidate > (layer.get(tr.to) ?? 0)) layer.set(tr.to, candidate)
-        if (next === 0) queue.push(tr.to)
-      }
-    }
-  }
-  return layer
-}
-
 export interface NodePosition {
   x: number
   y: number
   layer: number
+  col: number
 }
 
+// DFS-based classification — correctly handles cycles where Kahn's fails.
+// A back edge is one that points to a node currently on the DFS stack (GRAY).
+export function classifyEdges(
+  states: StateNode[],
+  transitions: TransitionEdge[],
+): EdgeClassification {
+  const adj = new Map<string, string[]>()
+  for (const s of states) adj.set(s.id, [])
+  for (const tr of transitions) adj.get(tr.from)?.push(tr.to)
+
+  const WHITE = 0, GRAY = 1, BLACK = 2
+  const color = new Map<string, number>()
+  for (const s of states) color.set(s.id, WHITE)
+  const backPairs = new Set<string>()
+
+  function dfs(u: string): void {
+    color.set(u, GRAY)
+    for (const v of (adj.get(u) ?? [])) {
+      const c = color.get(v)
+      if (c === GRAY) backPairs.add(`${u}\0${v}`)
+      else if (c === WHITE) dfs(v)
+    }
+    color.set(u, BLACK)
+  }
+
+  for (const s of states) {
+    if (color.get(s.id) === WHITE) dfs(s.id)
+  }
+
+  const forward: TransitionEdge[] = []
+  const back: TransitionEdge[] = []
+  for (const tr of transitions) {
+    ;(backPairs.has(`${tr.from}\0${tr.to}`) ? back : forward).push(tr)
+  }
+  return { forward, back }
+}
+
+// Longest-path layer assignment using Bellman-Ford relaxation on the forward DAG.
+// This correctly handles graphs where the same state is reachable via many paths.
+export function assignLayers(
+  states: StateNode[],
+  forwardTransitions: TransitionEdge[],
+): Map<string, number> {
+  const fwdAdj = new Map<string, string[]>()
+  const hasIncoming = new Set<string>()
+  for (const s of states) fwdAdj.set(s.id, [])
+  for (const tr of forwardTransitions) {
+    fwdAdj.get(tr.from)?.push(tr.to)
+    hasIncoming.add(tr.to)
+  }
+
+  const sources = states.map(s => s.id).filter(id => !hasIncoming.has(id))
+
+  const layer = new Map<string, number>()
+  for (const id of sources) layer.set(id, 0)
+
+  // Relax until stable (longest-path DP over the forward DAG)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const tr of forwardTransitions) {
+      const fromL = layer.get(tr.from)
+      if (fromL === undefined) continue
+      const candidate = fromL + 1
+      const toL = layer.get(tr.to)
+      if (toL === undefined || candidate > toL) {
+        layer.set(tr.to, candidate)
+        changed = true
+      }
+    }
+  }
+
+  // Detached sources: nodes with no incoming edges whose closest forward
+  // successor is more than one layer away. They entered the graph via a
+  // side-channel (e.g. an on_failure event with no regular transition edge)
+  // and belong visually near their successors, not pinned to the top.
+  // Relocating them cannot affect other nodes' layers because their
+  // successors are already set higher by the main flow.
+  for (const id of sources) {
+    const succLayers = (fwdAdj.get(id) ?? [])
+      .map(to => layer.get(to))
+      .filter((l): l is number => l !== undefined)
+    if (succLayers.length > 0 && Math.min(...succLayers) > 1) {
+      layer.set(id, Math.min(...succLayers) - 1)
+    }
+  }
+
+  // Nodes still unassigned (truly unreachable)
+  for (const s of states) {
+    if (!layer.has(s.id)) layer.set(s.id, 0)
+  }
+
+  return layer
+}
+
+// Top-to-bottom layout: y = layer * (nodeH + rowGap), x = column within layer.
+// Nodes in each layer are centred and sorted by forward out-degree (most
+// connected node gets the centre column).
 export function computePositions(
   states: StateNode[],
   forwardTransitions: TransitionEdge[],
@@ -116,7 +132,6 @@ export function computePositions(
 ): Map<string, NodePosition> {
   const layerMap = assignLayers(states, forwardTransitions)
 
-  // Group states by layer preserving config order
   const byLayer = new Map<number, StateNode[]>()
   for (const s of states) {
     const l = layerMap.get(s.id) ?? 0
@@ -124,18 +139,33 @@ export function computePositions(
     byLayer.get(l)!.push(s)
   }
 
-  const maxNodesInLayer = Math.max(0, ...Array.from(byLayer.values()).map((g) => g.length))
+  // Sort within each layer: highest forward out-degree first (→ centre column).
+  // Stable sort preserves config order as tiebreaker.
+  const fwdOut = new Map<string, number>()
+  for (const s of states) fwdOut.set(s.id, 0)
+  for (const tr of forwardTransitions) fwdOut.set(tr.from, (fwdOut.get(tr.from) ?? 0) + 1)
+  for (const group of byLayer.values()) {
+    group.sort((a, b) => (fwdOut.get(b.id) ?? 0) - (fwdOut.get(a.id) ?? 0))
+  }
+
+  const maxPerLayer = Math.max(1, ...Array.from(byLayer.values()).map(g => g.length))
+  const totalW = maxPerLayer * nodeW + (maxPerLayer - 1) * colGap
+  const centerX = totalW / 2
 
   const result = new Map<string, NodePosition>()
   for (const [l, group] of byLayer) {
-    const offset = ((maxNodesInLayer - group.length) * (nodeH + rowGap)) / 2
-    for (let i = 0; i < group.length; i++) {
+    const n = group.length
+    const groupW = n * nodeW + (n - 1) * colGap
+    const startX = centerX - groupW / 2
+    for (let i = 0; i < n; i++) {
       result.set(group[i].id, {
-        x: l * (nodeW + colGap),
-        y: offset + i * (nodeH + rowGap),
+        x: startX + i * (nodeW + colGap),
+        y: l * (nodeH + rowGap),
         layer: l,
+        col: i,
       })
     }
   }
+
   return result
 }

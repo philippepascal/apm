@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { getStateColors } from '../lib/stateColors'
 import { classifyEdges, computePositions } from '../lib/workflowLayout'
 import type { StateNode, TransitionEdge } from '../lib/workflowLayout'
 
 const NODE_W = 120
-const NODE_H = 40
-const COL_GAP = 80
-const ROW_GAP = 20
-const PAD = 40
+const NODE_H = 36
+const COL_GAP = 32   // horizontal gap between nodes in the same layer
+const ROW_GAP = 68   // vertical gap between layers
+const PAD = 44
+const LANE_STEP = 16 // spacing between parallel back/skip edge lanes
 
 interface WorkflowResponse {
   states: StateNode[]
@@ -20,17 +20,26 @@ async function fetchWorkflow(): Promise<WorkflowResponse> {
   return res.json()
 }
 
-// Maps the Tailwind dot class (e.g. 'bg-blue-500') to an SVG hex colour.
-function dotClassToHex(dot: string): string {
-  const map: Record<string, string> = {
-    'bg-red-500': '#ef4444',
-    'bg-amber-500': '#f59e0b',
-    'bg-blue-500': '#3b82f6',
-    'bg-purple-500': '#a855f7',
-    'bg-green-500': '#22c55e',
-    'bg-gray-400': '#9ca3af',
-  }
-  return map[dot] ?? '#9ca3af'
+// Node fill color based on who acts on the state.
+// supervisor → amber   agent → blue   terminal → green   neither → slate
+function nodeColor(s: { terminal: boolean; actionable: string[] }): string {
+  if (s.terminal) return '#22c55e'
+  if (s.actionable.includes('supervisor')) return '#f59e0b'
+  if (s.actionable.includes('agent')) return '#3b82f6'
+  return '#64748b'
+}
+
+function truncate(s: string, n: number): string {
+  return s.length > n ? s.slice(0, n - 1) + '…' : s
+}
+
+function approxLabelW(s: string): number {
+  return s.length * 5.2 + 8
+}
+
+function edgeLabel(tr: TransitionEdge): string {
+  const raw = tr.label.startsWith('→ ') ? tr.label.slice(2) : tr.label
+  return truncate(raw, 16)
 }
 
 export default function WorkflowGraph() {
@@ -53,22 +62,64 @@ export default function WorkflowGraph() {
   const { forward, back } = classifyEdges(states, transitions)
   const positions = computePositions(states, forward, NODE_W, NODE_H, COL_GAP, ROW_GAP)
 
-  // Compute bounding box
-  let maxX = 0
-  let maxY = 0
+  // Terminal states — transitions to these are implied (not drawn as edges)
+  const terminalIds = new Set(states.filter(s => s.terminal).map(s => s.id))
+
+  // Which non-terminal states have at least one →terminal transition (shown as a dot)
+  const hasTerminalExit = new Set(
+    [...forward, ...back].filter(tr => terminalIds.has(tr.to)).map(tr => tr.from)
+  )
+
+  // Drop all →terminal edges — they're implied
+  const visibleForward = forward.filter(tr => !terminalIds.has(tr.to))
+  const visibleBack = back.filter(tr => !terminalIds.has(tr.to))
+
+  // Bounding box of nodes
+  let maxX = 0, maxY = 0
   for (const pos of positions.values()) {
     maxX = Math.max(maxX, pos.x + NODE_W)
     maxY = Math.max(maxY, pos.y + NODE_H)
   }
-  const vbX = -PAD
+
+  // Classify visible forward edges:
+  //   DIRECT — adjacent layers (skip == 1) or clearly different columns (dx >= NODE_W/2)
+  //   SKIP   — multi-layer skip in the same column; routed on the right margin
+  type ForwardKind = { tr: TransitionEdge; kind: 'direct' } | { tr: TransitionEdge; kind: 'skip' }
+  const classified: ForwardKind[] = visibleForward.map(tr => {
+    const src = positions.get(tr.from)
+    const tgt = positions.get(tr.to)
+    if (!src || !tgt) return { tr, kind: 'direct' }
+    const layerSkip = tgt.layer - src.layer
+    const dx = Math.abs((tgt.x + NODE_W / 2) - (src.x + NODE_W / 2))
+    if (layerSkip > 1 && dx < NODE_W / 2) return { tr, kind: 'skip' }
+    return { tr, kind: 'direct' }
+  })
+
+  const directFwd = classified.filter(c => c.kind === 'direct').map(c => c.tr)
+  const skipFwd = classified.filter(c => c.kind === 'skip').map(c => c.tr)
+
+  // Group skip edges by target so edges sharing a destination share one lane
+  const skipLaneByTarget = new Map<string, number>()
+  let skipLaneCount = 0
+  for (const tr of skipFwd) {
+    if (!skipLaneByTarget.has(tr.to)) skipLaneByTarget.set(tr.to, skipLaneCount++)
+  }
+
+  // Right margin base-x for skip edges
+  const skipBaseX = maxX + PAD * 0.6
+
+  // Left margin base-x for back edges (each gets its own lane)
+  const backBaseX = -(PAD * 0.5)
+
+  const leftMargin = PAD + visibleBack.length * LANE_STEP
+  const rightMargin = PAD + skipLaneCount * LANE_STEP + 100 // 100px for skip-edge labels
+  const vbX = -leftMargin
   const vbY = -PAD
-  const vbW = maxX + PAD * 2
+  const vbW = leftMargin + maxX + rightMargin
   const vbH = maxY + PAD * 2
 
-  const midX = (a: number, b: number) => (a + b) / 2
-  const midY = (a: number, b: number) => (a + b) / 2
-
   return (
+    <div>
     <svg
       viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
       width={vbW}
@@ -76,101 +127,123 @@ export default function WorkflowGraph() {
       style={{ display: 'block', maxWidth: '100%' }}
     >
       <defs>
-        <marker
-          id="arrowhead"
-          markerWidth="8"
-          markerHeight="6"
-          refX="8"
-          refY="3"
-          orient="auto"
-        >
-          <polygon points="0 0, 8 3, 0 6" fill="#6b7280" />
+        <marker id="arr-fwd" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#6b7280" />
         </marker>
-        <marker
-          id="arrowhead-back"
-          markerWidth="8"
-          markerHeight="6"
-          refX="8"
-          refY="3"
-          orient="auto"
-        >
-          <polygon points="0 0, 8 3, 0 6" fill="#9ca3af" />
+        <marker id="arr-skip" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#9ca3af" />
+        </marker>
+        <marker id="arr-back" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="#9ca3af" />
         </marker>
       </defs>
 
-      {/* Forward edges */}
-      {forward.map((tr, i) => {
+      {/* Direct forward edges — bezier through the diagram center */}
+      {directFwd.map((tr, i) => {
         const src = positions.get(tr.from)
         const tgt = positions.get(tr.to)
         if (!src || !tgt) return null
-        const x1 = src.x + NODE_W
-        const y1 = src.y + NODE_H / 2
-        const x2 = tgt.x
-        const y2 = tgt.y + NODE_H / 2
-        const cp = COL_GAP / 2
-        const d = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
-        const lx = midX(x1, x2)
-        const ly = midY(y1, y2) - 6
+
+        const srcCx = src.x + NODE_W / 2
+        const tgtCx = tgt.x + NODE_W / 2
+        const dx = tgtCx - srcCx
+
+        // Lean the exit/entry toward the target center so fanned edges spread apart
+        const exitX = srcCx + dx * 0.28
+        const entryX = tgtCx - dx * 0.28
+        const exitY = src.y + NODE_H
+        const entryY = tgt.y
+        const ctrl = Math.max(18, (entryY - exitY) * 0.42)
+
+        const d = `M ${exitX} ${exitY} C ${exitX} ${exitY + ctrl}, ${entryX} ${entryY - ctrl}, ${entryX} ${entryY}`
+
+        // Label at t≈0.5 of the bezier
+        const lx = (exitX + entryX) / 2
+        const ly = (exitY + entryY) / 2 - 3
+        const label = edgeLabel(tr)
+        const lw = approxLabelW(label)
+
         return (
           <g key={`fwd-${i}`}>
-            <path d={d} fill="none" stroke="#6b7280" strokeWidth={1.5} markerEnd="url(#arrowhead)" />
-            <text
-              x={lx}
-              y={ly}
-              textAnchor="middle"
-              fontSize={9}
-              fill="#9ca3af"
-              style={{ pointerEvents: 'none' }}
-            >
-              {tr.label}
+            <path d={d} fill="none" stroke="#6b7280" strokeWidth={1.5} markerEnd="url(#arr-fwd)" />
+            <rect x={lx - lw / 2} y={ly - 8} width={lw} height={11} fill="white" fillOpacity={0.9} rx={2} />
+            <text x={lx} y={ly} textAnchor="middle" fontSize={9} fill="#6b7280" style={{ pointerEvents: 'none' }}>
+              {label}
             </text>
           </g>
         )
       })}
 
-      {/* Back edges */}
-      {back.map((tr, i) => {
+      {/* Skip forward edges — routed on the right margin, grouped by target */}
+      {skipFwd.map((tr, i) => {
         const src = positions.get(tr.from)
         const tgt = positions.get(tr.to)
         if (!src || !tgt) return null
-        const x1 = src.x + NODE_W / 2
-        const y1 = src.y
-        const x2 = tgt.x + NODE_W / 2
-        const y2 = tgt.y
-        const topY = Math.min(y1, y2) - 60
-        const d = `M ${x1} ${y1} C ${x1} ${topY}, ${x2} ${topY}, ${x2} ${y2}`
-        const lx = midX(x1, x2)
-        const ly = topY - 4
+
+        const lane = skipLaneByTarget.get(tr.to) ?? 0
+        const rightX = skipBaseX + lane * LANE_STEP
+
+        // Exit right-middle of source, enter right-middle of target
+        const exitX = src.x + NODE_W
+        const exitY = src.y + NODE_H / 2
+        const entryX = tgt.x + NODE_W
+        const entryY = tgt.y + NODE_H / 2
+
+        const d = `M ${exitX} ${exitY} C ${rightX} ${exitY}, ${rightX} ${entryY}, ${entryX} ${entryY}`
+
+        const lx = rightX + 3
+        const ly = (exitY + entryY) / 2
+        const label = edgeLabel(tr)
+        const lw = approxLabelW(label)
+
         return (
-          <g key={`back-${i}`}>
-            <path
-              d={d}
-              fill="none"
-              stroke="#9ca3af"
-              strokeWidth={1.5}
-              strokeDasharray="4 3"
-              markerEnd="url(#arrowhead-back)"
-            />
-            <text
-              x={lx}
-              y={ly}
-              textAnchor="middle"
-              fontSize={9}
-              fill="#9ca3af"
-              style={{ pointerEvents: 'none' }}
-            >
-              {tr.label}
+          <g key={`skip-${i}`}>
+            <path d={d} fill="none" stroke="#d1d5db" strokeWidth={1.5} markerEnd="url(#arr-skip)" />
+            <rect x={lx} y={ly - 8} width={lw} height={11} fill="white" fillOpacity={0.9} rx={2} />
+            <text x={lx + lw / 2} y={ly} textAnchor="middle" fontSize={9} fill="#9ca3af" style={{ pointerEvents: 'none' }}>
+              {label}
             </text>
           </g>
         )
       })}
 
-      {/* Nodes */}
+      {/* Back edges — routed on the left margin, one lane per edge */}
+      {visibleBack.map((tr, i) => {
+        const src = positions.get(tr.from)
+        const tgt = positions.get(tr.to)
+        if (!src || !tgt) return null
+
+        const leftX = backBaseX - i * LANE_STEP
+
+        const exitX = src.x
+        const exitY = src.y + NODE_H / 2
+        const entryX = tgt.x
+        const entryY = tgt.y + NODE_H / 2
+
+        const d = `M ${exitX} ${exitY} C ${leftX} ${exitY}, ${leftX} ${entryY}, ${entryX} ${entryY}`
+
+        const lx = leftX - 3
+        const ly = (exitY + entryY) / 2
+        const label = edgeLabel(tr)
+        const lw = approxLabelW(label)
+
+        return (
+          <g key={`back-${i}`}>
+            <path d={d} fill="none" stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="4 3" markerEnd="url(#arr-back)" />
+            <rect x={lx - lw} y={ly - 8} width={lw} height={11} fill="white" fillOpacity={0.9} rx={2} />
+            <text x={lx - lw / 2} y={ly} textAnchor="middle" fontSize={9} fill="#9ca3af" style={{ pointerEvents: 'none' }}>
+              {label}
+            </text>
+          </g>
+        )
+      })}
+
+      {/* Nodes — drawn last so they sit on top of edges */}
       {states.map((s) => {
         const pos = positions.get(s.id)
         if (!pos) return null
-        const colors = getStateColors(s.id)
-        const fill = dotClassToHex(colors.dot)
+        const fill = nodeColor(s)
+        const showDot = !s.terminal && hasTerminalExit.has(s.id)
         return (
           <g key={s.id}>
             <rect
@@ -197,9 +270,40 @@ export default function WorkflowGraph() {
             >
               {s.label}
             </text>
+            {showDot && (
+              <circle
+                cx={pos.x + NODE_W - 6}
+                cy={pos.y + 6}
+                r={3}
+                fill="white"
+                fillOpacity={0.55}
+                style={{ pointerEvents: 'none' }}
+              />
+            )}
           </g>
         )
       })}
     </svg>
+
+    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-gray-500">
+      {[
+        { color: '#3b82f6', label: 'Agent acts' },
+        { color: '#f59e0b', label: 'Supervisor acts' },
+        { color: '#64748b', label: 'In transition' },
+        { color: '#22c55e', label: 'Terminal' },
+      ].map(({ color, label }) => (
+        <span key={label} className="flex items-center gap-1">
+          <span style={{ background: color, opacity: 0.85 }} className="inline-block w-3 h-3 rounded-sm" />
+          {label}
+        </span>
+      ))}
+      <span className="flex items-center gap-1">
+        <span className="inline-flex items-center justify-center w-3 h-3">
+          <svg width="10" height="10"><circle cx="5" cy="5" r="3" fill="#9ca3af" /></svg>
+        </span>
+        Can close
+      </span>
+    </div>
+    </div>
   )
 }
