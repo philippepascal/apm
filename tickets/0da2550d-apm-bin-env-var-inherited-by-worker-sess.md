@@ -121,7 +121,7 @@ The `ctx.options["apm_bin"]` override path (used by tests) is preserved unchange
 
 #### Test coverage
 
-In `apm-core/src/start.rs`, extend or companion the `mock_wrapper_receives_env_vars` test to assert that the `APM_BIN` value's file stem is `"apm"` and not `"apm-server"`:
+In `apm-core/src/start.rs`, extend or add an assertion to the `claude_wrapper_sets_apm_env_vars` test verifying that the `APM_BIN` value's file stem is `"apm"` and not `"apm-server"`:
 
 ```rust
 if let Some(line) = env_content.lines().find(|l| l.starts_with("APM_BIN=")) {
