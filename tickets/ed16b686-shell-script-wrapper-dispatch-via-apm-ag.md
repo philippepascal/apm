@@ -45,7 +45,12 @@ The existing wrapper dispatch infrastructure in `apm-core/src/wrapper/` already 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding `agent` to `StateConfig` — states already carry `instructions` for a different, non-spawn purpose
+- Per-transition model overrides in `TransitionConfig` — model is an infrastructure concern that stays in worker profiles and workers config
+- Any change to the built-in `claude`, `mock-happy`, `mock-sad`, or `debug` wrapper implementations
+- Creating `wrapper.sh` files for agent configs other than `default`
+- Changes to the `manifest.toml` format or the "external" parser contract
+- Removing the `worker_profiles` mechanism — it remains as the path for infra-only overrides (covered by dependency 6803b88b's out-of-scope boundary)
 
 ### Approach
 
