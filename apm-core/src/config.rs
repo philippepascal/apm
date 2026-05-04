@@ -405,6 +405,12 @@ pub struct TransitionConfig {
     /// Worker profile to use for the agent spawned by this transition. References a key in `[worker_profiles]`.
     #[serde(default)]
     pub profile: Option<String>,
+    /// Path to a system-prompt file for the agent spawned by this transition. Overrides `profile.instructions`.
+    #[serde(default)]
+    pub instructions: Option<String>,
+    /// Identity prefix for the agent spawned by this transition. Overrides `profile.role_prefix`.
+    #[serde(default)]
+    pub role_prefix: Option<String>,
     #[serde(default)]
     pub on_failure: Option<String>,
     /// Semantic outcome of this transition from the worker's perspective.
@@ -876,6 +882,8 @@ trigger = "manual"
         assert!(t.focus_section.is_none());
         assert!(t.context_section.is_none());
         assert!(t.outcome.is_none());
+        assert!(t.instructions.is_none());
+        assert!(t.role_prefix.is_none());
     }
 
     #[test]
