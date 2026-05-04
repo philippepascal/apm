@@ -36,7 +36,11 @@ Without such a script, every attempt to produce the README GIF is a manual proce
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- VHS `.tape` files, asciinema configuration, or any recording-tool setup
+- Actual GIF creation or upload — the script produces a reproducible session; the recording tool is the caller's concern
+- Creating a GitHub repository (the demo uses a local bare-repo remote)
+- Reusing or calling `create-demo.sh` — this script creates its own minimal project
+- Changes to `create-demo.sh` (covered by ticket e04e1b3f)
 
 ### Approach
 
