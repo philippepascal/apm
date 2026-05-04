@@ -1,7 +1,7 @@
 +++
 id = "f8cbd68c"
 title = "Consolidate all agent instruction .md files under agents/*/"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f8cbd68c-consolidate-all-agent-instruction-md-fil"
 created_at = "2026-05-04T02:41:12.168717Z"
-updated_at = "2026-05-04T02:41:12.168717Z"
+updated_at = "2026-05-04T02:56:41.761812Z"
 +++
 
 ## Spec
@@ -76,3 +76,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-04T02:41Z | — | new | philippepascal |
+| 2026-05-04T02:56Z | new | groomed | philippepascal |
