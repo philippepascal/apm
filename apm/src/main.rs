@@ -580,19 +580,6 @@ merged-branch and worktree checks."
         #[command(subcommand)]
         command: AgentsCommand,
     },
-    /// Print agent instructions configured in .apm/config.toml
-    #[command(
-        long_about = "Print the contents of the instructions file configured under [agents] instructions in .apm/config.toml.
-
-Useful for onboarding a new agent subprocess: pipe or paste the output into
-the agent's context so it knows the workflow, branch conventions, and shell
-discipline rules without needing file-system access to the repo.
-
-Example:
-  apm agents | pbcopy          # copy to clipboard
-  apm agents > /tmp/agents.md  # write to a temp file for injection"
-    )]
-    Agents,
     /// Orchestrate workers: dispatch apm start --next --spawn in a loop
     #[command(
         long_about = "Orchestration loop: repeatedly dispatch agents until no work remains.
