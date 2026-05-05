@@ -70,25 +70,24 @@ pub fn check_depends_on_rules(
             );
         }
         CompletionStrategy::PrOrEpicMerge => {
-            let Some(epic) = ticket_epic else {
-                bail!(
-                    "pr_or_epic_merge requires the ticket to belong to an epic before depends_on can be set"
-                );
-            };
-            let mut offending: Vec<&str> = Vec::new();
-            for dep_id in dep_ids {
-                let dep = all_tickets.iter().find(|t| t.frontmatter.id == *dep_id)
-                    .ok_or_else(|| anyhow::anyhow!("dep {dep_id} not found"))?;
-                if dep.frontmatter.epic.as_deref() != Some(epic) {
-                    offending.push(dep_id.as_str());
+            if let Some(epic) = ticket_epic {
+                // Epic ticket: all deps must belong to the same epic
+                let mut offending: Vec<&str> = Vec::new();
+                for dep_id in dep_ids {
+                    let dep = all_tickets.iter().find(|t| t.frontmatter.id == *dep_id)
+                        .ok_or_else(|| anyhow::anyhow!("dep {dep_id} not found"))?;
+                    if dep.frontmatter.epic.as_deref() != Some(epic) {
+                        offending.push(dep_id.as_str());
+                    }
+                }
+                if !offending.is_empty() {
+                    bail!(
+                        "pr_or_epic_merge requires all deps to share epic {epic}; offending deps: {}",
+                        offending.join(", ")
+                    );
                 }
             }
-            if !offending.is_empty() {
-                bail!(
-                    "pr_or_epic_merge requires all deps to share epic {epic}; offending deps: {}",
-                    offending.join(", ")
-                );
-            }
+            // Standalone ticket (no epic): allowed, will use the PR path independently
         }
         CompletionStrategy::Merge => {
             let ticket_target = ticket_target_branch.unwrap_or(default_branch);
@@ -1007,7 +1006,9 @@ terminal = true
     }
 
     #[test]
-    fn dep_rules_pr_or_epic_merge_ticket_no_epic_fails() {
+    fn dep_rules_pr_or_epic_merge_standalone_ticket_ok() {
+        // Standalone ticket (no epic) may have depends_on under pr_or_epic_merge;
+        // it will use the independent PR path and depends_on still enforces ordering.
         let dep = make_ticket("dep1", Some("abc"), None);
         let result = check_depends_on_rules(
             &CompletionStrategy::PrOrEpicMerge,
@@ -1017,9 +1018,7 @@ terminal = true
             &[dep],
             "main",
         );
-        assert!(result.is_err());
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("epic"), "expected epic mention in: {msg}");
+        assert!(result.is_ok(), "expected Ok for standalone ticket, got {result:?}");
     }
 
     #[test]
