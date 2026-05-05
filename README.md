@@ -1,32 +1,52 @@
 # APM — Agent Project Manager
 
-A free, open-source project management tool for small teams using AI agents for development.
+**A git-native project manager for running AI coding agents in parallel, isolated by design.**
 
-**Goals:**
+[![Crates.io](https://img.shields.io/crates/v/apm-cli.svg)](https://crates.io/crates/apm-cli)
+[![License: BSL-1.1](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
+[![CI](https://github.com/philippepascal/apm/actions/workflows/release.yml/badge.svg)](https://github.com/philippepascal/apm/actions/workflows/release.yml)
 
-1. A free alternative to commercial project management offerings
-2. A hosting-free solution — everything lives in your git repo, no SaaS required
-3. An enabler for autonomous agent development that streamlines and speeds up project completion
+Spawn four Claude Code workers on one repo and they work simultaneously,
+without stepping on each other. The whole tool is structured so multi-agent
+work is safe by default. No database. No SaaS. No hosting — the repo *is*
+the PM tool.
 
-**How APM achieves this:**
+<!-- demo GIF goes here — see D4 in s/promo/tracker.md -->
+<!-- ![demo](docs/demo.gif) -->
 
-1. The git repo is the single repository for all tickets alongside the code — no database, no external state, works offline
-2. All agents run independently on ticket and epic branches, in isolated worktrees that never interfere with each other
-3. APM wraps git operations and offers a strict (but customizable) workflow that provides clarity and robustness
+## Why this exists
 
-**Organization model:**
+Once you have a coding agent that reliably ships tickets, the bottleneck
+stops being the agent and starts being the PM tool. Issue trackers assume
+a human in a browser. They don't map cleanly to branches, they hide state
+behind clicks an agent can't perform, and two agents picking the same
+ticket will trip over each other the moment they start coding.
 
-1. **Supervisors** (team members) configure APM — the workflow, the agents, the merge strategy — and control the overall flow. They create tickets, organize epics, review work throughout the workflow phases, and close tickets when done.
-2. **Main agent** (optional) assists the supervisor with those tasks: putting together high-level plans, translating them into tickets, and managing the backlog.
-3. **Workers** are agents that take tickets and work on them in their own branches. They use a subset of APM commands to guarantee a smooth flow. The number of parallel workers is up to the users, and they can be set to continuously pick work from the queue. Fine grain controls with default branches, epics and dependency allow parallel work while minimizing risks of conflicts.
+APM treats the PM tool as a thin layer over git:
 
-APM ships with a default workflow, ticket format, and agent instructions, with Claude Code as the default worker agent. All of these are configurable — teams can swap in any CLI agent, (even use different agents for different tasks) and customize the workflow to match their process. This document walks through the main workflow using the defaults.
+- Tickets are Markdown files on per-ticket branches (`ticket/<id>-<slug>`).
+  State is TOML frontmatter. History is `git log`.
+- Workers are dispatched by `apm work` (a CLI loop) or the web UI
+  dispatcher, which atomically claims a ticket and provisions a dedicated
+  worktree per worker. Two agents can't claim the same ticket; their
+  changes can't collide. (`apm start <id>` does the same for one-off
+  manual claims.)
+- The workflow is a state machine in config — swap in your own states,
+  transitions, and completion strategies.
+- Run N workers in parallel at a cap you set. Plug in Claude Code,
+  Codex, or anything else with a CLI.
 
-For more details, see the `docs/` directory:
+## At a glance
 
-- [docs/commands.md](docs/commands.md) — full command reference
-- [docs/docker-workers.md](docs/docker-workers.md) — running workers in Docker containers
-- [docs/external-tls-setup.md](docs/external-tls-setup.md) — TLS setup for the web UI
+| | APM | Linear / Jira | GitHub Issues |
+|---|---|---|---|
+| Storage | Your git repo | SaaS | GitHub |
+| Works offline | Yes | No | Partial |
+| CLI-first | Yes | No | Partial |
+| Agent-dispatchable | Yes, native | Indirect | Indirect |
+| Parallel worktree isolation | Built-in | N/A | N/A |
+| Cost | Free, self-hosted | Per-seat SaaS | Free w/ GitHub |
+| Lock-in | None — just git | High | GitHub |
 
 ## The workflow
 
