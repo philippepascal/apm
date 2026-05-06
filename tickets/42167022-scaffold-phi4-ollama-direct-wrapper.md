@@ -16,7 +16,9 @@ updated_at = "2026-05-06T20:48:29.208688Z"
 
 ### Problem
 
-Scaffold .apm/agents/phi4/ — a custom APM wrapper that calls Ollama's OpenAI-compatible API directly (http://localhost:11434/v1/chat/completions) with Phi-4 as the model. The wrapper must implement the full agentic tool-call loop in the script itself (no framework): send system prompt + user message, check for tool_calls in the response, execute tools locally (bash, read_file, write_file, str_replace), append tool results, loop until no more tool calls, then emit canonical JSONL and call apm state. Files to create: .apm/agents/phi4/wrapper.sh (the loop, preferably Python for JSON handling), .apm/agents/phi4/manifest.toml (contract_version=1, parser=canonical), .apm/agents/phi4/apm.worker.md (augmented worker instructions — the standard apm.worker.md content plus a tools section explaining bash/read_file/write_file/str_replace function calling, autonomous operation rules, and reminder to call apm state at end). All files are new additions; nothing existing is modified. Phi-4 context window is 16K so the worker instructions must be concise.
+APM supports custom wrappers placed at `.apm/agents/<name>/wrapper.*`. When a ticket is dispatched with `agent = "phi4"`, APM invokes `.apm/agents/phi4/wrapper.*` instead of the built-in `claude` binary. No such directory exists yet, so Phi-4 (running locally via Ollama) cannot be used as a worker.
+
+The wrapper must implement the full agentic loop itself: send the system prompt and user message to `http://localhost:11434/v1/chat/completions` with `model = "phi4"`, check the response for `tool_calls`, execute each tool locally, append tool results to the message history, and loop until the model stops issuing tool calls. Once done it emits canonical JSONL on stdout and calls `apm state` to transition the ticket. Phi-4's context window is 16 K tokens, so the worker instructions file must be concise enough to leave room for ticket content.
 
 ### Acceptance criteria
 
