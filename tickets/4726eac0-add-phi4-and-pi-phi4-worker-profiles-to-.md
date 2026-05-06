@@ -32,7 +32,10 @@ The required change is purely additive: append two named profiles to `config.tom
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Wiring either profile to a workflow transition (`profile =` in `workflow.toml`) — the supervisor does that after testing
+- Creating or modifying the wrapper files themselves (covered by tickets 42167022 and 80691f15)
+- Adding `env`, `role`, `instructions`, or `container` fields to either profile
+- End-to-end validation that the agents produce correct output
 
 ### Approach
 
