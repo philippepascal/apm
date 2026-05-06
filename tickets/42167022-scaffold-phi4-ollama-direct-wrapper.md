@@ -37,7 +37,12 @@ The wrapper must implement the full agentic loop itself: send the system prompt 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Wiring `phi4` into `config.toml` as the default or a named worker profile (supervisor action)
+- Streaming partial tokens — the wrapper uses non-streaming chat completions
+- Authentication / API-key handling for Ollama (it runs unauthenticated locally)
+- Error-retry logic beyond a single HTTP failure
+- Support for tools beyond the four listed (bash, read_file, write_file, str_replace)
+- Changes to any existing file in the repository
 
 ### Approach
 
