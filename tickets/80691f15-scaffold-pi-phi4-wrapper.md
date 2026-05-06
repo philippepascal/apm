@@ -1,7 +1,7 @@
 +++
 id = "80691f15"
 title = "Scaffold pi-phi4 wrapper"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/80691f15-scaffold-pi-phi4-wrapper"
 created_at = "2026-05-06T19:06:14.397074Z"
-updated_at = "2026-05-06T20:47:58.424621Z"
+updated_at = "2026-05-06T21:28:36.987169Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-06T19:06Z | — | new | philippepascal |
 | 2026-05-06T20:47Z | new | groomed | philippepascal |
+| 2026-05-06T21:28Z | groomed | in_design | philippepascal |
