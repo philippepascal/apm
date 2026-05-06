@@ -3,13 +3,13 @@ id = "42167022"
 title = "Scaffold phi4-ollama direct wrapper"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/42167022-scaffold-phi4-ollama-direct-wrapper"
 created_at = "2026-05-06T19:06:03.063876Z"
-updated_at = "2026-05-06T20:48:29.208688Z"
+updated_at = "2026-05-06T20:52:43.012457Z"
 +++
 
 ## Spec
