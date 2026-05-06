@@ -172,6 +172,7 @@ Confirm all four files exist and `wrapper.sh` and `parser.py` have the executabl
 
 ### Amendment requests
 
+- [ ] wrapper.sh: replace 'exec pi' with plain invocation followed by 'apm state $APM_TICKET_ID implemented || true' — exec prevents the shell from calling apm state if phi4 lacks bash tool access
 
 ### Code review
 
