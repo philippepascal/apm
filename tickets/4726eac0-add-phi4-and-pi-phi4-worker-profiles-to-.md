@@ -39,7 +39,39 @@ The required change is purely additive: append two named profiles to `config.tom
 
 ### Approach
 
-How the implementation will work.
+The only file that changes is `.apm/config.toml`. The change is a pure append — no existing lines are touched.
+
+1. Confirm no `[worker_profiles` header exists yet:
+   ```sh
+   grep -c '\[worker_profiles' .apm/config.toml
+   ```
+   If the count is non-zero, stop and report — do not append.
+
+2. Append the following block to the end of `.apm/config.toml`:
+   ```toml
+
+   [worker_profiles.phi4]
+   agent = "phi4"
+
+   [worker_profiles.phi4.options]
+   model = "phi4"
+
+   [worker_profiles.pi-phi4]
+   agent = "pi"
+
+   [worker_profiles.pi-phi4.options]
+   model = "phi4"
+   ```
+
+3. Commit:
+   ```
+   feat(config): add phi4 and pi-phi4 worker profiles
+   ```
+   Stage only `.apm/config.toml`.
+
+The `agent` values (`"phi4"` and `"pi"`) must match the directory names under `.apm/agents/` that tickets 42167022 and 80691f15 create. APM resolves `agent = "phi4"` to `.apm/agents/phi4/wrapper.*` at spawn time, so no further config is needed.
+
+`options.model` is forwarded to the wrapper as the `APM_OPT_MODEL` environment variable, which both wrappers read to select the Ollama model.
 
 ### Open questions
 
