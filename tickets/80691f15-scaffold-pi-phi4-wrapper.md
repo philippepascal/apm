@@ -1,7 +1,7 @@
 +++
 id = "80691f15"
 title = "Scaffold pi-phi4 wrapper"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/80691f15-scaffold-pi-phi4-wrapper"
 created_at = "2026-05-06T19:06:14.397074Z"
-updated_at = "2026-05-06T22:46:27.702847Z"
+updated_at = "2026-05-06T22:51:08.823467Z"
 +++
 
 ## Spec
@@ -197,3 +197,4 @@ Confirm all four files exist and `wrapper.sh` and `parser.py` have the executabl
 | 2026-05-06T22:24Z | in_design | specd | philippepascal |
 | 2026-05-06T22:37Z | specd | ready | philippepascal |
 | 2026-05-06T22:46Z | ready | in_progress | philippepascal |
+| 2026-05-06T22:51Z | in_progress | implemented | claude-0506-2246-88b8 |
