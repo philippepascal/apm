@@ -27,7 +27,7 @@ The wrapper must implement the full agentic loop itself: send the system prompt 
 - [x] `.apm/agents/phi4/wrapper.py` is executable and exits 0 when Ollama returns a response with no `tool_calls`
 - [x] The wrapper reads `APM_SYSTEM_PROMPT_FILE` and `APM_USER_MESSAGE_FILE` from the environment
 - [x] The wrapper emits at least one JSONL line with a `"type"` key on stdout before exiting
-- [ ] When the model returns `tool_calls`, the wrapper executes each tool and appends the result as a `tool` role message before calling the API again
+- [x] When the model returns `tool_calls`, the wrapper executes each tool and appends the result as a `tool` role message before calling the API again
 - [ ] The `bash` tool executes its `command` argument via a subprocess and returns stdout+stderr
 - [ ] The `read_file` tool reads and returns the contents of the given `path`
 - [ ] The `write_file` tool writes `content` to the given `path`, creating parent directories as needed
