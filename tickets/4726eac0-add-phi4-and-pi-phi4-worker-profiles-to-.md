@@ -9,8 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4726eac0-add-phi4-and-pi-phi4-worker-profiles-to-"
 created_at = "2026-05-06T19:06:21.963164Z"
-updated_at = "2026-05-06T19:06:37.693020Z"
-depends_on = ["80691f15"]
+updated_at = "2026-05-06T19:06:52.376417Z"
+depends_on = ["42167022", "80691f15"]
 +++
 
 ## Spec
