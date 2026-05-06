@@ -22,15 +22,15 @@ This ticket creates those four files under `.apm/agents/pi/`. The wrapper invoke
 
 ### Acceptance criteria
 
-- [ ] `.apm/agents/pi/manifest.toml` exists with `contract_version = 1`, `parser = "external"`, and `parser_command = "./parser.py"`
-- [ ] `.apm/agents/pi/wrapper.sh` is executable and invokes `pi --mode json --provider ollama --model <model>` where `<model>` is `$APM_OPT_MODEL` when set, otherwise `phi4`
-- [ ] `wrapper.sh` constructs the prompt by combining the contents of `APM_SYSTEM_PROMPT_FILE` and `APM_USER_MESSAGE_FILE` (system first, then user message)
-- [ ] `wrapper.sh` includes a comment block documenting how to configure Ollama as a provider in `~/.pi/agent/models.json`
-- [ ] `.apm/agents/pi/parser.py` reads pi's JSONL from stdin and emits at least one `{"type": "text", "text": "..."}` line containing the assistant's response text
-- [ ] `parser.py` emits `{"type": "result", "text": ""}` when pi's `agent_end` event is received
-- [ ] `parser.py` silently skips all pi event types that do not carry assistant text (no output, no error)
-- [ ] `.apm/agents/pi/apm.worker.md` exists with worker instructions scoped to pi's capabilities (no Claude-specific flags, no tool-augmentation section)
-- [ ] No existing file under `.apm/agents/` or anywhere else in the repo is modified
+- [x] `.apm/agents/pi/manifest.toml` exists with `contract_version = 1`, `parser = "external"`, and `parser_command = "./parser.py"`
+- [x] `.apm/agents/pi/wrapper.sh` is executable and invokes `pi --mode json --provider ollama --model <model>` where `<model>` is `$APM_OPT_MODEL` when set, otherwise `phi4`
+- [x] `wrapper.sh` constructs the prompt by combining the contents of `APM_SYSTEM_PROMPT_FILE` and `APM_USER_MESSAGE_FILE` (system first, then user message)
+- [x] `wrapper.sh` includes a comment block documenting how to configure Ollama as a provider in `~/.pi/agent/models.json`
+- [x] `.apm/agents/pi/parser.py` reads pi's JSONL from stdin and emits at least one `{"type": "text", "text": "..."}` line containing the assistant's response text
+- [x] `parser.py` emits `{"type": "result", "text": ""}` when pi's `agent_end` event is received
+- [x] `parser.py` silently skips all pi event types that do not carry assistant text (no output, no error)
+- [x] `.apm/agents/pi/apm.worker.md` exists with worker instructions scoped to pi's capabilities (no Claude-specific flags, no tool-augmentation section)
+- [x] No existing file under `.apm/agents/` or anywhere else in the repo is modified
 
 ### Out of scope
 
