@@ -22,7 +22,7 @@ The wrapper must implement the full agentic loop itself: send the system prompt 
 
 ### Acceptance criteria
 
-- [ ] `.apm/agents/phi4/manifest.toml` exists and parses without error under `apm validate`
+- [x] `.apm/agents/phi4/manifest.toml` exists and parses without error under `apm validate`
 - [ ] `manifest.toml` declares `contract_version = 1` and `parser = "canonical"` under `[wrapper]`
 - [ ] `.apm/agents/phi4/wrapper.py` is executable and exits 0 when Ollama returns a response with no `tool_calls`
 - [ ] The wrapper reads `APM_SYSTEM_PROMPT_FILE` and `APM_USER_MESSAGE_FILE` from the environment
