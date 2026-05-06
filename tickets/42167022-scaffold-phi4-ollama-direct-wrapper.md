@@ -33,7 +33,7 @@ The wrapper must implement the full agentic loop itself: send the system prompt 
 - [x] The `write_file` tool writes `content` to the given `path`, creating parent directories as needed
 - [x] The `str_replace` tool replaces the first occurrence of `old_str` with `new_str` in `path`
 - [x] After the loop ends, the wrapper calls `apm state $APM_TICKET_ID implemented`
-- [ ] `.apm/agents/phi4/apm.worker.md` exists and contains both the standard APM worker rules and a `## Tools` section explaining the four function-call tools
+- [x] `.apm/agents/phi4/apm.worker.md` exists and contains both the standard APM worker rules and a `## Tools` section explaining the four function-call tools
 
 ### Out of scope
 
