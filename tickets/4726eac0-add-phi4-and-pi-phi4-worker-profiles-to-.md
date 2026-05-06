@@ -23,12 +23,12 @@ The required change is purely additive: append two named profiles to `config.tom
 
 ### Acceptance criteria
 
-- [ ] `.apm/config.toml` contains a `[worker_profiles.phi4]` section with `agent = "phi4"`
-- [ ] `.apm/config.toml` contains a `[worker_profiles.phi4.options]` section with `model = "phi4"`
-- [ ] `.apm/config.toml` contains a `[worker_profiles.pi-phi4]` section with `agent = "pi"`
-- [ ] `.apm/config.toml` contains a `[worker_profiles.pi-phi4.options]` section with `model = "phi4"`
-- [ ] No existing section in `.apm/config.toml` is modified or removed
-- [ ] `.apm/config.toml` contains exactly one occurrence of the string `[worker_profiles` (no duplicate section headers)
+- [x] `.apm/config.toml` contains a `[worker_profiles.phi4]` section with `agent = "phi4"`
+- [x] `.apm/config.toml` contains a `[worker_profiles.phi4.options]` section with `model = "phi4"`
+- [x] `.apm/config.toml` contains a `[worker_profiles.pi-phi4]` section with `agent = "pi"`
+- [x] `.apm/config.toml` contains a `[worker_profiles.pi-phi4.options]` section with `model = "phi4"`
+- [x] No existing section in `.apm/config.toml` is modified or removed
+- [x] `.apm/config.toml` contains exactly one occurrence of the string `[worker_profiles` (no duplicate section headers)
 
 ### Out of scope
 
