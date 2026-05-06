@@ -24,7 +24,7 @@ The wrapper must implement the full agentic loop itself: send the system prompt 
 
 - [x] `.apm/agents/phi4/manifest.toml` exists and parses without error under `apm validate`
 - [x] `manifest.toml` declares `contract_version = 1` and `parser = "canonical"` under `[wrapper]`
-- [ ] `.apm/agents/phi4/wrapper.py` is executable and exits 0 when Ollama returns a response with no `tool_calls`
+- [x] `.apm/agents/phi4/wrapper.py` is executable and exits 0 when Ollama returns a response with no `tool_calls`
 - [ ] The wrapper reads `APM_SYSTEM_PROMPT_FILE` and `APM_USER_MESSAGE_FILE` from the environment
 - [ ] The wrapper emits at least one JSONL line with a `"type"` key on stdout before exiting
 - [ ] When the model returns `tool_calls`, the wrapper executes each tool and appends the result as a `tool` role message before calling the API again
