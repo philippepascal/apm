@@ -34,7 +34,12 @@ This ticket creates those four files under `.apm/agents/pi/`. The wrapper invoke
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Installing the pi CLI or Ollama — must be set up separately by the user
+- Writing or modifying `~/.pi/agent/models.json` — only documented in wrapper comments
+- Handling pi tool calls in the parser — pi executes tools internally; the parser only needs to surface text output
+- Supporting non-Ollama providers (e.g. OpenAI, Anthropic via pi)
+- Integration testing against a live pi/Ollama installation
+- Registering `pi` as an active agent in `.apm/config.toml` — that is a project-level configuration decision
 
 ### Approach
 
