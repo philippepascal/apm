@@ -46,7 +46,46 @@ The wrapper must implement the full agentic loop itself: send the system prompt 
 
 ### Approach
 
-How the implementation will work.
+Three new files under `.apm/agents/phi4/`; no existing files modified.
+
+**manifest.toml** — Create with content:
+
+```toml
+[wrapper]
+name = "phi4"
+contract_version = 1
+parser = "canonical"
+```
+
+`contract_version = 1` matches the current `CONTRACT_VERSION` constant. `parser = "canonical"` tells APM to scan stdout for JSONL lines (any object with a `"type"` key counts as a canonical event). APM passes on validation.
+
+**wrapper.py** — Python 3 script; shebang `#!/usr/bin/env python3`; chmod +x. Uses only stdlib (`json`, `os`, `pathlib`, `subprocess`, `sys`, `urllib.request`).
+
+Steps inside the script:
+
+1. Read `APM_SYSTEM_PROMPT_FILE`, `APM_USER_MESSAGE_FILE`, `APM_TICKET_ID`, `APM_BIN` from `os.environ`.
+
+2. Declare `TOOLS` — a list of four OpenAI function-calling objects (`type="function"`, `name`, `parameters` JSON Schema):
+   `bash(command:str)`, `read_file(path:str)`, `write_file(path:str,content:str)`, `str_replace(path:str,old_str:str,new_str:str)`.
+
+3. Build initial history: `[{"role":"system","content":sys}, {"role":"user","content":msg}]`.
+
+4. Agent loop: POST to `http://localhost:11434/v1/chat/completions` with `model="phi4"`, `tools=TOOLS`, `stream=False` via `urllib.request.urlopen`. Parse JSON response:
+   - `finish_reason == "tool_calls"`: append the assistant message, call `run_tool(name, args)` for each tool call, append `{"role":"tool","tool_call_id":...,"content":result}`, loop again.
+   - Otherwise: capture `choices[0].message.content` as `final_text` and break.
+
+5. Emit: `print(json.dumps({"type":"result","text":final_text}))` then `sys.stdout.flush()`.
+
+6. Transition: `subprocess.run([apm_bin, "state", ticket_id, "implemented"], check=True)`.
+
+**`run_tool(name, args)` helper:**
+- `bash`: `subprocess.run(args["command"], shell=True, capture_output=True, text=True)`; return stdout+stderr capped at 4 000 chars.
+- `read_file`: `Path(args["path"]).read_text()`.
+- `write_file`: mkdir parents, write text; return `"ok"`.
+- `str_replace`: read, `.replace(old_str, new_str, 1)`, write back; return `"ok"`.
+- unknown name: return `f"unknown tool: {name}"`.
+
+**apm.worker.md** — Target <= 600 words. Sections: identity sentence, before-coding checklist, permitted apm commands, minimal-change discipline, commit format, finishing step, a "Tools" section with one-line description and a compact JSON call example for each of the four tools, and a blocked/side-note note.
 
 ### Open questions
 
