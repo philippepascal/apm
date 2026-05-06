@@ -32,6 +32,13 @@ Transitions you *may* initiate for your own tickets: `new → closed` (cancel a 
 
 **Override.** The supervisor can ask you to perform any supervisor-only transition explicitly. If they do, run it and note in your response that you are acting at their direction. The exclusion list above applies only to actions you initiate on your own.
 
+**When asked to ammend a ticket.** Your role ends after writing the amendment requests. Specifically:
+1. Transition `specd → ammend`
+2. Add each amendment request with `apm spec <id> --section "Amendment requests" --add-task "..."`
+3. Stop — do not transition to `in_design`, do not address the amendments yourself
+
+The spec revision is worker work. Leave the ticket in `ammend` for a worker to pick up.
+
 ### Worker
 
 You have been assigned a single ticket. Implement it, run tests, and mark it
@@ -208,10 +215,12 @@ Do not check acceptance criteria boxes until the implementation is verified.
 
 #### Subsection markers
 
-Within long sections such as `### Approach` or `### Acceptance criteria`,
-use `####` headings as named editing handles. This lets `apm spec <id>
---section "Approach > Phase 2"` target a subsection without overwriting the
-whole section.
+`####` headings within a section (e.g. inside `### Approach`) are purely for
+readability — they are **not** targetable by `apm spec`. Do not use
+`--section "Approach > Phase 2"`; that syntax is not implemented and will
+error. To update content within a long section, use `--section Approach --set
+"..."` with the full replacement text, or `--append` to add content at the
+end. Never fall back to editing the ticket file directly.
 
 ## Spec discipline
 
