@@ -1,7 +1,7 @@
 +++
 id = "4726eac0"
 title = "Add phi4 and pi-phi4 worker profiles to config"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4726eac0-add-phi4-and-pi-phi4-worker-profiles-to-"
 created_at = "2026-05-06T19:06:21.963164Z"
-updated_at = "2026-05-06T22:51:22.706902Z"
+updated_at = "2026-05-06T22:56:14.510372Z"
 depends_on = ["42167022", "80691f15"]
 +++
 
@@ -92,3 +92,4 @@ The `agent` values (`"phi4"` and `"pi"`) must match the directory names under `.
 | 2026-05-06T21:36Z | in_design | specd | claude-0506-2133-9fd8 |
 | 2026-05-06T22:39Z | specd | ready | philippepascal |
 | 2026-05-06T22:51Z | ready | in_progress | philippepascal |
+| 2026-05-06T22:56Z | in_progress | implemented | claude-0506-2251-a798 |
