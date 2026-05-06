@@ -1,7 +1,7 @@
 +++
 id = "42167022"
 title = "Scaffold phi4-ollama direct wrapper"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/42167022-scaffold-phi4-ollama-direct-wrapper"
 created_at = "2026-05-06T19:06:03.063876Z"
-updated_at = "2026-05-06T19:06:03.063876Z"
+updated_at = "2026-05-06T20:47:32.057298Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-06T19:06Z | — | new | philippepascal |
+| 2026-05-06T20:47Z | new | groomed | philippepascal |
