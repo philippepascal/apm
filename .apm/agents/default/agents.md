@@ -32,6 +32,13 @@ Transitions you *may* initiate for your own tickets: `new → closed` (cancel a 
 
 **Override.** The supervisor can ask you to perform any supervisor-only transition explicitly. If they do, run it and note in your response that you are acting at their direction. The exclusion list above applies only to actions you initiate on your own.
 
+**When asked to ammend a ticket.** Your role ends after writing the amendment requests. Specifically:
+1. Transition `specd → ammend`
+2. Add each amendment request with `apm spec <id> --section "Amendment requests" --add-task "..."`
+3. Stop — do not transition to `in_design`, do not address the amendments yourself
+
+The spec revision is worker work. Leave the ticket in `ammend` for a worker to pick up.
+
 ### Worker
 
 You have been assigned a single ticket. Implement it, run tests, and mark it
