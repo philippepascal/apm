@@ -1,7 +1,7 @@
 +++
 id = "cfcf8e68"
 title = "pi/manifest.toml missing [wrapper] section"
-state = "new"
+state = "closed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/cfcf8e68-pi-manifest-toml-missing-wrapper-section"
 created_at = "2026-05-06T22:56:05.246110Z"
-updated_at = "2026-05-06T22:56:05.246110Z"
+updated_at = "2026-05-06T23:39:35.191677Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-06T22:56Z | — | new | claude-0506-2251-a798|philippepascal |
+| 2026-05-06T23:39Z | new | closed | philippepascal(apm-sync) |
