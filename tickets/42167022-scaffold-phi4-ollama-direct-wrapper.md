@@ -1,7 +1,7 @@
 +++
 id = "42167022"
 title = "Scaffold phi4-ollama direct wrapper"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/42167022-scaffold-phi4-ollama-direct-wrapper"
 created_at = "2026-05-06T19:06:03.063876Z"
-updated_at = "2026-05-06T22:39:32.205774Z"
+updated_at = "2026-05-06T22:40:13.491163Z"
 +++
 
 ## Spec
@@ -105,3 +105,4 @@ Steps inside the script:
 | 2026-05-06T20:48Z | groomed | in_design | philippepascal |
 | 2026-05-06T20:52Z | in_design | specd | claude-0506-2048-cdc0 |
 | 2026-05-06T22:39Z | specd | ready | philippepascal |
+| 2026-05-06T22:40Z | ready | in_progress | philippepascal |
