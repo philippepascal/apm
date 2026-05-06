@@ -17,7 +17,9 @@ depends_on = ["42167022", "80691f15"]
 
 ### Problem
 
-Add two worker profiles to .apm/config.toml — one for the phi4-ollama wrapper (ticket 42167022) and one for the pi-phi4 wrapper (ticket 80691f15). Both wrappers must exist before this ticket is implemented. Changes are purely additive: append to config.toml only. Profile for phi4: [worker_profiles.phi4] with agent='phi4' and options.model='phi4'. Profile for pi-phi4: [worker_profiles.pi-phi4] with agent='pi' and options.model='phi4'. No workflow changes — profiles are defined but not wired to any transition yet; the supervisor will do that after testing. Also verify .apm/config.toml does not already have a [worker_profiles] section to avoid duplication.
+`.apm/config.toml` currently has no `[worker_profiles]` section. Tickets 42167022 and 80691f15 introduce two new agent wrappers — `phi4` (a direct Ollama wrapper) and `pi` (a pi CLI wrapper) — but without corresponding profile entries in config, APM cannot resolve them when a transition specifies `profile = "phi4"` or `profile = "pi-phi4"`. The supervisor needs the profiles registered before wiring them to any workflow transition.
+
+The required change is purely additive: append two named profiles to `config.toml`. No existing fields are modified. The profiles are not wired to any transition in this ticket; that step follows after the supervisor validates the agents end-to-end.
 
 ### Acceptance criteria
 
