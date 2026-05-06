@@ -59,7 +59,9 @@ parser_command = "./parser.py"
 
 Create `.apm/agents/pi/wrapper.sh` and `chmod +x` it.
 
-The script reads both prompt files, combines them into a single string (system prompt first, a separator line, then user message), and passes the result as the positional `<prompt>` argument to pi. If pi gains a `--system` flag in a future version, the script can be updated to pass them separately; for now concatenation is the safe baseline.
+The script reads both prompt files, combines them (system prompt first, separator, user message) and passes the result to pi. Do NOT use `exec` — the shell must remain alive after pi exits to call `apm state` as a fallback if the model doesn't.
+
+The primary path is phi4 calling `apm state` via its bash tool (instructed in `apm.worker.md`). The shell-level call is a belt-and-suspenders fallback; `|| true` makes it idempotent if the model already transitioned the ticket.
 
 ```sh
 #!/bin/sh
@@ -88,14 +90,17 @@ model="${APM_OPT_MODEL:-phi4}"
 sys=$(cat "$APM_SYSTEM_PROMPT_FILE")
 msg=$(cat "$APM_USER_MESSAGE_FILE")
 
-exec pi --mode json --provider ollama --model "$model" "$sys
+pi --mode json --provider ollama --model "$model" "$sys
 
 ---
 
 $msg"
-```
 
-Note: `exec` replaces the shell process, so the parser receives pi's stdout directly. No `apm state` call is needed in the wrapper — APM drives state transitions based on parsed output.
+# Fallback: the agent should call apm state via its bash tool (per apm.worker.md).
+# If it doesn't (e.g. tool access is restricted), the shell handles it.
+# || true prevents a double-transition error from failing the wrapper.
+apm state "$APM_TICKET_ID" implemented || true
+```
 
 #### parser.py
 
@@ -154,6 +159,7 @@ Create `.apm/agents/pi/apm.worker.md` as a copy of `.apm/agents/default/apm.work
 - Replace the `Tests` section header and body with: "Run the project's test suite according to `## Spec → Approach` in your ticket. All tests must pass before calling `apm state <id> implemented`."
 - Replace all references to `claude` binary with `pi`
 - Keep `Scope limits`, `Before writing any code`, `Minimal-change discipline`, `Commit format`, `Finishing implementation`, `Side tickets`, and `Blocked state` sections unchanged
+- In the `Finishing implementation` section (or equivalent), add explicitly: "Your final action must be to call `apm state $APM_TICKET_ID implemented` using your bash tool. The wrapper script also calls it as a fallback, but the model-level call is the primary path."
 
 The resulting file teaches the pi agent what APM commands to run and what constraints apply, without referencing Claude-specific flags or tool augmentation.
 
