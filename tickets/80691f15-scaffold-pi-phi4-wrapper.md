@@ -16,7 +16,9 @@ updated_at = "2026-05-06T21:28:36.987169Z"
 
 ### Problem
 
-Scaffold .apm/agents/pi/ — an APM wrapper that delegates to the pi CLI (https://pi.dev) configured to use Phi-4 via Ollama. Pi supports --mode json for a JSONL event stream and --print for simple non-interactive use. Pi has --provider and --model flags. For Ollama: provider config lives in ~/.pi/agent/models.json; invoke with: pi --mode json --provider ollama --model phi4 <prompt>. Files to create: .apm/agents/pi/wrapper.sh (invokes pi CLI with --mode json, reads APM_SYSTEM_PROMPT_FILE and APM_USER_MESSAGE_FILE, uses APM_OPT_MODEL defaulting to phi4, calls apm state at end), .apm/agents/pi/manifest.toml (contract_version=1, parser=external, parser_command=./parser.py), .apm/agents/pi/parser.py (reads pi's --mode json JSONL from stdin, translates to APM canonical {type, text} events on stdout — need to check pi's actual JSON event schema from its docs/json.md), .apm/agents/pi/apm.worker.md (standard worker instructions; pi handles tool execution internally so no tool augmentation needed). Also document in the wrapper: how to configure Ollama as a provider in ~/.pi/agent/models.json. All files are new additions; nothing existing is modified. The pi CLI must be installed separately (not in scope of this ticket).
+APM has no wrapper for the pi CLI (https://pi.dev), so projects that want to run Phi-4 via Ollama as the worker model cannot integrate with APM's agent dispatch system. The pi CLI provides a clean interface to locally-hosted models, but APM requires a four-file bridge — `manifest.toml`, `wrapper.sh`, `parser.py`, and `apm.worker.md` — before it can spawn pi as a worker.
+
+This ticket creates those four files under `.apm/agents/pi/`. The wrapper invokes `pi --mode json --provider ollama --model phi4` (model overridable via `APM_OPT_MODEL`), the parser translates pi's JSONL event stream to APM canonical events, the manifest declares the parser contract, and the worker instructions tell the pi agent how to work a ticket. No existing file is changed.
 
 ### Acceptance criteria
 
