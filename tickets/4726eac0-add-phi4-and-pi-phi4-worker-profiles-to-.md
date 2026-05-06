@@ -1,7 +1,7 @@
 +++
 id = "4726eac0"
 title = "Add phi4 and pi-phi4 worker profiles to config"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4726eac0-add-phi4-and-pi-phi4-worker-profiles-to-"
 created_at = "2026-05-06T19:06:21.963164Z"
-updated_at = "2026-05-06T19:06:52.376417Z"
+updated_at = "2026-05-06T20:48:12.980761Z"
 depends_on = ["42167022", "80691f15"]
 +++
 
@@ -45,3 +45,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-06T19:06Z | — | new | philippepascal |
+| 2026-05-06T20:48Z | new | groomed | philippepascal |
