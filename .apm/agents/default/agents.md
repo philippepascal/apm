@@ -208,10 +208,12 @@ Do not check acceptance criteria boxes until the implementation is verified.
 
 #### Subsection markers
 
-Within long sections such as `### Approach` or `### Acceptance criteria`,
-use `####` headings as named editing handles. This lets `apm spec <id>
---section "Approach > Phase 2"` target a subsection without overwriting the
-whole section.
+`####` headings within a section (e.g. inside `### Approach`) are purely for
+readability — they are **not** targetable by `apm spec`. Do not use
+`--section "Approach > Phase 2"`; that syntax is not implemented and will
+error. To update content within a long section, use `--section Approach --set
+"..."` with the full replacement text, or `--append` to add content at the
+end. Never fall back to editing the ticket file directly.
 
 ## Spec discipline
 
