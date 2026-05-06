@@ -33,3 +33,14 @@ file = "/tmp/apm.log"
   args = ["--print"]
   model = "sonnet"
 
+[worker_profiles.phi4]
+agent = "phi4"
+
+[worker_profiles.phi4.options]
+model = "phi4"
+
+[worker_profiles.pi-phi4]
+agent = "pi"
+
+[worker_profiles.pi-phi4.options]
+model = "phi4"

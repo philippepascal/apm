@@ -1,3 +1,4 @@
+[wrapper]
 contract_version = 1
 parser = "external"
 parser_command = "./parser.py"
