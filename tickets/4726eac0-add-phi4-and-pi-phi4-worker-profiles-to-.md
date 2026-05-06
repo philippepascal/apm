@@ -4,12 +4,12 @@ title = "Add phi4 and pi-phi4 worker profiles to config"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4726eac0-add-phi4-and-pi-phi4-worker-profiles-to-"
 created_at = "2026-05-06T19:06:21.963164Z"
-updated_at = "2026-05-06T21:36:07.362630Z"
+updated_at = "2026-05-06T21:36:10.848125Z"
 depends_on = ["42167022", "80691f15"]
 +++
 
