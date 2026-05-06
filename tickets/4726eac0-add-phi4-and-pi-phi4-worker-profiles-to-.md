@@ -23,7 +23,12 @@ The required change is purely additive: append two named profiles to `config.tom
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `.apm/config.toml` contains a `[worker_profiles.phi4]` section with `agent = "phi4"`
+- [ ] `.apm/config.toml` contains a `[worker_profiles.phi4.options]` section with `model = "phi4"`
+- [ ] `.apm/config.toml` contains a `[worker_profiles.pi-phi4]` section with `agent = "pi"`
+- [ ] `.apm/config.toml` contains a `[worker_profiles.pi-phi4.options]` section with `model = "phi4"`
+- [ ] No existing section in `.apm/config.toml` is modified or removed
+- [ ] `.apm/config.toml` contains exactly one occurrence of the string `[worker_profiles` (no duplicate section headers)
 
 ### Out of scope
 
