@@ -1,0 +1,4 @@
+[wrapper]
+name = "phi4"
+contract_version = 1
+parser = "canonical"
