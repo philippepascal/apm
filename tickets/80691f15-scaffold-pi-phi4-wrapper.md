@@ -3,13 +3,13 @@ id = "80691f15"
 title = "Scaffold pi-phi4 wrapper"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/80691f15-scaffold-pi-phi4-wrapper"
 created_at = "2026-05-06T19:06:14.397074Z"
-updated_at = "2026-05-06T21:28:36.987169Z"
+updated_at = "2026-05-06T21:32:55.210642Z"
 +++
 
 ## Spec
