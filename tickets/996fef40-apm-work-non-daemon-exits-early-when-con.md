@@ -1,7 +1,7 @@
 +++
 id = "996fef40"
 title = "apm work non-daemon exits early when concurrency constraint temporarily blocks dispatch"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/996fef40-apm-work-non-daemon-exits-early-when-con"
 created_at = "2026-05-07T02:20:24.657545Z"
-updated_at = "2026-05-07T02:32:40.773013Z"
+updated_at = "2026-05-07T02:32:45.866391Z"
 +++
 
 ## Spec
@@ -89,3 +89,4 @@ The two existing unit tests (`daemon_dry_run_is_error`, `sig_count_increments_co
 | 2026-05-07T02:20Z | — | new | philippepascal |
 | 2026-05-07T02:30Z | new | groomed | philippepascal |
 | 2026-05-07T02:31Z | groomed | in_design | philippepascal |
+| 2026-05-07T02:32Z | in_design | specd | claude-0507-0231-85e0 |
