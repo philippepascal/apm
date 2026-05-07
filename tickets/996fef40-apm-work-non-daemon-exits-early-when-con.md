@@ -1,7 +1,7 @@
 +++
 id = "996fef40"
 title = "apm work non-daemon exits early when concurrency constraint temporarily blocks dispatch"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/996fef40-apm-work-non-daemon-exits-early-when-con"
 created_at = "2026-05-07T02:20:24.657545Z"
-updated_at = "2026-05-07T02:30:56.068722Z"
+updated_at = "2026-05-07T02:31:04.374458Z"
 +++
 
 ## Spec
@@ -43,3 +43,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-07T02:20Z | — | new | philippepascal |
 | 2026-05-07T02:30Z | new | groomed | philippepascal |
+| 2026-05-07T02:31Z | groomed | in_design | philippepascal |
