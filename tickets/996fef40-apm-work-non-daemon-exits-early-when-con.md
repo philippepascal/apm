@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/996fef40-apm-work-non-daemon-exits-early-when-con"
 created_at = "2026-05-07T02:20:24.657545Z"
-updated_at = "2026-05-07T02:20:24.657545Z"
+updated_at = "2026-05-07T02:30:52.467746Z"
 +++
 
 ## Spec
@@ -20,7 +20,7 @@ In non-daemon mode, apm work exits early when a concurrency constraint (max_work
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+[] daemon mode is unchanged
 
 ### Out of scope
 
@@ -37,8 +37,6 @@ How the implementation will work.
 
 
 ### Code review
-
-
 ## History
 
 | When | From | To | By |
