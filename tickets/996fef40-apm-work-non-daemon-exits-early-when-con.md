@@ -35,7 +35,43 @@ In non-daemon mode, apm work exits early when a concurrency constraint (max_work
 
 ### Approach
 
-How the implementation will work.
+#### Change `apm/src/cmd/work.rs` lines 89–93
+
+Replace the daemon-only guard around the `no_more` reset with a guard that fires for both modes, keeping the `next_poll` reset inside the daemon branch:
+
+```rust
+// Before
+// In daemon mode: a reaped worker opens a slot — check immediately.
+if daemon && reaped {
+    next_poll = Instant::now();
+    no_more = false;
+}
+
+// After
+// A reaped worker opens a slot — retry dispatch in both modes.
+if reaped {
+    if daemon {
+        next_poll = Instant::now();
+    }
+    no_more = false;
+}
+```
+
+This is the only code change required. No other call sites reference `no_more`.
+
+#### Why the exit condition remains correct
+
+After the fix, when there are truly no tickets left:
+
+1. Last worker finishes → `reaped = true` → `no_more = false`
+2. Next iteration: `spawn_next_worker` returns `Ok(None)` → `no_more = true`
+3. Next iteration: `!daemon && no_more && workers.is_empty()` → `break`
+
+The loop makes one extra `spawn_next_worker` call compared to the old (buggy) path, but exits correctly. No infinite-loop risk.
+
+#### Tests
+
+The two existing unit tests (`daemon_dry_run_is_error`, `sig_count_increments_correctly`) do not cover the scheduling loop and need no changes. The loop logic cannot be unit-tested without a real git repo; no new tests are required for this surgical fix.
 
 ### Open questions
 
