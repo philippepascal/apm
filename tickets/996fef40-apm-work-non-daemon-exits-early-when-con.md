@@ -27,7 +27,11 @@ In non-daemon mode, apm work exits early when a concurrency constraint (max_work
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `apm work --dry-run` path
+- Changes to `spawn_next_worker` itself
+- Error-arm retry behaviour (`Err(e)` at work.rs:136)
+- Daemon-mode shutdown or signal-handling logic
+- Adding integration tests that span the full worker-spawn lifecycle
 
 ### Approach
 
