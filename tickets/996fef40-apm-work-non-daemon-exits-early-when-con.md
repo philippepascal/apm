@@ -4,12 +4,12 @@ title = "apm work non-daemon exits early when concurrency constraint temporarily
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/996fef40-apm-work-non-daemon-exits-early-when-con"
 created_at = "2026-05-07T02:20:24.657545Z"
-updated_at = "2026-05-07T02:32:37.346572Z"
+updated_at = "2026-05-07T02:32:40.773013Z"
 +++
 
 ## Spec
