@@ -19,16 +19,31 @@ impl ParserStrategy {
     }
 }
 
-/// Locate an executable binary by name or absolute path.
-/// For absolute paths: checks the file exists.
-/// For relative names: walks PATH entries and returns the first executable match.
-fn find_binary(cmd: &str) -> anyhow::Result<PathBuf> {
+/// Locate an executable binary by name or path, matching POSIX shell rules.
+/// - Absolute path: must exist as a file.
+/// - Relative path containing `/` (e.g. `./parser.py`, `bin/parser`): resolved
+///   against `base_dir` (the agent directory where manifest.toml lives), so a
+///   parser shipped next to the manifest can be referenced naturally.
+/// - Bare name (e.g. `python3`): walks PATH entries and returns the first
+///   executable match.
+fn find_binary(cmd: &str, base_dir: &Path) -> anyhow::Result<PathBuf> {
     let p = Path::new(cmd);
     if p.is_absolute() {
         if p.is_file() {
             return Ok(p.to_path_buf());
         }
         anyhow::bail!("parser binary not found: {}", cmd);
+    }
+    if cmd.contains('/') {
+        let candidate = base_dir.join(p);
+        if candidate.is_file() {
+            return Ok(candidate);
+        }
+        anyhow::bail!(
+            "parser binary not found: {} (resolved to {})",
+            cmd,
+            candidate.display()
+        );
     }
     let path_var = std::env::var("PATH").unwrap_or_default();
     for dir in std::env::split_paths(&path_var) {
@@ -146,10 +161,8 @@ impl Wrapper for CustomWrapper {
                 Ok(cmd.spawn()?)
             }
             ParserStrategy::External => {
-                let manifest_path = self.script_path
-                    .parent()
-                    .map(|p| p.join("manifest.toml"))
-                    .unwrap_or_else(|| PathBuf::from("manifest.toml"));
+                let agent_dir = self.script_path.parent().unwrap_or_else(|| Path::new("."));
+                let manifest_path = agent_dir.join("manifest.toml");
 
                 // Require parser_command
                 let parser_cmd_str = self.manifest.as_ref()
@@ -160,8 +173,11 @@ impl Wrapper for CustomWrapper {
                     ))?
                     .to_owned();
 
-                // Validate binary is findable before spawning any process
-                let parser_bin = find_binary(&parser_cmd_str)?;
+                // Validate binary is findable before spawning any process.
+                // Relative paths in parser_command resolve against the agent dir
+                // (where manifest.toml lives) so parsers shipped next to the
+                // wrapper can be named naturally (e.g. "./parser.py").
+                let parser_bin = find_binary(&parser_cmd_str, agent_dir)?;
 
                 // Open log file; clone for each stream that writes to it:
                 // 1. wrapper.stderr, 2. parser.stdout, 3. parser.stderr
@@ -611,6 +627,44 @@ mod tests {
             msg.contains("nonexistent-binary-xyzzy-2803"),
             "error must name the missing binary: {msg}"
         );
+    }
+
+    #[test]
+    fn spawn_external_resolves_parser_command_relative_to_agent_dir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Layout mirrors the real bug: wrapper.sh and parser.py both live in
+        // the agent dir, and the manifest references the parser as "./parser.py".
+        let agent_dir = tempfile::tempdir().unwrap();
+        let wt = tempfile::tempdir().unwrap();
+        let log_dir = tempfile::tempdir().unwrap();
+        let log_path = log_dir.path().join("worker.log");
+
+        let wrapper_script = agent_dir.path().join("wrapper.sh");
+        std::fs::write(&wrapper_script, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&wrapper_script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let parser_script = agent_dir.path().join("parser.py");
+        std::fs::write(&parser_script, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&parser_script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let manifest = Manifest {
+            name: None,
+            contract_version: 1,
+            parser: "external".to_string(),
+            parser_command: Some("./parser.py".to_string()),
+            enforce_worktree_isolation: false,
+        };
+        let wrapper = CustomWrapper {
+            script_path: wrapper_script,
+            manifest: Some(manifest),
+        };
+
+        let ctx = make_ctx(wt.path(), &log_path);
+        // spawn() should resolve "./parser.py" against the agent dir and succeed.
+        let mut child = wrapper.spawn(&ctx)
+            .expect("spawn should resolve ./parser.py against agent dir");
+        let _ = child.wait();
     }
 
     #[test]
