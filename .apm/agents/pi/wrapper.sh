@@ -5,19 +5,24 @@
 #   1. Install pi CLI: see https://pi.dev/docs/install
 #   2. Install Ollama: see https://ollama.com
 #   3. Pull the model: ollama pull phi4
-#   4. Configure ~/.pi/agent/models.json to register the Ollama provider:
+#   4. Configure ~/.pi/agent/models.json to register the Ollama provider
+#      (schema documented at pi-coding-agent/docs/models.md):
 #
 #      {
-#        "ollama": {
-#          "type": "ollama",
-#          "base_url": "http://localhost:11434",
-#          "models": {
-#            "phi4": { "context_length": 16384 }
+#        "providers": {
+#          "ollama": {
+#            "baseUrl": "http://localhost:11434/v1",
+#            "api": "openai-completions",
+#            "apiKey": "ollama",
+#            "models": [
+#              { "id": "phi4" }
+#            ]
 #          }
 #        }
 #      }
 #
-#   Adjust base_url and context_length to match your Ollama installation.
+#   Adjust baseUrl to match your Ollama installation. apiKey is required by
+#   pi but ignored by Ollama. Add more entries to "models" to expose them.
 set -e
 
 model="${APM_OPT_MODEL:-phi4}"
