@@ -316,13 +316,15 @@ Valid field names:
   effort      — integer 1-10; implementation scale estimate
   risk        — integer 1-10; technical risk estimate
   title       — short human-readable summary
-  agent       — name of the assigned agent (use \"-\" to clear)
+  agent       — agent wrapper to use for this ticket; must match an agent
+                configured in config.toml ([workers].agent or any
+                [worker_profiles.*].agent). Use \"-\" to clear.
   branch      — override the ticket's branch name (use \"-\" to clear)
   depends_on  — comma-separated list of blocker IDs (use \"-\" to clear)
 
 Examples:
   apm set 42 priority 5
-  apm set 42 agent alice
+  apm set 42 agent pi
   apm set 42 agent -               # clear agent field
   apm set 42 depends_on abc123     # single blocker
   apm set 42 depends_on \"abc123,def456\"  # multiple blockers

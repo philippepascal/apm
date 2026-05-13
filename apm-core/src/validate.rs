@@ -139,6 +139,38 @@ pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, 
     violations
 }
 
+/// Return the set of agent names configured in config.toml — the global
+/// `[workers].agent` (defaulting to "claude" when absent) plus the `agent`
+/// of every `[worker_profiles.*]` entry.
+pub fn configured_agent_names(config: &Config) -> HashSet<String> {
+    let mut names: HashSet<String> = HashSet::new();
+    let primary = config.workers.agent.clone()
+        .unwrap_or_else(|| "claude".to_string());
+    names.insert(primary);
+    for p in config.worker_profiles.values() {
+        if let Some(a) = &p.agent {
+            names.insert(a.clone());
+        }
+    }
+    names
+}
+
+/// Validate that `name` matches an agent configured in config.toml. Accepts
+/// `"-"` (the sentinel used to clear the field) without error.
+pub fn validate_agent_name(config: &Config, name: &str) -> Result<()> {
+    if name == "-" {
+        return Ok(());
+    }
+    let configured = configured_agent_names(config);
+    if configured.contains(name) {
+        return Ok(());
+    }
+    let mut sorted: Vec<&String> = configured.iter().collect();
+    sorted.sort();
+    let list = sorted.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+    bail!("agent {name:?} is not configured in config.toml; known agents: [{list}]")
+}
+
 pub fn validate_owner(config: &Config, local: &LocalConfig, username: &str) -> Result<()> {
     if username == "-" {
         return Ok(());
@@ -527,12 +559,15 @@ pub fn verify_tickets(
             }
         }
 
-        // Validate frontmatter agent names against known built-ins.
+        // Validate frontmatter agent names against known built-ins and
+        // against the agents configured in config.toml.
         let agents_to_check: Vec<&str> = fm.agent
             .as_deref()
             .into_iter()
             .chain(fm.agent_overrides.values().map(String::as_str))
             .collect();
+
+        let configured_agents = configured_agent_names(config);
 
         for name in agents_to_check {
             match wrapper::resolve_wrapper(root, name) {
@@ -545,6 +580,13 @@ pub fn verify_tickets(
                     "ticket {}: agent {:?}: {e}",
                     fm.id, name
                 )),
+            }
+            if !configured_agents.contains(name) {
+                issues.push(format!(
+                    "ticket {}: agent {:?} is not configured in config.toml \
+                     (set [workers].agent or add a [worker_profiles.*].agent entry)",
+                    fm.id, name
+                ));
             }
         }
     }
@@ -2068,6 +2110,54 @@ terminal = true
         assert!(
             !issues.iter().any(|i| i.contains("is not a known built-in")),
             "expected no agent error for known built-in; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn validate_agent_name_accepts_configured_profile_agent() {
+        let toml = r#"
+[worker_profiles.pi]
+agent = "pi"
+"#;
+        let config = audit_config(toml);
+        validate_agent_name(&config, "pi").expect("pi should be a configured agent");
+    }
+
+    #[test]
+    fn validate_agent_name_rejects_unknown() {
+        let toml = r#"
+[worker_profiles.pi]
+agent = "pi"
+"#;
+        let config = audit_config(toml);
+        let err = validate_agent_name(&config, "nonexistent").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("nonexistent"), "got: {msg}");
+        assert!(msg.contains("not configured in config.toml"), "got: {msg}");
+    }
+
+    #[test]
+    fn validate_agent_name_accepts_dash_sentinel() {
+        let config = audit_config("");
+        validate_agent_name(&config, "-").expect("dash should clear without validation");
+    }
+
+    #[test]
+    fn validate_ticket_agent_not_in_config_is_error() {
+        let dir = setup_verify_repo();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        // "claude" wrapper resolves but is not in this minimal config's worker_profiles;
+        // setup_verify_repo's config also doesn't set [workers].agent, so the default
+        // "claude" is the only configured name — pick something else that *does* resolve
+        // as a wrapper to isolate the config-coverage check.
+        let ticket = make_agent_verify_ticket(root, "abcd1234", "specd", "agent = \"phi4\"\n");
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        assert!(
+            issues.iter().any(|i| i.contains("abcd1234") && i.contains("not configured in config.toml")),
+            "expected config-coverage error; got: {issues:?}"
         );
     }
 
