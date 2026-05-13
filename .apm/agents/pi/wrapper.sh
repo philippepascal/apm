@@ -25,7 +25,7 @@
 #   pi but ignored by Ollama. Add more entries to "models" to expose them.
 set -e
 
-model="${APM_OPT_MODEL:-phi4}"
+model="${APM_OPT_MODEL:-qwen3.5:9b}"
 sys=$(cat "$APM_SYSTEM_PROMPT_FILE")
 msg=$(cat "$APM_USER_MESSAGE_FILE")
 
