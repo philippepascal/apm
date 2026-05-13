@@ -9,14 +9,15 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/910dbeca-apm-command-to-feed-apm-parsed-help-for-"
 created_at = "2026-05-13T00:52:51.102305Z"
-updated_at = "2026-05-13T00:52:51.102305Z"
+updated_at = "2026-05-13T22:17:40.710617Z"
+agent = "pi"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+currently agents load markdown files that are static to learn how to use apm. instead apm needs a special command similar to help but specialized for agents. it may be a subcommand of apm help. it may have subcommand for every other apm commands. it needs to be very precise to improve agent understanding of apm commands, and very compact as it will be used often by agents.
 
 ### Acceptance criteria
 
