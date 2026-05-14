@@ -347,9 +347,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         });
     }
 
-    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
-    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
-
     let profile_name = triggering_transition
         .and_then(|tr| tr.profile.as_deref())
         .unwrap_or("")
@@ -358,6 +355,9 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
     let mut params = effective_spawn_params(triggering_transition.and_then(|tr| tr.agent.as_deref()), profile, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
+
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
     let worker_system = resolve_system_prompt(root, tr_instructions, profile, &config.workers, &params.agent, role)?;
@@ -549,9 +549,6 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         return Ok(RunNextOutput { ticket_id: Some(id), messages, warnings, worker_pid: None, log_path: None });
     }
 
-    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
-    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
-
     let profile_name2 = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.profile.as_deref())
         .unwrap_or("")
@@ -560,6 +557,9 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
     let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
+
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions2 = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix2 = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
     let worker_system = resolve_system_prompt(root, tr_instructions2, profile2, &config.workers, &params.agent, role2)?;
@@ -752,9 +752,6 @@ pub fn spawn_next_worker(
     }
     let _ = prompt; // prompt used only for run_next, not spawn_next_worker
 
-    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
-    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
-
     let profile_name2 = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.profile.as_deref())
         .unwrap_or("")
@@ -763,6 +760,9 @@ pub fn spawn_next_worker(
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
     let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
+
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
     let worker_system = resolve_system_prompt(root, tr_instructions_snw, profile2, &config.workers, &params.agent, role2)?;
