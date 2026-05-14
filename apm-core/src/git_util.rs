@@ -339,6 +339,8 @@ pub fn commit_to_branch(
     // If a permanent worktree exists for this branch, commit there directly.
     if let Some(wt_path) = find_worktree_for_branch(root, branch) {
         // Fast-forward to remote if remote is ahead, so our commit lands on top of it.
+        // The fast-forward is best-effort — diverged history is acceptable and
+        // we still proceed with the commit.
         let remote_ref = format!("origin/{branch}");
         if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
             let _ = run(&wt_path, &["merge", "--ff-only", &remote_ref]);
@@ -348,8 +350,10 @@ pub fn commit_to_branch(
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&full_path, content)?;
-        let _ = run(&wt_path, &["add", rel_path]);
-        let _ = run(&wt_path, &["commit", "-m", message]);
+        run(&wt_path, &["add", rel_path])
+            .with_context(|| format!("git add {rel_path} in worktree {} failed", wt_path.display()))?;
+        run(&wt_path, &["commit", "-m", message])
+            .with_context(|| format!("git commit on {branch} in worktree {} failed", wt_path.display()))?;
         crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
     }
@@ -361,8 +365,10 @@ pub fn commit_to_branch(
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&local_path, content)?;
-        let _ = run(root, &["add", rel_path]);
-        let _ = run(root, &["commit", "-m", message]);
+        run(root, &["add", rel_path])
+            .with_context(|| format!("git add {rel_path} failed"))?;
+        run(root, &["commit", "-m", message])
+            .with_context(|| format!("git commit on {branch} failed"))?;
         crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
     }
@@ -1262,6 +1268,32 @@ pub fn merge_ref(dir: &Path, refname: &str, warnings: &mut Vec<String>) -> Optio
     } else {
         let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
         warnings.push(format!("warning: merge {refname} failed: {stderr}"));
+        // Abort the merge so the worktree returns to a clean state. Without
+        // this, MERGE_HEAD persists and subsequent partial commits (e.g.
+        // `apm state`, `apm set`) fail silently with "cannot do a partial
+        // commit during a merge". Best-effort: an abort failure is reported
+        // as a warning but doesn't change the return value.
+        if detect_mid_merge_state(dir).is_some() {
+            let abort = Command::new("git")
+                .args(["-C", &dir.to_string_lossy(), "merge", "--abort"])
+                .output();
+            match abort {
+                Ok(o) if !o.status.success() => {
+                    let aborterr = String::from_utf8_lossy(&o.stderr).trim().to_string();
+                    warnings.push(format!(
+                        "warning: could not abort merge of {refname} in {}: {aborterr}",
+                        dir.display()
+                    ));
+                }
+                Err(e) => {
+                    warnings.push(format!(
+                        "warning: could not abort merge of {refname} in {}: {e}",
+                        dir.display()
+                    ));
+                }
+                Ok(_) => {}
+            }
+        }
         None
     }
 }
@@ -1564,6 +1596,37 @@ mod tests {
         let result = merge_ref(dir.path(), "feature", &mut warnings);
         assert!(result.is_some());
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn merge_ref_conflict_aborts_and_warns() {
+        let dir = git_init();
+        let p = dir.path();
+        // Create the same file on both branches with different content so
+        // the merge has a non-trivial conflict.
+        make_commit(p, "f.txt", "main version\n");
+        git_cmd(p, &["checkout", "-b", "feature"]);
+        std::fs::write(p.join("f.txt"), "feature version\n").unwrap();
+        git_cmd(p, &["add", "f.txt"]);
+        git_cmd(p, &["commit", "-m", "feature change"]);
+        git_cmd(p, &["checkout", "main"]);
+        std::fs::write(p.join("f.txt"), "main change\n").unwrap();
+        git_cmd(p, &["add", "f.txt"]);
+        git_cmd(p, &["commit", "-m", "main change"]);
+
+        let mut warnings = Vec::new();
+        let result = merge_ref(p, "feature", &mut warnings);
+
+        assert!(result.is_none(), "merge should report failure");
+        assert!(
+            warnings.iter().any(|w| w.contains("merge feature failed")),
+            "expected merge-failure warning; got: {warnings:?}"
+        );
+        // Critical: worktree must NOT be left mid-merge.
+        assert!(
+            detect_mid_merge_state(p).is_none(),
+            "merge_ref must abort on conflict so MERGE_HEAD does not persist"
+        );
     }
 
     #[test]
