@@ -1,7 +1,7 @@
 +++
 id = "de2588b4"
 title = "Spawn paths consume apm prompt internally"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de2588b4-spawn-paths-consume-apm-prompt-internall"
 created_at = "2026-05-14T21:14:34.141790Z"
-updated_at = "2026-05-14T21:21:29.757383Z"
+updated_at = "2026-05-14T21:22:32.528347Z"
 depends_on = ["ba121f45"]
 +++
 
@@ -53,3 +53,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-14T21:14Z | — | new | philippe|philippepascal |
+| 2026-05-14T21:22Z | new | groomed | philippe |
