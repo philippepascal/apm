@@ -1,15 +1,15 @@
 use anyhow::Result;
 use std::path::Path;
 
-pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<()> {
-    let out = apm_core::start::run(root, id_arg, no_aggressive, spawn, skip_permissions, agent_name)?;
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, caller_name: &str) -> Result<()> {
+    let out = apm_core::start::run(root, id_arg, no_aggressive, spawn, skip_permissions, caller_name)?;
     for w in &out.warnings {
         eprintln!("{w}");
     }
     if let Some(ref msg) = out.merge_message {
         println!("{msg}");
     }
-    println!("{}: {} → {} (agent: {}, branch: {})", out.id, out.old_state, out.new_state, out.agent_name, out.branch);
+    println!("{}: {} → {} (caller: {}, branch: {})", out.id, out.old_state, out.new_state, out.caller_name, out.branch);
     println!("Worktree: {}", out.worktree_path.display());
     if let (Some(pid), Some(ref log)) = (out.worker_pid, out.log_path.as_ref()) {
         println!("Worker spawned: PID={pid}, log={}", log.display());

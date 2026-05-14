@@ -44,3 +44,6 @@ agent = "pi"
 
 [worker_profiles.pi-phi4.options]
 model = "phi4"
+
+[worker_profiles.pi]
+agent = "pi"
