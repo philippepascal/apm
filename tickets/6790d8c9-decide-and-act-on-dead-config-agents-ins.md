@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6790d8c9-decide-and-act-on-dead-config-agents-ins"
 created_at = "2026-05-14T21:14:56.708735Z"
-updated_at = "2026-05-14T21:14:56.708735Z"
+updated_at = "2026-05-14T21:21:35.598598Z"
+depends_on = ["ba121f45"]
 +++
 
 ## Spec
