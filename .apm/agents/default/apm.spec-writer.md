@@ -49,6 +49,21 @@ apm spec <id> --section "Acceptance criteria" --set-file /tmp/spec-<id>-ac.md
 
 Do NOT write the ticket markdown file directly. Always use `apm spec`.
 
+### Never hand-edit the History table
+
+The `## History` section is maintained automatically — every `apm state`
+invocation appends a row with the correct timestamp and actor. Do not:
+
+- Write the table directly (filesystem Write, `git commit` of a modified
+  history block, etc.).
+- Compose your own row to "fix" a missing actor or timestamp.
+- Re-format the existing table.
+
+Calling `apm state <id> <new-state>` is the only correct way to record a
+transition. Hand-written rows mis-record the actor (the worker process has
+no way to know its own canonical name from outside `apm`) and break the
+guarantee that history reflects what apm did.
+
 ### Filename is fixed — never rename the ticket file
 
 The ticket's filename is derived from the branch name at creation and is

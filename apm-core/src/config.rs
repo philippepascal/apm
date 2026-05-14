@@ -612,9 +612,17 @@ pub fn resolve_identity(repo_root: &Path) -> String {
 ///   in `pick_next()` / `sorted_actionable()`. Tickets owned by another
 ///   identity are excluded from the pick set.
 ///
-/// Resolution order: `APM_AGENT_NAME` env var → `USER` → `USERNAME` → `"apm"`.
+/// Resolution order: `APM_AGENT_TYPE` → `APM_AGENT_NAME` → `USER` →
+/// `USERNAME` → `"apm"`.
+///
+/// `APM_AGENT_TYPE` is the agent type (e.g. "pi", "claude") and is preferred
+/// because it produces clean, human-readable values in ticket history.
+/// `APM_AGENT_NAME` is the unique per-run worker identifier
+/// (e.g. "pi-0514-0628-7348") — kept as a fallback for backward compatibility
+/// and for environments where only the legacy variable is set.
 pub fn resolve_caller_name() -> String {
-    std::env::var("APM_AGENT_NAME")
+    std::env::var("APM_AGENT_TYPE")
+        .or_else(|_| std::env::var("APM_AGENT_NAME"))
         .or_else(|_| std::env::var("USER"))
         .or_else(|_| std::env::var("USERNAME"))
         .unwrap_or_else(|_| "apm".to_string())

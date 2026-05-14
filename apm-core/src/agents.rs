@@ -206,6 +206,7 @@ pub fn test_wrapper(root: &Path, name: &str) -> Result<TestReport> {
 
     let ctx = WrapperContext {
         worker_name: "agents-test".to_string(),
+        agent_type: name.to_string(),
         ticket_id: "00000000".to_string(),
         ticket_branch: "test/agents-test".to_string(),
         worktree_path: tmp.clone(),

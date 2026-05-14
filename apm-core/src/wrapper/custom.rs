@@ -231,6 +231,7 @@ impl Wrapper for CustomWrapper {
 
 fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &str) {
     cmd.env("APM_AGENT_NAME", &ctx.worker_name);
+    cmd.env("APM_AGENT_TYPE", &ctx.agent_type);
     cmd.env("APM_TICKET_ID", &ctx.ticket_id);
     cmd.env("APM_TICKET_BRANCH", &ctx.ticket_branch);
     cmd.env("APM_TICKET_WORKTREE", ctx.worktree_path.to_string_lossy().as_ref());
@@ -323,6 +324,7 @@ mod tests {
     fn make_ctx(wt: &std::path::Path, log: &std::path::Path) -> WrapperContext {
         WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "test-id".to_string(),
             ticket_branch: "ticket/test-id".to_string(),
             worktree_path: wt.to_path_buf(),

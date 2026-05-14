@@ -374,6 +374,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let msg_file = write_temp_file("msg", &ticket_content)?;
     let ctx = WrapperContext {
         worker_name: worker_name.clone(),
+        agent_type: params.agent.clone(),
         ticket_id: id.clone(),
         ticket_branch: branch.clone(),
         worktree_path: wt_display.clone(),
@@ -587,6 +588,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let msg_file = write_temp_file("msg", &ticket_content)?;
     let ctx = WrapperContext {
         worker_name: worker_name.clone(),
+        agent_type: params.agent.clone(),
         ticket_id: id.clone(),
         ticket_branch: branch.clone(),
         worktree_path: wt_display.clone(),
@@ -790,6 +792,7 @@ pub fn spawn_next_worker(
     let msg_file = write_temp_file("msg", &ticket_content)?;
     let ctx = WrapperContext {
         worker_name: worker_name.clone(),
+        agent_type: params.agent.clone(),
         ticket_id: id.clone(),
         ticket_branch: branch.clone(),
         worktree_path: wt_display.clone(),
@@ -1424,6 +1427,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "test-id".to_string(),
             ticket_branch: "ticket/test-id".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -1521,6 +1525,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "abc123".to_string(),
             ticket_branch: "ticket/abc123-some-feature".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -1596,6 +1601,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "test123".to_string(),
             ticket_branch: "ticket/test123".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -1734,6 +1740,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "abc123".to_string(),
             ticket_branch: "ticket/abc123".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -2035,6 +2042,7 @@ Some approach.
         options.insert("apm_bin".to_string(), apm_bin.to_string());
         crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: ticket_id.to_string(),
             ticket_branch: format!("ticket/{ticket_id}-test"),
             worktree_path: project_root.to_path_buf(),
@@ -2163,6 +2171,7 @@ updated_at = "2026-01-01T00:00:00Z"
         let msg_file = crate::wrapper::write_temp_file("msg", "msg").unwrap();
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "aaaa0002".to_string(),
             ticket_branch: "ticket/aaaa0002-test".to_string(),
             worktree_path: root.to_path_buf(),
@@ -2230,6 +2239,7 @@ updated_at = "2026-01-01T00:00:00Z"
             let msg_file = crate::wrapper::write_temp_file("msg", "msg").unwrap();
             let ctx = crate::wrapper::WrapperContext {
                 worker_name: "test".to_string(),
+                agent_type: "test".to_string(),
                 ticket_id: ticket_id.to_string(),
                 ticket_branch: format!("ticket/{ticket_id}-test"),
                 worktree_path: root.to_path_buf(),
@@ -2284,6 +2294,7 @@ updated_at = "2026-01-01T00:00:00Z"
         let msg_file = crate::wrapper::write_temp_file("msg", "debug-message").unwrap();
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "aaaa0005".to_string(),
             ticket_branch: "ticket/aaaa0005-test".to_string(),
             worktree_path: root.to_path_buf(),
