@@ -128,7 +128,7 @@ pub struct StartOutput {
     pub id: String,
     pub old_state: String,
     pub new_state: String,
-    pub agent_name: String,
+    pub caller_name: String,
     pub branch: String,
     pub worktree_path: PathBuf,
     pub merge_message: Option<String>,
@@ -247,7 +247,7 @@ fn run_denial_scan(log_path: &Path, worktree: &Path, ticket_id: &str) {
     }
 }
 
-pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, caller_name: &str) -> Result<StartOutput> {
     let mut warnings: Vec<String> = Vec::new();
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -291,7 +291,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    crate::state::append_history(&mut t.body, &old_state, &new_state, &when, agent_name);
+    crate::state::append_history(&mut t.body, &old_state, &new_state, &when, caller_name);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -336,7 +336,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             id,
             old_state,
             new_state,
-            agent_name: agent_name.to_string(),
+            caller_name: caller_name.to_string(),
             branch,
             worktree_path: wt_display,
             merge_message,
@@ -423,7 +423,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         id,
         old_state,
         new_state,
-        agent_name: agent_name.to_string(),
+        caller_name: caller_name.to_string(),
         branch,
         worktree_path: wt_display,
         merge_message,
@@ -447,7 +447,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let all_tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let agent_name = crate::config::resolve_caller_name();
+    let caller_name = crate::config::resolve_caller_name();
     let current_user = crate::config::resolve_identity(root);
 
     // Filter out tickets whose epic already has the max number of active workers.
@@ -467,7 +467,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         })
         .collect();
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&caller_name), Some(&current_user)) else {
         messages.push("No actionable tickets.".to_string());
         return Ok(RunNextOutput { ticket_id: None, messages, warnings, worker_pid: None, log_path: None });
     };
@@ -498,13 +498,13 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
                 std::fs::read_to_string(root.join(path)).ok()
                     .or_else(|| { warnings.push("warning: instructions file not found".to_string()); None })
             }));
-    let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
+    let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
 
     if let Some(ref msg) = start_out.merge_message {
         messages.push(msg.clone());
     }
-    messages.push(format!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch));
+    messages.push(format!("{}: {} → {} (caller: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.caller_name, start_out.branch));
     messages.push(format!("Worktree: {}", start_out.worktree_path.display()));
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -672,10 +672,10 @@ pub fn spawn_next_worker(
             })
             .collect()
     };
-    let agent_name = crate::config::resolve_caller_name();
+    let caller_name = crate::config::resolve_caller_name();
     let current_user = crate::config::resolve_identity(root);
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&caller_name), Some(&current_user)) else {
         return Ok(None);
     };
 
@@ -706,13 +706,13 @@ pub fn spawn_next_worker(
                 std::fs::read_to_string(root.join(path)).ok()
                     .or_else(|| { warnings.push("warning: instructions file not found".to_string()); None })
             }));
-    let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
+    let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
 
     if let Some(ref msg) = start_out.merge_message {
         messages.push(msg.clone());
     }
-    messages.push(format!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch));
+    messages.push(format!("{}: {} → {} (caller: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.caller_name, start_out.branch));
     messages.push(format!("Worktree: {}", start_out.worktree_path.display()));
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
