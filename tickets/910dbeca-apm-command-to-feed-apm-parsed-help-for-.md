@@ -1,7 +1,7 @@
 +++
 id = "910dbeca"
 title = "apm command to feed apm parsed help for agents (piphi)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/910dbeca-apm-command-to-feed-apm-parsed-help-for-"
 created_at = "2026-05-13T00:52:51.102305Z"
-updated_at = "2026-05-14T06:25:25.738496Z"
+updated_at = "2026-05-14T06:28:56.428503Z"
 agent = "pi"
 +++
 
@@ -51,3 +51,4 @@ How the implementation will work.
 | 2026-05-14T06:08Z | new | groomed | philippe |
 | 2026-05-14T06:09Z | groomed | in_design | philippe |
 | 2026-05-14T06:25Z | in_design | groomed | philippe |
+| 2026-05-14T06:28Z | groomed | in_design | philippe |
