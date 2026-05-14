@@ -111,8 +111,7 @@ fn open_editor(root: &Path, config: &Config, branch: &str, rel_path: &str) -> Re
         .status();
 
     let file_path = root.join(rel_path);
-    // Commit whatever the user wrote, even if editor exited non-zero.
-    let _ = crate::editor::open(&file_path);
+    crate::editor::open(&file_path)?;
 
     let _ = std::process::Command::new("git")
         .args(["-c", "commit.gpgsign=false", "add", rel_path])

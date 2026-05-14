@@ -12,7 +12,14 @@ use std::path::{Path, PathBuf};
 pub const CONTRACT_VERSION: u32 = 1;
 
 pub struct WrapperContext {
+    /// Unique per-run identifier — e.g. "pi-0514-0628-7348". Stable for the
+    /// lifetime of one worker process; exposed to the wrapper via
+    /// `APM_AGENT_NAME` for log lines and worker-registry lookups.
     pub worker_name: String,
+    /// Agent type — e.g. "pi", "claude". Exposed via `APM_AGENT_TYPE` and
+    /// used as the actor in ticket history rows when the worker calls
+    /// `apm state` (cleaner than the unique worker_name).
+    pub agent_type: String,
     pub ticket_id: String,
     pub ticket_branch: String,
     pub worktree_path: PathBuf,

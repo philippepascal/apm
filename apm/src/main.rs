@@ -316,13 +316,15 @@ Valid field names:
   effort      — integer 1-10; implementation scale estimate
   risk        — integer 1-10; technical risk estimate
   title       — short human-readable summary
-  agent       — name of the assigned agent (use \"-\" to clear)
+  agent       — agent wrapper to use for this ticket; must match an agent
+                configured in config.toml ([workers].agent or any
+                [worker_profiles.*].agent). Use \"-\" to clear.
   branch      — override the ticket's branch name (use \"-\" to clear)
   depends_on  — comma-separated list of blocker IDs (use \"-\" to clear)
 
 Examples:
   apm set 42 priority 5
-  apm set 42 agent alice
+  apm set 42 agent pi
   apm set 42 agent -               # clear agent field
   apm set 42 depends_on abc123     # single blocker
   apm set 42 depends_on \"abc123,def456\"  # multiple blockers
@@ -990,14 +992,14 @@ fn main() -> Result<()> {
             (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
             (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
             (false, Some(id)) => {
-                let agent_name = apm_core::config::resolve_caller_name();
+                let caller_name = apm_core::config::resolve_caller_name();
                 cmd::start::run(
                     &root,
                     &id,
                     no_aggressive,
                     spawn,
                     skip_permissions,
-                    &agent_name,
+                    &caller_name,
                 )
             }
             (false, None) => anyhow::bail!("provide a ticket ID or use --next"),

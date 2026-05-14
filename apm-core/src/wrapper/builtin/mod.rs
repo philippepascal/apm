@@ -132,6 +132,7 @@ pub(crate) fn write_and_spawn_script(
 
     // Set APM contract env vars
     cmd.env("APM_AGENT_NAME", &ctx.worker_name);
+    cmd.env("APM_AGENT_TYPE", &ctx.agent_type);
     cmd.env("APM_TICKET_ID", &ctx.ticket_id);
     cmd.env("APM_TICKET_BRANCH", &ctx.ticket_branch);
     cmd.env("APM_TICKET_WORKTREE", ctx.worktree_path.to_string_lossy().as_ref());
@@ -175,6 +176,7 @@ mod tests {
     fn make_ctx_with_options(opts: HashMap<String, String>) -> WrapperContext {
         WrapperContext {
             worker_name: "test".into(),
+            agent_type: "test".into(),
             ticket_id: "t".into(),
             ticket_branch: "b".into(),
             worktree_path: PathBuf::from("/tmp"),

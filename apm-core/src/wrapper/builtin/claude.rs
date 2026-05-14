@@ -139,6 +139,7 @@ fn spawn_container(
 
     let apm_env_pairs: &[(&str, &str)] = &[
         ("APM_AGENT_NAME", &ctx.worker_name),
+        ("APM_AGENT_TYPE", &ctx.agent_type),
         ("APM_TICKET_ID", &ctx.ticket_id),
         ("APM_TICKET_BRANCH", &ctx.ticket_branch),
         ("APM_TICKET_WORKTREE", &worktree_str),
@@ -182,6 +183,7 @@ fn spawn_container(
 
 fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &str) {
     cmd.env("APM_AGENT_NAME", &ctx.worker_name);
+    cmd.env("APM_AGENT_TYPE", &ctx.agent_type);
     cmd.env("APM_TICKET_ID", &ctx.ticket_id);
     cmd.env("APM_TICKET_BRANCH", &ctx.ticket_branch);
     cmd.env("APM_TICKET_WORKTREE", ctx.worktree_path.to_string_lossy().as_ref());

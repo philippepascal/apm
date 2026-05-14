@@ -38,6 +38,7 @@ fn integration_echo_test_wrapper() {
 
     let ctx = WrapperContext {
         worker_name: "test-worker".to_string(),
+        agent_type: "test".to_string(),
         ticket_id: "echo-test-id".to_string(),
         ticket_branch: "ticket/echo-test-id".to_string(),
         worktree_path: wt.path().to_path_buf(),
@@ -116,6 +117,7 @@ fn spawn_matching_contract_succeeds() {
 
     let ctx = WrapperContext {
         worker_name: "v1-agent".to_string(),
+        agent_type: "test".to_string(),
         ticket_id: "v1-test".to_string(),
         ticket_branch: "ticket/v1-test".to_string(),
         worktree_path: wt.path().to_path_buf(),
@@ -181,6 +183,7 @@ fn integration_canonical_mode() {
 
     let ctx = WrapperContext {
         worker_name: "canonical-test".to_string(),
+        agent_type: "test".to_string(),
         ticket_id: "canonical-id".to_string(),
         ticket_branch: "ticket/canonical-id".to_string(),
         worktree_path: wt.path().to_path_buf(),
@@ -266,6 +269,7 @@ fn integration_external_parser_pipe() {
 
     let ctx = WrapperContext {
         worker_name: "pipe-test".to_string(),
+        agent_type: "test".to_string(),
         ticket_id: "pipe-id".to_string(),
         ticket_branch: "ticket/pipe-id".to_string(),
         worktree_path: wt.path().to_path_buf(),
@@ -338,6 +342,7 @@ fn spawn_future_contract_rejected() {
 
     let ctx = WrapperContext {
         worker_name: "future-agent".to_string(),
+        agent_type: "test".to_string(),
         ticket_id: "future-test".to_string(),
         ticket_branch: "ticket/future-test".to_string(),
         worktree_path: wt.path().to_path_buf(),

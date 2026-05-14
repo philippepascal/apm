@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use anyhow::Result;
 use crate::wrapper::{self, Wrapper, WrapperContext, WrapperKind};
 use crate::wrapper::custom::CustomWrapper;
@@ -88,14 +88,6 @@ exec claude "${ARGS[@]}" "$(cat "$APM_USER_MESSAGE_FILE")"
 
 const DEFAULT_WORKER_MD: &str = include_str!("default/agents/default/apm.worker.md");
 const DEFAULT_SPEC_WRITER_MD: &str = include_str!("default/agents/default/apm.spec-writer.md");
-
-fn rand_u16() -> u16 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .subsec_nanos() as u16
-}
 
 pub fn list_wrappers(root: &Path, config: &Config) -> Result<Vec<WrapperEntry>> {
     let mut entries: Vec<WrapperEntry> = Vec::new();
@@ -202,9 +194,8 @@ pub fn test_wrapper(root: &Path, name: &str) -> Result<TestReport> {
         )
     })?;
 
-    let tmp: PathBuf =
-        std::env::temp_dir().join(format!("apm-agents-test-{:04x}", rand_u16()));
-    std::fs::create_dir_all(&tmp)?;
+    let tmp_dir = tempfile::tempdir()?;
+    let tmp = tmp_dir.path().to_path_buf();
 
     let sys_file = tmp.join("system.txt");
     let msg_file = tmp.join("message.txt");
@@ -215,6 +206,7 @@ pub fn test_wrapper(root: &Path, name: &str) -> Result<TestReport> {
 
     let ctx = WrapperContext {
         worker_name: "agents-test".to_string(),
+        agent_type: name.to_string(),
         ticket_id: "00000000".to_string(),
         ticket_branch: "test/agents-test".to_string(),
         worktree_path: tmp.clone(),
@@ -282,8 +274,6 @@ pub fn test_wrapper(root: &Path, name: &str) -> Result<TestReport> {
         wall_millis,
         passed,
     };
-
-    let _ = std::fs::remove_dir_all(&tmp);
 
     Ok(report)
 }
