@@ -1,7 +1,7 @@
 +++
 id = "177b68b3"
 title = "UI shows assembled worker prompt for a ticket"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/177b68b3-ui-shows-assembled-worker-prompt-for-a-t"
 created_at = "2026-05-14T21:14:45.432859Z"
-updated_at = "2026-05-14T21:21:32.702201Z"
+updated_at = "2026-05-14T21:22:34.691386Z"
 depends_on = ["ba121f45", "de2588b4"]
 +++
 
@@ -54,3 +54,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-14T21:14Z | — | new | philippe|philippepascal |
+| 2026-05-14T21:22Z | new | groomed | philippe |
