@@ -1,7 +1,7 @@
 +++
 id = "6790d8c9"
 title = "Decide and act on dead config.agents.instructions field"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6790d8c9-decide-and-act-on-dead-config-agents-ins"
 created_at = "2026-05-14T21:14:56.708735Z"
-updated_at = "2026-05-14T21:21:35.598598Z"
+updated_at = "2026-05-14T21:22:37.013919Z"
 depends_on = ["ba121f45"]
 +++
 
@@ -53,3 +53,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-14T21:14Z | — | new | philippe|philippepascal |
+| 2026-05-14T21:22Z | new | groomed | philippe |
