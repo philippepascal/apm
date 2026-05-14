@@ -591,6 +591,67 @@ pub fn verify_tickets(
         }
     }
 
+    // Branch ↔ filename invariant: apm derives the ticket file path from the
+    // branch suffix (`ticket/<suffix>` → `tickets/<suffix>.md`). When a worker
+    // agent renames the file, `load_all_from_git` silently drops the ticket
+    // and it disappears from `apm list`. Catch it here by walking the
+    // ticket branches directly rather than the loaded list.
+    issues.extend(verify_branch_file_invariant(root, config));
+
+    issues
+}
+
+/// Walk every `ticket/*` branch and report file-layout problems that
+/// would otherwise make the ticket invisible to `apm list`.
+fn verify_branch_file_invariant(root: &Path, config: &Config) -> Vec<String> {
+    let mut issues: Vec<String> = Vec::new();
+    let tickets_dir = config.tickets.dir.to_string_lossy().to_string();
+    let branches = match crate::git_util::ticket_branches(root) {
+        Ok(b) => b,
+        Err(_) => return issues,
+    };
+    for branch in &branches {
+        let suffix = branch.trim_start_matches("ticket/");
+        // Skip bare 8-hex refs (created transiently by fetch); they aren't
+        // real ticket branches.
+        if suffix.len() == 8 && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            continue;
+        }
+        let expected_filename = format!("{suffix}.md");
+        let expected_path = format!("{tickets_dir}/{expected_filename}");
+
+        // If the expected file exists on the branch, this branch is fine.
+        if crate::git_util::read_from_branch(root, branch, &expected_path).is_ok() {
+            continue;
+        }
+
+        // Otherwise, look for any `tickets/<id>-*.md` on the branch so we
+        // can distinguish a rename from an orphan.
+        let id_prefix: String = suffix.chars().take_while(|c| *c != '-').collect();
+        let files = crate::git_util::list_files_on_branch(root, branch, &tickets_dir)
+            .unwrap_or_default();
+        let id_matches: Vec<&String> = files.iter()
+            .filter(|f| {
+                let leaf = f.rsplit('/').next().unwrap_or("");
+                leaf.starts_with(&format!("{id_prefix}-")) && leaf.ends_with(".md")
+            })
+            .collect();
+
+        if id_matches.is_empty() {
+            issues.push(format!(
+                "branch {branch}: no ticket file at {expected_path} (orphaned branch — \
+                 no tickets/{id_prefix}-*.md exists on this branch)"
+            ));
+        } else {
+            let found: Vec<String> = id_matches.iter().map(|s| (*s).clone()).collect();
+            issues.push(format!(
+                "branch {branch}: ticket file renamed — expected {expected_path}, \
+                 found {} on branch. apm derives the filename from the branch \
+                 suffix; rename the file back (or rename the branch) so it matches.",
+                found.join(", ")
+            ));
+        }
+    }
     issues
 }
 
@@ -2095,6 +2156,86 @@ terminal = true
         assert!(
             issues.iter().any(|i| i.contains("abcd1234") && i.contains("nonexistent-bot")),
             "expected error with ticket id and agent name; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn verify_tickets_flags_renamed_ticket_file_on_branch() {
+        // Reproduce the pi-agent rename bug: branch is
+        // `ticket/abcd1234-fix-login`, but the file on that branch is
+        // `tickets/abcd1234-fix-login-and-stuff.md`. apm's loader silently
+        // drops the ticket; the validator should flag it.
+        let dir = setup_verify_repo();
+        let p = dir.path();
+
+        let canonical_branch = "ticket/abcd1234-fix-login";
+        git_cmd(p, &["checkout", "-b", canonical_branch]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        // File written with a DIFFERENT slug than the branch suffix.
+        std::fs::write(
+            p.join("tickets/abcd1234-fix-login-and-stuff.md"),
+            "+++\nid = \"abcd1234\"\ntitle = \"x\"\nstate = \"new\"\n+++\n\n## Spec\n\n## History\n",
+        )
+        .unwrap();
+        git_cmd(p, &["add", "tickets/"]);
+        git_cmd(p, &["-c", "commit.gpgsign=false", "commit", "-m", "spec written"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        let config = Config::load(p).unwrap();
+        let issues = verify_tickets(p, &config, &[], &HashSet::new());
+
+        assert!(
+            issues.iter().any(|i| i.contains(canonical_branch) && i.contains("renamed")),
+            "expected rename diagnostic for {canonical_branch}; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn verify_tickets_flags_orphan_branch_with_no_ticket_file() {
+        let dir = setup_verify_repo();
+        let p = dir.path();
+
+        let branch = "ticket/deadbeef-orphan";
+        git_cmd(p, &["checkout", "-b", branch]);
+        // No tickets/ directory at all on this branch.
+        std::fs::write(p.join("dummy.txt"), "x").unwrap();
+        git_cmd(p, &["add", "dummy.txt"]);
+        git_cmd(p, &["-c", "commit.gpgsign=false", "commit", "-m", "no ticket file"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        let config = Config::load(p).unwrap();
+        let issues = verify_tickets(p, &config, &[], &HashSet::new());
+
+        assert!(
+            issues.iter().any(|i| i.contains(branch) && i.contains("orphaned")),
+            "expected orphan diagnostic for {branch}; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn verify_tickets_quiet_when_branch_file_matches() {
+        let dir = setup_verify_repo();
+        let p = dir.path();
+
+        let branch = "ticket/cafe0001-clean-branch";
+        git_cmd(p, &["checkout", "-b", branch]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        // Canonical filename: matches the branch suffix exactly.
+        std::fs::write(
+            p.join("tickets/cafe0001-clean-branch.md"),
+            "+++\nid = \"cafe0001\"\ntitle = \"x\"\nstate = \"new\"\n+++\n\n## Spec\n\n## History\n",
+        )
+        .unwrap();
+        git_cmd(p, &["add", "tickets/"]);
+        git_cmd(p, &["-c", "commit.gpgsign=false", "commit", "-m", "canonical"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        let config = Config::load(p).unwrap();
+        let issues = verify_tickets(p, &config, &[], &HashSet::new());
+
+        assert!(
+            !issues.iter().any(|i| i.contains(branch)),
+            "no branch-file issue expected for canonical layout; got: {issues:?}"
         );
     }
 
