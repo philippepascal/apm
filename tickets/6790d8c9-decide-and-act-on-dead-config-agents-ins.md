@@ -1,0 +1,54 @@
++++
+id = "6790d8c9"
+title = "Decide and act on dead config.agents.instructions field"
+state = "new"
+priority = 0
+effort = 0
+risk = 0
+author = "philippepascal"
+owner = "philippepascal"
+branch = "ticket/6790d8c9-decide-and-act-on-dead-config-agents-ins"
+created_at = "2026-05-14T21:14:56.708735Z"
+updated_at = "2026-05-14T21:14:56.708735Z"
++++
+
+## Spec
+
+### Problem
+
+Today `config.agents.instructions` is declared in `AgentsConfig` (`apm-core/src/config.rs:478`) but **never read anywhere** — it's effectively dead code. Its declared purpose ("Path to an instructions file injected into every worker prompt") matches exactly what we now need: a way to ensure `agents.md` content reaches small-model workers like pi without relying on them to fetch it.
+
+After `apm prompt` (ticket ba121f45) lands, decide whether this field should be honoured:
+
+Option A — wire it in: `apm prompt` prepends the content of `config.agents.instructions` to every assembled prompt. Lets a project ship a single agents.md that flows to every worker automatically.
+
+Option B — remove the dead field: delete it from `AgentsConfig` to avoid the false-friend trap (looks configurable, isn't).
+
+Acceptance: pick A or B with a paragraph of reasoning in Approach, then implement.
+
+### Acceptance criteria
+
+Checkboxes; each one independently testable.
+
+### Out of scope
+
+Explicit list of what this ticket does not cover.
+
+### Approach
+
+How the implementation will work.
+
+### Open questions
+
+
+### Amendment requests
+
+
+### Code review
+
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+| 2026-05-14T21:14Z | — | new | philippe|philippepascal |
