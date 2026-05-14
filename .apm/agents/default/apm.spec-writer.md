@@ -49,6 +49,25 @@ apm spec <id> --section "Acceptance criteria" --set-file /tmp/spec-<id>-ac.md
 
 Do NOT write the ticket markdown file directly. Always use `apm spec`.
 
+### Filename is fixed — never rename the ticket file
+
+The ticket's filename is derived from the branch name at creation and is
+load-bearing: `apm list`, `apm show`, and every other apm command look up the
+file using a path computed from the branch suffix. Renaming the file makes the
+ticket invisible to apm even though the branch and content are intact.
+
+**Rules:**
+- The file path is `tickets/<branch-suffix>.md`, where `<branch-suffix>` is the
+  branch name with the leading `ticket/` stripped — e.g. branch
+  `ticket/abc12345-fix-login` → file `tickets/abc12345-fix-login.md`.
+- Find the exact filename with `ls tickets/<id>-*.md` (there is exactly one).
+- Do **not** compute your own slug from the title. Do **not** `git mv`,
+  `mv`, or Write the spec under a different name — even if the existing slug
+  looks misspelled, abbreviated, or different from what your slugifier would
+  produce. Symptom of breaking this rule: the ticket disappears from `apm list`.
+- `apm spec` preserves the filename automatically — using it (as instructed
+  above) is the safe path.
+
 ---
 
 ## When you are done
@@ -183,9 +202,11 @@ When the ticket is in `ammend` state:
 4. Update `### Approach` if the amendments change the implementation plan
 5. Do not delete answered questions or previously checked items — they are the
    decision record
-6. Commit the updated ticket file via the worktree path:
+6. Commit the updated ticket file via the worktree path. **Do not compute the
+   filename — list it.** The slug is fixed at ticket creation:
    ```bash
-   git -C <worktree-path> add tickets/<id>-<slug>.md
+   FILE=$(ls <worktree-path>/tickets/<id>-*.md)   # exactly one match
+   git -C <worktree-path> add "$FILE"
    git -C <worktree-path> commit -m "ticket(<id>): address amendments"
    ```
 7. `apm state <id> specd` — resubmit only when **all** amendment boxes are checked
