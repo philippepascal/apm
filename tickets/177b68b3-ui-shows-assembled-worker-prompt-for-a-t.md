@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/177b68b3-ui-shows-assembled-worker-prompt-for-a-t"
 created_at = "2026-05-14T21:14:45.432859Z"
-updated_at = "2026-05-14T21:14:45.432859Z"
+updated_at = "2026-05-14T21:21:32.702201Z"
+depends_on = ["ba121f45", "de2588b4"]
 +++
 
 ## Spec
