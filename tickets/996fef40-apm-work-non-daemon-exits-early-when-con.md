@@ -75,6 +75,7 @@ The two existing unit tests (`daemon_dry_run_is_error`, `sig_count_increments_co
 
 ### Open questions
 
+**Q:** - Blocked: Edit tool and Bash (python3) both require user approval to write to the worktree path /Users/philippe/repos/apm/.apm--worktrees/ticket-996fef40-apm-work-non-daemon-exits-early-when-con/apm/src/cmd/work.rs. The fix is a 5-line change (lines 89-93 of apm/src/cmd/work.rs) replacing 'if daemon && reaped' with 'if reaped { if daemon { ... } }' per the Approach section. Needs write permission granted for the worktree path.
 
 ### Amendment requests
 
