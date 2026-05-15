@@ -17,15 +17,9 @@ depends_on = ["ba121f45"]
 
 ### Problem
 
-Once `apm prompt` (ticket ba121f45) lands, integrate it into the three worker-spawn entry points:
+The three worker-spawn entry points in `apm-core/src/start.rs` each call `resolve_system_prompt(...)` directly. Once ticket ba121f45 lands it renames that function to `build_system_prompt`, adds a per-agent file at Level 0 of the cascade, and exposes `apm prompt <id>` as a CLI that calls the same function. After ba121f45 merges, the three call sites must reference `build_system_prompt`; any site still calling `resolve_system_prompt` will fail to compile.
 
-1. `apm-core/src/start.rs::run` (handles `apm start --spawn <id>`)
-2. `apm-core/src/start.rs::run_next` (handles `apm start --spawn --next` and `apm work` non-daemon)
-3. `apm-core/src/start.rs::spawn_next_worker` (handles UI dispatch loop)
-
-Each currently calls `resolve_system_prompt(...)` directly. Replace those call sites with a call to the new prompt-assembly function (or shell out to `apm prompt` and capture stdout — TBD in design).
-
-Acceptance: all three spawn paths produce the same prompt as `apm prompt --ticket <id>` would print; running `apm prompt` then `apm start --spawn` for the same ticket shows identical prompts.
+The secondary concern is parity: `apm prompt <id>` is designed (per ba121f45 Step 2) to resolve the ticket's triggering transition and invoke `build_system_prompt` with the same cascade as the spawn paths. For that guarantee to hold the spawn paths must call `build_system_prompt` through the same argument-construction logic, not a parallel copy. This ticket ensures that the rename and any parity gap are addressed in one place after ba121f45 is merged.
 
 ### Acceptance criteria
 
