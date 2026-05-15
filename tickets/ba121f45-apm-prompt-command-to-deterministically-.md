@@ -50,6 +50,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Amendment requests
 
+- [ ] Step 2 says the new function lives 'in a new apm-core/src/prompt.rs (or a public fn in start.rs)' — pick one. Tickets de2588b4 and 177b68b3 already commit to apm_core::prompt::run by name; align by placing the function in apm-core/src/prompt.rs and remove the 'or' alternative.
 
 ### Code review
 
