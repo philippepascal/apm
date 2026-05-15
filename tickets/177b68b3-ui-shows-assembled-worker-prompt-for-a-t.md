@@ -1,7 +1,7 @@
 +++
 id = "177b68b3"
 title = "UI shows assembled worker prompt for a ticket"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/177b68b3-ui-shows-assembled-worker-prompt-for-a-t"
 created_at = "2026-05-14T21:14:45.432859Z"
-updated_at = "2026-05-15T21:54:21.880339Z"
+updated_at = "2026-05-15T21:58:21.606229Z"
 depends_on = ["ba121f45", "de2588b4"]
 +++
 
@@ -100,3 +100,4 @@ Follow the `build_app_with_tickets()` + `.oneshot()` pattern used by the `put_bo
 | 2026-05-15T01:53Z | in_design | specd | default-0515-0146-1530 |
 | 2026-05-15T19:56Z | specd | ammend | philippe |
 | 2026-05-15T21:54Z | ammend | in_design | philippe |
+| 2026-05-15T21:58Z | in_design | specd | default-0515-2154-9ed8 |
