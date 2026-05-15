@@ -41,7 +41,32 @@ The secondary concern is parity: `apm prompt <id>` is designed (per ba121f45 Ste
 
 ### Approach
 
-How the implementation will work.
+**Design decision — direct call, not shell-out.** The spawn paths call build_system_prompt() as a library function. Shelling out to apm prompt would add subprocess overhead and complex error handling with no benefit: ba121f45 already designed apm prompt to use the same lookup as run(), so the parity guarantee is structural, not process-boundary-dependent.
+
+**Coordination with ba121f45**
+
+ba121f45 Step 3 states it will replace resolve_system_prompt with build_system_prompt at the same three call sites. Two valid splits exist:
+
+1. ba121f45 keeps resolve_system_prompt as a deprecated alias calling through to build_system_prompt, leaving the spawn-path call sites untouched. de2588b4 then removes the alias and updates all three sites.
+2. ba121f45 renames the function and updates all usages including the three spawn sites. de2588b4 becomes a verification-and-test ticket only.
+
+Either split is acceptable. The implementer should confirm with the ba121f45 implementer which path they took before starting work. If ba121f45 already updated the three call sites, this ticket closes by verifying the parity ACs and renaming any remaining test references.
+
+**Call site changes (apm-core/src/start.rs)**
+
+Three locations, each a one-word substitution — no surrounding argument-construction code changes:
+
+- run() ~line 363: resolve_system_prompt(root, tr_instructions, profile, &config.workers, &params.agent, role)? becomes build_system_prompt with the same args
+- run_next() ~line 566: resolve_system_prompt(root, tr_instructions2, profile2, &config.workers, &params.agent, role2)? becomes build_system_prompt with the same args
+- spawn_next_worker() ~line 770: resolve_system_prompt(root, tr_instructions_snw, profile2, &config.workers, &params.agent, role2)? becomes build_system_prompt with the same args
+
+**Test updates (apm-core/src/start.rs test module)**
+
+The use super:: import at ~line 960 lists resolve_system_prompt by name. Update it to build_system_prompt. Rename the ~8 test functions that include resolve_system_prompt in their name to use build_system_prompt. No logic changes to test bodies — assertions remain the same.
+
+**Parity verification**
+
+After the substitution, verify the parity ACs by running apm prompt <id> and comparing its stdout against the system-prompt temp file written by a spawn (visible via a test fixture or debug log). No new automated test infrastructure is required beyond the unit-test renames above.
 
 ### Open questions
 
