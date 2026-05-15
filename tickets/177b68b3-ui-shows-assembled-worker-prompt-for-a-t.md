@@ -40,7 +40,44 @@ The apm UI's ticket-detail view has no way to inspect the system prompt a worker
 
 ### Approach
 
-Step 1 — server endpoint (apm-server)\n\napm-server/src/models.rs — add PromptResponse { prompt: String } (Serialize) and PromptQuery { agent: Option<String>, role: Option<String> } (Deserialize).\n\napm-server/src/handlers/tickets.rs — add handler get_ticket_prompt: (1) accept Path(id) and Query(params): Query<PromptQuery>; (2) return 501 if state.git_root() is None; (3) load tickets, resolve full ID with resolve_id_in_slice, return 404 if missing; (4) in spawn_blocking call apm_core::prompt::run(root, &full_id, params.agent.as_deref(), params.role.as_deref()) — the Result<String> function from ba121f45; (5) return Json(PromptResponse { prompt }) on success or a 500 JSON error body on failure.\n\napm-server/src/main.rs — import get_ticket_prompt and add .route("/api/tickets/:id/prompt", get(get_ticket_prompt)) to the protected router after /api/tickets/:id/body.\n\nDependency note: if ba121f45 places the run function in start.rs rather than a new prompt module, update the call site accordingly. Expected interface: fn(root: &Path, id: &str, agent: Option<&str>, role: Option<&str>) -> Result<String>.\n\nStep 2 — UI modal component (apm-ui)\n\napm-ui/src/components/PromptModal.tsx (new file). Props: ticketId string, initialAgent string-or-undefined, onClose callback. State: agentInput (controlled input) and committedAgent (debounce target — updated on blur or Enter), both initialized from initialAgent. useQuery on key ['ticket-prompt', ticketId, committedAgent] fetches GET /api/tickets/{id}/prompt with ?agent=<name> appended when committedAgent is non-empty (refetchOnWindowFocus false, no interval). Renders a fixed full-screen overlay with a centred card: header with title and close button; agent text input with placeholder 'default' that commits on blur/Enter; scrollable pre block for the prompt text (monospace, whitespace-pre-wrap); loading skeleton; error message. useEffect registers Escape to call onClose. Backdrop click calls onClose.\n\napm-ui/src/components/TicketDetail.tsx — three changes: (1) add agent?: string to the local TicketDetail interface; (2) add const [showPrompt, setShowPrompt] = useState(false); (3) add a Prompt button immediately before the Review button in the header (guarded by data), and conditionally mount PromptModal after TransitionButtons when showPrompt && data, passing ticketId, initialAgent={data.agent}, onClose.
+#### Step 1 — Server endpoint (apm-server)
+
+`apm-server/src/models.rs` — add `PromptResponse { prompt: String }` (Serialize) and `PromptQuery { agent: Option<String>, role: Option<String> }` (Deserialize).
+
+`apm-server/src/handlers/tickets.rs` — add handler `get_ticket_prompt`:
+- Accept `Path(id)` and `Query(params): Query<PromptQuery>`.
+- Return 501 if `state.git_root()` is None.
+- Load tickets, resolve full ID with `resolve_id_in_slice`; return 404 if missing.
+- In `spawn_blocking`, call `apm_core::prompt::run(root, &full_id, params.agent.as_deref(), params.role.as_deref())` — the `Result<String>` function from ba121f45.
+- Return `Json(PromptResponse { prompt })` on success, or a 500 JSON error body on failure.
+
+`apm-server/src/main.rs` — import `get_ticket_prompt` and add `.route("/api/tickets/:id/prompt", get(get_ticket_prompt))` to the protected router after `/api/tickets/:id/body`.
+
+Dependency note: if ba121f45 places `run` in `start.rs` rather than `prompt.rs`, update the call site accordingly. Expected interface: `fn(root: &Path, id: &str, agent: Option<&str>, role: Option<&str>) -> Result<String>`.
+
+#### Step 1 integration tests
+
+Follow the `build_app_with_tickets()` + `.oneshot()` pattern used by the `put_body` tests in `apm-server/src/main.rs` (lines 862–911). The test app is constructed without the `require_auth` middleware, so no session token or cookie is needed. Add three tests in the same file:
+
+- **In-memory returns 501**: `build_app_with_tickets(test_tickets())`, `GET /api/tickets/aaaabbbb/prompt`, assert `501 NOT_IMPLEMENTED`. (In-memory sources have no git root, the same early-return path as `put_body_in_memory_returns_501`.)
+- **Unknown ID returns 404**: same test app, `GET /api/tickets/zzzzzzzz/prompt`, assert `404`.
+- **Known ID happy path** (git-backed): construct a temp dir with a minimal ticket file, build a git-backed app state, call the endpoint, assert `200` and a non-empty `prompt` field in the JSON body. Follow whatever git-backed test helper exists alongside `build_app_with_tickets`; if none exists, defer this test to a follow-up.
+
+#### Step 2 — UI modal component (apm-ui)
+
+`apm-ui/src/components/PromptModal.tsx` (new file). Props: `ticketId: string`, `initialAgent: string | undefined`, `onClose: () => void`. State: `agentInput` (controlled input) and `committedAgent` (updated on blur or Enter), both initialized from `initialAgent`. `useQuery` on key `['ticket-prompt', ticketId, committedAgent]` fetches `GET /api/tickets/{id}/prompt` with `?agent=<name>` appended when `committedAgent` is non-empty (`refetchOnWindowFocus: false`, no polling interval). Renders a fixed full-screen overlay with a centred card:
+- Header: title ("Worker Prompt") and x close button.
+- Agent text input with placeholder `'default'` that commits on blur or Enter key.
+- Scrollable `<pre>` block for the prompt text (monospace, `whitespace-pre-wrap`).
+- Loading skeleton while the query is in-flight.
+- Inline error message on failure.
+
+`useEffect` registers Escape to call `onClose`. Backdrop click calls `onClose`.
+
+`apm-ui/src/components/TicketDetail.tsx` — three changes:
+1. Add `agent?: string` to the local `TicketDetail` interface.
+2. Add `const [showPrompt, setShowPrompt] = useState(false)`.
+3. Add a "Prompt" button immediately before the existing "Review" button in the header (guarded by `data`); conditionally mount `<PromptModal>` after `<TransitionButtons>` when `showPrompt && data`, passing `ticketId`, `initialAgent={data.agent}`, and `onClose={() => setShowPrompt(false)}`.
 
 ### Open questions
 
