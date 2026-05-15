@@ -47,6 +47,7 @@ Step 1 — server endpoint (apm-server)\n\napm-server/src/models.rs — add Prom
 
 ### Amendment requests
 
+- [ ] The Approach has literal \\n\\n strings instead of real newlines — visible as one wall of text in apm show. This was a quoting accident when the ticket was filed via --context. Rewrite the Approach with proper section breaks so an implementer can scan it. Section structure to preserve: Step 1 (server endpoint) with the three file/handler/route bullets, then Step 2 (UI modal component) with the PromptModal.tsx and TicketDetail.tsx bullets.
 
 ### Code review
 
