@@ -59,6 +59,7 @@ Decision: **Option A — wire the field in**.
 
 ### Amendment requests
 
+- [ ] Specify behaviour when agents.instructions is configured as an empty string (e.g. instructions = "" in config.toml). Either treat as unset (no prefix injected) — the natural read of an empty path — or bail with the file-not-found error. Add an AC for whichever you pick so an implementer doesn't have to guess.
 
 ### Code review
 
