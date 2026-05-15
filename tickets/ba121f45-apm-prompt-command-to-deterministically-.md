@@ -31,7 +31,12 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to how tickets are selected or dispatched (priority, epic filtering, etc.)
+- Changes to the user message portion of the prompt (role prefix, ticket content, epic bundle, dependency bundle)
+- New instruction file formats or templating beyond what already exists
+- Per-ticket instruction overrides (e.g. a field on the ticket frontmatter)
+- Changes to `apm agent` or any other subcommand not directly involved in prompt resolution
+- Validation that instruction file contents are well-formed
 
 ### Approach
 
