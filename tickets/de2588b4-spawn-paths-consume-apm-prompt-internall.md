@@ -4,12 +4,12 @@ title = "Spawn paths consume apm prompt internally"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de2588b4-spawn-paths-consume-apm-prompt-internall"
 created_at = "2026-05-14T21:14:34.141790Z"
-updated_at = "2026-05-15T01:45:44.267932Z"
+updated_at = "2026-05-15T01:45:46.036571Z"
 depends_on = ["ba121f45"]
 +++
 
