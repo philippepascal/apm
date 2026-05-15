@@ -23,7 +23,12 @@ The secondary concern is parity: `apm prompt <id>` is designed (per ba121f45 Ste
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After this ticket merges, `apm-core` compiles without referencing `resolve_system_prompt` anywhere outside of test history or comments
+- [ ] For any ticket in a spawnable state, `apm start --spawn <id>` passes the same system-prompt string to the worker subprocess as `apm prompt <id>` prints to stdout
+- [ ] For any ticket picked up by `run_next`, the system prompt written to the temp file equals the output of `apm prompt <id>` for that ticket
+- [ ] For any ticket dispatched by `spawn_next_worker`, the system prompt written to the temp file equals the output of `apm prompt <id>` for that ticket
+- [ ] If `build_system_prompt` returns an error (e.g. a missing instructions file), each spawn path exits non-zero and surfaces the error message unchanged
+- [ ] All existing unit tests that previously referenced `resolve_system_prompt` by name pass after being updated to reference `build_system_prompt`
 
 ### Out of scope
 
