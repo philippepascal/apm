@@ -17,16 +17,7 @@ depends_on = ["ba121f45", "de2588b4"]
 
 ### Problem
 
-After `apm prompt` and the spawn-path integration land (tickets ba121f45 and de2588b4), expose the prompt-preview in the apm UI.
-
-Today the UI has a ticket-detail view and a dispatch loop, but no way to see what system prompt a worker would receive. For debugging small-model behaviour (pi/phi4 etc.) and for letting a supervisor confirm 'is this what I think it is?' before clicking dispatch, the UI should be able to render the assembled prompt for the (ticket, agent, role) about to spawn.
-
-Acceptance:
-- ticket-detail page has a 'Show worker prompt' affordance.
-- It renders the exact prompt that `apm prompt --ticket <id>` produces, fetched via apm-server.
-- It updates when the supervisor changes the assigned agent via the UI's agent-override control.
-
-Out of scope: editing the prompt from the UI.
+The apm UI's ticket-detail view has no way to inspect the system prompt a worker would receive before dispatch. The only path is to launch a live worker, which is slow and gives no chance to catch misconfigured agents or instructions before they consume compute. After ba121f45 and de2588b4 land, `build_system_prompt()` is deterministic and accessible via `apm prompt <id>` — but only from the CLI.\n\nThis ticket wires that capability into the UI. The goal is twofold: supervisors can verify "is this really the prompt my worker will see?" before clicking a transition button, and they can experiment with different agent-name overrides without committing to them, which is the primary debugging path for small-model agents (pi, phi4, etc.) that misbehave unexpectedly.
 
 ### Acceptance criteria
 
