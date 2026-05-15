@@ -16,18 +16,27 @@ updated_at = "2026-05-15T01:21:17.353568Z"
 
 ### Problem
 
-`apm init` already writes `CLAUDE.md` to point at `agents.md` (`apm-core/src/init.rs::ensure_claude_md`), but it does **not** touch `.claude/settings.json`. Without that file, every `apm start --spawn` in a fresh repo hits Claude Code's permission gate — the worker tries to call `apm spec`, `apm state`, `apm show` etc., none of which are auto-allowed, and stalls. The 'graceful exit' path (`apm state <id> blocked`) hits the same gate, so the worker can't even self-escape and ends up marked `crashed` in `apm workers`.
+`apm init` already has logic to seed `.claude/settings.json` — in the CLI layer at `apm/src/cmd/init.rs`:
 
-Reproduction (just hit it twice in a row on tickets ba121f45 and 996fef40): worker log fills with `'This command requires approval'` / `'haven't granted it yet'`, then dies.
+- `update_claude_settings()` (line 273) targets the **project** `.claude/settings.json` with the `APM_ALLOW_ENTRIES` list (lines 138-167), which already includes every worker-essential command (`apm spec *`, `apm state *`, `apm show *`, `apm new *`, `apm set *`, etc.).
+- `update_user_claude_settings()` (line 287) targets the **user** `~/.claude/settings.json` with `APM_USER_ALLOW_ENTRIES`.
+
+But there are two reasons workers still crash with permission gates after a normal `apm init`:
+
+1. **Project settings.json is only updated when it already exists.** `update_claude_settings` passes `create_if_missing: false` (line 283), so `update_settings_json` returns early at line 218 if the file is absent. Brand-new repos never get the project allow-list.
+
+2. **Both helpers prompt interactively for [y/N] confirmation** (lines 232-244). In any non-TTY context the prompt is skipped via `read_line` returning empty/EOF, and the entries are not added. Also, a user typing anything other than `y` gets `Skipped.` and the file is left alone.
+
+Reproduction: in this repo right now, `.claude/settings.json` does not exist, and `.claude/settings.local.json` carries only my conversation's session-specific entries (no `apm spec *` or `apm state *`). Workers spawned today on tickets `ba121f45` and `996fef40` both crashed because the apm-essential commands hit the permission gate, and the graceful-exit path (`apm state <id> blocked`) is also gated — a recursive trap.
 
 Acceptance:
-- `apm init` writes a shared `.claude/settings.json` with the worker-essential commands allowed: `Bash(apm spec *)`, `Bash(apm state *)`, `Bash(apm show *)`, `Bash(apm new *)`, `Bash(apm set *)`, `Bash(apm next *)`, `Bash(apm list *)`, `Bash(apm sync *)`, `Bash(apm assign *)`, `Bash(apm version *)`, `Bash(apm validate *)`, plus `Write(<ticket-worktree>/**)` patterns the worker needs.
-- Idempotent: if `.claude/settings.json` already exists, merge in the missing entries (do not overwrite user additions).
-- The set of patterns lives next to `default_agents_md()` etc. so it's discoverable and editable.
+- `update_claude_settings` creates the project `.claude/settings.json` if absent (flip `create_if_missing` to `true`, or detect the no-file case explicitly).
+- Add a `--yes`/non-interactive flag to `apm init` that adds the entries without prompting, so CI and `apm init` in headless environments do the right thing.
+- After the change, a fresh `git init && apm init --yes` produces a `.claude/settings.json` with all `APM_ALLOW_ENTRIES` and the worker can spawn without permission crashes.
 
 Out of scope:
-- `.claude/settings.local.json` is engineer-local; do not touch it.
-- A migration command to backfill existing repos (separate ticket if wanted).
+- Backfill of existing repos that ran a pre-fix `apm init`. A migration command can ship later if wanted.
+- Modifying `settings.local.json` — that file is per-engineer and should never be touched by `apm init`.
 
 ### Acceptance criteria
 
