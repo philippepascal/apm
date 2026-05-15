@@ -52,6 +52,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 - [ ] Step 2 says the new function lives 'in a new apm-core/src/prompt.rs (or a public fn in start.rs)' — pick one. Tickets de2588b4 and 177b68b3 already commit to apm_core::prompt::run by name; align by placing the function in apm-core/src/prompt.rs and remove the 'or' alternative.
 - [ ] AC #5 calls the change 'backward compatible' but it is only config-compatible. Projects that have BOTH a per-agent file at .apm/agents/<agent>/apm.<role>.md AND a transition.instructions entry will see the per-agent file win where transition.instructions previously won. Call this out as a deliberate semantic change in the Approach (or in AC #5 itself) so it isn't a surprise during migration.
+- [ ] Add a parity unit test to the Approach covering AC #6: for the same (agent, role, ticket) inputs, the prompt assembled by run()/run_next()/spawn_next_worker() equals the output of apm prompt. One test reusing existing fixtures is enough; without it the parity guarantee has no automated guard.
 
 ### Code review
 
