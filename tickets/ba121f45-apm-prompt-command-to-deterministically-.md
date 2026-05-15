@@ -40,7 +40,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Approach
 
-- [ ] item one\n- [ ] item two\n- [ ] item three
+- item one
 
 ### Open questions
 
