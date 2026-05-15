@@ -25,12 +25,7 @@ ba121f45 renames `resolve_system_prompt` to `build_system_prompt` (Step 1), expo
 
 ### Out of scope
 
-- Adding or changing the `build_system_prompt` function itself (ba121f45)
-- Adding the `apm prompt` CLI command (ba121f45)
-- Changing the priority cascade or per-agent file Level 0 logic (ba121f45)
-- Shelling out to `apm prompt` as a subprocess — the spawn paths call `build_system_prompt` directly as a library function
-- Changes to argument-construction code in the spawn paths beyond the function-name substitution
-- Modifying any spawn-path behavior other than the system-prompt call
+- Renaming `resolve_system_prompt` to `build_system_prompt` (ba121f45 Step 1)\n- Adding the `apm prompt` CLI command (ba121f45 Step 2)\n- Updating the three call sites in `start.rs` (ba121f45 Step 3)\n- Renaming existing test functions from `resolve_system_prompt` to `build_system_prompt` (ba121f45)\n- Changing the priority cascade or per-agent file Level 0 logic (ba121f45)\n- Shelling out to `apm prompt` as a subprocess
 
 ### Approach
 
