@@ -40,7 +40,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Approach
 
-- **Step 1 — `apm-core/src/start.rs`**: Rename `resolve_system_prompt()` to `build_system_prompt()` and promote the per-agent file check to Level 0. New cascade: (0) `.apm/agents/<agent>/apm.<role>.md` — soft, no error if absent; (1) transition.instructions — hard error if path set but missing; (2) profile.instructions — same; (3) workers.instructions — same; (4) built-in default via `resolve_builtin_instructions()`; (5) error no instructions found. All existing error message strings for levels 1–5 are unchanged.\n- **Step 2 — `apm/src/main.rs` + new `apm-core/src/prompt.rs`**: Add `Prompt { id: String, agent: Option<String>, role: Option<String> }` to the CLI command enum. Wire to `prompt::run()`. Implementation: (1) load ticket by id; (2) find the applicable transition for the ticket's current state using the same lookup as `run()`; (3) resolve agent/role via normal cascade then apply CLI overrides; (4) call `build_system_prompt()`; (5) print result to stdout; (6) return non-zero on error.\n- **Step 3 — Spawn paths**: In `run()` (line 362), `run_next()` (line 566), and `spawn_next_worker()` (line 770): replace `resolve_system_prompt(...)` with `build_system_prompt(...)`. No other changes to those call sites.\n- **Step 4 — No config or schema changes**: `.apm/workflow.toml` and `.apm/config.toml` formats are unchanged. Transitions that set `instructions = ...` continue to work as Level 1 when no per-agent file is present.
+See steps below.
 
 ### Open questions
 
