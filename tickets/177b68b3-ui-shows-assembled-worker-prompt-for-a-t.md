@@ -4,12 +4,12 @@ title = "UI shows assembled worker prompt for a ticket"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/177b68b3-ui-shows-assembled-worker-prompt-for-a-t"
 created_at = "2026-05-14T21:14:45.432859Z"
-updated_at = "2026-05-15T01:52:56.615052Z"
+updated_at = "2026-05-15T01:52:58.490187Z"
 depends_on = ["ba121f45", "de2588b4"]
 +++
 
