@@ -37,7 +37,10 @@ Acceptance: pick A or B with a paragraph of reasoning in Approach, then implemen
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The undocumented `apm agents` command described in `docs/commands.md` (separate unimplemented feature)
+- Changing the cascade priority order within `build_system_prompt()` — that is ba121f45 scope
+- Per-agent or per-role filtering of the `agents.instructions` content
+- Any changes to `workers.instructions` behaviour
 
 ### Approach
 
