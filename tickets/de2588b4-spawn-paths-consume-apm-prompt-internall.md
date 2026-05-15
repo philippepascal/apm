@@ -17,9 +17,7 @@ depends_on = ["ba121f45"]
 
 ### Problem
 
-The three worker-spawn entry points in `apm-core/src/start.rs` each call `resolve_system_prompt(...)` directly. Once ticket ba121f45 lands it renames that function to `build_system_prompt`, adds a per-agent file at Level 0 of the cascade, and exposes `apm prompt <id>` as a CLI that calls the same function. After ba121f45 merges, the three call sites must reference `build_system_prompt`; any site still calling `resolve_system_prompt` will fail to compile.
-
-The secondary concern is parity: `apm prompt <id>` is designed (per ba121f45 Step 2) to resolve the ticket's triggering transition and invoke `build_system_prompt` with the same cascade as the spawn paths. For that guarantee to hold the spawn paths must call `build_system_prompt` through the same argument-construction logic, not a parallel copy. This ticket ensures that the rename and any parity gap are addressed in one place after ba121f45 is merged.
+ba121f45 renames `resolve_system_prompt` to `build_system_prompt` (Step 1), exposes `apm prompt <id>` as a CLI that calls the same function via the same transition-lookup path used by the spawn paths (Step 2), and updates the three call sites in `start.rs` and any existing test references (Step 3). After ba121f45 lands, the function rename and call-site substitutions are complete.\n\nThe gap that remains is automated verification: nothing asserts that `apm prompt <id>` and the three spawn paths produce identical system-prompt strings for the same ticket. A future refactor to argument-construction logic in any of the four code paths could silently break parity. This ticket delivers the unit tests that close that gap.
 
 ### Acceptance criteria
 
