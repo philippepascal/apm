@@ -3,8 +3,8 @@
 These instructions apply when you pick up a `ready` ticket via `apm start` or
 resume an `in_progress` ticket.
 
-Read `apm.agents.md` for startup, identity, worktree setup, and shell
-discipline. This file covers the implementation phase only.
+Read `.apm/agents/default/agents.md` for startup, identity, worktree setup,
+and shell discipline. This file covers the implementation phase only.
 
 ---
 
