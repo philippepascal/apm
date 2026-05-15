@@ -75,6 +75,7 @@ After the substitution, verify the parity ACs by running apm prompt <id> and com
 
 - [ ] The Approach presents two alternative splits with ba121f45 and instructs the implementer to 'confirm with the ba121f45 implementer'. Drop the alternatives. ba121f45 Step 3 already commits to replacing resolve_system_prompt with build_system_prompt at all three call sites in start.rs. This ticket must commit to a single, post-ba121f45 scope.
 - [ ] With ba121f45 owning the call-site substitution, this ticket is materially redundant. Either close it as folded into ba121f45, or re-scope it strictly to parity testing — i.e. its sole deliverable becomes the parity unit test (assembled prompt from run()/run_next()/spawn_next_worker() equals apm prompt stdout). The Approach currently says 'No new automated test infrastructure is required' which contradicts the ACs that assert equality of the assembled prompt strings.
+- [ ] Approach also lists call-site line numbers (~363, ~566, ~770) as one-word substitutions. If ba121f45 owns those substitutions, remove this section; if this ticket owns them after re-scope, keep them and remove the parallel claim in ba121f45 Step 3. Avoid the double-write.
 
 ### Code review
 
