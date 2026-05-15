@@ -16,15 +16,7 @@ updated_at = "2026-05-15T01:29:47.200209Z"
 
 ### Problem
 
-Workers spawned via `apm start`, `apm work`, and the UI dispatch loop currently get their system prompt from `resolve_system_prompt` in `apm-core/src/start.rs` — a 5-level priority cascade. The output of that function is the entire system prompt. There's no command-line way to inspect or test what a worker will actually receive before it spawns, and the assembly is duplicated/implicit across the three spawn paths.
-
-This makes debugging prompt issues hard. Recent example: pi-worker received the default spec-writer prompt (transition.instructions wins), but the prompt told it to 'read apm.agents.md' — a filename that doesn't exist (only `agents.md` does), and pi can't reliably fetch external files anyway. Without a way to print the actual assembled prompt, that mismatch was only visible by running a real worker.
-
-The user also wants per-agent files (e.g. `.apm/agents/pi/apm.spec-writer.md`) to override the default when present. Right now they exist as dead documentation because Level 0 (transition.instructions) always wins.
-
-Add a new `apm prompt` (or `apm agent prompt`, name TBD in spec) command that deterministically assembles the system prompt for a given (agent, role, ticket-id) tuple and prints it. `apm start`, `apm work`, and the UI must internally call this same code path so what you see is what the worker sees.
-
-Acceptance: a single function builds the prompt; CLI exposes it; spawn paths consume it; per-agent files override the defaults when present; existing transitions in workflow.toml continue to work as a fallback.
+Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `resolve_system_prompt()` in `apm-core/src/start.rs`, which applies a 5-level priority cascade to produce the system prompt. The cascade is: (0) `transition.instructions`, (1) profile.instructions, (2) workers.instructions, (3) `.apm/agents/<agent>/apm.<role>.md`, (4) built-in default. Because Level 0 always wins when a transition has `instructions` set — and nearly every transition in `workflow.toml` does — the per-agent files at Level 3 are unreachable dead code. A `pi`-agent transition still gets the `default` spec-writer prompt even if `.apm/agents/pi/apm.spec-writer.md` exists. There is also no CLI surface to inspect what any given (agent, role, ticket) tuple would receive; the only way to see the real prompt is to launch a live worker.\n\nAdd an `apm prompt <ticket-id>` command that deterministically assembles and prints the system prompt for a ticket's current state without spawning a worker. Promote the per-agent file lookup to the highest-priority level so agent-specific overrides actually take effect. Consolidate the three spawn paths — `run()`, `run_next()`, and `spawn_next_worker()` — onto a single `build_system_prompt()` function so the CLI output is guaranteed identical to what a worker receives.
 
 ### Acceptance criteria
 
