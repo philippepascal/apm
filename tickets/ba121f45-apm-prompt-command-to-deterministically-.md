@@ -41,6 +41,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 ### Approach
 
 - **Step 1 (`apm-core/src/start.rs`)**: Rename `resolve_system_prompt()` to `build_system_prompt()` and move the per-agent file check to Level 0 (soft, no error if absent). Updated cascade: (0) `.apm/agents/<agent>/apm.<role>.md`; (1) transition.instructions; (2) profile.instructions; (3) workers.instructions; (4) built-in default; (5) error. Levels 1–3 remain hard errors if the path is set but the file is missing. All existing error message strings are unchanged.
+- **Step 2 (`apm/src/main.rs` + `apm-core/src/prompt.rs`)**: Add `Prompt { id: String, agent: Option<String>, role: Option<String> }` to the CLI command enum. Wire to `prompt::run()` in a new `apm-core/src/prompt.rs` (or a public fn in `start.rs`). The function: (1) loads the ticket; (2) finds the applicable transition for the current state using the same lookup as `run()`; (3) resolves agent/role via normal cascade then applies CLI overrides; (4) calls `build_system_prompt()`; (5) writes result to stdout; (6) exits non-zero on error.
 
 ### Open questions
 
