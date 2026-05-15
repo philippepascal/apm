@@ -1,7 +1,7 @@
 +++
 id = "de2588b4"
 title = "Spawn paths consume apm prompt internally"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 2
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de2588b4-spawn-paths-consume-apm-prompt-internall"
 created_at = "2026-05-14T21:14:34.141790Z"
-updated_at = "2026-05-15T19:56:38.256091Z"
+updated_at = "2026-05-15T21:49:41.304742Z"
 depends_on = ["ba121f45"]
 +++
 
@@ -89,3 +89,4 @@ After the substitution, verify the parity ACs by running apm prompt <id> and com
 | 2026-05-15T01:39Z | groomed | in_design | philippe |
 | 2026-05-15T01:45Z | in_design | specd | default-0515-0139-de08 |
 | 2026-05-15T19:56Z | specd | ammend | philippe |
+| 2026-05-15T21:49Z | ammend | in_design | philippe |
