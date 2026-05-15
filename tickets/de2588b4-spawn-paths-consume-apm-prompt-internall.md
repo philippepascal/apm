@@ -32,7 +32,12 @@ The secondary concern is parity: `apm prompt <id>` is designed (per ba121f45 Ste
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding or changing the `build_system_prompt` function itself (ba121f45)
+- Adding the `apm prompt` CLI command (ba121f45)
+- Changing the priority cascade or per-agent file Level 0 logic (ba121f45)
+- Shelling out to `apm prompt` as a subprocess — the spawn paths call `build_system_prompt` directly as a library function
+- Changes to argument-construction code in the spawn paths beyond the function-name substitution
+- Modifying any spawn-path behavior other than the system-prompt call
 
 ### Approach
 
