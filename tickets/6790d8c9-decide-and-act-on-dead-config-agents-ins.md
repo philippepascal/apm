@@ -44,7 +44,15 @@ Acceptance: pick A or B with a paragraph of reasoning in Approach, then implemen
 
 ### Approach
 
-How the implementation will work.
+Decision: **Option A — wire the field in**.
+
+`WorkersConfig::instructions` (cascade Level 3 after ba121f45) replaces the entire resolved prompt. `agents.instructions`, by contrast, is intended as a prefix injected on top of whatever the cascade produces — a project-wide context layer that every worker receives regardless of which cascade level won. The project itself already sets `instructions = ".apm/agents/default/agents.md"` in `.apm/config.toml`, confirming real intent. Removing the field (Option B) would silently discard that config entry and leave the agents.md content unreachable by small-model workers.
+
+**`apm-core/src/start.rs`** — Add parameter `agents_instructions: Option<&Path>` to `build_system_prompt()` (renamed from `resolve_system_prompt()` in ba121f45). After the cascade resolves to a `String`, if `agents_instructions` is `Some(path)`: read the file with `std::fs::read_to_string(root.join(path))`; on missing file bail with `"agents.instructions: file not found: {path}"`; on success return `format!("{prefix}\n\n{base}")`. Update the three call sites (`run` ~line 362, `run_next` ~line 566, `spawn_next_worker` ~line 770) to pass `config.agents.instructions.as_deref()`.
+
+**`apm-core/src/prompt.rs`** (new from ba121f45) — The `prompt::run()` function also calls `build_system_prompt()`; pass `config.agents.instructions.as_deref()` there too.
+
+**No other changes** — `AgentsConfig.instructions: Option<PathBuf>` in `config.rs` stays as-is; `workers.instructions` behaviour is unchanged. Implement on top of the ba121f45 branch since this ticket modifies `build_system_prompt()` introduced there.
 
 ### Open questions
 
