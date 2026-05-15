@@ -233,4 +233,4 @@ section are out of scope.
 
 ## Style rules
 
-Before writing or amending a spec, read `.apm/style.md` if present. Apply every rule marked `[x]` under `## Specs` to the spec you are writing. Rules marked `[ ]` are inactive — do not apply or reference them.
+Before writing or amending a spec, read `.apm/agents/default/style.md` if present. Apply every rule marked `[x]` under `## Specs` to the spec you are writing. Rules marked `[ ]` are inactive — do not apply or reference them.
