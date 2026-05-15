@@ -40,7 +40,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Approach
 
-Rename `resolve_system_prompt()` to `build_system_prompt()` in `apm-core/src/start.rs` and promote the per-agent file check to the top of the cascade. New priority order: Level 0 = `.apm/agents/<agent>/apm.<role>.md` (soft, skip if absent); Level 1 = transition.instructions (hard error if set but missing); Level 2 = profile.instructions (same); Level 3 = workers.instructions (same); Level 4 = built-in default via `resolve_builtin_instructions()`; Level 5 = error. All existing error messages unchanged.\n\nAdd `Prompt { id: String, agent: Option<String>, role: Option<String> }` to the CLI enum in `apm/src/main.rs`. Wire to `prompt::run()` in `apm-core/src/prompt.rs`. The function loads the ticket, finds the applicable transition for the current state (same lookup as `run()`), resolves agent/role via the normal cascade then applies CLI overrides, calls `build_system_prompt()`, prints to stdout, and exits non-zero on error.\n\nIn `run()` (line 362), `run_next()` (line 566), and `spawn_next_worker()` (line 770): replace `resolve_system_prompt(...)` with `build_system_prompt(...)`. No other changes to those call sites. The `.apm/workflow.toml` and `.apm/config.toml` formats are unchanged; transitions that set `instructions = ...` continue to work as Level 1 when no per-agent file exists.
+- item one\n- item two\n- item three
 
 ### Open questions
 
