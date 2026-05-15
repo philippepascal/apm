@@ -20,7 +20,14 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm prompt <ticket-id>` prints to stdout the system prompt that would be used if the ticket's current transition fired, and exits 0
+- [ ] `apm prompt <ticket-id> --agent <name>` overrides the resolved agent for the inspection without affecting the ticket
+- [ ] `apm prompt <ticket-id> --role <name>` overrides the resolved role for the inspection without affecting the ticket
+- [ ] When `.apm/agents/<agent>/apm.<role>.md` exists it is used in preference to `transition.instructions`, profile.instructions, and workers.instructions
+- [ ] When no per-agent file exists, `transition.instructions` is used as before (backward compatible with existing `workflow.toml` transitions)
+- [ ] All three spawn paths (`run()`, `run_next()`, `spawn_next_worker()`) produce the same prompt as `apm prompt` for the same (agent, role, ticket) inputs
+- [ ] `apm prompt` exits non-zero with a clear message when no instructions can be resolved for the given tuple
+- [ ] `apm prompt` does not spawn a worker, modify any ticket, or write any temp files
 
 ### Out of scope
 
