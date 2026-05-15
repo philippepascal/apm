@@ -32,7 +32,11 @@ The apm UI's ticket-detail view has no way to inspect the system prompt a worker
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Editing the prompt text from the UI (the modal is read-only)
+- Persisting the agent override selected in the modal to the ticket frontmatter (`apm set <id> agent <name>` covers that workflow)
+- A role-override input in the modal (role defaults to "worker"; the CLI `apm prompt` handles edge cases)
+- A dropdown of known agent names (a text input avoids needing a new `/api/agents/list` endpoint)
+- Pre-flight prompt confirmation integrated into the transition buttons (a future ticket could add that)
 
 ### Approach
 
