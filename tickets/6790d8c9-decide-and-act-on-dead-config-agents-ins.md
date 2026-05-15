@@ -4,12 +4,12 @@ title = "Decide and act on dead config.agents.instructions field"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6790d8c9-decide-and-act-on-dead-config-agents-ins"
 created_at = "2026-05-14T21:14:56.708735Z"
-updated_at = "2026-05-15T02:01:03.265311Z"
+updated_at = "2026-05-15T02:01:05.260271Z"
 depends_on = ["ba121f45"]
 +++
 
