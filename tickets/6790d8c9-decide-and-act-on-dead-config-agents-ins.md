@@ -59,7 +59,7 @@ Decision: **Option A — wire the field in**.
 
 ### Amendment requests
 
-- [ ] Specify behaviour when agents.instructions is configured as an empty string (e.g. instructions = "" in config.toml). Either treat as unset (no prefix injected) — the natural read of an empty path — or bail with the file-not-found error. Add an AC for whichever you pick so an implementer doesn't have to guess.
+- [x] Specify behaviour when agents.instructions is configured as an empty string (e.g. instructions = "" in config.toml). Either treat as unset (no prefix injected) — the natural read of an empty path — or bail with the file-not-found error. Add an AC for whichever you pick so an implementer doesn't have to guess.
 - [ ] Specify the trailing-newline behaviour of the prefix. Approach says 'format!("{prefix}\n\n{base}")' — if the prefix file ends with its own newline, that yields three consecutive newlines. Trim trailing whitespace from the prefix before formatting, or document that the convention is 'one or more separators is fine'.
 
 ### Code review
