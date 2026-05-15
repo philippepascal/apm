@@ -40,8 +40,7 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Approach
 
-- item one
-- item two
+- **Step 1 (`apm-core/src/start.rs`)**: Rename `resolve_system_prompt()` to `build_system_prompt()` and move the per-agent file check to Level 0 (soft, no error if absent). Updated cascade: (0) `.apm/agents/<agent>/apm.<role>.md`; (1) transition.instructions; (2) profile.instructions; (3) workers.instructions; (4) built-in default; (5) error. Levels 1–3 remain hard errors if the path is set but the file is missing. All existing error message strings are unchanged.
 
 ### Open questions
 
