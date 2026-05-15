@@ -73,6 +73,7 @@ After the substitution, verify the parity ACs by running apm prompt <id> and com
 
 ### Amendment requests
 
+- [ ] The Approach presents two alternative splits with ba121f45 and instructs the implementer to 'confirm with the ba121f45 implementer'. Drop the alternatives. ba121f45 Step 3 already commits to replacing resolve_system_prompt with build_system_prompt at all three call sites in start.rs. This ticket must commit to a single, post-ba121f45 scope.
 
 ### Code review
 
