@@ -85,7 +85,7 @@ Follow the `build_app_with_tickets()` + `.oneshot()` pattern used by the `put_bo
 ### Amendment requests
 
 - [x] The Approach has literal \\n\\n strings instead of real newlines — visible as one wall of text in apm show. This was a quoting accident when the ticket was filed via --context. Rewrite the Approach with proper section breaks so an implementer can scan it. Section structure to preserve: Step 1 (server endpoint) with the three file/handler/route bullets, then Step 2 (UI modal component) with the PromptModal.tsx and TicketDetail.tsx bullets.
-- [ ] Server-side endpoint in the protected router needs an integration-test note in the Approach: what auth fixture or token does the test use? The existing /api/tickets/:id/body endpoint pattern is the right reference; just point to it so the implementer doesn't have to rediscover it.
+- [x] Server-side endpoint in the protected router needs an integration-test note in the Approach: what auth fixture or token does the test use? The existing /api/tickets/:id/body endpoint pattern is the right reference; just point to it so the implementer doesn't have to rediscover it.
 
 ### Code review
 
