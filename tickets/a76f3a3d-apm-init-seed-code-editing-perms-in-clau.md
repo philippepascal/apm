@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a76f3a3d-apm-init-seed-code-editing-perms-in-clau"
 created_at = "2026-05-17T19:52:57.296867Z"
-updated_at = "2026-05-17T19:52:57.296867Z"
+updated_at = "2026-05-17T19:53:10.960032Z"
+depends_on = ["db166d95"]
 +++
 
 ## Spec
