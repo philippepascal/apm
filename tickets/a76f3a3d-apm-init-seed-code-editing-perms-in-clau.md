@@ -1,7 +1,7 @@
 +++
 id = "a76f3a3d"
 title = "apm init: seed code-editing perms in .claude/settings.json"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a76f3a3d-apm-init-seed-code-editing-perms-in-clau"
 created_at = "2026-05-17T19:52:57.296867Z"
-updated_at = "2026-05-21T22:59:31.301179Z"
+updated_at = "2026-05-21T23:10:43.621907Z"
 depends_on = ["db166d95"]
 +++
 
@@ -70,3 +70,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-17T19:52Z | — | new | philippe|philippepascal |
 | 2026-05-21T22:59Z | new | groomed | philippepascal |
+| 2026-05-21T23:10Z | groomed | in_design | philippepascal |
