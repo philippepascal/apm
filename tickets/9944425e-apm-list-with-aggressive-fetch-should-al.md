@@ -1,7 +1,7 @@
 +++
 id = "9944425e"
 title = "apm list with aggressive fetch should also fast-forward local ticket refs"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9944425e-apm-list-with-aggressive-fetch-should-al"
 created_at = "2026-05-21T20:48:39.622072Z"
-updated_at = "2026-05-21T20:48:39.622072Z"
+updated_at = "2026-05-21T22:56:49.626362Z"
 +++
 
 ## Spec
@@ -63,12 +63,12 @@ How the implementation will work.
 
 ### Amendment requests
 
+[] take option B, and do provide a feedback to user in cli and ux if the local branch is older than head. and asterisk in the cli list, followed by details at bottom of list for example. Something similar in UI
 
 ### Code review
-
-
 ## History
 
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-21T20:48Z | — | new | philippe|philippepascal |
+| 2026-05-21T22:56Z | new | groomed | philippepascal |
