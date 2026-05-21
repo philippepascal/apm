@@ -59,7 +59,11 @@ Out of scope:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-pushing local-ahead refs to origin
+- Changing the `merged-into-main → auto-close` logic in `apm sync`
+- Modifying the `--no-aggressive` flag semantics or defaults
+- Any changes to `apm sync` itself — this ticket is about read-time behaviour only
+- Option A (fast-forwarding local refs inside the aggressive-fetch path)
 
 ### Approach
 
