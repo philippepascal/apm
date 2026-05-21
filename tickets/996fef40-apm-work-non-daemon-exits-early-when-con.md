@@ -20,10 +20,10 @@ In non-daemon mode, apm work exits early when a concurrency constraint (max_work
 
 ### Acceptance criteria
 
-- [ ] Running `apm work` with `max_workers_on_default=1` and 3+ ready tickets on the default branch dispatches and completes all tickets, not just the first
-- [ ] Running `apm work` with `max_workers_per_epic=1` and 3+ ready tickets in the same epic dispatches and completes all tickets
-- [ ] After the fix, `apm work` exits cleanly once all tickets are processed and no new ones remain (i.e. the break condition `!daemon && no_more && workers.is_empty()` still fires correctly)
-- [ ] `apm work -d` (daemon mode) behaviour is unchanged: a reaped worker still resets `next_poll` to `Instant::now()` and clears `no_more`
+- [x] Running `apm work` with `max_workers_on_default=1` and 3+ ready tickets on the default branch dispatches and completes all tickets, not just the first
+- [x] Running `apm work` with `max_workers_per_epic=1` and 3+ ready tickets in the same epic dispatches and completes all tickets
+- [x] After the fix, `apm work` exits cleanly once all tickets are processed and no new ones remain (i.e. the break condition `!daemon && no_more && workers.is_empty()` still fires correctly)
+- [x] `apm work -d` (daemon mode) behaviour is unchanged: a reaped worker still resets `next_poll` to `Instant::now()` and clears `no_more`
 
 ### Out of scope
 
@@ -82,6 +82,8 @@ A: settings have been adjusted.
 
 
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
