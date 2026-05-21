@@ -3,13 +3,13 @@ id = "a76f3a3d"
 title = "apm init: seed code-editing perms in .claude/settings.json"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a76f3a3d-apm-init-seed-code-editing-perms-in-clau"
 created_at = "2026-05-17T19:52:57.296867Z"
-updated_at = "2026-05-21T23:10:43.621907Z"
+updated_at = "2026-05-21T23:14:45.642122Z"
 depends_on = ["db166d95"]
 +++
 
