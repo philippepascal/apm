@@ -136,7 +136,7 @@ warning: local ref has diverged from origin — showing local content
 
 ### Amendment requests
 
-[] take option B, and do provide a feedback to user in cli and ux if the local branch is older than head. and asterisk in the cli list, followed by details at bottom of list for example. Something similar in UI
+- [x] take option B, and do provide a feedback to user in cli and ux if the local branch is older than head. and asterisk in the cli list, followed by details at bottom of list for example. Something similar in UI
 
 ### Code review
 
