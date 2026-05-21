@@ -1,7 +1,7 @@
 +++
 id = "9944425e"
 title = "apm list with aggressive fetch should also fast-forward local ticket refs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9944425e-apm-list-with-aggressive-fetch-should-al"
 created_at = "2026-05-21T20:48:39.622072Z"
-updated_at = "2026-05-21T22:56:49.626362Z"
+updated_at = "2026-05-21T23:15:21.390581Z"
 +++
 
 ## Spec
@@ -72,3 +72,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-21T20:48Z | — | new | philippe|philippepascal |
 | 2026-05-21T22:56Z | new | groomed | philippepascal |
+| 2026-05-21T23:15Z | groomed | in_design | philippepascal |
