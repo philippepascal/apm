@@ -4,12 +4,12 @@ title = "apm sync should reconcile ticket worktrees, not just bare refs"
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7f9c5964-apm-sync-should-reconcile-ticket-worktre"
 created_at = "2026-05-21T20:51:04.188233Z"
-updated_at = "2026-05-21T23:25:19.294530Z"
+updated_at = "2026-05-21T23:25:24.889897Z"
 depends_on = ["9944425e"]
 +++
 
