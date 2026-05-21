@@ -48,7 +48,14 @@ Out of scope:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm list` (aggressive on) reads origin's commit content for a ticket whose local ref is strictly behind origin — the displayed state matches origin, not the stale local ref
+- [ ] `apm list --no-aggressive` continues to read local refs unchanged; no classification overhead runs
+- [ ] A ticket whose local ref is ahead of origin still shows the local (unpushed) state in `apm list` and `apm show`
+- [ ] A ticket whose local ref has diverged from origin shows local state; a warning line is printed (not silently swallowed)
+- [ ] In `apm list` output, each ticket read from origin because local was strictly behind is marked with `*` adjacent to its ID
+- [ ] A stale-ref summary block is printed at the bottom of `apm list` output whenever any `*` tickets are present, naming each one and suggesting `apm sync` to reconcile local refs
+- [ ] `apm show <id>` (aggressive on) reads from origin when local is behind and prints a note line stating the local ref is behind origin and naming `apm sync` as the remedy
+- [ ] The `/api/tickets` response includes a `local_stale` boolean field; `TicketCard` in the web UI renders a visible badge on tickets where `local_stale` is true
 
 ### Out of scope
 
@@ -66,6 +73,8 @@ How the implementation will work.
 [] take option B, and do provide a feedback to user in cli and ux if the local branch is older than head. and asterisk in the cli list, followed by details at bottom of list for example. Something similar in UI
 
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
