@@ -1,7 +1,7 @@
 +++
 id = "7f9c5964"
 title = "apm sync should reconcile ticket worktrees, not just bare refs"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7f9c5964-apm-sync-should-reconcile-ticket-worktre"
 created_at = "2026-05-21T20:51:04.188233Z"
-updated_at = "2026-05-21T23:25:24.889897Z"
+updated_at = "2026-05-21T23:25:30.582661Z"
 depends_on = ["9944425e"]
 +++
 
@@ -129,3 +129,4 @@ No new CLI flags are added. The `--quiet` flag already threads through to `sync.
 | 2026-05-21T20:51Z | — | new | philippe|philippepascal |
 | 2026-05-21T22:59Z | new | groomed | philippepascal |
 | 2026-05-21T23:20Z | groomed | in_design | philippepascal |
+| 2026-05-21T23:25Z | in_design | specd | claude-0521-2321-1750 |
