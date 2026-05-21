@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/996fef40-apm-work-non-daemon-exits-early-when-con"
 created_at = "2026-05-07T02:20:24.657545Z"
-updated_at = "2026-05-15T02:02:55.575338Z"
+updated_at = "2026-05-21T22:47:21.005006Z"
 +++
 
 ## Spec
@@ -76,13 +76,12 @@ The two existing unit tests (`daemon_dry_run_is_error`, `sig_count_increments_co
 ### Open questions
 
 **Q:** - Blocked: Edit tool and Bash (python3) both require user approval to write to the worktree path /Users/philippe/repos/apm/.apm--worktrees/ticket-996fef40-apm-work-non-daemon-exits-early-when-con/apm/src/cmd/work.rs. The fix is a 5-line change (lines 89-93 of apm/src/cmd/work.rs) replacing 'if daemon && reaped' with 'if reaped { if daemon { ... } }' per the Approach section. Needs write permission granted for the worktree path.
+A: settings have been adjusted.
 
 ### Amendment requests
 
 
 ### Code review
-
-
 ## History
 
 | When | From | To | By |
