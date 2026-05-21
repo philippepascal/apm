@@ -35,7 +35,12 @@ The desired end state: after `db166d95` + this ticket, `apm init` in a project w
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Creating `.claude/settings.json` when `.claude/` is absent — covered by `db166d95`
+- The `--yes` flag and non-TTY auto-yes behaviour — covered by `db166d95`
+- Toolchain entries for uncommon build systems (make, bazel, go, ruby, etc.) — supervisor adds manually
+- Adding `permissions.ask` entries (destructive git ops, force-push guards, etc.)
+- Removing or migrating entries that were previously seeded by hand
+- Interactive selection of which toolchain entries to include
 
 ### Approach
 
