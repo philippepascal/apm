@@ -39,7 +39,51 @@ The accurate, complete command metadata already exists in the clap command defin
 
 ### Approach
 
-How the implementation will work.
+#### 1. Register the command
+
+In `apm/src/main.rs`, add an `Instructions` variant to the `Command` enum:
+
+```rust
+/// Output a compact plain-text guide for agents on how to use apm
+Instructions,
+```
+
+Add a dispatch arm in the `match cli.command` block:
+
+```rust
+Command::Instructions => cmd::instructions::run(Cli::command()),
+```
+
+`Cli::command()` is available via the `CommandFactory` import already at the top of `main.rs`.
+
+#### 2. New module `apm/src/cmd/instructions.rs`
+
+Implement `pub fn run(cli_cmd: clap::Command) -> Result<()>` that prints a 2-line preamble then delegates to `super::help::run(Some("commands"), cli_cmd)`.
+
+`help::run` is already `pub` and accepts a clap `Command` by value. Passing `Some("commands")` routes to the existing `render_commands()` path, which walks the clap tree and renders every visible command with its about text, positionals, flags, and defaults — no ANSI codes.
+
+The preamble (printed before delegating) should read:
+
+```
+apm — Agent Project Manager
+Run `apm <command> --help` for full flag details on any command.
+```
+
+#### 3. Wire up the module
+
+In `apm/src/cmd/mod.rs` (or wherever cmd submodules are declared), add `pub mod instructions;`.
+
+#### 4. No changes needed in `help.rs`
+
+The `render_commands()` path already produces ANSI-free output (confirmed by the existing `no_ansi_in_output` test). The new command reuses it as-is; no refactoring of `help.rs` internals is required.
+
+#### 5. Test coverage
+
+Add a unit test in `instructions.rs` that builds a minimal `clap::Command`, calls `run()`, and asserts:
+- No panic / no `Err` return
+- The preamble string "apm — Agent Project Manager" is present in the output
+- At least one command name from the test command tree appears in the output
+- No ANSI escape code byte (`\x1b`) appears in the output
 
 ### Open questions
 
