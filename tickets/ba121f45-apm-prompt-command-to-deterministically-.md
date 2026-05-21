@@ -1,7 +1,7 @@
 +++
 id = "ba121f45"
 title = "apm prompt command to deterministically build worker system prompt"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ba121f45-apm-prompt-command-to-deterministically-"
 created_at = "2026-05-14T21:14:16.356953Z"
-updated_at = "2026-05-15T21:54:13.084663Z"
+updated_at = "2026-05-21T22:52:41.861078Z"
 +++
 
 ## Spec
@@ -60,3 +60,4 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 | 2026-05-15T19:56Z | specd | ammend | philippe |
 | 2026-05-15T21:52Z | ammend | in_design | philippe |
 | 2026-05-15T21:54Z | in_design | specd | default-0515-2152-81b0 |
+| 2026-05-21T22:52Z | specd | ready | philippepascal |
