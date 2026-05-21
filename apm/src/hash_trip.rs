@@ -26,6 +26,7 @@ pub fn is_read_only_command(cmd: &super::Command) -> bool {
         super::Command::List { .. }
             | super::Command::Show { .. }
             | super::Command::Next { .. }
+            | super::Command::Prompt { .. }
             | super::Command::Agents { command: super::AgentsCommand::List }
             | super::Command::Agents { command: super::AgentsCommand::Test { .. } }
     )
