@@ -67,7 +67,69 @@ Out of scope:
 
 ### Approach
 
-How the implementation will work.
+Option B is chosen (per amendment request): classify refs at read time and prefer origin content when origin is strictly ahead. Local refs are never modified by this path — that remains `apm sync`'s job. The benefit over Option A is that the `*` indicator persists, giving the user explicit signal that local refs are behind rather than silently reconciling them.
+
+#### Phase 1 — new `read_from_branch_with_class` in `apm-core/src/git_util.rs`
+
+Add:
+```rust
+pub fn read_from_branch_with_class(
+    root: &Path, branch: &str, rel_path: &str,
+) -> Result<(String, BranchClass)> {
+    let local_ref  = format!("refs/heads/{branch}");
+    let remote_ref = format!("origin/{branch}");
+    let class = classify_branch(root, &local_ref, &remote_ref);
+    let content = match &class {
+        BranchClass::Behind | BranchClass::RemoteOnly | BranchClass::Equal => {
+            run(root, &["show", &format!("{remote_ref}:{rel_path}")])
+                .or_else(|_| run(root, &["show", &format!("{branch}:{rel_path}")]))?
+        }
+        BranchClass::Ahead | BranchClass::NoRemote | BranchClass::Diverged => {
+            run(root, &["show", &format!("{branch}:{rel_path}")])
+                .or_else(|_| run(root, &["show", &format!("{remote_ref}:{rel_path}")]))?
+        }
+    };
+    Ok((content, class))
+}
+```
+
+Keep the existing `read_from_branch` as a thin wrapper that discards the class (backward compat for callers that don't care).
+
+#### Phase 2 — `local_stale` field on `Ticket` in `apm-core/src/ticket/`
+
+Add an ephemeral (not serialized, skipped by `Ticket::parse`) boolean field:
+```rust
+pub local_stale: bool,   // true when BranchClass::Behind at read time
+```
+
+Modify `load_all_from_git` (`ticket_util.rs`) to call `read_from_branch_with_class`; set `t.local_stale = matches!(class, BranchClass::Behind)`. `RemoteOnly` is a first-fetch, not a staleness signal — do not mark it. `Diverged` is not marked stale either (local content was used; a warning is emitted separately).
+
+#### Phase 3 — `apm list` asterisk + summary (`apm/src/cmd/list.rs`)
+
+When rendering each row, prepend `*` to the ID column when `t.local_stale`. Collect stale tickets into a `Vec<(id, title)>`. After the table, if any:
+```
+  * local ref behind origin — run `apm sync` to fast-forward:
+      *9944425e  apm list with aggressive fetch ...
+```
+
+No asterisk or block when `--no-aggressive` (the flag already bypasses classification in Phase 1).
+
+#### Phase 4 — `apm show` note (`apm/src/cmd/show.rs`)
+
+Replace the `read_from_branch` call with `read_from_branch_with_class`. If `BranchClass::Behind`, print before the ticket body:
+```
+note: local ref is behind origin — showing origin content (run `apm sync` to fast-forward)
+```
+If `BranchClass::Diverged`, print:
+```
+warning: local ref has diverged from origin — showing local content
+```
+
+#### Phase 5 — web UI `local_stale` badge
+
+- `apm-server/src/handlers/tickets.rs`: add `local_stale: bool` to the ticket response DTO; populate from `t.local_stale`.
+- `apm-ui/src/components/supervisor/types.ts`: add `local_stale?: boolean` to the `Ticket` interface.
+- `apm-ui/src/components/supervisor/TicketCard.tsx`: render a small badge (reuse the existing `?` / `A` badge pattern, label it `↑` or `stale`) when `local_stale` is true.
 
 ### Open questions
 
