@@ -31,7 +31,11 @@ The accurate, complete command metadata already exists in the clap command defin
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Modifying or replacing existing agent instruction files (`.apm/agents/*/apm.*.md`)
+- Auto-injecting `apm instructions` output into agent system prompts or user messages
+- Flags or options on the command itself (e.g., `--format`, `--compact`, `--topic`)
+- Config/workflow/ticket schema documentation (already covered by `apm help config`, `apm help workflow`, `apm help ticket`)
+- Localisation or i18n of the output
 
 ### Approach
 
