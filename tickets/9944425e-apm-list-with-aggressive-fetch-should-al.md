@@ -4,12 +4,12 @@ title = "apm list with aggressive fetch should also fast-forward local ticket re
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9944425e-apm-list-with-aggressive-fetch-should-al"
 created_at = "2026-05-21T20:48:39.622072Z"
-updated_at = "2026-05-21T23:20:31.917970Z"
+updated_at = "2026-05-21T23:20:35.429896Z"
 +++
 
 ## Spec
