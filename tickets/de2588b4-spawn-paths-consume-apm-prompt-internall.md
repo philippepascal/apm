@@ -21,7 +21,7 @@ ba121f45 renames `resolve_system_prompt` to `build_system_prompt` (Step 1), expo
 
 ### Acceptance criteria
 
-- [ ] A unit test verifies that `prompt::run()` and the argument-construction path used by `run()` produce the same `build_system_prompt` result for a fixture ticket\n- [ ] Equivalent parity tests exist for `run_next()` and `spawn_next_worker()`\n- [ ] A unit test verifies that when `build_system_prompt` returns an error (e.g. instructions file missing), each spawn path propagates it unchanged\n- [ ] All new tests pass against the post-ba121f45 codebase
+- [x] A unit test verifies that `prompt::run()` and the argument-construction path used by `run()` produce the same `build_system_prompt` result for a fixture ticket\n- [ ] Equivalent parity tests exist for `run_next()` and `spawn_next_worker()`\n- [ ] A unit test verifies that when `build_system_prompt` returns an error (e.g. instructions file missing), each spawn path propagates it unchanged\n- [ ] All new tests pass against the post-ba121f45 codebase
 
 ### Out of scope
 
