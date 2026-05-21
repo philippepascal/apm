@@ -17,31 +17,11 @@ depends_on = ["db166d95"]
 
 ### Problem
 
-`apm init` already has an `APM_ALLOW_ENTRIES` list (`apm/src/cmd/init.rs:138-167`) covering every worker-essential `apm` subcommand. Sibling ticket `db166d95` covers the gap where the file is never created when `.claude/` exists but `settings.json` doesn't.
+`apm init` seeds `APM_ALLOW_ENTRIES` into `.claude/settings.json` so workers can invoke `apm` subcommands without permission prompts. That list (`apm/src/cmd/init.rs:138-167`) covers only `Bash(apm …)` patterns. Sibling ticket `db166d95` fixes the create-vs-update gap so the file is written when `.claude/` is present but `settings.json` is not; this ticket covers the *content* of that file.
 
-This ticket covers the **content** of that list. Today it only carries `Bash(apm …)` patterns. That unblocks `apm spec`, `apm state` etc., but a real worker doing implementation work needs more: the `Edit` tool to modify code files, `Bash(cargo *)` to run tests, `Bash(git -C *)` for git ops in its worktree, and a handful of read helpers (`grep`, `rg`, `find`, `cat`, etc.).
+The gap is concrete: ticket `996fef40` triggered a worker that successfully called `apm spec` and `apm state` (both allowed), then stalled the moment it tried to open a file with the `Edit` tool — not on the list. The worker's graceful-exit path worked, but every implementation ticket hits the same wall. Workers also need read helpers (`grep`, `find`, `cat`, etc.), text manipulation (`sed`, `awk`), safe file ops (`mv`, `cp`, `/tmp` writes), and git ops inside their worktree (`git -C …`). Language-specific toolchain commands (`cargo`, `npm`, `python3`) complete the picture for build and test steps.
 
-Reproduction (today, 2026-05-15): ticket `996fef40` is a 5-line surgical fix to `apm/src/cmd/work.rs`. Worker spawned successfully (`Bash(apm …)` was allowed), wrote a correct spec, then transitioned to `in_progress` and immediately stalled because the `Edit` tool was not allow-listed. The graceful-exit path worked — the worker wrote an Open question and transitioned to `blocked` — but the bare-minimum allow-list traps every implementation ticket at the same step.
-
-The set we just added manually to this repo's `.claude/settings.json` (alongside the existing apm allow-list) is a reasonable starting point:
-
-- `Edit`, `Write` — code editing
-- `Bash(cargo *)` — Rust toolchain (project-specific; see decision below)
-- `Bash(git -C *)` — git operations from worktree
-- `Bash(python3 *)` — scripting (sometimes used by workers as an Edit alternative)
-- `Bash(ls *)`, `Bash(rg *)`, `Bash(grep *)`, `Bash(find *)`, `Bash(cat *)`, `Bash(head *)`, `Bash(tail *)`, `Bash(wc *)`, `Bash(sort *)`, `Bash(uniq *)`, `Bash(diff *)`, `Bash(which *)` — read helpers
-- `Bash(sed *)`, `Bash(awk *)` — text manipulation
-- `Bash(mv *)`, `Bash(cp *)`, `Bash(rm /tmp/*)`, `Bash(mkdir -p /tmp/*)` — file ops scoped to safe areas
-- `Bash(echo *)`, `Bash(test *)`, `Bash(true)`, `Bash(false)` — shell building blocks
-
-Design decision the implementer must make: should `apm init` ship a **language-agnostic** baseline (Edit + read helpers + git) and leave language-specific entries like `Bash(cargo *)`, `Bash(npm *)`, `Bash(pytest *)` to the supervisor, OR should it detect the project type (presence of Cargo.toml, package.json, etc.) and append the right toolchain bash entries? Option A is simpler; option B is more helpful. Either is defensible.
-
-Acceptance:
-- `APM_ALLOW_ENTRIES` (or a follow-up constant `APM_CODE_EDIT_ENTRIES` merged into the seed) covers the language-agnostic baseline at minimum: `Edit`, `Write`, `Bash(git -C *)`, and the read helpers listed above.
-- Decision recorded in Approach about whether language toolchains (`cargo`, `npm`, `pytest`, etc.) are seeded automatically based on detected project files, or left to the supervisor to add by hand.
-- After this ticket + `db166d95`, running `apm init` in a fresh repo with `.claude/` present produces a `settings.json` that lets a worker complete a typical implementation ticket without permission stalls.
-
-Depends on `db166d95` so the writer and reviewer don't have to think about the create-vs-update logic at the same time.
+The desired end state: after `db166d95` + this ticket, `apm init` in a project with `.claude/` present writes a `settings.json` that lets a worker edit source files, run the project's test suite, and complete a typical implementation ticket without hitting a permission prompt.
 
 ### Acceptance criteria
 
