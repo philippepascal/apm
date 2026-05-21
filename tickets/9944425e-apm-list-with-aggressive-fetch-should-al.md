@@ -1,0 +1,74 @@
++++
+id = "9944425e"
+title = "apm list with aggressive fetch should also fast-forward local ticket refs"
+state = "new"
+priority = 0
+effort = 0
+risk = 0
+author = "philippepascal"
+owner = "philippepascal"
+branch = "ticket/9944425e-apm-list-with-aggressive-fetch-should-al"
+created_at = "2026-05-21T20:48:39.622072Z"
+updated_at = "2026-05-21T20:48:39.622072Z"
++++
+
+## Spec
+
+### Problem
+
+`apm list` reads ticket state from local `ticket/*` refs (via `git_util::ticket_branches` + `git_util::read_from_branch`). With `sync.aggressive = true` (the default in this repo), it runs `git fetch` before reading — which updates `refs/remotes/origin/ticket/*` but does **not** move local `refs/heads/ticket/*`. So the on-disk picture is:
+
+- origin/ticket/<slug> = latest (post-push from another machine)
+- ticket/<slug> (local) = stale (last cycle)
+- `read_from_branch` prefers local, falls back to origin only when local is absent (`apm-core/src/git_util.rs:31-37`)
+
+Result: `apm list` after a `git fetch` still shows stale state. The only way to reconcile is `apm sync`, which calls `sync_non_checked_out_refs` (`git_util.rs:483`) to fast-forward safe local refs to origin.
+
+Concrete repro hit today: ticket `996fef40` transitioned `in_progress → blocked` on machine A; commit pushed to origin. On machine B, `apm list` continued to show `ready` because machine B's local `ticket/996fef40-…` ref still pointed at the older `ready` commit. Origin had the new `blocked` commit but `read_from_branch`'s local-preference policy hid it. Running `apm sync` on machine B fixed it.
+
+This is a surprising UX. A reasonable user expects `apm list` (with aggressive sync on) to reflect what's on origin without needing a separate command.
+
+Two viable fixes — implementer picks one and records the rationale in Approach:
+
+**Option A — fast-forward inside aggressive sync.** Extend `fetch_if_aggressive` (or its caller chain) so the same `sync_non_checked_out_refs` logic used by `apm sync` runs on every aggressive read path. Cost: every `apm list`/`apm show` does the classify-and-update sweep across all ticket+epic refs (cheap if there are few, O(N) over branch count). Behaviour for `Ahead`/`Diverged` is already conservative (no-op + warning), so this doesn't introduce data-loss risk.
+
+**Option B — flip `read_from_branch` to prefer origin when origin is ahead.** Change the function to consult both refs, classify, and read from whichever is strictly newer. Local-ahead still reads local (so unpushed commits are visible). Diverged falls back to local (or warns and reads local). Cost: extra `merge-base` / `rev-parse` per ticket read.
+
+Acceptance:
+- After this change, on a fresh clone (or a machine that has not run `apm sync` recently) `apm list` reflects the state on origin without requiring a separate `apm sync` invocation.
+- `apm list --no-aggressive` continues to read whatever the local refs currently say (escape hatch unchanged).
+- Unpushed local commits on a ticket branch are still visible in `apm list` / `apm show` (no clobbering of local-ahead state).
+- Diverged ticket branches do not silently choose a side — either a warning is surfaced or behaviour is documented in Approach.
+- The fix path replicates the `apm sync` ref-classification logic from `git_util::sync_non_checked_out_refs` (or `read_from_branch`'s equivalent), so a single classification source-of-truth governs both flows.
+
+Out of scope:
+- Auto-pushing local-ahead refs.
+- Changing the `merged-into-main → auto-close` logic in `apm sync`.
+- UI changes (this is purely a CLI-read behaviour fix).
+
+### Acceptance criteria
+
+Checkboxes; each one independently testable.
+
+### Out of scope
+
+Explicit list of what this ticket does not cover.
+
+### Approach
+
+How the implementation will work.
+
+### Open questions
+
+
+### Amendment requests
+
+
+### Code review
+
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+| 2026-05-21T20:48Z | — | new | philippe|philippepascal |
