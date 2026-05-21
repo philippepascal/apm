@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7f9c5964-apm-sync-should-reconcile-ticket-worktre"
 created_at = "2026-05-21T20:51:04.188233Z"
-updated_at = "2026-05-21T20:51:04.188233Z"
+updated_at = "2026-05-21T20:51:08.862158Z"
+depends_on = ["9944425e"]
 +++
 
 ## Spec
