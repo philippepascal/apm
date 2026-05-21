@@ -4,12 +4,12 @@ title = "apm command to feed apm parsed help for agents"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fcf0b213-apm-command-to-feed-apm-parsed-help-for-"
 created_at = "2026-05-07T20:41:08.889701Z"
-updated_at = "2026-05-21T23:08:08.829119Z"
+updated_at = "2026-05-21T23:08:18.696552Z"
 +++
 
 ## Spec
