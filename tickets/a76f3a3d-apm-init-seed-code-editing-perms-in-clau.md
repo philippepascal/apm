@@ -44,7 +44,105 @@ The desired end state: after `db166d95` + this ticket, `apm init` in a project w
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/src/cmd/init.rs`.
+
+#### Design decision: language toolchains
+
+Project-level `.claude/settings.json` gets the language-agnostic baseline plus toolchain entries detected from manifest files present at the repo root. User-level `~/.claude/settings.json` gets the same baseline plus all common toolchains unconditionally — user settings serve workers across every repo on the machine, so detection makes no sense there.
+
+#### 1. Expand `APM_ALLOW_ENTRIES`
+
+Append to the existing constant after the last `apm` entry:
+
+```rust
+// code editing
+"Edit",
+"Write",
+// git ops in worktree
+"Bash(git -C *)",
+// read helpers
+"Bash(ls *)",
+"Bash(rg *)",
+"Bash(grep *)",
+"Bash(find *)",
+"Bash(cat *)",
+"Bash(head *)",
+"Bash(tail *)",
+"Bash(wc *)",
+"Bash(sort *)",
+"Bash(uniq *)",
+"Bash(diff *)",
+"Bash(which *)",
+// text manipulation
+"Bash(sed *)",
+"Bash(awk *)",
+// file ops (safe areas)
+"Bash(mv *)",
+"Bash(cp *)",
+"Bash(rm /tmp/*)",
+"Bash(mkdir -p /tmp/*)",
+// shell building blocks
+"Bash(echo *)",
+"Bash(test *)",
+"Bash(true)",
+"Bash(false)",
+```
+
+#### 2. Add toolchain detection function
+
+```rust
+fn detected_toolchain_entries(root: &Path) -> Vec<&'static str> {
+    let mut entries = Vec::new();
+    if root.join("Cargo.toml").exists() {
+        entries.push("Bash(cargo *)");
+    }
+    if root.join("package.json").exists() {
+        entries.extend_from_slice(&["Bash(npm *)", "Bash(npx *)"]);
+    }
+    if root.join("pyproject.toml").exists() || root.join("requirements.txt").exists() {
+        entries.push("Bash(python3 *)");
+    }
+    entries
+}
+```
+
+#### 3. Wire detection into `update_claude_settings`
+
+After `db166d95` adds `yes: bool` and the `.claude/` existence guard, merge detected entries before the call:
+
+```rust
+fn update_claude_settings(root: &Path, skip: bool, yes: bool) -> Result<()> {
+    if skip { return Ok(()); }
+    let claude_dir = root.join(".claude");
+    if !claude_dir.exists() { return Ok(()); }
+
+    let mut entries: Vec<&str> = APM_ALLOW_ENTRIES.to_vec();
+    entries.extend(detected_toolchain_entries(root));
+
+    update_settings_json(
+        &claude_dir.join("settings.json"),
+        &entries,
+        "The following entries will be added to .claude/settings.json permissions.allow:",
+        "Add apm commands to Claude allow list?",
+        "Updated .claude/settings.json",
+        true,
+        yes,
+    )
+}
+```
+
+`update_settings_json` de-duplicates against existing entries, so running `apm init` again is idempotent.
+
+#### 4. Expand `APM_USER_ALLOW_ENTRIES`
+
+Add the same language-agnostic baseline plus all common toolchains unconditionally. `APM_USER_ALLOW_ENTRIES` already contains `Bash(git add*)`, `Bash(git commit*)`, `Bash(git -C*)` — add the remaining new entries in the same groups used above for `APM_ALLOW_ENTRIES`, plus:
+
+```rust
+"Bash(cargo *)",
+"Bash(npm *)",
+"Bash(npx *)",
+"Bash(python3 *)",
+```
 
 ### Open questions
 
