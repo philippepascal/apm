@@ -3,13 +3,13 @@ id = "db166d95"
 title = "apm init must seed .claude/settings.json with worker-essential allow-list"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/db166d95-apm-init-must-seed-claude-settings-json-"
 created_at = "2026-05-15T01:21:17.353568Z"
-updated_at = "2026-05-21T23:08:37.830961Z"
+updated_at = "2026-05-21T23:10:18.810322Z"
 +++
 
 ## Spec
