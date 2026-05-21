@@ -20,7 +20,14 @@ Workers spawned via `apm start`, `apm work`, and the UI dispatch loop all call `
 
 ### Acceptance criteria
 
-- [ ] `apm prompt <ticket-id>` prints to stdout the system prompt that would be used if the ticket's current transition fired, and exits 0\n- [ ] `apm prompt <ticket-id> --agent <name>` overrides the resolved agent for the inspection without affecting the ticket\n- [ ] `apm prompt <ticket-id> --role <name>` overrides the resolved role for the inspection without affecting the ticket\n- [ ] When `.apm/agents/<agent>/apm.<role>.md` exists it is used in preference to `transition.instructions`, profile.instructions, and workers.instructions\n- [ ] When no per-agent file exists, `transition.instructions` is used as before (config-compatible with existing `workflow.toml` transitions; when both a per-agent file and `transition.instructions` are present, the per-agent file wins — deliberate semantic change, see Approach)\n- [ ] All three spawn paths (`run()`, `run_next()`, `spawn_next_worker()`) produce the same prompt as `apm prompt` for the same (agent, role, ticket) inputs\n- [ ] `apm prompt` exits non-zero with a clear message when no instructions can be resolved for the given tuple\n- [ ] `apm prompt` does not spawn a worker, modify any ticket, or write any temp files
+- [x] `apm prompt <ticket-id>` prints to stdout the system prompt that would be used if the ticket's current transition fired, and exits 0
+- [x] `apm prompt <ticket-id> --agent <name>` overrides the resolved agent for the inspection without affecting the ticket
+- [x] `apm prompt <ticket-id> --role <name>` overrides the resolved role for the inspection without affecting the ticket
+- [x] When `.apm/agents/<agent>/apm.<role>.md` exists it is used in preference to `transition.instructions`, profile.instructions, and workers.instructions
+- [x] When no per-agent file exists, `transition.instructions` is used as before (config-compatible with existing `workflow.toml` transitions; when both a per-agent file and `transition.instructions` are present, the per-agent file wins — deliberate semantic change, see Approach)
+- [x] All three spawn paths (`run()`, `run_next()`, `spawn_next_worker()`) produce the same prompt as `apm prompt` for the same (agent, role, ticket) inputs
+- [x] `apm prompt` exits non-zero with a clear message when no instructions can be resolved for the given tuple
+- [x] `apm prompt` does not spawn a worker, modify any ticket, or write any temp files
 
 ### Out of scope
 
