@@ -36,7 +36,12 @@ The fix is narrowly scoped: when a ticket worktree's branch is strictly behind o
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-pushing dirty or ahead worktrees, or any worktree modification other than `git merge --ff-only`.
+- `epic/*` worktrees (rare in practice; can be added in a follow-up if needed; `list_ticket_worktrees` only returns `ticket/*` branches).
+- Adding a `--worktrees` / `--no-worktrees` CLI flag (default behavior change is safe; a flag can be added as a follow-up if operators want opt-out).
+- Surfacing per-worktree sync state in the web UI (follow-up).
+- Reconciling untracked non-temp files between machines (impossible without a file-tracking layer outside git).
+- Worktrees in `Equal`, `NoRemote`, or `RemoteOnly` states (these are silent no-ops today and remain so).
 
 ### Approach
 
