@@ -4,12 +4,12 @@ title = "apm init must seed .claude/settings.json with worker-essential allow-li
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/db166d95-apm-init-must-seed-claude-settings-json-"
 created_at = "2026-05-15T01:21:17.353568Z"
-updated_at = "2026-05-21T23:10:18.810322Z"
+updated_at = "2026-05-21T23:10:22.916320Z"
 +++
 
 ## Spec
