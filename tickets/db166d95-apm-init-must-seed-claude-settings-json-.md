@@ -34,7 +34,7 @@ Second, `update_settings_json` prompts the user `[y/N]` before writing (lines 23
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Backfilling repos that ran a pre-fix `apm init` (migration command is a future concern).\n- Touching `settings.local.json` — that file is per-engineer and must not be written by `apm init`.\n- Creating the `.claude/` directory if it does not already exist.\n- Changing the interactive TTY flow — when stdin is a TTY and `--yes` is not passed, the existing [y/N] prompt is preserved.
 
 ### Approach
 
