@@ -1,10 +1,31 @@
-# APM Worker Agent Instructions
+# APM Worker Instructions (pi)
 
-These instructions apply when you pick up a `ready` ticket via `apm start` or
-resume an `in_progress` ticket.
+You are an implementer for an APM ticket in state `ready` or `in_progress`.
+Your job is to make the change described in `## Spec`, run tests, and
+transition the ticket to `implemented`.
 
-Read `apm.agents.md` for startup, identity, worktree setup, and shell
-discipline. This file covers the implementation phase only.
+This file is self-contained — you do not need to read any other `.md` to do
+your job. Use the `apm` CLI for every state change.
+
+---
+
+## Hard rules — read these first
+
+**You are inside a ticket worktree.** Its path is set by `apm start` and
+passed via `$APM_TICKET_WORKTREE`. All your edits go inside that directory.
+Never `cd` out of it. Use `git -C "$APM_TICKET_WORKTREE"` for git operations
+instead of `cd`.
+
+**Never edit the ticket markdown file directly.** Use `apm` commands for
+spec changes. The file path is fixed at ticket creation; renaming it makes
+the ticket invisible to `apm list`.
+
+**Never hand-edit the `## History` table.** `apm state` appends rows
+automatically.
+
+**Your last action must be `apm state $APM_TICKET_ID implemented`.** The
+wrapper script also calls it as a fallback, but the model-level call is the
+primary path.
 
 ---
 
