@@ -45,7 +45,73 @@ The fix is narrowly scoped: when a ticket worktree's branch is strictly behind o
 
 ### Approach
 
-How the implementation will work.
+#### Phase 1 — `is_worktree_dirty_for_sync` in `apm-core/src/git_util.rs`
+
+The existing `is_worktree_dirty` counts any non-empty `git status --porcelain` output as dirty. Add a sibling that filters known temp files before deciding. The function re-uses the same `Command::new("git")` pattern already present in `is_worktree_dirty`:
+
+```rust
+pub fn is_worktree_dirty_for_sync(path: &Path) -> bool {
+    const TEMP_FILES: &[&str] = &[".apm-worker.log", ".apm-worker.pid"];
+    let Ok(out) = Command::new("git")
+        .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
+        .output()
+    else { return false; };
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    stdout.lines().filter(|l| !l.is_empty()).any(|l| {
+        // Porcelain v1 format: "XY filename" — 3-char prefix then filename.
+        let fname = l.get(3..).unwrap_or("").trim();
+        !TEMP_FILES.contains(&fname)
+    })
+}
+```
+
+The existing `is_worktree_dirty` stays unchanged.
+
+#### Phase 2 — `WorktreeSyncResult` + `sync_checked_out_worktrees` in `apm-core/src/git_util.rs`
+
+Add a plain result struct alongside `sync_non_checked_out_refs`:
+
+```rust
+pub struct WorktreeSyncResult {
+    pub fast_forwarded:   Vec<(PathBuf, String)>,
+    pub skipped_dirty:    Vec<(PathBuf, String, Vec<String>)>,
+    pub skipped_ahead:    Vec<(PathBuf, String)>,
+    pub skipped_diverged: Vec<(PathBuf, String)>,
+}
+```
+
+The new function iterates ticket worktrees via `crate::worktree::list_ticket_worktrees(root)` and dispatches on `classify_branch`:
+
+- `Behind` + `is_worktree_dirty_for_sync` clean: run `run(&wt_path, &["merge", "--ff-only", &remote])`. On success push to `fast_forwarded`; on failure push a warning to `warnings`.
+- `Behind` + dirty: collect dirty filenames (private helper `dirty_files_for_sync` that re-runs `git status --porcelain` and returns the non-temp filenames), push to `skipped_dirty`.
+- `Ahead`: push to `skipped_ahead`.
+- `Diverged`: push to `skipped_diverged`.
+- `Equal`, `NoRemote`, `RemoteOnly`: silent skip.
+
+A private helper `dirty_files_for_sync(path: &Path) -> Vec<String>` runs the same porcelain query and collects the non-temp filenames. Separating the check (returns bool) from the collection (returns Vec) avoids allocating on the clean-worktree hot path.
+
+Export `WorktreeSyncResult` and `sync_checked_out_worktrees` through the existing `apm-core/src/git.rs` re-export facade, alongside `sync_non_checked_out_refs`.
+
+#### Phase 3 — Guidance strings in `apm-core/src/sync_guidance.rs`
+
+Add three constants following the existing naming and doc-comment pattern. Placeholders: `<branch>`, `<path>`, `<files>`.
+
+- `WORKTREE_DIRTY_SKIP` — lists the dirty files and tells the user to commit or stash before re-running.
+- `WORKTREE_AHEAD` — one-liner info line with a `git push` command.
+- `WORKTREE_DIVERGED` — multi-line guidance with `fetch` + `rebase` + `push` steps using `git -C <path>` so the user can run it from anywhere.
+
+#### Phase 4 — Wire into `apm/src/cmd/sync.rs`
+
+Inside the `if !offline` block, immediately after the `sync_non_checked_out_refs` call:
+
+1. Call `git::sync_checked_out_worktrees(root, &mut sync_warnings)`.
+2. If `!quiet`, print one confirmation line per `fast_forwarded` entry.
+3. For each `skipped_dirty` entry, push a formatted `WORKTREE_DIRTY_SKIP` message to `sync_warnings`.
+4. For each `skipped_ahead` entry, push a formatted `WORKTREE_AHEAD` message to `sync_warnings`.
+5. For each `skipped_diverged` entry, push a formatted `WORKTREE_DIVERGED` message to `sync_warnings`.
+6. After the existing warning-print loop, if `!quiet` and any worktrees were processed, print: `worktrees: N fast-forwarded, M skipped (local changes), K skipped (ahead/diverged)` — omitting zero-count terms.
+
+No new CLI flags are added. The `--quiet` flag already threads through to `sync.rs::run`; gate all new output on `!quiet` consistently with the existing pattern.
 
 ### Open questions
 
