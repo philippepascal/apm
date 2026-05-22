@@ -28,7 +28,7 @@ The test apm-core/tests/spec_writer_md_sync.rs::default_and_per_agent_apm_spec_w
 
 ### Approach
 
-How the implementation will work.
+The divergence is a single line in `apm-core/src/default/agents/claude/apm.spec-writer.md`. The project copy (`.apm/agents/claude/apm.spec-writer.md`) was updated to reference `.apm/agents/default/style.md`, but the default copy was not updated in step.\n\n**File to change:** `apm-core/src/default/agents/claude/apm.spec-writer.md`\n\n**Change:** Line 236 — in the Style rules paragraph, replace the old style-file path:\n\n- old: `read \`.apm/style.md\` if present`\n- new: `read \`.apm/agents/default/style.md\` if present`\n\nAfter the edit, verify with `diff apm-core/src/default/agents/claude/apm.spec-writer.md .apm/agents/claude/apm.spec-writer.md` (expect no output), then confirm with `cargo test -p apm-core spec_writer_md_sync`.
 
 ### Open questions
 
