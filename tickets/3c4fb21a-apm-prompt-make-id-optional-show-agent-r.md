@@ -1,7 +1,7 @@
 +++
 id = "3c4fb21a"
 title = "apm prompt: make ID optional; show agent/role discovery when called with no ID"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3c4fb21a-apm-prompt-make-id-optional-show-agent-r"
 created_at = "2026-05-22T08:01:03.768635Z"
-updated_at = "2026-05-22T08:08:11.266174Z"
+updated_at = "2026-05-22T08:08:15.455354Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ Use `std::fs::read_dir`; ignore non-UTF-8 names silently (skip). Propagate I/O e
 | 2026-05-22T08:01Z | — | new | philippepascal |
 | 2026-05-22T08:05Z | new | groomed | philippepascal |
 | 2026-05-22T08:05Z | groomed | in_design | philippepascal |
+| 2026-05-22T08:08Z | in_design | specd | claude-0522-0805-e7f8 |
