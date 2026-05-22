@@ -1,7 +1,7 @@
 +++
 id = "b2259593"
 title = "worker_md_sync and default spec-writer sync tests fail on main — three pre-existing failures"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b2259593-worker-md-sync-and-default-spec-writer-s"
 created_at = "2026-05-22T01:32:33.798879Z"
-updated_at = "2026-05-22T01:52:47.396342Z"
+updated_at = "2026-05-22T01:53:20.066617Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-22T01:32Z | — | new | claude-0522-0127-3120|philippepascal |
 | 2026-05-22T01:52Z | new | groomed | philippepascal |
+| 2026-05-22T01:53Z | groomed | in_design | philippepascal |
