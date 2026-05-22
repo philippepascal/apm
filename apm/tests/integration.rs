@@ -241,6 +241,168 @@ fn init_generated_config_has_all_workflow_states() {
     apm_core::config::Config::load(p).unwrap();
 }
 
+fn run_apm_with_home(dir: &std::path::Path, home: &std::path::Path, args: &[&str]) -> std::process::Output {
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(args)
+        .current_dir(dir)
+        .env("HOME", home)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm {:?} failed:\nstdout: {}\nstderr: {}",
+        args,
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    out
+}
+
+fn init_git_repo(p: &std::path::Path) {
+    git(p, &["init", "-q", "-b", "main"]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+    apm_core::init::setup(p, None, None, None).unwrap();
+}
+
+#[test]
+fn init_yes_creates_settings_when_claude_dir_exists() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let settings_path = p.join(".claude/settings.json");
+    assert!(settings_path.exists(), ".claude/settings.json was not created");
+    let contents = std::fs::read_to_string(&settings_path).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Bash(apm show*)"), "Bash(apm show*) missing");
+    assert!(entries.contains(&"Bash(apm state *)"), "Bash(apm state *) missing");
+    assert!(entries.contains(&"Bash(apm spec *)"), "Bash(apm spec *) missing");
+}
+
+#[test]
+fn init_yes_merges_without_duplicating_existing_entries() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+    // Pre-seed one entry
+    let existing = serde_json::json!({
+        "permissions": { "allow": ["Bash(apm show*)"] }
+    });
+    std::fs::write(p.join(".claude/settings.json"), serde_json::to_string_pretty(&existing).unwrap()).unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let contents = std::fs::read_to_string(p.join(".claude/settings.json")).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    let count = entries.iter().filter(|&&e| e == "Bash(apm show*)").count();
+    assert_eq!(count, 1, "Bash(apm show*) duplicated: found {} times", count);
+    assert!(entries.contains(&"Bash(apm state *)"), "Bash(apm state *) missing");
+}
+
+#[test]
+fn init_yes_no_op_when_claude_dir_absent() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    // No .claude/ directory
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    assert!(!p.join(".claude").exists(), ".claude/ must not be created");
+    assert!(!p.join(".claude/settings.json").exists(), "settings.json must not be created");
+}
+
+#[test]
+fn init_non_tty_creates_settings_without_yes_flag() {
+    // run_apm spawns a subprocess whose stdin is a pipe (not a TTY), so
+    // is_tty == false and yes is implied automatically.
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--quiet"]);
+
+    let settings_path = p.join(".claude/settings.json");
+    assert!(settings_path.exists(), ".claude/settings.json was not created on non-TTY stdin");
+    let contents = std::fs::read_to_string(&settings_path).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    assert!(!allow.is_empty(), "allow list must be populated");
+}
+
+#[test]
+fn init_yes_updates_user_settings() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let user_settings = home.path().join(".claude/settings.json");
+    assert!(user_settings.exists(), "~/.claude/settings.json was not created");
+    let contents = std::fs::read_to_string(&user_settings).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Bash(git -C*)"), "Bash(git -C*) missing from user settings");
+    assert!(entries.contains(&"Bash(apm state *)"), "Bash(apm state *) missing from user settings");
+}
+
+#[test]
+fn init_yes_prints_updated_message() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+
+    let out = run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("Updated .claude/settings.json"), "missing project settings update message: {stdout}");
+    assert!(stdout.contains("Updated ~/.claude/settings.json"), "missing user settings update message: {stdout}");
+}
+
+#[test]
+fn init_no_claude_with_yes_suppresses_writes() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--no-claude", "--yes", "--quiet"]);
+
+    assert!(!p.join(".claude/settings.json").exists(), ".claude/settings.json must not be written with --no-claude");
+}
+
 #[test]
 fn list_excludes_terminal_tickets_by_default() {
     let dir = setup();
