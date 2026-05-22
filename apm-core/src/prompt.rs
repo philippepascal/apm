@@ -205,7 +205,7 @@ Test.
             .and_then(|tr| tr.instructions.as_deref())
             .map(|s| s.to_string());
 
-        build_system_prompt(root, tr_instructions.as_deref(), profile, &config.workers, &params.agent, &role)
+        build_system_prompt(root, tr_instructions.as_deref(), profile, &config.workers, None, &params.agent, &role)
     }
 
     /// AC #1: parity for the run() spawn path — argument construction identical
@@ -373,6 +373,7 @@ Test.
             Some("nonexistent.md"),
             None,
             &config.workers,
+            None,
             "mock-happy",
             "worker",
         )
