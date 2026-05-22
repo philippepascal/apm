@@ -549,6 +549,44 @@ pub async fn batch_priority(
     Ok(Json(BatchResult { succeeded, failed }).into_response())
 }
 
+pub async fn get_ticket_prompt(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Query(params): Query<PromptQuery>,
+) -> Result<Response, AppError> {
+    let root = match state.git_root() {
+        Some(r) => r.clone(),
+        None => return Ok((StatusCode::NOT_IMPLEMENTED, "no git root").into_response()),
+    };
+    let tickets = load_tickets(&state).await?;
+    let full_id = match apm_core::ticket::resolve_id_in_slice(&tickets, &id) {
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("no ticket matches") {
+                return Ok((StatusCode::NOT_FOUND, msg).into_response());
+            } else if msg.contains("invalid ticket ID") {
+                return Ok((StatusCode::BAD_REQUEST, msg).into_response());
+            } else {
+                return Err(AppError(e));
+            }
+        }
+        Ok(id) => id,
+    };
+    let agent_override = params.agent.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let mut buf: Vec<u8> = Vec::new();
+        apm_core::prompt::run(&root, &full_id, agent_override.as_deref(), None, &mut buf)?;
+        Ok::<String, anyhow::Error>(String::from_utf8_lossy(&buf).into_owned())
+    }).await?;
+    match result {
+        Ok(prompt) => Ok(Json(PromptResponse { prompt }).into_response()),
+        Err(e) => Ok((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": e.to_string()})),
+        ).into_response()),
+    }
+}
+
 pub async fn create_ticket(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTicketRequest>,

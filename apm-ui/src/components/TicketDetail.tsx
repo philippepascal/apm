@@ -8,6 +8,7 @@ import InlineNumberField from './InlineNumberField'
 import InlineOwnerField from './InlineOwnerField'
 import { getStateColors } from '../lib/stateColors'
 import AssignPicker from './AssignPicker'
+import PromptModal from './PromptModal'
 
 interface TicketDetail {
   id: string
@@ -17,6 +18,7 @@ interface TicketDetail {
   risk: number
   priority: number
   owner?: string
+  agent?: string
   body: string
   raw: string
   valid_transitions: { to: string; label: string; warning?: string }[]
@@ -243,6 +245,7 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
   const setEpicFilter = useLayoutStore((s) => s.setEpicFilter)
   const queryClient = useQueryClient()
   const [patchError, setPatchError] = useState<string | null>(null)
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ticket', selectedTicketId],
@@ -311,6 +314,14 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            {data && (
+              <button
+                onClick={() => setShowPrompt(true)}
+                className="px-2 py-0.5 text-xs rounded border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              >
+                Prompt
+              </button>
+            )}
             {data && (
               <button
                 onClick={() => setReviewMode(true)}
@@ -437,6 +448,13 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
       </div>
       {data && (
         <TransitionButtons ticket={data} onTransitioned={handleTransitioned} />
+      )}
+      {showPrompt && data && (
+        <PromptModal
+          ticketId={data.id}
+          initialAgent={data.agent}
+          onClose={() => setShowPrompt(false)}
+        />
       )}
     </div>
   )
