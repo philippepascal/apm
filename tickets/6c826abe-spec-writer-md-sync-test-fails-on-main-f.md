@@ -20,7 +20,7 @@ The test apm-core/tests/spec_writer_md_sync.rs::default_and_per_agent_apm_spec_w
 
 ### Acceptance criteria
 
-- [ ] `cargo test -p apm-core spec_writer_md_sync` passes on main\n- [ ] `diff apm-core/src/default/agents/claude/apm.spec-writer.md .apm/agents/claude/apm.spec-writer.md` produces no output
+- [x] `cargo test -p apm-core spec_writer_md_sync` passes on main\n- [x] `diff apm-core/src/default/agents/claude/apm.spec-writer.md .apm/agents/claude/apm.spec-writer.md` produces no output
 
 ### Out of scope
 
