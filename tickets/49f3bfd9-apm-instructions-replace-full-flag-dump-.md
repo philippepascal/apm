@@ -4,12 +4,12 @@ title = "apm instructions: replace full flag dump with compact one-liner-per-com
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/49f3bfd9-apm-instructions-replace-full-flag-dump-"
 created_at = "2026-05-22T08:04:36.768358Z"
-updated_at = "2026-05-22T08:10:27.652068Z"
+updated_at = "2026-05-22T08:10:29.822884Z"
 +++
 
 ## Spec
