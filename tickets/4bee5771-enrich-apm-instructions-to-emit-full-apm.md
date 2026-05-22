@@ -4,12 +4,12 @@ title = "Enrich apm instructions to emit full APM system knowledge"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4bee5771-enrich-apm-instructions-to-emit-full-apm"
 created_at = "2026-05-22T23:22:16.080767Z"
-updated_at = "2026-05-22T23:58:07.243870Z"
+updated_at = "2026-05-22T23:58:09.728125Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 +++
