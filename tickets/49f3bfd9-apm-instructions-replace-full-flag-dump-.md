@@ -1,7 +1,7 @@
 +++
 id = "49f3bfd9"
 title = "apm instructions: replace full flag dump with compact one-liner-per-command summary"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/49f3bfd9-apm-instructions-replace-full-flag-dump-"
 created_at = "2026-05-22T08:04:36.768358Z"
-updated_at = "2026-05-22T08:24:01.813044Z"
+updated_at = "2026-05-22T10:18:42.346886Z"
 +++
 
 ## Spec
@@ -119,3 +119,4 @@ The existing `make_test_cmd()` helper already has `foo` (with `--verbose` flag) 
 | 2026-05-22T08:14Z | specd | ready | philippepascal |
 | 2026-05-22T08:20Z | ready | in_progress | philippepascal |
 | 2026-05-22T08:24Z | in_progress | implemented | claude-0522-0820-b3f7 |
+| 2026-05-22T10:18Z | implemented | closed | philippepascal(apm-sync) |
