@@ -1,7 +1,7 @@
 +++
 id = "6790d8c9"
 title = "Decide and act on dead config.agents.instructions field"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6790d8c9-decide-and-act-on-dead-config-agents-ins"
 created_at = "2026-05-14T21:14:56.708735Z"
-updated_at = "2026-05-22T00:11:11.539996Z"
+updated_at = "2026-05-22T02:24:03.675949Z"
 depends_on = ["ba121f45"]
 +++
 
@@ -80,3 +80,4 @@ Decision: **Option A — wire the field in**.
 | 2026-05-21T22:52Z | specd | ready | philippepascal |
 | 2026-05-22T00:01Z | ready | in_progress | philippepascal |
 | 2026-05-22T00:11Z | in_progress | implemented | claude-0521-2300-x7k2 |
+| 2026-05-22T02:24Z | implemented | closed | philippepascal(apm-sync) |
