@@ -148,6 +148,9 @@ detect branch merges automatically.
 Unless --no-claude is passed, adds apm commands to .claude/settings.json
 so that Claude Code's allow list does not prompt for every apm call.
 
+Pass --yes (or -y) to skip the [y/N] confirmation prompts. This is implied
+when stdin is not a terminal.
+
 Use --migrate if you have an existing root-level apm.toml and apm.agents.md
 that need to be moved into .apm/.")]
     Init {
@@ -163,6 +166,9 @@ that need to be moved into .apm/.")]
         /// Suppress non-error output
         #[arg(long)]
         quiet: bool,
+        /// Add allow-list entries without prompting
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
     /// List tickets
     #[command(long_about = "List tickets (read-only query).
@@ -950,7 +956,8 @@ fn main() -> Result<()> {
             migrate,
             with_docker,
             quiet,
-        } => cmd::init::run(&root, no_claude, migrate, with_docker, quiet),
+            yes,
+        } => cmd::init::run(&root, no_claude, migrate, with_docker, quiet, yes),
         Command::List {
             state,
             unassigned,

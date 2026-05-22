@@ -4,7 +4,7 @@ use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool, quiet: bool) -> Result<()> {
+pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool, quiet: bool, yes: bool) -> Result<()> {
     if migrate {
         let msgs = apm_core::init::migrate(root)?;
         for msg in msgs {
@@ -14,6 +14,7 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool, quiet
     }
 
     let is_tty = std::io::stdin().is_terminal();
+    let yes = yes || !is_tty;
 
     // Check if git_host is configured
     let has_git_host = {
@@ -57,8 +58,8 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool, quiet
             }
         }
     }
-    update_claude_settings(root, no_claude)?;
-    update_user_claude_settings()?;
+    update_claude_settings(root, no_claude, yes)?;
+    update_user_claude_settings(yes)?;
     warn_if_settings_untracked(root);
     println!("apm initialized.");
     if std::io::stdout().is_terminal() && !quiet {
@@ -208,6 +209,7 @@ fn update_settings_json(
     prompt_confirm: &str,
     updated_msg: &str,
     create_if_missing: bool,
+    yes: bool,
 ) -> Result<()> {
     let mut val: Value = if path.exists() {
         let raw = std::fs::read_to_string(path)?;
@@ -229,18 +231,20 @@ fn update_settings_json(
         return Ok(());
     }
 
-    println!("{prompt_header}");
-    for e in &missing {
-        println!("  {e}");
-    }
-    print!("{prompt_confirm} [y/N] ");
-    io::stdout().flush()?;
+    if !yes {
+        println!("{prompt_header}");
+        for e in &missing {
+            println!("  {e}");
+        }
+        print!("{prompt_confirm} [y/N] ");
+        io::stdout().flush()?;
 
-    let mut line = String::new();
-    io::stdin().lock().read_line(&mut line)?;
-    if !line.trim().eq_ignore_ascii_case("y") {
-        println!("Skipped.");
-        return Ok(());
+        let mut line = String::new();
+        io::stdin().lock().read_line(&mut line)?;
+        if !line.trim().eq_ignore_ascii_case("y") {
+            println!("Skipped.");
+            return Ok(());
+        }
     }
 
     if val.pointer("/permissions/allow").is_none() {
@@ -270,21 +274,26 @@ fn update_settings_json(
     Ok(())
 }
 
-fn update_claude_settings(root: &Path, skip: bool) -> Result<()> {
+fn update_claude_settings(root: &Path, skip: bool, yes: bool) -> Result<()> {
     if skip {
         return Ok(());
     }
+    let claude_dir = root.join(".claude");
+    if !claude_dir.exists() {
+        return Ok(());
+    }
     update_settings_json(
-        &root.join(".claude/settings.json"),
+        &claude_dir.join("settings.json"),
         APM_ALLOW_ENTRIES,
         "The following entries will be added to .claude/settings.json permissions.allow:",
         "Add apm commands to Claude allow list?",
         "Updated .claude/settings.json",
-        false,
+        true,
+        yes,
     )
 }
 
-fn update_user_claude_settings() -> Result<()> {
+fn update_user_claude_settings(yes: bool) -> Result<()> {
     let home = match std::env::var("HOME") {
         Ok(h) if !h.is_empty() => h,
         _ => return Ok(()),
@@ -296,5 +305,6 @@ fn update_user_claude_settings() -> Result<()> {
         "Add to ~/.claude/settings.json?",
         "Updated ~/.claude/settings.json",
         true,
+        yes,
     )
 }
