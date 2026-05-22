@@ -12,6 +12,7 @@ pub mod cmd {
     pub mod init;
     pub mod path_guard;
     pub mod start;
+    pub mod prompt;
     pub mod validate;
     pub mod list;
     pub mod show;
