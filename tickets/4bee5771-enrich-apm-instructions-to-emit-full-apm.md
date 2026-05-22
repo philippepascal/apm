@@ -35,7 +35,12 @@ Emitting the full state machine to a worker that only touches `ready → in_prog
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Wiring `generate()` into `build_system_prompt` — that is T3 (d8e2fa0e)
+- Updating CLI help text for `apm instructions` and `apm prompt` — that is ticket bfa41899
+- Rewriting `apm.worker.md` or `apm.spec-writer.md` built-in role files — those are T4 (78eeb755) and T5 (34ad9126)
+- Removing `agents.md` or migrating the project's `.apm/agents/` directory — those are T7 (1fce91bd) and T8 (7c5c491d)
+- Defining a canonical role catalog beyond what already exists in the workflow config
+- Unknown `--role` validation beyond a best-effort warning; the fallback is full (unscoped) output
 
 ### Approach
 
