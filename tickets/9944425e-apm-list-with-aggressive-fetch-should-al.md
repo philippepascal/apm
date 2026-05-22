@@ -1,7 +1,7 @@
 +++
 id = "9944425e"
 title = "apm list with aggressive fetch should also fast-forward local ticket refs"
-state = "ready"
+state = "closed"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9944425e-apm-list-with-aggressive-fetch-should-al"
 created_at = "2026-05-21T20:48:39.622072Z"
-updated_at = "2026-05-22T06:44:43.900650Z"
+updated_at = "2026-05-22T06:45:31.484571Z"
 +++
 
 ## Spec
@@ -153,3 +153,4 @@ warning: local ref has diverged from origin — showing local content
 | 2026-05-22T02:45Z | ready | in_progress | philippepascal |
 | 2026-05-22T03:05Z | in_progress | implemented | claude-0522-0245-8ae0 |
 | 2026-05-22T06:44Z | implemented | ready | philippepascal |
+| 2026-05-22T06:45Z | ready | closed | philippepascal(apm-sync) |
