@@ -31,7 +31,13 @@ Implementation: replace the render_commands() delegation in apm/src/cmd/instruct
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions` output contains `apm <name>` prefixed lines for every non-hidden top-level subcommand
+- [ ] Each line shows only the command name and its one-line description; no flags, positionals, or defaults appear
+- [ ] Command lines are two-column aligned: the `apm <name>` token is padded to a consistent width so all descriptions start in the same column
+- [ ] Hidden subcommands (e.g. `path-guard`, `_hook`) are absent from the output
+- [ ] The preamble (`apm — Agent Project Manager` and the `--help` pointer) is still present and unchanged
+- [ ] `apm help commands` output is unchanged — still shows full flag/positional/default detail
+- [ ] Unit tests in `instructions.rs` pass and do not assert flag or positional content
 
 ### Out of scope
 
