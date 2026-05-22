@@ -865,6 +865,8 @@ Examples:\n\
         #[arg(long)]
         role: Option<String>,
     },
+    /// Output a compact plain-text guide for agents on how to use apm
+    Instructions,
     /// Print version and build type
     Version,
     /// Show help for a topic: commands, config, workflow, ticket
@@ -1187,6 +1189,7 @@ fn main() -> Result<()> {
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
         Command::Prompt { id, agent, role } => cmd::prompt::run(&root, &id, agent, role),
+        Command::Instructions => cmd::instructions::run(Cli::command()),
         Command::Version => {
             cmd::version::run();
             Ok(())

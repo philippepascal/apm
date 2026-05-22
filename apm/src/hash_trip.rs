@@ -17,6 +17,7 @@ pub fn is_exempt_command(cmd: &super::Command) -> bool {
             | super::Command::Init { .. }
             | super::Command::Help { .. }
             | super::Command::PathGuard
+            | super::Command::Instructions
     )
 }
 
