@@ -53,7 +53,7 @@ fn render_overview() -> String {
     out
 }
 
-fn render_commands(root: &clap::Command) -> String {
+pub fn render_commands(root: &clap::Command) -> String {
     let mut cmds: Vec<&clap::Command> = root
         .get_subcommands()
         .filter(|c| !c.is_hide_set())

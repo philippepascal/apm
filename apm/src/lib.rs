@@ -33,6 +33,7 @@ pub mod cmd {
     pub mod revoke;
     pub mod version;
     pub mod help;
+    pub mod instructions;
 }
 
 pub use crate::cmd::*;
