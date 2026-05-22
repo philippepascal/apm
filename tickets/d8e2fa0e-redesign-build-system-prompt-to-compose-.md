@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d8e2fa0e-redesign-build-system-prompt-to-compose-"
 created_at = "2026-05-22T23:23:06.850140Z"
-updated_at = "2026-05-22T23:23:06.850140Z"
+updated_at = "2026-05-22T23:24:04.315849Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
+depends_on = ["4bee5771"]
 +++
 
 ## Spec
