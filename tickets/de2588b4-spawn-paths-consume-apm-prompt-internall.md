@@ -1,7 +1,7 @@
 +++
 id = "de2588b4"
 title = "Spawn paths consume apm prompt internally"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/de2588b4-spawn-paths-consume-apm-prompt-internall"
 created_at = "2026-05-14T21:14:34.141790Z"
-updated_at = "2026-05-21T23:59:58.654262Z"
+updated_at = "2026-05-22T02:24:29.938987Z"
 depends_on = ["ba121f45"]
 +++
 
@@ -60,3 +60,4 @@ ba121f45 renames `resolve_system_prompt` to `build_system_prompt` (Step 1), expo
 | 2026-05-21T22:52Z | specd | ready | philippepascal |
 | 2026-05-21T23:43Z | ready | in_progress | philippepascal |
 | 2026-05-21T23:59Z | in_progress | implemented | claude-0521-2345-de25 |
+| 2026-05-22T02:24Z | implemented | closed | philippepascal(apm-sync) |
