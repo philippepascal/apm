@@ -26,7 +26,7 @@ The desired behaviour is a discovery mode: when no ID is supplied (regardless of
 - [x] `apm prompt` with no arguments exits 0 and prints a `Roles:` line whose value is the sorted, comma-space-separated list of unique role names extracted from `apm.<role>.md` filenames across all agent directories
 - [x] The two output lines align their values at the same column (labels padded to equal width)
 - [x] `apm prompt --agent <name>` with no ID triggers discovery mode and produces the same output as bare `apm prompt`
-- [ ] `apm prompt --role <name>` with no ID triggers discovery mode and produces the same output as bare `apm prompt`
+- [x] `apm prompt --role <name>` with no ID triggers discovery mode and produces the same output as bare `apm prompt`
 - [ ] When `.apm/agents/` does not exist, discovery exits 0 and prints `Agents:` and `Roles:` lines with empty values rather than erroring
 - [ ] `apm prompt <id>` with a valid ticket ID behaves identically to the pre-change implementation
 - [ ] `apm prompt <id> --agent <a> --role <r>` continues to work as before
