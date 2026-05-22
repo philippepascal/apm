@@ -45,7 +45,59 @@ Implementation: replace the render_commands() delegation in apm/src/cmd/instruct
 
 ### Approach
 
-How the implementation will work.
+#### Changes to `apm/src/cmd/instructions.rs`
+
+Replace the body of `render()` so it no longer calls `super::help::render_commands()`. Instead, add a module-private `render_compact_commands()` function:
+
+```rust
+fn render_compact_commands(cli_cmd: &clap::Command) -> String {
+    let mut cmds: Vec<&clap::Command> = cli_cmd
+        .get_subcommands()
+        .filter(|c| !c.is_hide_set())
+        .collect();
+    cmds.sort_by_key(|c| c.get_name());
+
+    // Compute column width: len("apm ") + longest name + 2-space gap
+    let max_name = cmds.iter().map(|c| c.get_name().len()).max().unwrap_or(0);
+    let col_width = 4 + max_name; // "apm " prefix
+
+    let mut out = String::new();
+    for cmd in &cmds {
+        let label = format!("apm {}", cmd.get_name());
+        let about = cmd.get_about().map(|a| a.to_string()).unwrap_or_default();
+        out.push_str(&format!("  {:<col_width$}  {}\n", label, about));
+    }
+    out
+}
+```
+
+Update `render()` to call the new function:
+
+```rust
+fn render(cli_cmd: clap::Command) -> String {
+    let mut out = String::from(PREAMBLE);
+    out.push('\n');
+    out.push_str(&render_compact_commands(&cli_cmd));
+    out.push('\n');
+    out
+}
+```
+
+#### Unit test updates in `instructions.rs`
+
+Remove or update the existing `render_includes_command_name` test — it still passes because command names do appear, but add explicit coverage for the new shape:
+
+- **`render_compact_has_apm_prefix`** — output contains `"apm foo"` and `"apm bar"`
+- **`render_compact_shows_about`** — output contains `"Do foo things"` and `"Do bar things"`
+- **`render_compact_no_flags`** — output does not contain `"--verbose"` or `"--count"` (flags from the test fixture)
+- **`render_compact_excludes_hidden`** — add a hidden subcommand to `make_test_cmd()`; assert it is absent
+- **`render_no_ansi`** — unchanged; continues to assert no ANSI escapes
+
+The existing `make_test_cmd()` helper already has `foo` (with `--verbose` flag) and `bar` (with `--count` flag), so the no-flags assertion exercises real coverage.
+
+#### No changes to `help.rs`
+
+`help::render_commands()` is the implementation behind `apm help commands` and must remain unchanged. The `instructions` module stops calling it; no modifications needed there.
 
 ### Open questions
 
