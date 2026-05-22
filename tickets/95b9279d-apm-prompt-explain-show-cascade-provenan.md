@@ -32,7 +32,11 @@ updated_at = "2026-05-22T10:23:50.807696Z"
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Modifying `build_system_prompt()` itself or any spawn path behaviour
+- Changing the default output of `apm prompt <id>` (without `--explain`)
+- Machine-readable output formats (JSON, TOML)
+- Explaining the `state.instructions` injection (that field is not part of the `build_system_prompt` cascade)
+- Colour or ANSI formatting
 
 ### Approach
 
