@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/78eeb755-rewrite-apm-worker-md-built-in-default"
 created_at = "2026-05-22T23:22:24.735576Z"
-updated_at = "2026-05-22T23:22:24.735576Z"
+updated_at = "2026-05-22T23:23:55.843026Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
+depends_on = ["4bee5771"]
 +++
 
 ## Spec
