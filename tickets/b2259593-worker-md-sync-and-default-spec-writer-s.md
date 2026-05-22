@@ -20,7 +20,7 @@ Three byte-for-byte sync tests in `apm-core/tests/worker_md_sync.rs` fail on mai
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo test -p apm-core --test worker_md_sync default_and_project_apm_worker_md_are_identical` passes\n- [ ] `cargo test -p apm-core --test worker_md_sync default_and_per_agent_apm_worker_md_are_identical` passes\n- [ ] `cargo test -p apm-core --test worker_md_sync default_and_project_apm_spec_writer_md_are_identical` passes\n- [ ] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
