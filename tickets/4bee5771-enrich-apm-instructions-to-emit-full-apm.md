@@ -24,7 +24,14 @@ Emitting the full state machine to a worker that only touches `ready → in_prog
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions` (no role) output contains all five sections in order: state machine, ticket format, shell discipline, session identity, command reference
+- [ ] Output contains no ANSI escape codes regardless of flags used
+- [ ] State machine section lists workflow states, their transitions, and actor information — read from the project's workflow config when present, falling back to a built-in static description otherwise
+- [ ] Ticket format section lists required frontmatter fields and body sections (name, type, required flag) — read from ticket config when present, falling back to built-in static content otherwise
+- [ ] `apm instructions --role <name>` state machine section includes only states and transitions where the named role acts or needs awareness; states the role never touches are omitted
+- [ ] `apm instructions --role <name>` command reference includes only commands relevant to the named role (hard-coded per-role allowlists in `apm-core/src/instructions.rs`)
+- [ ] Shell discipline and session identity sections are present and unabridged regardless of `--role`
+- [ ] `apm_core::instructions::generate(root, role, commands)` is idempotent and callable without clap as a transitive dependency on `apm-core`
 
 ### Out of scope
 
