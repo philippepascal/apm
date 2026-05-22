@@ -1,7 +1,7 @@
 +++
 id = "4bee5771"
 title = "Enrich apm instructions to emit full APM system knowledge"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4bee5771-enrich-apm-instructions-to-emit-full-apm"
 created_at = "2026-05-22T23:22:16.080767Z"
-updated_at = "2026-05-22T23:22:16.080767Z"
+updated_at = "2026-05-22T23:50:41.378508Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 +++
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-22T23:22Z | — | new | philippepascal |
+| 2026-05-22T23:50Z | new | groomed | philippepascal |
