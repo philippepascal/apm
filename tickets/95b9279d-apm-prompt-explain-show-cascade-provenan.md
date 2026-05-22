@@ -1,7 +1,7 @@
 +++
 id = "95b9279d"
 title = "apm prompt --explain: show cascade provenance instead of prompt text"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/95b9279d-apm-prompt-explain-show-cascade-provenan"
 created_at = "2026-05-22T10:22:16.387302Z"
-updated_at = "2026-05-22T10:22:16.387302Z"
+updated_at = "2026-05-22T10:23:20.934810Z"
 +++
 
 ## Spec
@@ -54,3 +54,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-22T10:22Z | — | new | philippepascal |
+| 2026-05-22T10:23Z | new | groomed | philippepascal |
