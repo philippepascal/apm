@@ -24,7 +24,7 @@ Three byte-for-byte sync tests in `apm-core/tests/worker_md_sync.rs` fail on mai
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating any agent markdown pairs not covered by these three failing tests\n- Changes to the test files themselves\n- Changes to `.apm/agents/` project files (they are already correct)
 
 ### Approach
 
