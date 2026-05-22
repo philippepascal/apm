@@ -1,7 +1,7 @@
 +++
 id = "fcf0b213"
 title = "apm command to feed apm parsed help for agents"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fcf0b213-apm-command-to-feed-apm-parsed-help-for-"
 created_at = "2026-05-07T20:41:08.889701Z"
-updated_at = "2026-05-22T02:25:42.545011Z"
+updated_at = "2026-05-22T02:26:08.284257Z"
 +++
 
 ## Spec
@@ -103,3 +103,4 @@ Add a unit test in `instructions.rs` that builds a minimal `clap::Command`, call
 | 2026-05-21T23:00Z | groomed | in_design | philippepascal |
 | 2026-05-21T23:08Z | in_design | specd | claude-0521-2300-c320 |
 | 2026-05-22T02:25Z | specd | ready | philippepascal |
+| 2026-05-22T02:26Z | ready | in_progress | philippepascal |
