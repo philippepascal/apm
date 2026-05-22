@@ -1,7 +1,7 @@
 +++
 id = "b2259593"
 title = "worker_md_sync and default spec-writer sync tests fail on main — three pre-existing failures"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b2259593-worker-md-sync-and-default-spec-writer-s"
 created_at = "2026-05-22T01:32:33.798879Z"
-updated_at = "2026-05-22T02:08:39.888009Z"
+updated_at = "2026-05-22T02:24:19.494334Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ Three files in `apm-core/src/default/agents/` must be updated to match their `.a
 | 2026-05-22T01:59Z | specd | ready | philippepascal |
 | 2026-05-22T01:59Z | ready | in_progress | philippepascal |
 | 2026-05-22T02:08Z | in_progress | implemented | claude-0522-0159-9148 |
+| 2026-05-22T02:24Z | implemented | closed | philippepascal(apm-sync) |
