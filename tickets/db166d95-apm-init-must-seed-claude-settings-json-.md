@@ -1,7 +1,7 @@
 +++
 id = "db166d95"
 title = "apm init must seed .claude/settings.json with worker-essential allow-list"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/db166d95-apm-init-must-seed-claude-settings-json-"
 created_at = "2026-05-15T01:21:17.353568Z"
-updated_at = "2026-05-21T23:10:28.592786Z"
+updated_at = "2026-05-22T02:25:46.287527Z"
 +++
 
 ## Spec
@@ -177,3 +177,4 @@ when stdin is not a terminal.
 | 2026-05-21T22:59Z | new | groomed | philippepascal |
 | 2026-05-21T23:08Z | groomed | in_design | philippepascal |
 | 2026-05-21T23:10Z | in_design | specd | claude-0521-2308-b018 |
+| 2026-05-22T02:25Z | specd | ready | philippepascal |
