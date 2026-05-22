@@ -40,7 +40,62 @@ The desired behaviour is a discovery mode: when no ID is supplied (regardless of
 
 ### Approach
 
-How the implementation will work.
+#### 1. `apm/src/main.rs` — make ID optional
+
+Change the `Prompt` struct field at line 866:
+```rust
+// before
+id: String,
+// after
+id: Option<String>,
+```
+
+Update the `long_about` string to document discovery mode and add an example line:
+```
+  apm prompt                                 # list available agents and roles
+```
+
+The dispatch at line 1198 changes from `cmd::prompt::run(&root, &id, agent, role)` to:
+```rust
+cmd::prompt::run(&root, id.as_deref(), agent, role)
+```
+
+#### 2. `apm/src/cmd/prompt.rs` — branch on None
+
+Change the `run` signature to `id: Option<&str>`. When `id.is_none()`, call `apm_core::prompt::discover(root, &mut stdout)` and return early. Otherwise delegate to `apm_core::prompt::run` exactly as today.
+
+```rust
+pub fn run(root: &Path, id: Option<&str>, agent: Option<String>, role: Option<String>) -> Result<()> {
+    let mut stdout = std::io::stdout();
+    match id {
+        None => apm_core::prompt::discover(root, &mut stdout),
+        Some(id) => apm_core::prompt::run(root, id, agent.as_deref(), role.as_deref(), &mut stdout),
+    }
+}
+```
+
+#### 3. `apm-core/src/prompt.rs` — add `discover()`
+
+Add a new public function. Algorithm:
+
+1. Build the path `root/.apm/agents/`. If it does not exist or is not a directory, treat the agent list as empty.
+2. Read directory entries; collect names of entries that are themselves directories. Sort lexicographically.
+3. For each agent directory, read its entries; collect filenames matching `apm.*.md`; extract the `*` portion as the role name.
+4. Collect all role names across all agent dirs, deduplicate, sort.
+5. Format and write two lines. Pad label to 8 chars so values align:
+   ```
+   Agents:  claude, default, pi
+   Roles:   spec-writer, worker
+   ```
+   If either list is empty, write the label with no trailing values (just a newline).
+
+Use `std::fs::read_dir`; ignore non-UTF-8 names silently (skip). Propagate I/O errors on the output writer.
+
+#### 4. Tests in `apm-core/src/prompt.rs`
+
+- **`discover_lists_agents_and_roles`**: create a tempdir with `.apm/agents/mock-happy/apm.worker.md` and `.apm/agents/pi/apm.spec-writer.md`; call `discover()`; assert output contains `Agents:  mock-happy, pi` and `Roles:   spec-writer, worker`.
+- **`discover_no_agents_dir`**: tempdir with no `.apm/agents/` directory; call `discover()`; assert exits Ok(()) and output contains `Agents:` and `Roles:` lines (empty values).
+- **`discover_deduplicates_roles`**: two agent dirs each containing `apm.worker.md`; assert role appears once.
 
 ### Open questions
 
