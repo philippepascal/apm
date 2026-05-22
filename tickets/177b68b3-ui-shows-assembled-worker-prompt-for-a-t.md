@@ -25,7 +25,7 @@ The apm UI's ticket-detail view has no way to inspect the system prompt a worker
 - [x] `GET /api/tickets/:id/prompt?agent=<name>` returns the prompt computed as if the ticket's `agent` frontmatter field were set to `<name>`.
 - [x] `GET /api/tickets/:id/prompt` returns 404 when the ticket ID matches no ticket.
 - [x] The ticket-detail header shows a "Prompt" button adjacent to the existing "Review" button; it is only rendered when a ticket is loaded.
-- [ ] Clicking "Prompt" opens a modal that fetches and displays the assembled system prompt in a scrollable monospace block.
+- [x] Clicking "Prompt" opens a modal that fetches and displays the assembled system prompt in a scrollable monospace block.
 - [ ] The modal contains an agent-override text input pre-filled with the ticket's current `agent` frontmatter value (empty when the field is absent).
 - [ ] Submitting a new agent name in the input (blur or Enter) refetches the prompt and re-renders the content without closing the modal.
 - [ ] Closing the modal (× button or Escape key) does not write any change to the ticket.
