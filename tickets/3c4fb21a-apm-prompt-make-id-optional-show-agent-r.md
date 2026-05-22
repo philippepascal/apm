@@ -33,7 +33,10 @@ The desired behaviour is a discovery mode: when no ID is supplied (regardless of
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing how `apm start` or any other command resolves agents or roles
+- Filtering the discovery output by the supplied `--agent` or `--role` flag value
+- Discovery for commands other than `apm prompt`
+- Validating that discovered agent/role pairs have usable instructions (that is a concern for the prompt-building path, not discovery)
 
 ### Approach
 
