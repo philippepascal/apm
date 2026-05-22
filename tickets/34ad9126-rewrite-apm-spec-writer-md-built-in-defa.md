@@ -1,7 +1,7 @@
 +++
 id = "34ad9126"
 title = "Rewrite apm.spec-writer.md built-in default"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/34ad9126-rewrite-apm-spec-writer-md-built-in-defa"
 created_at = "2026-05-22T23:22:22.098663Z"
-updated_at = "2026-05-22T23:50:43.725043Z"
+updated_at = "2026-05-22T23:58:32.049061Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-22T23:22Z | — | new | philippepascal |
 | 2026-05-22T23:50Z | new | groomed | philippepascal |
+| 2026-05-22T23:58Z | groomed | in_design | philippepascal |
