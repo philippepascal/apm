@@ -1,7 +1,7 @@
 +++
 id = "95b9279d"
 title = "apm prompt --explain: show cascade provenance instead of prompt text"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/95b9279d-apm-prompt-explain-show-cascade-provenan"
 created_at = "2026-05-22T10:22:16.387302Z"
-updated_at = "2026-05-22T17:34:10.802723Z"
+updated_at = "2026-05-22T17:46:19.893720Z"
 +++
 
 ## Spec
@@ -137,3 +137,4 @@ Add tests in the existing `#[cfg(test)]` block:
 | 2026-05-22T17:32Z | in_design | specd | claude-0522-1727-1900 |
 | 2026-05-22T17:33Z | specd | ready | philippepascal |
 | 2026-05-22T17:34Z | ready | in_progress | philippepascal |
+| 2026-05-22T17:46Z | in_progress | implemented | claude-0522-1734-5468 |
