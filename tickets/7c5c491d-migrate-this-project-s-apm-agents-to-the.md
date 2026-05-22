@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7c5c491d-migrate-this-project-s-apm-agents-to-the"
 created_at = "2026-05-22T23:23:29.954873Z"
-updated_at = "2026-05-22T23:23:29.954873Z"
+updated_at = "2026-05-22T23:24:29.857517Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
+depends_on = ["34ad9126", "78eeb755", "02bbcc2f", "1fce91bd", "7ef960f2"]
 +++
 
 ## Spec
