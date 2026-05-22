@@ -105,3 +105,37 @@ To abort a rebase:
 
 To abort a cherry-pick:
     git cherry-pick --abort";
+
+/// Printed when a ticket worktree is `Behind` origin but has uncommitted changes —
+/// the fast-forward is skipped to avoid clobbering local work.
+/// Placeholders: `<branch>`, `<path>`, `<files>`.
+pub const WORKTREE_DIRTY_SKIP: &str = "\
+apm sync: worktree <path> (<branch>) has uncommitted changes — skipping fast-forward.
+
+Dirty files:
+<files>
+
+Commit or stash your changes first, then re-run apm sync:
+
+    git -C <path> stash
+    apm sync
+    git -C <path> stash pop";
+
+/// Printed when a ticket worktree's branch is `Ahead` of origin (local has unpushed commits).
+/// Placeholders: `<branch>`, `<path>`.
+pub const WORKTREE_AHEAD: &str = "\
+info: <branch> worktree at <path> is ahead of origin — push when ready: git -C <path> push origin <branch>";
+
+/// Printed when a ticket worktree's branch has `Diverged` from origin
+/// (each side has commits the other lacks).  Manual resolution required.
+/// Placeholders: `<branch>`, `<path>`.
+pub const WORKTREE_DIVERGED: &str = "\
+apm sync: worktree <path> (<branch>) has diverged from origin — cannot fast-forward.
+
+To resolve, fetch and rebase manually inside the worktree:
+
+    git -C <path> fetch origin
+    git -C <path> rebase origin/<branch>
+    git -C <path> push origin <branch>
+
+After resolving, re-run apm sync.";

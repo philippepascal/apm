@@ -1197,6 +1197,116 @@ pub fn is_worktree_dirty(path: &Path) -> bool {
     !out.stdout.is_empty()
 }
 
+/// Like `is_worktree_dirty` but ignores known APM temp files so that an
+/// in-progress worker's log/pid files do not prevent a safe fast-forward.
+pub fn is_worktree_dirty_for_sync(path: &Path) -> bool {
+    const TEMP_FILES: &[&str] = &[".apm-worker.log", ".apm-worker.pid"];
+    let Ok(out) = Command::new("git")
+        .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
+        .output()
+    else {
+        return false;
+    };
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    stdout.lines().filter(|l| !l.is_empty()).any(|l| {
+        // Porcelain v1 format: "XY filename" — 3-char prefix then filename.
+        let fname = l.get(3..).unwrap_or("").trim();
+        !TEMP_FILES.contains(&fname)
+    })
+}
+
+/// Returns the list of dirty (non-temp) filenames in a worktree.
+/// Separating the check (returns bool) from the collection (returns Vec) avoids
+/// allocating on the clean-worktree hot path.
+fn dirty_files_for_sync(path: &Path) -> Vec<String> {
+    const TEMP_FILES: &[&str] = &[".apm-worker.log", ".apm-worker.pid"];
+    let Ok(out) = Command::new("git")
+        .args(["-C", &path.to_string_lossy(), "status", "--porcelain"])
+        .output()
+    else {
+        return Vec::new();
+    };
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    stdout
+        .lines()
+        .filter(|l| !l.is_empty())
+        .filter_map(|l| {
+            let fname = l.get(3..)?.trim();
+            if TEMP_FILES.contains(&fname) { None } else { Some(fname.to_string()) }
+        })
+        .collect()
+}
+
+/// Result of `sync_checked_out_worktrees`.
+pub struct WorktreeSyncResult {
+    /// Worktrees that were successfully fast-forwarded: (path, branch).
+    pub fast_forwarded: Vec<(PathBuf, String)>,
+    /// Worktrees skipped due to uncommitted changes: (path, branch, dirty_files).
+    pub skipped_dirty: Vec<(PathBuf, String, Vec<String>)>,
+    /// Worktrees whose local branch is ahead of origin: (path, branch).
+    pub skipped_ahead: Vec<(PathBuf, String)>,
+    /// Worktrees whose local branch has diverged from origin: (path, branch).
+    pub skipped_diverged: Vec<(PathBuf, String)>,
+}
+
+/// Fast-forward each ticket worktree that is `Behind` origin and has no
+/// uncommitted changes (excluding `.apm-worker.log` and `.apm-worker.pid`).
+///
+/// State matrix:
+///   Behind + clean  → `git merge --ff-only origin/<branch>` in the worktree.
+///   Behind + dirty  → skip; record in `skipped_dirty` for a warning.
+///   Ahead           → skip; record in `skipped_ahead` for an info line.
+///   Diverged        → skip; record in `skipped_diverged` for a warning.
+///   Equal / NoRemote / RemoteOnly → silent no-op.
+///
+/// Unexpected merge failures (e.g. ff refused for a reason other than dirty
+/// working tree) are appended to `warnings`.
+pub fn sync_checked_out_worktrees(root: &Path, warnings: &mut Vec<String>) -> WorktreeSyncResult {
+    let mut result = WorktreeSyncResult {
+        fast_forwarded: Vec::new(),
+        skipped_dirty: Vec::new(),
+        skipped_ahead: Vec::new(),
+        skipped_diverged: Vec::new(),
+    };
+
+    let worktrees = match crate::worktree::list_ticket_worktrees(root) {
+        Ok(w) => w,
+        Err(_) => return result,
+    };
+
+    for (wt_path, branch) in worktrees {
+        let local_ref = format!("refs/heads/{branch}");
+        let remote_ref = format!("origin/{branch}");
+        match classify_branch(root, &local_ref, &remote_ref) {
+            BranchClass::Behind => {
+                if is_worktree_dirty_for_sync(&wt_path) {
+                    let dirty = dirty_files_for_sync(&wt_path);
+                    result.skipped_dirty.push((wt_path, branch, dirty));
+                } else {
+                    match run(&wt_path, &["merge", "--ff-only", &remote_ref]) {
+                        Ok(_) => result.fast_forwarded.push((wt_path, branch)),
+                        Err(e) => warnings.push(format!(
+                            "warning: fast-forward {} failed: {e:#}",
+                            wt_path.display()
+                        )),
+                    }
+                }
+            }
+            BranchClass::Ahead => {
+                result.skipped_ahead.push((wt_path, branch));
+            }
+            BranchClass::Diverged => {
+                result.skipped_diverged.push((wt_path, branch));
+            }
+            BranchClass::Equal | BranchClass::NoRemote | BranchClass::RemoteOnly => {
+                // Silent no-op.
+            }
+        }
+    }
+
+    result
+}
+
 pub fn local_branch_exists(root: &Path, branch: &str) -> bool {
     Command::new("git")
         .args(["-C", &root.to_string_lossy(), "rev-parse", "--verify", &format!("refs/heads/{branch}")])
@@ -1552,6 +1662,197 @@ mod tests {
         make_commit(dir.path(), "f.txt", "hi");
         std::fs::write(dir.path().join("f.txt"), "changed").unwrap();
         assert!(is_worktree_dirty(dir.path()));
+    }
+
+    #[test]
+    fn is_worktree_dirty_for_sync_clean() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        assert!(!is_worktree_dirty_for_sync(dir.path()));
+    }
+
+    #[test]
+    fn is_worktree_dirty_for_sync_temp_files_only_is_clean() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        // Temp files should not count as dirty.
+        std::fs::write(dir.path().join(".apm-worker.log"), "log").unwrap();
+        std::fs::write(dir.path().join(".apm-worker.pid"), "123").unwrap();
+        assert!(!is_worktree_dirty_for_sync(dir.path()));
+        // But is_worktree_dirty sees them.
+        assert!(is_worktree_dirty(dir.path()));
+    }
+
+    #[test]
+    fn is_worktree_dirty_for_sync_real_change_is_dirty() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join("f.txt"), "changed").unwrap();
+        assert!(is_worktree_dirty_for_sync(dir.path()));
+    }
+
+    #[test]
+    fn is_worktree_dirty_for_sync_temp_plus_real_is_dirty() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join(".apm-worker.log"), "log").unwrap();
+        std::fs::write(dir.path().join("f.txt"), "changed").unwrap();
+        assert!(is_worktree_dirty_for_sync(dir.path()));
+    }
+
+    #[test]
+    fn dirty_files_for_sync_excludes_temp_files() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        std::fs::write(dir.path().join(".apm-worker.log"), "log").unwrap();
+        std::fs::write(dir.path().join(".apm-worker.pid"), "123").unwrap();
+        std::fs::write(dir.path().join("f.txt"), "changed").unwrap();
+        let dirty = dirty_files_for_sync(dir.path());
+        assert!(dirty.contains(&"f.txt".to_string()), "f.txt should be in dirty; got {dirty:?}");
+        assert!(!dirty.iter().any(|f| f.contains(".apm-worker")), "temp files should be excluded; got {dirty:?}");
+    }
+
+    #[test]
+    fn sync_checked_out_worktrees_behind_clean_fast_forwards() {
+        // Set up: local repo (acts as "origin"), clone ("local") with a ticket worktree.
+        let origin_tmp = git_init();
+        let origin = origin_tmp.path();
+        make_commit(origin, "README", "v1");
+        // Create a ticket branch on origin.
+        git_cmd(origin, &["checkout", "-b", "ticket/test-ff"]);
+        make_commit(origin, "impl.rs", "v1");
+        git_cmd(origin, &["checkout", "main"]);
+
+        // Clone the origin.
+        let clone_tmp = tempfile::tempdir().unwrap();
+        let clone = clone_tmp.path();
+        Cmd::new("git")
+            .args(["clone", &origin.to_string_lossy(), &clone.to_string_lossy()])
+            .env("GIT_AUTHOR_NAME", "test").env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test").env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status().unwrap();
+        // Set up clone identity.
+        git_cmd(clone, &["config", "user.email", "t@t.com"]);
+        git_cmd(clone, &["config", "user.name", "test"]);
+        // Check out ticket branch in clone so list_ticket_worktrees finds it as a worktree.
+        let wt_path = clone.join("wt-test-ff");
+        Cmd::new("git")
+            .args(["worktree", "add", &wt_path.to_string_lossy(), "ticket/test-ff"])
+            .current_dir(clone).status().unwrap();
+
+        // Now push a new commit on origin's ticket branch (so clone is Behind).
+        git_cmd(origin, &["checkout", "ticket/test-ff"]);
+        make_commit(origin, "impl.rs", "v2");
+        git_cmd(origin, &["checkout", "main"]);
+        // Fetch in clone so origin/ticket/test-ff advances.
+        git_cmd(clone, &["fetch", "origin"]);
+
+        let mut warnings = Vec::new();
+        let result = sync_checked_out_worktrees(clone, &mut warnings);
+
+        assert_eq!(result.fast_forwarded.len(), 1, "should have fast-forwarded 1 worktree; warnings: {warnings:?}");
+        assert!(result.skipped_dirty.is_empty());
+        assert!(result.skipped_ahead.is_empty());
+        assert!(result.skipped_diverged.is_empty());
+        assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+
+        // Verify the working tree was updated.
+        let content = std::fs::read_to_string(wt_path.join("impl.rs")).unwrap();
+        assert_eq!(content.trim(), "v2", "worktree should have v2 after fast-forward");
+    }
+
+    #[test]
+    fn sync_checked_out_worktrees_dirty_skips() {
+        let origin_tmp = git_init();
+        let origin = origin_tmp.path();
+        make_commit(origin, "README", "v1");
+        git_cmd(origin, &["checkout", "-b", "ticket/test-dirty"]);
+        make_commit(origin, "impl.rs", "v1");
+        git_cmd(origin, &["checkout", "main"]);
+
+        let clone_tmp = tempfile::tempdir().unwrap();
+        let clone = clone_tmp.path();
+        Cmd::new("git")
+            .args(["clone", &origin.to_string_lossy(), &clone.to_string_lossy()])
+            .env("GIT_AUTHOR_NAME", "test").env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test").env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status().unwrap();
+        git_cmd(clone, &["config", "user.email", "t@t.com"]);
+        git_cmd(clone, &["config", "user.name", "test"]);
+        let wt_path = clone.join("wt-test-dirty");
+        Cmd::new("git")
+            .args(["worktree", "add", &wt_path.to_string_lossy(), "ticket/test-dirty"])
+            .current_dir(clone).status().unwrap();
+
+        // Advance origin branch.
+        git_cmd(origin, &["checkout", "ticket/test-dirty"]);
+        make_commit(origin, "impl.rs", "v2");
+        git_cmd(origin, &["checkout", "main"]);
+        git_cmd(clone, &["fetch", "origin"]);
+
+        // Make the worktree dirty (non-temp file).
+        std::fs::write(wt_path.join("impl.rs"), "local change").unwrap();
+
+        let mut warnings = Vec::new();
+        let result = sync_checked_out_worktrees(clone, &mut warnings);
+
+        assert!(result.fast_forwarded.is_empty(), "should not fast-forward dirty worktree");
+        assert_eq!(result.skipped_dirty.len(), 1);
+        let (_, _, ref dirty_files) = result.skipped_dirty[0];
+        assert!(dirty_files.contains(&"impl.rs".to_string()), "impl.rs should be in dirty files; got {dirty_files:?}");
+    }
+
+    #[test]
+    fn sync_checked_out_worktrees_temp_only_is_clean() {
+        let origin_tmp = git_init();
+        let origin = origin_tmp.path();
+        make_commit(origin, "README", "v1");
+        git_cmd(origin, &["checkout", "-b", "ticket/test-temponly"]);
+        make_commit(origin, "impl.rs", "v1");
+        git_cmd(origin, &["checkout", "main"]);
+
+        let clone_tmp = tempfile::tempdir().unwrap();
+        let clone = clone_tmp.path();
+        Cmd::new("git")
+            .args(["clone", &origin.to_string_lossy(), &clone.to_string_lossy()])
+            .env("GIT_AUTHOR_NAME", "test").env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test").env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status().unwrap();
+        git_cmd(clone, &["config", "user.email", "t@t.com"]);
+        git_cmd(clone, &["config", "user.name", "test"]);
+        let wt_path = clone.join("wt-test-temponly");
+        Cmd::new("git")
+            .args(["worktree", "add", &wt_path.to_string_lossy(), "ticket/test-temponly"])
+            .current_dir(clone).status().unwrap();
+
+        // Advance origin branch.
+        git_cmd(origin, &["checkout", "ticket/test-temponly"]);
+        make_commit(origin, "impl.rs", "v2");
+        git_cmd(origin, &["checkout", "main"]);
+        git_cmd(clone, &["fetch", "origin"]);
+
+        // Temp-only files should not block the fast-forward.
+        std::fs::write(wt_path.join(".apm-worker.log"), "log").unwrap();
+        std::fs::write(wt_path.join(".apm-worker.pid"), "123").unwrap();
+
+        let mut warnings = Vec::new();
+        let result = sync_checked_out_worktrees(clone, &mut warnings);
+
+        assert_eq!(result.fast_forwarded.len(), 1, "temp-only worktree should be fast-forwarded; warnings: {warnings:?}");
+        assert!(result.skipped_dirty.is_empty());
+    }
+
+    #[test]
+    fn sync_checked_out_worktrees_no_worktrees_returns_empty() {
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hi");
+        let mut warnings = Vec::new();
+        let result = sync_checked_out_worktrees(dir.path(), &mut warnings);
+        assert!(result.fast_forwarded.is_empty());
+        assert!(result.skipped_dirty.is_empty());
+        assert!(result.skipped_ahead.is_empty());
+        assert!(result.skipped_diverged.is_empty());
+        assert!(warnings.is_empty());
     }
 
     #[test]

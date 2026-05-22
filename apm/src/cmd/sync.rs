@@ -23,6 +23,42 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         let ahead_refs = git::sync_non_checked_out_refs(root, &mut sync_warnings);
         let default_is_ahead = git::sync_default_branch(root, &config.project.default_branch, &mut sync_warnings);
 
+        // Reconcile ticket worktrees: fast-forward clean Behind worktrees,
+        // warn about dirty/ahead/diverged ones.
+        let wt_result = git::sync_checked_out_worktrees(root, &mut sync_warnings);
+        if !quiet {
+            for (wt_path, _branch) in &wt_result.fast_forwarded {
+                println!("fast-forwarded worktree: {}", wt_path.display());
+            }
+        }
+        for (wt_path, branch, dirty_files) in &wt_result.skipped_dirty {
+            let files_list = dirty_files
+                .iter()
+                .map(|f| format!("    {f}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            sync_warnings.push(
+                apm_core::sync_guidance::WORKTREE_DIRTY_SKIP
+                    .replace("<path>", &wt_path.display().to_string())
+                    .replace("<branch>", branch)
+                    .replace("<files>", &files_list),
+            );
+        }
+        for (wt_path, branch) in &wt_result.skipped_ahead {
+            sync_warnings.push(
+                apm_core::sync_guidance::WORKTREE_AHEAD
+                    .replace("<path>", &wt_path.display().to_string())
+                    .replace("<branch>", branch),
+            );
+        }
+        for (wt_path, branch) in &wt_result.skipped_diverged {
+            sync_warnings.push(
+                apm_core::sync_guidance::WORKTREE_DIVERGED
+                    .replace("<path>", &wt_path.display().to_string())
+                    .replace("<branch>", branch),
+            );
+        }
+
         // Handle default branch push.
         if default_is_ahead {
             let should_push = push_default || (is_tty && !quiet && {
@@ -63,6 +99,31 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
 
         for w in &sync_warnings {
             eprintln!("{w}");
+        }
+
+        // Worktree summary line — omit when quiet or when no worktrees were processed.
+        let total_wt = wt_result.fast_forwarded.len()
+            + wt_result.skipped_dirty.len()
+            + wt_result.skipped_ahead.len()
+            + wt_result.skipped_diverged.len();
+        if !quiet && total_wt > 0 {
+            let mut parts: Vec<String> = Vec::new();
+            let ff = wt_result.fast_forwarded.len();
+            if ff > 0 {
+                parts.push(format!(
+                    "{ff} worktree{} fast-forwarded",
+                    if ff == 1 { "" } else { "s" }
+                ));
+            }
+            let dirty = wt_result.skipped_dirty.len();
+            if dirty > 0 {
+                parts.push(format!("{dirty} skipped (local changes)"));
+            }
+            let ad = wt_result.skipped_ahead.len() + wt_result.skipped_diverged.len();
+            if ad > 0 {
+                parts.push(format!("{ad} skipped (ahead/diverged)"));
+            }
+            println!("worktrees: {}", parts.join(", "));
         }
     }
 
