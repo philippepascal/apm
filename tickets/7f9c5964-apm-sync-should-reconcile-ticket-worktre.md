@@ -29,7 +29,7 @@ The fix is narrowly scoped: when a ticket worktree's branch is strictly behind o
 - [x] When a ticket worktree has uncommitted changes (tracked modifications, staged changes, or non-temp untracked files), `apm sync` emits one warning per worktree that names the worktree path and lists the dirty files, and skips the fast-forward.
 - [x] When a ticket worktree's branch is `Ahead` of origin, `apm sync` emits a per-worktree info line that includes the worktree path and takes no other action.
 - [x] When a ticket worktree's branch has `Diverged` from origin, `apm sync` emits a per-worktree warning that includes the worktree path and takes no other action.
-- [ ] After processing all worktrees, `apm sync` prints a summary: `N worktree(s) fast-forwarded, M skipped (local changes), K skipped (ahead/diverged)` — omitting zero-count terms.
+- [x] After processing all worktrees, `apm sync` prints a summary: `N worktree(s) fast-forwarded, M skipped (local changes), K skipped (ahead/diverged)` — omitting zero-count terms.
 - [ ] When no ticket worktrees exist, no worktree-related lines appear in `apm sync` output.
 - [ ] All per-worktree lines and the summary line are suppressed when `--quiet` is passed.
 - [ ] Worktree reconciliation runs in the same `!offline` block as `sync_non_checked_out_refs`; passing `--offline` skips it entirely.
