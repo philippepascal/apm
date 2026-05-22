@@ -90,6 +90,7 @@ mod tests {
             migrate: false,
             with_docker: false,
             quiet: false,
+            yes: false,
         };
         assert!(is_exempt_command(&cmd));
     }
