@@ -1,7 +1,7 @@
 +++
 id = "49f3bfd9"
 title = "apm instructions: replace full flag dump with compact one-liner-per-command summary"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/49f3bfd9-apm-instructions-replace-full-flag-dump-"
 created_at = "2026-05-22T08:04:36.768358Z"
-updated_at = "2026-05-22T08:05:02.934634Z"
+updated_at = "2026-05-22T08:08:28.004812Z"
 +++
 
 ## Spec
@@ -56,3 +56,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-22T08:04Z | — | new | philippepascal |
 | 2026-05-22T08:05Z | new | groomed | philippepascal |
+| 2026-05-22T08:08Z | groomed | in_design | philippepascal |
