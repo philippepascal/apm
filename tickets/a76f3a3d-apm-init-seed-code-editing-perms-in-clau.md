@@ -1,7 +1,7 @@
 +++
 id = "a76f3a3d"
 title = "apm init: seed code-editing perms in .claude/settings.json"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a76f3a3d-apm-init-seed-code-editing-perms-in-clau"
 created_at = "2026-05-17T19:52:57.296867Z"
-updated_at = "2026-05-21T23:14:57.875610Z"
+updated_at = "2026-05-22T02:25:50.012221Z"
 depends_on = ["db166d95"]
 +++
 
@@ -161,3 +161,4 @@ Add the same language-agnostic baseline plus all common toolchains unconditional
 | 2026-05-21T22:59Z | new | groomed | philippepascal |
 | 2026-05-21T23:10Z | groomed | in_design | philippepascal |
 | 2026-05-21T23:14Z | in_design | specd | claude-0521-2310-3a68 |
+| 2026-05-22T02:25Z | specd | ready | philippepascal |
