@@ -1,7 +1,7 @@
 +++
 id = "edb0cf35"
 title = "Create apm.project.md template and apm.main-agent.md built-in defaults"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/edb0cf35-create-apm-project-md-template-and-apm-m"
 created_at = "2026-05-22T23:22:36.259605Z"
-updated_at = "2026-05-22T23:23:50.289543Z"
+updated_at = "2026-05-22T23:50:48.578585Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771"]
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-22T23:22Z | — | new | philippepascal |
+| 2026-05-22T23:50Z | new | groomed | philippepascal |
