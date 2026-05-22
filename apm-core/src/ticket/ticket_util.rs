@@ -492,6 +492,7 @@ pub fn set_field(fm: &mut Frontmatter, field: &str, value: &str) -> anyhow::Resu
         "risk"     => fm.risk     = value.parse().map_err(|_| anyhow::anyhow!("risk must be 0–255"))?,
         "author"   => anyhow::bail!("author is immutable"),
         "owner"    => fm.owner    = if value == "-" { None } else { Some(value.to_string()) },
+        "agent"    => fm.agent    = if value == "-" { None } else { Some(value.to_string()) },
         "branch"   => fm.branch   = if value == "-" { None } else { Some(value.to_string()) },
         "title"    => fm.title    = value.to_string(),
         "depends_on" => {
@@ -1063,6 +1064,21 @@ state = "new"
         fm.owner = Some("alice".to_string());
         set_field(&mut fm, "owner", "-").unwrap();
         assert_eq!(fm.owner, None);
+    }
+
+    #[test]
+    fn set_field_agent_set() {
+        let mut fm = make_frontmatter();
+        set_field(&mut fm, "agent", "pi").unwrap();
+        assert_eq!(fm.agent, Some("pi".to_string()));
+    }
+
+    #[test]
+    fn set_field_agent_clear() {
+        let mut fm = make_frontmatter();
+        fm.agent = Some("pi".to_string());
+        set_field(&mut fm, "agent", "-").unwrap();
+        assert_eq!(fm.agent, None);
     }
 
     // ── dep_satisfied ─────────────────────────────────────────────────────

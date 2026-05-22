@@ -47,7 +47,7 @@ pub struct EffectiveWorkerParams {
     pub options: std::collections::HashMap<String, String>,
 }
 
-fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a Config, warnings: &mut Vec<String>) -> Option<&'a WorkerProfileConfig> {
+pub(crate) fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, config: &'a Config, warnings: &mut Vec<String>) -> Option<&'a WorkerProfileConfig> {
     let name = transition.profile.as_deref()?;
     match config.worker_profiles.get(name) {
         Some(p) => Some(p),
@@ -111,7 +111,7 @@ pub fn effective_spawn_params(transition_agent: Option<&str>, profile: Option<&W
     EffectiveWorkerParams { command, args, model, env, container, agent, options }
 }
 
-fn apply_frontmatter_agent(
+pub(crate) fn apply_frontmatter_agent(
     agent: &mut String,
     frontmatter: &ticket_fmt::Frontmatter,
     profile_name: &str,
@@ -128,7 +128,7 @@ pub struct StartOutput {
     pub id: String,
     pub old_state: String,
     pub new_state: String,
-    pub agent_name: String,
+    pub caller_name: String,
     pub branch: String,
     pub worktree_path: PathBuf,
     pub merge_message: Option<String>,
@@ -247,7 +247,7 @@ fn run_denial_scan(log_path: &Path, worktree: &Path, ticket_id: &str) {
     }
 }
 
-pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, agent_name: &str) -> Result<StartOutput> {
+pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_permissions: bool, caller_name: &str) -> Result<StartOutput> {
     let mut warnings: Vec<String> = Vec::new();
     let config = Config::load(root)?;
     let aggressive = config.sync.aggressive && !no_aggressive;
@@ -291,7 +291,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
     let when = now.format("%Y-%m-%dT%H:%MZ").to_string();
-    crate::state::append_history(&mut t.body, &old_state, &new_state, &when, agent_name);
+    crate::state::append_history(&mut t.body, &old_state, &new_state, &when, caller_name);
 
     let content = t.serialize()?;
     let rel_path = format!(
@@ -336,7 +336,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
             id,
             old_state,
             new_state,
-            agent_name: agent_name.to_string(),
+            caller_name: caller_name.to_string(),
             branch,
             worktree_path: wt_display,
             merge_message,
@@ -347,9 +347,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         });
     }
 
-    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
-    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
-
     let profile_name = triggering_transition
         .and_then(|tr| tr.profile.as_deref())
         .unwrap_or("")
@@ -358,9 +355,12 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
     let mut params = effective_spawn_params(triggering_transition.and_then(|tr| tr.agent.as_deref()), profile, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
+
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
-    let worker_system = resolve_system_prompt(root, tr_instructions, profile, &config.workers, &params.agent, role)?;
+    let worker_system = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.instructions.as_deref(), &params.agent, role)?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(tr_role_prefix, profile, &id));
     let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
@@ -374,6 +374,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let msg_file = write_temp_file("msg", &ticket_content)?;
     let ctx = WrapperContext {
         worker_name: worker_name.clone(),
+        agent_type: params.agent.clone(),
         ticket_id: id.clone(),
         ticket_branch: branch.clone(),
         worktree_path: wt_display.clone(),
@@ -423,7 +424,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         id,
         old_state,
         new_state,
-        agent_name: agent_name.to_string(),
+        caller_name: caller_name.to_string(),
         branch,
         worktree_path: wt_display,
         merge_message,
@@ -447,7 +448,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let actionable_owned = config.actionable_states_for("agent");
     let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
     let all_tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
-    let agent_name = crate::config::resolve_caller_name();
+    let caller_name = crate::config::resolve_caller_name();
     let current_user = crate::config::resolve_identity(root);
 
     // Filter out tickets whose epic already has the max number of active workers.
@@ -467,7 +468,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         })
         .collect();
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&caller_name), Some(&current_user)) else {
         messages.push("No actionable tickets.".to_string());
         return Ok(RunNextOutput { ticket_id: None, messages, warnings, worker_pid: None, log_path: None });
     };
@@ -498,13 +499,13 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
                 std::fs::read_to_string(root.join(path)).ok()
                     .or_else(|| { warnings.push("warning: instructions file not found".to_string()); None })
             }));
-    let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
+    let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
 
     if let Some(ref msg) = start_out.merge_message {
         messages.push(msg.clone());
     }
-    messages.push(format!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch));
+    messages.push(format!("{}: {} → {} (caller: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.caller_name, start_out.branch));
     messages.push(format!("Worktree: {}", start_out.worktree_path.display()));
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -549,9 +550,6 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         return Ok(RunNextOutput { ticket_id: Some(id), messages, warnings, worker_pid: None, log_path: None });
     }
 
-    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
-    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
-
     let profile_name2 = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.profile.as_deref())
         .unwrap_or("")
@@ -560,9 +558,12 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
     let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
+
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions2 = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix2 = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
-    let worker_system = resolve_system_prompt(root, tr_instructions2, profile2, &config.workers, &params.agent, role2)?;
+    let worker_system = build_system_prompt(root, tr_instructions2, profile2, &config.workers, config.agents.instructions.as_deref(), &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -587,6 +588,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let msg_file = write_temp_file("msg", &ticket_content)?;
     let ctx = WrapperContext {
         worker_name: worker_name.clone(),
+        agent_type: params.agent.clone(),
         ticket_id: id.clone(),
         ticket_branch: branch.clone(),
         worktree_path: wt_display.clone(),
@@ -672,10 +674,10 @@ pub fn spawn_next_worker(
             })
             .collect()
     };
-    let agent_name = crate::config::resolve_caller_name();
+    let caller_name = crate::config::resolve_caller_name();
     let current_user = crate::config::resolve_identity(root);
 
-    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&agent_name), Some(&current_user)) else {
+    let Some(candidate) = ticket::pick_next(&tickets, &actionable, &startable, p.priority_weight, p.effort_weight, p.risk_weight, &config, Some(&caller_name), Some(&current_user)) else {
         return Ok(None);
     };
 
@@ -706,13 +708,13 @@ pub fn spawn_next_worker(
                 std::fs::read_to_string(root.join(path)).ok()
                     .or_else(|| { warnings.push("warning: instructions file not found".to_string()); None })
             }));
-    let start_out = run(root, &id, no_aggressive, false, false, &agent_name)?;
+    let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
 
     if let Some(ref msg) = start_out.merge_message {
         messages.push(msg.clone());
     }
-    messages.push(format!("{}: {} → {} (agent: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.agent_name, start_out.branch));
+    messages.push(format!("{}: {} → {} (caller: {}, branch: {})", start_out.id, start_out.old_state, start_out.new_state, start_out.caller_name, start_out.branch));
     messages.push(format!("Worktree: {}", start_out.worktree_path.display()));
 
     let tickets2 = ticket::load_all_from_git(root, &config.tickets.dir)?;
@@ -752,9 +754,6 @@ pub fn spawn_next_worker(
     }
     let _ = prompt; // prompt used only for run_next, not spawn_next_worker
 
-    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
-    let worker_name = format!("claude-{}-{:04x}", now_str, rand_u16());
-
     let profile_name2 = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.profile.as_deref())
         .unwrap_or("")
@@ -763,9 +762,12 @@ pub fn spawn_next_worker(
     let role2 = profile2.and_then(|p| p.role.as_deref()).unwrap_or("worker");
     let mut params = effective_spawn_params(triggering_transition_owned.as_ref().and_then(|tr| tr.agent.as_deref()), profile2, &config.workers);
     apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name2);
+
+    let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
+    let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
-    let worker_system = resolve_system_prompt(root, tr_instructions_snw, profile2, &config.workers, &params.agent, role2)?;
+    let worker_system = build_system_prompt(root, tr_instructions_snw, profile2, &config.workers, config.agents.instructions.as_deref(), &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -790,6 +792,7 @@ pub fn spawn_next_worker(
     let msg_file = write_temp_file("msg", &ticket_content)?;
     let ctx = WrapperContext {
         worker_name: worker_name.clone(),
+        agent_type: params.agent.clone(),
         ticket_id: id.clone(),
         ticket_branch: branch.clone(),
         worktree_path: wt_display.clone(),
@@ -875,7 +878,29 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
     }
 }
 
-fn resolve_system_prompt(
+pub(crate) fn build_system_prompt(
+    root: &Path,
+    transition_instructions: Option<&str>,
+    profile: Option<&WorkerProfileConfig>,
+    workers: &WorkersConfig,
+    agents_instructions: Option<&Path>,
+    agent: &str,
+    role: &str,
+) -> Result<String> {
+    let base = build_system_prompt_body(root, transition_instructions, profile, workers, agent, role)?;
+
+    // Prepend agents.instructions prefix when configured and non-empty
+    let Some(path) = agents_instructions else { return Ok(base); };
+    if path.as_os_str().is_empty() {
+        return Ok(base);
+    }
+    let prefix = std::fs::read_to_string(root.join(path))
+        .map_err(|_| anyhow::anyhow!("agents.instructions: file not found: {}", path.display()))?;
+    let prefix = prefix.trim_end();
+    Ok(format!("{prefix}\n\n{base}"))
+}
+
+fn build_system_prompt_body(
     root: &Path,
     transition_instructions: Option<&str>,
     profile: Option<&WorkerProfileConfig>,
@@ -883,12 +908,19 @@ fn resolve_system_prompt(
     agent: &str,
     role: &str,
 ) -> Result<String> {
-    // Level 0: transition.instructions
+    // Level 0: .apm/agents/<agent>/apm.<role>.md (soft — no error if absent)
+    let per_agent = root.join(format!(".apm/agents/{agent}/apm.{role}.md"));
+    if per_agent.exists() {
+        if let Ok(content) = std::fs::read_to_string(&per_agent) {
+            return Ok(content);
+        }
+    }
+    // Level 1: transition.instructions
     if let Some(path) = transition_instructions {
         return std::fs::read_to_string(root.join(path))
             .with_context(|| format!("transition.instructions: file not found: {path}"));
     }
-    // Level 1: profile.instructions
+    // Level 2: profile.instructions
     if let Some(p) = profile {
         if let Some(ref instr_path) = p.instructions {
             match std::fs::read_to_string(root.join(instr_path)) {
@@ -897,18 +929,11 @@ fn resolve_system_prompt(
             }
         }
     }
-    // Level 2: workers.instructions
+    // Level 3: workers.instructions
     if let Some(ref instr_path) = workers.instructions {
         match std::fs::read_to_string(root.join(instr_path)) {
             Ok(content) => return Ok(content),
             Err(_) => bail!("[workers].instructions: file not found: {instr_path}"),
-        }
-    }
-    // Level 3: .apm/agents/<agent>/apm.<role>.md
-    let per_agent = root.join(format!(".apm/agents/{agent}/apm.{role}.md"));
-    if per_agent.exists() {
-        if let Ok(content) = std::fs::read_to_string(&per_agent) {
-            return Ok(content);
         }
     }
     // Level 4: built-in default
@@ -954,7 +979,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_MSG, DEPRECATION_TEST_LOCK, emit_deprecation_warning_to};
+    use super::{build_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_MSG, DEPRECATION_TEST_LOCK, emit_deprecation_warning_to};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -1176,10 +1201,10 @@ mod tests {
         assert_eq!(params.agent, "claude");
     }
 
-    // --- resolve_system_prompt ---
+    // --- build_system_prompt ---
 
     #[test]
-    fn resolve_system_prompt_uses_profile_instructions() {
+    fn build_system_prompt_uses_profile_instructions() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -1187,13 +1212,13 @@ mod tests {
         let profile = make_profile(Some(".apm/spec.md"), None);
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, None, Some(&profile), &workers, "claude", "worker").unwrap(),
+            build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker").unwrap(),
             "SPEC WRITER"
         );
     }
 
     #[test]
-    fn resolve_system_prompt_uses_workers_instructions_when_no_profile() {
+    fn build_system_prompt_uses_workers_instructions_when_no_profile() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -1203,48 +1228,48 @@ mod tests {
             ..WorkersConfig::default()
         };
         assert_eq!(
-            resolve_system_prompt(p, None, None, &workers, "claude", "worker").unwrap(),
+            build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap(),
             "GLOBAL INSTRUCTIONS"
         );
     }
 
     #[test]
-    fn resolve_system_prompt_uses_per_agent_file() {
+    fn build_system_prompt_uses_per_agent_file() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WORKER").unwrap();
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, None, None, &workers, "claude", "worker").unwrap(),
+            build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap(),
             "PER AGENT WORKER"
         );
     }
 
     #[test]
-    fn resolve_system_prompt_falls_back_to_builtin_default() {
+    fn build_system_prompt_falls_back_to_builtin_default() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, None, &workers, "claude", "worker").unwrap();
+        let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
         assert_eq!(result, super::CLAUDE_WORKER_DEFAULT);
     }
 
     #[test]
-    fn resolve_system_prompt_falls_back_to_builtin_spec_writer() {
+    fn build_system_prompt_falls_back_to_builtin_spec_writer() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, None, &workers, "claude", "spec-writer").unwrap();
+        let result = build_system_prompt(p, None, None, &workers, None, "claude", "spec-writer").unwrap();
         assert_eq!(result, super::CLAUDE_SPEC_WRITER_DEFAULT);
     }
 
     #[test]
-    fn resolve_system_prompt_errors_for_unknown_agent() {
+    fn build_system_prompt_errors_for_unknown_agent() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, None, &workers, "custom-bot", "worker");
+        let result = build_system_prompt(p, None, None, &workers, None, "custom-bot", "worker");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("custom-bot"), "error should name the agent: {msg}");
@@ -1252,19 +1277,19 @@ mod tests {
     }
 
     #[test]
-    fn resolve_system_prompt_profile_instructions_missing_file_is_error() {
+    fn build_system_prompt_profile_instructions_missing_file_is_error() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let profile = make_profile(Some(".apm/nonexistent.md"), None);
         let workers = WorkersConfig::default();
-        let result = resolve_system_prompt(p, None, Some(&profile), &workers, "claude", "worker");
+        let result = build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("nonexistent.md"), "error should name the file: {msg}");
     }
 
     #[test]
-    fn resolve_system_prompt_backward_compat() {
+    fn build_system_prompt_backward_compat() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -1272,9 +1297,81 @@ mod tests {
         let profile = make_profile(Some(".apm/apm.worker.md"), None);
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, None, Some(&profile), &workers, "claude", "worker").unwrap(),
+            build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker").unwrap(),
             "LEGACY WORKER CONTENT"
         );
+    }
+
+    // --- agents_instructions prefix ---
+
+    #[test]
+    fn agents_instructions_prepended_with_blank_line() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::write(p.join("prefix.md"), "PREFIX CONTENT\n").unwrap();
+        let workers = WorkersConfig::default();
+        let result = build_system_prompt(
+            p, None, None, &workers,
+            Some(std::path::Path::new("prefix.md")),
+            "claude", "worker",
+        ).unwrap();
+        let expected = format!("PREFIX CONTENT\n\n{}", super::CLAUDE_WORKER_DEFAULT);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn agents_instructions_none_is_no_op() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let workers = WorkersConfig::default();
+        let without_prefix = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
+        assert_eq!(without_prefix, super::CLAUDE_WORKER_DEFAULT);
+    }
+
+    #[test]
+    fn agents_instructions_empty_path_is_no_op() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let workers = WorkersConfig::default();
+        let result = build_system_prompt(
+            p, None, None, &workers,
+            Some(std::path::Path::new("")),
+            "claude", "worker",
+        ).unwrap();
+        assert_eq!(result, super::CLAUDE_WORKER_DEFAULT);
+    }
+
+    #[test]
+    fn agents_instructions_missing_file_is_hard_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let workers = WorkersConfig::default();
+        let result = build_system_prompt(
+            p, None, None, &workers,
+            Some(std::path::Path::new("no-such-file.md")),
+            "claude", "worker",
+        );
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("agents.instructions"), "error should mention agents.instructions: {msg}");
+        assert!(msg.contains("no-such-file.md"), "error should name the file: {msg}");
+    }
+
+    #[test]
+    fn agents_instructions_trailing_whitespace_trimmed() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        // File ends with multiple newlines
+        std::fs::write(p.join("prefix.md"), "PREFIX\n\n\n").unwrap();
+        let workers = WorkersConfig::default();
+        let result = build_system_prompt(
+            p, None, None, &workers,
+            Some(std::path::Path::new("prefix.md")),
+            "claude", "worker",
+        ).unwrap();
+        // Must have exactly one blank line between prefix and body
+        let expected = format!("PREFIX\n\n{}", super::CLAUDE_WORKER_DEFAULT);
+        assert_eq!(result, expected);
     }
 
     // --- agent_role_prefix ---
@@ -1317,7 +1414,7 @@ mod tests {
         let profile = make_profile(Some(".apm/profile.md"), None);
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, Some(".apm/transition.md"), Some(&profile), &workers, "claude", "worker").unwrap(),
+            build_system_prompt(p, Some(".apm/transition.md"), Some(&profile), &workers, None, "claude", "worker").unwrap(),
             "TRANSITION CONTENT"
         );
     }
@@ -1330,8 +1427,22 @@ mod tests {
         std::fs::write(p.join(".apm/transition.md"), "TRANSITION ONLY").unwrap();
         let workers = WorkersConfig::default();
         assert_eq!(
-            resolve_system_prompt(p, Some(".apm/transition.md"), None, &workers, "claude", "worker").unwrap(),
+            build_system_prompt(p, Some(".apm/transition.md"), None, &workers, None, "claude", "worker").unwrap(),
             "TRANSITION ONLY"
+        );
+    }
+
+    #[test]
+    fn per_agent_file_beats_transition_instructions() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WINS").unwrap();
+        std::fs::write(p.join(".apm/transition.md"), "TRANSITION CONTENT").unwrap();
+        let workers = WorkersConfig::default();
+        assert_eq!(
+            build_system_prompt(p, Some(".apm/transition.md"), None, &workers, None, "claude", "worker").unwrap(),
+            "PER AGENT WINS"
         );
     }
 
@@ -1424,6 +1535,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "test-id".to_string(),
             ticket_branch: "ticket/test-id".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -1521,6 +1633,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "abc123".to_string(),
             ticket_branch: "ticket/abc123-some-feature".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -1596,6 +1709,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "test123".to_string(),
             ticket_branch: "ticket/test123".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -1734,6 +1848,7 @@ mod tests {
 
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "abc123".to_string(),
             ticket_branch: "ticket/abc123".to_string(),
             worktree_path: wt.path().to_path_buf(),
@@ -2035,6 +2150,7 @@ Some approach.
         options.insert("apm_bin".to_string(), apm_bin.to_string());
         crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: ticket_id.to_string(),
             ticket_branch: format!("ticket/{ticket_id}-test"),
             worktree_path: project_root.to_path_buf(),
@@ -2163,6 +2279,7 @@ updated_at = "2026-01-01T00:00:00Z"
         let msg_file = crate::wrapper::write_temp_file("msg", "msg").unwrap();
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "aaaa0002".to_string(),
             ticket_branch: "ticket/aaaa0002-test".to_string(),
             worktree_path: root.to_path_buf(),
@@ -2230,6 +2347,7 @@ updated_at = "2026-01-01T00:00:00Z"
             let msg_file = crate::wrapper::write_temp_file("msg", "msg").unwrap();
             let ctx = crate::wrapper::WrapperContext {
                 worker_name: "test".to_string(),
+                agent_type: "test".to_string(),
                 ticket_id: ticket_id.to_string(),
                 ticket_branch: format!("ticket/{ticket_id}-test"),
                 worktree_path: root.to_path_buf(),
@@ -2284,6 +2402,7 @@ updated_at = "2026-01-01T00:00:00Z"
         let msg_file = crate::wrapper::write_temp_file("msg", "debug-message").unwrap();
         let ctx = crate::wrapper::WrapperContext {
             worker_name: "test-worker".to_string(),
+            agent_type: "test".to_string(),
             ticket_id: "aaaa0005".to_string(),
             ticket_branch: "ticket/aaaa0005-test".to_string(),
             worktree_path: root.to_path_buf(),

@@ -86,9 +86,11 @@ pub fn run(root: &Path, skip_permissions: bool, dry_run: bool, daemon: bool, int
             !done
         });
 
-        // In daemon mode: a reaped worker opens a slot — check immediately.
-        if daemon && reaped {
-            next_poll = Instant::now();
+        // A reaped worker opens a slot — retry dispatch in both modes.
+        if reaped {
+            if daemon {
+                next_poll = Instant::now();
+            }
             no_more = false;
         }
 

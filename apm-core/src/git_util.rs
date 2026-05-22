@@ -339,6 +339,8 @@ pub fn commit_to_branch(
     // If a permanent worktree exists for this branch, commit there directly.
     if let Some(wt_path) = find_worktree_for_branch(root, branch) {
         // Fast-forward to remote if remote is ahead, so our commit lands on top of it.
+        // The fast-forward is best-effort — diverged history is acceptable and
+        // we still proceed with the commit.
         let remote_ref = format!("origin/{branch}");
         if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
             let _ = run(&wt_path, &["merge", "--ff-only", &remote_ref]);
@@ -348,8 +350,10 @@ pub fn commit_to_branch(
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&full_path, content)?;
-        let _ = run(&wt_path, &["add", rel_path]);
-        let _ = run(&wt_path, &["commit", "-m", message]);
+        run(&wt_path, &["add", rel_path])
+            .with_context(|| format!("git add {rel_path} in worktree {} failed", wt_path.display()))?;
+        run(&wt_path, &["commit", "-m", message])
+            .with_context(|| format!("git commit on {branch} in worktree {} failed", wt_path.display()))?;
         crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
     }
@@ -361,8 +365,10 @@ pub fn commit_to_branch(
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&local_path, content)?;
-        let _ = run(root, &["add", rel_path]);
-        let _ = run(root, &["commit", "-m", message]);
+        run(root, &["add", rel_path])
+            .with_context(|| format!("git add {rel_path} failed"))?;
+        run(root, &["commit", "-m", message])
+            .with_context(|| format!("git commit on {branch} failed"))?;
         crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
     }
@@ -1241,9 +1247,62 @@ pub fn git_config_get(root: &Path, key: &str) -> Option<String> {
     if value.is_empty() { None } else { Some(value) }
 }
 
-pub fn merge_ref(dir: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String> {
+/// Remove any unmerged (stage 1/2/3) entries from the index of `dir`.
+/// `git ls-files -u` lists them; `git reset HEAD -- <path>` clears each.
+/// No-op when the index is clean. Warnings are appended on failure; we
+/// never bail because the caller's next operation will surface any real
+/// problem.
+fn clear_stale_unmerged_entries(dir: &Path, warnings: &mut Vec<String>) {
     let out = match Command::new("git")
-        .args(["-C", &dir.to_string_lossy(), "merge", refname, "--no-edit"])
+        .args(["-C", &dir.to_string_lossy(), "ls-files", "-u"])
+        .output()
+    {
+        Ok(o) if o.status.success() => o,
+        _ => return,
+    };
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let mut paths: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for line in stdout.lines() {
+        // Format: "<mode> <sha> <stage>\t<path>"
+        if let Some(path) = line.split('\t').nth(1) {
+            paths.insert(path.to_string());
+        }
+    }
+    if paths.is_empty() {
+        return;
+    }
+    warnings.push(format!(
+        "warning: clearing {} stale unmerged index entr{} in {} (left by an earlier failed merge)",
+        paths.len(),
+        if paths.len() == 1 { "y" } else { "ies" },
+        dir.display(),
+    ));
+    for path in &paths {
+        let _ = Command::new("git")
+            .args(["-C", &dir.to_string_lossy(), "reset", "HEAD", "--", path])
+            .output();
+    }
+}
+
+pub fn merge_ref(dir: &Path, refname: &str, warnings: &mut Vec<String>) -> Option<String> {
+    // Preflight: clear any stage-2/3 unmerged index entries left behind by an
+    // earlier failed merge whose abort didn't fully clean up. Without this,
+    // git refuses with "Merging is not possible because you have unmerged
+    // files." before even attempting the merge.
+    clear_stale_unmerged_entries(dir, warnings);
+
+    // `merge.directoryRenames=false` disables git's heuristic that infers
+    // file renames when many siblings in a directory are renamed elsewhere.
+    // For apm, that heuristic mis-fires during the post-provision merge:
+    // when main archives a sweep of `tickets/*.md` into `archive/tickets/`,
+    // git would speculatively rename the ticket branch's own active ticket
+    // file into archive/ too, creating a phantom conflict.
+    let out = match Command::new("git")
+        .args([
+            "-C", &dir.to_string_lossy(),
+            "-c", "merge.directoryRenames=false",
+            "merge", refname, "--no-edit",
+        ])
         .output()
     {
         Ok(o) => o,
@@ -1262,6 +1321,32 @@ pub fn merge_ref(dir: &Path, refname: &str, warnings: &mut Vec<String>) -> Optio
     } else {
         let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
         warnings.push(format!("warning: merge {refname} failed: {stderr}"));
+        // Abort the merge so the worktree returns to a clean state. Without
+        // this, MERGE_HEAD persists and subsequent partial commits (e.g.
+        // `apm state`, `apm set`) fail silently with "cannot do a partial
+        // commit during a merge". Best-effort: an abort failure is reported
+        // as a warning but doesn't change the return value.
+        if detect_mid_merge_state(dir).is_some() {
+            let abort = Command::new("git")
+                .args(["-C", &dir.to_string_lossy(), "merge", "--abort"])
+                .output();
+            match abort {
+                Ok(o) if !o.status.success() => {
+                    let aborterr = String::from_utf8_lossy(&o.stderr).trim().to_string();
+                    warnings.push(format!(
+                        "warning: could not abort merge of {refname} in {}: {aborterr}",
+                        dir.display()
+                    ));
+                }
+                Err(e) => {
+                    warnings.push(format!(
+                        "warning: could not abort merge of {refname} in {}: {e}",
+                        dir.display()
+                    ));
+                }
+                Ok(_) => {}
+            }
+        }
         None
     }
 }
@@ -1564,6 +1649,129 @@ mod tests {
         let result = merge_ref(dir.path(), "feature", &mut warnings);
         assert!(result.is_some());
         assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn merge_ref_does_not_speculate_directory_renames() {
+        // Reproduce the apm archive-sweep scenario: many siblings move from
+        // dir A to dir B on main; the feature branch adds a *new* file in
+        // dir A. With directory rename detection on, git would speculatively
+        // place the new file under dir B too, conflicting with the feature
+        // branch. With it off (our fix), the file stays at A on the merged
+        // branch.
+        let dir = git_init();
+        let p = dir.path();
+        // Seed: dir A has several files
+        std::fs::create_dir_all(p.join("a")).unwrap();
+        for name in &["1.md", "2.md", "3.md", "4.md"] {
+            std::fs::write(p.join("a").join(name), "seed\n").unwrap();
+        }
+        git_cmd(p, &["add", "a"]);
+        git_cmd(p, &["commit", "-m", "seed"]);
+
+        // main: move all of a/* into b/*
+        std::fs::create_dir_all(p.join("b")).unwrap();
+        for name in &["1.md", "2.md", "3.md", "4.md"] {
+            std::fs::rename(p.join("a").join(name), p.join("b").join(name)).unwrap();
+        }
+        git_cmd(p, &["add", "-A"]);
+        git_cmd(p, &["commit", "-m", "archive sweep"]);
+
+        // feature branch: branch off seed, add new file in a/
+        git_cmd(p, &["checkout", "-b", "feature", "HEAD~1"]);
+        std::fs::write(p.join("a/new.md"), "active\n").unwrap();
+        git_cmd(p, &["add", "a/new.md"]);
+        git_cmd(p, &["commit", "-m", "add active ticket"]);
+
+        let mut warnings = Vec::new();
+        let result = merge_ref(p, "main", &mut warnings);
+
+        assert!(result.is_some(), "merge should succeed without directory-rename inference; warnings: {warnings:?}");
+        assert!(detect_mid_merge_state(p).is_none(), "should not be left mid-merge");
+        // The new file should still be at a/new.md, not b/new.md.
+        assert!(p.join("a/new.md").exists(), "new.md should stay at a/");
+        assert!(!p.join("b/new.md").exists(), "new.md must NOT have been speculatively renamed into b/");
+    }
+
+    #[test]
+    fn merge_ref_clears_stale_unmerged_index_entries() {
+        // Reproduce a stage-2 leftover from an earlier failed merge that
+        // was incompletely aborted. Without preflight cleanup, git refuses:
+        // "Merging is not possible because you have unmerged files."
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "f.txt", "hi");
+
+        // Branch "other" with a non-conflicting commit — we'll merge this
+        // *later*, after polluting the index.
+        git_cmd(p, &["checkout", "-b", "other"]);
+        make_commit(p, "g.txt", "there");
+        git_cmd(p, &["checkout", "main"]);
+
+        // Now create a real merge conflict against a third branch "feature".
+        std::fs::write(p.join("conflict.md"), "main\n").unwrap();
+        git_cmd(p, &["add", "conflict.md"]);
+        git_cmd(p, &["commit", "-m", "main version"]);
+
+        git_cmd(p, &["checkout", "-b", "feature", "HEAD~1"]);
+        std::fs::write(p.join("conflict.md"), "feature\n").unwrap();
+        git_cmd(p, &["add", "conflict.md"]);
+        git_cmd(p, &["commit", "-m", "feature version"]);
+
+        git_cmd(p, &["checkout", "main"]);
+        let _ = Cmd::new("git")
+            .args(["-C", &p.to_string_lossy(), "merge", "feature", "--no-edit"])
+            .output();
+        // Simulate a botched abort: clear MERGE_HEAD but leave stage entries.
+        let _ = std::fs::remove_file(p.join(".git/MERGE_HEAD"));
+        let _ = std::fs::remove_file(p.join(".git/MERGE_MSG"));
+
+        let pre = String::from_utf8_lossy(
+            &Cmd::new("git").args(["-C", &p.to_string_lossy(), "ls-files", "-u"])
+                .output().unwrap().stdout
+        ).to_string();
+        assert!(!pre.trim().is_empty(), "precondition: unmerged index entries should be present; got: {pre:?}");
+
+        // Without preflight cleanup, this would fail with "unmerged files".
+        let mut warnings = Vec::new();
+        let result = merge_ref(p, "other", &mut warnings);
+
+        assert!(result.is_some(), "merge should succeed after preflight; warnings: {warnings:?}");
+        assert!(
+            warnings.iter().any(|w| w.contains("stale unmerged index")),
+            "expected stale-entry warning; got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn merge_ref_conflict_aborts_and_warns() {
+        let dir = git_init();
+        let p = dir.path();
+        // Create the same file on both branches with different content so
+        // the merge has a non-trivial conflict.
+        make_commit(p, "f.txt", "main version\n");
+        git_cmd(p, &["checkout", "-b", "feature"]);
+        std::fs::write(p.join("f.txt"), "feature version\n").unwrap();
+        git_cmd(p, &["add", "f.txt"]);
+        git_cmd(p, &["commit", "-m", "feature change"]);
+        git_cmd(p, &["checkout", "main"]);
+        std::fs::write(p.join("f.txt"), "main change\n").unwrap();
+        git_cmd(p, &["add", "f.txt"]);
+        git_cmd(p, &["commit", "-m", "main change"]);
+
+        let mut warnings = Vec::new();
+        let result = merge_ref(p, "feature", &mut warnings);
+
+        assert!(result.is_none(), "merge should report failure");
+        assert!(
+            warnings.iter().any(|w| w.contains("merge feature failed")),
+            "expected merge-failure warning; got: {warnings:?}"
+        );
+        // Critical: worktree must NOT be left mid-merge.
+        assert!(
+            detect_mid_merge_state(p).is_none(),
+            "merge_ref must abort on conflict so MERGE_HEAD does not persist"
+        );
     }
 
     #[test]

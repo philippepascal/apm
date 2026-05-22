@@ -338,12 +338,18 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
         // branch (authoritative ls-remote check at candidate-collection
         // time). Avoids noisy "remote ref does not exist" failures that
         // happen routinely when GitHub auto-deletes branches on merge.
+        //
+        // On success, also prune the local remote-tracking ref. `git push
+        // origin --delete` updates the remote but leaves the local
+        // refs/remotes/origin/<branch> ref behind; without this prune the
+        // stale ref would keep surfacing the ticket in `apm list`.
         if candidate.remote_branch_exists {
-            if let Err(e) = git_util::delete_remote_branch(root, &candidate.branch) {
-                warnings.push(format!(
+            match git_util::delete_remote_branch(root, &candidate.branch) {
+                Ok(()) => git_util::prune_remote_tracking(root, &candidate.branch),
+                Err(e) => warnings.push(format!(
                     "warning: could not delete remote branch {}: {e}",
                     candidate.branch
-                ));
+                )),
             }
         }
     }

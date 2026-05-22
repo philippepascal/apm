@@ -1,0 +1,130 @@
++++
+id = "6803b88b"
+title = "Decouple instructions from worker_profiles; move to workflow transitions"
+state = "closed"
+priority = 0
+effort = 4
+risk = 2
+author = "philippepascal"
+owner = "philippepascal"
+branch = "ticket/6803b88b-decouple-instructions-from-worker-profil"
+created_at = "2026-05-04T16:48:29.472278Z"
+updated_at = "2026-05-04T20:20:43.362757Z"
+epic = "5acea599"
+target_branch = "epic/5acea599-flexible-agent-configuration"
++++
+
+## Spec
+
+### Problem
+
+Spawning a worker agent for a workflow phase currently requires two coordinated edits in two different files. The transition in `workflow.toml` sets `profile = "spec_agent"`, and the profile in `config.toml` carries `instructions` (the system-prompt file path) and `role_prefix`. The profile was originally introduced for infrastructure overrides (agent binary, model, container), but `instructions` and `role_prefix` are workflow-level concerns: they describe what role the agent plays during a particular phase, not how it is executed.
+
+This coupling has two practical downsides. First, editing which instructions a spec-writer receives requires touching `config.toml`, not `workflow.toml`, where all other workflow-phase behaviour lives. Second, a project that wants distinct instructions per transition but identical infrastructure must create one profile entry per transition, inflating `config.toml` with boilerplate that adds no infrastructure value.
+
+The desired state is that `instructions` and `role_prefix` can be set directly on a `[[workflow.states.transitions]]` block in `workflow.toml`. Projects that need only a role change, without any infrastructure override, would no longer need a `[worker_profiles.*]` entry at all. Projects that need both can continue using a profile; transition-level fields simply take precedence.
+
+### Acceptance criteria
+
+- [x] `TransitionConfig` in `apm-core/src/config.rs` gains an `instructions: Option<String>` field
+- [x] `TransitionConfig` gains a `role_prefix: Option<String>` field
+- [x] When `transition.instructions` is set, it is used as the worker system prompt in place of `profile.instructions`
+- [x] When `transition.role_prefix` is set, it is used as the worker identity prefix in place of `profile.role_prefix`
+- [x] Resolution order for system prompt is: transition.instructions → profile.instructions → workers.instructions → `.apm/agents/<agent>/apm.<role>.md` → built-in default
+- [x] Resolution order for role prefix is: transition.role_prefix → profile.role_prefix → built-in default string
+- [x] A transition with only `instructions` and `role_prefix` (no `profile`) spawns a worker correctly with the specified system prompt and identity prefix
+- [x] A transition with both `profile` and `instructions` uses `instructions` for the system prompt, ignoring `profile.instructions`
+- [x] A transition with both `profile` and `role_prefix` uses `role_prefix` for the identity prefix, ignoring `profile.role_prefix`
+- [x] `apm start` and `apm next --spawn` both apply the same resolution order
+- [x] `.apm/workflow.toml` is updated: `groomed → in_design` and `ammend → in_design` transitions carry `instructions` and `role_prefix` directly
+- [x] `.apm/workflow.toml` is updated: `ready → in_progress` transition carries `instructions` and `role_prefix` directly
+- [x] `.apm/config.toml` is updated: `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]` drop `instructions` and `role_prefix`; profiles that become empty are removed
+- [x] Running `apm init` produces a `.apm/config.toml` where no worker profile retains an `instructions` or `role_prefix` field
+- [x] Existing tests for instruction resolution pass without behavioural change (call sites updated to pass `None` as the new first argument; no assertion changes)
+
+### Out of scope
+
+- Moving other profile fields (model, agent, container, env, options) to transitions — those remain infrastructure concerns owned by worker_profiles\n- Changing the semantics of StateConfig.instructions, which is a user-message prefix used in non-spawn mode (unrelated to the system prompt)\n- Adding instructions/role_prefix to states (as opposed to transitions) — states already have instructions for a different purpose\n- Removing the worker_profiles mechanism; it stays as the path for infra-only overrides\n- Schema validation that a transition references a valid profile name (a separate concern)
+
+### Approach
+
+#### 1. Extend TransitionConfig — apm-core/src/config.rs
+
+Add two optional fields to `TransitionConfig`:
+
+    pub instructions: Option<String>,  // path to system-prompt file; overrides profile.instructions
+    pub role_prefix: Option<String>,   // identity prefix; overrides profile.role_prefix
+
+Both use `#[serde(default)]` so existing configs parse without change.
+
+#### 2. Update instruction resolution — apm-core/src/start.rs
+
+Change the signature of `resolve_system_prompt` to accept a new first argument `transition_instructions: Option<&str>` before `profile`. Insert Level 0 at the top of the function body, before the existing Level 1 (profile.instructions):
+
+    // Level 0: transition.instructions
+    if let Some(path) = transition_instructions {
+        return std::fs::read_to_string(root.join(path))
+            .with_context(|| format!("transition.instructions: file not found: {}", path));
+    }
+
+Levels 1–5 (profile → workers → agent file → built-in → error) remain unchanged.
+
+Update `agent_role_prefix` to accept a new first argument `transition_role_prefix: Option<&str>` before `profile`. Resolution order: transition_role_prefix → profile.role_prefix → default string.
+
+Update all call sites of `resolve_system_prompt` and `agent_role_prefix` in `run()` and `spawn_next_worker()` to pass the transition fields. The triggering transition is already captured at both sites; extract `.instructions.as_deref()` and `.role_prefix.as_deref()` from it.
+
+Also update the three `WrapperContext::role_prefix` assignments (one in `run()`, two in the `spawn_next_worker()` variants). These lines currently read `profile.and_then(|p| p.role_prefix.clone())`. Change each to resolve `transition.role_prefix` first (with `<id>` substituted), then fall back to `profile.role_prefix`, then `None`. This ensures the `APM_ROLE_PREFIX` env var forwarded to the wrapper reflects the transition-level override.
+
+#### 3. Migrate project configuration
+
+**`.apm/workflow.toml`** (this project) — add fields directly on the `command:start` transitions:
+
+- `groomed → in_design` and `ammend → in_design`: add
+      instructions = ".apm/agents/default/apm.spec-writer.md"
+      role_prefix  = "You are a Spec-Writer agent assigned to ticket #<id>."
+- `ready → in_progress`: add
+      instructions = ".apm/agents/default/apm.worker.md"
+      role_prefix  = "You are a Worker agent assigned to ticket #<id>."
+
+**`.apm/config.toml`** (this project) — remove `instructions` and `role_prefix` from `[worker_profiles.spec_agent]` and `[worker_profiles.impl_agent]`. Each profile holds only those two fields plus `command`/`args` (deprecated) and `model` whose value mirrors the `[workers]` default; once stripped they have no meaningful non-redundant content, so remove both profile entries entirely and drop the corresponding `profile = ...` lines from the transitions.
+
+**`apm-core/src/default/workflow.toml`** (template written by `apm init`) — apply the same transition-level `instructions` and `role_prefix` additions as above. Additionally:
+
+- Drop `profile = "impl_agent"` from the `ready → in_progress` transition (that profile will be removed from the generated config; see below).
+- Keep `profile = "spec_agent"` on `groomed → in_design` and `ammend → in_design` — the generated `spec_agent` profile retains `role = "spec-writer"` which is the fallback used when `transition.instructions` is absent.
+
+**`apm-core/src/init.rs` — `default_config()` string template** — update the generated `config.toml` for new projects:
+
+- `[worker_profiles.spec_agent]`: remove `instructions` and `role_prefix`; the profile retains `role = "spec-writer"` and remains in the template.
+- `[worker_profiles.impl_agent]`: remove `instructions` and `role_prefix`; the profile becomes empty — remove the entire entry from the template.
+
+#### 4. Update tests — apm-core/src/start.rs
+
+- Add test `transition_instructions_takes_precedence_over_profile`: writes two temp files with distinct content, sets `transition.instructions` to one and `profile.instructions` to the other, asserts `resolve_system_prompt` returns the transition file content.
+- Add test `transition_instructions_no_profile_required`: sets `transition.instructions` with no profile reference, asserts `resolve_system_prompt` returns the file content without error.
+- Update existing direct calls to `resolve_system_prompt` to pass `None` as the new first argument — no behaviour change.
+
+### Open questions
+
+
+### Amendment requests
+
+
+### Code review
+
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+| 2026-05-04T16:48Z | — | new | philippepascal |
+| 2026-05-04T16:50Z | new | groomed | philippepascal |
+| 2026-05-04T16:50Z | groomed | in_design | philippepascal |
+| 2026-05-04T16:55Z | in_design | specd | claude-0504-1650-1a08 |
+| 2026-05-04T17:26Z | specd | ammend | philippepascal |
+| 2026-05-04T17:32Z | ammend | in_design | philippepascal |
+| 2026-05-04T17:43Z | in_design | specd | claude-0504-1732-f5d0 |
+| 2026-05-04T19:18Z | specd | ready | philippepascal |
+| 2026-05-04T19:18Z | ready | in_progress | philippepascal |
+| 2026-05-04T19:32Z | in_progress | implemented | claude-0504-1918-ff48 |
+| 2026-05-04T20:20Z | implemented | closed | philippepascal(apm-sync) |

@@ -132,6 +132,17 @@ fn print_ticket(t: &ticket::Ticket) {
     if let Some(o) = &fm.owner {
         println!("owner:        {o}");
     }
+    if let Some(a) = &fm.agent {
+        println!("agent:        {a}");
+    }
+    if !fm.agent_overrides.is_empty() {
+        let mut keys: Vec<&String> = fm.agent_overrides.keys().collect();
+        keys.sort();
+        let parts: Vec<String> = keys.iter()
+            .map(|k| format!("{}={}", k, fm.agent_overrides[*k]))
+            .collect();
+        println!("agent_overrides: {}", parts.join(", "));
+    }
     println!();
     print!("{}", t.body);
 }

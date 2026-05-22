@@ -33,6 +33,7 @@ Workflow:
   review         Review a ticket and transition state (supervisor)
   next           Return the highest-priority actionable ticket
   start          Claim a ticket and provision its worktree (agent)
+  prompt         Print the system prompt that would be used for a ticket
   state          Transition a ticket's state (low-level)
   work           Orchestrate workers: dispatch in a loop
   sync           Sync with remote (poll events, detect merges)
@@ -316,13 +317,15 @@ Valid field names:
   effort      — integer 1-10; implementation scale estimate
   risk        — integer 1-10; technical risk estimate
   title       — short human-readable summary
-  agent       — name of the assigned agent (use \"-\" to clear)
+  agent       — agent wrapper to use for this ticket; must match an agent
+                configured in config.toml ([workers].agent or any
+                [worker_profiles.*].agent). Use \"-\" to clear.
   branch      — override the ticket's branch name (use \"-\" to clear)
   depends_on  — comma-separated list of blocker IDs (use \"-\" to clear)
 
 Examples:
   apm set 42 priority 5
-  apm set 42 agent alice
+  apm set 42 agent pi
   apm set 42 agent -               # clear agent field
   apm set 42 depends_on abc123     # single blocker
   apm set 42 depends_on \"abc123,def456\"  # multiple blockers
@@ -829,6 +832,39 @@ the given substring:
         #[arg(long, conflicts_with = "device")]
         all: bool,
     },
+    /// Print the system prompt that would be used for a ticket's current transition
+    #[command(long_about = "Print the system prompt that would be used if the ticket's current\n\
+command:start transition fired, then exit 0. The ticket is not modified\n\
+and no worker is spawned.\n\
+\n\
+Uses the same priority cascade as the live spawn paths:\n\
+  0. .apm/agents/<agent>/apm.<role>.md     (per-agent file, highest)\n\
+  1. transition.instructions               (from workflow.toml)\n\
+  2. profile.instructions                  (from [worker_profiles.*])\n\
+  3. [workers].instructions                (global fallback)\n\
+  4. built-in default for known agents\n\
+  5. error — no instructions found\n\
+\n\
+--agent and --role override the resolved values for inspection only;\n\
+they do not affect the ticket or any config.\n\
+\n\
+Exits non-zero with a clear message when no instructions can be resolved.\n\
+\n\
+Examples:\n\
+  apm prompt ba121f45                          # resolved agent + role\n\
+  apm prompt ba121f45 --agent pi               # inspect pi-agent prompt\n\
+  apm prompt ba121f45 --role spec-writer       # inspect spec-writer role")]
+    Prompt {
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+        #[arg(value_name = "ID")]
+        id: String,
+        /// Override the resolved agent for inspection (does not affect the ticket)
+        #[arg(long)]
+        agent: Option<String>,
+        /// Override the resolved role for inspection (does not affect the ticket)
+        #[arg(long)]
+        role: Option<String>,
+    },
     /// Print version and build type
     Version,
     /// Show help for a topic: commands, config, workflow, ticket
@@ -990,14 +1026,14 @@ fn main() -> Result<()> {
             (true, Some(_)) => anyhow::bail!("--next and an explicit ID are mutually exclusive"),
             (true, None) => cmd::start::run_next(&root, no_aggressive, spawn, skip_permissions),
             (false, Some(id)) => {
-                let agent_name = apm_core::config::resolve_caller_name();
+                let caller_name = apm_core::config::resolve_caller_name();
                 cmd::start::run(
                     &root,
                     &id,
                     no_aggressive,
                     spawn,
                     skip_permissions,
-                    &agent_name,
+                    &caller_name,
                 )
             }
             (false, None) => anyhow::bail!("provide a ticket ID or use --next"),
@@ -1150,6 +1186,7 @@ fn main() -> Result<()> {
             }
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
+        Command::Prompt { id, agent, role } => cmd::prompt::run(&root, &id, agent, role),
         Command::Version => {
             cmd::version::run();
             Ok(())

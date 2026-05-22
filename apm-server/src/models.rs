@@ -64,6 +64,16 @@ pub struct PutBodyRequest {
     pub spec: String,
 }
 
+#[derive(serde::Serialize)]
+pub struct PromptResponse {
+    pub prompt: String,
+}
+
+#[derive(serde::Deserialize, Default)]
+pub struct PromptQuery {
+    pub agent: Option<String>,
+}
+
 #[derive(serde::Deserialize)]
 pub struct PatchTicketRequest {
     pub effort: Option<u8>,
