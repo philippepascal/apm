@@ -28,7 +28,7 @@ Three byte-for-byte sync tests in `apm-core/tests/worker_md_sync.rs` fail on mai
 
 ### Approach
 
-How the implementation will work.
+Three files in `apm-core/src/default/agents/` must be updated to match their `.apm/agents/` counterparts. All edits are text-only; no logic changes.\n\n**File 1 — `apm-core/src/default/agents/default/apm.worker.md`**\n\nLines 6–7: replace `Read `apm.agents.md` for startup, identity, worktree setup, and shell / discipline.` with `Read `.apm/agents/default/agents.md` for startup, identity, worktree setup, / and shell discipline.` (matching the project copy at `.apm/agents/default/apm.worker.md` line 6–7).\n\n**File 2 — `apm-core/src/default/agents/claude/apm.worker.md`**\n\nIdentical line 6–7 change as File 1.\n\n**File 3 — `apm-core/src/default/agents/default/apm.spec-writer.md`**\n\nThree edits vs the project copy at `.apm/agents/default/apm.spec-writer.md`:\n\n1. After line 50 (`Do NOT write the ticket markdown file directly.`), insert the `### Never hand-edit the History table` and `### Filename is fixed — never rename the ticket file` subsections (project copy lines 52–85).\n\n2. In the `## Handling `ammend` tickets` section, replace step 6. The source has a simple two-line git add/commit using a hardcoded `tickets/<id>-<slug>.md` path. The project copy uses `FILE=$(ls <worktree-path>/tickets/<id>-*.md)` to avoid computing the slug.\n\n3. In the `## Style rules` section at the end, change the path from `.apm/style.md` to `.apm/agents/default/style.md`.\n\nIn each case the project copy is the reference; copy it verbatim into the source file. After editing, `diff` each pair to confirm byte-for-byte identity, then run `cargo test --workspace`.
 
 ### Open questions
 
