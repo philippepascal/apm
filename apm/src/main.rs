@@ -843,6 +843,9 @@ the given substring:
 command:start transition fired, then exit 0. The ticket is not modified\n\
 and no worker is spawned.\n\
 \n\
+When called with no ID, prints the agents and roles discovered in .apm/agents/\n\
+and exits 0. --agent and --role flags are accepted but ignored in this mode.\n\
+\n\
 Uses the same priority cascade as the live spawn paths:\n\
   0. .apm/agents/<agent>/apm.<role>.md     (per-agent file, highest)\n\
   1. transition.instructions               (from workflow.toml)\n\
@@ -857,13 +860,14 @@ they do not affect the ticket or any config.\n\
 Exits non-zero with a clear message when no instructions can be resolved.\n\
 \n\
 Examples:\n\
+  apm prompt                                 # list available agents and roles\n\
   apm prompt ba121f45                          # resolved agent + role\n\
   apm prompt ba121f45 --agent pi               # inspect pi-agent prompt\n\
   apm prompt ba121f45 --role spec-writer       # inspect spec-writer role")]
     Prompt {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
-        id: String,
+        id: Option<String>,
         /// Override the resolved agent for inspection (does not affect the ticket)
         #[arg(long)]
         agent: Option<String>,
@@ -1195,7 +1199,7 @@ fn main() -> Result<()> {
             }
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
-        Command::Prompt { id, agent, role } => cmd::prompt::run(&root, &id, agent, role),
+        Command::Prompt { id, agent, role } => cmd::prompt::run(&root, id.as_deref(), agent, role),
         Command::Instructions => cmd::instructions::run(Cli::command()),
         Command::Version => {
             cmd::version::run();

@@ -1,9 +1,62 @@
 use anyhow::Result;
+use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
 use crate::config::Config;
 use crate::ticket;
 use crate::start::{build_system_prompt, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
+
+/// Scan `.apm/agents/` for agent subdirectory names and role names extracted
+/// from `apm.<role>.md` filenames, then print a two-line discovery summary.
+pub fn discover(root: &Path, out: &mut dyn Write) -> Result<()> {
+    let agents_dir = root.join(".apm/agents");
+    let mut agents: Vec<String> = Vec::new();
+    let mut roles: HashSet<String> = HashSet::new();
+
+    if agents_dir.is_dir() {
+        let mut dir_names: Vec<String> = std::fs::read_dir(&agents_dir)?
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_dir())
+            .filter_map(|e| e.file_name().into_string().ok())
+            .collect();
+        dir_names.sort();
+
+        for agent_name in &dir_names {
+            let agent_dir = agents_dir.join(agent_name);
+            if let Ok(entries) = std::fs::read_dir(&agent_dir) {
+                for entry in entries.filter_map(|e| e.ok()) {
+                    if let Ok(name) = entry.file_name().into_string() {
+                        if let Some(rest) = name.strip_prefix("apm.") {
+                            if let Some(role) = rest.strip_suffix(".md") {
+                                roles.insert(role.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        agents = dir_names;
+    }
+
+    let mut sorted_roles: Vec<String> = roles.into_iter().collect();
+    sorted_roles.sort();
+
+    let agents_str = agents.join(", ");
+    let roles_str = sorted_roles.join(", ");
+
+    if agents_str.is_empty() {
+        writeln!(out, "Agents:")?;
+    } else {
+        writeln!(out, "{:<8} {}", "Agents:", agents_str)?;
+    }
+    if roles_str.is_empty() {
+        writeln!(out, "Roles:")?;
+    } else {
+        writeln!(out, "{:<8} {}", "Roles:", roles_str)?;
+    }
+
+    Ok(())
+}
 
 /// Print the system prompt that would be used if the ticket's current
 /// `command:start` transition fired.  Agent and role may be overridden for
@@ -347,6 +400,57 @@ Test.
             .args(["commit", "-m", "add ticket"]).current_dir(root).output().unwrap();
         std::process::Command::new("git")
             .args(["checkout", "main"]).current_dir(root).output().unwrap();
+    }
+
+    #[test]
+    fn discover_lists_agents_and_roles() {
+        use std::fs;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join(".apm/agents/mock-happy")).unwrap();
+        fs::create_dir_all(root.join(".apm/agents/pi")).unwrap();
+        fs::write(root.join(".apm/agents/mock-happy/apm.worker.md"), "").unwrap();
+        fs::write(root.join(".apm/agents/pi/apm.spec-writer.md"), "").unwrap();
+
+        let mut buf = Vec::new();
+        discover(root, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("Agents:  mock-happy, pi"), "got: {output:?}");
+        assert!(output.contains("Roles:   spec-writer, worker"), "got: {output:?}");
+    }
+
+    #[test]
+    fn discover_no_agents_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+
+        let mut buf = Vec::new();
+        let result = discover(root, &mut buf);
+        assert!(result.is_ok());
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("Agents:"), "got: {output:?}");
+        assert!(output.contains("Roles:"), "got: {output:?}");
+    }
+
+    #[test]
+    fn discover_deduplicates_roles() {
+        use std::fs;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join(".apm/agents/alpha")).unwrap();
+        fs::create_dir_all(root.join(".apm/agents/beta")).unwrap();
+        fs::write(root.join(".apm/agents/alpha/apm.worker.md"), "").unwrap();
+        fs::write(root.join(".apm/agents/beta/apm.worker.md"), "").unwrap();
+
+        let mut buf = Vec::new();
+        discover(root, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        let roles_line = output.lines().find(|l| l.starts_with("Roles:")).unwrap();
+        let count = roles_line.matches("worker").count();
+        assert_eq!(count, 1, "role should appear once; got: {roles_line:?}");
     }
 
     /// AC #3: when build_system_prompt returns an error (missing instructions
