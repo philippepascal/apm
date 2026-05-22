@@ -32,7 +32,7 @@ The fix is narrowly scoped: when a ticket worktree's branch is strictly behind o
 - [x] After processing all worktrees, `apm sync` prints a summary: `N worktree(s) fast-forwarded, M skipped (local changes), K skipped (ahead/diverged)` — omitting zero-count terms.
 - [x] When no ticket worktrees exist, no worktree-related lines appear in `apm sync` output.
 - [x] All per-worktree lines and the summary line are suppressed when `--quiet` is passed.
-- [ ] Worktree reconciliation runs in the same `!offline` block as `sync_non_checked_out_refs`; passing `--offline` skips it entirely.
+- [x] Worktree reconciliation runs in the same `!offline` block as `sync_non_checked_out_refs`; passing `--offline` skips it entirely.
 
 ### Out of scope
 
