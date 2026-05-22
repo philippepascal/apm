@@ -27,7 +27,7 @@ Second, `update_settings_json` prompts the user `[y/N]` before writing (lines 23
 - [x] `apm init --yes` on a repo with `.claude/` present but no `settings.json` creates `.claude/settings.json` containing all `APM_ALLOW_ENTRIES` under `permissions.allow` without prompting.
 - [x] `apm init --yes` on a repo with an existing `.claude/settings.json` that is missing some entries merges the missing entries in without duplicating entries that are already present.
 - [x] `apm init --yes` on a repo with no `.claude/` directory does not create `.claude/` or `settings.json`, and exits zero.
-- [ ] `apm init` (no `--yes`) on a non-TTY stdin with `.claude/settings.json` absent still creates and seeds the file (non-interactive path does not prompt).
+- [x] `apm init` (no `--yes`) on a non-TTY stdin with `.claude/settings.json` absent still creates and seeds the file (non-interactive path does not prompt).
 - [ ] `apm init --yes` updates `~/.claude/settings.json` with `APM_USER_ALLOW_ENTRIES` without prompting.
 - [ ] `apm init --yes` prints `Updated .claude/settings.json` when the project file was created or modified, and prints `Updated ~/.claude/settings.json` when the user file was modified.
 - [ ] `apm init --no-claude` still suppresses all settings.json writes even when `--yes` is passed.
