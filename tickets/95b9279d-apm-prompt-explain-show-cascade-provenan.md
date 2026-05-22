@@ -22,7 +22,13 @@ updated_at = "2026-05-22T10:23:50.807696Z"
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm prompt <id> --explain` prints a provenance table to stdout instead of the prompt text
+- [ ] The `prefix:` line names the `agents.instructions` file path when configured, or `none` when not configured
+- [ ] The `system prompt:` line names the cascade level number (0–4), its fixed label, and its source (file path or `built-in default`)
+- [ ] All cascade levels that did not win appear under `skipped:` with their fixed label and their reason (`none set`, `file absent: <path>`, or `not reached`)
+- [ ] `--agent` and `--role` override flags work together with `--explain` and are reflected in the provenance output
+- [ ] `apm prompt --explain` (no ticket ID) exits non-zero with a message indicating that `--explain` requires a ticket ID
+- [ ] Unit tests cover: level 0 wins (per-agent file present), level 4 wins (built-in default), and prefix layer configured
 
 ### Out of scope
 
