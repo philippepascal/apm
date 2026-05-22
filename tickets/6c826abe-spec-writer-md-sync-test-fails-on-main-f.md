@@ -1,7 +1,7 @@
 +++
 id = "6c826abe"
 title = "spec_writer_md_sync test fails on main — files diverged"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6c826abe-spec-writer-md-sync-test-fails-on-main-f"
 created_at = "2026-05-21T23:42:35.079918Z"
-updated_at = "2026-05-22T01:27:39.405603Z"
+updated_at = "2026-05-22T01:27:53.084833Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ The divergence is a single line in `apm-core/src/default/agents/claude/apm.spec-
 | 2026-05-22T01:25Z | groomed | in_design | philippepascal |
 | 2026-05-22T01:27Z | in_design | specd | claude-0522-0125-f408 |
 | 2026-05-22T01:27Z | specd | ready | philippepascal |
+| 2026-05-22T01:27Z | ready | in_progress | philippepascal |
