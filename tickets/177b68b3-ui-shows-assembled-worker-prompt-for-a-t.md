@@ -21,7 +21,7 @@ The apm UI's ticket-detail view has no way to inspect the system prompt a worker
 
 ### Acceptance criteria
 
-- [ ] `GET /api/tickets/:id/prompt` returns `{"prompt": "<text>"}` for a ticket in any state.
+- [x] `GET /api/tickets/:id/prompt` returns `{"prompt": "<text>"}` for a ticket in any state.
 - [ ] `GET /api/tickets/:id/prompt?agent=<name>` returns the prompt computed as if the ticket's `agent` frontmatter field were set to `<name>`.
 - [ ] `GET /api/tickets/:id/prompt` returns 404 when the ticket ID matches no ticket.
 - [ ] The ticket-detail header shows a "Prompt" button adjacent to the existing "Review" button; it is only rendered when a ticket is loaded.
