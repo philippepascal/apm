@@ -31,32 +31,34 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
                 println!("fast-forwarded worktree: {}", wt_path.display());
             }
         }
-        for (wt_path, branch, dirty_files) in &wt_result.skipped_dirty {
-            let files_list = dirty_files
-                .iter()
-                .map(|f| format!("    {f}"))
-                .collect::<Vec<_>>()
-                .join("\n");
-            sync_warnings.push(
-                apm_core::sync_guidance::WORKTREE_DIRTY_SKIP
-                    .replace("<path>", &wt_path.display().to_string())
-                    .replace("<branch>", branch)
-                    .replace("<files>", &files_list),
-            );
-        }
-        for (wt_path, branch) in &wt_result.skipped_ahead {
-            sync_warnings.push(
-                apm_core::sync_guidance::WORKTREE_AHEAD
-                    .replace("<path>", &wt_path.display().to_string())
-                    .replace("<branch>", branch),
-            );
-        }
-        for (wt_path, branch) in &wt_result.skipped_diverged {
-            sync_warnings.push(
-                apm_core::sync_guidance::WORKTREE_DIVERGED
-                    .replace("<path>", &wt_path.display().to_string())
-                    .replace("<branch>", branch),
-            );
+        if !quiet {
+            for (wt_path, branch, dirty_files) in &wt_result.skipped_dirty {
+                let files_list = dirty_files
+                    .iter()
+                    .map(|f| format!("    {f}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                sync_warnings.push(
+                    apm_core::sync_guidance::WORKTREE_DIRTY_SKIP
+                        .replace("<path>", &wt_path.display().to_string())
+                        .replace("<branch>", branch)
+                        .replace("<files>", &files_list),
+                );
+            }
+            for (wt_path, branch) in &wt_result.skipped_ahead {
+                sync_warnings.push(
+                    apm_core::sync_guidance::WORKTREE_AHEAD
+                        .replace("<path>", &wt_path.display().to_string())
+                        .replace("<branch>", branch),
+                );
+            }
+            for (wt_path, branch) in &wt_result.skipped_diverged {
+                sync_warnings.push(
+                    apm_core::sync_guidance::WORKTREE_DIVERGED
+                        .replace("<path>", &wt_path.display().to_string())
+                        .replace("<branch>", branch),
+                );
+            }
         }
 
         // Handle default branch push.
