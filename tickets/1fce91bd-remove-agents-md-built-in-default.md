@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1fce91bd-remove-agents-md-built-in-default"
 created_at = "2026-05-22T23:22:54.150045Z"
-updated_at = "2026-05-22T23:22:54.150045Z"
+updated_at = "2026-05-22T23:24:17.286016Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
+depends_on = ["edb0cf35", "34ad9126", "78eeb755"]
 +++
 
 ## Spec
