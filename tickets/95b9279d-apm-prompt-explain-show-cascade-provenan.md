@@ -16,17 +16,9 @@ updated_at = "2026-05-22T10:23:50.807696Z"
 
 ### Problem
 
-build_system_prompt() applies a 5-level cascade to resolve the system prompt: (0) .apm/agents/<agent>/apm.<role>.md, (1) transition.instructions, (2) profile.instructions, (3) workers.instructions, (4) built-in default — plus an agents.instructions prefix prepended on top. When a worker behaves unexpectedly, there is no way to tell which level won or which file was actually read without grepping config files manually.
+`build_system_prompt()` in `apm-core/src/start.rs` resolves the agent system prompt through a 5-level cascade (level 0: per-agent file, 1: transition.instructions, 2: profile.instructions, 3: workers.instructions, 4: built-in default) preceded by an `agents.instructions` prefix layer. When a spawned worker behaves unexpectedly — wrong persona, wrong instructions — there is no way to know which level won or which file was read without manually grepping config files and checking the filesystem. `apm prompt <id>` currently prints the full assembled prompt, which does not tell the user *why* that content was chosen.
 
-apm prompt <id> --explain should print the provenance of the assembled prompt instead of the prompt itself: which file was used as the agents.instructions prefix (if any), which level of the cascade won and what file or config path it came from, and which levels were checked and skipped. Example output:
-
-  prefix:         .apm/agents/default/agents.md  (agents.instructions)
-  system prompt:  .apm/agents/claude/apm.worker.md  (level 0 — per-agent file)
-  skipped:        level 1 (transition.instructions — none set)
-                  level 2 (profile.instructions — none set)
-                  level 3 (workers.instructions — none set)
-
-This is a debugging tool for supervisors to verify prompt resolution without reading a full prompt dump.
+`apm prompt <id> --explain` should print a compact provenance table that names the source of each layer — which file or config path supplied the prefix, which cascade level won and what its source is, and which levels were checked or configured but not used. The flag makes the debugging loop fast: a supervisor can confirm at a glance that the right file is winning without reading a full prompt dump.
 
 ### Acceptance criteria
 
