@@ -118,11 +118,10 @@ Add tests in the existing `#[cfg(test)]` block:
 
 
 ### Amendment requests
-
+[] if no id given, ==explain does not change the behavior
+[] ==explain also needs to work with ==agent anf ==prompt
 
 ### Code review
-
-
 ## History
 
 | When | From | To | By |
