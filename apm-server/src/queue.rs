@@ -135,6 +135,8 @@ mod tests {
             },
             body: String::new(),
             path: PathBuf::from(format!("{id}.md")),
+            local_stale: false,
+            local_diverged: false,
         }
     }
 

@@ -497,6 +497,8 @@ pub(crate) mod tests {
             },
             body: String::new(),
             path: PathBuf::from(format!("{}.md", id)),
+            local_stale: false,
+            local_diverged: false,
         }
     }
 

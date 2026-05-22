@@ -25,14 +25,46 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         mine_user.as_deref(),
     );
 
-    for t in filtered {
+    let mut stale_tickets: Vec<(&str, &str)> = Vec::new();
+    let mut diverged_tickets: Vec<(&str, &str)> = Vec::new();
+
+    for t in &filtered {
         let fm = &t.frontmatter;
         let owner = fm.owner.as_deref().unwrap_or("-");
         let base = match fm.target_branch.as_deref() {
             Some(branch) => apm_core::epic::epic_id_from_branch(branch).to_owned(),
             None => ctx.config.project.default_branch.clone(),
         };
-        println!("{:<8} [{:<12}] {:<16} {:<12} {}", fm.id, fm.state, owner, base, fm.title);
+        let id_display = if t.local_stale {
+            format!("*{}", fm.id)
+        } else {
+            fm.id.clone()
+        };
+        println!("{:<9} [{:<12}] {:<16} {:<12} {}", id_display, fm.state, owner, base, fm.title);
+
+        if t.local_stale {
+            stale_tickets.push((&fm.id, &fm.title));
+        }
+        if t.local_diverged {
+            diverged_tickets.push((&fm.id, &fm.title));
+        }
     }
+
+    if !diverged_tickets.is_empty() {
+        eprintln!();
+        eprintln!("warning: local ref has diverged from origin on {} ticket(s) — showing local content:", diverged_tickets.len());
+        for (id, title) in &diverged_tickets {
+            eprintln!("    {}  {}", id, title);
+        }
+    }
+
+    if !stale_tickets.is_empty() {
+        println!();
+        println!("  * local ref behind origin — run `apm sync` to fast-forward:");
+        for (id, title) in &stale_tickets {
+            println!("      *{}  {}", id, title);
+        }
+    }
+
     Ok(())
 }

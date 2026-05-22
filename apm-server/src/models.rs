@@ -10,6 +10,7 @@ pub struct TicketResponse {
     pub has_pending_amendments: bool,
     pub blocking_deps: Vec<BlockingDep>,
     pub owner: Option<String>,
+    pub local_stale: bool,
 }
 
 #[derive(serde::Serialize)]

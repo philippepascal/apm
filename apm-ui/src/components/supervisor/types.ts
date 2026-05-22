@@ -12,4 +12,5 @@ export interface Ticket {
   epic?: string
   depends_on?: string[]
   blocking_deps?: Array<{ id: string; state: string }>
+  local_stale?: boolean
 }

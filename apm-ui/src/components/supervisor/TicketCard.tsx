@@ -74,6 +74,14 @@ export default function TicketCard({ ticket, columnTicketIds, showAuthor }: Tick
               A
             </span>
           )}
+          {ticket.local_stale && (
+            <span
+              title="Local ref is behind origin — run apm sync to fast-forward"
+              className="text-[10px] px-1 rounded bg-sky-900/60 text-sky-300"
+            >
+              stale
+            </span>
+          )}
           {isDepBlocked && (
             <Ban size={12} className="text-amber-400 shrink-0" />
           )}

@@ -185,6 +185,43 @@ pub fn load_all_from_git(root: &Path, tickets_dir_rel: &std::path::Path) -> Resu
     Ok(tickets)
 }
 
+/// Like `load_all_from_git` but classifies each ticket's local ref against origin.
+///
+/// For tickets whose local ref is strictly behind origin (`BranchClass::Behind`),
+/// content is read from origin so the caller sees the current state. `local_stale`
+/// is set to `true` on those tickets so the caller can signal staleness to the user.
+///
+/// For tickets whose local ref has diverged from origin (`BranchClass::Diverged`),
+/// local content is used and `local_diverged` is set to `true` so the caller can
+/// print a warning. No refs are modified by this function.
+///
+/// This function is the classification-aware alternative to `load_all_from_git`.
+/// It is only called from paths that have already run `git fetch` (aggressive mode),
+/// so classification is meaningful. `--no-aggressive` paths call `load_all_from_git`
+/// instead, skipping the per-branch ancestry checks.
+pub fn load_all_from_git_classified(root: &Path, tickets_dir_rel: &std::path::Path) -> Result<Vec<Ticket>> {
+    let branches = crate::git::ticket_branches(root)?;
+    let mut tickets = Vec::new();
+    for branch in &branches {
+        let suffix = branch.trim_start_matches("ticket/");
+        if suffix.len() == 8 && suffix.chars().all(|c| c.is_ascii_hexdigit()) {
+            continue;
+        }
+        let filename = format!("{suffix}.md");
+        let rel_path = format!("{}/{}", tickets_dir_rel.to_string_lossy(), filename);
+        let dummy_path = root.join(&rel_path);
+        if let Ok((content, class)) = crate::git::read_from_branch_with_class(root, branch, &rel_path) {
+            if let Ok(mut t) = Ticket::parse(&dummy_path, &content) {
+                t.local_stale = matches!(class, crate::git::BranchClass::Behind);
+                t.local_diverged = matches!(class, crate::git::BranchClass::Diverged);
+                tickets.push(t);
+            }
+        }
+    }
+    tickets.sort_by_key(|t| t.frontmatter.created_at);
+    Ok(tickets)
+}
+
 /// Read a ticket's state from a specific branch by relative path.
 pub fn state_from_branch(root: &Path, branch: &str, rel_path: &str) -> Option<String> {
     let content = crate::git::read_from_branch(root, branch, rel_path).ok()?;
@@ -383,7 +420,7 @@ pub fn create(
         body_template
     };
     let path = tickets_dir.join(&filename);
-    let mut t = Ticket { frontmatter: fm, body, path };
+    let mut t = Ticket { frontmatter: fm, body, path, local_stale: false, local_diverged: false };
 
     if !section_sets.is_empty() {
         let mut doc = t.document()?;

@@ -72,6 +72,12 @@ pub struct Ticket {
     pub frontmatter: Frontmatter,
     pub body: String,
     pub path: PathBuf,
+    /// true when the local ref is strictly behind origin at read time.
+    /// Ephemeral — never serialized or parsed from TOML.
+    pub local_stale: bool,
+    /// true when the local ref has diverged from origin at read time.
+    /// Ephemeral — never serialized or parsed from TOML.
+    pub local_diverged: bool,
 }
 
 impl Ticket {
@@ -92,7 +98,7 @@ impl Ticket {
         let body = rest[end + 4..].trim_start_matches('\n').to_string();
         let frontmatter: Frontmatter = toml::from_str(toml_src)
             .with_context(|| format!("cannot parse frontmatter in {}", path.display()))?;
-        Ok(Self { frontmatter, body, path: path.to_owned() })
+        Ok(Self { frontmatter, body, path: path.to_owned(), local_stale: false, local_diverged: false })
     }
 
     pub fn serialize(&self) -> Result<String> {

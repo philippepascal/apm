@@ -18,10 +18,24 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result
             let rel_path = format!("{}/{}", config.tickets.dir.to_string_lossy(), filename);
             let dummy_path = root.join(&rel_path);
 
-            let content = git::read_from_branch(root, &branch, &rel_path)?;
-            let t = ticket::Ticket::parse(&dummy_path, &content)?;
-
-            show_ticket(&t, &content, root, &branch, &rel_path, edit)
+            if aggressive {
+                let (content, class) = git::read_from_branch_with_class(root, &branch, &rel_path)?;
+                match class {
+                    git::BranchClass::Behind => {
+                        eprintln!("note: local ref is behind origin — showing origin content (run `apm sync` to fast-forward)");
+                    }
+                    git::BranchClass::Diverged => {
+                        eprintln!("warning: local ref has diverged from origin — showing local content");
+                    }
+                    _ => {}
+                }
+                let t = ticket::Ticket::parse(&dummy_path, &content)?;
+                show_ticket(&t, &content, root, &branch, &rel_path, edit)
+            } else {
+                let content = git::read_from_branch(root, &branch, &rel_path)?;
+                let t = ticket::Ticket::parse(&dummy_path, &content)?;
+                show_ticket(&t, &content, root, &branch, &rel_path, edit)
+            }
         }
         Err(_) => {
             // Fallback: search tickets/ on default branch, then archive_dir if set.

@@ -187,6 +187,7 @@ pub async fn get_epic(
                 has_pending_amendments,
                 blocking_deps: vec![],
                 owner,
+                local_stale: t.local_stale,
             }
         })
         .collect();
