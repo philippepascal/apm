@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7ef960f2-update-apm-init-for-new-file-structure"
 created_at = "2026-05-22T23:23:20.147068Z"
-updated_at = "2026-05-22T23:23:20.147068Z"
+updated_at = "2026-05-22T23:24:24.678072Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
+depends_on = ["edb0cf35", "d8e2fa0e", "02bbcc2f", "1fce91bd"]
 +++
 
 ## Spec
