@@ -16,14 +16,9 @@ updated_at = "2026-05-22T08:05:07.484125Z"
 
 ### Problem
 
-apm prompt currently requires a ticket ID as a positional argument (enforced by clap). Running it bare errors with a missing-argument message, which is unhelpful when a user does not yet know what agents or roles are available in the project.
+`apm prompt` declares its ID argument as `id: String` in the clap struct, making it a required positional. Running the command bare — or with only `--agent`/`--role` flags but no ID — causes clap to abort with a generic missing-argument error before any application code runs. This is unhelpful when a user wants to know what agents and roles are configured in the project before assembling a full prompt invocation.
 
-The fix has two parts: (1) make the ID argument optional in the clap definition, (2) add a discovery mode that fires when no ID is supplied — regardless of whether --agent or --role flags are present. Discovery mode reads .apm/agents/ subdirectory names for the agent list and scans for apm.<role>.md filenames across all agent dirs for the role list, then prints:
-
-  Agents:  claude, default, pi
-  Roles:   spec-writer, worker
-
-When an ID is supplied, behaviour is unchanged. Partial flags without an ID (e.g. apm prompt --agent claude) also trigger discovery mode rather than attempting a half-assembled prompt with no ticket context.
+The desired behaviour is a discovery mode: when no ID is supplied (regardless of whether `--agent` or `--role` are present), the command scans `.apm/agents/` for agent subdirectory names and extracts role names from `apm.<role>.md` filenames within those directories, then prints a two-line summary and exits 0. When an ID is supplied, behaviour is entirely unchanged.
 
 ### Acceptance criteria
 
