@@ -104,7 +104,7 @@ skipped:        level 1 (transition.instructions — none set)
 #### CLI plumbing
 
 - `apm/src/main.rs` `Prompt` variant: add `#[arg(long)] explain: bool`. Update `long_about` to document `--explain` with the example output shown in the problem statement. Update the dispatch call on line 1202 to pass `explain`.
-- `apm/src/cmd/prompt.rs`: update `run` signature to `run(root, id, agent, role, explain)`. When `explain` is `true` and `id` is `Some`, call `apm_core::prompt::explain(...)`. When `explain` is `true` and `id` is `None`, return `Err(anyhow!("--explain requires a ticket ID"))`.
+- `apm/src/cmd/prompt.rs`: update `run` signature to `run(root, id, agent, role, explain)`. When `explain` is `true` and `id` is `Some`, call `apm_core::prompt::explain(root, id, agent, role, out)`, passing the `--agent` and `--role` override values through unchanged so the provenance table reflects the effective agent and role. When `explain` is `true` and `id` is `None`, fall through to the normal no-ID code path as if `explain` were `false`; the flag is silently ignored.
 
 #### Tests — `apm-core/src/prompt.rs`
 
@@ -112,7 +112,7 @@ Add tests in the existing `#[cfg(test)]` block:
 - `explain_level0_wins`: fixture with `.apm/agents/mock-happy/apm.worker.md` present; assert output contains `"level 0"`, the file path, and three `"none set"` skipped entries.
 - `explain_level4_wins`: fixture with no per-agent file, no transition/profile/workers instructions, agent = `"claude"`; assert output contains `"level 4"` and `"built-in default"`.
 - `explain_prefix_shown`: fixture with `agents.instructions` pointing to a readable file; assert prefix line names the file path.
-- `explain_no_id_errors`: call `cmd::prompt::run` with `explain=true` and `id=None`; assert non-zero exit / error result.
+- `explain_agent_role_override`: fixture with `--agent` and `--role` overrides set; assert the winner and skipped entries reflect the overridden agent name and role (e.g. level 0 source path uses the overridden values).
 
 ### Open questions
 
