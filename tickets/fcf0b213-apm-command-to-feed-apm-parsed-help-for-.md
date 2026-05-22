@@ -22,7 +22,7 @@ The accurate, complete command metadata already exists in the clap command defin
 
 ### Acceptance criteria
 
-- [ ] `apm instructions` exits 0 and prints output to stdout
+- [x] `apm instructions` exits 0 and prints output to stdout
 - [ ] The output includes every visible top-level command with its one-line description, positional arguments, and flags (including defaults)
 - [ ] The output is plain text with no ANSI escape codes
 - [ ] The command listing is generated from clap command metadata, not a separately maintained string — adding or modifying a command definition automatically reflects in the output
