@@ -1,7 +1,7 @@
 +++
 id = "bfa41899"
 title = "Update apm instructions and apm prompt CLI help for new model"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bfa41899-update-apm-instructions-and-apm-prompt-c"
 created_at = "2026-05-22T23:23:41.917063Z"
-updated_at = "2026-05-22T23:24:34.750690Z"
+updated_at = "2026-05-22T23:51:03.696623Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771", "d8e2fa0e"]
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-22T23:23Z | — | new | philippepascal |
+| 2026-05-22T23:51Z | new | groomed | philippepascal |
