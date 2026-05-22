@@ -878,6 +878,26 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
     }
 }
 
+pub(crate) struct PromptProvenance {
+    pub prefix_path: Option<String>,
+    pub winner: ProvenanceEntry,
+    pub skipped: Vec<ProvenanceEntry>,
+}
+
+pub(crate) struct ProvenanceEntry {
+    pub level: u8,
+    pub label: &'static str,
+    pub source: String,
+}
+
+const LEVEL_LABELS: [&str; 5] = [
+    "per-agent file",
+    "transition.instructions",
+    "profile.instructions",
+    "workers.instructions",
+    "built-in default",
+];
+
 pub(crate) fn build_system_prompt(
     root: &Path,
     transition_instructions: Option<&str>,
@@ -940,6 +960,84 @@ fn build_system_prompt_body(
     if let Some(s) = resolve_builtin_instructions(agent, role) {
         return Ok(s.to_string());
     }
+    // Level 5: hard error
+    bail!(
+        "no instructions found for agent '{agent}' role '{role}': \
+         set [workers].instructions in .apm/config.toml or add \
+         .apm/agents/{agent}/apm.{role}.md"
+    )
+}
+
+pub(crate) fn explain_system_prompt(
+    root: &Path,
+    transition_instructions: Option<&str>,
+    profile: Option<&WorkerProfileConfig>,
+    workers: &WorkersConfig,
+    agents_instructions: Option<&Path>,
+    agent: &str,
+    role: &str,
+) -> Result<PromptProvenance> {
+    let prefix_path = match agents_instructions {
+        None => None,
+        Some(path) if path.as_os_str().is_empty() => None,
+        Some(path) => Some(path.display().to_string()),
+    };
+
+    let mut skipped: Vec<ProvenanceEntry> = Vec::new();
+
+    // Level 0: per-agent file
+    let per_agent_rel = format!(".apm/agents/{agent}/apm.{role}.md");
+    let per_agent = root.join(&per_agent_rel);
+    if per_agent.exists() {
+        let winner = ProvenanceEntry { level: 0, label: LEVEL_LABELS[0], source: per_agent_rel };
+        for i in 1usize..=3 {
+            skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
+        }
+        return Ok(PromptProvenance { prefix_path, winner, skipped });
+    }
+    skipped.push(ProvenanceEntry {
+        level: 0,
+        label: LEVEL_LABELS[0],
+        source: format!("file absent: {per_agent_rel}"),
+    });
+
+    // Level 1: transition.instructions
+    if let Some(path) = transition_instructions {
+        let winner = ProvenanceEntry { level: 1, label: LEVEL_LABELS[1], source: path.to_string() };
+        for i in 2usize..=3 {
+            skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
+        }
+        return Ok(PromptProvenance { prefix_path, winner, skipped });
+    }
+    skipped.push(ProvenanceEntry { level: 1, label: LEVEL_LABELS[1], source: "none set".to_string() });
+
+    // Level 2: profile.instructions
+    if let Some(p) = profile {
+        if let Some(ref instr_path) = p.instructions {
+            let winner = ProvenanceEntry { level: 2, label: LEVEL_LABELS[2], source: instr_path.to_string() };
+            skipped.push(ProvenanceEntry { level: 3, label: LEVEL_LABELS[3], source: "not reached".to_string() });
+            return Ok(PromptProvenance { prefix_path, winner, skipped });
+        }
+    }
+    skipped.push(ProvenanceEntry { level: 2, label: LEVEL_LABELS[2], source: "none set".to_string() });
+
+    // Level 3: workers.instructions
+    if let Some(ref instr_path) = workers.instructions {
+        let winner = ProvenanceEntry { level: 3, label: LEVEL_LABELS[3], source: instr_path.to_string() };
+        return Ok(PromptProvenance { prefix_path, winner, skipped });
+    }
+    skipped.push(ProvenanceEntry { level: 3, label: LEVEL_LABELS[3], source: "none set".to_string() });
+
+    // Level 4: built-in default
+    if resolve_builtin_instructions(agent, role).is_some() {
+        let winner = ProvenanceEntry {
+            level: 4,
+            label: LEVEL_LABELS[4],
+            source: format!("built-in default ({agent}/{role})"),
+        };
+        return Ok(PromptProvenance { prefix_path, winner, skipped });
+    }
+
     // Level 5: hard error
     bail!(
         "no instructions found for agent '{agent}' role '{role}': \

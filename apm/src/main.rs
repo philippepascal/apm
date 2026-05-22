@@ -857,13 +857,24 @@ Uses the same priority cascade as the live spawn paths:\n\
 --agent and --role override the resolved values for inspection only;\n\
 they do not affect the ticket or any config.\n\
 \n\
+--explain prints a compact provenance table instead of the prompt text:\n\
+\n\
+  prefix:         .apm/agents/default/agents.md  (agents.instructions)\n\
+  system prompt:  .apm/agents/claude/apm.worker.md  (level 0 — per-agent file)\n\
+  skipped:        level 1 (transition.instructions — none set)\n\
+                  level 2 (profile.instructions — none set)\n\
+                  level 3 (workers.instructions — none set)\n\
+\n\
+--explain is silently ignored when no ticket ID is given.\n\
+\n\
 Exits non-zero with a clear message when no instructions can be resolved.\n\
 \n\
 Examples:\n\
   apm prompt                                 # list available agents and roles\n\
   apm prompt ba121f45                          # resolved agent + role\n\
   apm prompt ba121f45 --agent pi               # inspect pi-agent prompt\n\
-  apm prompt ba121f45 --role spec-writer       # inspect spec-writer role")]
+  apm prompt ba121f45 --role spec-writer       # inspect spec-writer role\n\
+  apm prompt ba121f45 --explain                # show cascade provenance")]
     Prompt {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
@@ -874,6 +885,9 @@ Examples:\n\
         /// Override the resolved role for inspection (does not affect the ticket)
         #[arg(long)]
         role: Option<String>,
+        /// Print provenance table instead of prompt text
+        #[arg(long)]
+        explain: bool,
     },
     /// Output a compact plain-text guide for agents on how to use apm
     Instructions,
@@ -1199,7 +1213,7 @@ fn main() -> Result<()> {
             }
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
-        Command::Prompt { id, agent, role } => cmd::prompt::run(&root, id.as_deref(), agent, role),
+        Command::Prompt { id, agent, role, explain } => cmd::prompt::run(&root, id.as_deref(), agent, role, explain),
         Command::Instructions => cmd::instructions::run(Cli::command()),
         Command::Version => {
             cmd::version::run();

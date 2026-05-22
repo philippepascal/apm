@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::Path;
 use crate::config::Config;
 use crate::ticket;
-use crate::start::{build_system_prompt, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
+use crate::start::{build_system_prompt, explain_system_prompt, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
 
 /// Scan `.apm/agents/` for agent subdirectory names and role names extracted
 /// from `apm.<role>.md` filenames, then print a two-line discovery summary.
@@ -100,6 +100,88 @@ pub fn run(
     let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.instructions.as_deref(), &agent, &role)?;
 
     out.write_all(prompt.as_bytes())?;
+    Ok(())
+}
+
+/// Print a provenance table showing which cascade level supplied the system
+/// prompt and why each other level was skipped.
+pub fn explain(
+    root: &Path,
+    id: &str,
+    agent_override: Option<&str>,
+    role_override: Option<&str>,
+    out: &mut dyn Write,
+) -> Result<()> {
+    let config = Config::load(root)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let ticket_id = ticket::resolve_id_in_slice(&tickets, id)?;
+    let t = tickets.iter()
+        .find(|t| t.frontmatter.id == ticket_id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {:?} not found", ticket_id))?;
+
+    let state = &t.frontmatter.state;
+    let triggering_transition = config.workflow.states.iter()
+        .find(|s| s.id == *state)
+        .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
+
+    let mut warnings = Vec::new();
+    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
+    let profile_name = triggering_transition
+        .and_then(|tr| tr.profile.as_deref())
+        .unwrap_or("")
+        .to_string();
+
+    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
+    let role = role_override.unwrap_or(role_from_cascade).to_string();
+
+    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
+    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
+
+    let agent = agent_override.unwrap_or(&params.agent).to_string();
+
+    let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
+    let prov = explain_system_prompt(
+        root,
+        tr_instructions,
+        profile,
+        &config.workers,
+        config.agents.instructions.as_deref(),
+        &agent,
+        &role,
+    )?;
+
+    // prefix line
+    match &prov.prefix_path {
+        Some(path) => writeln!(out, "{:<16}{}  (agents.instructions)", "prefix:", path)?,
+        None => writeln!(out, "{:<16}none", "prefix:")?,
+    }
+
+    // system prompt line (winner)
+    writeln!(
+        out,
+        "{:<16}{}  (level {} \u{2014} {})",
+        "system prompt:",
+        prov.winner.source,
+        prov.winner.level,
+        prov.winner.label,
+    )?;
+
+    // skipped lines
+    let mut first = true;
+    for entry in &prov.skipped {
+        let label = if first { "skipped:" } else { "" };
+        writeln!(
+            out,
+            "{:<16}level {} ({} \u{2014} {})",
+            label,
+            entry.level,
+            entry.label,
+            entry.source,
+        )?;
+        first = false;
+    }
+
     Ok(())
 }
 
@@ -488,5 +570,158 @@ Test.
             spawn_err, direct_err,
             "spawn path must propagate build_system_prompt error unchanged"
         );
+    }
+
+    // --- explain tests ---
+
+    fn make_explain_project(root: &Path, ticket_id: &str, agent: &str, create_per_agent_file: bool, agents_instructions: Option<&str>) {
+        use std::fs;
+
+        fs::create_dir_all(root.join(".apm")).unwrap();
+        fs::create_dir_all(root.join("tickets")).unwrap();
+
+        if create_per_agent_file {
+            let agent_dir = root.join(format!(".apm/agents/{agent}"));
+            fs::create_dir_all(&agent_dir).unwrap();
+            fs::write(agent_dir.join("apm.worker.md"), format!("INSTRUCTIONS FOR {agent}")).unwrap();
+        }
+
+        let agents_section = match agents_instructions {
+            Some(path) => format!("\n[agents]\ninstructions = \"{path}\"\n"),
+            None => String::new(),
+        };
+
+        fs::write(root.join(".apm/config.toml"), format!(r#"
+[project]
+name = "explain-test"
+default_branch = "main"
+
+[workers]
+agent = "{agent}"
+
+[tickets]
+dir = "tickets"
+{agents_section}"#)).unwrap();
+
+        fs::write(root.join(".apm/workflow.toml"), r#"
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to = "in_progress"
+  trigger = "command:start"
+  label = "Start"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+"#).unwrap();
+
+        let ticket_content = format!(r#"+++
+id = "{ticket_id}"
+title = "Explain Test"
+state = "ready"
+priority = 0
+effort = 5
+risk = 3
+author = "test"
+owner = "test"
+branch = "ticket/{ticket_id}-test"
+created_at = "2026-01-01T00:00:00Z"
+updated_at = "2026-01-01T00:00:00Z"
++++
+
+## Spec
+
+### Problem
+
+Test.
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+"#);
+        fs::write(root.join(format!("tickets/{ticket_id}-test.md")), ticket_content).unwrap();
+
+        let git = |args: &[&str]| {
+            std::process::Command::new("git").args(args).current_dir(root).output().unwrap()
+        };
+
+        git(&["init"]);
+        git(&["config", "user.email", "t@t.com"]);
+        git(&["config", "user.name", "T"]);
+        git(&["add", ".apm"]);
+        git(&["commit", "-m", "init", "--allow-empty"]);
+        let branch = format!("ticket/{ticket_id}-test");
+        git(&["checkout", "-b", &branch]);
+        git(&["add", &format!("tickets/{ticket_id}-test.md")]);
+        git(&["commit", "-m", "add ticket"]);
+        git(&["checkout", "main"]);
+    }
+
+    #[test]
+    fn explain_level0_wins() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "aaaa0001", "mock-happy", true, None);
+
+        let mut buf = Vec::new();
+        explain(root, "aaaa0001", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("level 0"), "should show level 0; got:\n{output}");
+        assert!(output.contains(".apm/agents/mock-happy/apm.worker.md"), "should show per-agent path; got:\n{output}");
+        assert_eq!(output.matches("not reached").count(), 3, "levels 1-3 should be not reached; got:\n{output}");
+    }
+
+    #[test]
+    fn explain_level4_wins() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "bbbb0002", "claude", false, None);
+
+        let mut buf = Vec::new();
+        explain(root, "bbbb0002", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("level 4"), "should show level 4; got:\n{output}");
+        assert!(output.contains("built-in default"), "should show built-in default; got:\n{output}");
+    }
+
+    #[test]
+    fn explain_prefix_shown() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "cccc0003", "claude", false, Some(".apm/agents/default/agents.md"));
+
+        let mut buf = Vec::new();
+        explain(root, "cccc0003", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        let prefix_line = output.lines().find(|l| l.starts_with("prefix:")).unwrap();
+        assert!(
+            prefix_line.contains(".apm/agents/default/agents.md"),
+            "prefix line should name the configured file; got: {prefix_line:?}"
+        );
+    }
+
+    #[test]
+    fn explain_agent_role_override() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        // Project uses mock-happy (which has a per-agent file). Override to claude
+        // (no per-agent file) → level 4 wins and skipped level 0 shows claude's path.
+        make_explain_project(root, "dddd0004", "mock-happy", true, None);
+
+        let mut buf = Vec::new();
+        explain(root, "dddd0004", Some("claude"), Some("worker"), &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("level 4"), "claude override should fall to level 4; got:\n{output}");
+        assert!(output.contains("built-in default (claude/worker)"), "should name claude/worker; got:\n{output}");
+        assert!(output.contains(".apm/agents/claude/apm.worker.md"), "skipped level 0 should use overridden agent name; got:\n{output}");
     }
 }
