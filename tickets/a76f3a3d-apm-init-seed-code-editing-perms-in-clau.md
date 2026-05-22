@@ -25,13 +25,13 @@ The desired end state: after `db166d95` + this ticket, `apm init` in a project w
 
 ### Acceptance criteria
 
-- [ ] `APM_ALLOW_ENTRIES` includes `Edit` and `Write` tool entries
-- [ ] `APM_ALLOW_ENTRIES` includes the language-agnostic bash baseline: `Bash(git -C *)`, `Bash(ls *)`, `Bash(rg *)`, `Bash(grep *)`, `Bash(find *)`, `Bash(cat *)`, `Bash(head *)`, `Bash(tail *)`, `Bash(wc *)`, `Bash(sort *)`, `Bash(uniq *)`, `Bash(diff *)`, `Bash(which *)`, `Bash(sed *)`, `Bash(awk *)`, `Bash(mv *)`, `Bash(cp *)`, `Bash(rm /tmp/*)`, `Bash(mkdir -p /tmp/*)`, `Bash(echo *)`, `Bash(test *)`, `Bash(true)`, `Bash(false)`
-- [ ] When `Cargo.toml` exists at the repo root, `apm init` adds `Bash(cargo *)` to the project `.claude/settings.json` entries
-- [ ] When `package.json` exists at the repo root, `apm init` adds `Bash(npm *)` and `Bash(npx *)` to the project `.claude/settings.json` entries
-- [ ] When `pyproject.toml` or `requirements.txt` exists at the repo root, `apm init` adds `Bash(python3 *)` to the project `.claude/settings.json` entries
-- [ ] `APM_USER_ALLOW_ENTRIES` includes `Edit`, `Write`, the same language-agnostic bash baseline, and unconditionally includes all common toolchain entries (`Bash(cargo *)`, `Bash(npm *)`, `Bash(npx *)`, `Bash(python3 *)`)
-- [ ] Running `apm init` (with `db166d95` applied) in a Rust project with `.claude/` present but no `settings.json` produces a file containing `Edit`, `Write`, `Bash(git -C *)`, read helpers, and `Bash(cargo *)`
+- [x] `APM_ALLOW_ENTRIES` includes `Edit` and `Write` tool entries
+- [x] `APM_ALLOW_ENTRIES` includes the language-agnostic bash baseline: `Bash(git -C *)`, `Bash(ls *)`, `Bash(rg *)`, `Bash(grep *)`, `Bash(find *)`, `Bash(cat *)`, `Bash(head *)`, `Bash(tail *)`, `Bash(wc *)`, `Bash(sort *)`, `Bash(uniq *)`, `Bash(diff *)`, `Bash(which *)`, `Bash(sed *)`, `Bash(awk *)`, `Bash(mv *)`, `Bash(cp *)`, `Bash(rm /tmp/*)`, `Bash(mkdir -p /tmp/*)`, `Bash(echo *)`, `Bash(test *)`, `Bash(true)`, `Bash(false)`
+- [x] When `Cargo.toml` exists at the repo root, `apm init` adds `Bash(cargo *)` to the project `.claude/settings.json` entries
+- [x] When `package.json` exists at the repo root, `apm init` adds `Bash(npm *)` and `Bash(npx *)` to the project `.claude/settings.json` entries
+- [x] When `pyproject.toml` or `requirements.txt` exists at the repo root, `apm init` adds `Bash(python3 *)` to the project `.claude/settings.json` entries
+- [x] `APM_USER_ALLOW_ENTRIES` includes `Edit`, `Write`, the same language-agnostic bash baseline, and unconditionally includes all common toolchain entries (`Bash(cargo *)`, `Bash(npm *)`, `Bash(npx *)`, `Bash(python3 *)`)
+- [x] Running `apm init` (with `db166d95` applied) in a Rust project with `.claude/` present but no `settings.json` produces a file containing `Edit`, `Write`, `Bash(git -C *)`, read helpers, and `Bash(cargo *)`
 
 ### Out of scope
 
