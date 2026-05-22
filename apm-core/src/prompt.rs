@@ -44,7 +44,7 @@ pub fn run(
     let agent = agent_override.unwrap_or(&params.agent).to_string();
 
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-    let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, &agent, &role)?;
+    let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.instructions.as_deref(), &agent, &role)?;
 
     out.write_all(prompt.as_bytes())?;
     Ok(())
@@ -152,6 +152,7 @@ Test.
             None,
             None,
             &config.workers,
+            None,
             "mock-happy",
             "worker",
         ).unwrap();
