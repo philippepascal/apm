@@ -17,6 +17,7 @@ pub use ticket::ticket_fmt;
 pub mod init;
 pub mod logger;
 pub mod start;
+pub mod prompt;
 pub mod state;
 pub mod sync;
 pub mod sync_guidance;
