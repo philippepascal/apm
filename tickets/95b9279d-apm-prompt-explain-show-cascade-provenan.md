@@ -22,13 +22,13 @@ updated_at = "2026-05-22T17:34:10.802723Z"
 
 ### Acceptance criteria
 
-- [ ] `apm prompt <id> --explain` prints a provenance table to stdout instead of the prompt text
-- [ ] The `prefix:` line names the `agents.instructions` file path when configured, or `none` when not configured
-- [ ] The `system prompt:` line names the cascade level number (0–4), its fixed label, and its source (file path or `built-in default`)
-- [ ] All cascade levels that did not win appear under `skipped:` with their fixed label and their reason (`none set`, `file absent: <path>`, or `not reached`)
-- [ ] `--agent` and `--role` override flags work together with `--explain`; the provenance table reflects the effective agent and role (e.g. the per-agent file path at level 0 uses the overridden agent name)
-- [ ] `apm prompt --explain` (no ticket ID) behaves identically to `apm prompt` (no ticket ID); `--explain` is silently ignored when no ID is provided
-- [ ] Unit tests cover: level 0 wins (per-agent file present), level 4 wins (built-in default), and prefix layer configured
+- [x] `apm prompt <id> --explain` prints a provenance table to stdout instead of the prompt text
+- [x] The `prefix:` line names the `agents.instructions` file path when configured, or `none` when not configured
+- [x] The `system prompt:` line names the cascade level number (0–4), its fixed label, and its source (file path or `built-in default`)
+- [x] All cascade levels that did not win appear under `skipped:` with their fixed label and their reason (`none set`, `file absent: <path>`, or `not reached`)
+- [x] `--agent` and `--role` override flags work together with `--explain`; the provenance table reflects the effective agent and role (e.g. the per-agent file path at level 0 uses the overridden agent name)
+- [x] `apm prompt --explain` (no ticket ID) behaves identically to `apm prompt` (no ticket ID); `--explain` is silently ignored when no ID is provided
+- [x] Unit tests cover: level 0 wins (per-agent file present), level 4 wins (built-in default), and prefix layer configured
 
 ### Out of scope
 
