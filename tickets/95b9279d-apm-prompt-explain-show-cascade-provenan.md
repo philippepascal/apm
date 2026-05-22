@@ -26,8 +26,8 @@ updated_at = "2026-05-22T17:27:48.325467Z"
 - [ ] The `prefix:` line names the `agents.instructions` file path when configured, or `none` when not configured
 - [ ] The `system prompt:` line names the cascade level number (0–4), its fixed label, and its source (file path or `built-in default`)
 - [ ] All cascade levels that did not win appear under `skipped:` with their fixed label and their reason (`none set`, `file absent: <path>`, or `not reached`)
-- [ ] `--agent` and `--role` override flags work together with `--explain` and are reflected in the provenance output
-- [ ] `apm prompt --explain` (no ticket ID) exits non-zero with a message indicating that `--explain` requires a ticket ID
+- [ ] `--agent` and `--role` override flags work together with `--explain`; the provenance table reflects the effective agent and role (e.g. the per-agent file path at level 0 uses the overridden agent name)
+- [ ] `apm prompt --explain` (no ticket ID) behaves identically to `apm prompt` (no ticket ID); `--explain` is silently ignored when no ID is provided
 - [ ] Unit tests cover: level 0 wins (per-agent file present), level 4 wins (built-in default), and prefix layer configured
 
 ### Out of scope
@@ -118,10 +118,13 @@ Add tests in the existing `#[cfg(test)]` block:
 
 
 ### Amendment requests
+
 [] if no id given, ==explain does not change the behavior
 [] ==explain also needs to work with ==agent anf ==prompt
 
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
