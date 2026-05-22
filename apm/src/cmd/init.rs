@@ -165,6 +165,37 @@ const APM_ALLOW_ENTRIES: &[&str] = &[
     "Bash(apm sessions *)",
     "Bash(apm revoke *)",
     "Bash(apm version*)",
+    // code editing
+    "Edit",
+    "Write",
+    // git ops in worktree
+    "Bash(git -C *)",
+    // read helpers
+    "Bash(ls *)",
+    "Bash(rg *)",
+    "Bash(grep *)",
+    "Bash(find *)",
+    "Bash(cat *)",
+    "Bash(head *)",
+    "Bash(tail *)",
+    "Bash(wc *)",
+    "Bash(sort *)",
+    "Bash(uniq *)",
+    "Bash(diff *)",
+    "Bash(which *)",
+    // text manipulation
+    "Bash(sed *)",
+    "Bash(awk *)",
+    // file ops (safe areas)
+    "Bash(mv *)",
+    "Bash(cp *)",
+    "Bash(rm /tmp/*)",
+    "Bash(mkdir -p /tmp/*)",
+    // shell building blocks
+    "Bash(echo *)",
+    "Bash(test *)",
+    "Bash(true)",
+    "Bash(false)",
 ];
 
 /// Entries added to ~/.claude/settings.json so subagents running in isolated
@@ -200,6 +231,42 @@ const APM_USER_ALLOW_ENTRIES: &[&str] = &[
     "Bash(apm sessions *)",
     "Bash(apm revoke *)",
     "Bash(apm version*)",
+    // code editing
+    "Edit",
+    "Write",
+    // git ops in worktree
+    "Bash(git -C *)",
+    // read helpers
+    "Bash(ls *)",
+    "Bash(rg *)",
+    "Bash(grep *)",
+    "Bash(find *)",
+    "Bash(cat *)",
+    "Bash(head *)",
+    "Bash(tail *)",
+    "Bash(wc *)",
+    "Bash(sort *)",
+    "Bash(uniq *)",
+    "Bash(diff *)",
+    "Bash(which *)",
+    // text manipulation
+    "Bash(sed *)",
+    "Bash(awk *)",
+    // file ops (safe areas)
+    "Bash(mv *)",
+    "Bash(cp *)",
+    "Bash(rm /tmp/*)",
+    "Bash(mkdir -p /tmp/*)",
+    // shell building blocks
+    "Bash(echo *)",
+    "Bash(test *)",
+    "Bash(true)",
+    "Bash(false)",
+    // language toolchains (unconditional at user level)
+    "Bash(cargo *)",
+    "Bash(npm *)",
+    "Bash(npx *)",
+    "Bash(python3 *)",
 ];
 
 fn update_settings_json(
@@ -274,6 +341,20 @@ fn update_settings_json(
     Ok(())
 }
 
+fn detected_toolchain_entries(root: &Path) -> Vec<&'static str> {
+    let mut entries = Vec::new();
+    if root.join("Cargo.toml").exists() {
+        entries.push("Bash(cargo *)");
+    }
+    if root.join("package.json").exists() {
+        entries.extend_from_slice(&["Bash(npm *)", "Bash(npx *)"]);
+    }
+    if root.join("pyproject.toml").exists() || root.join("requirements.txt").exists() {
+        entries.push("Bash(python3 *)");
+    }
+    entries
+}
+
 fn update_claude_settings(root: &Path, skip: bool, yes: bool) -> Result<()> {
     if skip {
         return Ok(());
@@ -282,9 +363,11 @@ fn update_claude_settings(root: &Path, skip: bool, yes: bool) -> Result<()> {
     if !claude_dir.exists() {
         return Ok(());
     }
+    let mut entries: Vec<&str> = APM_ALLOW_ENTRIES.to_vec();
+    entries.extend(detected_toolchain_entries(root));
     update_settings_json(
         &claude_dir.join("settings.json"),
-        APM_ALLOW_ENTRIES,
+        &entries,
         "The following entries will be added to .claude/settings.json permissions.allow:",
         "Add apm commands to Claude allow list?",
         "Updated .claude/settings.json",
