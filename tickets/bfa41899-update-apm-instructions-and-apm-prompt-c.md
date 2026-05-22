@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bfa41899-update-apm-instructions-and-apm-prompt-c"
 created_at = "2026-05-22T23:23:41.917063Z"
-updated_at = "2026-05-22T23:23:41.917063Z"
+updated_at = "2026-05-22T23:24:34.750690Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
+depends_on = ["4bee5771", "d8e2fa0e"]
 +++
 
 ## Spec
