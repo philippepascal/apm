@@ -24,8 +24,8 @@ mod work;
 mod workers;
 
 use handlers::tickets::{
-    batch_priority, batch_transition, create_ticket, get_ticket, list_tickets,
-    patch_ticket, put_body, transition_ticket,
+    batch_priority, batch_transition, create_ticket, get_ticket, get_ticket_prompt,
+    list_tickets, patch_ticket, put_body, transition_ticket,
 };
 #[cfg(test)]
 use handlers::tickets::extract_section;
@@ -175,6 +175,7 @@ fn build_app(root: PathBuf, origin_override: Option<&str>) -> Router {
         .route("/api/tickets", get(list_tickets).post(create_ticket))
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
+        .route("/api/tickets/:id/prompt", get(get_ticket_prompt))
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/tickets/batch/transition", post(batch_transition))
         .route("/api/tickets/batch/priority", post(batch_priority))
@@ -251,6 +252,7 @@ pub(crate) fn build_app_with_tickets(tickets: Vec<apm_core::ticket::Ticket>) -> 
         .route("/api/tickets", get(list_tickets).post(create_ticket))
         .route("/api/tickets/:id", get(get_ticket).patch(patch_ticket))
         .route("/api/tickets/:id/body", put(put_body))
+        .route("/api/tickets/:id/prompt", get(get_ticket_prompt))
         .route("/api/tickets/:id/transition", post(transition_ticket))
         .route("/api/epics", get(handlers::epics::list_epics).post(handlers::epics::create_epic))
         .route("/api/epics/:id", get(handlers::epics::get_epic))
@@ -2436,5 +2438,83 @@ label = "In Progress"
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["states"], serde_json::json!([]));
         assert_eq!(json["transitions"], serde_json::json!([]));
+    }
+
+    #[tokio::test]
+    async fn get_prompt_in_memory_returns_501() {
+        let app = build_app_with_tickets(test_tickets());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/aaaabbbb/prompt")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[tokio::test]
+    async fn get_prompt_unknown_id_returns_404() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let app = build_app(p.clone(), None);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/tickets/00000000/prompt")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn get_prompt_known_id_returns_200_with_prompt() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup(&p);
+
+        let config = apm_core::config::Config::load(&p).unwrap();
+        let mut _warnings = Vec::new();
+        let ticket = apm_core::ticket::create(
+            &p,
+            &config,
+            "test prompt ticket".to_string(),
+            "test".to_string(),
+            "test".to_string(),
+            None,
+            None,
+            false,
+            vec![],
+            None,
+            None,
+            None,
+            None,
+            &mut _warnings,
+        )
+        .unwrap();
+        let ticket_id = ticket.frontmatter.id.clone();
+
+        let app = build_app(p.clone(), None);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/tickets/{}/prompt", &ticket_id[..8]))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(json["prompt"].is_string(), "prompt field should be present");
+        assert!(!json["prompt"].as_str().unwrap().is_empty(), "prompt should not be empty");
     }
 }
