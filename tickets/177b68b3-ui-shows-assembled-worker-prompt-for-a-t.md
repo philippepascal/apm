@@ -27,7 +27,7 @@ The apm UI's ticket-detail view has no way to inspect the system prompt a worker
 - [x] The ticket-detail header shows a "Prompt" button adjacent to the existing "Review" button; it is only rendered when a ticket is loaded.
 - [x] Clicking "Prompt" opens a modal that fetches and displays the assembled system prompt in a scrollable monospace block.
 - [x] The modal contains an agent-override text input pre-filled with the ticket's current `agent` frontmatter value (empty when the field is absent).
-- [ ] Submitting a new agent name in the input (blur or Enter) refetches the prompt and re-renders the content without closing the modal.
+- [x] Submitting a new agent name in the input (blur or Enter) refetches the prompt and re-renders the content without closing the modal.
 - [ ] Closing the modal (× button or Escape key) does not write any change to the ticket.
 
 ### Out of scope
