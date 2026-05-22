@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
 use crate::config::Config;
+use crate::start::{build_system_prompt, explain_system_prompt, PromptProvenance, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
 use crate::ticket;
-use crate::start::{build_system_prompt, explain_system_prompt, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
 
 /// Scan `.apm/agents/` for agent subdirectory names and role names extracted
 /// from `apm.<role>.md` filenames, then print a two-line discovery summary.
@@ -151,13 +151,58 @@ pub fn explain(
         &role,
     )?;
 
-    // prefix line
+    format_provenance(&prov, out)
+}
+
+/// Build and print the system prompt for a given agent+role without a ticket.
+/// Levels 1 (transition.instructions) and 2 (profile.instructions) are skipped;
+/// level 0 (per-agent file), 3 (workers.instructions), and 4 (built-in default)
+/// resolve normally.
+pub fn run_without_ticket(
+    root: &Path,
+    agent: &str,
+    role: &str,
+    out: &mut dyn Write,
+) -> Result<()> {
+    let config = Config::load(root)?;
+    let prompt = build_system_prompt(
+        root,
+        None,
+        None,
+        &config.workers,
+        config.agents.instructions.as_deref(),
+        agent,
+        role,
+    )?;
+    out.write_all(prompt.as_bytes())?;
+    Ok(())
+}
+
+/// Print a provenance table for a given agent+role without a ticket.
+pub fn explain_without_ticket(
+    root: &Path,
+    agent: &str,
+    role: &str,
+    out: &mut dyn Write,
+) -> Result<()> {
+    let config = Config::load(root)?;
+    let prov = explain_system_prompt(
+        root,
+        None,
+        None,
+        &config.workers,
+        config.agents.instructions.as_deref(),
+        agent,
+        role,
+    )?;
+    format_provenance(&prov, out)
+}
+
+fn format_provenance(prov: &PromptProvenance, out: &mut dyn Write) -> Result<()> {
     match &prov.prefix_path {
         Some(path) => writeln!(out, "{:<16}{}  (agents.instructions)", "prefix:", path)?,
         None => writeln!(out, "{:<16}none", "prefix:")?,
     }
-
-    // system prompt line (winner)
     writeln!(
         out,
         "{:<16}{}  (level {} \u{2014} {})",
@@ -166,8 +211,6 @@ pub fn explain(
         prov.winner.level,
         prov.winner.label,
     )?;
-
-    // skipped lines
     let mut first = true;
     for entry in &prov.skipped {
         let label = if first { "skipped:" } else { "" };
@@ -181,7 +224,6 @@ pub fn explain(
         )?;
         first = false;
     }
-
     Ok(())
 }
 

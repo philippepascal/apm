@@ -843,9 +843,6 @@ the given substring:
 command:start transition fired, then exit 0. The ticket is not modified\n\
 and no worker is spawned.\n\
 \n\
-When called with no ID, prints the agents and roles discovered in .apm/agents/\n\
-and exits 0. --agent and --role flags are accepted but ignored in this mode.\n\
-\n\
 Uses the same priority cascade as the live spawn paths:\n\
   0. .apm/agents/<agent>/apm.<role>.md     (per-agent file, highest)\n\
   1. transition.instructions               (from workflow.toml)\n\
@@ -853,6 +850,11 @@ Uses the same priority cascade as the live spawn paths:\n\
   3. [workers].instructions                (global fallback)\n\
   4. built-in default for known agents\n\
   5. error — no instructions found\n\
+\n\
+Without a ticket ID, --agent and --role determine the mode:\n\
+  • Both provided: print the system prompt for that agent+role (levels 1 and 2\n\
+    are skipped — no ticket means no transition or profile context).\n\
+  • Either missing: print the agents and roles discovered in .apm/agents/.\n\
 \n\
 --agent and --role override the resolved values for inspection only;\n\
 they do not affect the ticket or any config.\n\
@@ -865,16 +867,16 @@ they do not affect the ticket or any config.\n\
                   level 2 (profile.instructions — none set)\n\
                   level 3 (workers.instructions — none set)\n\
 \n\
---explain is silently ignored when no ticket ID is given.\n\
-\n\
 Exits non-zero with a clear message when no instructions can be resolved.\n\
 \n\
 Examples:\n\
-  apm prompt                                 # list available agents and roles\n\
-  apm prompt ba121f45                          # resolved agent + role\n\
-  apm prompt ba121f45 --agent pi               # inspect pi-agent prompt\n\
-  apm prompt ba121f45 --role spec-writer       # inspect spec-writer role\n\
-  apm prompt ba121f45 --explain                # show cascade provenance")]
+  apm prompt                                       # list available agents and roles\n\
+  apm prompt --agent default --role worker         # base prompt for default/worker\n\
+  apm prompt --agent default --role worker --explain  # provenance without a ticket\n\
+  apm prompt ba121f45                              # resolved agent + role for ticket\n\
+  apm prompt ba121f45 --agent pi                   # inspect pi-agent prompt\n\
+  apm prompt ba121f45 --role spec-writer           # inspect spec-writer role\n\
+  apm prompt ba121f45 --explain                    # show cascade provenance")]
     Prompt {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
