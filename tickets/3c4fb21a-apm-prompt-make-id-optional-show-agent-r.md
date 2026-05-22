@@ -1,7 +1,7 @@
 +++
 id = "3c4fb21a"
 title = "apm prompt: make ID optional; show agent/role discovery when called with no ID"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3c4fb21a-apm-prompt-make-id-optional-show-agent-r"
 created_at = "2026-05-22T08:01:03.768635Z"
-updated_at = "2026-05-22T08:01:03.768635Z"
+updated_at = "2026-05-22T08:05:00.333411Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-22T08:01Z | — | new | philippepascal |
+| 2026-05-22T08:05Z | new | groomed | philippepascal |
