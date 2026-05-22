@@ -27,7 +27,7 @@ The accurate, complete command metadata already exists in the clap command defin
 - [x] The output is plain text with no ANSI escape codes
 - [x] The command listing is generated from clap command metadata, not a separately maintained string — adding or modifying a command definition automatically reflects in the output
 - [x] `apm instructions` appears in the output of `apm help commands` (automatically, as a registered command)
-- [ ] A brief preamble (1–2 lines) precedes the command listing to orient agents reading the output cold
+- [x] A brief preamble (1–2 lines) precedes the command listing to orient agents reading the output cold
 
 ### Out of scope
 
