@@ -24,7 +24,7 @@ The test apm-core/tests/spec_writer_md_sync.rs::default_and_per_agent_apm_spec_w
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the referenced style path to anything other than the value already in the project file\n- Updating any other agent instruction files\n- Investigating why the two files diverged or adding a CI gate to prevent future drift
 
 ### Approach
 
