@@ -1,7 +1,7 @@
 +++
 id = "6c826abe"
 title = "spec_writer_md_sync test fails on main — files diverged"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/6c826abe-spec-writer-md-sync-test-fails-on-main-f"
 created_at = "2026-05-21T23:42:35.079918Z"
-updated_at = "2026-05-21T23:42:35.079918Z"
+updated_at = "2026-05-22T01:25:24.298290Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-21T23:42Z | — | new | claude-0521-2330-ba12|philippepascal |
+| 2026-05-22T01:25Z | new | groomed | philippepascal |
