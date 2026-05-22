@@ -4,12 +4,12 @@ title = "apm prompt: make ID optional; show agent/role discovery when called wit
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3c4fb21a-apm-prompt-make-id-optional-show-agent-r"
 created_at = "2026-05-22T08:01:03.768635Z"
-updated_at = "2026-05-22T08:08:08.900599Z"
+updated_at = "2026-05-22T08:08:11.266174Z"
 +++
 
 ## Spec
