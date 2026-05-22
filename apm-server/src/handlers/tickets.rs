@@ -26,7 +26,7 @@ pub async fn load_tickets(state: &AppState) -> Result<Vec<apm_core::ticket::Tick
             let root = root.clone();
             let tickets_dir = tickets_dir.clone();
             Ok(crate::util::blocking(move || {
-                apm_core::ticket::load_all_from_git(&root, &tickets_dir)
+                apm_core::ticket::load_all_from_git_classified(&root, &tickets_dir)
             }).await?)
         }
         TicketSource::InMemory(tickets) => Ok(tickets.clone()),
@@ -105,6 +105,7 @@ pub async fn list_tickets(
                     })
                 })
                 .collect();
+            let local_stale = t.local_stale;
             let mut fm = t.frontmatter;
             if fm.author.is_none() {
                 fm.author = Some("unassigned".to_string());
@@ -117,6 +118,7 @@ pub async fn list_tickets(
                 has_pending_amendments,
                 blocking_deps,
                 owner,
+                local_stale,
             }
         })
         .collect();
@@ -333,6 +335,8 @@ pub async fn put_body(
             frontmatter: current_ticket.frontmatter,
             body: new_body,
             path: current_ticket.path,
+            local_stale: false,
+            local_diverged: false,
         };
         updated.serialize()
     }).await?;
@@ -414,6 +418,8 @@ pub async fn patch_ticket(
         frontmatter: fm,
         body,
         path: ticket.path,
+        local_stale: false,
+        local_diverged: false,
     };
     let content = updated
         .serialize()
@@ -528,7 +534,7 @@ pub async fn batch_priority(
             failed.push(BatchFailure { id, error: e.to_string() });
             continue;
         }
-        let updated = apm_core::ticket::Ticket { frontmatter: fm, body, path: ticket.path.clone() };
+        let updated = apm_core::ticket::Ticket { frontmatter: fm, body, path: ticket.path.clone(), local_stale: false, local_diverged: false };
         let content = match updated.serialize() {
             Ok(c) => c,
             Err(e) => {
@@ -662,6 +668,7 @@ pub async fn create_ticket(
                 has_pending_amendments,
                 blocking_deps: vec![],
                 owner,
+                local_stale: false,
             };
             Ok((StatusCode::CREATED, Json(response)).into_response())
         }

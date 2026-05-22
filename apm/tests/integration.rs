@@ -7295,3 +7295,269 @@ fn state_implemented_refuses_when_main_has_untracked_overlap() {
     let err_msg = result.err().unwrap().to_string();
     assert!(err_msg.contains("src/new.rs"), "error should name the leaked file: {err_msg}");
 }
+
+// ── local_stale / staleness classification ─────────────────────────────────
+
+/// Push a new commit to the bare origin from a second clone, simulating
+/// another machine updating the ticket branch.
+fn push_remote_state_update(bare_path: &std::path::Path, branch: &str, rel_path: &str, new_content: &str) {
+    let remote2 = tempfile::tempdir().unwrap();
+    let r2 = remote2.path();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &bare_path.to_string_lossy(), "."])
+        .current_dir(r2)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["config", "user.name", "test"])
+        .current_dir(r2)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@test.com"])
+        .current_dir(r2)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["checkout", branch])
+        .current_dir(r2)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .status()
+        .unwrap();
+    let full_path = r2.join(rel_path);
+    if let Some(parent) = full_path.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+    std::fs::write(&full_path, new_content).unwrap();
+    std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "add", rel_path])
+        .current_dir(r2)
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "commit", "-m", "remote state update"])
+        .current_dir(r2)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .status()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["push", "origin", branch])
+        .current_dir(r2)
+        .status()
+        .unwrap();
+}
+
+/// `load_all_from_git_classified` marks a ticket as `local_stale` when the
+/// local branch is strictly behind origin.
+#[test]
+fn load_all_from_git_classified_marks_stale_when_local_behind() {
+    let (_bare, local) = init_remote_repo();
+    let p = local.path();
+
+    // Create a ticket and push the branch.
+    let (id, _) = create_ticket(p, "Stale classification test");
+    let branch = find_ticket_branch(p, "stale-classification-test");
+    git(p, &["push", "origin", &branch]);
+
+    // Get the rel path.
+    let rel_path = ticket_rel_path(&branch);
+
+    // Read original content.
+    let orig = branch_content(p, &branch, &rel_path);
+
+    // Simulate remote machine pushing a new commit.
+    let bare_path = std::process::Command::new("git")
+        .args(["remote", "get-url", "origin"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let bare_url = String::from_utf8_lossy(&bare_path.stdout).trim().to_string();
+
+    let r2 = tempfile::tempdir().unwrap();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &bare_url, "."])
+        .current_dir(r2.path())
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .status()
+        .unwrap();
+    git(r2.path(), &["config", "user.name", "test"]);
+    git(r2.path(), &["config", "user.email", "test@test.com"]);
+    git(r2.path(), &["checkout", &branch]);
+    // Write a modified version (e.g. state changed to in_progress).
+    let new_content = orig.replace("state = \"new\"", "state = \"in_progress\"");
+    std::fs::write(r2.path().join(&rel_path), &new_content).unwrap();
+    git(r2.path(), &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(r2.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "remote: state update"]);
+    git(r2.path(), &["push", "origin", &branch]);
+
+    // Fetch in local so origin/ticket/* is ahead but local is stale.
+    git(p, &["fetch", "--all", "--quiet"]);
+
+    // load_all_from_git_classified should mark local_stale = true.
+    let config = apm_core::config::Config::load(p).unwrap();
+    let tickets = apm_core::ticket::load_all_from_git_classified(p, &config.tickets.dir).unwrap();
+    let t = tickets.iter().find(|t| t.frontmatter.id.starts_with(&id[..8])).unwrap();
+    assert!(t.local_stale, "ticket should be local_stale; state={}", t.frontmatter.state);
+    assert!(!t.local_diverged, "ticket should not be local_diverged");
+    // Content should reflect the new remote state.
+    assert_eq!(
+        t.frontmatter.state, "in_progress",
+        "classified load should show origin state; got state={}", t.frontmatter.state
+    );
+}
+
+/// `apm list` (aggressive on, with remote) shows `*` prefix for stale tickets.
+#[test]
+fn apm_list_shows_asterisk_for_stale_tickets() {
+    let (_bare, local) = init_remote_repo();
+    let p = local.path();
+
+    let (id, _) = create_ticket(p, "Stale list test");
+    let branch = find_ticket_branch(p, "stale-list-test");
+    let rel_path = ticket_rel_path(&branch);
+    git(p, &["push", "origin", &branch]);
+
+    // Read original content to produce a modified version.
+    let orig = branch_content(p, &branch, &rel_path);
+    let new_content = orig.replace("state = \"new\"", "state = \"in_progress\"");
+
+    // Simulate remote update.
+    let bare_url = String::from_utf8_lossy(
+        &std::process::Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .current_dir(p)
+            .output()
+            .unwrap()
+            .stdout
+    ).trim().to_string();
+    let r2 = tempfile::tempdir().unwrap();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &bare_url, "."])
+        .current_dir(r2.path())
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .status()
+        .unwrap();
+    git(r2.path(), &["config", "user.name", "test"]);
+    git(r2.path(), &["config", "user.email", "test@test.com"]);
+    git(r2.path(), &["checkout", &branch]);
+    std::fs::write(r2.path().join(&rel_path), &new_content).unwrap();
+    git(r2.path(), &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(r2.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "remote: state update"]);
+    git(r2.path(), &["push", "origin", &branch]);
+
+    // Fetch so local is behind.
+    git(p, &["fetch", "--all", "--quiet"]);
+
+    // apm list should succeed and contain "*<id>" in output.
+    let short_id = &id[..8];
+    let out = run_apm(p, &["list", "--all"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains(&format!("*{short_id}")),
+        "expected '*{short_id}' in list output; got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("apm sync"),
+        "expected 'apm sync' suggestion in list output; got:\n{stdout}"
+    );
+}
+
+/// `apm list --no-aggressive` does NOT show `*` prefix even when local is stale.
+#[test]
+fn apm_list_no_aggressive_does_not_classify() {
+    let (_bare, local) = init_remote_repo();
+    let p = local.path();
+
+    let (id, _) = create_ticket(p, "No aggressive stale");
+    let branch = find_ticket_branch(p, "no-aggressive-stale");
+    let rel_path = ticket_rel_path(&branch);
+    git(p, &["push", "origin", &branch]);
+
+    let orig = branch_content(p, &branch, &rel_path);
+    let new_content = orig.replace("state = \"new\"", "state = \"in_progress\"");
+
+    let bare_url = String::from_utf8_lossy(
+        &std::process::Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .current_dir(p)
+            .output()
+            .unwrap()
+            .stdout
+    ).trim().to_string();
+    let r2 = tempfile::tempdir().unwrap();
+    std::process::Command::new("git")
+        .args(["clone", "-q", &bare_url, "."])
+        .current_dir(r2.path())
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .status()
+        .unwrap();
+    git(r2.path(), &["config", "user.name", "test"]);
+    git(r2.path(), &["config", "user.email", "test@test.com"]);
+    git(r2.path(), &["checkout", &branch]);
+    std::fs::write(r2.path().join(&rel_path), &new_content).unwrap();
+    git(r2.path(), &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(r2.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "remote: state update"]);
+    git(r2.path(), &["push", "origin", &branch]);
+
+    // --no-aggressive skips both fetch and classification.
+    let out = run_apm(p, &["list", "--no-aggressive", "--all"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let short_id = &id[..8];
+    assert!(
+        !stdout.contains(&format!("*{short_id}")),
+        "no-aggressive should NOT show '*' prefix; got:\n{stdout}"
+    );
+}
+
+/// A ticket whose local ref is ahead of origin still shows the local
+/// (unpushed) state — not origin's older state.
+#[test]
+fn load_all_from_git_classified_local_ahead_shows_local_state() {
+    let (_bare, local) = init_remote_repo();
+    let p = local.path();
+
+    let (id, _) = create_ticket(p, "Ahead local state");
+    let branch = find_ticket_branch(p, "ahead-local-state");
+    let rel_path = ticket_rel_path(&branch);
+    git(p, &["push", "origin", &branch]);
+
+    // Make a local commit (new state, not pushed).
+    let orig = branch_content(p, &branch, &rel_path);
+    let ahead_content = orig.replace("state = \"new\"", "state = \"in_progress\"");
+    git(p, &["checkout", &branch]);
+    std::fs::write(p.join(&rel_path), &ahead_content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "local: state update (unpushed)"]);
+    git(p, &["checkout", "main"]);
+
+    // Fetch (no new remote commits, so origin is behind local).
+    git(p, &["fetch", "--all", "--quiet"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let tickets = apm_core::ticket::load_all_from_git_classified(p, &config.tickets.dir).unwrap();
+    let t = tickets.iter().find(|t| t.frontmatter.id.starts_with(&id[..8])).unwrap();
+    assert!(!t.local_stale, "local-ahead ticket must NOT be marked local_stale");
+    assert_eq!(
+        t.frontmatter.state, "in_progress",
+        "should show local (unpushed) state; got: {}", t.frontmatter.state
+    );
+}

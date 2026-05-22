@@ -36,6 +36,37 @@ pub fn read_from_branch(root: &Path, branch: &str, rel_path: &str) -> Result<Str
         .or_else(|_| run(root, &["show", &format!("origin/{branch}:{rel_path}")]))
 }
 
+/// Read a file's content from a branch ref, also returning a `BranchClass`
+/// that describes the relationship between the local and remote ref.
+///
+/// When local is strictly behind origin (`Behind`) or origin only (`RemoteOnly`)
+/// or equal (`Equal`), content is read from origin so callers see the latest state.
+/// When local is ahead (`Ahead`), diverged (`Diverged`), or has no remote
+/// (`NoRemote`), content is read from the local ref (preserving unpushed state).
+///
+/// This is the classification-aware alternative to `read_from_branch`, used by
+/// callers that want to signal staleness to the user without modifying any refs.
+pub fn read_from_branch_with_class(
+    root: &Path,
+    branch: &str,
+    rel_path: &str,
+) -> Result<(String, BranchClass)> {
+    let local_ref = format!("refs/heads/{branch}");
+    let remote_ref = format!("origin/{branch}");
+    let class = classify_branch(root, &local_ref, &remote_ref);
+    let content = match &class {
+        BranchClass::Behind | BranchClass::RemoteOnly | BranchClass::Equal => {
+            run(root, &["show", &format!("{remote_ref}:{rel_path}")])
+                .or_else(|_| run(root, &["show", &format!("{branch}:{rel_path}")]))?
+        }
+        BranchClass::Ahead | BranchClass::NoRemote | BranchClass::Diverged => {
+            run(root, &["show", &format!("{branch}:{rel_path}")])
+                .or_else(|_| run(root, &["show", &format!("{remote_ref}:{rel_path}")]))?
+        }
+    };
+    Ok((content, class))
+}
+
 /// All ticket/* branch names visible locally or remotely (deduplicated).
 /// Local branches are included even when a remote exists, so that
 /// unpushed branches (e.g. just created) are visible without a push.
@@ -1644,7 +1675,11 @@ mod tests {
     }
 
     fn make_commit(dir: &Path, filename: &str, content: &str) {
-        std::fs::write(dir.join(filename), content).unwrap();
+        let full = dir.join(filename);
+        if let Some(parent) = full.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(full, content).unwrap();
         git_cmd(dir, &["add", filename]);
         git_cmd(dir, &["commit", "-m", "init"]);
     }
@@ -2356,5 +2391,169 @@ mod tests {
             merged.iter().any(|b| b == "ticket/foo"),
             "expected ticket/foo in merged set; got {merged:?}"
         );
+    }
+
+    // ---- read_from_branch_with_class tests ----
+
+    /// Build a bare + local pair where `origin` acts as the remote.
+    /// Returns (bare_dir, local_dir). Both must be kept alive.
+    fn git_init_with_remote() -> (TempDir, TempDir) {
+        // bare origin
+        let bare = tempfile::tempdir().unwrap();
+        Cmd::new("git")
+            .args(["init", "--bare", "-q"])
+            .current_dir(bare.path())
+            .status()
+            .unwrap();
+
+        // local clone
+        let local = tempfile::tempdir().unwrap();
+        let p = local.path();
+        Cmd::new("git")
+            .args(["clone", "-q", &bare.path().to_string_lossy(), "."])
+            .current_dir(p)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status()
+            .unwrap();
+        git_cmd(p, &["config", "user.name", "test"]);
+        git_cmd(p, &["config", "user.email", "t@t.com"]);
+
+        (bare, local)
+    }
+
+    #[test]
+    fn read_from_branch_with_class_behind_returns_origin_content() {
+        let (bare, local) = git_init_with_remote();
+        let p = local.path();
+
+        // Initial commit on main + push.
+        make_commit(p, "README", "base");
+        git_cmd(p, &["push", "origin", "main"]);
+
+        // Create ticket branch, push it.
+        git_cmd(p, &["checkout", "-b", "ticket/abc"]);
+        make_commit(p, "tickets/abc.md", "state: ready\n");
+        git_cmd(p, &["push", "origin", "ticket/abc"]);
+
+        // Simulate remote machine: update the bare branch directly via a second clone.
+        let remote2 = tempfile::tempdir().unwrap();
+        let r2 = remote2.path();
+        Cmd::new("git")
+            .args(["clone", "-q", &bare.path().to_string_lossy(), "."])
+            .current_dir(r2)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status()
+            .unwrap();
+        git_cmd(r2, &["config", "user.name", "test"]);
+        git_cmd(r2, &["config", "user.email", "t@t.com"]);
+        git_cmd(r2, &["checkout", "ticket/abc"]);
+        make_commit(r2, "tickets/abc.md", "state: in_progress\n");
+        git_cmd(r2, &["push", "origin", "ticket/abc"]);
+
+        // Fetch in local so origin/ticket/abc advances but local ticket/abc stays stale.
+        git_cmd(p, &["fetch", "--all", "--quiet"]);
+
+        // read_from_branch_with_class should return origin content (in_progress) and Behind.
+        let (content, class) = read_from_branch_with_class(p, "ticket/abc", "tickets/abc.md").unwrap();
+        assert!(
+            matches!(class, BranchClass::Behind),
+            "expected Behind; got something else"
+        );
+        assert!(
+            content.contains("in_progress"),
+            "expected origin content 'in_progress'; got: {content:?}"
+        );
+    }
+
+    #[test]
+    fn read_from_branch_with_class_ahead_returns_local_content() {
+        let (_bare, local) = git_init_with_remote();
+        let p = local.path();
+
+        make_commit(p, "README", "base");
+        git_cmd(p, &["push", "origin", "main"]);
+
+        git_cmd(p, &["checkout", "-b", "ticket/xyz"]);
+        make_commit(p, "tickets/xyz.md", "state: ready\n");
+        git_cmd(p, &["push", "origin", "ticket/xyz"]);
+
+        // Local adds a new commit not yet pushed.
+        make_commit(p, "tickets/xyz.md", "state: in_progress\n");
+
+        // fetch to make sure origin ref is set.
+        git_cmd(p, &["fetch", "--all", "--quiet"]);
+
+        let (content, class) = read_from_branch_with_class(p, "ticket/xyz", "tickets/xyz.md").unwrap();
+        assert!(
+            matches!(class, BranchClass::Ahead),
+            "expected Ahead"
+        );
+        assert!(
+            content.contains("in_progress"),
+            "expected local content; got: {content:?}"
+        );
+    }
+
+    #[test]
+    fn read_from_branch_with_class_equal_returns_content() {
+        let (_bare, local) = git_init_with_remote();
+        let p = local.path();
+
+        make_commit(p, "README", "base");
+        git_cmd(p, &["push", "origin", "main"]);
+
+        git_cmd(p, &["checkout", "-b", "ticket/eq"]);
+        make_commit(p, "tickets/eq.md", "state: ready\n");
+        git_cmd(p, &["push", "origin", "ticket/eq"]);
+
+        let (content, class) = read_from_branch_with_class(p, "ticket/eq", "tickets/eq.md").unwrap();
+        assert!(
+            matches!(class, BranchClass::Equal),
+            "expected Equal"
+        );
+        assert!(content.contains("ready"), "expected ready content; got: {content:?}");
+    }
+
+    #[test]
+    fn read_from_branch_with_class_remote_only_returns_origin_content() {
+        let (bare, local) = git_init_with_remote();
+        let p = local.path();
+
+        make_commit(p, "README", "base");
+        git_cmd(p, &["push", "origin", "main"]);
+
+        // Create and push a branch from a second clone — local has no local branch.
+        let remote2 = tempfile::tempdir().unwrap();
+        let r2 = remote2.path();
+        Cmd::new("git")
+            .args(["clone", "-q", &bare.path().to_string_lossy(), "."])
+            .current_dir(r2)
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .status()
+            .unwrap();
+        git_cmd(r2, &["config", "user.name", "test"]);
+        git_cmd(r2, &["config", "user.email", "t@t.com"]);
+        git_cmd(r2, &["checkout", "-b", "ticket/ro"]);
+        make_commit(r2, "tickets/ro.md", "state: ready\n");
+        git_cmd(r2, &["push", "origin", "ticket/ro"]);
+
+        // Fetch so local knows about origin/ticket/ro, but no local branch exists.
+        git_cmd(p, &["fetch", "--all", "--quiet"]);
+
+        let (content, class) = read_from_branch_with_class(p, "ticket/ro", "tickets/ro.md").unwrap();
+        assert!(
+            matches!(class, BranchClass::RemoteOnly),
+            "expected RemoteOnly"
+        );
+        assert!(content.contains("ready"), "expected ready content; got: {content:?}");
     }
 }

@@ -13,7 +13,11 @@ impl CmdContext {
         let config = Config::load(root)?;
         let aggressive = config.sync.aggressive && !no_aggressive;
         crate::util::fetch_if_aggressive(root, aggressive);
-        let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+        let tickets = if aggressive {
+            apm_core::ticket::load_all_from_git_classified(root, &config.tickets.dir)?
+        } else {
+            apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?
+        };
         Ok(Self { config, tickets, aggressive })
     }
 
