@@ -1,7 +1,7 @@
 +++
 id = "7c5c491d"
 title = "Migrate this project's .apm/agents/ to the new structure"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7c5c491d-migrate-this-project-s-apm-agents-to-the"
 created_at = "2026-05-22T23:23:29.954873Z"
-updated_at = "2026-05-22T23:24:29.857517Z"
+updated_at = "2026-05-22T23:51:00.721404Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["34ad9126", "78eeb755", "02bbcc2f", "1fce91bd", "7ef960f2"]
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-22T23:23Z | — | new | philippepascal |
+| 2026-05-22T23:51Z | new | groomed | philippepascal |
