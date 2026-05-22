@@ -41,7 +41,7 @@ Implementation: replace the render_commands() delegation in apm/src/cmd/instruct
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `apm help commands` output — that topic keeps its full flag/positional detail\n- Adding `about` text to commands that currently have none (a separate doc-quality concern)\n- Changing the preamble wording\n- Listing sub-subcommands (e.g. `apm epic new`) — top-level commands only
 
 ### Approach
 
