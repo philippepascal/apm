@@ -4,12 +4,12 @@ title = "worker_md_sync and default spec-writer sync tests fail on main — thre
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b2259593-worker-md-sync-and-default-spec-writer-s"
 created_at = "2026-05-22T01:32:33.798879Z"
-updated_at = "2026-05-22T01:57:12.890996Z"
+updated_at = "2026-05-22T01:57:16.477893Z"
 +++
 
 ## Spec
