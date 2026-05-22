@@ -404,6 +404,150 @@ fn init_no_claude_with_yes_suppresses_writes() {
 }
 
 #[test]
+fn init_yes_includes_edit_write_and_baseline() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let contents = std::fs::read_to_string(p.join(".claude/settings.json")).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Edit"), "Edit missing");
+    assert!(entries.contains(&"Write"), "Write missing");
+    assert!(entries.contains(&"Bash(git -C *)"), "Bash(git -C *) missing");
+    assert!(entries.contains(&"Bash(ls *)"), "Bash(ls *) missing");
+    assert!(entries.contains(&"Bash(grep *)"), "Bash(grep *) missing");
+    assert!(entries.contains(&"Bash(find *)"), "Bash(find *) missing");
+    assert!(entries.contains(&"Bash(cat *)"), "Bash(cat *) missing");
+    assert!(entries.contains(&"Bash(sed *)"), "Bash(sed *) missing");
+    assert!(entries.contains(&"Bash(awk *)"), "Bash(awk *) missing");
+    assert!(entries.contains(&"Bash(mv *)"), "Bash(mv *) missing");
+    assert!(entries.contains(&"Bash(cp *)"), "Bash(cp *) missing");
+    assert!(entries.contains(&"Bash(rm /tmp/*)"), "Bash(rm /tmp/*) missing");
+    assert!(entries.contains(&"Bash(mkdir -p /tmp/*)"), "Bash(mkdir -p /tmp/*) missing");
+    assert!(entries.contains(&"Bash(echo *)"), "Bash(echo *) missing");
+    assert!(entries.contains(&"Bash(test *)"), "Bash(test *) missing");
+    assert!(entries.contains(&"Bash(true)"), "Bash(true) missing");
+    assert!(entries.contains(&"Bash(false)"), "Bash(false) missing");
+}
+
+#[test]
+fn init_yes_adds_cargo_for_rust_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+    std::fs::write(p.join("Cargo.toml"), "[package]\nname = \"test\"\n").unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let contents = std::fs::read_to_string(p.join(".claude/settings.json")).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Bash(cargo *)"), "Bash(cargo *) missing for Rust project");
+    assert!(entries.contains(&"Edit"), "Edit missing");
+    assert!(entries.contains(&"Bash(git -C *)"), "Bash(git -C *) missing");
+}
+
+#[test]
+fn init_yes_adds_npm_for_node_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+    std::fs::write(p.join("package.json"), "{\"name\": \"test\"}\n").unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let contents = std::fs::read_to_string(p.join(".claude/settings.json")).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Bash(npm *)"), "Bash(npm *) missing for Node project");
+    assert!(entries.contains(&"Bash(npx *)"), "Bash(npx *) missing for Node project");
+}
+
+#[test]
+fn init_yes_adds_python3_for_python_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+    std::fs::write(p.join("requirements.txt"), "requests\n").unwrap();
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let contents = std::fs::read_to_string(p.join(".claude/settings.json")).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Bash(python3 *)"), "Bash(python3 *) missing for Python project (requirements.txt)");
+}
+
+#[test]
+fn init_yes_user_settings_include_all_toolchains() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    // No Cargo.toml — user settings should still have all toolchain entries
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let user_settings = home.path().join(".claude/settings.json");
+    assert!(user_settings.exists(), "~/.claude/settings.json was not created");
+    let contents = std::fs::read_to_string(&user_settings).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(entries.contains(&"Edit"), "Edit missing from user settings");
+    assert!(entries.contains(&"Write"), "Write missing from user settings");
+    assert!(entries.contains(&"Bash(cargo *)"), "Bash(cargo *) missing from user settings");
+    assert!(entries.contains(&"Bash(npm *)"), "Bash(npm *) missing from user settings");
+    assert!(entries.contains(&"Bash(npx *)"), "Bash(npx *) missing from user settings");
+    assert!(entries.contains(&"Bash(python3 *)"), "Bash(python3 *) missing from user settings");
+    assert!(entries.contains(&"Bash(git -C *)"), "Bash(git -C *) missing from user settings");
+}
+
+#[test]
+fn init_yes_no_cargo_detected_when_no_cargo_toml() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    init_git_repo(p);
+    std::fs::create_dir_all(p.join(".claude")).unwrap();
+    // No Cargo.toml present
+
+    run_apm_with_home(p, home.path(), &["init", "--yes", "--quiet"]);
+
+    let contents = std::fs::read_to_string(p.join(".claude/settings.json")).unwrap();
+    let val: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    let allow = val.pointer("/permissions/allow")
+        .and_then(|v| v.as_array())
+        .expect("permissions.allow must be an array");
+    let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
+    assert!(!entries.contains(&"Bash(cargo *)"), "Bash(cargo *) must not appear without Cargo.toml");
+}
+
+#[test]
 fn list_excludes_terminal_tickets_by_default() {
     let dir = setup();
 apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
