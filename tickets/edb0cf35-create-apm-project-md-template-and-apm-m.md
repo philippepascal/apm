@@ -19,7 +19,11 @@ depends_on = ["4bee5771"]
 
 ### Problem
 
-Two new built-in content files are needed in apm-core/src/default/agents/default/. First: apm.project.md — a placeholder template the user fills in with project-specific context: what we are building, tech stack, technical decisions, module responsibilities, repo structure. It should have clear section headers and placeholder text so fresh apm init projects know what to put there. Second: apm.main-agent.md — the supervisor companion role file (no role detection, that is handled by prompt assembly). Content: what the main agent does (helps supervisor create tickets, review specs, manage epics), what it does NOT do (spawn workers, push code unsolicited, transition states without authorization), supervisor-only transitions list, override clause, startup sequence (sync, next, list — and run apm instructions at session start). Both files must be include_str! compiled into apm-core (same as existing role files). The startup sequence in apm.main-agent.md should reference apm instructions as the source of APM system knowledge, not duplicate it.
+The APM prompt redesign (epic ab6e5db7) splits the monolithic `agents.md` into three composed layers: (1) dynamic APM system knowledge from `apm instructions` (T1/4bee5771), (2) project-specific context from `apm.project.md`, and (3) role-specific instructions from a role file. Two built-in defaults for layers 2 and 3 are missing from apm-core: `apm.project.md` and `apm.main-agent.md`.
+
+`apm.project.md` is a template the user fills in after `apm init`. Without a shipped template, users have no guidance on what to write — they see only the legacy `agents.md` with its `_Fill in your project's structure here._` placeholder. The new file should have named sections so project-specific documentation is easy to populate and maintain independently of APM version updates.
+
+`apm.main-agent.md` is the role file for the supervisor companion (the Main Agent). Currently the Main Agent role is described inside `agents.md` alongside the Worker role, the ticket format, shell discipline, and session identity content that T1 will emit dynamically. After the redesign, `apm.main-agent.md` must contain only Main Agent-specific behavior (purpose, off-limits actions, supervisor-only transitions, startup sequence) and must reference `apm instructions` as the source of APM system knowledge rather than duplicating it.
 
 ### Acceptance criteria
 
