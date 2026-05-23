@@ -27,13 +27,13 @@ The APM prompt redesign (epic ab6e5db7) splits the monolithic `agents.md` into t
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/agents/default/apm.project.md` exists with named section headers and `_fill in_`-style placeholder text covering: project name/description, tech stack, repo structure, module responsibilities, and key technical decisions
-- [ ] `apm-core/src/default/agents/default/apm.main-agent.md` exists and covers: purpose, off-limits actions, supervisor-only transitions list, override clause, amendment workflow, and startup sequence
-- [ ] `apm.main-agent.md` startup sequence instructs the agent to run `apm instructions` first to obtain current state machine, ticket format, shell discipline, and command reference
-- [ ] `apm.main-agent.md` does not inline the state machine, ticket format, shell discipline, or session identity content (those are emitted by `apm instructions`)
-- [ ] Both files are accessible via `include_str!` constants in `apm-core/src/start.rs` and `cargo build --workspace` succeeds
-- [ ] `resolve_builtin_instructions` in `start.rs` returns the `apm.main-agent.md` content for role `"main-agent"` regardless of agent name
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `apm-core/src/default/agents/default/apm.project.md` exists with named section headers and `_fill in_`-style placeholder text covering: project name/description, tech stack, repo structure, module responsibilities, and key technical decisions
+- [x] `apm-core/src/default/agents/default/apm.main-agent.md` exists and covers: purpose, off-limits actions, supervisor-only transitions list, override clause, amendment workflow, and startup sequence
+- [x] `apm.main-agent.md` startup sequence instructs the agent to run `apm instructions` first to obtain current state machine, ticket format, shell discipline, and command reference
+- [x] `apm.main-agent.md` does not inline the state machine, ticket format, shell discipline, or session identity content (those are emitted by `apm instructions`)
+- [x] Both files are accessible via `include_str!` constants in `apm-core/src/start.rs` and `cargo build --workspace` succeeds
+- [x] `resolve_builtin_instructions` in `start.rs` returns the `apm.main-agent.md` content for role `"main-agent"` regardless of agent name
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
