@@ -1,7 +1,7 @@
 +++
 id = "4bee5771"
 title = "Enrich apm instructions to emit full APM system knowledge"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4bee5771-enrich-apm-instructions-to-emit-full-apm"
 created_at = "2026-05-22T23:22:16.080767Z"
-updated_at = "2026-05-23T02:58:11.146409Z"
+updated_at = "2026-05-23T02:58:45.656188Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 +++
@@ -128,3 +128,4 @@ Use a `tempfile::TempDir` with no `.apm/` directory (triggers static fallbacks t
 | 2026-05-22T23:51Z | groomed | in_design | philippepascal |
 | 2026-05-22T23:58Z | in_design | specd | claude-0522-1400-b7f2 |
 | 2026-05-23T02:58Z | specd | ready | philippepascal |
+| 2026-05-23T02:58Z | ready | in_progress | philippepascal |
