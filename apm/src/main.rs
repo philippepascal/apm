@@ -892,7 +892,11 @@ Examples:\n\
         explain: bool,
     },
     /// Output a compact plain-text guide for agents on how to use apm
-    Instructions,
+    Instructions {
+        /// Scope output to this role (e.g. worker, spec-writer); omit for full output
+        #[arg(long, value_name = "ROLE")]
+        role: Option<String>,
+    },
     /// Print version and build type
     Version,
     /// Show help for a topic: commands, config, workflow, ticket
@@ -1216,7 +1220,7 @@ fn main() -> Result<()> {
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
         Command::Prompt { id, agent, role, explain } => cmd::prompt::run(&root, id.as_deref(), agent, role, explain),
-        Command::Instructions => cmd::instructions::run(Cli::command()),
+        Command::Instructions { role } => cmd::instructions::run(Cli::command(), &root, role.as_deref()),
         Command::Version => {
             cmd::version::run();
             Ok(())
