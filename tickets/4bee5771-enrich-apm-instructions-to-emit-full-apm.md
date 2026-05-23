@@ -31,7 +31,7 @@ Emitting the full state machine to a worker that only touches `ready → in_prog
 - [x] `apm instructions --role <name>` state machine section includes only states and transitions where the named role acts or needs awareness; states the role never touches are omitted
 - [x] `apm instructions --role <name>` command reference includes only commands relevant to the named role (hard-coded per-role allowlists in `apm-core/src/instructions.rs`)
 - [x] Shell discipline and session identity sections are present and unabridged regardless of `--role`
-- [ ] `apm_core::instructions::generate(root, role, commands)` is idempotent and callable without clap as a transitive dependency on `apm-core`
+- [x] `apm_core::instructions::generate(root, role, commands)` is idempotent and callable without clap as a transitive dependency on `apm-core`
 
 ### Out of scope
 
