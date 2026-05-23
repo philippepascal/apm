@@ -19,7 +19,9 @@ depends_on = ["edb0cf35", "34ad9126", "78eeb755"]
 
 ### Problem
 
-After T2 creates apm.project.md and apm.main-agent.md, and T4/T5 rewrite the role files, agents.md (apm-core/src/default/agents/default/agents.md) is no longer needed — all its content has been redistributed. Delete it. Changes: (1) delete apm-core/src/default/agents/default/agents.md; (2) remove fn default_agents_md() in apm-core/src/init.rs:392; (3) remove the write_default call for agents.md in setup() at init.rs:142; (4) ensure no remaining include_str! references it. The init.rs test setup_creates_expected_files currently asserts .apm/agents/default/agents.md exists — this assertion must be removed (or changed to assert it does NOT exist after init).
+After T2 (edb0cf35) creates `apm.project.md` and `apm.main-agent.md` and T4/T5 (78eeb755, 34ad9126) rewrite the worker and spec-writer role files, `agents.md` is no longer needed — all of its content has been redistributed into the new role files. The built-in default at `apm-core/src/default/agents/default/agents.md` can be deleted and the code that compiles and writes it can be removed.
+
+Four concrete changes follow: delete the built-in file, remove the `fn default_agents_md()` wrapper (the sole `include_str!` that embeds the file), remove the `write_default` call in `setup()` that writes agents.md to new projects, and update the test that currently asserts the file exists after `apm init`. The `ensure_claude_md` call (which injects `@.apm/agents/default/agents.md` into CLAUDE.md) and the `instructions` key in `default_config` are not changed here — those are covered by T8 (7ef960f2).
 
 ### Acceptance criteria
 
