@@ -1,7 +1,7 @@
 +++
 id = "7c5c491d"
 title = "Migrate this project's .apm/agents/ to the new structure"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7c5c491d-migrate-this-project-s-apm-agents-to-the"
 created_at = "2026-05-22T23:23:29.954873Z"
-updated_at = "2026-05-23T00:34:08.800013Z"
+updated_at = "2026-05-23T00:34:14.755310Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["34ad9126", "78eeb755", "02bbcc2f", "1fce91bd", "7ef960f2"]
@@ -145,3 +145,4 @@ Commit all changes to the ticket branch in the worktree.
 | 2026-05-22T23:23Z | — | new | philippepascal |
 | 2026-05-22T23:51Z | new | groomed | philippepascal |
 | 2026-05-23T00:30Z | groomed | in_design | philippepascal |
+| 2026-05-23T00:34Z | in_design | specd | claude-0522-1445-b3f7 |
