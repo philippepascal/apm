@@ -42,7 +42,11 @@ Both rules exist in `apm.spec-writer.md` but are absent from `apm.worker.md`. Wo
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The `claude/` override (`apm-core/src/default/agents/claude/apm.worker.md`) — covered by T6 (02bbcc2f)
+- Shell discipline content itself — owned by T1 (4bee5771)
+- Session identity and startup sequence — covered by T1
+- Deletion of `agents.md` — T7 (1fce91bd)
+- Rewriting `apm.spec-writer.md` — T4 (34ad9126)
 
 ### Approach
 
