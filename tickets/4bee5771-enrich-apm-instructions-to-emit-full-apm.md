@@ -24,7 +24,7 @@ Emitting the full state machine to a worker that only touches `ready → in_prog
 
 ### Acceptance criteria
 
-- [ ] `apm instructions` (no role) output contains all five sections in order: state machine, ticket format, shell discipline, session identity, command reference
+- [x] `apm instructions` (no role) output contains all five sections in order: state machine, ticket format, shell discipline, session identity, command reference
 - [ ] Output contains no ANSI escape codes regardless of flags used
 - [ ] State machine section lists workflow states, their transitions, and actor information — read from the project's workflow config when present, falling back to a built-in static description otherwise
 - [ ] Ticket format section lists required frontmatter fields and body sections (name, type, required flag) — read from ticket config when present, falling back to built-in static content otherwise
