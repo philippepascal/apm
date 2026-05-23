@@ -32,7 +32,7 @@ The new model replaces this with three explicitly named, ordered layers: (1) `ap
 - [x] When `agents.project` names a file that cannot be read, `build_system_prompt` returns an error whose message contains `"agents.project"` and the configured path
 - [x] `AgentsConfig` deserialises `project = "..."` from the `[agents]` section of `config.toml` and stores it as `project: Option<PathBuf>`
 - [x] When `[agents].instructions` is set and `[agents].project` is absent, `build_system_prompt` emits a deprecation warning to stderr and does NOT use instructions as any prompt layer
-- [ ] `apm prompt --explain` output labels all three layers: a `layer 1:` line for apm instructions (dynamic), a `layer 2:` line for the project file path (or "not configured"), and a `layer 3:` line for the cascade winner
+- [x] `apm prompt --explain` output labels all three layers: a `layer 1:` line for apm instructions (dynamic), a `layer 2:` line for the project file path (or "not configured"), and a `layer 3:` line for the cascade winner
 - [ ] `apm prompt --agent A --role R` output begins with the content returned by `instructions::generate(root, Some(R), &[])`
 
 ### Out of scope
