@@ -25,16 +25,16 @@ This ticket wires those changes into `init.rs`: `setup()` must write the two new
 
 ### Acceptance criteria
 
-- [ ] `apm init` creates `.apm/agents/default/apm.project.md` using the built-in default template from T2 (edb0cf35)
-- [ ] `apm init` creates `.apm/agents/default/apm.main-agent.md` using the built-in default from T2 (edb0cf35)
-- [ ] `apm init` does not create `.apm/agents/default/agents.md`
-- [ ] `apm init` does not create `.apm/agents/claude/apm.worker.md`
-- [ ] `apm init` does NOT create `.apm/agents/claude/apm.spec-writer.md`
-- [ ] A freshly initialized CLAUDE.md contains `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md` and does not contain `@.apm/agents/default/agents.md`
-- [ ] The generated `config.toml` contains `project = ".apm/agents/default/apm.project.md"` in `[agents]` and does not contain `instructions = ".apm/agents/default/agents.md"`
-- [ ] Running `apm init` on a project whose CLAUDE.md contains `@.apm/agents/default/agents.md` replaces that line with both new `@` imports
-- [ ] Running `apm init` on a project whose `config.toml` has `instructions = ".apm/agents/default/agents.md"` rewrites it to `project = ".apm/agents/default/apm.project.md"`
-- [ ] `cargo test --workspace` passes with all init tests updated to reflect the new structure
+- [x] `apm init` creates `.apm/agents/default/apm.project.md` using the built-in default template from T2 (edb0cf35)
+- [x] `apm init` creates `.apm/agents/default/apm.main-agent.md` using the built-in default from T2 (edb0cf35)
+- [x] `apm init` does not create `.apm/agents/default/agents.md`
+- [x] `apm init` does not create `.apm/agents/claude/apm.worker.md`
+- [x] `apm init` does NOT create `.apm/agents/claude/apm.spec-writer.md`
+- [x] A freshly initialized CLAUDE.md contains `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md` and does not contain `@.apm/agents/default/agents.md`
+- [x] The generated `config.toml` contains `project = ".apm/agents/default/apm.project.md"` in `[agents]` and does not contain `instructions = ".apm/agents/default/agents.md"`
+- [x] Running `apm init` on a project whose CLAUDE.md contains `@.apm/agents/default/agents.md` replaces that line with both new `@` imports
+- [x] Running `apm init` on a project whose `config.toml` has `instructions = ".apm/agents/default/agents.md"` rewrites it to `project = ".apm/agents/default/apm.project.md"`
+- [x] `cargo test --workspace` passes with all init tests updated to reflect the new structure
 
 ### Out of scope
 
