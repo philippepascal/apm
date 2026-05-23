@@ -48,7 +48,60 @@ The APM prompt redesign (epic ab6e5db7) splits the monolithic `agents.md` into t
 
 ### Approach
 
-How the implementation will work.
+#### 1. Create `apm-core/src/default/agents/default/apm.project.md`
+
+Template file with `_fill in_`-style placeholders. Sections:
+
+- `# Project Context` — title only
+- `## What we are building` — one-paragraph placeholder describing the product
+- `## Tech stack` — bullet list: language/runtime, key libraries, database, etc.
+- `## Repo structure` — directory tree with one-line descriptions per entry
+- `## Module responsibilities` — per-module paragraph (what each crate/package owns)
+- `## Key technical decisions` — bullet list of non-obvious architectural choices and their rationale
+
+Keep the file under 50 lines. Every placeholder uses `_Fill in: ..._` phrasing so it is visually distinct from real content.
+
+#### 2. Create `apm-core/src/default/agents/default/apm.main-agent.md`
+
+Role file for the supervisor companion. Sections:
+
+- **Title + preamble** — "You are a project-management companion to the supervisor. Run `apm instructions` at the start of every session to load the current state machine, ticket format, shell discipline, and command reference."
+- **What you do** — help the supervisor create tickets (with `--context`), manage epics, review specs, answer codebase questions; run `apm` commands at the supervisor's explicit direction
+- **What you do NOT do** — spawn workers, push code unsolicited, run `apm start`, amend published git history, make unauthorized state transitions
+- **Supervisor-only transitions** — exact list from current `agents.md` (`new → groomed`, `specd → ready/ammend`, `implemented → ready/ammend/closed`, `blocked → ready`, `apm epic close`); then the override clause ("The supervisor can ask you to perform any supervisor-only transition explicitly...")
+- **When asked to amend a ticket** — transition `specd → ammend`, add amendment requests with `apm spec --add-task`, stop; do not pick up the ticket yourself
+- **Startup sequence**:
+  1. `apm instructions` — loads APM system knowledge for this session
+  2. `apm sync` — refresh local cache from all `ticket/*` branches
+  3. `apm next --json` — find the highest-priority actionable ticket
+  4. `apm list --state in_progress` — check for in-progress tickets to resume
+
+Do **not** inline state machine tables, ticket format, shell discipline rules, or session identity instructions — those are covered by `apm instructions` output (T1/4bee5771).
+
+#### 3. Add `include_str!` constants to `apm-core/src/start.rs`
+
+Insert two new `const` declarations immediately after the existing block at lines 7–16:
+
+```rust
+const DEFAULT_MAIN_AGENT_MD: &str = include_str!("default/agents/default/apm.main-agent.md");
+const DEFAULT_PROJECT_MD: &str = include_str!("default/agents/default/apm.project.md");
+```
+
+`DEFAULT_PROJECT_MD` is declared here so T3 (d8e2fa0e) can reference it from `build_system_prompt` without adding a new `include_str!` call. It is not used in this ticket beyond compilation verification.
+
+#### 4. Update `resolve_builtin_instructions` in `apm-core/src/start.rs`
+
+Add one arm before the `_ => None` catch-all:
+
+```rust
+(_, "main-agent") => Some(DEFAULT_MAIN_AGENT_MD),
+```
+
+The wildcard agent pattern (`_`) matches any agent name, since there are no per-agent overrides for `main-agent`.
+
+#### 5. Verify
+
+Run `cargo test --workspace`. The two new `const` declarations must compile (exercising the `include_str!` paths); existing tests must pass unchanged.
 
 ### Open questions
 
