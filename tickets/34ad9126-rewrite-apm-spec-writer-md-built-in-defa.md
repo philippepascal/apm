@@ -46,7 +46,27 @@ The claude-agent override (`apm-core/src/default/agents/claude/apm.spec-writer.m
 
 ### Approach
 
-How the implementation will work.
+**File 1 — `apm-core/src/default/agents/default/apm.spec-writer.md`**
+
+Apply the following removals to the current 272-line file:
+
+- **Remove** the two-sentence runtime notice at the top of `## Scope limits` ("This session was started with `--disable-slash-commands`…" and "If you see skill availability information…"). Leave the section header and the remaining sub-sections ("Off-limits" and the permission-prompt paragraph) intact.
+- **Remove** the "Permitted `apm` commands" bullet list (five items). T1 emits this filtered by role; the list in the role file is redundant once T1 lands.
+- **Remove** the opening prose of `## How to save spec sections` and its code block (the `# Short content — inline` / `# Long content — via temp file` block). This is shell discipline; T1 owns it. Retain only the single line "Do NOT write the ticket markdown file directly. Always use `apm spec`." Keep the `### Never hand-edit the History table` and `### Filename is fixed` subsections unchanged.
+- **Fix** amendment step 6: delete the `FILE=$(ls ...)` / `git -C` / `git commit` block. Replace with a note that `apm spec` calls auto-commit to the ticket branch, so no manual git step is needed — consistent with the same note that already appears in the `## Open questions` / `## Capability limitations` sections.
+
+Do not touch any other section. The spec-writing guidance (Problem, AC, Out of scope, Approach, Effort/Risk scales), amendment flow, open-questions process, and capability-limitations sections are all in scope to keep verbatim.
+
+**File 2 — `apm-core/src/default/agents/claude/apm.spec-writer.md`**
+
+Delete the file. No content is worth preserving — it predates the History/Filename rules and is otherwise identical to the default.
+
+**File 3 — `apm-core/src/start.rs`**
+
+- Remove the constant: `const CLAUDE_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");`
+- Add a new constant: `const DEFAULT_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/default/apm.spec-writer.md");`
+- In `resolve_builtin_instructions`, change the arm `("claude", "spec-writer") => Some(CLAUDE_SPEC_WRITER_DEFAULT)` to `("claude", "spec-writer") => Some(DEFAULT_SPEC_WRITER_DEFAULT)`. This preserves the Level 4 fallback for projects that have no per-project `.apm/agents/claude/apm.spec-writer.md` (fresh `apm init` repos).
+- Update the test `build_system_prompt_falls_back_to_builtin_spec_writer`: change `assert_eq!(result, super::CLAUDE_SPEC_WRITER_DEFAULT)` to `assert_eq!(result, super::DEFAULT_SPEC_WRITER_DEFAULT)`.
 
 ### Open questions
 
