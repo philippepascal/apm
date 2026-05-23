@@ -40,7 +40,13 @@ The desired end state: `agents.md` deleted; two new files (`apm.project.md`, `ap
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Rewriting the built-in defaults in `apm-core/src/default/agents/` — covered by 34ad9126, 78eeb755, edb0cf35
+- Removing the `claude/` overrides from the built-in defaults in `apm-core/` — covered by 02bbcc2f and 34ad9126
+- Updating `apm-core/src/init.rs` or `apm-core/src/start.rs` — covered by 7ef960f2 and d8e2fa0e
+- Updating `apm instructions` CLI help text — covered by bfa41899
+- The `wrapper.sh` file — not affected by the redesign
+- The `style.md` file — not affected by the redesign
+- Running `cargo test --workspace` — no Rust source changes in this ticket
 
 ### Approach
 
