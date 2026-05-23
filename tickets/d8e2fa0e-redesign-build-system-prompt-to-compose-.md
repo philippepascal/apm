@@ -21,7 +21,7 @@ depends_on = ["4bee5771", "edb0cf35"]
 
 `build_system_prompt` (apm-core/src/start.rs) currently works as: prepend the file at `config.agents.instructions` → then pick a single cascade winner from the role-file cascade (per-agent file | transition | profile | workers | built-in). The prefix is optional and always the same content regardless of role.
 
-The new model replaces this with three explicitly named, ordered layers: (1) `apm_core::instructions::generate()` output (from T1/4bee5771, scoped to the role), (2) the project context file at `config.agents.project` (default path `.apm/agents/default/apm.project.md`), (3) the existing role-file cascade unchanged. All three are joined with a blank line between each present layer. The `[agents]` config key changes from `instructions` to `project`; the old key is deprecated — if present without `project`, use it as layer 2 and emit a deprecation warning.
+The new model replaces this with three explicitly named, ordered layers: (1) `apm_core::instructions::generate()` output (from T1/4bee5771, scoped to the role), (2) the project context file at `config.agents.project` (default path `.apm/agents/default/apm.project.md`), (3) the existing role-file cascade unchanged. All three are joined with a blank line between each present layer. The `[agents]` config key changes from `instructions` to `project`; the old key is deprecated — if present without `project`, emit a deprecation warning to stderr and do not use the instructions value as any prompt layer.
 
 `explain_system_prompt` and `format_provenance` must be updated so `apm prompt --explain` shows the source for all three layers rather than a separate "prefix" line plus a single "system prompt" line.
 
