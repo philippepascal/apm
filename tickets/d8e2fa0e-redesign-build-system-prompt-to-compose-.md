@@ -124,7 +124,7 @@ Update `explain_prefix_shown`: change config to use `project = "..."`, change as
 
 ### Amendment requests
 
-- [ ] AC item 5 specifies wrong backward-compat behavior: 'uses the instructions path as Layer 2 and emits a deprecation warning' — the old instructions key pointed to the monolithic agents.md, not project context, so treating it as Layer 2 would inject garbage. Change AC item 5 to: 'When [agents].instructions is set and [agents].project is absent, build_system_prompt emits a deprecation warning to stderr and does NOT use instructions as any prompt layer.' Update the Approach accordingly: step 4 should say ignore the instructions value (emit warning only), not pass it as project_file.
+- [x] AC item 5 specifies wrong backward-compat behavior: 'uses the instructions path as Layer 2 and emits a deprecation warning' — the old instructions key pointed to the monolithic agents.md, not project context, so treating it as Layer 2 would inject garbage. Change AC item 5 to: 'When [agents].instructions is set and [agents].project is absent, build_system_prompt emits a deprecation warning to stderr and does NOT use instructions as any prompt layer.' Update the Approach accordingly: step 4 should say ignore the instructions value (emit warning only), not pass it as project_file.
 
 ### Code review
 
