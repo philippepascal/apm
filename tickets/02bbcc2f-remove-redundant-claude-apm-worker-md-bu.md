@@ -23,7 +23,12 @@ apm-core/src/default/agents/claude/apm.worker.md is byte-for-byte identical to a
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core/src/default/agents/claude/apm.worker.md` is absent from the repository
+- [ ] `cargo build --workspace` succeeds with no compile errors (no dangling `include_str!` or undefined constant)
+- [ ] `cargo test --workspace` passes with no test referencing `CLAUDE_WORKER_DEFAULT`
+- [ ] `apm init` on a fresh directory does not write `.apm/agents/claude/apm.worker.md`
+- [ ] `apm prompt --agent claude --role worker` resolves to the same content as `apm prompt --agent default --role worker` when no per-project override exists
+- [ ] The `worker_md_sync` integration test is removed (it tested a now-deleted invariant)
 
 ### Out of scope
 
