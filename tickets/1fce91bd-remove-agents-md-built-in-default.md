@@ -25,12 +25,12 @@ Four concrete changes follow: delete the built-in file, remove the `fn default_a
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/agents/default/agents.md` does not exist in the repository after this ticket merges
-- [ ] `fn default_agents_md()` is absent from `apm-core/src/init.rs`
-- [ ] The `write_default` call for `agents.md` is absent from `setup()` in `apm-core/src/init.rs`
-- [ ] No `include_str!` in any Rust source file references `default/agents/default/agents.md`
-- [ ] `setup_creates_expected_files` does not assert that `.apm/agents/default/agents.md` exists
-- [ ] `cargo test --workspace` passes with no new failures
+- [x] `apm-core/src/default/agents/default/agents.md` does not exist in the repository after this ticket merges
+- [x] `fn default_agents_md()` is absent from `apm-core/src/init.rs`
+- [x] The `write_default` call for `agents.md` is absent from `setup()` in `apm-core/src/init.rs`
+- [x] No `include_str!` in any Rust source file references `default/agents/default/agents.md`
+- [x] `setup_creates_expected_files` does not assert that `.apm/agents/default/agents.md` exists
+- [x] `cargo test --workspace` passes with no new failures
 
 ### Out of scope
 
