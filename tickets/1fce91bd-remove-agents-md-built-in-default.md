@@ -43,7 +43,55 @@ Four concrete changes follow: delete the built-in file, remove the `fn default_a
 
 ### Approach
 
-How the implementation will work.
+Four files change: one deletion and three edits.
+
+**1. Delete `apm-core/src/default/agents/default/agents.md`**
+
+Remove the file from the repository. This is the only built-in default being deleted; the other defaults (`apm.spec-writer.md`, `apm.worker.md`) stay.
+
+**2. `apm-core/src/init.rs` — remove `fn default_agents_md()`**
+
+Delete lines 392–394:
+```rust
+fn default_agents_md() -> &'static str {
+    include_str!("default/agents/default/agents.md")
+}
+```
+
+This removes the sole `include_str!` reference to the deleted file.
+
+**3. `apm-core/src/init.rs` — remove the `write_default` call in `setup()`**
+
+Delete line 142:
+```rust
+write_default(&agents_default_dir.join("agents.md"), default_agents_md(), ".apm/agents/default/agents.md", &mut messages)?;
+```
+
+Leave all surrounding lines intact: the `agents_default_dir` directory creation above it (line 139–141) stays because it is still needed for `apm.spec-writer.md` and `apm.worker.md`; the `ensure_claude_md` call below it (line 160) stays and is unchanged (T8 handles that).
+
+**4. `apm-core/src/init.rs` — update `setup_creates_expected_files` test**
+
+In the test at line 661, change:
+```rust
+assert!(tmp.path().join(".apm/agents/default/agents.md").exists());
+```
+to:
+```rust
+assert!(!tmp.path().join(".apm/agents/default/agents.md").exists());
+```
+
+This asserts the file is NOT written by a fresh `apm init`, which is the new expected behaviour.
+
+**5. `apm/tests/e2e.rs` — update the e2e assertion**
+
+Two lines in `full_ticket_lifecycle` (around line 313 and 319) assert that agents.md exists and that CLAUDE.md references it. The CLAUDE.md reference will remain true for now (the `ensure_claude_md` call is unchanged until T8), but the file existence assertion must be removed or inverted:
+
+- Line 313: `assert!(env.root().join(".apm/agents/default/agents.md").exists(), ...)` — change to assert it does NOT exist.
+- Line 319: `assert!(claude.contains("@.apm/agents/default/agents.md"), ...)` — leave unchanged; `ensure_claude_md` still injects this import until T8 removes it.
+
+**6. Verify**
+
+Run `cargo test --workspace`. All tests must pass before marking implemented.
 
 ### Open questions
 
