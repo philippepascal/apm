@@ -200,9 +200,12 @@ pub fn generate(root: &Path, role: Option<&str>, commands: &[(String, String)]) 
     out.push_str(SESSION_IDENTITY_BODY);
     out.push('\n');
 
-    // 5. Command reference
-    out.push_str("## Command Reference\n\n");
-    out.push_str(&command_reference_body(role, commands));
+    // 5. Command reference — omit section entirely when no commands are provided
+    let cr = command_reference_body(role, commands);
+    if !cr.is_empty() {
+        out.push_str("## Command Reference\n\n");
+        out.push_str(&cr);
+    }
 
     Ok(out)
 }
@@ -354,7 +357,7 @@ fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> 
     };
 
     if filtered.is_empty() {
-        return String::from("(no commands available)\n\n");
+        return String::new();
     }
 
     let max_name = filtered.iter().map(|(name, _)| name.len()).max().unwrap_or(0);
@@ -443,13 +446,15 @@ mod tests {
         assert!(out.contains("## Ticket Format"), "Ticket Format header missing");
         assert!(out.contains("## Shell Discipline"), "Shell Discipline header missing");
         assert!(out.contains("## Session Identity"), "Session Identity header missing");
-        assert!(out.contains("## Command Reference"), "Command Reference header missing");
+        // Command Reference is omitted when no commands are passed
+        assert!(!out.contains("## Command Reference"), "Command Reference header should be absent with empty commands");
     }
 
     #[test]
     fn generate_no_role_sections_in_order() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), None, &empty_commands()).unwrap();
+        // Use sample_commands so Command Reference is present for ordering check
+        let out = generate(tmp.path(), None, &sample_commands()).unwrap();
         let pos_sm = out.find("## State Machine").unwrap();
         let pos_tf = out.find("## Ticket Format").unwrap();
         let pos_sd = out.find("## Shell Discipline").unwrap();
