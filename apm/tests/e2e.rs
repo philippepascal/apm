@@ -316,7 +316,8 @@ fn full_ticket_lifecycle() {
     assert!(!env.root().join(".git/hooks/post-merge").exists(), "post-merge hook should not be installed");
 
     let claude = env.read("CLAUDE.md");
-    assert!(claude.contains("@.apm/agents/default/agents.md"), "CLAUDE.md missing @.apm/agents/default/agents.md import");
+    assert!(claude.contains("@.apm/agents/default/apm.project.md"), "CLAUDE.md missing @.apm/agents/default/apm.project.md import");
+    assert!(claude.contains("@.apm/agents/default/apm.main-agent.md"), "CLAUDE.md missing @.apm/agents/default/apm.main-agent.md import");
 
     // ── Step 2: create a ticket ─────────────────────────────────────────────
     // Agent creates a ticket for the parse_count bug.
