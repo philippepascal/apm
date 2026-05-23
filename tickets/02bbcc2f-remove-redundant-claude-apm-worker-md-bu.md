@@ -40,7 +40,25 @@ apm-core/src/default/agents/claude/apm.worker.md is byte-for-byte identical to a
 
 ### Approach
 
-How the implementation will work.
+Four locations change; no new files are added.
+
+**1. Delete the file**
+Remove `apm-core/src/default/agents/claude/apm.worker.md`.
+
+**2. `apm-core/src/start.rs`**
+- Line 7: delete `const CLAUDE_WORKER_DEFAULT: &str = include_str!("default/agents/claude/apm.worker.md");`
+- In `resolve_builtin_instructions()`: remove the `("claude", "worker") => Some(CLAUDE_WORKER_DEFAULT)` match arm. After removal, a claude/worker lookup falls through to whatever arm handles the default worker (or returns `None` if no such arm exists, relying on the cascade to pick up the project's `.apm/agents/default/apm.worker.md`).
+- Tests that assert on `super::CLAUDE_WORKER_DEFAULT` (lines ~1353, 1373, 1385, 1396, 1416): switch each reference to the constant that holds the default worker content. Identify that constant by inspecting the remaining arms of `resolve_builtin_instructions`; it is the value that `resolve_builtin_instructions("default", "worker")` returns, or the fallback used by the test setup when no per-agent override is present.
+
+**3. `apm-core/src/init.rs`**
+- In `setup()`: remove the `write_default` call that writes `agents/claude/apm.worker.md` (lines ~154–159).
+- In the integration test (`setup_creates_expected_files` or `test_setup_creates_all_files`, line ~668): remove the assertion that `.apm/agents/claude/apm.worker.md` exists.
+
+**4. `apm-core/tests/worker_md_sync.rs`**
+- Delete the test function `default_and_per_agent_apm_worker_md_are_identical` (lines ~56–118) in its entirety. It tested that the two files were byte-identical — an invariant that disappears with the file. If this is the only test in the file, delete the file; otherwise remove only that function.
+
+**Verification**
+Run `cargo test --workspace` — all tests must pass before marking implemented.
 
 ### Open questions
 
