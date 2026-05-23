@@ -1,7 +1,7 @@
 +++
 id = "1fce91bd"
 title = "Remove agents.md built-in default"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1fce91bd-remove-agents-md-built-in-default"
 created_at = "2026-05-22T23:22:54.150045Z"
-updated_at = "2026-05-23T04:01:31.362731Z"
+updated_at = "2026-05-23T07:28:30.323827Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["edb0cf35", "34ad9126", "78eeb755"]
@@ -113,3 +113,4 @@ Run `cargo test --workspace`. All tests must pass before marking implemented.
 | 2026-05-23T02:58Z | specd | ready | philippepascal |
 | 2026-05-23T03:52Z | ready | in_progress | philippepascal |
 | 2026-05-23T04:01Z | in_progress | implemented | claude-0523-0352-6a58 |
+| 2026-05-23T07:28Z | implemented | closed | philippepascal(apm-sync) |
