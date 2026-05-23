@@ -106,7 +106,13 @@ Body sections (under ## Spec):\n\
     Supervisor-requested changes to the spec.\n\
 \n\
   ## History (auto-managed)\n\
-    Transition log written by apm. Never edit manually.\n";
+    Transition log written by apm. Never edit manually.\n\
+\n\
+Ticket file rules:\n\
+  - Do not hand-edit the History section — apm state appends rows automatically.\n\
+  - Do not rename the ticket file. The filename (tickets/<id>-<slug>.md) is derived\n\
+    from the branch name and is load-bearing for all apm lookups.\n\
+  - Find the exact filename with: ls tickets/<id>-*.md\n";
 
 static SHELL_DISCIPLINE_BODY: &str = "Claude Code's permission system matches the start of the command string.\n\
 Compound calls defeat this matching and generate permission prompts. Keep\n\
@@ -152,7 +158,13 @@ Use bash -c for multi-step commands that must share a directory:\n\
   bash -c \"cd $wt && cargo test --workspace 2>&1\"\n\
 \n\
 Use the Write tool instead of heredocs or $() for temp files:\n\
-  Write the file via the Write tool, then pass --set-file to apm spec.\n";
+  Write the file via the Write tool, then pass --set-file to apm spec.\n\
+\n\
+Off-limits — do not read or write these files:\n\
+\n\
+  .claude/              (settings, memory, CLAUDE.md)\n\
+  .apm/                 (except the ticket file)\n\
+  .gitignore, .github/  (project config)\n";
 
 static SESSION_IDENTITY_BODY: &str = "Generate a unique session name at the start of every session.\n\
 Use a fixed string — do not use $() substitution inline, as it triggers\n\
@@ -242,11 +254,6 @@ fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
         }
 
         if source_states.is_empty() && target_states.is_empty() {
-            // Unknown role — warn and fall back to emitting everything.
-            out.push_str(&format!(
-                "Warning: no transitions found for role '{}'; showing full state machine.\n\n",
-                role_name
-            ));
             None
         } else {
             let mut combined = source_states;
@@ -341,6 +348,11 @@ fn format_live_ticket_format(config: &Config) -> String {
 
     out.push_str("\n  ## History (auto-managed)\n");
     out.push_str("    Transition log written by apm. Never edit manually.\n");
+    out.push_str("\nTicket file rules:\n");
+    out.push_str("  - Do not hand-edit the History section — apm state appends rows automatically.\n");
+    out.push_str("  - Do not rename the ticket file. The filename (tickets/<id>-<slug>.md) is derived\n");
+    out.push_str("    from the branch name and is load-bearing for all apm lookups.\n");
+    out.push_str("  - Find the exact filename with: ls tickets/<id>-*.md\n");
     out
 }
 

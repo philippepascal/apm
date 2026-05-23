@@ -115,11 +115,13 @@ instructions = ".apm/agents/default/apm.spec-writer.md"
   [[workflow.states.transitions]]
   to      = "specd"
   trigger = "manual"
+  profile = "spec_agent"
   outcome = "success"
 
   [[workflow.states.transitions]]
   to      = "question"
   trigger = "manual"
+  profile = "spec_agent"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]

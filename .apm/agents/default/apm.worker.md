@@ -19,17 +19,6 @@ your environment, ignore it entirely.
 - `apm new --side-note` — file an out-of-scope observation
 - `apm spec <id> --section "Open questions"` — write blocking questions (blocked flow only)
 
-**Off-limits (never modify these):**
-- Any file under `.claude/` (settings, memory, CLAUDE.md)
-- `.apm/config.toml` or any file in `.apm/` other than your ticket
-- `.gitignore`, `.github/`, or other project-config files
-
-**On a permission prompt for an `apm` command:** do not invoke any skill or
-attempt to edit `settings.json`. Instead, set the ticket to `blocked` via
-`apm state <id> blocked` and include a diagnostic naming which `apm` command
-triggered the prompt and what allowlist entry is missing. The structural
-backstop for permission-denial enforcement is ticket f06272f1.
-
 ---
 
 ## Before writing any code
@@ -92,44 +81,6 @@ Then immediately resume the current ticket.
 
 ---
 
-## Ticket file discipline
-
-### Never hand-edit the History table
-
-The `## History` section is maintained automatically — every `apm state`
-invocation appends a row with the correct timestamp and actor. Do not:
-
-- Write the table directly (filesystem Write, `git commit` of a modified
-  history block, etc.).
-- Compose your own row to "fix" a missing actor or timestamp.
-- Re-format the existing table.
-
-Calling `apm state <id> <new-state>` is the only correct way to record a
-transition. Hand-written rows mis-record the actor (the worker process has
-no way to know its own canonical name from outside `apm`) and break the
-guarantee that history reflects what apm did.
-
-### Filename is fixed — never rename the ticket file
-
-The ticket's filename is derived from the branch name at creation and is
-load-bearing: `apm list`, `apm show`, and every other apm command look up the
-file using a path computed from the branch suffix. Renaming the file makes the
-ticket invisible to apm even though the branch and content are intact.
-
-**Rules:**
-- The file path is `tickets/<branch-suffix>.md`, where `<branch-suffix>` is the
-  branch name with the leading `ticket/` stripped — e.g. branch
-  `ticket/abc12345-fix-login` → file `tickets/abc12345-fix-login.md`.
-- Find the exact filename with `ls tickets/<id>-*.md` (there is exactly one).
-- Do **not** compute your own slug from the title. Do **not** `git mv`,
-  `mv`, or Write the spec under a different name — even if the existing slug
-  looks misspelled, abbreviated, or different from what your slugifier would
-  produce. Symptom of breaking this rule: the ticket disappears from `apm list`.
-- `apm spec` preserves the filename automatically — using it (as instructed
-  above) is the safe path.
-
----
-
 ## Blocked state
 
 If you hit a missing decision or ambiguity mid-implementation:
@@ -183,7 +134,3 @@ in `apm show <id>` under Worktree — note it at the start of your run.
 
 If a tool call resolves to a path outside your worktree, stop immediately, file
 a side-note ticket, and set yourself to blocked.
-
----
-
-**Frontmatter agent override** (supervisor tool): A supervisor may add `agent = "<name>"` or an `[agent_overrides]` table to a ticket's frontmatter to select a specific agent for that ticket or for individual profiles. Do not set these fields yourself — they are a supervisor-level escape hatch for debugging or per-ticket specialisation.
