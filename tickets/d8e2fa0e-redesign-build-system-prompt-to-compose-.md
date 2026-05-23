@@ -1,7 +1,7 @@
 +++
 id = "d8e2fa0e"
 title = "Redesign build_system_prompt to compose three layers"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d8e2fa0e-redesign-build-system-prompt-to-compose-"
 created_at = "2026-05-22T23:23:06.850140Z"
-updated_at = "2026-05-23T00:25:13.568768Z"
+updated_at = "2026-05-23T00:25:17.795139Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771", "edb0cf35"]
@@ -141,3 +141,4 @@ Update `explain_prefix_shown`: change config to use `project = "..."`, change as
 | 2026-05-22T23:23Z | — | new | philippepascal |
 | 2026-05-22T23:50Z | new | groomed | philippepascal |
 | 2026-05-23T00:20Z | groomed | in_design | philippepascal |
+| 2026-05-23T00:25Z | in_design | specd | claude-0522-0030-d8e2 |
