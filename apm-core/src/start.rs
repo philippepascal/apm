@@ -14,6 +14,8 @@ const MOCK_RANDOM_WORKER_DEFAULT: &str = include_str!("default/agents/mock-rando
 const MOCK_RANDOM_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.spec-writer.md");
 const DEBUG_WORKER_DEFAULT: &str = include_str!("default/agents/debug/apm.worker.md");
 const DEBUG_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/debug/apm.spec-writer.md");
+const DEFAULT_MAIN_AGENT_MD: &str = include_str!("default/agents/default/apm.main-agent.md");
+const DEFAULT_PROJECT_MD: &str = include_str!("default/agents/default/apm.project.md");
 
 static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -875,6 +877,7 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
         ("mock-random", "spec-writer") => Some(MOCK_RANDOM_SPEC_WRITER_DEFAULT),
         ("debug", "worker") => Some(DEBUG_WORKER_DEFAULT),
         ("debug", "spec-writer") => Some(DEBUG_SPEC_WRITER_DEFAULT),
+        (_, "main-agent") => Some(DEFAULT_MAIN_AGENT_MD),
         _ => None,
     }
 }
