@@ -34,7 +34,7 @@ The desired end state: `agents.md` deleted; two new files (`apm.project.md`, `ap
 - [x] `.apm/agents/default/apm.worker.md` matches the rewritten built-in from 78eeb755 (no `agents.md` back-reference, no `## Shell discipline` section, has `## Ticket file discipline`)
 - [x] `.apm/agents/claude/apm.worker.md` does not exist in the repo
 - [x] `.apm/agents/claude/apm.spec-writer.md` does not exist in the repo
-- [ ] `CLAUDE.md` contains `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md`
+- [x] `CLAUDE.md` contains `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md`
 - [ ] `CLAUDE.md` does not contain `@.apm/agents/default/agents.md`
 - [ ] `.apm/config.toml` `[agents]` section has `project = ".apm/agents/default/apm.project.md"` and does not contain an `instructions =` key
 
