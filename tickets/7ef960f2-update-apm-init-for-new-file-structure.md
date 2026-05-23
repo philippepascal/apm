@@ -1,7 +1,7 @@
 +++
 id = "7ef960f2"
 title = "Update apm init for new file structure"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7ef960f2-update-apm-init-for-new-file-structure"
 created_at = "2026-05-22T23:23:20.147068Z"
-updated_at = "2026-05-23T04:22:23.017013Z"
+updated_at = "2026-05-23T04:27:59.717148Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["edb0cf35", "d8e2fa0e", "02bbcc2f", "1fce91bd"]
@@ -177,3 +177,4 @@ Run `cargo test --workspace`. All tests must pass.
 | 2026-05-23T01:51Z | in_design | specd | claude-0523-0147-3da0 |
 | 2026-05-23T02:58Z | specd | ready | philippepascal |
 | 2026-05-23T04:22Z | ready | in_progress | philippepascal |
+| 2026-05-23T04:27Z | in_progress | implemented | claude-0523-0422-9c68 |
