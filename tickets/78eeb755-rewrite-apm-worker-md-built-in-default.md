@@ -1,7 +1,7 @@
 +++
 id = "78eeb755"
 title = "Rewrite apm.worker.md built-in default"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/78eeb755-rewrite-apm-worker-md-built-in-default"
 created_at = "2026-05-22T23:22:24.735576Z"
-updated_at = "2026-05-22T23:50:46.122589Z"
+updated_at = "2026-05-23T00:06:33.529498Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-22T23:22Z | — | new | philippepascal |
 | 2026-05-22T23:50Z | new | groomed | philippepascal |
+| 2026-05-23T00:06Z | groomed | in_design | philippepascal |
