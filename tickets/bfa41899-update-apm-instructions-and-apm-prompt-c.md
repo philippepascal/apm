@@ -1,7 +1,7 @@
 +++
 id = "bfa41899"
 title = "Update apm instructions and apm prompt CLI help for new model"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bfa41899-update-apm-instructions-and-apm-prompt-c"
 created_at = "2026-05-22T23:23:41.917063Z"
-updated_at = "2026-05-23T04:22:06.145981Z"
+updated_at = "2026-05-23T07:28:51.003166Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771", "d8e2fa0e"]
@@ -148,3 +148,4 @@ No new tests. The only test change is the dead-code removal in step 2 above. The
 | 2026-05-23T02:58Z | specd | ready | philippepascal |
 | 2026-05-23T04:15Z | ready | in_progress | philippepascal |
 | 2026-05-23T04:22Z | in_progress | implemented | claude-0523-0415-2a68 |
+| 2026-05-23T07:28Z | implemented | closed | philippepascal(apm-sync) |
