@@ -24,6 +24,15 @@ depends_on = ["4bee5771", "edb0cf35"]
 The new model replaces this with three explicitly named, ordered layers: (1) `apm_core::instructions::generate()` output (from T1/4bee5771, scoped to the role), (2) the project context file at `config.agents.project` (default path `.apm/agents/default/apm.project.md`), (3) the existing role-file cascade unchanged. All three are joined with a blank line between each present layer. The `[agents]` config key changes from `instructions` to `project`; the old key is deprecated — if present without `project`, use it as layer 2 and emit a deprecation warning.
 
 `explain_system_prompt` and `format_provenance` must be updated so `apm prompt --explain` shows the source for all three layers rather than a separate "prefix" line plus a single "system prompt" line.
+Backward-compat note: the old  key must NOT be repurposed as layer 2. The key pointed to the monolithic , not to project context — injecting it as layer 2 would produce garbage. The correct behavior when  is present without : emit a deprecation warning telling the user to run Created tickets/EPIC.md
+.apm/config.toml differs from default — wrote .apm/config.toml.init for comparison
+.apm/workflow.toml differs from default — wrote .apm/workflow.toml.init for comparison
+.apm/agents/default/agents.md differs from default — wrote .apm/agents/default/agents.md.init for comparison
+Updated .claude/settings.json
+apm initialized. to migrate, and do not use  as any prompt layer. T8 (7ef960f2) handles migration for projects that run .apm/config.toml differs from default — wrote .apm/config.toml.init for comparison
+.apm/workflow.toml differs from default — wrote .apm/workflow.toml.init for comparison
+.apm/agents/default/agents.md differs from default — wrote .apm/agents/default/agents.md.init for comparison
+apm initialized..
 
 ### Acceptance criteria
 
