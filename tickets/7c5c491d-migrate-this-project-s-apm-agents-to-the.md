@@ -36,7 +36,7 @@ The desired end state: `agents.md` deleted; two new files (`apm.project.md`, `ap
 - [x] `.apm/agents/claude/apm.spec-writer.md` does not exist in the repo
 - [x] `CLAUDE.md` contains `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md`
 - [x] `CLAUDE.md` does not contain `@.apm/agents/default/agents.md`
-- [ ] `.apm/config.toml` `[agents]` section has `project = ".apm/agents/default/apm.project.md"` and does not contain an `instructions =` key
+- [x] `.apm/config.toml` `[agents]` section has `project = ".apm/agents/default/apm.project.md"` and does not contain an `instructions =` key
 
 ### Out of scope
 
