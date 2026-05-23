@@ -37,7 +37,15 @@ The new model replaces this with three explicitly named, ordered layers: (1) `ap
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Rewriting the role-file cascade logic (levels 0–4 within Layer 3) — unchanged by this ticket
+- Updating `apm instructions` CLI help text or `apm prompt` help text — covered by bfa41899
+- Rewriting the content of `apm.worker.md` or `apm.spec-writer.md` — covered by 78eeb755 and 34ad9126
+- Implementing `apm_core::instructions::generate()` — covered by 4bee5771 (T1, a declared dependency)
+- Creating `apm.project.md` or `apm.main-agent.md` built-in defaults — covered by edb0cf35 (T2, a declared dependency)
+- Deleting `agents.md` or migrating `.apm/agents/` — covered by 1fce91bd and 7c5c491d
+- Removing the `claude/apm.worker.md` built-in override — covered by 02bbcc2f
+- Validating that the project file conforms to any schema
+- Adding a `--project` CLI flag to `apm prompt`
 
 ### Approach
 
