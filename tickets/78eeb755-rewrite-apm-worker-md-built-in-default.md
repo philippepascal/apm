@@ -50,7 +50,19 @@ Both rules exist in `apm.spec-writer.md` but are absent from `apm.worker.md`. Wo
 
 ### Approach
 
-How the implementation will work.
+One file changes: `apm-core/src/default/agents/default/apm.worker.md`. No Rust source changes — the `include_str!` in `apm-core/src/agents.rs:89` references the same filename, and no test asserts on the content of the default worker.md.
+
+1. **Remove the `agents.md` back-reference from the preamble.** The current second paragraph (lines 5–8) reads: `Read .apm/agents/default/agents.md for startup, identity, worktree setup, and shell discipline. This file covers the implementation phase only.` Replace it with: `Shell discipline, session identity, and startup sequence are covered by \`apm instructions\` — this file covers the implementation phase only.`
+
+2. **Delete the `## Shell discipline` section** (lines 134–183) in its entirety, including its heading.
+
+3. **Add a `## Ticket file discipline` section** immediately after `## Side tickets`. Copy the two subsections verbatim from `apm.spec-writer.md`:
+   - `### Never hand-edit the History table` — full block including the three bullet points and the closing paragraph
+   - `### Filename is fixed — never rename the ticket file` — full block including the **Rules:** list and the closing note
+
+4. All other sections (`## Scope limits`, `## Before writing any code`, `## Minimal-change discipline`, `## Commit format`, `## Tests`, `## Finishing implementation`, `## Blocked state`, `## Capability limitations`, `## Path discipline`, and the frontmatter-override note) are preserved unchanged.
+
+5. Run `cargo test --workspace` — all tests must pass before marking implemented.
 
 ### Open questions
 
