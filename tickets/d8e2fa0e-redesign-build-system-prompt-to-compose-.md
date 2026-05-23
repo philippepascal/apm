@@ -53,15 +53,7 @@ The new model replaces this with three explicitly named, ordered layers: (1) `ap
 
 Add `pub project: Option<PathBuf>` with `#[serde(default)]` immediately after `max_workers_on_default`. Keep the existing `pub instructions: Option<PathBuf>` field (no removal yet — needed for deprecation detection). Update the `Default` impl: `project: None`. Add a doc comment to `instructions` marking it deprecated.
 
-Add a method to `AgentsConfig`:
-
-```rust
-pub fn effective_project(&self) -> Option<&Path> {
-    self.project.as_deref().or_else(|| self.instructions.as_deref())
-}
-```
-
-Deprecation warning emission is handled at call sites (see step 4).
+Do **not** add an `effective_project()` helper — callers use `config.agents.project.as_deref()` directly and handle the deprecation case explicitly (see step 4).
 
 #### 2. `apm-core/src/start.rs` — reshape `PromptProvenance`
 
@@ -78,13 +70,13 @@ Rename parameter `agents_instructions: Option<&Path>` → `project_file: Option<
 1. **Layer 1**: call `crate::instructions::generate(root, Some(role), &[])` — propagate errors.
 2. **Layer 2**: if `project_file` is `Some(path)` and non-empty, read `root.join(path)` — return a hard error naming `"agents.project"` and the path on failure. If `None` or empty, `layer2 = None`.
 3. **Layer 3**: call `build_system_prompt_body(...)` unchanged.
-4. Compose: `[layer1.trim_end(), layer2.as_deref().map(str::trim_end), layer3.trim_end()]` — collect present parts and join with `"\n\n"`.
+4. Compose: collect present parts from `[layer1.trim_end(), layer2_opt, layer3.trim_end()]` and join with `"\n\n"`.
 
 #### 4. `apm-core/src/start.rs` — update the `build_system_prompt` call at line 363
 
-Replace `config.agents.instructions.as_deref()` with the resolved project path. Emit a one-time deprecation warning when `config.agents.project.is_none() && config.agents.instructions.is_some()` — reuse the existing `DEPRECATION_WARNED` + `emit_deprecation_warning_to` pattern with a new message: `"apm: deprecated: [agents].instructions renamed to [agents].project — update config.toml"`.
+When `config.agents.project.is_none() && config.agents.instructions.is_some()`, emit a one-time deprecation warning — reuse the existing `DEPRECATION_WARNED` + `emit_deprecation_warning_to` pattern with message: `"apm: deprecated: [agents].instructions renamed to [agents].project — update config.toml"`. The instructions value is **not** passed as `project_file`; Layer 2 is absent in this case.
 
-Pass `config.agents.effective_project()` as `project_file`.
+Pass `config.agents.project.as_deref()` as `project_file` (not a fallback to `instructions`).
 
 #### 5. `apm-core/src/start.rs` — update `explain_system_prompt`
 
@@ -95,7 +87,7 @@ Rename parameter `agents_instructions` → `project_file`. Populate the updated 
 
 #### 6. `apm-core/src/prompt.rs` — update all four callsites
 
-`run`, `explain`, `run_without_ticket`, `explain_without_ticket` each call `build_system_prompt` or `explain_system_prompt` with `config.agents.instructions.as_deref()`. Replace with `config.agents.effective_project()`. Apply the same one-time deprecation warning as step 4 (check `project.is_none() && instructions.is_some()` before each call).
+`run`, `explain`, `run_without_ticket`, `explain_without_ticket` each call `build_system_prompt` or `explain_system_prompt` with `config.agents.instructions.as_deref()`. Replace with `config.agents.project.as_deref()`. Apply the same one-time deprecation warning as step 4 before each call (check `project.is_none() && instructions.is_some()`).
 
 #### 7. `apm-core/src/prompt.rs` — update `format_provenance`
 
@@ -119,7 +111,9 @@ Rename and update the four `agents_instructions_*` tests:
 - `agents_instructions_missing_file_is_hard_error` → assert error message contains `"agents.project"` (not `"agents.instructions"`)
 - `agents_instructions_trailing_whitespace_trimmed` → assert exactly one blank line between each present layer
 
-Add: `project_file_in_layer2` — configures project file, asserts `layer1_content + "\n\n" + project_content + "\n\n" + layer3_content`.
+Add two new tests:
+- `project_file_in_layer2` — configures `project = "..."`, asserts `layer1_content + "\n\n" + project_content + "\n\n" + layer3_content`
+- `instructions_deprecated_is_warning_only` — configures `instructions = "..."` with no `project`; asserts output is `layer1 + "\n\n" + layer3` (no instructions content injected), and stderr contains `"deprecated"`
 
 #### 9. Tests in `apm-core/src/prompt.rs`
 
