@@ -1,7 +1,7 @@
 +++
 id = "7ef960f2"
 title = "Update apm init for new file structure"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7ef960f2-update-apm-init-for-new-file-structure"
 created_at = "2026-05-22T23:23:20.147068Z"
-updated_at = "2026-05-22T23:50:58.406305Z"
+updated_at = "2026-05-23T00:25:32.538611Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["edb0cf35", "d8e2fa0e", "02bbcc2f", "1fce91bd"]
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-22T23:23Z | — | new | philippepascal |
 | 2026-05-22T23:50Z | new | groomed | philippepascal |
+| 2026-05-23T00:25Z | groomed | in_design | philippepascal |
