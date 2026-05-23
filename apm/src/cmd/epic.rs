@@ -330,7 +330,9 @@ pub(crate) fn run_epic_clean(
     // Load all tickets.
     let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
 
-    // Find epic branches whose derived state is "done".
+    // Find epic branches whose derived state is "done", or "empty" and already
+    // merged into the default branch (tickets closed, branches deleted post-merge).
+    let default_branch = &config.project.default_branch;
     let mut candidates: Vec<String> = Vec::new();
     for branch in &local_branches {
         let id = apm_core::epic::epic_id_from_branch(branch);
@@ -345,7 +347,17 @@ pub(crate) fn run_epic_clean(
             .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
             .collect();
 
-        if apm_core::epic::derive_epic_state(&state_configs) == "done" {
+        let derived = apm_core::epic::derive_epic_state(&state_configs);
+        let is_merged = || -> bool {
+            let out = std::process::Command::new("git")
+                .current_dir(root)
+                .args(["log", "--oneline", &format!("{default_branch}..{branch}")])
+                .output()
+                .ok();
+            out.map(|o| String::from_utf8_lossy(&o.stdout).trim().is_empty()).unwrap_or(false)
+        };
+
+        if derived == "done" || (derived == "empty" && is_merged()) {
             candidates.push(branch.clone());
         }
     }
@@ -356,7 +368,7 @@ pub(crate) fn run_epic_clean(
     }
 
     // Print candidate list.
-    println!("Would delete {} epic(s):", candidates.len());
+    println!("Epics to delete ({}):", candidates.len());
     for branch in &candidates {
         let id = apm_core::epic::epic_id_from_branch(branch);
         let title = apm_core::epic::branch_to_title(branch);
