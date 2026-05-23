@@ -19,7 +19,15 @@ depends_on = ["4bee5771"]
 
 ### Problem
 
-apm.spec-writer.md built-in default (apm-core/src/default/agents/default/apm.spec-writer.md, 272 lines) currently contains shell discipline verbatim — this will move to apm instructions (see T1). It also contains role-detection language ("if your prompt contains X you are a worker") which is no longer needed once prompt assembly selects the right role file per agent. Remove both. Also: History/Filename preservation rules (how to preserve ## History and frontmatter when editing tickets) exist here but not in apm.worker.md — keep them. Net result: shorter, cleaner role file that only describes spec-writer behavior. The built-in claude/apm.spec-writer.md override (apm-core/src/default/agents/claude/apm.spec-writer.md) should be reviewed for any meaningful delta vs the default and merged or deleted.
+The built-in default `apm-core/src/default/agents/default/apm.spec-writer.md` (272 lines) contains two categories of content that become redundant once T1 (4bee5771) lands:
+
+1. **Runtime-specific role-identification language.** The file opens with "This session was started with `--disable-slash-commands`. Skill and slash command invocation is disabled." After T3 (d8e2fa0e) rewrites prompt assembly to compose three layers, the role file is selected by the system — it does not need to self-declare its activation conditions. This language is also fragile: it embeds runtime harness behaviour into a static text file.
+
+2. **Shell discipline content.** The "How to save spec sections" block (Write-tool + `--set-file` pattern, avoiding `$()` subshells) duplicates what T1 will emit via its generic shell discipline section. The "Permitted `apm` commands" list duplicates what T1's command reference will emit when filtered to the `spec-writer` role. An unrelated `$(ls ...)` subshell survives in amendment step 6 and violates the discipline it teaches.
+
+The History/Filename preservation rules (never hand-edit `## History`, never rename the ticket file) are spec-writer-unique and must be kept — sibling T5 (78eeb755) will copy them to `apm.worker.md`.
+
+The claude-agent override (`apm-core/src/default/agents/claude/apm.spec-writer.md`, 237 lines) is a stale near-copy of the default that was never updated with the History/Filename rules. After the default rewrite it has no meaningful delta. Deleting it and pointing the `resolve_builtin_instructions` match arm to the rewritten default removes a maintenance liability with no behaviour change for projects that use the default cascade.
 
 ### Acceptance criteria
 
