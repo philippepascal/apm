@@ -4,8 +4,8 @@ use crate::wrapper::{WrapperContext, write_temp_file};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
-const CLAUDE_WORKER_DEFAULT: &str = include_str!("default/agents/claude/apm.worker.md");
-const CLAUDE_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");
+const DEFAULT_WORKER_DEFAULT: &str = include_str!("default/agents/default/apm.worker.md");
+const DEFAULT_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/default/apm.spec-writer.md");
 const MOCK_HAPPY_WORKER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.worker.md");
 const MOCK_HAPPY_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.spec-writer.md");
 const MOCK_SAD_WORKER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.worker.md");
@@ -14,6 +14,8 @@ const MOCK_RANDOM_WORKER_DEFAULT: &str = include_str!("default/agents/mock-rando
 const MOCK_RANDOM_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.spec-writer.md");
 const DEBUG_WORKER_DEFAULT: &str = include_str!("default/agents/debug/apm.worker.md");
 const DEBUG_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/debug/apm.spec-writer.md");
+const DEFAULT_MAIN_AGENT_MD: &str = include_str!("default/agents/default/apm.main-agent.md");
+const DEFAULT_PROJECT_MD: &str = include_str!("default/agents/default/apm.project.md");
 
 static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -864,8 +866,9 @@ fn with_epic_bundle(root: &Path, epic_id: Option<&str>, ticket_id: &str, config:
 
 pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
     match (agent, role) {
-        ("claude", "worker") => Some(CLAUDE_WORKER_DEFAULT),
-        ("claude", "spec-writer") => Some(CLAUDE_SPEC_WRITER_DEFAULT),
+        ("claude", "worker") => Some(DEFAULT_WORKER_DEFAULT),
+        ("default", "worker") => Some(DEFAULT_WORKER_DEFAULT),
+        ("claude", "spec-writer") => Some(DEFAULT_SPEC_WRITER_DEFAULT),
         ("mock-happy", "worker") => Some(MOCK_HAPPY_WORKER_DEFAULT),
         ("mock-happy", "spec-writer") => Some(MOCK_HAPPY_SPEC_WRITER_DEFAULT),
         ("mock-sad", "worker") => Some(MOCK_SAD_WORKER_DEFAULT),
@@ -874,6 +877,7 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
         ("mock-random", "spec-writer") => Some(MOCK_RANDOM_SPEC_WRITER_DEFAULT),
         ("debug", "worker") => Some(DEBUG_WORKER_DEFAULT),
         ("debug", "spec-writer") => Some(DEBUG_SPEC_WRITER_DEFAULT),
+        (_, "main-agent") => Some(DEFAULT_MAIN_AGENT_MD),
         _ => None,
     }
 }
@@ -1350,7 +1354,7 @@ mod tests {
         let p = dir.path();
         let workers = WorkersConfig::default();
         let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
-        assert_eq!(result, super::CLAUDE_WORKER_DEFAULT);
+        assert_eq!(result, super::DEFAULT_WORKER_DEFAULT);
     }
 
     #[test]
@@ -1359,7 +1363,7 @@ mod tests {
         let p = dir.path();
         let workers = WorkersConfig::default();
         let result = build_system_prompt(p, None, None, &workers, None, "claude", "spec-writer").unwrap();
-        assert_eq!(result, super::CLAUDE_SPEC_WRITER_DEFAULT);
+        assert_eq!(result, super::DEFAULT_SPEC_WRITER_DEFAULT);
     }
 
     #[test]
@@ -1413,7 +1417,7 @@ mod tests {
             Some(std::path::Path::new("prefix.md")),
             "claude", "worker",
         ).unwrap();
-        let expected = format!("PREFIX CONTENT\n\n{}", super::CLAUDE_WORKER_DEFAULT);
+        let expected = format!("PREFIX CONTENT\n\n{}", super::DEFAULT_WORKER_DEFAULT);
         assert_eq!(result, expected);
     }
 
@@ -1423,7 +1427,7 @@ mod tests {
         let p = dir.path();
         let workers = WorkersConfig::default();
         let without_prefix = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
-        assert_eq!(without_prefix, super::CLAUDE_WORKER_DEFAULT);
+        assert_eq!(without_prefix, super::DEFAULT_WORKER_DEFAULT);
     }
 
     #[test]
@@ -1436,7 +1440,7 @@ mod tests {
             Some(std::path::Path::new("")),
             "claude", "worker",
         ).unwrap();
-        assert_eq!(result, super::CLAUDE_WORKER_DEFAULT);
+        assert_eq!(result, super::DEFAULT_WORKER_DEFAULT);
     }
 
     #[test]
@@ -1468,7 +1472,7 @@ mod tests {
             "claude", "worker",
         ).unwrap();
         // Must have exactly one blank line between prefix and body
-        let expected = format!("PREFIX\n\n{}", super::CLAUDE_WORKER_DEFAULT);
+        let expected = format!("PREFIX\n\n{}", super::DEFAULT_WORKER_DEFAULT);
         assert_eq!(result, expected);
     }
 
