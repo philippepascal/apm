@@ -19,7 +19,11 @@ depends_on = ["4bee5771", "d8e2fa0e"]
 
 ### Problem
 
-Two CLI help texts need updating after the redesign. First: apm instructions (apm/src/cmd/instructions.rs) — the PREAMBLE and render() function describe it as a command list; after T1 it emits full APM system knowledge. Update the about string in main.rs and the preamble/intro in instructions.rs to reflect what it emits: state machine, ticket format, shell discipline, session identity, command reference. Second: apm prompt (apm/src/main.rs Prompt subcommand) — the help text and examples describe the old cascade model; after T3 it composes three layers. Update the about string and examples to document: (a) layer 1 = apm instructions (dynamic), (b) layer 2 = apm.project.md, (c) layer 3 = role file. Also update apm prompt --explain output labels to match the new layer names (currently labels say 'per-agent file', 'transition.instructions', etc.).
+Two CLI help strings become stale after the T1 (4bee5771) and T3 (d8e2fa0e) redesign.
+
+`apm instructions` (line 894 of `apm/src/main.rs` and the `PREAMBLE` constant in `apm/src/cmd/instructions.rs`) currently describes the command as emitting "a compact plain-text guide" that lists commands. After T1, the command calls `apm_core::instructions::generate()` and emits full APM system knowledge across five named sections: state machine, ticket format, shell discipline, session identity, and command reference. The about string and any surviving intro text must reflect this.
+
+`apm prompt` (the `#[command(long_about = "...")]` block in `apm/src/main.rs`, lines 842–879) documents a flat 5-level cascade (levels 0–4) and shows a `--explain` sample with `prefix:` / `system prompt:` labels. After T3, the prompt composes three layers — layer 1 (dynamic apm instructions), layer 2 (project context file), layer 3 (role-file cascade) — and `format_provenance` outputs `layer 1:` / `layer 2:` / `layer 3:` labels. The long_about and its embedded `--explain` example must describe the three-layer model and match the T3 output format.
 
 ### Acceptance criteria
 
