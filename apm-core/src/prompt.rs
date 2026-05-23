@@ -97,7 +97,10 @@ pub fn run(
     let agent = agent_override.unwrap_or(&params.agent).to_string();
 
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-    let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.instructions.as_deref(), &agent, &role)?;
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        crate::start::emit_agents_instructions_deprecation();
+    }
+    let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &agent, &role)?;
 
     out.write_all(prompt.as_bytes())?;
     Ok(())
@@ -141,12 +144,15 @@ pub fn explain(
     let agent = agent_override.unwrap_or(&params.agent).to_string();
 
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        crate::start::emit_agents_instructions_deprecation();
+    }
     let prov = explain_system_prompt(
         root,
         tr_instructions,
         profile,
         &config.workers,
-        config.agents.instructions.as_deref(),
+        config.agents.project.as_deref(),
         &agent,
         &role,
     )?;
@@ -165,12 +171,15 @@ pub fn run_without_ticket(
     out: &mut dyn Write,
 ) -> Result<()> {
     let config = Config::load(root)?;
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        crate::start::emit_agents_instructions_deprecation();
+    }
     let prompt = build_system_prompt(
         root,
         None,
         None,
         &config.workers,
-        config.agents.instructions.as_deref(),
+        config.agents.project.as_deref(),
         agent,
         role,
     )?;
@@ -186,12 +195,15 @@ pub fn explain_without_ticket(
     out: &mut dyn Write,
 ) -> Result<()> {
     let config = Config::load(root)?;
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        crate::start::emit_agents_instructions_deprecation();
+    }
     let prov = explain_system_prompt(
         root,
         None,
         None,
         &config.workers,
-        config.agents.instructions.as_deref(),
+        config.agents.project.as_deref(),
         agent,
         role,
     )?;
@@ -199,14 +211,16 @@ pub fn explain_without_ticket(
 }
 
 fn format_provenance(prov: &PromptProvenance, out: &mut dyn Write) -> Result<()> {
-    match &prov.prefix_path {
-        Some(path) => writeln!(out, "{:<16}{}  (agents.instructions)", "prefix:", path)?,
-        None => writeln!(out, "{:<16}none", "prefix:")?,
+    let role_str = prov.layer1_role.as_deref().unwrap_or("(none)");
+    writeln!(out, "{:<16}apm instructions (dynamic, role: {})", "layer 1:", role_str)?;
+    match &prov.layer2_path {
+        Some(path) => writeln!(out, "{:<16}{}", "layer 2:", path)?,
+        None => writeln!(out, "{:<16}not configured", "layer 2:")?,
     }
     writeln!(
         out,
         "{:<16}{}  (level {} \u{2014} {})",
-        "system prompt:",
+        "layer 3:",
         prov.winner.source,
         prov.winner.level,
         prov.winner.label,
@@ -329,7 +343,7 @@ Test.
             None,
             None,
             &config.workers,
-            None,
+            config.agents.project.as_deref(),
             "mock-happy",
             "worker",
         ).unwrap();
@@ -382,7 +396,7 @@ Test.
             .and_then(|tr| tr.instructions.as_deref())
             .map(|s| s.to_string());
 
-        build_system_prompt(root, tr_instructions.as_deref(), profile, &config.workers, None, &params.agent, &role)
+        build_system_prompt(root, tr_instructions.as_deref(), profile, &config.workers, config.agents.project.as_deref(), &params.agent, &role)
     }
 
     /// AC #1: parity for the run() spawn path — argument construction identical
@@ -616,7 +630,7 @@ Test.
 
     // --- explain tests ---
 
-    fn make_explain_project(root: &Path, ticket_id: &str, agent: &str, create_per_agent_file: bool, agents_instructions: Option<&str>) {
+    fn make_explain_project(root: &Path, ticket_id: &str, agent: &str, create_per_agent_file: bool, project: Option<&str>) {
         use std::fs;
 
         fs::create_dir_all(root.join(".apm")).unwrap();
@@ -628,8 +642,8 @@ Test.
             fs::write(agent_dir.join("apm.worker.md"), format!("INSTRUCTIONS FOR {agent}")).unwrap();
         }
 
-        let agents_section = match agents_instructions {
-            Some(path) => format!("\n[agents]\ninstructions = \"{path}\"\n"),
+        let agents_section = match project {
+            Some(path) => format!("\n[agents]\nproject = \"{path}\"\n"),
             None => String::new(),
         };
 
@@ -737,16 +751,20 @@ Test.
     fn explain_prefix_shown() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        make_explain_project(root, "cccc0003", "claude", false, Some(".apm/agents/default/agents.md"));
+        // Configure a project file path and create the file
+        let project_path = ".apm/agents/default/apm.project.md";
+        std::fs::create_dir_all(root.join(".apm/agents/default")).unwrap();
+        std::fs::write(root.join(project_path), "Project context.").unwrap();
+        make_explain_project(root, "cccc0003", "claude", false, Some(project_path));
 
         let mut buf = Vec::new();
         explain(root, "cccc0003", None, None, &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        let prefix_line = output.lines().find(|l| l.starts_with("prefix:")).unwrap();
+        let layer2_line = output.lines().find(|l| l.starts_with("layer 2:")).unwrap();
         assert!(
-            prefix_line.contains(".apm/agents/default/agents.md"),
-            "prefix line should name the configured file; got: {prefix_line:?}"
+            layer2_line.contains(project_path),
+            "layer 2 line should name the configured file; got: {layer2_line:?}"
         );
     }
 
