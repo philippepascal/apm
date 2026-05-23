@@ -5,7 +5,7 @@ use chrono::Utc;
 use std::path::{Path, PathBuf};
 
 const DEFAULT_WORKER_DEFAULT: &str = include_str!("default/agents/default/apm.worker.md");
-const CLAUDE_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");
+const DEFAULT_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/default/apm.spec-writer.md");
 const MOCK_HAPPY_WORKER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.worker.md");
 const MOCK_HAPPY_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.spec-writer.md");
 const MOCK_SAD_WORKER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.worker.md");
@@ -866,7 +866,7 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
     match (agent, role) {
         ("claude", "worker") => Some(DEFAULT_WORKER_DEFAULT),
         ("default", "worker") => Some(DEFAULT_WORKER_DEFAULT),
-        ("claude", "spec-writer") => Some(CLAUDE_SPEC_WRITER_DEFAULT),
+        ("claude", "spec-writer") => Some(DEFAULT_SPEC_WRITER_DEFAULT),
         ("mock-happy", "worker") => Some(MOCK_HAPPY_WORKER_DEFAULT),
         ("mock-happy", "spec-writer") => Some(MOCK_HAPPY_SPEC_WRITER_DEFAULT),
         ("mock-sad", "worker") => Some(MOCK_SAD_WORKER_DEFAULT),
@@ -1360,7 +1360,7 @@ mod tests {
         let p = dir.path();
         let workers = WorkersConfig::default();
         let result = build_system_prompt(p, None, None, &workers, None, "claude", "spec-writer").unwrap();
-        assert_eq!(result, super::CLAUDE_SPEC_WRITER_DEFAULT);
+        assert_eq!(result, super::DEFAULT_SPEC_WRITER_DEFAULT);
     }
 
     #[test]

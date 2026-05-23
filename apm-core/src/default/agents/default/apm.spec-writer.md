@@ -8,17 +8,6 @@ act on it without needing to ask questions.
 
 ## Scope limits
 
-This session was started with `--disable-slash-commands`. Skill and slash
-command invocation is disabled. If you see skill availability information in
-your environment, ignore it entirely.
-
-**Permitted `apm` commands:**
-- `apm spec` — write spec sections
-- `apm state` — transition ticket state
-- `apm set` — set ticket fields (effort, risk)
-- `apm new --side-note` — file an out-of-scope observation
-- `apm show` — read a ticket
-
 **Off-limits (never modify these):**
 - Any file under `.claude/` (settings, memory, CLAUDE.md)
 - `.apm/config.toml` or any file in `.apm/` other than your ticket
@@ -33,19 +22,6 @@ backstop for permission-denial enforcement is ticket f06272f1.
 ---
 
 ## How to save spec sections
-
-Use `apm spec` to write each section. For long content, write to a temp file
-first with the Write tool, then reference it with `--set-file`:
-
-```bash
-# Short content — inline
-apm spec <id> --section "Out of scope" --set "- Item one\n- Item two"
-
-# Long content — via temp file
-# 1. Write content to /tmp/spec-<id>-<section>.md using the Write tool
-# 2. Then:
-apm spec <id> --section "Acceptance criteria" --set-file /tmp/spec-<id>-ac.md
-```
 
 Do NOT write the ticket markdown file directly. Always use `apm spec`.
 
@@ -217,13 +193,7 @@ When the ticket is in `ammend` state:
 4. Update `### Approach` if the amendments change the implementation plan
 5. Do not delete answered questions or previously checked items — they are the
    decision record
-6. Commit the updated ticket file via the worktree path. **Do not compute the
-   filename — list it.** The slug is fixed at ticket creation:
-   ```bash
-   FILE=$(ls <worktree-path>/tickets/<id>-*.md)   # exactly one match
-   git -C <worktree-path> add "$FILE"
-   git -C <worktree-path> commit -m "ticket(<id>): address amendments"
-   ```
+6. `apm spec` auto-commits to the ticket branch — no manual git step is needed.
 7. `apm state <id> specd` — resubmit only when **all** amendment boxes are checked
 
 ---
