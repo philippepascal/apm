@@ -436,7 +436,7 @@ dir = "tickets"
 archive_dir = "archive/tickets"
 
 [worktrees]
-dir = "worktrees"
+dir = ".apm--worktrees"
 agent_dirs = [".claude", ".cursor", ".windsurf"]
 
 [agents]
@@ -1068,12 +1068,8 @@ mod tests {
     fn default_config_has_in_repo_worktrees_dir() {
         let config = default_config("myproj", "desc", "main", &[]);
         assert!(
-            config.contains("dir = \"worktrees\""),
-            "default config should use in-repo worktrees dir: {config}"
-        );
-        assert!(
-            !config.contains("--worktrees"),
-            "default config must not reference the old external layout: {config}"
+            config.contains("dir = \".apm--worktrees\""),
+            "default config should use .apm--worktrees dir: {config}"
         );
     }
 
@@ -1083,7 +1079,7 @@ mod tests {
         git_init(tmp.path());
         setup(tmp.path(), None, None, None).unwrap();
         let contents = std::fs::read_to_string(tmp.path().join(".gitignore")).unwrap();
-        assert!(contents.contains("/worktrees/"), ".gitignore must contain /worktrees/");
+        assert!(contents.contains("/.apm--worktrees/"), ".gitignore must contain /.apm--worktrees/");
         assert!(contents.contains("# apm worktrees"), ".gitignore must contain the apm worktrees comment");
     }
 
@@ -1107,7 +1103,7 @@ mod tests {
         git_init(tmp.path());
         setup(tmp.path(), None, None, None).unwrap();
         assert!(
-            tmp.path().join("worktrees").exists(),
+            tmp.path().join(".apm--worktrees").exists(),
             "worktrees dir should be created inside the repo"
         );
     }

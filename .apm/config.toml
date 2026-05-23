@@ -1,6 +1,8 @@
 [project]
 name = "apm"
 description = "Git-native, agent-first project management tool"
+default_branch = "main"
+collaborators = []
 
 [tickets]
 dir = "tickets"
@@ -29,9 +31,13 @@ enabled = true
 file = "/tmp/apm.log"
 
 [workers]
-  command = "claude"
-  args = ["--print"]
-  model = "sonnet"
+agent = "claude"
+
+[workers.options]
+model = "sonnet"
+
+[worker_profiles.spec_agent]
+role = "spec-writer"
 
 [worker_profiles.phi4]
 agent = "phi4"

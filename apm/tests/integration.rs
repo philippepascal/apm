@@ -1833,7 +1833,7 @@ name = "test"
 dir = "tickets"
 
 [worktrees]
-dir = "worktrees"
+dir = ".apm--worktrees"
 
 [agents]
 max_concurrent = 3
