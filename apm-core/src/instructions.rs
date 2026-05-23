@@ -114,9 +114,7 @@ Ticket file rules:\n\
     from the branch name and is load-bearing for all apm lookups.\n\
   - Find the exact filename with: ls tickets/<id>-*.md\n";
 
-static SHELL_DISCIPLINE_BODY: &str = "Claude Code's permission system matches the start of the command string.\n\
-Compound calls defeat this matching and generate permission prompts. Keep\n\
-each Bash call to a single operation.\n\
+static SHELL_DISCIPLINE_BODY: &str = "Keep each Bash call to a single operation.\n\
 \n\
 Do not chain commands:\n\
 \n\
