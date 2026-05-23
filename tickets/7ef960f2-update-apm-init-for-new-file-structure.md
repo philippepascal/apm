@@ -158,7 +158,7 @@ Run `cargo test --workspace`. All tests must pass.
 
 ### Amendment requests
 
-- [ ] AC item 5 is wrong: it says 'apm init still creates .apm/agents/claude/apm.spec-writer.md (content differs from default, kept per-agent)' — but T4 (34ad9126) deletes the built-in apm-core/src/default/agents/claude/apm.spec-writer.md, so the include_str! that setup() uses to write it will not compile after T4 lands. Change AC item 5 to: 'apm init does NOT create .apm/agents/claude/apm.spec-writer.md'.
+- [x] AC item 5 is wrong: it says 'apm init still creates .apm/agents/claude/apm.spec-writer.md (content differs from default, kept per-agent)' — but T4 (34ad9126) deletes the built-in apm-core/src/default/agents/claude/apm.spec-writer.md, so the include_str! that setup() uses to write it will not compile after T4 lands. Change AC item 5 to: 'apm init does NOT create .apm/agents/claude/apm.spec-writer.md'.
 - [ ] Approach Step 1 only adds new write_default calls; it does not mention removing the existing write_default block for claude/apm.spec-writer.md (init.rs:148-153). Add an explicit step: remove that write_default call and any agents_claude_dir creation that becomes unreferenced, mirroring what T6 does for apm.worker.md.
 
 ### Code review
