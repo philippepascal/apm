@@ -37,7 +37,14 @@ The APM prompt redesign (epic ab6e5db7) splits the monolithic `agents.md` into t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Writing `apm.project.md` and `apm.main-agent.md` during `apm init` — covered by 7ef960f2
+- Adding `@apm.project.md` and `@apm.main-agent.md` includes to CLAUDE.md — covered by 7ef960f2
+- Wiring `apm.project.md` as layer 2 in `build_system_prompt` — covered by d8e2fa0e
+- Rewriting `apm.worker.md` or `apm.spec-writer.md` — covered by 78eeb755 and 34ad9126
+- Removing `agents.md` from init or deleting its built-in — covered by 1fce91bd
+- Migrating this project's own `.apm/agents/` directory — covered by 7c5c491d
+- Creating per-agent claude-specific overrides for either new file
+- Updating config.toml default to add a `project` key — covered by d8e2fa0e and 7ef960f2
 
 ### Approach
 
