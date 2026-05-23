@@ -139,24 +139,11 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
     let agents_default_dir = apm_dir.join("agents/default");
     std::fs::create_dir_all(&agents_default_dir)
         .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_default_dir.display()))?;
-    write_default(&agents_default_dir.join("agents.md"), default_agents_md(), ".apm/agents/default/agents.md", &mut messages)?;
     write_default(&agents_default_dir.join("apm.spec-writer.md"), include_str!("default/agents/default/apm.spec-writer.md"), ".apm/agents/default/apm.spec-writer.md", &mut messages)?;
     write_default(&agents_default_dir.join("apm.worker.md"), include_str!("default/agents/default/apm.worker.md"), ".apm/agents/default/apm.worker.md", &mut messages)?;
     let agents_claude_dir = apm_dir.join("agents/claude");
     std::fs::create_dir_all(&agents_claude_dir)
         .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_claude_dir.display()))?;
-    write_default(
-        &agents_claude_dir.join("apm.spec-writer.md"),
-        include_str!("default/agents/claude/apm.spec-writer.md"),
-        ".apm/agents/claude/apm.spec-writer.md",
-        &mut messages,
-    )?;
-    write_default(
-        &agents_claude_dir.join("apm.worker.md"),
-        include_str!("default/agents/claude/apm.worker.md"),
-        ".apm/agents/claude/apm.worker.md",
-        &mut messages,
-    )?;
     ensure_claude_md(root, ".apm/agents/default/agents.md", &mut messages)?;
     let gitignore = root.join(".gitignore");
     let wt_pattern = crate::config::Config::load(root)
@@ -389,10 +376,6 @@ The `tickets/EPIC.md merge=ours` rule in `.gitattributes` prevents merge
 conflicts when multiple epics are open simultaneously.
 ";
 
-fn default_agents_md() -> &'static str {
-    include_str!("default/agents/default/agents.md")
-}
-
 #[cfg(target_os = "macos")]
 fn default_log_file(name: &str) -> String {
     format!("~/Library/Logs/apm/{name}.log")
@@ -436,7 +419,6 @@ agent_dirs = [".claude", ".cursor", ".windsurf"]
 max_concurrent = 3
 max_workers_per_epic = 1
 max_workers_on_default = 1
-instructions = ".apm/agents/default/agents.md"
 
 [workers]
 agent = "claude"
@@ -658,14 +640,13 @@ mod tests {
         assert!(tmp.path().join(".apm/config.toml").exists());
         assert!(tmp.path().join(".apm/workflow.toml").exists());
         assert!(tmp.path().join(".apm/ticket.toml").exists());
-        assert!(tmp.path().join(".apm/agents/default/agents.md").exists());
+        assert!(!tmp.path().join(".apm/agents/default/agents.md").exists());
         assert!(tmp.path().join(".apm/agents/default/apm.spec-writer.md").exists());
         assert!(tmp.path().join(".apm/agents/default/apm.worker.md").exists());
         assert!(!tmp.path().join(".apm/agents.md").exists());
         assert!(!tmp.path().join(".apm/apm.spec-writer.md").exists());
         assert!(!tmp.path().join(".apm/apm.worker.md").exists());
-        assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
+        assert!(!tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
         assert!(tmp.path().join(".gitignore").exists());
         assert!(tmp.path().join("CLAUDE.md").exists());
     }

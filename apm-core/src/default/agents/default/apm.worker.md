@@ -3,8 +3,7 @@
 These instructions apply when you pick up a `ready` ticket via `apm start` or
 resume an `in_progress` ticket.
 
-Read `.apm/agents/default/agents.md` for startup, identity, worktree setup,
-and shell discipline. This file covers the implementation phase only.
+Shell discipline, session identity, and startup sequence are covered by `apm instructions` — this file covers the implementation phase only.
 
 ---
 
@@ -93,6 +92,44 @@ Then immediately resume the current ticket.
 
 ---
 
+## Ticket file discipline
+
+### Never hand-edit the History table
+
+The `## History` section is maintained automatically — every `apm state`
+invocation appends a row with the correct timestamp and actor. Do not:
+
+- Write the table directly (filesystem Write, `git commit` of a modified
+  history block, etc.).
+- Compose your own row to "fix" a missing actor or timestamp.
+- Re-format the existing table.
+
+Calling `apm state <id> <new-state>` is the only correct way to record a
+transition. Hand-written rows mis-record the actor (the worker process has
+no way to know its own canonical name from outside `apm`) and break the
+guarantee that history reflects what apm did.
+
+### Filename is fixed — never rename the ticket file
+
+The ticket's filename is derived from the branch name at creation and is
+load-bearing: `apm list`, `apm show`, and every other apm command look up the
+file using a path computed from the branch suffix. Renaming the file makes the
+ticket invisible to apm even though the branch and content are intact.
+
+**Rules:**
+- The file path is `tickets/<branch-suffix>.md`, where `<branch-suffix>` is the
+  branch name with the leading `ticket/` stripped — e.g. branch
+  `ticket/abc12345-fix-login` → file `tickets/abc12345-fix-login.md`.
+- Find the exact filename with `ls tickets/<id>-*.md` (there is exactly one).
+- Do **not** compute your own slug from the title. Do **not** `git mv`,
+  `mv`, or Write the spec under a different name — even if the existing slug
+  looks misspelled, abbreviated, or different from what your slugifier would
+  produce. Symptom of breaking this rule: the ticket disappears from `apm list`.
+- `apm spec` preserves the filename automatically — using it (as instructed
+  above) is the safe path.
+
+---
+
 ## Blocked state
 
 If you hit a missing decision or ambiguity mid-implementation:
@@ -127,58 +164,6 @@ The supervisor will see the ticket in the queue and resolve the blocker.
 This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
 which includes `### Open questions`. Projects with customised schemas that omit this
 section are out of scope.
-
----
-
-## Shell discipline
-
-Claude Code's permission system matches the **start** of the command string.
-Compound calls defeat this matching and generate permission prompts. Keep each
-Bash call to a single operation.
-
-**Do not chain commands:**
-```bash
-# Wrong
-apm sync && apm list --state ready
-
-# Right — one call per operation
-apm sync
-apm list --state ready
-```
-
-**Do not use `$()` subshells:**
-```bash
-# Wrong
-apm spec 1234 --section Problem --set "$(cat /tmp/problem.md)"
-
-# Right — write content with the Write tool, then reference by file
-apm spec 1234 --section Problem --set-file /tmp/problem.md
-```
-
-**Do not use background jobs (`&`):**
-```bash
-# Wrong
-cargo test & cargo clippy & wait
-
-# Right — sequential calls
-cargo test
-cargo clippy
-```
-
-**Use `git -C` for all git operations in worktrees:**
-```bash
-# Wrong
-cd "$wt" && git add .
-
-# Right
-git -C "$wt" add <files>
-```
-
-**Use `bash -c` for multi-step commands that must share a directory:**
-```bash
-# Right — single bash call, matches Bash(bash *)
-bash -c "cd $wt && cargo test --workspace 2>&1"
-```
 
 ---
 
