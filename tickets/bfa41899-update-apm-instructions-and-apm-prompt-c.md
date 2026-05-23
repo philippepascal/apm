@@ -27,13 +27,13 @@ Two CLI help strings become stale after the T1 (4bee5771) and T3 (d8e2fa0e) rede
 
 ### Acceptance criteria
 
-- [ ] `apm instructions --help` describes the output as APM system knowledge (state machine, ticket format, shell discipline, session identity, command reference) — not as a compact command list
-- [ ] `apm prompt --help` does not describe the 0–4 cascade levels as top-level composition steps
-- [ ] `apm prompt --help` describes three named layers: layer 1 = apm instructions (dynamic), layer 2 = project context file, layer 3 = role-file cascade
-- [ ] The `--explain` sample in `apm prompt --help` shows `layer 1:`, `layer 2:`, `layer 3:`, and `skipped:` labels, matching the T3 `format_provenance` output format
-- [ ] No help text retains the old `prefix:` or `system prompt:` explain labels
-- [ ] The last example line in `apm prompt --help` reads `# show layer provenance` (not `# show cascade provenance`)
-- [ ] Dead-code constants and helpers in `apm/src/cmd/instructions.rs` left orphaned by T1 (`PREAMBLE`, `render`, `render_compact_commands` and their unit tests) are removed if still present after T1 lands
+- [x] `apm instructions --help` describes the output as APM system knowledge (state machine, ticket format, shell discipline, session identity, command reference) — not as a compact command list
+- [x] `apm prompt --help` does not describe the 0–4 cascade levels as top-level composition steps
+- [x] `apm prompt --help` describes three named layers: layer 1 = apm instructions (dynamic), layer 2 = project context file, layer 3 = role-file cascade
+- [x] The `--explain` sample in `apm prompt --help` shows `layer 1:`, `layer 2:`, `layer 3:`, and `skipped:` labels, matching the T3 `format_provenance` output format
+- [x] No help text retains the old `prefix:` or `system prompt:` explain labels
+- [x] The last example line in `apm prompt --help` reads `# show layer provenance` (not `# show cascade provenance`)
+- [x] Dead-code constants and helpers in `apm/src/cmd/instructions.rs` left orphaned by T1 (`PREAMBLE`, `render`, `render_compact_commands` and their unit tests) are removed if still present after T1 lands
 
 ### Out of scope
 
