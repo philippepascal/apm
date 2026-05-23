@@ -1,7 +1,7 @@
 +++
 id = "02bbcc2f"
 title = "Remove redundant claude/apm.worker.md built-in default"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/02bbcc2f-remove-redundant-claude-apm-worker-md-bu"
 created_at = "2026-05-22T23:22:45.436649Z"
-updated_at = "2026-05-23T02:58:19.936546Z"
+updated_at = "2026-05-23T03:20:25.729986Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["78eeb755"]
@@ -78,3 +78,4 @@ Run `cargo test --workspace` — all tests must pass before marking implemented.
 | 2026-05-23T00:14Z | groomed | in_design | philippepascal |
 | 2026-05-23T00:17Z | in_design | specd | claude-0522-0015-b7f2 |
 | 2026-05-23T02:58Z | specd | ready | philippepascal |
+| 2026-05-23T03:20Z | ready | in_progress | philippepascal |
