@@ -50,9 +50,9 @@ This ticket wires those changes into `init.rs`: `setup()` must write the two new
 
 All changes are in `apm-core/src/init.rs` and `apm/tests/e2e.rs`. By the time this ticket is implemented, T7 has already removed `default_agents_md()` and its `write_default` call for `agents.md`, and T6 has already removed the `claude/apm.worker.md` `write_default` call.
 
-#### Step 1 — setup(): write new files
+#### Step 1 — setup(): write new files and remove spec-writer write_default
 
-After the existing `write_default` calls for `apm.spec-writer.md` and `apm.worker.md` (lines ~143–144), add two new calls using `include_str!` inline — consistent with the existing pattern:
+**Add new write_default calls** — after the existing `write_default` calls for `apm.spec-writer.md` and `apm.worker.md` (lines ~143–144), add two new calls using `include_str!` inline — consistent with the existing pattern:
 
 ```rust
 write_default(
@@ -70,6 +70,8 @@ write_default(
 ```
 
 These files are created by T2 (edb0cf35). Do NOT add constants to `start.rs` — use `include_str!` directly.
+
+**Remove `claude/apm.spec-writer.md` write_default** — T4 (34ad9126) deletes `apm-core/src/default/agents/claude/apm.spec-writer.md`, so the `include_str!` in `setup()` at lines ~148–153 will not compile after T4 lands. Remove that entire `write_default` block. If `agents_claude_dir` is only referenced by this block (verify by inspecting surrounding code), remove its declaration and the directory-creation call that references it too — mirroring what T6 (02bbcc2f) does for `claude/apm.worker.md`.
 
 #### Step 2 — ensure_claude_md(): accept multiple paths
 
@@ -121,6 +123,7 @@ Same cascade reasoning: a project with `instructions = ".apm/agents.md"` gets it
 **`setup_creates_expected_files`** (line ~652):
 - Add: `assert!(tmp.path().join(".apm/agents/default/apm.project.md").exists());`
 - Add: `assert!(tmp.path().join(".apm/agents/default/apm.main-agent.md").exists());`
+- Add: `assert!(!tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());`
 - (T7 already flips the `agents.md` assertion to `!exists`; T6 already flips `claude/apm.worker.md` to `!exists`)
 
 **New test `default_config_has_project_key`**:
