@@ -24,6 +24,7 @@ Two CLI help strings become stale after the T1 (4bee5771) and T3 (d8e2fa0e) rede
 `apm instructions` (line 894 of `apm/src/main.rs` and the `PREAMBLE` constant in `apm/src/cmd/instructions.rs`) currently describes the command as emitting "a compact plain-text guide" that lists commands. After T1, the command calls `apm_core::instructions::generate()` and emits full APM system knowledge across five named sections: state machine, ticket format, shell discipline, session identity, and command reference. The about string and any surviving intro text must reflect this.
 
 `apm prompt` (the `#[command(long_about = "...")]` block in `apm/src/main.rs`, lines 842–879) documents a flat 5-level cascade (levels 0–4) and shows a `--explain` sample with `prefix:` / `system prompt:` labels. After T3, the prompt composes three layers — layer 1 (dynamic apm instructions), layer 2 (project context file), layer 3 (role-file cascade) — and `format_provenance` outputs `layer 1:` / `layer 2:` / `layer 3:` labels. The long_about and its embedded `--explain` example must describe the three-layer model and match the T3 output format.
+Dependency note: the exact label format used in format_provenance output (e.g. 'layer 1:', 'layer 2:') is decided by T3 (d8e2fa0e), not by this ticket. This ticket's job is to update the help text and --explain example to match whatever T3 implements. Read T3's implementation to determine the actual label strings before writing the updated help text.
 
 ### Acceptance criteria
 
