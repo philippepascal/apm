@@ -19,7 +19,17 @@ depends_on = ["4bee5771"]
 
 ### Problem
 
-apm.worker.md built-in default (apm-core/src/default/agents/default/apm.worker.md) currently contains shell discipline verbatim — this will move to apm instructions (see T1). It also contains role-detection language that is no longer needed. Remove both. Add History/Filename preservation rules that currently exist only in apm.spec-writer.md (workers also edit ticket files and need these rules). Net result: shorter, cleaner role file that only describes worker/implementer behavior. Do NOT touch the claude/ override in this ticket — that is T6.
+`apm-core/src/default/agents/default/apm.worker.md` currently contains two categories of content that become redundant once T1 (4bee5771) lands:
+
+1. **`## Shell discipline` (lines 134–183):** a verbatim copy of the agents.md shell-discipline block. After T1, `apm instructions` emits this section dynamically; keeping it in the role file would duplicate it.
+2. **Preamble back-reference to `agents.md`:** line 6 says "Read `.apm/agents/default/agents.md` for startup, identity, worktree setup, and shell discipline." `agents.md` is being deleted in T7 (1fce91bd); after that deletion this reference is dead.
+
+The file also lacks two rules that workers need when committing ticket files as part of the `implemented` or `blocked` flows:
+
+- **Never hand-edit the `## History` table** — workers must use `apm state`, not write the table directly.
+- **Filename is fixed** — renaming the ticket file breaks `apm list` / `apm show`.
+
+Both rules exist in `apm.spec-writer.md` but are absent from `apm.worker.md`. Workers write spec content when blocking (open questions) and commit ticket files; without these guards they can corrupt the ticket in the same ways spec-writers can.
 
 ### Acceptance criteria
 
