@@ -34,7 +34,7 @@ The claude-agent override (`apm-core/src/default/agents/claude/apm.spec-writer.m
 - [x] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain the phrase "disable-slash-commands"
 - [x] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain a "Permitted `apm` commands" section
 - [x] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain the Write-tool / `--set-file` code block (the `# Short content — inline` / `# Long content — via temp file` examples)
-- [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain any `$(` subshell patterns
+- [x] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain any `$(` subshell patterns
 - [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` retains the "Never hand-edit the History table" section
 - [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` retains the "Filename is fixed — never rename the ticket file" section
 - [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` does not exist on disk
