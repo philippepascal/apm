@@ -29,7 +29,7 @@ This ticket wires those changes into `init.rs`: `setup()` must write the two new
 - [ ] `apm init` creates `.apm/agents/default/apm.main-agent.md` using the built-in default from T2 (edb0cf35)
 - [ ] `apm init` does not create `.apm/agents/default/agents.md`
 - [ ] `apm init` does not create `.apm/agents/claude/apm.worker.md`
-- [ ] `apm init` still creates `.apm/agents/claude/apm.spec-writer.md` (content differs from default, kept per-agent)
+- [ ] `apm init` does NOT create `.apm/agents/claude/apm.spec-writer.md`
 - [ ] A freshly initialized CLAUDE.md contains `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md` and does not contain `@.apm/agents/default/agents.md`
 - [ ] The generated `config.toml` contains `project = ".apm/agents/default/apm.project.md"` in `[agents]` and does not contain `instructions = ".apm/agents/default/agents.md"`
 - [ ] Running `apm init` on a project whose CLAUDE.md contains `@.apm/agents/default/agents.md` replaces that line with both new `@` imports
