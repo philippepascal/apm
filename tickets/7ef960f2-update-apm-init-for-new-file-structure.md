@@ -38,7 +38,13 @@ This ticket wires those changes into `init.rs`: `setup()` must write the two new
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Creating the content of `apm.project.md` or `apm.main-agent.md` built-in defaults — covered by edb0cf35
+- Deleting `apm-core/src/default/agents/default/agents.md` from the repository — covered by 1fce91bd
+- Removing `CLAUDE_WORKER_DEFAULT` constant and its `resolve_builtin_instructions` arm — covered by 02bbcc2f
+- Adding `project: Option<PathBuf>` to `AgentsConfig` or adding `effective_project()` — covered by d8e2fa0e
+- Updating `apm instructions` or `apm prompt` CLI help text — covered by bfa41899
+- Migrating this project's own `.apm/agents/` directory and CLAUDE.md — covered by 7c5c491d
+- Updating `migrate_flat_agent_files` for the old pre-`agents/default/` flat paths (`.apm/agents.md` → `.apm/agents/default/agents.md`) — that logic already exists; this ticket only extends it to handle the next migration step
 
 ### Approach
 
