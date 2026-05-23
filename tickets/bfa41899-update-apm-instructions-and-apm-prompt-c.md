@@ -37,7 +37,12 @@ Two CLI help strings become stale after the T1 (4bee5771) and T3 (d8e2fa0e) rede
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating `format_provenance` output format or `PromptProvenance` struct — covered by T3 (d8e2fa0e)
+- Changing `LEVEL_LABELS` in `apm-core/src/start.rs` (`per-agent file`, `transition.instructions`, etc.) — these remain accurate as sub-level labels within layer 3
+- Generating the content of the five sections emitted by `apm instructions` — covered by T1 (4bee5771)
+- Adding `--role` flag to `apm instructions` — covered by T1
+- Updating test assertions in `apm-core/src/prompt.rs` (`explain_prefix_shown`) to check `layer 2:` — covered by T3 step 9
+- Any behaviour change; this ticket is text-only
 
 ### Approach
 
