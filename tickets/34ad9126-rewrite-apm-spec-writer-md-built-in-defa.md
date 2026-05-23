@@ -42,7 +42,7 @@ The claude-agent override (`apm-core/src/default/agents/claude/apm.spec-writer.m
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Rewriting apm.worker.md (78eeb755)\n- Deleting agents.md (1fce91bd)\n- Deleting the claude/apm.worker.md override (02bbcc2f)\n- Migrating the project's own .apm/agents/ (7c5c491d)\n- Changing what T1 emits in its shell discipline section
 
 ### Approach
 
