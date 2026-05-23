@@ -50,7 +50,84 @@ The desired end state: `agents.md` deleted; two new files (`apm.project.md`, `ap
 
 ### Approach
 
-How the implementation will work.
+All changes are file operations inside the worktree. There are no Rust source changes and no `cargo test` run. Work in this order:
+
+**1. Create `.apm/agents/default/apm.project.md`**
+
+This is the project-context layer — it replaces the `## Repo structure` placeholder in the old `agents.md`. Copy `apm-core/src/default/agents/default/apm.project.md` (created by edb0cf35) as the starting point, then replace its placeholder body with real APM project content:
+
+- **What APM is:** a Git-native, agent-first project management tool; each ticket lives on its own `ticket/<id>-<slug>` branch as a Markdown file with TOML frontmatter.
+- **Rust workspace crates:**
+  - `apm-core` — core library: ticket parsing, state machine, `build_system_prompt`, `apm init` scaffolding, instructions generation
+  - `apm` — CLI binary; depends on `apm-core`; subcommands live in `apm/src/cmd/`
+  - `apm-server` — web UI; depends on `apm-core`
+- **State machine:** transitions defined in `apm.toml` under `[[workflow.states]]`; the `apm state` command enforces valid transitions and auto-commits the History table row
+- **Key conventions:** unit tests inline in `apm-core/src/`, integration tests in `apm/tests/integration.rs` using temp git repos; `cargo test --workspace` is the required test command
+
+**2. Create `.apm/agents/default/apm.main-agent.md`**
+
+Copy `apm-core/src/default/agents/default/apm.main-agent.md` (created by edb0cf35) verbatim. No project-specific additions are needed — the project-specific main-agent rules live in CLAUDE.md directly.
+
+**3. Update `.apm/agents/default/apm.spec-writer.md`**
+
+Apply the removals specified in 34ad9126 to the current 273-line project file:
+
+- Remove the two-sentence runtime notice at the top of `## Scope limits` (lines 11–13: "This session was started…" and "If you see skill availability information…")
+- Remove the **Permitted `apm` commands** bullet list (five items, lines 15–20)
+- Remove the opening prose and code block of `## How to save spec sections` (lines 36–48: the `# Short content` / `# Long content` block). Keep only the single line "Do NOT write the ticket markdown file directly. Always use `apm spec`." Keep the `### Never hand-edit the History table` and `### Filename is fixed` subsections.
+- Fix amendment step 6: delete the `FILE=$(ls ...)` / `git -C` / `git commit` block (lines 220–225). Replace with a note: "`apm spec` calls auto-commit to the ticket branch — no manual git step is needed."
+
+Do not touch any other section.
+
+**4. Update `.apm/agents/default/apm.worker.md`**
+
+Apply the changes specified in 78eeb755 to the current 205-line project file:
+
+- Replace the second paragraph (lines 5–8: "Read `.apm/agents/default/agents.md` for startup…") with: "Shell discipline, session identity, and startup sequence are covered by `apm instructions` — this file covers the implementation phase only."
+- Delete the `## Shell discipline` section (lines 133–181) in its entirety, including its heading.
+- Add a `## Ticket file discipline` section immediately after `## Side tickets`, copying the two subsections verbatim from the updated `apm.spec-writer.md`: `### Never hand-edit the History table` and `### Filename is fixed — never rename the ticket file`.
+
+**5. Delete stale claude/ overrides**
+
+Delete both files:
+- `.apm/agents/claude/apm.worker.md` — identical to the old default; stale after step 4
+- `.apm/agents/claude/apm.spec-writer.md` — older version missing History/Filename sections; stale after step 3
+
+After deletion, `build_system_prompt` for claude agents falls through to the updated defaults.
+
+**6. Update `CLAUDE.md`**
+
+Replace the line `@.apm/agents/default/agents.md` with two lines:
+```
+@.apm/agents/default/apm.project.md
+@.apm/agents/default/apm.main-agent.md
+```
+
+Keep `@.apm/agents/default/style.md` and all other content unchanged.
+
+**7. Update `.apm/config.toml`**
+
+In the `[agents]` section, rename:
+```toml
+instructions = ".apm/agents/default/agents.md"
+```
+to:
+```toml
+project = ".apm/agents/default/apm.project.md"
+```
+
+**8. Delete `.apm/agents/default/agents.md`**
+
+Remove the file from the repo with `git -C <wt> rm .apm/agents/default/agents.md`.
+
+**9. Verify**
+
+Run `apm prompt --agent claude --role worker` and confirm the assembled prompt contains:
+- Project context from `apm.project.md`
+- Worker instructions from the updated `apm.worker.md` (no shell discipline section, has ticket file discipline)
+- No references to `agents.md`
+
+Commit all changes to the ticket branch in the worktree.
 
 ### Open questions
 
