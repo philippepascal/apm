@@ -151,12 +151,6 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         ".apm/agents/claude/apm.spec-writer.md",
         &mut messages,
     )?;
-    write_default(
-        &agents_claude_dir.join("apm.worker.md"),
-        include_str!("default/agents/claude/apm.worker.md"),
-        ".apm/agents/claude/apm.worker.md",
-        &mut messages,
-    )?;
     ensure_claude_md(root, ".apm/agents/default/agents.md", &mut messages)?;
     let gitignore = root.join(".gitignore");
     let wt_pattern = crate::config::Config::load(root)
@@ -665,7 +659,6 @@ mod tests {
         assert!(!tmp.path().join(".apm/apm.spec-writer.md").exists());
         assert!(!tmp.path().join(".apm/apm.worker.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
         assert!(tmp.path().join(".gitignore").exists());
         assert!(tmp.path().join("CLAUDE.md").exists());
     }
