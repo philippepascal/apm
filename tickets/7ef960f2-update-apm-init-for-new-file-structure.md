@@ -155,6 +155,7 @@ Run `cargo test --workspace`. All tests must pass.
 
 ### Amendment requests
 
+- [ ] AC item 5 is wrong: it says 'apm init still creates .apm/agents/claude/apm.spec-writer.md (content differs from default, kept per-agent)' — but T4 (34ad9126) deletes the built-in apm-core/src/default/agents/claude/apm.spec-writer.md, so the include_str! that setup() uses to write it will not compile after T4 lands. Change AC item 5 to: 'apm init does NOT create .apm/agents/claude/apm.spec-writer.md'.
 
 ### Code review
 
