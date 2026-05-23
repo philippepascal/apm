@@ -38,7 +38,7 @@ The claude-agent override (`apm-core/src/default/agents/claude/apm.spec-writer.m
 - [x] `apm-core/src/default/agents/default/apm.spec-writer.md` retains the "Never hand-edit the History table" section
 - [x] `apm-core/src/default/agents/default/apm.spec-writer.md` retains the "Filename is fixed — never rename the ticket file" section
 - [x] `apm-core/src/default/agents/claude/apm.spec-writer.md` does not exist on disk
-- [ ] `cargo test --workspace` passes with no new failures
+- [x] `cargo test --workspace` passes with no new failures
 
 ### Out of scope
 
