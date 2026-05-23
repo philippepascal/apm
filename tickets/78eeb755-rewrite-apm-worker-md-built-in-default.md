@@ -1,7 +1,7 @@
 +++
 id = "78eeb755"
 title = "Rewrite apm.worker.md built-in default"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/78eeb755-rewrite-apm-worker-md-built-in-default"
 created_at = "2026-05-22T23:22:24.735576Z"
-updated_at = "2026-05-23T00:09:10.323734Z"
+updated_at = "2026-05-23T00:09:15.644269Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771"]
@@ -80,3 +80,4 @@ One file changes: `apm-core/src/default/agents/default/apm.worker.md`. No Rust s
 | 2026-05-22T23:22Z | — | new | philippepascal |
 | 2026-05-22T23:50Z | new | groomed | philippepascal |
 | 2026-05-23T00:06Z | groomed | in_design | philippepascal |
+| 2026-05-23T00:09Z | in_design | specd | claude-0522-0010-b7f2 |
