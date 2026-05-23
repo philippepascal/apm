@@ -37,7 +37,7 @@ Both rules exist in `apm.spec-writer.md` but are absent from `apm.worker.md`. Wo
 - [x] The preamble no longer contains a reference to `agents.md`
 - [x] A "Never hand-edit the History table" rule is present with the same normative content as in `apm.spec-writer.md`
 - [x] A "Filename is fixed — never rename the ticket file" rule is present with the same normative content as in `apm.spec-writer.md`
-- [ ] All sections present in the original that are not being removed are unchanged in meaning
+- [x] All sections present in the original that are not being removed are unchanged in meaning
 - [ ] `cargo test --workspace` passes
 
 ### Out of scope
