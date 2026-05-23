@@ -19,7 +19,11 @@ depends_on = ["4bee5771", "edb0cf35"]
 
 ### Problem
 
-build_system_prompt (apm-core/src/start.rs:901) currently works as: prepend agents.instructions file → pick one cascade winner (per-agent file | transition | profile | workers | built-in). The new model composes three layers: (1) apm instructions output (from T1's library function in apm-core/src/instructions.rs), (2) apm.project.md content (from a configurable path, default .apm/agents/default/apm.project.md), (3) role file (the existing cascade, unchanged). The config.toml [agents] section gets a new key: project = ".apm/agents/default/apm.project.md" replacing instructions = ".apm/agents/default/agents.md". The instructions key is deprecated — if present, emit a deprecation warning and ignore it (or treat as project for one release). update build_system_prompt, build_system_prompt_body, and explain_system_prompt accordingly. The explain output (--explain flag) must show all three layer sources: apm instructions (dynamic), project file path, role file path.
+`build_system_prompt` (apm-core/src/start.rs) currently works as: prepend the file at `config.agents.instructions` → then pick a single cascade winner from the role-file cascade (per-agent file | transition | profile | workers | built-in). The prefix is optional and always the same content regardless of role.
+
+The new model replaces this with three explicitly named, ordered layers: (1) `apm_core::instructions::generate()` output (from T1/4bee5771, scoped to the role), (2) the project context file at `config.agents.project` (default path `.apm/agents/default/apm.project.md`), (3) the existing role-file cascade unchanged. All three are joined with a blank line between each present layer. The `[agents]` config key changes from `instructions` to `project`; the old key is deprecated — if present without `project`, use it as layer 2 and emit a deprecation warning.
+
+`explain_system_prompt` and `format_provenance` must be updated so `apm prompt --explain` shows the source for all three layers rather than a separate "prefix" line plus a single "system prompt" line.
 
 ### Acceptance criteria
 
