@@ -48,7 +48,107 @@ This ticket wires those changes into `init.rs`: `setup()` must write the two new
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/src/init.rs` and `apm/tests/e2e.rs`. By the time this ticket is implemented, T7 has already removed `default_agents_md()` and its `write_default` call for `agents.md`, and T6 has already removed the `claude/apm.worker.md` `write_default` call.
+
+#### Step 1 — setup(): write new files
+
+After the existing `write_default` calls for `apm.spec-writer.md` and `apm.worker.md` (lines ~143–144), add two new calls using `include_str!` inline — consistent with the existing pattern:
+
+```rust
+write_default(
+    &agents_default_dir.join("apm.project.md"),
+    include_str!("default/agents/default/apm.project.md"),
+    ".apm/agents/default/apm.project.md",
+    &mut messages,
+)?;
+write_default(
+    &agents_default_dir.join("apm.main-agent.md"),
+    include_str!("default/agents/default/apm.main-agent.md"),
+    ".apm/agents/default/apm.main-agent.md",
+    &mut messages,
+)?;
+```
+
+These files are created by T2 (edb0cf35). Do NOT add constants to `start.rs` — use `include_str!` directly.
+
+#### Step 2 — ensure_claude_md(): accept multiple paths
+
+Change the signature from `(root, agents_path: &str, ...)` to `(root, agents_paths: &[&str], ...)`. Rewrite the body:
+
+1. Collect the paths that are not already in the file (check `contents.contains(&format!("@{p}"))` for each).
+2. If none are absent, return `Ok(())`.
+3. If some are absent, prepend them (in slice order) to the file content — one per line followed by `\n` — then `\n` separator before existing content if the file existed and was non-empty.
+4. If the file did not exist, write only the absent paths.
+5. Push a message: `"Updated CLAUDE.md (added ... import)"` or `"Created CLAUDE.md."`.
+
+Update the call site in `setup()` (line ~160):
+```rust
+ensure_claude_md(root, &[
+    ".apm/agents/default/apm.project.md",
+    ".apm/agents/default/apm.main-agent.md",
+], &mut messages)?;
+```
+
+#### Step 3 — default_config(): rename key
+
+In the `[agents]` section of the format string, replace:
+```toml
+instructions = ".apm/agents/default/agents.md"
+```
+with:
+```toml
+project = ".apm/agents/default/apm.project.md"
+```
+
+#### Step 4 — migrate_flat_agent_files(): extend both rewrite tables
+
+**CLAUDE.md (`path_rewrites`)** — add one entry after the existing entries:
+```rust
+("@.apm/agents/default/agents.md",
+ "@.apm/agents/default/apm.project.md\n@.apm/agents/default/apm.main-agent.md"),
+```
+Place this AFTER `("@.apm/agents.md", "@.apm/agents/default/agents.md")` so the cascade works: a project with `@.apm/agents.md` gets migrated to `@.apm/agents/default/agents.md` by the first rule, and then immediately migrated again to the two new `@` imports by the new rule — both in a single call.
+
+**config.toml / workflow.toml (`instructions_rewrites`)** — add one entry after the existing entries:
+```rust
+("instructions = \".apm/agents/default/agents.md\"",
+ "project = \".apm/agents/default/apm.project.md\""),
+```
+Same cascade reasoning: a project with `instructions = ".apm/agents.md"` gets its path updated by the existing rule, then the key is renamed by this new rule, all in one pass.
+
+#### Step 5 — Update unit tests in init.rs
+
+**`setup_creates_expected_files`** (line ~652):
+- Add: `assert!(tmp.path().join(".apm/agents/default/apm.project.md").exists());`
+- Add: `assert!(tmp.path().join(".apm/agents/default/apm.main-agent.md").exists());`
+- (T7 already flips the `agents.md` assertion to `!exists`; T6 already flips `claude/apm.worker.md` to `!exists`)
+
+**New test `default_config_has_project_key`**:
+```rust
+let config = default_config("proj", "desc", "main", &[]);
+assert!(config.contains("project = \".apm/agents/default/apm.project.md\""));
+assert!(!config.contains("instructions = "));
+```
+
+**New test `setup_claude_md_contains_new_imports`**: call `setup()`, read CLAUDE.md, assert it contains both `@.apm/agents/default/apm.project.md` and `@.apm/agents/default/apm.main-agent.md`, and does not contain `@.apm/agents/default/agents.md`.
+
+**`setup_migrates_flat_agent_files_to_agents_default`** (line ~939):
+- Add: assert CLAUDE.md contains `@.apm/agents/default/apm.project.md`
+- Add: assert CLAUDE.md contains `@.apm/agents/default/apm.main-agent.md`
+- Add: assert CLAUDE.md does not contain `@.apm/agents/default/agents.md` (the cascade fully migrated it)
+- Keep: assert `.apm/agents/default/agents.md` exists (the old file was physically moved there; moving is separate from the CLAUDE.md rewrite)
+
+#### Step 6 — Update e2e assertions in apm/tests/e2e.rs
+
+Around line 313:
+- Change `agents.md` existence assertion to assert it does NOT exist. (Note: T7 already does this; verify T7's diff covers this line before touching it.)
+
+Around line 319:
+- Change `claude.contains("@.apm/agents/default/agents.md")` to assert it contains both `"@.apm/agents/default/apm.project.md"` and `"@.apm/agents/default/apm.main-agent.md"`.
+
+#### Step 7 — Verify
+
+Run `cargo test --workspace`. All tests must pass.
 
 ### Open questions
 
