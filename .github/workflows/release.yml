@@ -48,6 +48,10 @@ jobs:
             musl: true
 
     steps:
+      - name: Clear macOS git credential helper
+        if: runner.os == 'macOS'
+        run: git config --global credential.helper ''
+
       - uses: actions/checkout@v4
 
       - name: Cache cargo registry
