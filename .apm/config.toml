@@ -18,7 +18,7 @@ repo = "philippepascal/apm"
 token_env = "APM_GITHUB_TOKEN"
 
 [agents]
-project               = ".apm/agents/default/apm.project.md"
+project               = ".apm/project.md"
 max_concurrent        = 4
 max_workers_per_epic  = 1
 max_workers_on_default = 1

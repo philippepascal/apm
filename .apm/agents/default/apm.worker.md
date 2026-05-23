@@ -49,35 +49,20 @@ your environment, ignore it entirely.
 
 ---
 
-## Tests
+## Tests and finishing
 
 - Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
-- Integration tests in `apm/tests/integration.rs` — use temp git repos, no
-  fixture files needed
-- Run `cargo test --workspace` — all tests must pass before calling `apm state <id> implemented`
-
----
-
-## Finishing implementation
-
-Run `cargo test --workspace` — all tests must pass.
-
-Then: `apm state <id> implemented`
-
-`apm state` pushes the branch and opens the PR automatically. Do not open a PR manually.
+- Integration tests in `apm/tests/integration.rs` — temp git repos, no fixtures
+- Run `cargo test --workspace` — all tests must pass
+- Then: `apm state <id> implemented` — pushes branch and opens PR automatically
 
 ---
 
 ## Side tickets
 
-When you notice an out-of-scope issue during implementation, capture it without
-interrupting your current work:
-
-```bash
-apm new --side-note "Brief title" --context "What you observed and why it matters"
-```
-
-Then immediately resume the current ticket.
+Capture out-of-scope observations without interrupting your work:
+`apm new --side-note "Brief title" --context "What you observed and why it matters"`
+Then resume.
 
 ---
 
@@ -89,48 +74,19 @@ If you hit a missing decision or ambiguity mid-implementation:
 2. Commit the update to the worktree branch
 3. `apm state <id> blocked`
 
-Do not use `apm state <id> ready` — that transition does not exist from
-`in_progress`.
-
 ---
 
 ## Capability limitations
 
-If you are blocked by a tool limitation, permission denial, or any other
-capability constraint — not a missing decision — do not attempt workarounds.
-Specifically, do not:
+If blocked by a tool limitation or permission denial — not a missing decision — exit cleanly:
 
-- Invoke skills (e.g. `fewer-permission-prompts`, `update-config`)
-- Edit `.claude/settings.json` or any file under `.apm/`
-- Attempt changes outside the ticket worktree
-
-Exit cleanly in two steps:
-
-1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation and what you needed>"`
+1. `apm spec <id> --section "Open questions" --append "- Blocked: <describe the limitation>"`
 2. `apm state <id> blocked`
 
-`apm spec --append` auto-commits to the ticket branch — no manual git commit needed.
-The supervisor will see the ticket in the queue and resolve the blocker.
-
-This instruction assumes the ticket uses the default `[[ticket.sections]]` schema,
-which includes `### Open questions`. Projects with customised schemas that omit this
-section are out of scope.
+Do not invoke skills, edit files outside your worktree, or attempt workarounds.
 
 ---
 
 ## Path discipline
 
-Your working directory is the ticket worktree. Never read or write files outside
-it. Always use absolute paths rooted at your worktree. The worktree path appears
-in `apm show <id>` under Worktree — note it at the start of your run.
-
-```
-# Correct — absolute path inside your worktree
-/Users/you/repos/myproject/.apm--worktrees/ticket-abc123-my-feature/src/main.rs
-
-# Wrong — path in the main repo root (leaks edits outside your worktree)
-/Users/you/repos/myproject/src/main.rs
-```
-
-If a tool call resolves to a path outside your worktree, stop immediately, file
-a side-note ticket, and set yourself to blocked.
+Always use absolute paths rooted at your worktree (shown in `apm show <id>` under Worktree). Never read or write files outside it.

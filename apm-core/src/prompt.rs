@@ -752,8 +752,8 @@ Test.
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
         // Configure a project file path and create the file
-        let project_path = ".apm/agents/default/apm.project.md";
-        std::fs::create_dir_all(root.join(".apm/agents/default")).unwrap();
+        let project_path = ".apm/project.md";
+        std::fs::create_dir_all(root.join(".apm")).unwrap();
         std::fs::write(root.join(project_path), "Project context.").unwrap();
         make_explain_project(root, "cccc0003", "claude", false, Some(project_path));
 

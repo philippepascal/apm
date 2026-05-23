@@ -851,7 +851,7 @@ The prompt is composed from three layers, concatenated in order:\n\
     and command reference.\n\
 \n\
   Layer 2 — Project context\n\
-    The file at [agents].project in config.toml (typically apm.project.md).\n\
+    The file at [agents].project in config.toml (typically .apm/project.md).\n\
     Omitted if the key is not set or the path is empty.\n\
 \n\
   Layer 3 — Role instructions (cascade, highest priority wins)\n\
@@ -873,7 +873,7 @@ they do not affect the ticket or any config.\n\
 --explain prints a compact provenance table instead of the prompt text:\n\
 \n\
   layer 1:        apm instructions (dynamic, role: worker)\n\
-  layer 2:        .apm/agents/default/apm.project.md\n\
+  layer 2:        .apm/project.md\n\
   layer 3:        .apm/agents/claude/apm.worker.md  (level 0 — per-agent file)\n\
   skipped:        level 1 (transition.instructions — not reached)\n\
                   level 2 (profile.instructions — not reached)\n\
