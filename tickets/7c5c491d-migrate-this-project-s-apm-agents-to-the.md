@@ -27,7 +27,7 @@ The desired end state: `agents.md` deleted; two new files (`apm.project.md`, `ap
 
 ### Acceptance criteria
 
-- [ ] `.apm/agents/default/agents.md` does not exist in the repo
+- [x] `.apm/agents/default/agents.md` does not exist in the repo
 - [ ] `.apm/agents/default/apm.project.md` exists and contains APM-specific project context (crate structure, module responsibilities)
 - [ ] `.apm/agents/default/apm.main-agent.md` exists and matches the built-in default created by edb0cf35
 - [ ] `.apm/agents/default/apm.spec-writer.md` matches the rewritten built-in from 34ad9126 (no runtime notice, no permitted-commands list, no shell-discipline block in § How to save spec sections, amendment step 6 references auto-commit not a manual git block)
