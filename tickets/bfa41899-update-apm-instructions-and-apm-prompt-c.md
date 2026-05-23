@@ -118,7 +118,7 @@ Examples:
   apm prompt ba121f45 --explain                    # show layer provenance
 ```
 
-The `--explain` sample is derived from T3 step 7's format_provenance spec; if T3's actual output format differs in spacing or field order, match the actual runtime output.
+**`--explain` sample verification:** The label strings (`layer 1:`, `layer 2:`, `layer 3:`, `skipped:`) and field order were verified against T3 spec step 7. As of this revision T3 (d8e2fa0e) is in ammend state — its branch still uses the old `prefix:` / `system prompt:` labels — so the sample is based on T3's spec rather than a live implementation. Once T3 lands, confirm column spacing against actual runtime output and adjust the long_about if needed.
 
 #### 4. Test updates
 
