@@ -129,6 +129,7 @@ No new tests. The only test change is the dead-code removal in step 2 above. The
 
 ### Amendment requests
 
+- [ ] The exact label strings in the --explain sample ('layer 1:', 'layer 2:', 'layer 3:', 'skipped:') are determined by T3's implementation of format_provenance, not by this ticket. Before finalizing the long_about text, read T3's actual implementation to confirm label strings, spacing, and field order — then update the embedded sample to match exactly. Do not assume the Approach's example is final.
 
 ### Code review
 
