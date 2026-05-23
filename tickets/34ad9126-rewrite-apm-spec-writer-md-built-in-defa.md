@@ -1,7 +1,7 @@
 +++
 id = "34ad9126"
 title = "Rewrite apm.spec-writer.md built-in default"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/34ad9126-rewrite-apm-spec-writer-md-built-in-defa"
 created_at = "2026-05-22T23:22:22.098663Z"
-updated_at = "2026-05-23T03:48:04.767374Z"
+updated_at = "2026-05-23T07:28:33.736464Z"
 epic = "ab6e5db7"
 target_branch = "epic/ab6e5db7-prompt-management-redesign"
 depends_on = ["4bee5771"]
@@ -88,3 +88,4 @@ Delete the file. No content is worth preserving — it predates the History/File
 | 2026-05-23T02:58Z | specd | ready | philippepascal |
 | 2026-05-23T03:38Z | ready | in_progress | philippepascal |
 | 2026-05-23T03:48Z | in_progress | implemented | claude-0523-0338-77a0 |
+| 2026-05-23T07:28Z | implemented | closed | philippepascal(apm-sync) |
