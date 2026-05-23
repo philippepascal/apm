@@ -31,7 +31,7 @@ The claude-agent override (`apm-core/src/default/agents/claude/apm.spec-writer.m
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain the phrase "disable-slash-commands"
+- [x] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain the phrase "disable-slash-commands"
 - [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain a "Permitted `apm` commands" section
 - [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain the Write-tool / `--set-file` code block (the `# Short content — inline` / `# Long content — via temp file` examples)
 - [ ] `apm-core/src/default/agents/default/apm.spec-writer.md` does not contain any `$(` subshell patterns
