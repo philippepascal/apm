@@ -24,6 +24,24 @@ static DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 const DEPRECATION_MSG: &str = "apm: deprecated: `[workers] command`, `args`, and `model` fields are deprecated — migrate to `agent` and `[workers.options]`";
 
+static AGENTS_INSTRUCTIONS_DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[cfg(test)]
+static AGENTS_INSTRUCTIONS_DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+const AGENTS_INSTRUCTIONS_DEPRECATION_MSG: &str = "apm: deprecated: [agents].instructions renamed to [agents].project — update config.toml";
+
+pub(crate) fn emit_agents_instructions_deprecation_to(out: &mut dyn std::io::Write) {
+    use std::sync::atomic::Ordering;
+    if AGENTS_INSTRUCTIONS_DEPRECATION_WARNED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+        let _ = writeln!(out, "{AGENTS_INSTRUCTIONS_DEPRECATION_MSG}");
+    }
+}
+
+pub(crate) fn emit_agents_instructions_deprecation() {
+    emit_agents_instructions_deprecation_to(&mut std::io::stderr().lock());
+}
+
 /// Delay inserted between `git fetch` and `git merge` in aggressive mode to let
 /// remote-propagation settle and reduce the fetch-race window.
 const POST_FETCH_SETTLE_MS: u64 = 1_000;
@@ -362,7 +380,10 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
-    let worker_system = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.instructions.as_deref(), &params.agent, role)?;
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        emit_agents_instructions_deprecation();
+    }
+    let worker_system = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &params.agent, role)?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(tr_role_prefix, profile, &id));
     let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
@@ -565,7 +586,10 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions2 = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix2 = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
-    let worker_system = build_system_prompt(root, tr_instructions2, profile2, &config.workers, config.agents.instructions.as_deref(), &params.agent, role2)?;
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        emit_agents_instructions_deprecation();
+    }
+    let worker_system = build_system_prompt(root, tr_instructions2, profile2, &config.workers, config.agents.project.as_deref(), &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -769,7 +793,10 @@ pub fn spawn_next_worker(
     let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
-    let worker_system = build_system_prompt(root, tr_instructions_snw, profile2, &config.workers, config.agents.instructions.as_deref(), &params.agent, role2)?;
+    if config.agents.project.is_none() && config.agents.instructions.is_some() {
+        emit_agents_instructions_deprecation();
+    }
+    let worker_system = build_system_prompt(root, tr_instructions_snw, profile2, &config.workers, config.agents.project.as_deref(), &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -883,7 +910,8 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
 }
 
 pub(crate) struct PromptProvenance {
-    pub prefix_path: Option<String>,
+    pub layer1_role: Option<String>,
+    pub layer2_path: Option<String>,
     pub winner: ProvenanceEntry,
     pub skipped: Vec<ProvenanceEntry>,
 }
@@ -907,21 +935,39 @@ pub(crate) fn build_system_prompt(
     transition_instructions: Option<&str>,
     profile: Option<&WorkerProfileConfig>,
     workers: &WorkersConfig,
-    agents_instructions: Option<&Path>,
+    project_file: Option<&Path>,
     agent: &str,
     role: &str,
 ) -> Result<String> {
-    let base = build_system_prompt_body(root, transition_instructions, profile, workers, agent, role)?;
+    // Layer 1: APM system knowledge (always present, scoped to role)
+    let layer1 = crate::instructions::generate(root, Some(role), &[])?;
 
-    // Prepend agents.instructions prefix when configured and non-empty
-    let Some(path) = agents_instructions else { return Ok(base); };
-    if path.as_os_str().is_empty() {
-        return Ok(base);
+    // Layer 2: project context file (absent when not configured or path is empty)
+    let layer2: Option<String> = if let Some(path) = project_file {
+        if path.as_os_str().is_empty() {
+            None
+        } else {
+            let content = std::fs::read_to_string(root.join(path))
+                .map_err(|_| anyhow::anyhow!("agents.project: file not found: {}", path.display()))?;
+            Some(content)
+        }
+    } else {
+        None
+    };
+
+    // Layer 3: role-file cascade (unchanged)
+    let layer3 = build_system_prompt_body(root, transition_instructions, profile, workers, agent, role)?;
+
+    // Compose layers joined by a single blank line
+    let mut result = layer1.trim_end().to_owned();
+    if let Some(ref l2) = layer2 {
+        result.push_str("\n\n");
+        result.push_str(l2.trim_end());
     }
-    let prefix = std::fs::read_to_string(root.join(path))
-        .map_err(|_| anyhow::anyhow!("agents.instructions: file not found: {}", path.display()))?;
-    let prefix = prefix.trim_end();
-    Ok(format!("{prefix}\n\n{base}"))
+    result.push_str("\n\n");
+    result.push_str(layer3.trim_end());
+
+    Ok(result)
 }
 
 fn build_system_prompt_body(
@@ -977,15 +1023,14 @@ pub(crate) fn explain_system_prompt(
     transition_instructions: Option<&str>,
     profile: Option<&WorkerProfileConfig>,
     workers: &WorkersConfig,
-    agents_instructions: Option<&Path>,
+    project_file: Option<&Path>,
     agent: &str,
     role: &str,
 ) -> Result<PromptProvenance> {
-    let prefix_path = match agents_instructions {
-        None => None,
-        Some(path) if path.as_os_str().is_empty() => None,
-        Some(path) => Some(path.display().to_string()),
-    };
+    let layer1_role = Some(role.to_string());
+    let layer2_path = project_file
+        .filter(|p| !p.as_os_str().is_empty())
+        .map(|p| p.display().to_string());
 
     let mut skipped: Vec<ProvenanceEntry> = Vec::new();
 
@@ -997,7 +1042,7 @@ pub(crate) fn explain_system_prompt(
         for i in 1usize..=3 {
             skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
         }
-        return Ok(PromptProvenance { prefix_path, winner, skipped });
+        return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
     }
     skipped.push(ProvenanceEntry {
         level: 0,
@@ -1011,7 +1056,7 @@ pub(crate) fn explain_system_prompt(
         for i in 2usize..=3 {
             skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
         }
-        return Ok(PromptProvenance { prefix_path, winner, skipped });
+        return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
     }
     skipped.push(ProvenanceEntry { level: 1, label: LEVEL_LABELS[1], source: "none set".to_string() });
 
@@ -1020,7 +1065,7 @@ pub(crate) fn explain_system_prompt(
         if let Some(ref instr_path) = p.instructions {
             let winner = ProvenanceEntry { level: 2, label: LEVEL_LABELS[2], source: instr_path.to_string() };
             skipped.push(ProvenanceEntry { level: 3, label: LEVEL_LABELS[3], source: "not reached".to_string() });
-            return Ok(PromptProvenance { prefix_path, winner, skipped });
+            return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
         }
     }
     skipped.push(ProvenanceEntry { level: 2, label: LEVEL_LABELS[2], source: "none set".to_string() });
@@ -1028,7 +1073,7 @@ pub(crate) fn explain_system_prompt(
     // Level 3: workers.instructions
     if let Some(ref instr_path) = workers.instructions {
         let winner = ProvenanceEntry { level: 3, label: LEVEL_LABELS[3], source: instr_path.to_string() };
-        return Ok(PromptProvenance { prefix_path, winner, skipped });
+        return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
     }
     skipped.push(ProvenanceEntry { level: 3, label: LEVEL_LABELS[3], source: "none set".to_string() });
 
@@ -1039,7 +1084,7 @@ pub(crate) fn explain_system_prompt(
             label: LEVEL_LABELS[4],
             source: format!("built-in default ({agent}/{role})"),
         };
-        return Ok(PromptProvenance { prefix_path, winner, skipped });
+        return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
     }
 
     // Level 5: hard error
@@ -1081,7 +1126,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_MSG, DEPRECATION_TEST_LOCK, emit_deprecation_warning_to};
+    use super::{build_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_MSG, DEPRECATION_TEST_LOCK, emit_deprecation_warning_to, AGENTS_INSTRUCTIONS_DEPRECATION_WARNED, AGENTS_INSTRUCTIONS_DEPRECATION_MSG, AGENTS_INSTRUCTIONS_DEPRECATION_TEST_LOCK, emit_agents_instructions_deprecation_to};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -1313,10 +1358,8 @@ mod tests {
         std::fs::write(p.join(".apm/spec.md"), "SPEC WRITER").unwrap();
         let profile = make_profile(Some(".apm/spec.md"), None);
         let workers = WorkersConfig::default();
-        assert_eq!(
-            build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker").unwrap(),
-            "SPEC WRITER"
-        );
+        let result = build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("SPEC WRITER"), "layer 3 content missing: {result}");
     }
 
     #[test]
@@ -1329,10 +1372,8 @@ mod tests {
             instructions: Some(".apm/global.md".to_string()),
             ..WorkersConfig::default()
         };
-        assert_eq!(
-            build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap(),
-            "GLOBAL INSTRUCTIONS"
-        );
+        let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("GLOBAL INSTRUCTIONS"), "layer 3 content missing: {result}");
     }
 
     #[test]
@@ -1342,10 +1383,8 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WORKER").unwrap();
         let workers = WorkersConfig::default();
-        assert_eq!(
-            build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap(),
-            "PER AGENT WORKER"
-        );
+        let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("PER AGENT WORKER"), "layer 3 content missing: {result}");
     }
 
     #[test]
@@ -1354,7 +1393,7 @@ mod tests {
         let p = dir.path();
         let workers = WorkersConfig::default();
         let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
-        assert_eq!(result, super::DEFAULT_WORKER_DEFAULT);
+        assert!(result.contains(super::DEFAULT_WORKER_DEFAULT.trim()), "built-in default not found in output");
     }
 
     #[test]
@@ -1363,7 +1402,7 @@ mod tests {
         let p = dir.path();
         let workers = WorkersConfig::default();
         let result = build_system_prompt(p, None, None, &workers, None, "claude", "spec-writer").unwrap();
-        assert_eq!(result, super::DEFAULT_SPEC_WRITER_DEFAULT);
+        assert!(result.contains(super::DEFAULT_SPEC_WRITER_DEFAULT.trim()), "built-in spec-writer default not found in output");
     }
 
     #[test]
@@ -1398,16 +1437,15 @@ mod tests {
         std::fs::write(p.join(".apm/apm.worker.md"), "LEGACY WORKER CONTENT").unwrap();
         let profile = make_profile(Some(".apm/apm.worker.md"), None);
         let workers = WorkersConfig::default();
-        assert_eq!(
-            build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker").unwrap(),
-            "LEGACY WORKER CONTENT"
-        );
+        let result = build_system_prompt(p, None, Some(&profile), &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("LEGACY WORKER CONTENT"), "layer 3 content missing: {result}");
     }
 
-    // --- agents_instructions prefix ---
+    // --- layer 2 (project file) tests ---
 
     #[test]
     fn agents_instructions_prepended_with_blank_line() {
+        // Layer 2 content appears between Layer 1 and Layer 3
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::write(p.join("prefix.md"), "PREFIX CONTENT\n").unwrap();
@@ -1417,21 +1455,30 @@ mod tests {
             Some(std::path::Path::new("prefix.md")),
             "claude", "worker",
         ).unwrap();
-        let expected = format!("PREFIX CONTENT\n\n{}", super::DEFAULT_WORKER_DEFAULT);
+        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let expected = format!(
+            "{}\n\nPREFIX CONTENT\n\n{}",
+            layer1.trim_end(),
+            super::DEFAULT_WORKER_DEFAULT.trim_end()
+        );
         assert_eq!(result, expected);
     }
 
     #[test]
     fn agents_instructions_none_is_no_op() {
+        // When Layer 2 is absent, output is Layer 1 + blank line + Layer 3
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
-        let without_prefix = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
-        assert_eq!(without_prefix, super::DEFAULT_WORKER_DEFAULT);
+        let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
+        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_WORKER_DEFAULT.trim_end());
+        assert_eq!(result, expected);
     }
 
     #[test]
     fn agents_instructions_empty_path_is_no_op() {
+        // Empty path → Layer 2 absent → output is Layer 1 + blank line + Layer 3
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let workers = WorkersConfig::default();
@@ -1440,7 +1487,9 @@ mod tests {
             Some(std::path::Path::new("")),
             "claude", "worker",
         ).unwrap();
-        assert_eq!(result, super::DEFAULT_WORKER_DEFAULT);
+        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_WORKER_DEFAULT.trim_end());
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -1455,15 +1504,15 @@ mod tests {
         );
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("agents.instructions"), "error should mention agents.instructions: {msg}");
+        assert!(msg.contains("agents.project"), "error should mention agents.project: {msg}");
         assert!(msg.contains("no-such-file.md"), "error should name the file: {msg}");
     }
 
     #[test]
     fn agents_instructions_trailing_whitespace_trimmed() {
+        // File with multiple trailing newlines → exactly one blank line between layers
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        // File ends with multiple newlines
         std::fs::write(p.join("prefix.md"), "PREFIX\n\n\n").unwrap();
         let workers = WorkersConfig::default();
         let result = build_system_prompt(
@@ -1471,8 +1520,66 @@ mod tests {
             Some(std::path::Path::new("prefix.md")),
             "claude", "worker",
         ).unwrap();
-        // Must have exactly one blank line between prefix and body
-        let expected = format!("PREFIX\n\n{}", super::DEFAULT_WORKER_DEFAULT);
+        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let expected = format!(
+            "{}\n\nPREFIX\n\n{}",
+            layer1.trim_end(),
+            super::DEFAULT_WORKER_DEFAULT.trim_end()
+        );
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn project_file_in_layer2() {
+        // Layer 2 content between Layer 1 and Layer 3 with exact ordering
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::write(p.join("project.md"), "PROJECT CONTEXT\n").unwrap();
+        let workers = WorkersConfig::default();
+        let result = build_system_prompt(
+            p, None, None, &workers,
+            Some(std::path::Path::new("project.md")),
+            "claude", "worker",
+        ).unwrap();
+        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let expected = format!(
+            "{}\n\nPROJECT CONTEXT\n\n{}",
+            layer1.trim_end(),
+            super::DEFAULT_WORKER_DEFAULT.trim_end()
+        );
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn instructions_deprecated_is_warning_only() {
+        // When [agents].instructions is set but [agents].project is not,
+        // the deprecation warning is emitted and the instructions value is NOT injected.
+        let _guard = AGENTS_INSTRUCTIONS_DEPRECATION_TEST_LOCK.lock().unwrap();
+        AGENTS_INSTRUCTIONS_DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
+
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::write(p.join("agents.md"), "MONOLITHIC AGENTS CONTENT\n").unwrap();
+
+        // Simulate: project absent, instructions present → emit deprecation, pass None
+        let mut stderr_buf: Vec<u8> = Vec::new();
+        emit_agents_instructions_deprecation_to(&mut stderr_buf);
+
+        let workers = WorkersConfig::default();
+        // project_file = None (not the instructions path)
+        let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
+
+        // Deprecation warning was emitted
+        let stderr = String::from_utf8(stderr_buf).unwrap();
+        assert!(stderr.contains("deprecated"), "stderr should contain 'deprecated': {stderr}");
+        assert!(stderr.contains(AGENTS_INSTRUCTIONS_DEPRECATION_MSG), "wrong message: {stderr}");
+
+        // Instructions content NOT in output
+        assert!(!result.contains("MONOLITHIC AGENTS CONTENT"), "instructions content must not appear in output: {result}");
+
+        // Output is Layer 1 + Layer 3 (no Layer 2)
+        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_WORKER_DEFAULT.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1515,10 +1622,9 @@ mod tests {
         std::fs::write(p.join(".apm/profile.md"), "PROFILE CONTENT").unwrap();
         let profile = make_profile(Some(".apm/profile.md"), None);
         let workers = WorkersConfig::default();
-        assert_eq!(
-            build_system_prompt(p, Some(".apm/transition.md"), Some(&profile), &workers, None, "claude", "worker").unwrap(),
-            "TRANSITION CONTENT"
-        );
+        let result = build_system_prompt(p, Some(".apm/transition.md"), Some(&profile), &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("TRANSITION CONTENT"), "transition content not in output: {result}");
+        assert!(!result.contains("PROFILE CONTENT"), "profile content should not appear: {result}");
     }
 
     #[test]
@@ -1528,10 +1634,8 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm")).unwrap();
         std::fs::write(p.join(".apm/transition.md"), "TRANSITION ONLY").unwrap();
         let workers = WorkersConfig::default();
-        assert_eq!(
-            build_system_prompt(p, Some(".apm/transition.md"), None, &workers, None, "claude", "worker").unwrap(),
-            "TRANSITION ONLY"
-        );
+        let result = build_system_prompt(p, Some(".apm/transition.md"), None, &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("TRANSITION ONLY"), "transition content not in output: {result}");
     }
 
     #[test]
@@ -1542,10 +1646,9 @@ mod tests {
         std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WINS").unwrap();
         std::fs::write(p.join(".apm/transition.md"), "TRANSITION CONTENT").unwrap();
         let workers = WorkersConfig::default();
-        assert_eq!(
-            build_system_prompt(p, Some(".apm/transition.md"), None, &workers, None, "claude", "worker").unwrap(),
-            "PER AGENT WINS"
-        );
+        let result = build_system_prompt(p, Some(".apm/transition.md"), None, &workers, None, "claude", "worker").unwrap();
+        assert!(result.contains("PER AGENT WINS"), "per-agent content not in output: {result}");
+        assert!(!result.contains("TRANSITION CONTENT"), "transition content should not appear: {result}");
     }
 
     #[test]

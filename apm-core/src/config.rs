@@ -475,7 +475,12 @@ pub struct AgentsConfig {
     /// Maximum workers allowed to target the default branch simultaneously.
     #[serde(default = "default_max_workers_on_default")]
     pub max_workers_on_default: usize,
-    /// Path to an instructions file injected into every worker prompt.
+    /// Path to the project-context file injected as Layer 2 into every worker prompt.
+    /// Default path: `.apm/agents/default/apm.project.md`.
+    #[serde(default)]
+    pub project: Option<PathBuf>,
+    /// Deprecated — renamed to `project`. If set without `project`, a deprecation
+    /// warning is emitted and the value is ignored.
     #[serde(default)]
     pub instructions: Option<PathBuf>,
     /// When true, workers may file side-note tickets during implementation.
@@ -515,6 +520,7 @@ impl Default for AgentsConfig {
             max_concurrent: default_max_concurrent(),
             max_workers_per_epic: default_max_workers_per_epic(),
             max_workers_on_default: default_max_workers_on_default(),
+            project: None,
             instructions: None,
             side_tickets: true,
             skip_permissions: false,
