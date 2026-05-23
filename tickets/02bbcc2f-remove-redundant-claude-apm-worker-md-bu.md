@@ -32,7 +32,11 @@ apm-core/src/default/agents/claude/apm.worker.md is byte-for-byte identical to a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Rewriting the content of `apm.worker.md` — covered by 78eeb755
+- Deleting or modifying `apm-core/src/default/agents/claude/apm.spec-writer.md`
+- Migrating the project's own `.apm/agents/` directory — covered by 7c5c491d
+- Changing what `apm instructions` emits — covered by 4bee5771
+- Changing the cascade or resolution algorithm in `build_system_prompt` — covered by d8e2fa0e
 
 ### Approach
 
