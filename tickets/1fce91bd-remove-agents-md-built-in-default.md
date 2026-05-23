@@ -34,7 +34,12 @@ Four concrete changes follow: delete the built-in file, remove the `fn default_a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating `ensure_claude_md` to inject different files into CLAUDE.md — covered by T8 (7ef960f2)
+- Changing the `instructions` key in `default_config` to `project` — covered by T8 (7ef960f2) coordinated with T3 (d8e2fa0e)
+- Updating the `prompt.rs` test `explain_prefix_shown` that uses `.apm/agents/default/agents.md` as the prefix path — covered by T3 (d8e2fa0e)
+- Updating `migrate_flat_agent_files` migration rules — migration of old agents.md files is still valid; T8 handles any follow-on changes
+- Updating `apm/src/main.rs` help text that references `agents.md` — covered by bfa41899
+- Rewriting the content of any role file (`apm.worker.md`, `apm.spec-writer.md`) — covered by 78eeb755 and 34ad9126
 
 ### Approach
 
