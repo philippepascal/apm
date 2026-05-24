@@ -1655,12 +1655,11 @@ fn setup_with_local_worktrees() -> TempDir {
     let dir = init_repo();
     let p = dir.path();
 
-    // BYPASS: no CLI command to set workers.agent post-init; replace the agent
-    // name so dispatched workers use the built-in debug wrapper instead of
-    // claude (which is not installed on CI).
+    // BYPASS: replace the default worker profile so dispatched workers use the
+    // built-in debug wrapper instead of claude (which is not installed on CI).
     let config_path = p.join(".apm/config.toml");
     let config = std::fs::read_to_string(&config_path).unwrap();
-    let config = config.replace("agent = \"claude\"", "agent = \"debug\"");
+    let config = config.replace("default = \"claude/worker\"", "default = \"debug/worker\"");
     std::fs::write(&config_path, config).unwrap();
 
     git(p, &["add", ".apm/config.toml"]);
