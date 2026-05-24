@@ -41,7 +41,57 @@ A new user inspecting the freshly-written config has no way to discover these kn
 
 ### Approach
 
-How the implementation will work.
+The entire change lives in `default_config()` in `apm-core/src/init.rs`. Expand the format string to include commented-out stubs for every implicit parameter, organised by section.
+
+#### Additions within existing sections
+
+In the `[agents]` block, add after the existing explicit fields:
+```toml
+# side_tickets = true        # allow workers to file side-note tickets
+# skip_permissions = false   # skip Claude Code permission prompts in workers
+```
+
+In the `[workers]` block, add after `model`:
+```toml
+# container = "apm-worker"   # Docker image for worker agents; omit for local execution
+# env = {}                   # environment variables injected into every worker
+# keychain = {}              # macOS Keychain items resolved at worker launch (secret_name = keychain_item)
+```
+
+#### New commented-out sections (appended after `[logging]`)
+
+```toml
+# [sync]
+# aggressive = true   # fetch all remote branches before checking state
+
+# [git_host]
+# provider = "github"           # git host provider; only "github" is supported
+# repo = "owner/repo"           # repository path for PR creation and collaborator lookup
+# token_env = "GITHUB_TOKEN"    # env var holding the API token
+
+# [server]
+# origin = "http://localhost:3000"    # public-facing URL used in PR descriptions
+# url    = "http://127.0.0.1:3000"   # internal URL the CLI uses to reach apm-server
+
+# [context]
+# epic_sibling_cap = 20      # max sibling tickets included in worker context bundles
+# epic_byte_cap    = 8192    # max byte size of the context bundle injected into worker prompts
+
+# [isolation]
+# read_allow = ["/etc/resolv.conf", "~/.gitconfig"]   # paths workers may read outside the worktree
+# enforce_worktree_isolation = false                   # block writes outside APM_TICKET_WORKTREE
+
+# [work]
+# epic = ""   # default epic ID assigned when creating new tickets with `apm new`
+```
+
+#### Idempotency
+
+`default_config()` is a pure function called on every `apm init` run and its output is compared byte-for-byte against the on-disk file by `write_default()`. Because the new comments are part of the generated string, a freshly-initialised config already contains them; a second `apm init` call produces an identical string and no `.init` diff is written. No changes to `write_default()` or the idempotency logic are needed.
+
+#### Tests
+
+All existing tests in `apm-core/src/init.rs` check for substrings or valid-TOML properties that remain true after the change. No test modifications are required. Verify with `cargo test --workspace`.
 
 ### Open questions
 
