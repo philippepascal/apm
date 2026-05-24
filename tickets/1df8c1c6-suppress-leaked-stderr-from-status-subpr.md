@@ -1,7 +1,7 @@
 +++
 id = "1df8c1c6"
 title = "Suppress leaked stderr from .status() subprocess calls in apm-core"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1df8c1c6-suppress-leaked-stderr-from-status-subpr"
 created_at = "2026-05-24T21:19:59.285174Z"
-updated_at = "2026-05-24T21:22:15.393431Z"
+updated_at = "2026-05-24T21:22:23.024962Z"
 +++
 
 ## Spec
@@ -74,3 +74,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-24T21:19Z | — | new | philippepascal |
 | 2026-05-24T21:22Z | new | groomed | philippepascal |
+| 2026-05-24T21:22Z | groomed | in_design | philippepascal |
