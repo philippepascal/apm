@@ -29,7 +29,7 @@ Checkboxes; each one independently testable.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+Adding new tests beyond the spawn tests already present. Adding mock-sad or mock-random coverage (separate ticket if wanted).
 
 ### Approach
 
