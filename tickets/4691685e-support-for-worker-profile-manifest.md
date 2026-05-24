@@ -1,7 +1,7 @@
 +++
 id = "4691685e"
 title = "support for worker_profile manifest"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4691685e-support-for-worker-profile-manifest"
 created_at = "2026-05-24T19:18:32.809526Z"
-updated_at = "2026-05-24T19:34:19.121041Z"
+updated_at = "2026-05-24T19:53:01.011096Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-24T19:18Z | — | new | philippepascal |
 | 2026-05-24T19:34Z | new | groomed | philippepascal |
+| 2026-05-24T19:53Z | groomed | in_design | philippepascal |
