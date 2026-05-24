@@ -1,7 +1,7 @@
 +++
 id = "4691685e"
 title = "support for worker_profile manifest"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4691685e-support-for-worker-profile-manifest"
 created_at = "2026-05-24T19:18:32.809526Z"
-updated_at = "2026-05-24T20:34:08.936398Z"
+updated_at = "2026-05-24T20:43:20.530452Z"
 +++
 
 ## Spec
@@ -120,3 +120,4 @@ From lowest to highest: `config.toml [workers].model` → `local.toml [workers].
 | 2026-05-24T20:06Z | specd | ammend | philippepascal |
 | 2026-05-24T20:33Z | ammend | in_design | philippepascal |
 | 2026-05-24T20:34Z | in_design | specd | claude |
+| 2026-05-24T20:43Z | specd | ready | philippepascal |
