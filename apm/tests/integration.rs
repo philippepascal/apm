@@ -1984,12 +1984,11 @@ fn setup_for_prompt_dispatch() -> TempDir {
     let dir = init_repo();
     let p = dir.path();
 
-    // BYPASS: no apm CLI command to set workers.agent post-init; replace the
-    // agent name so every dispatch path uses the built-in debug wrapper instead
-    // of claude (which is not installed on CI).
+    // BYPASS: replace the default worker profile so every dispatch path uses the
+    // built-in debug wrapper instead of claude (which is not installed on CI).
     let config_path = p.join(".apm/config.toml");
     let cfg = std::fs::read_to_string(&config_path).unwrap();
-    let patched = cfg.replace("agent = \"claude\"", "agent = \"debug\"");
+    let patched = cfg.replace("default = \"claude/worker\"", "default = \"debug/worker\"");
     std::fs::write(&config_path, patched).unwrap();
 
     dir
