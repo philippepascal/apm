@@ -25,6 +25,7 @@ Checkboxes; each one independently testable.
 - [ ] Remove make_mock_worker (dead code)
 - [ ] Remove APM_SKIP_COMPAT_CHECK from release.yml
 - [ ] Spawn tests call apm_core::start::run directly, wait for child process, and assert final ticket state after mock-happy completes
+- [ ] All 259 integration tests pass without APM_SKIP_COMPAT_CHECK set
 
 ### Out of scope
 
