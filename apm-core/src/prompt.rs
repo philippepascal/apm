@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
 use crate::config::Config;
-use crate::start::{build_system_prompt, explain_system_prompt, PromptProvenance, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
+use crate::start::{build_system_prompt, build_user_message, explain_system_prompt, PromptProvenance, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
 use crate::ticket;
 
 /// Scan `.apm/agents/` for agent subdirectory names and role names extracted
@@ -178,6 +178,103 @@ pub fn run_without_ticket(
         role,
     )?;
     out.write_all(prompt.as_bytes())?;
+    Ok(())
+}
+
+/// Print the user message that would be sent to the worker if the ticket's
+/// current command:start transition fired.  Includes the dependency context
+/// bundle (if the ticket has deps) prepended to the serialised ticket content.
+pub fn run_message(
+    root: &Path,
+    id: &str,
+    agent_override: Option<&str>,
+    role_override: Option<&str>,
+    out: &mut dyn Write,
+) -> Result<()> {
+    let config = Config::load(root)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let ticket_id = ticket::resolve_id_in_slice(&tickets, id)?;
+    let t = tickets.iter()
+        .find(|t| t.frontmatter.id == ticket_id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {:?} not found", ticket_id))?;
+
+    let state = &t.frontmatter.state;
+    let triggering_transition = config.workflow.states.iter()
+        .find(|s| s.id == *state)
+        .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
+
+    let mut warnings = Vec::new();
+    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
+    let profile_name = triggering_transition
+        .and_then(|tr| tr.profile.as_deref())
+        .unwrap_or("")
+        .to_string();
+
+    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
+    let _role = role_override.unwrap_or(role_from_cascade);
+
+    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
+    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
+
+    let _agent = agent_override.unwrap_or(&params.agent);
+
+    let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
+    let depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
+
+    let msg = build_user_message(root, t, &depends_on, tr_role_prefix, profile, &config)?;
+    out.write_all(msg.as_bytes())?;
+    Ok(())
+}
+
+/// Print both the system prompt and user message, separated by section headers.
+/// Use --system or --message to narrow to one part.
+pub fn run_full(
+    root: &Path,
+    id: &str,
+    agent_override: Option<&str>,
+    role_override: Option<&str>,
+    out: &mut dyn Write,
+) -> Result<()> {
+    let config = Config::load(root)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let ticket_id = ticket::resolve_id_in_slice(&tickets, id)?;
+    let t = tickets.iter()
+        .find(|t| t.frontmatter.id == ticket_id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {:?} not found", ticket_id))?;
+
+    let state = &t.frontmatter.state;
+    let triggering_transition = config.workflow.states.iter()
+        .find(|s| s.id == *state)
+        .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
+
+    let mut warnings = Vec::new();
+    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
+    let profile_name = triggering_transition
+        .and_then(|tr| tr.profile.as_deref())
+        .unwrap_or("")
+        .to_string();
+
+    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
+    let role = role_override.unwrap_or(role_from_cascade).to_string();
+
+    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
+    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
+    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
+
+    let agent = agent_override.unwrap_or(&params.agent).to_string();
+
+    let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
+    let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
+    let depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
+
+    let sys = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &agent, &role)?;
+    let msg = build_user_message(root, t, &depends_on, tr_role_prefix, profile, &config)?;
+
+    writeln!(out, "=== system ===")?;
+    out.write_all(sys.as_bytes())?;
+    writeln!(out, "\n=== user ===")?;
+    out.write_all(msg.as_bytes())?;
     Ok(())
 }
 
@@ -775,5 +872,61 @@ Test.
         assert!(output.contains("level 4"), "claude override should fall to level 4; got:\n{output}");
         assert!(output.contains("built-in default (claude/worker)"), "should name claude/worker; got:\n{output}");
         assert!(output.contains(".apm/agents/claude/apm.worker.md"), "skipped level 0 should use overridden agent name; got:\n{output}");
+    }
+
+    #[test]
+    fn run_message_contains_ticket_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_parity_project(root, "abcd0005");
+
+        let mut buf = Vec::new();
+        run_message(root, "abcd0005", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("abcd0005"), "user message should contain ticket id; got:\n{output}");
+        assert!(output.contains("Worker agent"), "user message should contain role prefix; got:\n{output}");
+    }
+
+    #[test]
+    fn run_full_contains_both_sections() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_parity_project(root, "abcd0006");
+
+        let mut buf = Vec::new();
+        run_full(root, "abcd0006", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        assert!(output.contains("=== system ==="), "full output should have system header; got:\n{output}");
+        assert!(output.contains("=== user ==="), "full output should have user header; got:\n{output}");
+        let sys_pos = output.find("=== system ===").unwrap();
+        let usr_pos = output.find("=== user ===").unwrap();
+        assert!(sys_pos < usr_pos, "system section should come before user section");
+        assert!(output.contains("PER-AGENT INSTRUCTIONS"), "system prompt content should appear; got:\n{output}");
+        assert!(output.contains("abcd0006"), "ticket id should appear in user section; got:\n{output}");
+    }
+
+    #[test]
+    fn run_full_system_matches_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_parity_project(root, "abcd0007");
+
+        let mut sys_buf = Vec::new();
+        run(root, "abcd0007", None, None, &mut sys_buf).unwrap();
+        let sys_only = String::from_utf8(sys_buf).unwrap();
+
+        let mut full_buf = Vec::new();
+        run_full(root, "abcd0007", None, None, &mut full_buf).unwrap();
+        let full = String::from_utf8(full_buf).unwrap();
+
+        let sys_section = full
+            .split("=== user ===")
+            .next()
+            .unwrap()
+            .trim_start_matches("=== system ===\n");
+        assert_eq!(sys_section.trim_end(), sys_only.trim_end(),
+            "system section in run_full must match run() output");
     }
 }

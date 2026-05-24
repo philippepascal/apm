@@ -797,7 +797,7 @@ pub fn spawn_next_worker(
 
 /// If the ticket has dependencies, prepend a dependency context bundle to the
 /// worker prompt content.  Tickets with no dependencies are unchanged.
-fn with_dependency_bundle(root: &Path, depends_on: &[String], config: &Config, content: String) -> String {
+pub(crate) fn with_dependency_bundle(root: &Path, depends_on: &[String], config: &Config, content: String) -> String {
     if depends_on.is_empty() {
         return content;
     }
@@ -806,6 +806,20 @@ fn with_dependency_bundle(root: &Path, depends_on: &[String], config: &Config, c
         return content;
     }
     format!("{bundle}\n{content}")
+}
+
+pub fn build_user_message(
+    root: &Path,
+    ticket: &crate::ticket::Ticket,
+    depends_on: &[String],
+    tr_role_prefix: Option<&str>,
+    profile: Option<&WorkerProfileConfig>,
+    config: &Config,
+) -> Result<String> {
+    let content = ticket.serialize()?;
+    let id = &ticket.frontmatter.id;
+    let raw = format!("{}\n\n{content}", agent_role_prefix(tr_role_prefix, profile, id));
+    Ok(with_dependency_bundle(root, depends_on, config, raw))
 }
 
 
@@ -1013,7 +1027,7 @@ pub(crate) fn explain_system_prompt(
     )
 }
 
-fn agent_role_prefix(transition_role_prefix: Option<&str>, profile: Option<&WorkerProfileConfig>, id: &str) -> String {
+pub(crate) fn agent_role_prefix(transition_role_prefix: Option<&str>, profile: Option<&WorkerProfileConfig>, id: &str) -> String {
     if let Some(prefix) = transition_role_prefix {
         return prefix.replace("<id>", id);
     }
