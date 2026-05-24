@@ -35,7 +35,73 @@ Adding new tests beyond the spawn tests already present. Adding mock-sad or mock
 
 ### Approach
 
-In setup_with_local_worktrees and setup_for_prompt_dispatch, change the workflow.toml patch from `"debug/` to `"mock-happy/`. Then refactor the spawn tests to call `apm_core::start::run` directly (instead of the CLI wrapper) so they get the `StartOutput` back, extract the child process handle, wait for it to exit, and then assert the final ticket state. Remove `make_mock_worker` and `APM_SKIP_COMPAT_CHECK` once nothing needs them.
+#### Fix mock-happy scripts to work from a linked worktree
+
+`mock-happy` runs as a subprocess inside a git linked worktree (e.g. `.apm--worktrees/ticket-foo/`). When its script calls `"$APM" spec …` or `"$APM" state …`, the `apm` binary uses `git rev-parse --show-toplevel` to find the project root, which returns the linked worktree path — not the main repo root. `Config::load` then fails because `.apm/config.toml` does not exist inside the linked worktree.
+
+Fix: in `apm-core/src/wrapper/builtin/mod.rs`, update both branches of `happy_script()`:
+
+- **Spec-writer mode** (the `else` branch): add `cd "${APM_PROJECT_ROOT:?APM_PROJECT_ROOT not set}"` as the first command after the `ID=…` assignment, so all subsequent `apm` calls run from the main project root.
+- **Impl mode** (the `if impl_mode` branch): keep the `git add` / `git commit` in the original worktree CWD, then add `cd "${APM_PROJECT_ROOT:?}"` immediately before the `"$APM" state …` call. Also replace the bare `git commit` with `git -c commit.gpgsign=false commit` to avoid failures on systems with global GPG signing enabled.
+
+In both modes, append `--force --no-aggressive` to the `"$APM" state "$ID" {target}` call. `--force` bypasses the completion strategy (no push, no PR creation), making the script work in test repos that have no git remote. `--no-aggressive` suppresses the remote fetch that would also fail without a remote.
+
+`APM_PROJECT_ROOT` is already set to `ctx.root` by `write_and_spawn_script` in the same file; no new env vars are needed.
+
+#### Patch test setup functions
+
+In `apm/tests/integration.rs`, update both `setup_with_local_worktrees()` and `setup_for_prompt_dispatch()`:
+
+1. In the `config.toml` patch, replace `"claude/worker"` with `"mock-happy/worker"`.
+2. In the `workflow.toml` patch, replace `"claude/` with `"mock-happy/` (existing replace-all covers all `worker_profile` occurrences).
+
+`setup_with_local_worktrees` already commits the patched files via `git add / git commit`; no change to that commit step is needed. `setup_for_prompt_dispatch` intentionally does not commit (the test reads config from the filesystem); this remains unchanged.
+
+#### Remove dead code and CI env var
+
+- Delete `make_mock_worker` (lines 50–66 in `integration.rs`). It is never called.
+- In `.github/workflows/release.yml`, remove the `APM_SKIP_COMPAT_CHECK: "1"` env entry from the test step. `should_check_claude_compat` only fires when the resolved agent is `"claude"` (the built-in Claude wrapper). With `mock-happy` as the agent, the check is never reached.
+
+#### Add `wait_for_pid` helper and refactor spawn tests
+
+Add a helper to `integration.rs`:
+
+```rust
+fn wait_for_pid(pid: u32) {
+    loop {
+        let running = std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !running { break; }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+}
+```
+
+`kill -0` checks whether the process exists without sending a signal; it returns non-zero once the PID has been reaped by the background thread in `start::run`.
+
+For each spawn test that currently calls `apm::cmd::start::run(…)` or `apm::cmd::start::run_next(…)` and then immediately asserts ticket state, make the following changes:
+
+1. Call `apm_core::start::run(…)` (or `apm_core::start::run_next(…)`) directly to get `StartOutput` (or `RunNextOutput`) which carries `worker_pid`.
+2. Unwrap `worker_pid`, call `wait_for_pid(pid)`.
+3. Update the state assertion to the final state that mock-happy produces:
+   - Spec-writer path (`groomed`/`ammend` → `in_design`): final state is `specd`.
+   - Worker path (`ready` → `in_progress`): final state is `implemented`.
+
+Affected tests:
+- `start_spawn_sets_agent_to_worker_pid` — assert `implemented`
+- `start_next_spawn_sets_agent_to_worker_pid` — assert `implemented`
+- `spawn_new_ticket_transitions_to_in_design` — assert `specd`
+- `spawn_ammend_ticket_transitions_to_in_design` — assert `specd`
+- `spawn_ready_ticket_transitions_to_in_progress` — assert `implemented`
+- `start_next_spawn_new_ticket_transitions_correctly` — assert `specd`
+- `start_next_spawn_ready_ticket_transitions_correctly` — assert `implemented`
+
+The `start_non_spawn_keeps_agent_name` test uses `spawn: false`, so mock-happy is never invoked. No change needed there.
+
+Non-spawn tests that use `setup_with_local_worktrees` (e.g. `start_next_claims_highest_priority_ticket`) are unaffected: they never invoke the worker binary.
 
 ### Open questions
 
