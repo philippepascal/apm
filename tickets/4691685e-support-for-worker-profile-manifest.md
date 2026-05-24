@@ -16,13 +16,9 @@ updated_at = "2026-05-24T19:53:01.011096Z"
 
 ### Problem
 
-Add support for manifest files for worker profiles. These files will be located in .apm/agents/[agent]/ and be called [worker_profile].toml. They will live along side apm.[worker_profile].toml.
+APM currently supports a global `[workers]` config in `.apm/config.toml` and a per-machine `local.toml` override, but there is no way to configure properties per worker profile. All profiles (`claude/worker`, `claude/spec-writer`, etc.) share the same `model`, `env`, and `container` values. This means that if a project wants the spec-writer to use a more capable model (e.g., Opus) while keeping the worker on a faster, cheaper one (e.g., Sonnet), there is no supported way to express that.
 
-They are optional.
-
-If present, apm start, work, UI dispatcher will use them to look for options and configurations of the agent being spawned. 
-
-First use case will be to have claude spec-writer use opus, and claude worker use sonnet.
+The fix is to introduce optional per-profile manifest files at `.apm/agents/<agent>/<role>.toml`. When present, these files supply profile-specific overrides for `model` and `env` that take effect at worker spawn time — in `apm start`, `apm work`, and the server's UI dispatcher — without changing any other behaviour.
 
 ### Acceptance criteria
 
