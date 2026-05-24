@@ -33,7 +33,11 @@ A new user inspecting the freshly-written config has no way to discover these kn
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `workflow.toml` or `ticket.toml` — they have their own files and are already dense
+- Changes to `local.toml` — machine-specific, intentionally minimal
+- An interactive wizard or `apm config` command for setting values
+- Documentation outside the generated `config.toml` itself
+- Surfacing `LocalConfig` fields (`[workers].command`, `[workers].args`) in `config.toml` — those belong in `local.toml`
 
 ### Approach
 
