@@ -61,7 +61,10 @@ Replace each .status() call site with run_status (or inline .output() for the is
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Suppressing stdout from any git subprocess
+- Changes to how APM handles or surfaces fetch/push errors (warnings and error propagation behaviour is unchanged)
+- New automated tests for stderr suppression (the fix is a structural change at the process-spawn level, not logic that can be asserted with unit tests)
+- Any call sites outside `apm-core/src/git_util.rs`
 
 ### Approach
 
