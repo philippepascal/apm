@@ -157,21 +157,23 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
 /// and `.apm/style.md` to `.apm/agents/default/` and rewrite path references in
 /// CLAUDE.md, config.toml, and workflow.toml.
 fn migrate_flat_agent_files(root: &Path, apm_dir: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let agents_default_dir = apm_dir.join("agents/default");
-    std::fs::create_dir_all(&agents_default_dir)?;
-
     let moves = [
         ("agents.md", "agents.md"),
         ("apm.spec-writer.md", "apm.spec-writer.md"),
         ("apm.worker.md", "apm.worker.md"),
         ("style.md", "style.md"),
     ];
-    for (old_name, new_name) in &moves {
-        let old_path = apm_dir.join(old_name);
-        let new_path = agents_default_dir.join(new_name);
-        if old_path.exists() && !new_path.exists() {
-            std::fs::rename(&old_path, &new_path)?;
-            messages.push(format!("Moved .apm/{old_name} → .apm/agents/default/{new_name}"));
+    let has_flat = moves.iter().any(|(name, _)| apm_dir.join(name).exists());
+    if has_flat {
+        let agents_default_dir = apm_dir.join("agents/default");
+        std::fs::create_dir_all(&agents_default_dir)?;
+        for (old_name, new_name) in &moves {
+            let old_path = apm_dir.join(old_name);
+            let new_path = agents_default_dir.join(new_name);
+            if old_path.exists() && !new_path.exists() {
+                std::fs::rename(&old_path, &new_path)?;
+                messages.push(format!("Moved .apm/{old_name} → .apm/agents/default/{new_name}"));
+            }
         }
     }
 

@@ -1,3 +1,5 @@
+@.apm/agents/default/apm.main-agent.md
+
 # Claude Code — APM Project
 
 @.apm/project.md

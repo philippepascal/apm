@@ -86,8 +86,8 @@ fi
 exec claude "${ARGS[@]}" "$(cat "$APM_USER_MESSAGE_FILE")"
 "#;
 
-const DEFAULT_WORKER_MD: &str = include_str!("default/agents/default/apm.worker.md");
-const DEFAULT_SPEC_WRITER_MD: &str = include_str!("default/agents/default/apm.spec-writer.md");
+const DEFAULT_WORKER_MD: &str = include_str!("default/agents/claude/apm.worker.md");
+const DEFAULT_SPEC_WRITER_MD: &str = include_str!("default/agents/claude/apm.spec-writer.md");
 
 pub fn list_wrappers(root: &Path, config: &Config) -> Result<Vec<WrapperEntry>> {
     let mut entries: Vec<WrapperEntry> = Vec::new();
