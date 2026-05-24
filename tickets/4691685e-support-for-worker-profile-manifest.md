@@ -3,13 +3,13 @@ id = "4691685e"
 title = "support for worker_profile manifest"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4691685e-support-for-worker-profile-manifest"
 created_at = "2026-05-24T19:18:32.809526Z"
-updated_at = "2026-05-24T19:53:01.011096Z"
+updated_at = "2026-05-24T19:56:42.632506Z"
 +++
 
 ## Spec
