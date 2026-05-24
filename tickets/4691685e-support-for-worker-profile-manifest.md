@@ -25,7 +25,7 @@ The fix is to introduce optional per-profile manifest files at `.apm/agents/<age
 - [x] When `.apm/agents/<agent>/<role>.toml` is absent, `apm start` behaviour is identical to today (no regression)
 - [x] When `model` is set in `<role>.toml`, the worker is spawned with that model, overriding any value in `[workers].model` or `local.toml`
 - [x] When `[env]` entries are set in `<role>.toml`, they are merged into the worker's env, with manifest values winning on key conflicts over `[workers.env]`
-- [ ] When `<role>.toml` exists but is malformed TOML, `apm start` returns an error that includes the file path
+- [x] When `<role>.toml` exists but is malformed TOML, `apm start` returns an error that includes the file path
 - [ ] The manifest applies per-profile: `claude/spec-writer` reads `spec-writer.toml`, `claude/worker` reads `worker.toml`; each profile is independent
 - [ ] `apm work` (dispatcher) and the server UI dispatcher pick up the same manifest-derived settings as `apm start`
 
