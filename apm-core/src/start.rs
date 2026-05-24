@@ -47,6 +47,38 @@ pub fn resolve_worker_profile(worker_profile_str: &str, workers: &WorkersConfig)
     })
 }
 
+#[derive(serde::Deserialize, Default, Debug)]
+struct WorkerProfileManifest {
+    model: Option<String>,
+    #[serde(default)]
+    env: std::collections::HashMap<String, String>,
+}
+
+fn load_profile_manifest(root: &Path, agent: &str, role: &str) -> Result<Option<WorkerProfileManifest>> {
+    let path = root.join(format!(".apm/agents/{agent}/{role}.toml"));
+    if !path.exists() {
+        return Ok(None);
+    }
+    let content = std::fs::read_to_string(&path)
+        .with_context(|| format!("failed to read profile manifest: {}", path.display()))?;
+    toml::from_str(&content)
+        .map(Some)
+        .map_err(|e| anyhow::anyhow!("malformed profile manifest {}: {e}", path.display()))
+}
+
+fn apply_profile_manifest(root: &Path, wp: &mut ResolvedWorkerProfile) -> Result<()> {
+    let Some(manifest) = load_profile_manifest(root, &wp.agent, &wp.role)? else {
+        return Ok(());
+    };
+    if let Some(model) = manifest.model {
+        wp.model = Some(model);
+    }
+    for (k, v) in manifest.env {
+        wp.env.insert(k, v);
+    }
+    Ok(())
+}
+
 pub(crate) fn apply_frontmatter_agent(
     agent: &mut String,
     frontmatter: &ticket_fmt::Frontmatter,
@@ -289,6 +321,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         .unwrap_or("claude/worker")
         .to_string();
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
+    apply_profile_manifest(root, &mut wp)?;
     apply_frontmatter_agent(&mut wp.agent, &t.frontmatter, &worker_profile_str);
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
@@ -456,6 +489,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     }
 
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
+    apply_profile_manifest(root, &mut wp)?;
     apply_frontmatter_agent(&mut wp.agent, &t.frontmatter, &worker_profile_str);
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
@@ -626,6 +660,7 @@ pub fn spawn_next_worker(
     };
 
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
+    apply_profile_manifest(root, &mut wp)?;
     apply_frontmatter_agent(&mut wp.agent, &t.frontmatter, &worker_profile_str);
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
@@ -1558,6 +1593,80 @@ mod tests {
         let mut agent = "claude".to_string();
         apply_frontmatter_agent(&mut agent, &fm, "impl_agent");
         assert_eq!(agent, "claude");
+    }
+
+    // --- load_profile_manifest / apply_profile_manifest ---
+
+    #[test]
+    fn load_profile_manifest_returns_none_when_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = super::load_profile_manifest(dir.path(), "claude", "worker").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn load_profile_manifest_parses_model() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/worker.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
+        let manifest = super::load_profile_manifest(p, "claude", "worker").unwrap().unwrap();
+        assert_eq!(manifest.model.as_deref(), Some("claude-opus-4-5"));
+    }
+
+    #[test]
+    fn load_profile_manifest_errors_on_malformed_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/worker.toml"), "not = [valid toml\n").unwrap();
+        let err = super::load_profile_manifest(p, "claude", "worker").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("worker.toml"), "error must include file path: {msg}");
+    }
+
+    #[test]
+    fn apply_profile_manifest_overrides_model() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/worker.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
+        let mut workers = WorkersConfig::default();
+        workers.model = Some("sonnet".into());
+        let mut wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        assert_eq!(wp.model.as_deref(), Some("sonnet"));
+        super::apply_profile_manifest(p, &mut wp).unwrap();
+        assert_eq!(wp.model.as_deref(), Some("claude-opus-4-5"));
+    }
+
+    #[test]
+    fn apply_profile_manifest_noop_when_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let mut workers = WorkersConfig::default();
+        workers.model = Some("sonnet".into());
+        workers.env.insert("FOO".into(), "bar".into());
+        let mut wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        super::apply_profile_manifest(p, &mut wp).unwrap();
+        assert_eq!(wp.model.as_deref(), Some("sonnet"));
+        assert_eq!(wp.env.get("FOO").map(|s| s.as_str()), Some("bar"));
+    }
+
+    #[test]
+    fn apply_profile_manifest_merges_env_and_manifest_wins_on_conflict() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/worker.toml"),
+            "[env]\nFOO = \"manifest\"\nBAR = \"new\"\n").unwrap();
+        let mut workers = WorkersConfig::default();
+        workers.env.insert("FOO".into(), "global".into());
+        workers.env.insert("BAZ".into(), "kept".into());
+        let mut wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        super::apply_profile_manifest(p, &mut wp).unwrap();
+        assert_eq!(wp.env.get("FOO").map(|s| s.as_str()), Some("manifest"), "manifest should override global");
+        assert_eq!(wp.env.get("BAR").map(|s| s.as_str()), Some("new"), "manifest-only key should be present");
+        assert_eq!(wp.env.get("BAZ").map(|s| s.as_str()), Some("kept"), "global-only key should be kept");
     }
 
     // --- mock wrapper integration tests ---
