@@ -866,11 +866,16 @@ SYSTEM PROMPT — three layers, concatenated in order:\n\
 \n\
   Layer 3 — Role instructions (cascade, highest priority wins)\n\
     0. .apm/agents/<agent>/apm.<role>.md     (per-agent file)\n\
-    1. transition.instructions               (from workflow.toml)\n\
+       .apm/agents/default/apm.<role>.md     (default fallback if above absent)\n\
+    1. transition.instructions               (workflow.toml, advanced override)\n\
     2. profile.instructions                  (from [worker_profiles.*])\n\
     3. [workers].instructions                (global fallback)\n\
     4. built-in default for known agents\n\
     5. error — no instructions found\n\
+\n\
+    Place role instructions in .apm/agents/<agent>/apm.<role>.md for\n\
+    agent-specific overrides, or .apm/agents/default/apm.<role>.md as\n\
+    the shared default for all agents without a specific file.\n\
 \n\
 USER MESSAGE — dependency bundle + ticket:\n\
 \n\
@@ -890,7 +895,7 @@ they do not affect the ticket or any config.\n\
 \n\
   layer 1:        apm instructions (dynamic, role: worker)\n\
   layer 2:        .apm/project.md\n\
-  layer 3:        .apm/agents/claude/apm.worker.md  (level 0 — per-agent file)\n\
+  layer 3:        .apm/agents/default/apm.worker.md (default fallback — .apm/agents/claude/apm.worker.md absent)  (level 0 — per-agent file)\n\
   skipped:        level 1 (transition.instructions — not reached)\n\
                   level 2 (profile.instructions — not reached)\n\
                   level 3 (workers.instructions — not reached)\n\

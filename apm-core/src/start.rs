@@ -910,14 +910,22 @@ fn build_system_prompt_body(
     agent: &str,
     role: &str,
 ) -> Result<String> {
-    // Level 0: .apm/agents/<agent>/apm.<role>.md (soft — no error if absent)
+    // Level 0: .apm/agents/<agent>/apm.<role>.md, falling back to .apm/agents/default/apm.<role>.md
     let per_agent = root.join(format!(".apm/agents/{agent}/apm.{role}.md"));
     if per_agent.exists() {
         if let Ok(content) = std::fs::read_to_string(&per_agent) {
             return Ok(content);
         }
     }
-    // Level 1: transition.instructions
+    if agent != "default" {
+        let default_file = root.join(format!(".apm/agents/default/apm.{role}.md"));
+        if default_file.exists() {
+            if let Ok(content) = std::fs::read_to_string(&default_file) {
+                return Ok(content);
+            }
+        }
+    }
+    // Level 1: transition.instructions (explicit override, advanced use)
     if let Some(path) = transition_instructions {
         return std::fs::read_to_string(root.join(path))
             .with_context(|| format!("transition.instructions: file not found: {path}"));
@@ -945,8 +953,7 @@ fn build_system_prompt_body(
     // Level 5: hard error
     bail!(
         "no instructions found for agent '{agent}' role '{role}': \
-         set [workers].instructions in .apm/config.toml or add \
-         .apm/agents/{agent}/apm.{role}.md"
+         add .apm/agents/{agent}/apm.{role}.md or .apm/agents/default/apm.{role}.md"
     )
 }
 
@@ -966,7 +973,7 @@ pub(crate) fn explain_system_prompt(
 
     let mut skipped: Vec<ProvenanceEntry> = Vec::new();
 
-    // Level 0: per-agent file
+    // Level 0: per-agent file, then default fallback
     let per_agent_rel = format!(".apm/agents/{agent}/apm.{role}.md");
     let per_agent = root.join(&per_agent_rel);
     if per_agent.exists() {
@@ -975,6 +982,21 @@ pub(crate) fn explain_system_prompt(
             skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
         }
         return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
+    }
+    if agent != "default" {
+        let default_rel = format!(".apm/agents/default/apm.{role}.md");
+        let default_file = root.join(&default_rel);
+        if default_file.exists() {
+            let winner = ProvenanceEntry {
+                level: 0,
+                label: LEVEL_LABELS[0],
+                source: format!("{default_rel} (default fallback — {per_agent_rel} absent)"),
+            };
+            for i in 1usize..=3 {
+                skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
+            }
+            return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
+        }
     }
     skipped.push(ProvenanceEntry {
         level: 0,
@@ -1289,6 +1311,32 @@ mod tests {
         let workers = WorkersConfig::default();
         let result = build_system_prompt(p, None, None, &workers, None, "claude", "spec-writer").unwrap();
         assert!(result.contains(super::DEFAULT_SPEC_WRITER_DEFAULT.trim()), "built-in spec-writer default not found in output");
+    }
+
+    #[test]
+    fn build_system_prompt_falls_back_to_default_agent_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/default")).unwrap();
+        std::fs::write(p.join(".apm/agents/default/apm.worker.md"), "DEFAULT WORKER CONTENT").unwrap();
+        let workers = WorkersConfig::default();
+        // "my-bot" has no per-agent file; should fall back to default/
+        let result = build_system_prompt(p, None, None, &workers, None, "my-bot", "worker").unwrap();
+        assert!(result.contains("DEFAULT WORKER CONTENT"), "default fallback content missing: {result}");
+    }
+
+    #[test]
+    fn build_system_prompt_agent_file_takes_precedence_over_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/my-bot")).unwrap();
+        std::fs::create_dir_all(p.join(".apm/agents/default")).unwrap();
+        std::fs::write(p.join(".apm/agents/my-bot/apm.worker.md"), "AGENT SPECIFIC").unwrap();
+        std::fs::write(p.join(".apm/agents/default/apm.worker.md"), "DEFAULT CONTENT").unwrap();
+        let workers = WorkersConfig::default();
+        let result = build_system_prompt(p, None, None, &workers, None, "my-bot", "worker").unwrap();
+        assert!(result.contains("AGENT SPECIFIC"), "agent-specific file should win: {result}");
+        assert!(!result.contains("DEFAULT CONTENT"), "default should be skipped: {result}");
     }
 
     #[test]

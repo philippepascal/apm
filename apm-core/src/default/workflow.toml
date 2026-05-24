@@ -19,15 +19,12 @@ id           = "groomed"
 label        = "Groomed"
 actionable   = ["agent"]
 dep_requires = "spec"
-instructions = ".apm/agents/default/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to              = "in_design"
   trigger         = "command:start"
   profile         = "spec_agent"
   context_section = "Problem"
-  instructions    = ".apm/agents/default/apm.spec-writer.md"
-  role_prefix     = "You are a Spec-Writer agent assigned to ticket #<id>."
   outcome         = "needs_input"
 
   [[workflow.states.transitions]]
@@ -78,7 +75,6 @@ label          = "Ammend"
 actionable     = ["agent"]
 dep_requires   = "spec"
 satisfies_deps = "spec"
-instructions   = ".apm/agents/default/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to      = "specd"
@@ -91,12 +87,10 @@ instructions   = ".apm/agents/default/apm.spec-writer.md"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to           = "in_design"
-  trigger      = "command:start"
-  profile      = "spec_agent"
-  instructions = ".apm/agents/default/apm.spec-writer.md"
-  role_prefix  = "You are a Spec-Writer agent assigned to ticket #<id>."
-  outcome      = "needs_input"
+  to      = "in_design"
+  trigger = "command:start"
+  profile = "spec_agent"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -104,9 +98,8 @@ instructions   = ".apm/agents/default/apm.spec-writer.md"
   outcome = "cancelled"
 
 [[workflow.states]]
-id           = "in_design"
-label        = "In Design"
-instructions = ".apm/agents/default/apm.spec-writer.md"
+id    = "in_design"
+label = "In Design"
 
   [[workflow.states.transitions]]
   to      = "specd"
@@ -135,14 +128,11 @@ id             = "ready"
 label          = "Ready"
 actionable     = ["agent"]
 satisfies_deps = "spec"
-instructions   = ".apm/agents/default/apm.worker.md"
 
   [[workflow.states.transitions]]
-  to           = "in_progress"
-  trigger      = "command:start"
-  instructions = ".apm/agents/default/apm.worker.md"
-  role_prefix  = "You are a Worker agent assigned to ticket #<id>."
-  outcome      = "needs_input"
+  to      = "in_progress"
+  trigger = "command:start"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "ammend"
@@ -163,7 +153,6 @@ instructions   = ".apm/agents/default/apm.worker.md"
 id             = "in_progress"
 label          = "In Progress"
 satisfies_deps = "spec"
-instructions   = ".apm/agents/default/apm.worker.md"
 
   [[workflow.states.transitions]]
   to         = "implemented"
