@@ -16,7 +16,7 @@ updated_at = "2026-05-24T19:07:11.167447Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+Integration tests that exercise worker spawning use the `debug` wrapper, which is a no-op (exits immediately without doing anything). This means the tests only verify that the spawn path doesn't error — they don't verify that a real agent loop (claim ticket → run → transition state → exit) works end-to-end. The mock agents (`mock-happy`, `mock-sad`) were built exactly for this purpose but are unused in the test suite. Additionally there is leftover dead code (`make_mock_worker`) and unnecessary CI plumbing (`APM_SKIP_COMPAT_CHECK`) from earlier failed attempts to make CI work without a real claude binary.
 
 ### Acceptance criteria
 
