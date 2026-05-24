@@ -22,14 +22,14 @@ A new user inspecting the freshly-written config has no way to discover these kn
 
 ### Acceptance criteria
 
-- [ ] `apm init` on a fresh repo produces a `config.toml` that includes commented-out stubs for `[sync]`, `[git_host]`, `[server]`, `[context]`, `[isolation]`, and `[work]`
-- [ ] The `[agents]` block in the generated config includes commented-out `side_tickets` and `skip_permissions` lines with their default values
-- [ ] The `[workers]` block in the generated config includes commented-out `container`, `env`, and `keychain` lines
-- [ ] Every commented-out parameter shows its default value (or an illustrative example for parameters with no scalar default, such as `container`)
-- [ ] Every commented-out parameter is accompanied by a short inline comment (`# …`) describing its effect
-- [ ] The generated `config.toml` is valid TOML when all comment lines are removed
-- [ ] Running `apm init` a second time on an already-initialised repo does not produce a `.init` diff file (idempotency preserved)
-- [ ] Existing tests in `apm-core` pass without modification after the change
+- [x] `apm init` on a fresh repo produces a `config.toml` that includes commented-out stubs for `[sync]`, `[git_host]`, `[server]`, `[context]`, `[isolation]`, and `[work]`
+- [x] The `[agents]` block in the generated config includes commented-out `side_tickets` and `skip_permissions` lines with their default values
+- [x] The `[workers]` block in the generated config includes commented-out `container`, `env`, and `keychain` lines
+- [x] Every commented-out parameter shows its default value (or an illustrative example for parameters with no scalar default, such as `container`)
+- [x] Every commented-out parameter is accompanied by a short inline comment (`# …`) describing its effect
+- [x] The generated `config.toml` is valid TOML when all comment lines are removed
+- [x] Running `apm init` a second time on an already-initialised repo does not produce a `.init` diff file (idempotency preserved)
+- [x] Existing tests in `apm-core` pass without modification after the change
 
 ### Out of scope
 
