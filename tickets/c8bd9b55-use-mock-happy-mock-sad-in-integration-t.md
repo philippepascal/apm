@@ -29,7 +29,7 @@ Two mock agents, `mock-happy` and `mock-sad`, were created specifically to fill 
 - [ ] `APM_SKIP_COMPAT_CHECK: "1"` is removed from the test step in `.github/workflows/release.yml`
 - [ ] `setup_with_local_worktrees` patches the agent to `mock-happy/` in both `config.toml` and `workflow.toml`
 - [ ] `setup_for_prompt_dispatch` patches the agent to `mock-happy/` in both `config.toml` and `workflow.toml`
-- [ ] A `wait_for_pid(pid: u32)` helper is added to `integration.rs` that polls `kill -0 <pid>` until the process exits
+- [x] A `wait_for_pid(pid: u32)` helper is added to `integration.rs` that polls `kill -0 <pid>` until the process exits
 - [ ] Spawn tests call `apm_core::start::run` (or `apm_core::start::run_next`) directly, extract `worker_pid`, wait via `wait_for_pid`, and assert the final state: `specd` for spec-writer paths and `implemented` for worker paths
 - [ ] `cargo test --workspace` passes with all tests green and without `APM_SKIP_COMPAT_CHECK` set
 
