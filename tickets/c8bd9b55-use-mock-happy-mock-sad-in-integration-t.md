@@ -22,12 +22,16 @@ Two mock agents, `mock-happy` and `mock-sad`, were created specifically to fill 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
-- [ ] Replace "debug/" with "mock-happy/" in workflow.toml patch in both setup functions
-- [ ] Remove make_mock_worker (dead code)
-- [ ] Remove APM_SKIP_COMPAT_CHECK from release.yml
-- [ ] Spawn tests call apm_core::start::run directly, wait for child process, and assert final ticket state after mock-happy completes
-- [ ] All 259 integration tests pass without APM_SKIP_COMPAT_CHECK set
+- [ ] `happy_script` spec-writer mode adds `cd "${APM_PROJECT_ROOT:?}"` before the first `apm` call so all CLI invocations use the main project root
+- [ ] `happy_script` impl mode adds `cd "${APM_PROJECT_ROOT:?}"` before the `apm state` call and uses `git -c commit.gpgsign=false commit`
+- [ ] Both modes of `happy_script` call `apm state … --force --no-aggressive` instead of bare `apm state`
+- [ ] `make_mock_worker` is removed from `apm/tests/integration.rs`
+- [ ] `APM_SKIP_COMPAT_CHECK: "1"` is removed from the test step in `.github/workflows/release.yml`
+- [ ] `setup_with_local_worktrees` patches the agent to `mock-happy/` in both `config.toml` and `workflow.toml`
+- [ ] `setup_for_prompt_dispatch` patches the agent to `mock-happy/` in both `config.toml` and `workflow.toml`
+- [ ] A `wait_for_pid(pid: u32)` helper is added to `integration.rs` that polls `kill -0 <pid>` until the process exits
+- [ ] Spawn tests call `apm_core::start::run` (or `apm_core::start::run_next`) directly, extract `worker_pid`, wait via `wait_for_pid`, and assert the final state: `specd` for spec-writer paths and `implemented` for worker paths
+- [ ] `cargo test --workspace` passes with all tests green and without `APM_SKIP_COMPAT_CHECK` set
 
 ### Out of scope
 
