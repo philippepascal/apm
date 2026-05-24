@@ -35,7 +35,10 @@ Two mock agents, `mock-happy` and `mock-sad`, were created specifically to fill 
 
 ### Out of scope
 
-Adding new tests beyond the spawn tests already present. Adding mock-sad or mock-random coverage (separate ticket if wanted).
+- mock-sad and mock-random integration test coverage (separate ticket)
+- Changes to apm state, apm spec, or other CLI commands beyond what the scripts call
+- New integration tests beyond the spawn tests already present
+- Fixing repo_root() to resolve main worktree root (the cd fix in happy_script handles the worktree path issue without touching main.rs)
 
 ### Approach
 
