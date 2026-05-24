@@ -744,12 +744,7 @@ pub fn remote_branch_tip(root: &Path, branch: &str) -> Option<String> {
 /// Check if `commit` is a git ancestor of `of_ref` (i.e. reachable from `of_ref`).
 /// Uses `git merge-base --is-ancestor`.
 pub fn is_ancestor(root: &Path, commit: &str, of_ref: &str) -> bool {
-    Command::new("git")
-        .current_dir(root)
-        .args(["merge-base", "--is-ancestor", commit, of_ref])
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    run(root, &["merge-base", "--is-ancestor", commit, of_ref]).is_ok()
 }
 
 /// Classification of a local branch relative to its origin counterpart.
@@ -907,25 +902,11 @@ pub fn sync_default_branch(root: &Path, default: &str, warnings: &mut Vec<String
 }
 
 pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
-    let status = std::process::Command::new("git")
-        .args(["fetch", "origin", branch])
-        .current_dir(root)
-        .status()?;
-    if !status.success() {
-        anyhow::bail!("git fetch failed");
-    }
-    Ok(())
+    run(root, &["fetch", "origin", branch]).map(|_| ())
 }
 
 pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
-    let status = std::process::Command::new("git")
-        .args(["push", "origin", &format!("{branch}:{branch}")])
-        .current_dir(root)
-        .status()?;
-    if !status.success() {
-        anyhow::bail!("git push failed");
-    }
-    Ok(())
+    run(root, &["push", "origin", &format!("{branch}:{branch}")]).map(|_| ())
 }
 
 pub fn push_branch_tracking(root: &Path, branch: &str) -> anyhow::Result<()> {
@@ -1002,15 +983,9 @@ pub fn list_remote_ticket_branches(root: &Path) -> std::collections::HashSet<Str
 
 /// Delete a remote branch on origin.
 pub fn delete_remote_branch(root: &Path, branch: &str) -> Result<()> {
-    let status = Command::new("git")
-        .current_dir(root)
-        .args(["push", "origin", "--delete", branch])
-        .status()
-        .context("git push origin --delete failed")?;
-    if !status.success() {
-        anyhow::bail!("git push origin --delete {branch} failed");
-    }
-    Ok(())
+    run(root, &["push", "origin", "--delete", branch])
+        .map(|_| ())
+        .context("git push origin --delete failed")
 }
 
 /// Move files on a branch in a single commit.
@@ -1127,10 +1102,7 @@ pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str
 }
 
 pub fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool, messages: &mut Vec<String>, _warnings: &mut Vec<String>) -> Result<()> {
-    let _ = std::process::Command::new("git")
-        .args(["fetch", "origin", default_branch])
-        .current_dir(root)
-        .status();
+    let _ = run(root, &["fetch", "origin", default_branch]);
 
     let current = std::process::Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
@@ -1152,10 +1124,7 @@ pub fn merge_into_default(root: &Path, config: &Config, branch: &str, default_br
         .output()?;
 
     if !out.status.success() {
-        let _ = std::process::Command::new("git")
-            .args(["merge", "--abort"])
-            .current_dir(&merge_dir)
-            .status();
+        let _ = run(&merge_dir, &["merge", "--abort"]);
         bail!(
             "merge conflict — resolve manually and push: {}",
             String::from_utf8_lossy(&out.stderr).trim()
