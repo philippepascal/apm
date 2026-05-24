@@ -129,10 +129,14 @@ pub async fn create_epic(
         _ => return Ok((StatusCode::BAD_REQUEST, "title is required").into_response()),
     };
     let title_clone = title.clone();
-    let (id, branch) = crate::util::blocking(move || {
+    let branch = crate::util::blocking(move || {
         let config = apm_core::config::Config::load(&root)?;
-        apm_core::epic::create_epic_branch(&root, &title_clone, &config)
+        apm_core::epic::create(&root, &title_clone, &config)
     }).await?;
+    let id = branch.strip_prefix("epic/")
+        .and_then(|s| s.split('-').next())
+        .unwrap_or("")
+        .to_string();
     Ok((
         StatusCode::CREATED,
         Json(EpicSummary {

@@ -9,35 +9,25 @@ pub struct SetupDockerOutput {
     pub messages: Vec<String>,
 }
 
-/// What happened when we tried to write a default file.
-#[allow(dead_code)]
-enum WriteAction {
-    Created,
-    Unchanged,
-    Replaced,
-    InitWritten,
-    Skipped,
-}
-
 /// Write `content` to `path`. If the file already exists and differs from the
 /// default, write a .init copy for comparison (always non-interactive in core).
-fn write_default(path: &Path, content: &str, label: &str, messages: &mut Vec<String>) -> Result<WriteAction> {
+fn write_default(path: &Path, content: &str, label: &str, messages: &mut Vec<String>) -> Result<()> {
     if !path.exists() {
         std::fs::write(path, content)?;
         messages.push(format!("Created {label}"));
-        return Ok(WriteAction::Created);
+        return Ok(());
     }
 
     let existing = std::fs::read_to_string(path)?;
     if existing == content {
-        return Ok(WriteAction::Unchanged);
+        return Ok(());
     }
 
     // Always take the non-interactive path in the library: write .init copy.
     let init_path = init_path_for(path);
     std::fs::write(&init_path, content)?;
     messages.push(format!("{label} differs from default — wrote {label}.init for comparison"));
-    Ok(WriteAction::InitWritten)
+    Ok(())
 }
 
 /// foo.toml → foo.toml.init, agents.md → agents.md.init
@@ -55,12 +45,6 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         std::fs::create_dir_all(&tickets_dir)?;
         messages.push("Created tickets/".to_string());
     }
-    write_default(
-        &tickets_dir.join("EPIC.md"),
-        EPIC_MD_PLACEHOLDER,
-        "tickets/EPIC.md",
-        &mut messages,
-    )?;
 
     let apm_dir = root.join(".apm");
     std::fs::create_dir_all(&apm_dir)?;
@@ -163,7 +147,6 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         .ok()
         .and_then(|c| worktree_gitignore_pattern(&c.worktrees.dir));
     ensure_gitignore(&gitignore, wt_pattern.as_deref(), &mut messages)?;
-    ensure_gitattributes(&root.join(".gitattributes"), &mut messages)?;
     maybe_initial_commit(root, &mut messages)?;
     ensure_worktrees_dir(root, &mut messages)?;
     Ok(SetupOutput { messages })
@@ -373,26 +356,6 @@ pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &
     Ok(())
 }
 
-pub fn ensure_gitattributes(path: &Path, messages: &mut Vec<String>) -> Result<()> {
-    let entry = "tickets/EPIC.md merge=ours";
-    if path.exists() {
-        let mut contents = std::fs::read_to_string(path)?;
-        if !contents.contains(entry) {
-            if !contents.ends_with('\n') {
-                contents.push('\n');
-            }
-            contents.push_str(entry);
-            contents.push('\n');
-            std::fs::write(path, &contents)?;
-            messages.push("Updated .gitattributes".to_string());
-        }
-    } else {
-        std::fs::write(path, format!("{entry}\n"))?;
-        messages.push("Created .gitattributes".to_string());
-    }
-    Ok(())
-}
-
 fn ensure_claude_md(root: &Path, agents_paths: &[&str], messages: &mut Vec<String>) -> Result<()> {
     let claude_path = root.join("CLAUDE.md");
     if claude_path.exists() {
@@ -419,18 +382,6 @@ fn ensure_claude_md(root: &Path, agents_paths: &[&str], messages: &mut Vec<Strin
     }
     Ok(())
 }
-
-const EPIC_MD_PLACEHOLDER: &str = "\
-# EPIC.md — per-epic context document
-
-Each epic branch writes its own `tickets/EPIC.md` with the epic title and any
-notes added by the supervisor. APM reads it from the epic branch to build the
-context bundle injected into worker prompts for tickets that belong to that epic.
-
-The copy on `main` is this placeholder and is never read by APM at runtime.
-The `tickets/EPIC.md merge=ours` rule in `.gitattributes` prevents merge
-conflicts when multiple epics are open simultaneously.
-";
 
 #[cfg(target_os = "macos")]
 fn default_log_file(name: &str) -> String {
@@ -853,9 +804,9 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("test.toml");
         let mut msgs = Vec::new();
-        let action = write_default(&path, "content", "test.toml", &mut msgs).unwrap();
-        assert!(matches!(action, WriteAction::Created));
+        write_default(&path, "content", "test.toml", &mut msgs).unwrap();
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "content");
+        assert!(msgs.iter().any(|m| m.contains("Created")));
     }
 
     #[test]
@@ -864,20 +815,17 @@ mod tests {
         let path = tmp.path().join("test.toml");
         std::fs::write(&path, "content").unwrap();
         let mut msgs = Vec::new();
-        let action = write_default(&path, "content", "test.toml", &mut msgs).unwrap();
-        assert!(matches!(action, WriteAction::Unchanged));
+        write_default(&path, "content", "test.toml", &mut msgs).unwrap();
+        assert!(msgs.is_empty());
     }
 
     #[test]
     fn write_default_non_tty_writes_init_when_differs() {
-        // In test context stdin is not a terminal, so this exercises
-        // the non-interactive path: write .init copy.
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("test.toml");
         std::fs::write(&path, "modified").unwrap();
         let mut msgs = Vec::new();
-        let action = write_default(&path, "default", "test.toml", &mut msgs).unwrap();
-        assert!(matches!(action, WriteAction::InitWritten));
+        write_default(&path, "default", "test.toml", &mut msgs).unwrap();
         assert_eq!(std::fs::read_to_string(&path).unwrap(), "modified");
         assert_eq!(
             std::fs::read_to_string(tmp.path().join("test.toml.init")).unwrap(),

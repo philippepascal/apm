@@ -289,15 +289,6 @@ pub async fn clean_handler(
                 }
 
                 log.push(format!("deleted epic {branch}"));
-
-                let epics_path = root.join(".apm").join("epics.toml");
-                if epics_path.exists() {
-                    let raw = std::fs::read_to_string(&epics_path)?;
-                    let mut table: toml::value::Table = toml::from_str(&raw)?;
-                    if table.remove(&id).is_some() {
-                        std::fs::write(&epics_path, toml::to_string(&table)?)?;
-                    }
-                }
             }
         }
 

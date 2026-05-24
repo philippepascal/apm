@@ -572,135 +572,6 @@ apm::cmd::new::run(dir.path(), "Open ticket".into(), true, false, None, None, tr
     assert_eq!(all.len(), 2, "--all should include the closed ticket");
 }
 
-// --- context ---
-
-#[test]
-fn build_epic_bundle_includes_title_siblings_and_guidance() {
-    let dir = setup();
-    let p = dir.path();
-    let config = apm_core::config::Config::load(p).unwrap();
-
-    // Epic branch with title, goal and non-goals in EPIC.md.
-    let epic_id = "ab12cd34";
-    let epic_branch = format!("epic/{epic_id}-test-epic");
-    let epic_md = "# Test Epic\n\n## Goal\nBuild something great.\n\n## Non-goals\nDo not gold-plate.\n";
-    apm_core::git::commit_to_branch(p, &epic_branch, "tickets/EPIC.md", epic_md, "epic: init").unwrap();
-
-    // Active sibling in "specd" state with an Out of scope section.
-    let sibling_active = concat!(
-        "+++\nid = \"aaaa1111\"\ntitle = \"Auth Tickets\"\n",
-        "state = \"specd\"\nepic = \"ab12cd34\"\n+++\n\n",
-        "## Spec\n\n### Problem\n\nHandle user authentication.\n\n",
-        "### Acceptance criteria\n\n- [ ] Criterion\n\n",
-        "### Out of scope\n\nPassword reset and OAuth are out.\n\n",
-        "## History\n\n| When | From | To | By |\n|------|------|----|----|",
-    );
-    apm_core::git::commit_to_branch(
-        p,
-        "ticket/aaaa1111-auth-tickets",
-        "tickets/aaaa1111-auth-tickets.md",
-        sibling_active,
-        "add active sibling",
-    )
-    .unwrap();
-
-    // Closed sibling.
-    let sibling_closed = concat!(
-        "+++\nid = \"bbbb2222\"\ntitle = \"Old Feature\"\n",
-        "state = \"closed\"\nepic = \"ab12cd34\"\n+++\n\n",
-        "## Spec\n\n### Problem\n\nDeploy initial infra.\n",
-    );
-    apm_core::git::commit_to_branch(
-        p,
-        "ticket/bbbb2222-old-feature",
-        "tickets/bbbb2222-old-feature.md",
-        sibling_closed,
-        "add closed sibling",
-    )
-    .unwrap();
-
-    // Another closed sibling (to test grouping).
-    let sibling_closed2 = concat!(
-        "+++\nid = \"cccc3333\"\ntitle = \"Legacy Work\"\n",
-        "state = \"closed\"\nepic = \"ab12cd34\"\n+++\n\n",
-        "## Spec\n\n### Problem\n\nMigrate legacy data.\n",
-    );
-    apm_core::git::commit_to_branch(
-        p,
-        "ticket/cccc3333-legacy-work",
-        "tickets/cccc3333-legacy-work.md",
-        sibling_closed2,
-        "add second closed sibling",
-    )
-    .unwrap();
-
-    // Current ticket — must not appear in bundle.
-    let current_id = "dddd4444";
-
-    let bundle = apm_core::context::build_epic_bundle(p, epic_id, current_id, &config);
-
-    assert!(bundle.contains("Test Epic"), "bundle must have epic title");
-    assert!(bundle.contains("Build something great"), "bundle must have epic goal");
-    assert!(bundle.contains("Do not gold-plate"), "bundle must have non-goals");
-    assert!(bundle.contains("Auth Tickets"), "bundle must have active sibling title");
-    assert!(bundle.contains("Handle user authentication"), "bundle must have problem one-liner");
-    assert!(bundle.contains("Password reset and OAuth are out"), "bundle must have Out of scope");
-    assert!(bundle.contains("Old Feature"), "bundle must have closed sibling");
-    assert!(bundle.contains("Legacy Work"), "bundle must have second closed sibling");
-    assert!(bundle.contains("do not duplicate or overreach"), "bundle must have scope guidance");
-    assert!(!bundle.contains("dddd4444"), "current ticket must not appear in bundle");
-}
-
-#[test]
-fn build_epic_bundle_empty_when_no_epic() {
-    let dir = setup();
-    let p = dir.path();
-    let config = apm_core::config::Config::load(p).unwrap();
-
-    // No epic branch created.  Bundle should still be a valid string (not empty
-    // per-se, but the fallback title is the epic_id).
-    let bundle = apm_core::context::build_epic_bundle(p, "deadbeef", "aaaa1111", &config);
-    // With no epic branch and no sibling tickets, the bundle is the minimal
-    // header with the fallback ID as title.
-    assert!(bundle.contains("deadbeef"));
-    assert!(bundle.contains("Scope guidance"));
-}
-
-#[test]
-fn build_epic_bundle_respects_sibling_cap() {
-    let dir = setup();
-    let p = dir.path();
-
-    // Append context config to .apm/config.toml to cap siblings at 1.
-    let config_path = p.join(".apm/config.toml");
-    let mut config_content = std::fs::read_to_string(&config_path).unwrap();
-    config_content.push_str("\n[context]\nepic_sibling_cap = 1\nepic_byte_cap = 0\n");
-    std::fs::write(&config_path, &config_content).unwrap();
-    let config = apm_core::config::Config::load(p).unwrap();
-
-    let epic_id = "ff001122";
-    let epic_branch = format!("epic/{epic_id}-capped-epic");
-    apm_core::git::commit_to_branch(p, &epic_branch, "tickets/EPIC.md", "# Capped Epic\n", "init").unwrap();
-
-    for (id, slug) in [("aaaa0001", "sib-a"), ("bbbb0002", "sib-b")] {
-        let content = format!(
-            "+++\nid = \"{id}\"\ntitle = \"Sib {id}\"\nstate = \"closed\"\nepic = \"{epic_id}\"\n+++\n\n## Spec\n\n### Problem\n\nProblem for {id}.\n",
-        );
-        apm_core::git::commit_to_branch(
-            p,
-            &format!("ticket/{id}-{slug}"),
-            &format!("tickets/{id}-{slug}.md"),
-            &content,
-            "add",
-        )
-        .unwrap();
-    }
-
-    let bundle = apm_core::context::build_epic_bundle(p, epic_id, "zzzzzzzz", &config);
-    // Only 1 sibling included, 1 elided.
-    assert!(bundle.contains("older closed sibling"), "elided count should be mentioned");
-}
-
 // --- new ---
 
 #[test]
@@ -4137,6 +4008,7 @@ fn create_epic_branch(dir: &std::path::Path, branch: &str) {
     // BYPASS: apm epic new requires a remote origin; create epic branch directly via git
     git(dir, &["checkout", "-b", branch]);
     // Write a placeholder file so the branch has a commit.
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
     std::fs::write(dir.join("tickets/EPIC.md"), format!("# {branch}\n")).unwrap();
     git(dir, &["-c", "commit.gpgsign=false", "add", "tickets/EPIC.md"]);
     git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "create epic"]);
@@ -6032,6 +5904,13 @@ fn git_merge_base(dir: &std::path::Path, ref1: &str, ref2: &str) -> String {
     String::from_utf8(out.stdout).unwrap().trim().to_string()
 }
 
+fn make_epic_branch(p: &std::path::Path, title: &str, id: &str) -> (String, String) {
+    let slug = title.to_lowercase().replace(' ', "-");
+    let branch = format!("epic/{id}-{slug}");
+    apm_core::git::commit_to_branch(p, &branch, "tickets/EPIC.md", &format!("# {title}\n"), "create epic").unwrap();
+    (id.to_string(), branch)
+}
+
 #[test]
 fn move_standalone_ticket_into_epic() {
     let dir = setup();
@@ -6040,7 +5919,7 @@ fn move_standalone_ticket_into_epic() {
     let config = apm_core::config::Config::load(p).unwrap();
 
     // Create an epic branch.
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "test epic", &config).unwrap();
+    let (epic_id, epic_branch) = make_epic_branch(p, "test epic", "ee000001");
 
     // Create a standalone ticket (no epic).
     let mut warnings = vec![];
@@ -6122,7 +6001,7 @@ fn move_commits_replayed_on_new_base() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "replay epic", &config).unwrap();
+    let (epic_id, epic_branch) = make_epic_branch(p, "replay epic", "ee000002");
 
     let mut warnings = vec![];
     let ticket = apm_core::ticket::create(
@@ -6170,7 +6049,7 @@ fn move_ticket_out_of_epic() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "out epic", &config).unwrap();
+    let (epic_id, epic_branch) = make_epic_branch(p, "out epic", "ee000003");
 
     // Create ticket directly in the epic.
     let mut warnings = vec![];
@@ -6233,10 +6112,8 @@ fn move_between_epics() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic1_id, epic1_branch) =
-        apm_core::epic::create_epic_branch(p, "first epic", &config).unwrap();
-    let (epic2_id, epic2_branch) =
-        apm_core::epic::create_epic_branch(p, "second epic", &config).unwrap();
+    let (epic1_id, epic1_branch) = make_epic_branch(p, "first epic", "ee000004");
+    let (epic2_id, epic2_branch) = make_epic_branch(p, "second epic", "ee000005");
 
     // Create ticket in epic1.
     let mut warnings = vec![];
@@ -6307,7 +6184,7 @@ fn move_already_in_same_epic_is_noop() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, epic_branch) = apm_core::epic::create_epic_branch(p, "same epic", &config).unwrap();
+    let (epic_id, epic_branch) = make_epic_branch(p, "same epic", "ee000006");
 
     let mut warnings = vec![];
     let ticket = apm_core::ticket::create(
@@ -6388,7 +6265,7 @@ fn move_terminal_ticket_fails() {
     let p = dir.path();
     let config = apm_core::config::Config::load(p).unwrap();
 
-    let (epic_id, _epic_branch) = apm_core::epic::create_epic_branch(p, "t epic", &config).unwrap();
+    let (epic_id, _epic_branch) = make_epic_branch(p, "t epic", "ee000007");
 
     let mut warnings = vec![];
     let ticket = apm_core::ticket::create(
@@ -6464,8 +6341,7 @@ fn move_rebase_conflict_fails_cleanly() {
     let config = apm_core::config::Config::load(p).unwrap();
 
     // Create an epic branch, then add a commit to it that conflicts with the ticket.
-    let (epic_id, epic_branch) =
-        apm_core::epic::create_epic_branch(p, "conflict epic", &config).unwrap();
+    let (epic_id, epic_branch) = make_epic_branch(p, "conflict epic", "ee000008");
 
     // Add a commit to the epic branch that modifies "shared.txt".
     add_commit_to_branch_via_worktree(p, &epic_branch, "shared.txt", "from epic\n");

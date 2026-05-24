@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::Path;
 
 use crate::config::StateConfig;
-use crate::{git_util, worktree};
+use crate::git_util;
 
 pub fn epic_is_quiescent(
     root: &Path,
@@ -323,45 +323,14 @@ pub fn create(root: &Path, title: &str, config: &crate::config::Config) -> Resul
     let id = crate::ticket_fmt::gen_hex_id();
     let slug = crate::ticket::slugify(title);
     let branch = format!("epic/{id}-{slug}");
-
     let default_branch = &config.project.default_branch;
-    git_util::fetch_branch(root, default_branch)?;
-
-    let unique = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.subsec_nanos())
-        .unwrap_or(0);
-    let wt_path = std::env::temp_dir().join(format!(
-        "apm-{}-{}-{}",
-        std::process::id(),
-        unique,
-        branch.replace('/', "-"),
-    ));
-
-    let wt_path_str = wt_path.to_string_lossy();
-    git_util::run(root, &["worktree", "add", "-b", &branch, &wt_path_str, &format!("origin/{default_branch}")])?;
-
-    let result = (|| -> Result<()> {
-        let epic_md = wt_path.join("tickets/EPIC.md");
-        if let Some(parent) = epic_md.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(&epic_md, format!("# {title}\n"))?;
-
-        git_util::stage_files(&wt_path, &["tickets/EPIC.md"])?;
-
-        let commit_msg = format!("epic({id}): create {title}");
-        git_util::commit(&wt_path, &commit_msg)?;
-        Ok(())
-    })();
-
-    let _ = worktree::remove_worktree(root, &wt_path, true);
-    let _ = std::fs::remove_dir_all(&wt_path);
-
-    result?;
-
-    crate::git::push_branch_tracking(root, &branch)?;
-
+    let _ = git_util::fetch_branch(root, default_branch);
+    if git_util::run(root, &["branch", &branch, &format!("origin/{default_branch}")]).is_err()
+        && git_util::run(root, &["branch", &branch, default_branch]).is_err()
+    {
+        crate::git::commit_to_branch(root, &branch, "tickets/.gitkeep", "", "epic: init")?;
+    }
+    let _ = crate::git::push_branch_tracking(root, &branch);
     Ok(branch)
 }
 
@@ -505,16 +474,3 @@ pub fn set_epic_owner(
     Ok((to_change.len(), skipped.len()))
 }
 
-pub fn create_epic_branch(root: &Path, title: &str, config: &crate::config::Config) -> Result<(String, String)> {
-    let id = crate::ticket_fmt::gen_hex_id();
-    let slug = crate::ticket::slugify(title);
-    let branch = format!("epic/{id}-{slug}");
-    let default_branch = &config.project.default_branch;
-    let _ = crate::git_util::run(root, &["fetch", "origin", default_branch]);
-    if crate::git_util::run(root, &["branch", &branch, &format!("origin/{default_branch}")]).is_err() {
-        crate::git_util::run(root, &["branch", &branch, default_branch])?;
-    }
-    crate::git_util::commit_to_branch(root, &branch, "tickets/EPIC.md", &format!("# {title}\n"), "epic: init")?;
-    let _ = crate::git_util::push_branch(root, &branch);
-    Ok((id, branch))
-}

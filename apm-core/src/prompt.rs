@@ -97,9 +97,7 @@ pub fn run(
     let agent = agent_override.unwrap_or(&params.agent).to_string();
 
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        crate::start::emit_agents_instructions_deprecation();
-    }
+
     let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &agent, &role)?;
 
     out.write_all(prompt.as_bytes())?;
@@ -144,9 +142,7 @@ pub fn explain(
     let agent = agent_override.unwrap_or(&params.agent).to_string();
 
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        crate::start::emit_agents_instructions_deprecation();
-    }
+
     let prov = explain_system_prompt(
         root,
         tr_instructions,
@@ -171,9 +167,7 @@ pub fn run_without_ticket(
     out: &mut dyn Write,
 ) -> Result<()> {
     let config = Config::load(root)?;
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        crate::start::emit_agents_instructions_deprecation();
-    }
+
     let prompt = build_system_prompt(
         root,
         None,
@@ -195,9 +189,7 @@ pub fn explain_without_ticket(
     out: &mut dyn Write,
 ) -> Result<()> {
     let config = Config::load(root)?;
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        crate::start::emit_agents_instructions_deprecation();
-    }
+
     let prov = explain_system_prompt(
         root,
         None,

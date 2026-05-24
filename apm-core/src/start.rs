@@ -15,51 +15,13 @@ const MOCK_RANDOM_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-
 const DEBUG_WORKER_DEFAULT: &str = include_str!("default/agents/debug/apm.worker.md");
 const DEBUG_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/debug/apm.spec-writer.md");
 const DEFAULT_MAIN_AGENT_MD: &str = include_str!("default/agents/default/apm.main-agent.md");
-const DEFAULT_PROJECT_MD: &str = include_str!("default/project.md");
-
-static DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-#[cfg(test)]
-static DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-const DEPRECATION_MSG: &str = "apm: deprecated: `[workers] command`, `args`, and `model` fields are deprecated — migrate to `agent` and `[workers.options]`";
-
-static AGENTS_INSTRUCTIONS_DEPRECATION_WARNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-#[cfg(test)]
-static AGENTS_INSTRUCTIONS_DEPRECATION_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-const AGENTS_INSTRUCTIONS_DEPRECATION_MSG: &str = "apm: deprecated: [agents].instructions renamed to [agents].project — update config.toml";
-
-pub(crate) fn emit_agents_instructions_deprecation_to(out: &mut dyn std::io::Write) {
-    use std::sync::atomic::Ordering;
-    if AGENTS_INSTRUCTIONS_DEPRECATION_WARNED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
-        let _ = writeln!(out, "{AGENTS_INSTRUCTIONS_DEPRECATION_MSG}");
-    }
-}
-
-pub(crate) fn emit_agents_instructions_deprecation() {
-    emit_agents_instructions_deprecation_to(&mut std::io::stderr().lock());
-}
 
 /// Delay inserted between `git fetch` and `git merge` in aggressive mode to let
 /// remote-propagation settle and reduce the fetch-race window.
 const POST_FETCH_SETTLE_MS: u64 = 1_000;
 
-fn emit_deprecation_warning_to(out: &mut dyn std::io::Write) {
-    use std::sync::atomic::Ordering;
-    if DEPRECATION_WARNED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
-        let _ = writeln!(out, "{DEPRECATION_MSG}");
-    }
-}
-
-fn emit_deprecation_warning() {
-    emit_deprecation_warning_to(&mut std::io::stderr().lock());
-}
-
 pub struct EffectiveWorkerParams {
     pub command: String,
-    pub args: Vec<String>,
     pub model: Option<String>,
     pub env: std::collections::HashMap<String, String>,
     pub container: Option<String>,
@@ -79,30 +41,12 @@ pub(crate) fn resolve_profile<'a>(transition: &crate::config::TransitionConfig, 
 }
 
 pub fn effective_spawn_params(transition_agent: Option<&str>, profile: Option<&WorkerProfileConfig>, workers: &WorkersConfig) -> EffectiveWorkerParams {
-    // Legacy command/args (kept for check_output_format_supported backward compat)
-    let command = profile.and_then(|p| p.command.clone())
-        .or_else(|| workers.command.clone())
-        .unwrap_or_else(|| "claude".to_string());
-    let args = profile.and_then(|p| p.args.clone())
-        .or_else(|| workers.args.clone())
-        .unwrap_or_else(|| vec!["--print".to_string()]);
-
     // Agent resolution: transition > profile > workers > default "claude"
-    let raw_agent = transition_agent
+    let agent = transition_agent
         .map(str::to_owned)
         .or_else(|| profile.and_then(|p| p.agent.clone()))
-        .or_else(|| workers.agent.clone());
-
-    // Emit deprecation warning when legacy fields present but agent absent
-    let has_legacy = workers.command.is_some()
-        || workers.args.is_some()
-        || workers.model.is_some()
-        || profile.map(|p| p.command.is_some() || p.args.is_some() || p.model.is_some()).unwrap_or(false);
-    if raw_agent.is_none() && has_legacy {
-        emit_deprecation_warning();
-    }
-
-    let agent = raw_agent.unwrap_or_else(|| "claude".to_string());
+        .or_else(|| workers.agent.clone())
+        .unwrap_or_else(|| "claude".to_string());
 
     // Options merge: workers.options base, profile.options overrides on collision
     let mut options = workers.options.clone();
@@ -112,10 +56,7 @@ pub fn effective_spawn_params(transition_agent: Option<&str>, profile: Option<&W
         }
     }
 
-    // Model: options.model > legacy profile.model > legacy workers.model
-    let model = options.get("model").cloned()
-        .or_else(|| profile.and_then(|p| p.model.clone()))
-        .or_else(|| workers.model.clone());
+    let model = options.get("model").cloned();
 
     // Env merge
     let mut env = workers.env.clone();
@@ -128,7 +69,8 @@ pub fn effective_spawn_params(transition_agent: Option<&str>, profile: Option<&W
     let container = profile.and_then(|p| p.container.clone())
         .or_else(|| workers.container.clone());
 
-    EffectiveWorkerParams { command, args, model, env, container, agent, options }
+    let command = agent.clone();
+    EffectiveWorkerParams { command, model, env, container, agent, options }
 }
 
 pub(crate) fn apply_frontmatter_agent(
@@ -285,7 +227,6 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         bail!("ticket {id:?} not found");
     };
 
-    let ticket_epic_id = t.frontmatter.epic.clone();
     let ticket_depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
     let fm = &t.frontmatter;
     if !startable.is_empty() && !startable.contains(&fm.state.as_str()) {
@@ -380,13 +321,9 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        emit_agents_instructions_deprecation();
-    }
     let worker_system = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &params.agent, role)?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(tr_role_prefix, profile, &id));
-    let with_epic = with_epic_bundle(root, ticket_epic_id.as_deref(), &id, &config, raw_prompt);
-    let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, with_epic);
+    let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, raw_prompt);
     let role_prefix = tr_role_prefix
         .map(|p| p.replace("<id>", &id))
         .or_else(|| profile.and_then(|p| p.role_prefix.clone()));
@@ -586,16 +523,12 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions2 = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix2 = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        emit_agents_instructions_deprecation();
-    }
     let worker_system = build_system_prompt(root, tr_instructions2, profile2, &config.workers, config.agents.project.as_deref(), &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
     let raw_prompt_next = format!("{}\n\n{raw}", agent_role_prefix(tr_role_prefix2, profile2, &id));
-    let with_epic_next = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_next);
-    let ticket_content = with_dependency_bundle(root, &dep_ids_next, &config, with_epic_next);
+    let ticket_content = with_dependency_bundle(root, &dep_ids_next, &config, raw_prompt_next);
     let role_prefix2 = tr_role_prefix2
         .map(|p| p.replace("<id>", &id))
         .or_else(|| profile2.and_then(|p| p.role_prefix.clone()));
@@ -793,16 +726,12 @@ pub fn spawn_next_worker(
     let worker_name = format!("{}-{}-{:04x}", params.agent, now_str, rand_u16());
     let tr_instructions_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.instructions.as_deref());
     let tr_role_prefix_snw = triggering_transition_owned.as_ref().and_then(|tr| tr.role_prefix.as_deref());
-    if config.agents.project.is_none() && config.agents.instructions.is_some() {
-        emit_agents_instructions_deprecation();
-    }
     let worker_system = build_system_prompt(root, tr_instructions_snw, profile2, &config.workers, config.agents.project.as_deref(), &params.agent, role2)?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
     let raw_prompt_snw = format!("{}\n\n{raw}", agent_role_prefix(tr_role_prefix_snw, profile2, &id));
-    let with_epic_snw = with_epic_bundle(root, t.frontmatter.epic.as_deref(), &id, &config, raw_prompt_snw);
-    let ticket_content = with_dependency_bundle(root, &dep_ids_snw, &config, with_epic_snw);
+    let ticket_content = with_dependency_bundle(root, &dep_ids_snw, &config, raw_prompt_snw);
     let role_prefix2 = tr_role_prefix_snw
         .map(|p| p.replace("<id>", &id))
         .or_else(|| profile2.and_then(|p| p.role_prefix.clone()));
@@ -879,17 +808,6 @@ fn with_dependency_bundle(root: &Path, depends_on: &[String], config: &Config, c
     format!("{bundle}\n{content}")
 }
 
-/// If the ticket belongs to an epic, prepend an epic context bundle to the
-/// worker prompt content.  Tickets without an epic are unchanged.
-fn with_epic_bundle(root: &Path, epic_id: Option<&str>, ticket_id: &str, config: &Config, content: String) -> String {
-    match epic_id {
-        Some(eid) => {
-            let bundle = crate::context::build_epic_bundle(root, eid, ticket_id, config);
-            format!("{bundle}\n{content}")
-        }
-        None => content,
-    }
-}
 
 pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
     match (agent, role) {
@@ -1126,7 +1044,7 @@ fn rand_u16() -> u16 {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild, DEPRECATION_WARNED, DEPRECATION_MSG, DEPRECATION_TEST_LOCK, emit_deprecation_warning_to, AGENTS_INSTRUCTIONS_DEPRECATION_WARNED, AGENTS_INSTRUCTIONS_DEPRECATION_MSG, AGENTS_INSTRUCTIONS_DEPRECATION_TEST_LOCK, emit_agents_instructions_deprecation_to};
+    use super::{build_system_prompt, agent_role_prefix, resolve_profile, effective_spawn_params, check_output_format_supported, apply_frontmatter_agent, ManagedChild};
     use crate::config::{WorkerProfileConfig, WorkersConfig, TransitionConfig, CompletionStrategy};
     use std::collections::HashMap;
 
@@ -1157,18 +1075,8 @@ mod tests {
         }
     }
 
-    fn make_workers(command: &str, model: Option<&str>) -> WorkersConfig {
-        WorkersConfig {
-            command: Some(command.to_string()),
-            args: None,
-            model: model.map(|s| s.to_string()),
-            env: HashMap::new(),
-            container: None,
-            keychain: HashMap::new(),
-            agent: None,
-            options: HashMap::new(),
-            instructions: None,
-        }
+    fn make_workers() -> WorkersConfig {
+        WorkersConfig::default()
     }
 
     // --- resolve_profile ---
@@ -1189,7 +1097,7 @@ mod tests {
             worktrees: Default::default(),
             sync: Default::default(),
             logging: Default::default(),
-            workers: make_workers("claude", None),
+            workers: make_workers(),
             work: Default::default(),
             server: Default::default(),
             git_host: Default::default(),
@@ -1222,7 +1130,7 @@ mod tests {
             worktrees: Default::default(),
             sync: Default::default(),
             logging: Default::default(),
-            workers: make_workers("claude", None),
+            workers: make_workers(),
             work: Default::default(),
             server: Default::default(),
             git_host: Default::default(),
@@ -1252,7 +1160,7 @@ mod tests {
             worktrees: Default::default(),
             sync: Default::default(),
             logging: Default::default(),
-            workers: make_workers("claude", None),
+            workers: make_workers(),
             work: Default::default(),
             server: Default::default(),
             git_host: Default::default(),
@@ -1269,44 +1177,8 @@ mod tests {
     // --- effective_spawn_params ---
 
     #[test]
-    fn effective_spawn_params_profile_command_overrides_global() {
-        let workers = make_workers("claude", Some("sonnet"));
-        let profile = WorkerProfileConfig {
-            command: Some("my-claude".into()),
-            ..Default::default()
-        };
-        let params = effective_spawn_params(None, Some(&profile), &workers);
-        assert_eq!(params.command, "my-claude");
-    }
-
-    #[test]
-    fn effective_spawn_params_falls_back_to_global_command() {
-        let workers = make_workers("claude", None);
-        let params = effective_spawn_params(None, None, &workers);
-        assert_eq!(params.command, "claude");
-    }
-
-    #[test]
-    fn effective_spawn_params_profile_model_overrides_global() {
-        let workers = make_workers("claude", Some("sonnet"));
-        let profile = WorkerProfileConfig {
-            model: Some("opus".into()),
-            ..Default::default()
-        };
-        let params = effective_spawn_params(None, Some(&profile), &workers);
-        assert_eq!(params.model.as_deref(), Some("opus"));
-    }
-
-    #[test]
-    fn effective_spawn_params_falls_back_to_global_model() {
-        let workers = make_workers("claude", Some("sonnet"));
-        let params = effective_spawn_params(None, None, &workers);
-        assert_eq!(params.model.as_deref(), Some("sonnet"));
-    }
-
-    #[test]
     fn effective_spawn_params_profile_env_merged_over_global() {
-        let mut workers = make_workers("claude", None);
+        let mut workers = make_workers();
         workers.env.insert("FOO".into(), "global".into());
         workers.env.insert("BAR".into(), "bar".into());
 
@@ -1323,7 +1195,7 @@ mod tests {
 
     #[test]
     fn effective_spawn_params_profile_container_overrides_global() {
-        let mut workers = make_workers("claude", None);
+        let mut workers = make_workers();
         workers.container = Some("global-image".into());
         let profile = WorkerProfileConfig {
             container: Some("profile-image".into()),
@@ -1547,39 +1419,6 @@ mod tests {
             layer1.trim_end(),
             super::DEFAULT_WORKER_DEFAULT.trim_end()
         );
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn instructions_deprecated_is_warning_only() {
-        // When [agents].instructions is set but [agents].project is not,
-        // the deprecation warning is emitted and the instructions value is NOT injected.
-        let _guard = AGENTS_INSTRUCTIONS_DEPRECATION_TEST_LOCK.lock().unwrap();
-        AGENTS_INSTRUCTIONS_DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
-
-        let dir = tempfile::tempdir().unwrap();
-        let p = dir.path();
-        std::fs::write(p.join("agents.md"), "MONOLITHIC AGENTS CONTENT\n").unwrap();
-
-        // Simulate: project absent, instructions present → emit deprecation, pass None
-        let mut stderr_buf: Vec<u8> = Vec::new();
-        emit_agents_instructions_deprecation_to(&mut stderr_buf);
-
-        let workers = WorkersConfig::default();
-        // project_file = None (not the instructions path)
-        let result = build_system_prompt(p, None, None, &workers, None, "claude", "worker").unwrap();
-
-        // Deprecation warning was emitted
-        let stderr = String::from_utf8(stderr_buf).unwrap();
-        assert!(stderr.contains("deprecated"), "stderr should contain 'deprecated': {stderr}");
-        assert!(stderr.contains(AGENTS_INSTRUCTIONS_DEPRECATION_MSG), "wrong message: {stderr}");
-
-        // Instructions content NOT in output
-        assert!(!result.contains("MONOLITHIC AGENTS CONTENT"), "instructions content must not appear in output: {result}");
-
-        // Output is Layer 1 + Layer 3 (no Layer 2)
-        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_WORKER_DEFAULT.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1976,51 +1815,6 @@ mod tests {
         let params = effective_spawn_params(None, Some(&profile), &workers);
         assert_eq!(params.options.get("model").map(|s| s.as_str()), Some("sonnet"), "profile model should override workers model");
         assert_eq!(params.options.get("timeout").map(|s| s.as_str()), Some("30"), "non-overlapping key should survive");
-    }
-
-    #[test]
-    fn deprecation_warning_writes_to_stream_once() {
-        let _guard = DEPRECATION_TEST_LOCK.lock().unwrap();
-        DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
-
-        // Capture what would otherwise go to stderr — proves the message hits
-        // the writer (i.e. stderr in production), not just an in-memory log.
-        let mut buf: Vec<u8> = Vec::new();
-        emit_deprecation_warning_to(&mut buf);
-        emit_deprecation_warning_to(&mut buf);
-
-        let captured = String::from_utf8(buf).unwrap();
-        let count = captured.matches(DEPRECATION_MSG).count();
-        assert_eq!(count, 1, "deprecated message should appear exactly once on the writer, found {count}\n{captured}");
-    }
-
-    #[test]
-    fn deprecation_warning_triggered_by_legacy_workers_config() {
-        let _guard = DEPRECATION_TEST_LOCK.lock().unwrap();
-        DEPRECATION_WARNED.store(false, std::sync::atomic::Ordering::SeqCst);
-
-        let workers = WorkersConfig { command: Some("claude".into()), ..Default::default() };
-        effective_spawn_params(None, None, &workers);
-
-        assert!(
-            DEPRECATION_WARNED.load(std::sync::atomic::Ordering::SeqCst),
-            "legacy [workers].command must trigger the deprecation warning"
-        );
-    }
-
-    #[test]
-    fn legacy_model_forwarded_to_ctx() {
-        let workers = WorkersConfig { model: Some("opus".into()), ..Default::default() };
-        let params = effective_spawn_params(None, None, &workers);
-        assert_eq!(params.model.as_deref(), Some("opus"));
-    }
-
-    #[test]
-    fn options_model_takes_precedence_over_legacy() {
-        let mut workers = WorkersConfig { model: Some("opus".into()), agent: Some("claude".into()), ..Default::default() };
-        workers.options.insert("model".into(), "sonnet".into());
-        let params = effective_spawn_params(None, None, &workers);
-        assert_eq!(params.model.as_deref(), Some("sonnet"));
     }
 
     // --- APM_OPT_ env vars ---
