@@ -24,6 +24,7 @@ Checkboxes; each one independently testable.
 - [ ] Replace "debug/" with "mock-happy/" in workflow.toml patch in both setup functions
 - [ ] Remove make_mock_worker (dead code)
 - [ ] Remove APM_SKIP_COMPAT_CHECK from release.yml
+- [ ] Spawn tests call apm_core::start::run directly, wait for child process, and assert final ticket state after mock-happy completes
 
 ### Out of scope
 
