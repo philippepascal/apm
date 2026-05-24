@@ -1,8 +1,8 @@
 use anyhow::Result;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::Path;
 
-use crate::config::{Config, TransitionConfig, WorkerProfileConfig};
+use crate::config::{Config, TransitionConfig};
 
 // ---------------------------------------------------------------------------
 // Static fallback content
@@ -243,7 +243,7 @@ fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
 
         for state in &config.workflow.states {
             for transition in &state.transitions {
-                let t_role = derive_transition_role(transition, &config.worker_profiles);
+                let t_role = derive_transition_role(transition);
                 if t_role == role_name {
                     source_states.insert(state.id.clone());
                     target_states.insert(transition.to.clone());
@@ -286,12 +286,12 @@ fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
         // Transitions — emit all when unscoped, or only role-matching ones.
         for transition in &state.transitions {
             if filter.is_some() {
-                let t_role = derive_transition_role(transition, &config.worker_profiles);
+                let t_role = derive_transition_role(transition);
                 if t_role != role.unwrap_or("") {
                     continue;
                 }
             }
-            let t_role = derive_transition_role(transition, &config.worker_profiles);
+            let t_role = derive_transition_role(transition);
             let mut line = format!("  → {}", transition.to);
             if !transition.trigger.is_empty() {
                 line.push_str(&format!(", trigger: {}", transition.trigger));
@@ -386,30 +386,14 @@ fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> 
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn derive_transition_role(
-    t: &TransitionConfig,
-    profiles: &HashMap<String, WorkerProfileConfig>,
-) -> String {
-    // (a) profile.role if a matching profile is found
-    if let Some(ref profile_name) = t.profile {
-        if let Some(profile) = profiles.get(profile_name) {
-            if let Some(ref role) = profile.role {
-                return role.clone();
-            }
-        }
-    }
-    // (b) basename of instructions path, strip "apm." prefix and ".md" suffix
-    if let Some(ref instructions) = t.instructions {
-        let path = Path::new(instructions);
-        if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-            let without_prefix = file_name.strip_prefix("apm.").unwrap_or(file_name);
-            let role = without_prefix.strip_suffix(".md").unwrap_or(without_prefix);
+fn derive_transition_role(t: &TransitionConfig) -> String {
+    if let Some(ref wp) = t.worker_profile {
+        if let Some((_, role)) = wp.split_once('/') {
             if !role.is_empty() {
                 return role.to_string();
             }
         }
     }
-    // (c) default
     "worker".to_string()
 }
 
@@ -558,8 +542,7 @@ mod tests {
     }
 
     #[test]
-    fn derive_transition_role_from_instructions_path() {
-        let profiles = HashMap::new();
+    fn derive_transition_role_from_worker_profile() {
         let t = crate::config::TransitionConfig {
             to: "specd".to_string(),
             trigger: "submit".to_string(),
@@ -569,19 +552,15 @@ mod tests {
             focus_section: None,
             context_section: None,
             warning: None,
-            profile: None,
-            instructions: Some(".apm/agents/default/apm.spec-writer.md".to_string()),
-            role_prefix: None,
-            agent: None,
+            worker_profile: Some("claude/spec-writer".to_string()),
             on_failure: None,
             outcome: None,
         };
-        assert_eq!(derive_transition_role(&t, &profiles), "spec-writer");
+        assert_eq!(derive_transition_role(&t), "spec-writer");
     }
 
     #[test]
     fn derive_transition_role_defaults_to_worker() {
-        let profiles = HashMap::new();
         let t = crate::config::TransitionConfig {
             to: "implemented".to_string(),
             trigger: String::new(),
@@ -591,43 +570,11 @@ mod tests {
             focus_section: None,
             context_section: None,
             warning: None,
-            profile: None,
-            instructions: None,
-            role_prefix: None,
-            agent: None,
+            worker_profile: None,
             on_failure: None,
             outcome: None,
         };
-        assert_eq!(derive_transition_role(&t, &profiles), "worker");
-    }
-
-    #[test]
-    fn derive_transition_role_from_profile() {
-        let mut profiles = HashMap::new();
-        profiles.insert(
-            "my_profile".to_string(),
-            WorkerProfileConfig {
-                role: Some("spec-writer".to_string()),
-                ..Default::default()
-            },
-        );
-        let t = crate::config::TransitionConfig {
-            to: "specd".to_string(),
-            trigger: String::new(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            profile: Some("my_profile".to_string()),
-            instructions: None,
-            role_prefix: None,
-            agent: None,
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t, &profiles), "spec-writer");
+        assert_eq!(derive_transition_role(&t), "worker");
     }
 
     #[test]
@@ -648,7 +595,7 @@ actionable = ["agent"]
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "start"
-instructions = ".apm/agents/default/apm.worker.md"
+worker_profile = "claude/worker"
 
 [[workflow.states]]
 id = "in_progress"
@@ -658,7 +605,7 @@ actionable = ["agent"]
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-instructions = ".apm/agents/default/apm.worker.md"
+worker_profile = "claude/worker"
 
 [[workflow.states]]
 id = "implemented"
@@ -677,7 +624,7 @@ actionable = ["agent"]
 [[workflow.states.transitions]]
 to = "in_design"
 trigger = "claim"
-instructions = ".apm/agents/default/apm.spec-writer.md"
+worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "in_design"
@@ -687,7 +634,7 @@ actionable = ["agent"]
 [[workflow.states.transitions]]
 to = "specd"
 trigger = "submit"
-instructions = ".apm/agents/default/apm.spec-writer.md"
+worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "specd"

@@ -254,10 +254,7 @@ mod tests {
             warning: None,
             on_failure: None,
             outcome: None,
-            profile: None,
-            instructions: None,
-            role_prefix: None,
-            agent: None,
+            worker_profile: None,
         }
     }
 
@@ -272,7 +269,6 @@ mod tests {
             satisfies_deps: crate::config::SatisfiesDeps::Bool(false),
             dep_requires: None,
             transitions: vec![],
-            instructions: None,
         }
     }
 

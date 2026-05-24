@@ -121,11 +121,12 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
     write_default(&apm_dir.join("ticket.toml"), default_ticket_toml(), ".apm/ticket.toml", &mut messages)?;
     migrate_flat_agent_files(root, &apm_dir, &mut messages)?;
     migrate_project_md_location(root, &apm_dir, &mut messages)?;
-    let agents_default_dir = apm_dir.join("agents/default");
-    std::fs::create_dir_all(&agents_default_dir)
-        .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_default_dir.display()))?;
-    write_default(&agents_default_dir.join("apm.spec-writer.md"), include_str!("default/agents/default/apm.spec-writer.md"), ".apm/agents/default/apm.spec-writer.md", &mut messages)?;
-    write_default(&agents_default_dir.join("apm.worker.md"), include_str!("default/agents/default/apm.worker.md"), ".apm/agents/default/apm.worker.md", &mut messages)?;
+    migrate_agents_default_to_claude(root, &apm_dir, &mut messages)?;
+    let agents_claude_dir = apm_dir.join("agents/claude");
+    std::fs::create_dir_all(&agents_claude_dir)
+        .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_claude_dir.display()))?;
+    write_default(&agents_claude_dir.join("apm.spec-writer.md"), include_str!("default/agents/claude/apm.spec-writer.md"), ".apm/agents/claude/apm.spec-writer.md", &mut messages)?;
+    write_default(&agents_claude_dir.join("apm.worker.md"), include_str!("default/agents/claude/apm.worker.md"), ".apm/agents/claude/apm.worker.md", &mut messages)?;
     write_default(
         &apm_dir.join("project.md"),
         include_str!("default/project.md"),
@@ -133,14 +134,14 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         &mut messages,
     )?;
     write_default(
-        &agents_default_dir.join("apm.main-agent.md"),
-        include_str!("default/agents/default/apm.main-agent.md"),
-        ".apm/agents/default/apm.main-agent.md",
+        &agents_claude_dir.join("apm.main-agent.md"),
+        include_str!("default/agents/claude/apm.main-agent.md"),
+        ".apm/agents/claude/apm.main-agent.md",
         &mut messages,
     )?;
     ensure_claude_md(root, &[
         ".apm/project.md",
-        ".apm/agents/default/apm.main-agent.md",
+        ".apm/agents/claude/apm.main-agent.md",
     ], &mut messages)?;
     let gitignore = root.join(".gitignore");
     let wt_pattern = crate::config::Config::load(root)
@@ -257,6 +258,59 @@ fn migrate_project_md_location(root: &Path, apm_dir: &Path, messages: &mut Vec<S
             messages.push("Updated config.toml (project → .apm/project.md)".to_string());
         }
     }
+    Ok(())
+}
+
+/// Rename `.apm/agents/default/` → `.apm/agents/claude/` and update
+/// CLAUDE.md and config.toml references.
+fn migrate_agents_default_to_claude(root: &Path, apm_dir: &Path, messages: &mut Vec<String>) -> Result<()> {
+    let default_dir = apm_dir.join("agents/default");
+    let claude_dir = apm_dir.join("agents/claude");
+
+    if !default_dir.exists() || claude_dir.exists() {
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(&claude_dir)?;
+
+    let files = ["apm.spec-writer.md", "apm.worker.md", "apm.main-agent.md", "style.md", "agents.md"];
+    for file in &files {
+        let old = default_dir.join(file);
+        let new = claude_dir.join(file);
+        if old.exists() && !new.exists() {
+            std::fs::rename(&old, &new)?;
+            messages.push(format!("Moved .apm/agents/default/{file} → .apm/agents/claude/{file}"));
+        }
+    }
+
+    if let Ok(entries) = std::fs::read_dir(&default_dir) {
+        let remaining: Vec<_> = entries.filter_map(|e| e.ok()).collect();
+        if remaining.is_empty() {
+            let _ = std::fs::remove_dir(&default_dir);
+        }
+    }
+
+    let rewrites: &[(&str, &str)] = &[
+        ("@.apm/agents/default/apm.main-agent.md", "@.apm/agents/claude/apm.main-agent.md"),
+        ("@.apm/agents/default/apm.worker.md", "@.apm/agents/claude/apm.worker.md"),
+        ("@.apm/agents/default/apm.spec-writer.md", "@.apm/agents/claude/apm.spec-writer.md"),
+        ("@.apm/agents/default/style.md", "@.apm/agents/claude/style.md"),
+        ("@.apm/agents/default/agents.md", "@.apm/agents/claude/agents.md"),
+    ];
+
+    let claude_md = root.join("CLAUDE.md");
+    if claude_md.exists() {
+        let contents = std::fs::read_to_string(&claude_md)?;
+        let mut updated = contents.clone();
+        for (old, new) in rewrites {
+            updated = updated.replace(old, new);
+        }
+        if updated != contents {
+            std::fs::write(&claude_md, &updated)?;
+            messages.push("Updated CLAUDE.md (agents/default/ → agents/claude/)".to_string());
+        }
+    }
+
     Ok(())
 }
 
@@ -429,13 +483,8 @@ max_workers_on_default = 1
 project = ".apm/project.md"
 
 [workers]
-agent = "claude"
-
-[workers.options]
+default = "claude/worker"
 model = "sonnet"
-
-[worker_profiles.spec_agent]
-role = "spec-writer"
 
 [logging]
 enabled = false
@@ -648,16 +697,16 @@ mod tests {
         assert!(tmp.path().join(".apm/config.toml").exists());
         assert!(tmp.path().join(".apm/workflow.toml").exists());
         assert!(tmp.path().join(".apm/ticket.toml").exists());
-        assert!(!tmp.path().join(".apm/agents/default/agents.md").exists());
-        assert!(tmp.path().join(".apm/agents/default/apm.spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/agents/default/apm.worker.md").exists());
+        assert!(!tmp.path().join(".apm/agents/claude/agents.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
         assert!(tmp.path().join(".apm/project.md").exists());
-        assert!(tmp.path().join(".apm/agents/default/apm.main-agent.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.main-agent.md").exists());
         assert!(!tmp.path().join(".apm/agents.md").exists());
         assert!(!tmp.path().join(".apm/apm.spec-writer.md").exists());
         assert!(!tmp.path().join(".apm/apm.worker.md").exists());
-        assert!(!tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
-        assert!(!tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
+        assert!(!tmp.path().join(".apm/agents/default/apm.spec-writer.md").exists());
+        assert!(!tmp.path().join(".apm/agents/default/apm.worker.md").exists());
         assert!(tmp.path().join(".gitignore").exists());
         assert!(tmp.path().join("CLAUDE.md").exists());
     }
@@ -949,18 +998,18 @@ mod tests {
         assert!(!tmp.path().join(".apm/apm.worker.md").exists());
         assert!(!tmp.path().join(".apm/style.md").exists());
 
-        // New paths must exist
-        assert!(tmp.path().join(".apm/agents/default/agents.md").exists());
-        assert!(tmp.path().join(".apm/agents/default/apm.spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/agents/default/apm.worker.md").exists());
-        assert!(tmp.path().join(".apm/agents/default/style.md").exists());
+        // New paths must exist (in agents/claude/ after migration)
+        assert!(tmp.path().join(".apm/agents/claude/agents.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/style.md").exists());
 
-        // CLAUDE.md must be rewritten — cascade migrates agents.md → two new imports
+        // CLAUDE.md must be rewritten — cascade migrates agents.md → two new imports, then default → claude
         let claude = std::fs::read_to_string(tmp.path().join("CLAUDE.md")).unwrap();
         assert!(claude.contains("@.apm/project.md"));
-        assert!(claude.contains("@.apm/agents/default/apm.main-agent.md"));
-        assert!(!claude.contains("@.apm/agents/default/agents.md"));
-        assert!(claude.contains("@.apm/agents/default/style.md"));
+        assert!(claude.contains("@.apm/agents/claude/apm.main-agent.md"));
+        assert!(!claude.contains("@.apm/agents/claude/agents.md"));
+        assert!(claude.contains("@.apm/agents/claude/style.md"));
         assert!(!claude.contains("@.apm/agents.md"));
         assert!(!claude.contains("@.apm/style.md"));
     }
@@ -1143,8 +1192,8 @@ mod tests {
 
         let claude = std::fs::read_to_string(tmp.path().join("CLAUDE.md")).unwrap();
         assert!(claude.contains("@.apm/project.md"));
-        assert!(claude.contains("@.apm/agents/default/apm.main-agent.md"));
-        assert!(!claude.contains("@.apm/agents/default/agents.md"));
+        assert!(claude.contains("@.apm/agents/claude/apm.main-agent.md"));
+        assert!(!claude.contains("@.apm/agents/claude/agents.md"));
     }
 
     #[test]
@@ -1171,7 +1220,7 @@ mod tests {
 
         let claude = std::fs::read_to_string(tmp.path().join("CLAUDE.md")).unwrap();
         assert!(claude.contains("@.apm/project.md"));
-        assert!(claude.contains("@.apm/agents/default/apm.main-agent.md"));
+        assert!(claude.contains("@.apm/agents/claude/apm.main-agent.md"));
         assert!(!claude.contains("@.apm/agents/default/agents.md"));
     }
 

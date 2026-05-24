@@ -31,25 +31,5 @@ enabled = true
 file = "/tmp/apm.log"
 
 [workers]
-agent = "claude"
-
-[workers.options]
+default = "claude/worker"
 model = "sonnet"
-
-[worker_profiles.spec_agent]
-role = "spec-writer"
-
-[worker_profiles.phi4]
-agent = "phi4"
-
-[worker_profiles.phi4.options]
-model = "phi4"
-
-[worker_profiles.pi-phi4]
-agent = "pi"
-
-[worker_profiles.pi-phi4.options]
-model = "phi4"
-
-[worker_profiles.pi]
-agent = "pi"

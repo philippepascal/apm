@@ -281,7 +281,6 @@ mod tests {
             dep_requires: None,
             transitions: vec![],
             actionable: actionable.into_iter().map(|s| s.to_string()).collect(),
-            instructions: None,
         }
     }
 

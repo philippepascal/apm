@@ -108,13 +108,12 @@ pub struct WorkersConfig {
     /// Environment variables injected into every worker process.
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
-    /// Built-in agent identifier (e.g. `"claude"`).
-    pub agent: Option<String>,
-    /// Key-value options forwarded to the agent wrapper as `APM_OPT_<KEY>` env vars.
-    #[serde(default)]
-    pub options: std::collections::HashMap<String, String>,
-    /// Global instructions file used as the system prompt for all profiles; overridden by per-profile `instructions`.
-    pub instructions: Option<String>,
+    /// Default worker profile used when a transition has no `worker_profile` set.
+    /// Format: `"agent/role"` (e.g. `"claude/worker"`).
+    pub default: Option<String>,
+    /// Model identifier passed to the worker agent (e.g. `"claude-sonnet-4-5"`).
+    /// Can be overridden per-machine in `.apm/local.toml` under `[workers].model`.
+    pub model: Option<String>,
 }
 
 impl Default for WorkersConfig {
@@ -123,31 +122,10 @@ impl Default for WorkersConfig {
             container: None,
             keychain: std::collections::HashMap::new(),
             env: std::collections::HashMap::new(),
-            agent: None,
-            options: std::collections::HashMap::new(),
-            instructions: None,
+            default: None,
+            model: None,
         }
     }
-}
-
-#[derive(Debug, Clone, Deserialize, Default, JsonSchema)]
-pub struct WorkerProfileConfig {
-    /// Extra environment variables merged into the worker environment for this profile.
-    #[serde(default)]
-    pub env: std::collections::HashMap<String, String>,
-    /// Override the Docker image for this profile.
-    pub container: Option<String>,
-    /// Additional instructions prepended to the worker prompt for this profile.
-    pub instructions: Option<String>,
-    /// Role label prepended to the worker identity string for this profile.
-    pub role_prefix: Option<String>,
-    /// Built-in agent identifier for this profile. Overrides `[workers] agent`.
-    pub agent: Option<String>,
-    /// Key-value options for this profile, merged over `[workers.options]`.
-    #[serde(default)]
-    pub options: std::collections::HashMap<String, String>,
-    /// Role name used to select the per-agent instruction file (e.g. "worker", "spec-writer"). Defaults to "worker" when absent.
-    pub role: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, JsonSchema)]
@@ -228,8 +206,6 @@ pub struct Config {
     pub server: ServerConfig,
     #[serde(default)]
     pub git_host: GitHostConfig,
-    #[serde(default)]
-    pub worker_profiles: std::collections::HashMap<String, WorkerProfileConfig>,
     #[serde(default)]
     pub context: ContextConfig,
     #[serde(default)]
@@ -355,9 +331,6 @@ pub struct StateConfig {
     /// Roles that can actively pick up / act on tickets in this state. Valid values: `agent`, `supervisor`, `engineer`, `any`. Drives `apm next`, `apm start`, and `apm list --actionable`.
     #[serde(default)]
     pub actionable: Vec<String>,
-    /// Optional extra instructions injected into the worker prompt when a ticket enters this state.
-    #[serde(default)]
-    pub instructions: Option<String>,
 }
 
 /// A directed edge in the state machine: from the parent state to `to`.
@@ -386,18 +359,11 @@ pub struct TransitionConfig {
     /// Optional warning message shown to the supervisor before the transition is confirmed.
     #[serde(default)]
     pub warning: Option<String>,
-    /// Worker profile to use for the agent spawned by this transition. References a key in `[worker_profiles]`.
+    /// Worker profile for the agent spawned by this transition. Format: `"agent/role"`
+    /// (e.g. `"claude/spec-writer"`). The agent name selects the wrapper; the role
+    /// selects `.apm/agents/<agent>/apm.<role>.md` for the instruction file.
     #[serde(default)]
-    pub profile: Option<String>,
-    /// Path to a system-prompt file for the agent spawned by this transition. Overrides `profile.instructions`.
-    #[serde(default)]
-    pub instructions: Option<String>,
-    /// Identity prefix for the agent spawned by this transition. Overrides `profile.role_prefix`.
-    #[serde(default)]
-    pub role_prefix: Option<String>,
-    /// Built-in agent identifier for the agent spawned by this transition. Overrides `profile.agent` and `[workers] agent`.
-    #[serde(default)]
-    pub agent: Option<String>,
+    pub worker_profile: Option<String>,
     #[serde(default)]
     pub on_failure: Option<String>,
     /// Semantic outcome of this transition from the worker's perspective.
@@ -644,6 +610,11 @@ impl WorkersConfig {
         for (k, v) in &local.env {
             self.env.insert(k.clone(), v.clone());
         }
+        if let Some(ref m) = local.model {
+            if !m.is_empty() {
+                self.model = Some(m.clone());
+            }
+        }
     }
 }
 
@@ -821,28 +792,6 @@ type = "qa"
     }
 
     #[test]
-    fn state_config_with_instructions() {
-        let toml = r#"
-id           = "in_progress"
-label        = "In Progress"
-instructions = "apm.worker.md"
-"#;
-        let s: StateConfig = toml::from_str(toml).unwrap();
-        assert_eq!(s.id, "in_progress");
-        assert_eq!(s.instructions.as_deref(), Some("apm.worker.md"));
-    }
-
-    #[test]
-    fn state_config_instructions_default_none() {
-        let toml = r#"
-id    = "new"
-label = "New"
-"#;
-        let s: StateConfig = toml::from_str(toml).unwrap();
-        assert!(s.instructions.is_none());
-    }
-
-    #[test]
     fn transition_config_new_fields() {
         let toml = r#"
 to              = "implemented"
@@ -868,9 +817,18 @@ trigger = "manual"
         assert!(t.focus_section.is_none());
         assert!(t.context_section.is_none());
         assert!(t.outcome.is_none());
-        assert!(t.instructions.is_none());
-        assert!(t.role_prefix.is_none());
-        assert!(t.agent.is_none());
+        assert!(t.worker_profile.is_none());
+    }
+
+    #[test]
+    fn transition_config_worker_profile_field() {
+        let toml = r#"
+to             = "in_design"
+trigger        = "command:start"
+worker_profile = "claude/spec-writer"
+"#;
+        let t: TransitionConfig = toml::from_str(toml).unwrap();
+        assert_eq!(t.worker_profile.as_deref(), Some("claude/spec-writer"));
     }
 
     #[test]
@@ -956,9 +914,25 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
-        assert!(config.workers.agent.is_none());
-        assert!(config.workers.options.is_empty());
+        assert!(config.workers.default.is_none());
+        assert!(config.workers.model.is_none());
         assert!(config.workers.env.is_empty());
+    }
+
+    #[test]
+    fn workers_config_default_field() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = "claude/worker"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.workers.default.as_deref(), Some("claude/worker"));
     }
 
     #[test]
@@ -1384,46 +1358,4 @@ dir = "tickets"
         assert_eq!(resolve_caller_name(), "apm");
     }
 
-    #[test]
-    fn config_round_trip_new_shape() {
-        let toml = r#"
-[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[workers]
-agent = "claude"
-
-[workers.options]
-model = "sonnet"
-timeout = "30"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
-        assert_eq!(config.workers.agent.as_deref(), Some("claude"));
-        assert_eq!(config.workers.options.get("model").map(|s| s.as_str()), Some("sonnet"));
-        assert_eq!(config.workers.options.get("timeout").map(|s| s.as_str()), Some("30"));
-    }
-
-    #[test]
-    fn worker_profile_config_new_fields() {
-        let toml = r#"
-[project]
-name = "test"
-
-[tickets]
-dir = "tickets"
-
-[worker_profiles.my_agent]
-agent = "mock-happy"
-
-[worker_profiles.my_agent.options]
-model = "sonnet"
-"#;
-        let config: Config = toml::from_str(toml).unwrap();
-        let profile = config.worker_profiles.get("my_agent").unwrap();
-        assert_eq!(profile.agent.as_deref(), Some("mock-happy"));
-        assert_eq!(profile.options.get("model").map(|s| s.as_str()), Some("sonnet"));
-    }
 }

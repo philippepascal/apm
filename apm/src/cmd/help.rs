@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::config::{Config, TicketConfig, WorkerProfileConfig, WorkflowConfig};
+use apm_core::config::{Config, TicketConfig, WorkflowConfig};
 use apm_core::help_schema::{schema_entries, FieldEntry};
 
 static TOPICS: &[(&str, &str)] = &[
@@ -275,29 +275,7 @@ fn render_config() -> String {
             continue;
         }
 
-        if section == "worker_profiles" {
-            // worker_profiles is a HashMap<String, WorkerProfileConfig>.
-            // Render using map notation: worker_profiles.<name>.<field>.
-            out.push_str("[worker_profiles.<name>]\n");
-            out.push_str("# Each key is a user-defined named profile whose fields mirror [workers].\n");
-
-            let profile_entries: Vec<FieldEntry> = schema_entries::<WorkerProfileConfig>()
-                .into_iter()
-                .map(|e| FieldEntry {
-                    toml_path: format!("worker_profiles.<name>.{}", e.toml_path),
-                    ..e
-                })
-                .collect();
-
-            if !profile_entries.is_empty() {
-                let path_w = profile_entries.iter().map(|e| e.toml_path.len()).max().unwrap_or(0);
-                let type_w = profile_entries.iter().map(|e| e.type_name.len()).max().unwrap_or(0);
-                for e in &profile_entries {
-                    out.push_str(&fmt_field_entry(e, path_w, type_w));
-                    out.push('\n');
-                }
-            }
-        } else {
+        {
             out.push_str(&format!("[{}]\n", section));
 
             let path_w = group.iter().map(|e| e.toml_path.len()).max().unwrap_or(0);

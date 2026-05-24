@@ -134,18 +134,11 @@ pub fn list_wrappers(root: &Path, config: &Config) -> Result<Vec<WrapperEntry>> 
         }
     }
 
-    // Configured marker: global [workers].agent plus per-profile [worker_profiles.*].agent.
-    let global_agent = config.workers.agent.as_deref().unwrap_or("claude").to_string();
+    // Mark which agents are referenced in worker_profile transitions or workers.default.
+    let configured = crate::validate::configured_agent_names(config);
     for entry in &mut entries {
-        if entry.name == global_agent {
+        if configured.contains(&entry.name) {
             entry.configured_as.push("(configured)".to_string());
-        }
-        for (profile_name, profile) in &config.worker_profiles {
-            if let Some(ref agent) = profile.agent {
-                if entry.name == *agent {
-                    entry.configured_as.push(format!("({profile_name})"));
-                }
-            }
         }
     }
 

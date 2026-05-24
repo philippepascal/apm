@@ -324,8 +324,8 @@ Valid field names:
   risk        — integer 1-10; technical risk estimate
   title       — short human-readable summary
   agent       — agent wrapper to use for this ticket; must match an agent
-                configured in config.toml ([workers].agent or any
-                [worker_profiles.*].agent). Use \"-\" to clear.
+                configured in config.toml ([workers].default or any
+                worker_profile on a spawn transition). Use \"-\" to clear.
   branch      — override the ticket's branch name (use \"-\" to clear)
   depends_on  — comma-separated list of blocker IDs (use \"-\" to clear)
 
@@ -866,15 +866,12 @@ SYSTEM PROMPT — three layers, concatenated in order:\n\
 \n\
   Layer 3 — Role instructions (cascade, highest priority wins)\n\
     0. .apm/agents/<agent>/apm.<role>.md     (per-agent file)\n\
-       .apm/agents/default/apm.<role>.md     (default fallback if above absent)\n\
-    1. transition.instructions               (workflow.toml, advanced override)\n\
-    2. profile.instructions                  (from [worker_profiles.*])\n\
-    3. [workers].instructions                (global fallback)\n\
-    4. built-in default for known agents\n\
-    5. error — no instructions found\n\
+    1. .apm/agents/claude/apm.<role>.md      (claude fallback for non-claude agents)\n\
+    2. built-in default for known agents\n\
+    3. error — no instructions found\n\
 \n\
     Place role instructions in .apm/agents/<agent>/apm.<role>.md for\n\
-    agent-specific overrides, or .apm/agents/default/apm.<role>.md as\n\
+    agent-specific overrides, or .apm/agents/claude/apm.<role>.md as\n\
     the shared default for all agents without a specific file.\n\
 \n\
 USER MESSAGE — dependency bundle + ticket:\n\
@@ -895,17 +892,16 @@ they do not affect the ticket or any config.\n\
 \n\
   layer 1:        apm instructions (dynamic, role: worker)\n\
   layer 2:        .apm/project.md\n\
-  layer 3:        .apm/agents/default/apm.worker.md (default fallback — .apm/agents/claude/apm.worker.md absent)  (level 0 — per-agent file)\n\
-  skipped:        level 1 (transition.instructions — not reached)\n\
-                  level 2 (profile.instructions — not reached)\n\
-                  level 3 (workers.instructions — not reached)\n\
+  layer 3:        .apm/agents/claude/apm.worker.md  (level 1 — claude-fallback file)\n\
+  skipped:        level 0 (.apm/agents/myagent/apm.worker.md — not reached)\n\
+                  level 2 (built-in default — not reached)\n\
 \n\
 Exits non-zero with a clear message when no instructions can be resolved.\n\
 \n\
 Examples:\n\
   apm prompt                                          # list available agents and roles\n\
-  apm prompt --agent default --role worker            # base prompt for default/worker\n\
-  apm prompt --agent default --role worker --explain  # provenance without a ticket\n\
+  apm prompt --agent claude --role worker            # base prompt for claude/worker\n\
+  apm prompt --agent claude --role worker --explain  # provenance without a ticket\n\
   apm prompt ba121f45                                 # full context (system + user)\n\
   apm prompt ba121f45 --system                        # system prompt only\n\
   apm prompt ba121f45 --message                       # user message only\n\

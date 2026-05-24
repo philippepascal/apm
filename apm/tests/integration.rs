@@ -2613,9 +2613,7 @@ fn validate_config_missing_instructions_and_bad_context_section() {
     git(p, &["config", "user.email", "test@test.com"]);
     git(p, &["config", "user.name", "test"]);
 
-    // Config with:
-    //   - state `new` with instructions pointing to a non-existent file
-    //   - transition with context_section that doesn't exist in ticket.sections
+    // Config with a transition context_section that doesn't exist in ticket.sections
     std::fs::create_dir_all(p.join(".apm")).unwrap();
     std::fs::write(
         p.join(".apm/config.toml"),
@@ -2630,9 +2628,8 @@ name = "Problem"
 type = "free"
 
 [[workflow.states]]
-id           = "new"
-label        = "New"
-instructions = "missing-file.md"
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to              = "closed"
@@ -2649,12 +2646,7 @@ terminal = true
     let config = apm_core::config::Config::load(p).unwrap();
     let errors = apm::cmd::validate::validate_config(&config, p);
 
-    assert_eq!(errors.len(), 2, "expected exactly 2 errors, got: {errors:?}");
-
-    let has_missing_file = errors.iter().any(|e| {
-        e.contains("state.new.instructions") && e.contains("file not found")
-    });
-    assert!(has_missing_file, "expected missing instructions error in {errors:?}");
+    assert_eq!(errors.len(), 1, "expected exactly 1 error, got: {errors:?}");
 
     let has_bad_section = errors.iter().any(|e| {
         e.contains("context_section") && e.contains("NonExistentSection")

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
 use crate::config::Config;
-use crate::start::{build_system_prompt, build_user_message, explain_system_prompt, PromptProvenance, effective_spawn_params, apply_frontmatter_agent, resolve_profile};
+use crate::start::{build_system_prompt, build_user_message, explain_system_prompt, PromptProvenance, resolve_worker_profile, apply_frontmatter_agent};
 use crate::ticket;
 
 /// Scan `.apm/agents/` for agent subdirectory names and role names extracted
@@ -58,6 +58,25 @@ pub fn discover(root: &Path, out: &mut dyn Write) -> Result<()> {
     Ok(())
 }
 
+fn resolve_agent_role(
+    config: &Config,
+    triggering_transition: Option<&crate::config::TransitionConfig>,
+    frontmatter: &crate::ticket_fmt::Frontmatter,
+    agent_override: Option<&str>,
+    role_override: Option<&str>,
+) -> Result<(String, String)> {
+    let default_wp = config.workers.default.as_deref().unwrap_or("claude/worker");
+    let wp_str = triggering_transition
+        .and_then(|tr| tr.worker_profile.as_deref())
+        .unwrap_or(default_wp);
+    let wp = resolve_worker_profile(wp_str, &config.workers)?;
+    let mut agent = wp.agent.clone();
+    apply_frontmatter_agent(&mut agent, frontmatter, wp_str);
+    let agent = agent_override.unwrap_or(&agent).to_string();
+    let role = role_override.unwrap_or(&wp.role).to_string();
+    Ok((agent, role))
+}
+
 /// Print the system prompt that would be used if the ticket's current
 /// `command:start` transition fired.  Agent and role may be overridden for
 /// inspection without modifying the ticket.
@@ -80,25 +99,9 @@ pub fn run(
         .find(|s| s.id == *state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
 
-    let mut warnings = Vec::new();
-    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-    let profile_name = triggering_transition
-        .and_then(|tr| tr.profile.as_deref())
-        .unwrap_or("")
-        .to_string();
-
-    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let role = role_override.unwrap_or(role_from_cascade).to_string();
-
-    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
-    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
-
-    let agent = agent_override.unwrap_or(&params.agent).to_string();
-
-    let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-
-    let prompt = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &agent, &role)?;
+    let (agent, role) = resolve_agent_role(&config, triggering_transition, &t.frontmatter, agent_override, role_override)?;
+    let project_file = config.agents.project.as_deref().map(Path::new);
+    let prompt = build_system_prompt(root, project_file, &agent, &role)?;
 
     out.write_all(prompt.as_bytes())?;
     Ok(())
@@ -125,41 +128,14 @@ pub fn explain(
         .find(|s| s.id == *state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
 
-    let mut warnings = Vec::new();
-    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-    let profile_name = triggering_transition
-        .and_then(|tr| tr.profile.as_deref())
-        .unwrap_or("")
-        .to_string();
-
-    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let role = role_override.unwrap_or(role_from_cascade).to_string();
-
-    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
-    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
-
-    let agent = agent_override.unwrap_or(&params.agent).to_string();
-
-    let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-
-    let prov = explain_system_prompt(
-        root,
-        tr_instructions,
-        profile,
-        &config.workers,
-        config.agents.project.as_deref(),
-        &agent,
-        &role,
-    )?;
+    let (agent, role) = resolve_agent_role(&config, triggering_transition, &t.frontmatter, agent_override, role_override)?;
+    let project_file = config.agents.project.as_deref().map(Path::new);
+    let prov = explain_system_prompt(root, project_file, &agent, &role)?;
 
     format_provenance(&prov, out)
 }
 
 /// Build and print the system prompt for a given agent+role without a ticket.
-/// Levels 1 (transition.instructions) and 2 (profile.instructions) are skipped;
-/// level 0 (per-agent file), 3 (workers.instructions), and 4 (built-in default)
-/// resolve normally.
 pub fn run_without_ticket(
     root: &Path,
     agent: &str,
@@ -167,16 +143,8 @@ pub fn run_without_ticket(
     out: &mut dyn Write,
 ) -> Result<()> {
     let config = Config::load(root)?;
-
-    let prompt = build_system_prompt(
-        root,
-        None,
-        None,
-        &config.workers,
-        config.agents.project.as_deref(),
-        agent,
-        role,
-    )?;
+    let project_file = config.agents.project.as_deref().map(Path::new);
+    let prompt = build_system_prompt(root, project_file, agent, role)?;
     out.write_all(prompt.as_bytes())?;
     Ok(())
 }
@@ -203,26 +171,10 @@ pub fn run_message(
         .find(|s| s.id == *state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
 
-    let mut warnings = Vec::new();
-    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-    let profile_name = triggering_transition
-        .and_then(|tr| tr.profile.as_deref())
-        .unwrap_or("")
-        .to_string();
-
-    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let _role = role_override.unwrap_or(role_from_cascade);
-
-    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
-    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
-
-    let _agent = agent_override.unwrap_or(&params.agent);
-
-    let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
+    let (_, role) = resolve_agent_role(&config, triggering_transition, &t.frontmatter, agent_override, role_override)?;
     let depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
 
-    let msg = build_user_message(root, t, &depends_on, tr_role_prefix, profile, &config)?;
+    let msg = build_user_message(root, t, &depends_on, &role, &config)?;
     out.write_all(msg.as_bytes())?;
     Ok(())
 }
@@ -248,28 +200,12 @@ pub fn run_full(
         .find(|s| s.id == *state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
 
-    let mut warnings = Vec::new();
-    let profile = triggering_transition.and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-    let profile_name = triggering_transition
-        .and_then(|tr| tr.profile.as_deref())
-        .unwrap_or("")
-        .to_string();
-
-    let role_from_cascade = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker");
-    let role = role_override.unwrap_or(role_from_cascade).to_string();
-
-    let tr_agent = triggering_transition.and_then(|tr| tr.agent.as_deref());
-    let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
-    apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
-
-    let agent = agent_override.unwrap_or(&params.agent).to_string();
-
-    let tr_instructions = triggering_transition.and_then(|tr| tr.instructions.as_deref());
-    let tr_role_prefix = triggering_transition.and_then(|tr| tr.role_prefix.as_deref());
+    let (agent, role) = resolve_agent_role(&config, triggering_transition, &t.frontmatter, agent_override, role_override)?;
+    let project_file = config.agents.project.as_deref().map(Path::new);
     let depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
 
-    let sys = build_system_prompt(root, tr_instructions, profile, &config.workers, config.agents.project.as_deref(), &agent, &role)?;
-    let msg = build_user_message(root, t, &depends_on, tr_role_prefix, profile, &config)?;
+    let sys = build_system_prompt(root, project_file, &agent, &role)?;
+    let msg = build_user_message(root, t, &depends_on, &role, &config)?;
 
     writeln!(out, "=== system ===")?;
     out.write_all(sys.as_bytes())?;
@@ -286,16 +222,8 @@ pub fn explain_without_ticket(
     out: &mut dyn Write,
 ) -> Result<()> {
     let config = Config::load(root)?;
-
-    let prov = explain_system_prompt(
-        root,
-        None,
-        None,
-        &config.workers,
-        config.agents.project.as_deref(),
-        agent,
-        role,
-    )?;
+    let project_file = config.agents.project.as_deref().map(Path::new);
+    let prov = explain_system_prompt(root, project_file, agent, role)?;
     format_provenance(&prov, out)
 }
 
@@ -346,7 +274,7 @@ name = "parity-test"
 default_branch = "main"
 
 [workers]
-agent = "mock-happy"
+default = "mock-happy/worker"
 
 [tickets]
 dir = "tickets"
@@ -423,21 +351,13 @@ Test.
         let root = dir.path();
         make_parity_project(root, "abcd0001");
 
-        let config = crate::config::Config::load(root).unwrap();
-
-        // Direct call to build_system_prompt — the same code path used by
-        // run(), run_next(), and spawn_next_worker().
         let expected = crate::start::build_system_prompt(
             root,
             None,
-            None,
-            &config.workers,
-            config.agents.project.as_deref(),
             "mock-happy",
             "worker",
         ).unwrap();
 
-        // prompt::run in capture mode
         let mut buf = Vec::new();
         run(root, "abcd0001", None, None, &mut buf).unwrap();
         let actual = String::from_utf8(buf).unwrap();
@@ -446,187 +366,6 @@ Test.
             actual, expected,
             "prompt::run output must match build_system_prompt output for same inputs"
         );
-    }
-
-    /// Replicates the argument-construction logic shared by run(), run_next(), and
-    /// spawn_next_worker() and calls build_system_prompt() directly.  All three
-    /// spawn paths clone the triggering transition and derive (profile, role,
-    /// agent, tr_instructions) identically before calling build_system_prompt().
-    fn spawn_path_build_system_prompt(root: &Path, ticket_id: &str) -> anyhow::Result<String> {
-        use crate::start::{build_system_prompt, resolve_profile, effective_spawn_params, apply_frontmatter_agent};
-
-        let config = crate::config::Config::load(root)?;
-        let tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)?;
-        let t = tickets.iter()
-            .find(|t| t.frontmatter.id == ticket_id)
-            .ok_or_else(|| anyhow::anyhow!("ticket {:?} not found", ticket_id))?;
-
-        let state = t.frontmatter.state.clone();
-        // Clone the transition as run_next() and spawn_next_worker() do.
-        let triggering_transition = config.workflow.states.iter()
-            .find(|s| s.id == state)
-            .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
-            .cloned();
-
-        let mut warnings = Vec::new();
-        let profile = triggering_transition.as_ref()
-            .and_then(|tr| resolve_profile(tr, &config, &mut warnings));
-        let profile_name = triggering_transition.as_ref()
-            .and_then(|tr| tr.profile.as_deref())
-            .unwrap_or("")
-            .to_string();
-
-        let role = profile.and_then(|p| p.role.as_deref()).unwrap_or("worker").to_string();
-        let tr_agent = triggering_transition.as_ref().and_then(|tr| tr.agent.as_deref());
-        let mut params = effective_spawn_params(tr_agent, profile, &config.workers);
-        apply_frontmatter_agent(&mut params.agent, &t.frontmatter, &profile_name);
-
-        let tr_instructions = triggering_transition.as_ref()
-            .and_then(|tr| tr.instructions.as_deref())
-            .map(|s| s.to_string());
-
-        build_system_prompt(root, tr_instructions.as_deref(), profile, &config.workers, config.agents.project.as_deref(), &params.agent, &role)
-    }
-
-    /// AC #1: parity for the run() spawn path — argument construction identical
-    /// to prompt::run().
-    #[test]
-    fn parity_run_path_matches_prompt_run() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        make_parity_project(root, "abcd0002");
-
-        let from_spawn_path = spawn_path_build_system_prompt(root, "abcd0002").unwrap();
-
-        let mut buf = Vec::new();
-        run(root, "abcd0002", None, None, &mut buf).unwrap();
-        let from_prompt_run = String::from_utf8(buf).unwrap();
-
-        assert_eq!(
-            from_spawn_path, from_prompt_run,
-            "run() path: build_system_prompt output must match prompt::run output"
-        );
-    }
-
-    /// AC #2a: parity for the run_next() spawn path.
-    #[test]
-    fn parity_run_next_path_matches_prompt_run() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        make_parity_project(root, "abcd0003");
-
-        let from_spawn_path = spawn_path_build_system_prompt(root, "abcd0003").unwrap();
-
-        let mut buf = Vec::new();
-        run(root, "abcd0003", None, None, &mut buf).unwrap();
-        let from_prompt_run = String::from_utf8(buf).unwrap();
-
-        assert_eq!(
-            from_spawn_path, from_prompt_run,
-            "run_next() path: build_system_prompt output must match prompt::run output"
-        );
-    }
-
-    /// AC #2b: parity for the spawn_next_worker() path.
-    #[test]
-    fn parity_spawn_next_worker_path_matches_prompt_run() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        make_parity_project(root, "abcd0004");
-
-        let from_spawn_path = spawn_path_build_system_prompt(root, "abcd0004").unwrap();
-
-        let mut buf = Vec::new();
-        run(root, "abcd0004", None, None, &mut buf).unwrap();
-        let from_prompt_run = String::from_utf8(buf).unwrap();
-
-        assert_eq!(
-            from_spawn_path, from_prompt_run,
-            "spawn_next_worker() path: build_system_prompt output must match prompt::run output"
-        );
-    }
-
-    /// Creates a minimal project where transition.instructions points to a file
-    /// that does not exist, so build_system_prompt() will return an error.
-    fn make_error_project(root: &Path, ticket_id: &str) {
-        use std::fs;
-
-        fs::create_dir_all(root.join(".apm")).unwrap();
-        fs::create_dir_all(root.join("tickets")).unwrap();
-        fs::write(root.join(".apm/config.toml"), r#"
-[project]
-name = "error-test"
-default_branch = "main"
-
-[workers]
-agent = "mock-happy"
-
-[tickets]
-dir = "tickets"
-"#).unwrap();
-        fs::write(root.join(".apm/workflow.toml"), r#"
-[[workflow.states]]
-id = "ready"
-label = "Ready"
-actionable = ["agent"]
-
-  [[workflow.states.transitions]]
-  to = "in_progress"
-  trigger = "command:start"
-  label = "Start"
-  instructions = "nonexistent.md"
-
-[[workflow.states]]
-id = "in_progress"
-label = "In Progress"
-"#).unwrap();
-
-        let ticket_content = format!(r#"+++
-id = "{ticket_id}"
-title = "Error Test"
-state = "ready"
-priority = 0
-effort = 5
-risk = 3
-author = "test"
-owner = "test"
-branch = "ticket/{ticket_id}-test"
-created_at = "2026-01-01T00:00:00Z"
-updated_at = "2026-01-01T00:00:00Z"
-+++
-
-## Spec
-
-### Problem
-
-Test.
-
-## History
-
-| When | From | To | By |
-|------|------|----|----|
-"#);
-        fs::write(root.join(format!("tickets/{ticket_id}-test.md")), ticket_content).unwrap();
-
-        std::process::Command::new("git")
-            .arg("init").current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["config", "user.email", "t@t.com"]).current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["config", "user.name", "T"]).current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["add", ".apm"]).current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["commit", "-m", "init", "--allow-empty"]).current_dir(root).output().unwrap();
-        let branch = format!("ticket/{ticket_id}-test");
-        std::process::Command::new("git")
-            .args(["checkout", "-b", &branch]).current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["add", &format!("tickets/{ticket_id}-test.md")]).current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["commit", "-m", "add ticket"]).current_dir(root).output().unwrap();
-        std::process::Command::new("git")
-            .args(["checkout", "main"]).current_dir(root).output().unwrap();
     }
 
     #[test]
@@ -680,43 +419,6 @@ Test.
         assert_eq!(count, 1, "role should appear once; got: {roles_line:?}");
     }
 
-    /// AC #3: when build_system_prompt returns an error (missing instructions
-    /// file), the spawn path propagates it unchanged.  One test for run()'s
-    /// argument-construction path is sufficient; the error-propagation mechanism
-    /// (the ? operator) is identical across all three spawn paths.
-    #[test]
-    fn error_missing_instructions_propagated() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = dir.path();
-        make_error_project(root, "errtest1");
-
-        // spawn_path_build_system_prompt replicates the spawn-path argument
-        // construction and propagates the error from build_system_prompt via ?.
-        let spawn_err = spawn_path_build_system_prompt(root, "errtest1")
-            .unwrap_err()
-            .to_string();
-
-        // Direct call to build_system_prompt with the same arguments — must
-        // produce the identical error string.
-        let config = crate::config::Config::load(root).unwrap();
-        let direct_err = crate::start::build_system_prompt(
-            root,
-            Some("nonexistent.md"),
-            None,
-            &config.workers,
-            None,
-            "mock-happy",
-            "worker",
-        )
-        .unwrap_err()
-        .to_string();
-
-        assert_eq!(
-            spawn_err, direct_err,
-            "spawn path must propagate build_system_prompt error unchanged"
-        );
-    }
-
     // --- explain tests ---
 
     fn make_explain_project(root: &Path, ticket_id: &str, agent: &str, create_per_agent_file: bool, project: Option<&str>) {
@@ -742,7 +444,7 @@ name = "explain-test"
 default_branch = "main"
 
 [workers]
-agent = "{agent}"
+default = "{agent}/worker"
 
 [tickets]
 dir = "tickets"
@@ -819,11 +521,11 @@ Test.
 
         assert!(output.contains("level 0"), "should show level 0; got:\n{output}");
         assert!(output.contains(".apm/agents/mock-happy/apm.worker.md"), "should show per-agent path; got:\n{output}");
-        assert_eq!(output.matches("not reached").count(), 3, "levels 1-3 should be not reached; got:\n{output}");
+        assert_eq!(output.matches("not reached").count(), 2, "levels 1-2 should be not reached; got:\n{output}");
     }
 
     #[test]
-    fn explain_level4_wins() {
+    fn explain_level2_wins() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
         make_explain_project(root, "bbbb0002", "claude", false, None);
@@ -832,7 +534,7 @@ Test.
         explain(root, "bbbb0002", None, None, &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        assert!(output.contains("level 4"), "should show level 4; got:\n{output}");
+        assert!(output.contains("level 2"), "should show level 2; got:\n{output}");
         assert!(output.contains("built-in default"), "should show built-in default; got:\n{output}");
     }
 
@@ -840,7 +542,6 @@ Test.
     fn explain_prefix_shown() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        // Configure a project file path and create the file
         let project_path = ".apm/project.md";
         std::fs::create_dir_all(root.join(".apm")).unwrap();
         std::fs::write(root.join(project_path), "Project context.").unwrap();
@@ -861,15 +562,13 @@ Test.
     fn explain_agent_role_override() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        // Project uses mock-happy (which has a per-agent file). Override to claude
-        // (no per-agent file) → level 4 wins and skipped level 0 shows claude's path.
         make_explain_project(root, "dddd0004", "mock-happy", true, None);
 
         let mut buf = Vec::new();
         explain(root, "dddd0004", Some("claude"), Some("worker"), &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        assert!(output.contains("level 4"), "claude override should fall to level 4; got:\n{output}");
+        assert!(output.contains("level 2"), "claude override should fall to level 2; got:\n{output}");
         assert!(output.contains("built-in default (claude/worker)"), "should name claude/worker; got:\n{output}");
         assert!(output.contains(".apm/agents/claude/apm.worker.md"), "skipped level 0 should use overridden agent name; got:\n{output}");
     }
