@@ -1,7 +1,7 @@
 +++
 id = "1df8c1c6"
 title = "Suppress leaked stderr from .status() subprocess calls in apm-core"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1df8c1c6-suppress-leaked-stderr-from-status-subpr"
 created_at = "2026-05-24T21:19:59.285174Z"
-updated_at = "2026-05-24T21:32:56.593813Z"
+updated_at = "2026-05-24T22:02:00.772840Z"
 +++
 
 ## Spec
@@ -106,3 +106,4 @@ After these replacements, verify that the remaining `std::process::Command` uses
 | 2026-05-24T21:27Z | specd | ready | philippepascal |
 | 2026-05-24T21:27Z | ready | in_progress | philippepascal |
 | 2026-05-24T21:32Z | in_progress | implemented | claude |
+| 2026-05-24T22:02Z | implemented | closed | philippepascal(apm-sync) |
