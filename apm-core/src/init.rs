@@ -486,14 +486,42 @@ max_concurrent = 3
 max_workers_per_epic = 1
 max_workers_on_default = 1
 project = ".apm/project.md"
+# side_tickets = true        # allow workers to file side-note tickets
+# skip_permissions = false   # skip Claude Code permission prompts in workers
 
 [workers]
 default = "{workers_default}"
 model = "sonnet"
+# container = "apm-worker"   # Docker image for worker agents; omit for local execution
+# env = {{}}                  # environment variables injected into every worker
+# keychain = {{}}             # macOS Keychain items resolved at worker launch (secret_name = keychain_item)
 
 [logging]
 enabled = false
 file = "{log_file}"
+
+# [sync]
+# aggressive = true   # fetch all remote branches before checking state
+
+# [git_host]
+# provider = "github"           # git host provider; only "github" is supported
+# repo = "owner/repo"           # repository path for PR creation and collaborator lookup
+# token_env = "GITHUB_TOKEN"    # env var holding the API token
+
+# [server]
+# origin = "http://localhost:3000"   # public-facing URL used in PR descriptions
+# url    = "http://127.0.0.1:3000"   # internal URL the CLI uses to reach apm-server
+
+# [context]
+# epic_sibling_cap = 20     # max sibling tickets included in worker context bundles
+# epic_byte_cap    = 8192   # max byte size of the context bundle injected into worker prompts
+
+# [isolation]
+# read_allow = ["/etc/resolv.conf", "~/.gitconfig"]   # paths workers may read outside the worktree
+# enforce_worktree_isolation = false                   # block writes outside APM_TICKET_WORKTREE
+
+# [work]
+# epic = ""   # default epic ID assigned when creating new tickets with `apm new`
 "##
     )
 }
