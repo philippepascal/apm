@@ -22,6 +22,7 @@ What is broken or missing, and why it matters.
 
 Checkboxes; each one independently testable.
 - [ ] Replace "debug/" with "mock-happy/" in workflow.toml patch in both setup functions
+- [ ] Remove make_mock_worker (dead code)
 
 ### Out of scope
 
