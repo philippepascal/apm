@@ -34,7 +34,6 @@ jobs:
       - name: Run tests
         env:
           APM_SKIP_COMPAT_CHECK: "1"
-          APM_WORKERS_DEFAULT: "debug/worker"
         run: cargo test --workspace
 
   build:

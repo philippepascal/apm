@@ -43,7 +43,8 @@ pub fn run(root: &Path, no_claude: bool, migrate: bool, with_docker: bool, quiet
     let desc_opt = if description.is_empty() { None } else { Some(description.as_str()) };
     let user_opt = if username.is_empty() { None } else { Some(username.as_str()) };
 
-    let setup_out = apm_core::init::setup(root, name_opt, desc_opt, user_opt)?;
+    let workers_default = if no_claude { Some("debug/worker") } else { None };
+    let setup_out = apm_core::init::setup(root, name_opt, desc_opt, user_opt, workers_default)?;
     for msg in &setup_out.messages {
         println!("{msg}");
     }

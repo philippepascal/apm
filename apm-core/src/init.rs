@@ -37,7 +37,7 @@ fn init_path_for(path: &Path) -> std::path::PathBuf {
     path.with_file_name(name)
 }
 
-pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, username: Option<&str>) -> Result<SetupOutput> {
+pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, username: Option<&str>, workers_default: Option<&str>) -> Result<SetupOutput> {
     let mut messages: Vec<String> = Vec::new();
 
     let tickets_dir = root.join("tickets");
@@ -84,7 +84,8 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
             vec![effective_username]
         };
         let branch = detect_default_branch(root);
-        std::fs::write(&config_path, default_config(default_name, effective_description, &branch, &collaborators))?;
+        let wdefault = workers_default.unwrap_or("claude/worker");
+        std::fs::write(&config_path, default_config(default_name, effective_description, &branch, &collaborators, wdefault))?;
         messages.push("Created .apm/config.toml".to_string());
     } else {
         // Extract project values from existing config to generate a
@@ -114,7 +115,8 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
                 })
                 .unwrap_or_default();
             let collabs: Vec<&str> = collab_owned.iter().map(|s| s.as_str()).collect();
-            write_default(&config_path, &default_config(n, d, b, &collabs), ".apm/config.toml", &mut messages)?;
+            let wdefault = workers_default.unwrap_or("claude/worker");
+            write_default(&config_path, &default_config(n, d, b, &collabs, wdefault), ".apm/config.toml", &mut messages)?;
         }
     }
     write_default(&apm_dir.join("workflow.toml"), default_workflow_toml(), ".apm/workflow.toml", &mut messages)?;
@@ -453,12 +455,13 @@ fn toml_escape(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-fn default_config(name: &str, description: &str, default_branch: &str, collaborators: &[&str]) -> String {
+fn default_config(name: &str, description: &str, default_branch: &str, collaborators: &[&str], workers_default: &str) -> String {
     let log_file = default_log_file(name);
     let name = toml_escape(name);
     let description = toml_escape(description);
     let default_branch = toml_escape(default_branch);
     let log_file = toml_escape(&log_file);
+    let workers_default = toml_escape(workers_default);
     let collaborators_line = {
         let items: Vec<String> = collaborators.iter().map(|u| format!("\"{}\"", toml_escape(u))).collect();
         format!("collaborators = [{}]", items.join(", "))
@@ -485,7 +488,7 @@ max_workers_on_default = 1
 project = ".apm/project.md"
 
 [workers]
-default = "claude/worker"
+default = "{workers_default}"
 model = "sonnet"
 
 [logging]
@@ -693,7 +696,7 @@ mod tests {
     fn setup_creates_expected_files() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         assert!(tmp.path().join("tickets").exists());
         assert!(tmp.path().join(".apm/config.toml").exists());
@@ -717,7 +720,7 @@ mod tests {
     fn setup_non_tty_uses_dir_name_and_empty_description() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         let config = std::fs::read_to_string(tmp.path().join(".apm/config.toml")).unwrap();
         let dir_name = tmp.path().file_name().unwrap().to_str().unwrap();
@@ -729,13 +732,13 @@ mod tests {
     fn setup_is_idempotent() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         // Write sentinel content to config
         let config_path = tmp.path().join(".apm/config.toml");
         let original = std::fs::read_to_string(&config_path).unwrap();
 
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         let after = std::fs::read_to_string(&config_path).unwrap();
         assert_eq!(original, after);
     }
@@ -802,7 +805,7 @@ mod tests {
         let name = r#"my\"project"#;
         let description = r#"desc with "quotes" and \backslash"#;
         let branch = "main";
-        let config = default_config(name, description, branch, &[]);
+        let config = default_config(name, description, branch, &[], "claude/worker");
         toml::from_str::<toml::Value>(&config).expect("default_config output must be valid TOML");
     }
 
@@ -829,13 +832,13 @@ mod tests {
     fn setup_non_tty_no_local_toml() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         assert!(!tmp.path().join(".apm/local.toml").exists());
     }
 
     #[test]
     fn default_config_with_collaborators() {
-        let config = default_config("proj", "desc", "main", &["alice"]);
+        let config = default_config("proj", "desc", "main", &["alice"], "claude/worker");
         let parsed: toml::Value = toml::from_str(&config).unwrap();
         let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
         assert_eq!(collaborators.len(), 1);
@@ -844,7 +847,7 @@ mod tests {
 
     #[test]
     fn default_config_empty_collaborators() {
-        let config = default_config("proj", "desc", "main", &[]);
+        let config = default_config("proj", "desc", "main", &[], "claude/worker");
         let parsed: toml::Value = toml::from_str(&config).unwrap();
         let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
         assert!(collaborators.is_empty());
@@ -898,14 +901,14 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
         // First setup: creates all files
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         // Modify a file
         let workflow = tmp.path().join(".apm/workflow.toml");
         std::fs::write(&workflow, "# custom workflow\n").unwrap();
 
         // Second setup (non-tty): should write .init copy
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         assert!(tmp.path().join(".apm/workflow.toml.init").exists());
         // Original should be untouched
         assert_eq!(std::fs::read_to_string(&workflow).unwrap(), "# custom workflow\n");
@@ -918,7 +921,7 @@ mod tests {
     fn setup_writes_config_init_when_modified() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         // Modify config.toml (add a custom section)
         let config_path = tmp.path().join(".apm/config.toml");
@@ -927,7 +930,7 @@ mod tests {
         std::fs::write(&config_path, &content).unwrap();
 
         // Second setup (non-tty): should write config.toml.init
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         assert!(tmp.path().join(".apm/config.toml.init").exists());
         // Original should be untouched
         assert!(std::fs::read_to_string(&config_path).unwrap().contains("[custom]"));
@@ -945,10 +948,10 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
         // First run: create config with collaborators = ["alice"]
-        setup(tmp.path(), None, None, Some("alice")).unwrap();
+        setup(tmp.path(), None, None, Some("alice"), None).unwrap();
 
         // Re-run without username (simulates non-TTY subsequent call)
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         // Should NOT produce a false diff
         assert!(!tmp.path().join(".apm/config.toml.init").exists());
@@ -958,7 +961,7 @@ mod tests {
     fn setup_config_init_collaborators_match_live() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, Some("alice")).unwrap();
+        setup(tmp.path(), None, None, Some("alice"), None).unwrap();
 
         // Manually edit config to add a custom section (to trigger a real diff)
         let config_path = tmp.path().join(".apm/config.toml");
@@ -966,7 +969,7 @@ mod tests {
         content.push_str("\n[custom]\nfoo = \"bar\"\n");
         std::fs::write(&config_path, &content).unwrap();
 
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         // .init must exist (real diff)
         assert!(tmp.path().join(".apm/config.toml.init").exists());
@@ -992,7 +995,7 @@ mod tests {
         )
         .unwrap();
 
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         // Old flat files must be gone
         assert!(!tmp.path().join(".apm/agents.md").exists());
@@ -1021,9 +1024,9 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
         // First run: no username → collaborators = []
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         // Re-run: should still be idempotent
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         assert!(!tmp.path().join(".apm/config.toml.init").exists());
     }
 
@@ -1097,7 +1100,7 @@ mod tests {
 
     #[test]
     fn default_config_has_in_repo_worktrees_dir() {
-        let config = default_config("myproj", "desc", "main", &[]);
+        let config = default_config("myproj", "desc", "main", &[], "claude/worker");
         assert!(
             config.contains("dir = \".apm--worktrees\""),
             "default config should use .apm--worktrees dir: {config}"
@@ -1108,7 +1111,7 @@ mod tests {
     fn setup_gitignore_includes_worktrees_pattern() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         let contents = std::fs::read_to_string(tmp.path().join(".gitignore")).unwrap();
         assert!(contents.contains("/.apm--worktrees/"), ".gitignore must contain /.apm--worktrees/");
         assert!(contents.contains("# apm worktrees"), ".gitignore must contain the apm worktrees comment");
@@ -1132,7 +1135,7 @@ mod tests {
     fn setup_creates_worktrees_dir_inside_repo() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
         assert!(
             tmp.path().join(".apm--worktrees").exists(),
             "worktrees dir should be created inside the repo"
@@ -1181,7 +1184,7 @@ mod tests {
 
     #[test]
     fn default_config_has_project_key() {
-        let config = default_config("proj", "desc", "main", &[]);
+        let config = default_config("proj", "desc", "main", &[], "claude/worker");
         assert!(config.contains("project = \".apm/project.md\""));
         assert!(!config.contains("instructions = "));
     }
@@ -1190,7 +1193,7 @@ mod tests {
     fn setup_claude_md_contains_new_imports() {
         let tmp = TempDir::new().unwrap();
         git_init(tmp.path());
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         let claude = std::fs::read_to_string(tmp.path().join("CLAUDE.md")).unwrap();
         assert!(claude.contains("@.apm/project.md"));
@@ -1214,7 +1217,7 @@ mod tests {
             "@.apm/agents/default/agents.md\n",
         ).unwrap();
 
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         let config = std::fs::read_to_string(tmp.path().join(".apm/config.toml")).unwrap();
         assert!(config.contains("project = \".apm/project.md\""));
@@ -1238,7 +1241,7 @@ mod tests {
             "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[agents]\nproject = \".apm/agents/default/apm.project.md\"\n",
         ).unwrap();
 
-        setup(tmp.path(), None, None, None).unwrap();
+        setup(tmp.path(), None, None, None, None).unwrap();
 
         assert!(tmp.path().join(".apm/project.md").exists());
         assert!(!tmp.path().join(".apm/agents/default/apm.project.md").exists());
