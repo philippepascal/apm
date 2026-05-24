@@ -33,7 +33,7 @@ Adding new tests beyond the spawn tests already present. Adding mock-sad or mock
 
 ### Approach
 
-How the implementation will work.
+In setup_with_local_worktrees and setup_for_prompt_dispatch, change the workflow.toml patch from `"debug/` to `"mock-happy/`. Then refactor the spawn tests to call `apm_core::start::run` directly (instead of the CLI wrapper) so they get the `StartOutput` back, extract the child process handle, wait for it to exit, and then assert the final ticket state. Remove `make_mock_worker` and `APM_SKIP_COMPAT_CHECK` once nothing needs them.
 
 ### Open questions
 
