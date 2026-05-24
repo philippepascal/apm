@@ -3,13 +3,13 @@ id = "c8bd9b55"
 title = "Use mock-happy/mock-sad in integration tests instead of debug wrapper"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c8bd9b55-use-mock-happy-mock-sad-in-integration-t"
 created_at = "2026-05-24T19:07:11.167447Z"
-updated_at = "2026-05-24T19:34:29.132806Z"
+updated_at = "2026-05-24T19:52:26.625129Z"
 +++
 
 ## Spec
