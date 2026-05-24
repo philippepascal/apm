@@ -31,7 +31,11 @@ The fix is to introduce optional per-profile manifest files at `.apm/agents/<age
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-profile manifest files for `container` — only `model` and `env` are overridable in this ticket
+- `local.toml` override of the profile manifest — profile manifest wins over `local.toml`; a follow-on ticket can layer per-machine > per-profile priority if needed
+- `apm validate` coverage for profile manifest files
+- `apm prompt` / `explain` showing the manifest-derived model in provenance output
+- Schema documentation or JSON Schema generation for the manifest format
 
 ### Approach
 
