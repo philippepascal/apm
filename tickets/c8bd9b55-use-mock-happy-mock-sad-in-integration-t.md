@@ -21,6 +21,7 @@ What is broken or missing, and why it matters.
 ### Acceptance criteria
 
 Checkboxes; each one independently testable.
+- [ ] Replace "debug/" with "mock-happy/" in workflow.toml patch in both setup functions
 
 ### Out of scope
 
@@ -33,13 +34,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
