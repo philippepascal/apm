@@ -1,7 +1,7 @@
 +++
 id = "c8bd9b55"
 title = "Use mock-happy/mock-sad in integration tests instead of debug wrapper"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c8bd9b55-use-mock-happy-mock-sad-in-integration-t"
 created_at = "2026-05-24T19:07:11.167447Z"
-updated_at = "2026-05-24T19:34:16.805155Z"
+updated_at = "2026-05-24T19:34:29.132806Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ In setup_with_local_worktrees and setup_for_prompt_dispatch, change the workflow
 |------|------|----|----|
 | 2026-05-24T19:07Z | — | new | philippepascal |
 | 2026-05-24T19:34Z | new | groomed | philippepascal |
+| 2026-05-24T19:34Z | groomed | in_design | philippepascal |
