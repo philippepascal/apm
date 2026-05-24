@@ -16,7 +16,9 @@ updated_at = "2026-05-24T19:34:29.132806Z"
 
 ### Problem
 
-Integration tests that exercise worker spawning use the `debug` wrapper, which is a no-op (exits immediately without doing anything). This means the tests only verify that the spawn path doesn't error — they don't verify that a real agent loop (claim ticket → run → transition state → exit) works end-to-end. The mock agents (`mock-happy`, `mock-sad`) were built exactly for this purpose but are unused in the test suite. Additionally there is leftover dead code (`make_mock_worker`) and unnecessary CI plumbing (`APM_SKIP_COMPAT_CHECK`) from earlier failed attempts to make CI work without a real claude binary.
+Integration tests that exercise worker spawning configure the `debug/worker` profile, which is a built-in no-op: it exits immediately without reading the ticket, writing spec sections, or calling `apm state`. Tests that use it only verify that `apm start --spawn` does not return an error and that the parent-side state transition (e.g. `groomed → in_design`, `ready → in_progress`) was written to the ticket branch. They say nothing about whether the agent loop itself — claim ticket, do work, call `apm state`, exit — functions end-to-end.
+
+Two mock agents, `mock-happy` and `mock-sad`, were created specifically to fill this gap. `mock-happy` writes dummy spec or implementation content and calls `apm state <id> <success-target>` before exiting; `mock-sad` calls `apm state <id> <non-success-target>`. Neither is used in the integration tests. Additionally, a helper `make_mock_worker` exists in the test file as dead code (never called), and `APM_SKIP_COMPAT_CHECK=1` is set in CI to suppress a compat check that is irrelevant once `debug/` is replaced by a named built-in wrapper.
 
 ### Acceptance criteria
 
