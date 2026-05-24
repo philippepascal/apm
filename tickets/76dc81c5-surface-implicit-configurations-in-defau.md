@@ -4,12 +4,12 @@ title = "surface implicit configurations in default config"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/76dc81c5-surface-implicit-configurations-in-defau"
 created_at = "2026-05-24T19:24:15.489361Z"
-updated_at = "2026-05-24T19:59:16.209047Z"
+updated_at = "2026-05-24T19:59:20.358529Z"
 +++
 
 ## Spec
