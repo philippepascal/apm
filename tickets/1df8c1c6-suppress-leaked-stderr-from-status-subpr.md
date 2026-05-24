@@ -49,7 +49,15 @@ Replace each .status() call site with run_status (or inline .output() for the is
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `fetch_branch` does not write to the terminal's stderr when the remote ref does not exist
+- [ ] `push_branch` does not write to the terminal's stderr when the push fails
+- [ ] `delete_remote_branch` does not write to the terminal's stderr when the deletion fails
+- [ ] `is_ancestor` does not write to the terminal's stderr when `git merge-base --is-ancestor` exits non-zero
+- [ ] The silent fetch in `merge_into_default` does not write to the terminal's stderr
+- [ ] The merge-abort cleanup in `merge_into_default` does not write to the terminal's stderr
+- [ ] `fetch_branch` error value includes the raw git error text (not the generic "git fetch failed")
+- [ ] `push_branch` error value includes the raw git error text (not the generic "git push failed")
+- [ ] `cargo test --workspace` passes after the change
 
 ### Out of scope
 
