@@ -26,7 +26,7 @@ Two mock agents, `mock-happy` and `mock-sad`, were created specifically to fill 
 - [ ] `happy_script` impl mode adds `cd "${APM_PROJECT_ROOT:?}"` before the `apm state` call and uses `git -c commit.gpgsign=false commit`
 - [ ] Both modes of `happy_script` call `apm state … --force --no-aggressive` instead of bare `apm state`
 - [ ] `make_mock_worker` is removed from `apm/tests/integration.rs`
-- [ ] `APM_SKIP_COMPAT_CHECK: "1"` is removed from the test step in `.github/workflows/release.yml`
+- [x] `APM_SKIP_COMPAT_CHECK: "1"` is removed from the test step in `.github/workflows/release.yml`
 - [ ] `setup_with_local_worktrees` patches the agent to `mock-happy/` in both `config.toml` and `workflow.toml`
 - [ ] `setup_for_prompt_dispatch` patches the agent to `mock-happy/` in both `config.toml` and `workflow.toml`
 - [x] A `wait_for_pid(pid: u32)` helper is added to `integration.rs` that polls `kill -0 <pid>` until the process exits
