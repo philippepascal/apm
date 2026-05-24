@@ -83,7 +83,9 @@ pub struct RunNextOutput {
 
 /// True when `agent` resolves to the built-in claude wrapper (no custom shadow).
 /// The compatibility probe is only meaningful in that case.
+/// Set `APM_SKIP_COMPAT_CHECK=1` to bypass (useful in CI without claude installed).
 pub(crate) fn should_check_claude_compat(root: &Path, agent: &str) -> bool {
+    if std::env::var("APM_SKIP_COMPAT_CHECK").as_deref() == Ok("1") { return false; }
     if agent != "claude" { return false; }
     matches!(
         crate::wrapper::resolve_wrapper(root, "claude"),

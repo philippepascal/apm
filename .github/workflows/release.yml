@@ -32,6 +32,8 @@ jobs:
           npm run build
 
       - name: Run tests
+        env:
+          APM_SKIP_COMPAT_CHECK: "1"
         run: cargo test --workspace
 
   build:
