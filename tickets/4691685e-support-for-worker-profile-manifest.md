@@ -104,6 +104,7 @@ From lowest to highest: `config.toml [workers].model` → `local.toml [workers].
 
 ### Amendment requests
 
+- [ ] Fill in the blank 'Priority chain for model' section in the Approach with the explicit precedence order: manifest > local.toml > [workers].model
 
 ### Code review
 
