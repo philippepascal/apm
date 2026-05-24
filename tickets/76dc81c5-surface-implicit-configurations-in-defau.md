@@ -1,7 +1,7 @@
 +++
 id = "76dc81c5"
 title = "surface implicit configurations in default config"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/76dc81c5-surface-implicit-configurations-in-defau"
 created_at = "2026-05-24T19:24:15.489361Z"
-updated_at = "2026-05-24T20:33:15.942583Z"
+updated_at = "2026-05-24T21:26:07.219937Z"
 +++
 
 ## Spec
@@ -113,3 +113,4 @@ All existing tests in `apm-core/src/init.rs` check for substrings or valid-TOML 
 | 2026-05-24T20:30Z | specd | ready | philippepascal |
 | 2026-05-24T20:30Z | ready | in_progress | philippepascal |
 | 2026-05-24T20:33Z | in_progress | implemented | claude |
+| 2026-05-24T21:26Z | implemented | closed | philippepascal(apm-sync) |
