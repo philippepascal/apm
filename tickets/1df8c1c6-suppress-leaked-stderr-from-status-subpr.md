@@ -3,13 +3,13 @@ id = "1df8c1c6"
 title = "Suppress leaked stderr from .status() subprocess calls in apm-core"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1df8c1c6-suppress-leaked-stderr-from-status-subpr"
 created_at = "2026-05-24T21:19:59.285174Z"
-updated_at = "2026-05-24T21:22:23.024962Z"
+updated_at = "2026-05-24T21:23:48.019104Z"
 +++
 
 ## Spec
