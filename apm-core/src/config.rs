@@ -719,6 +719,12 @@ impl Config {
             config.workers.merge_local(&local.workers);
         }
 
+        if let Ok(v) = std::env::var("APM_WORKERS_DEFAULT") {
+            if !v.is_empty() {
+                config.workers.default = Some(v);
+            }
+        }
+
         Ok(config)
     }
 }
@@ -1329,6 +1335,22 @@ dir = "tickets"
         // limit=1, all active workers are epic-linked → not blocked
         let active = vec![Some("epicA".to_string()), Some("epicB".to_string())];
         assert!(!config.is_default_branch_blocked(&active));
+    }
+
+    #[test]
+    fn apm_workers_default_env_overrides_config() {
+        let _g = ENV_LOCK.lock().unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(
+            apm_dir.join("config.toml"),
+            "[project]\nname = \"test\"\n[tickets]\ndir = \"tickets\"\n[workers]\ndefault = \"claude/worker\"\n",
+        ).unwrap();
+        std::env::set_var("APM_WORKERS_DEFAULT", "debug/worker");
+        let config = Config::load(tmp.path()).unwrap();
+        std::env::remove_var("APM_WORKERS_DEFAULT");
+        assert_eq!(config.workers.default.as_deref(), Some("debug/worker"));
     }
 
     #[test]
