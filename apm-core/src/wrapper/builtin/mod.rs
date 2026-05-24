@@ -47,10 +47,11 @@ APM="${{APM_BIN:?APM_BIN not set — see wrapper contract}}"
 ID="{id}"
 printf 'mock: placeholder implementation for ticket %s\n' "$ID" > mock-implementation.txt
 git add mock-implementation.txt
-git commit -m "mock: placeholder commit for ticket $ID"
+git -c commit.gpgsign=false commit -m "mock: placeholder commit for ticket $ID"
 printf '%s\n' '{{"type":"tool_use","id":"mock-1","name":"git_commit","input":{{}}}}'
 printf '%s\n' '{{"type":"tool_use","id":"mock-2","name":"apm_state","input":{{}}}}'
-"$APM" state "$ID" {target}
+cd "${{APM_PROJECT_ROOT:?}}"
+"$APM" state "$ID" {target} --force --no-aggressive
 rm -f "$0"
 "#
         )
@@ -60,6 +61,7 @@ rm -f "$0"
 set -e
 APM="${{APM_BIN:?APM_BIN not set — see wrapper contract}}"
 ID="{id}"
+cd "${{APM_PROJECT_ROOT:?APM_PROJECT_ROOT not set}}"
 "$APM" spec "$ID" --section "Problem" --set "Mock spec — no real problem analyzed."
 printf '%s\n' "- [ ] Mock criterion 1" "- [ ] Mock criterion 2" > ".apm-mock-ac-$$.txt"
 "$APM" spec "$ID" --section "Acceptance criteria" --set-file ".apm-mock-ac-$$.txt"
@@ -70,7 +72,7 @@ rm -f ".apm-mock-ac-$$.txt"
 "$APM" set "$ID" risk 1
 printf '%s\n' '{{"type":"tool_use","id":"mock-1","name":"write_spec","input":{{}}}}'
 printf '%s\n' '{{"type":"tool_use","id":"mock-2","name":"apm_state","input":{{}}}}'
-"$APM" state "$ID" {target}
+"$APM" state "$ID" {target} --force --no-aggressive
 rm -f "$0"
 "#
         )
@@ -231,7 +233,7 @@ mod tests {
     #[test]
     fn happy_script_impl_mode_creates_commit() {
         let s = happy_script("abc123", "implemented", true);
-        assert!(s.contains("git commit"), "impl mode must create commit: {s}");
+        assert!(s.contains("git -c commit.gpgsign=false commit"), "impl mode must create commit: {s}");
     }
 
     #[test]

@@ -93,11 +93,25 @@ pub(crate) fn resolve_apm_cli_bin() -> String {
 }
 
 fn resolve_cli_bin_from_exe(exe: &std::path::Path) -> std::path::PathBuf {
+    // Check sibling first (production layout: apm-server and apm share the same directory).
     let candidate = exe
         .parent()
         .map(|dir| dir.join("apm"))
         .filter(|p| p.is_file() && *p != exe);
-    candidate.unwrap_or_else(|| exe.to_path_buf())
+    if let Some(p) = candidate {
+        return p;
+    }
+    // Check grandparent directory (test layout: test binary lives in deps/, apm lives
+    // one level up in the profile output directory, e.g. target/debug/).
+    let grandparent_candidate = exe
+        .parent()
+        .and_then(|parent| parent.parent())
+        .map(|grandparent| grandparent.join("apm"))
+        .filter(|p| p.is_file() && *p != exe);
+    if let Some(p) = grandparent_candidate {
+        return p;
+    }
+    exe.to_path_buf()
 }
 
 #[cfg(test)]

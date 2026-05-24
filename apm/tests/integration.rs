@@ -47,24 +47,6 @@ fn create_ticket(dir: &std::path::Path, title: &str) -> (String, String) {
     (id, branch)
 }
 
-/// Create a mock worker binary inside `dir/bin/mock-worker`.
-/// When called with `--help` it prints `--output-format stream-json` so the
-/// compatibility probe in `check_output_format_supported` passes.
-/// For all other invocations it exits 0 immediately.
-fn make_mock_worker(dir: &std::path::Path) -> std::path::PathBuf {
-    use std::os::unix::fs::PermissionsExt;
-    let bin_dir = dir.join("bin");
-    std::fs::create_dir_all(&bin_dir).unwrap();
-    let bin = bin_dir.join("mock-worker");
-    std::fs::write(
-        &bin,
-        "#!/bin/sh\nif [ \"$1\" = \"--help\" ]; then\n    echo '--output-format stream-json'\n    exit 0\nfi\nexit 0\n",
-    )
-    .unwrap();
-    std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
-    bin
-}
-
 fn init_repo() -> TempDir {
     let dir = tempfile::tempdir().unwrap();
     git(dir.path(), &["init", "-q", "-b", "main"]);
@@ -1655,16 +1637,14 @@ fn setup_with_local_worktrees() -> TempDir {
     let dir = init_repo();
     let p = dir.path();
 
-    // BYPASS: replace all claude/* worker profiles with debug/* so dispatched
-    // workers use the built-in debug wrapper instead of claude (not on CI).
     let config_path = p.join(".apm/config.toml");
     let config = std::fs::read_to_string(&config_path).unwrap();
-    let config = config.replace("default = \"claude/worker\"", "default = \"debug/worker\"");
+    let config = config.replace("default = \"claude/worker\"", "default = \"mock-happy/worker\"");
     std::fs::write(&config_path, config).unwrap();
 
     let workflow_path = p.join(".apm/workflow.toml");
     let workflow = std::fs::read_to_string(&workflow_path).unwrap();
-    let workflow = workflow.replace("\"claude/", "\"debug/");
+    let workflow = workflow.replace("\"claude/", "\"mock-happy/");
     std::fs::write(&workflow_path, workflow).unwrap();
 
     git(p, &["add", ".apm/config.toml", ".apm/workflow.toml"]);
@@ -1856,8 +1836,18 @@ terminal = true
 
 // ── apm start --spawn ────────────────────────────────────────────────────────
 
-/// Write a minimal fake `claude` executable to `bin_dir` and prepend it to PATH.
-/// Returns the old PATH so the caller can restore it.
+/// Poll until the process with the given PID has exited and been reaped.
+fn wait_for_pid(pid: u32) {
+    loop {
+        let running = std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !running { break; }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+}
 
 #[test]
 fn start_spawn_sets_agent_to_worker_pid() {
@@ -1866,10 +1856,12 @@ fn start_spawn_sets_agent_to_worker_pid() {
     let (id, branch) = write_ticket_to_branch(p, "ready", "alpha");
 
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
-    apm::cmd::start::run(p, &id, true, true, false, "delegator-agent").unwrap();
+    let out = apm_core::start::run(p, &id, true, true, false, "delegator-agent").unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(content.contains("state = \"implemented\""), "ticket should be implemented after spawn: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
@@ -1896,10 +1888,12 @@ fn start_next_spawn_sets_agent_to_worker_pid() {
     let (_id, branch) = write_ticket_with_owner(p, "ready", "alpha", "delegator-agent");
 
     std::env::set_var("APM_AGENT_NAME", "delegator-agent");
-    apm::cmd::start::run_next(p, true, true, false).unwrap();
+    let out = apm_core::start::run_next(p, true, true, false).unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_progress\""), "ticket should be in_progress after spawn: {content}");
+    assert!(content.contains("state = \"implemented\""), "ticket should be implemented after spawn: {content}");
     assert!(!content.contains("agent ="), "agent field must not be written: {content}");
 }
 
@@ -1989,16 +1983,14 @@ fn setup_for_prompt_dispatch() -> TempDir {
     let dir = init_repo();
     let p = dir.path();
 
-    // BYPASS: replace all claude/* worker profiles with debug/* so dispatched
-    // workers use the built-in debug wrapper instead of claude (not on CI).
     let config_path = p.join(".apm/config.toml");
     let cfg = std::fs::read_to_string(&config_path).unwrap();
-    let cfg = cfg.replace("default = \"claude/worker\"", "default = \"debug/worker\"");
+    let cfg = cfg.replace("default = \"claude/worker\"", "default = \"mock-happy/worker\"");
     std::fs::write(&config_path, cfg).unwrap();
 
     let workflow_path = p.join(".apm/workflow.toml");
     let workflow = std::fs::read_to_string(&workflow_path).unwrap();
-    let workflow = workflow.replace("\"claude/", "\"debug/");
+    let workflow = workflow.replace("\"claude/", "\"mock-happy/");
     std::fs::write(&workflow_path, workflow).unwrap();
 
     dir
@@ -2012,10 +2004,12 @@ fn spawn_new_ticket_transitions_to_in_design() {
     let (id, branch) = write_ticket_to_branch(p, "groomed", "spec me");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_design\""), "new ticket should transition to in_design: {content}");
+    assert!(content.contains("state = \"specd\""), "new ticket should transition to specd: {content}");
 }
 
 #[test]
@@ -2026,10 +2020,12 @@ fn spawn_ammend_ticket_transitions_to_in_design() {
     let (id, branch) = write_ticket_to_branch(p, "ammend", "fix spec");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_design\""), "ammend ticket should transition to in_design: {content}");
+    assert!(content.contains("state = \"specd\""), "ammend ticket should transition to specd: {content}");
 }
 
 #[test]
@@ -2040,10 +2036,12 @@ fn spawn_ready_ticket_transitions_to_in_progress() {
     let (id, branch) = write_ticket_to_branch(p, "ready", "implement me");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_progress\""), "ready ticket should transition to in_progress: {content}");
+    assert!(content.contains("state = \"implemented\""), "ready ticket should transition to implemented: {content}");
 }
 
 #[test]
@@ -2055,10 +2053,12 @@ fn start_next_spawn_new_ticket_transitions_correctly() {
     let (_id, branch) = write_ticket_with_owner(p, "groomed", "spec me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run_next(p, true, true, false).unwrap();
+    let out = apm_core::start::run_next(p, true, true, false).unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_design\""), "run_next on new ticket should go to in_design: {content}");
+    assert!(content.contains("state = \"specd\""), "run_next on new ticket should go to specd: {content}");
 }
 
 #[test]
@@ -2070,10 +2070,12 @@ fn start_next_spawn_ready_ticket_transitions_correctly() {
     let (_id, branch) = write_ticket_with_owner(p, "ready", "implement me", "test-agent");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
-    apm::cmd::start::run_next(p, true, true, false).unwrap();
+    let out = apm_core::start::run_next(p, true, true, false).unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"in_progress\""), "run_next on ready ticket should go to in_progress: {content}");
+    assert!(content.contains("state = \"implemented\""), "run_next on ready ticket should go to implemented: {content}");
 }
 
 // ── apm work ─────────────────────────────────────────────────────────────────
