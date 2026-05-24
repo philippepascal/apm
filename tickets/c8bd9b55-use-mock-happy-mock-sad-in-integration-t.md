@@ -1,7 +1,7 @@
 +++
 id = "c8bd9b55"
 title = "Use mock-happy/mock-sad in integration tests instead of debug wrapper"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c8bd9b55-use-mock-happy-mock-sad-in-integration-t"
 created_at = "2026-05-24T19:07:11.167447Z"
-updated_at = "2026-05-24T19:52:40.505069Z"
+updated_at = "2026-05-24T20:30:03.227745Z"
 +++
 
 ## Spec
@@ -127,3 +127,4 @@ Non-spawn tests that use `setup_with_local_worktrees` (e.g. `start_next_claims_h
 | 2026-05-24T19:34Z | new | groomed | philippepascal |
 | 2026-05-24T19:34Z | groomed | in_design | philippepascal |
 | 2026-05-24T19:52Z | in_design | specd | claude |
+| 2026-05-24T20:30Z | specd | ready | philippepascal |
