@@ -1,7 +1,7 @@
 +++
 id = "76dc81c5"
 title = "surface implicit configurations in default config"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/76dc81c5-surface-implicit-configurations-in-defau"
 created_at = "2026-05-24T19:24:15.489361Z"
-updated_at = "2026-05-24T19:24:15.489361Z"
+updated_at = "2026-05-24T19:34:21.351376Z"
 +++
 
 ## Spec
@@ -46,3 +46,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-24T19:24Z | — | new | philippepascal |
+| 2026-05-24T19:34Z | new | groomed | philippepascal |
