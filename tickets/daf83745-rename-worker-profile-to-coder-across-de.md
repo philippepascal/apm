@@ -70,7 +70,81 @@ setup_with_local_worktrees() and setup_for_prompt_dispatch() patch "claude/worke
 
 ### Approach
 
-How the implementation will work.
+This is a mechanical string-replacement and file-rename across source code, tests, and live config. No logic changes.
+
+#### 1. Built-in default files — git mv (five files)
+
+Use `git mv` to rename each file (contents unchanged):
+- `apm-core/src/default/agents/claude/apm.worker.md` → `apm.coder.md`
+- `apm-core/src/default/agents/mock-happy/apm.worker.md` → `apm.coder.md`
+- `apm-core/src/default/agents/mock-sad/apm.worker.md` → `apm.coder.md`
+- `apm-core/src/default/agents/mock-random/apm.worker.md` → `apm.coder.md`
+- `apm-core/src/default/agents/debug/apm.worker.md` → `apm.coder.md`
+
+#### 2. apm-core/src/default/workflow.toml
+
+Line 135: `worker_profile = "claude/worker"` → `worker_profile = "claude/coder"`.
+
+#### 3. apm-core/src/start.rs
+
+a) **const declarations (lines 7–16)** — rename the five `*_WORKER_DEFAULT` consts to `*_CODER_DEFAULT` and update each `include_str!` path from `apm.worker.md` to `apm.coder.md`.
+
+b) **`resolve_builtin_instructions` match arms** — change the role string from `"worker"` to `"coder"` in all five match arms (`claude`, `default`, `mock-happy`, `mock-sad`, `mock-random`, `mock-random`, `debug`), and update the referenced const names to match step (a).
+
+c) **Three `.unwrap_or` fallbacks** (lines 321, 449, 626): `"claude/worker"` → `"claude/coder"`.
+
+d) **Tests** — update:
+- All `"claude/worker"` profile strings passed to `resolve_worker_profile` → `"claude/coder"`
+- All `apm.worker.md` path strings in test file writes → `apm.coder.md`
+- All `worker.toml` manifest file names in tests → `coder.toml` (the profile manifest is named after the role, so `coder.toml` for `claude/coder`)
+
+#### 4. apm-core/src/init.rs
+
+a) Two `.unwrap_or("claude/worker")` calls (lines 87 and 118) → `.unwrap_or("claude/coder")`.
+
+b) The `write_default` call at line 131 that writes `apm.worker.md`: change the path argument and the label string to `apm.coder.md`.
+
+c) **Tests**: update `default_config(..., "claude/worker")` calls to `"claude/coder"` and the `apm.worker.md` file-existence assert (line 735) to `apm.coder.md`.
+
+#### 5. apm-core/src/validate.rs
+
+Line 722: `.unwrap_or("claude/worker")` → `.unwrap_or("claude/coder")`.
+
+#### 6. apm-core/src/config.rs
+
+- Line 112: doc comment example `"claude/worker"` → `"claude/coder"`.
+- Lines 932 and 935: inline test TOML and assertion → `"claude/coder"`.
+
+#### 7. apm-core/src/instructions.rs
+
+Lines 598 and 608: `worker_profile = "claude/worker"` → `"claude/coder"` in the example TOML embedded in generated instructions output.
+
+#### 8. apm-core/src/prompt.rs
+
+- Line 68: `.unwrap_or("claude/worker")` → `.unwrap_or("claude/coder")`.
+- Lines 572–573: update test assertion strings from `"claude/worker"` / `apm.worker.md` to `"claude/coder"` / `apm.coder.md`.
+
+#### 9. apm/src/main.rs
+
+Lines 903–904: update the `--role worker` help text example to `--role coder`.
+
+#### 10. apm/tests/validate_fix.rs
+
+- Lines 52, 136: assertion `Some("claude/worker")` → `Some("claude/coder")`.
+- Line 151: embedded TOML `default = "claude/worker"` → `"claude/coder"`.
+
+#### 11. apm/tests/integration.rs
+
+- Line 1642: `replace("default = \"claude/worker\"", "default = \"mock-happy/worker\"")` → `replace("default = \"claude/coder\"", "default = \"mock-happy/coder\"")`.
+- Line 1988: same replacement.
+
+#### 12. Live project files
+
+- `.apm/config.toml`: `default = "claude/worker"` → `default = "claude/coder"`.
+- `.apm/workflow.toml`: `worker_profile = "claude/worker"` → `worker_profile = "claude/coder"`.
+- `git mv .apm/agents/claude/apm.worker.md .apm/agents/claude/apm.coder.md`.
+
+Commit all source, test, and live-config changes together in a single commit on the ticket branch.
 
 ### Open questions
 
