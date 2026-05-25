@@ -1,7 +1,7 @@
 +++
 id = "daf83745"
 title = "Rename worker profile to coder across defaults and live config"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/daf83745-rename-worker-profile-to-coder-across-de"
 created_at = "2026-05-25T00:45:42.028363Z"
-updated_at = "2026-05-25T01:43:22.286936Z"
+updated_at = "2026-05-25T01:43:25.844752Z"
 +++
 
 ## Spec
@@ -169,3 +169,4 @@ e) **`migrate_agents_default_to_claude()` — rewrites array (line 299)**: chang
 | 2026-05-25T01:26Z | in_design | specd | claude |
 | 2026-05-25T01:41Z | specd | ammend | philippepascal |
 | 2026-05-25T01:42Z | ammend | in_design | philippepascal |
+| 2026-05-25T01:43Z | in_design | specd | claude |
