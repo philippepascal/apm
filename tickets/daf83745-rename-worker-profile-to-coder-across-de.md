@@ -1,7 +1,7 @@
 +++
 id = "daf83745"
 title = "Rename worker profile to coder across defaults and live config"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/daf83745-rename-worker-profile-to-coder-across-de"
 created_at = "2026-05-25T00:45:42.028363Z"
-updated_at = "2026-05-25T01:26:00.902821Z"
+updated_at = "2026-05-25T01:41:39.217266Z"
 +++
 
 ## Spec
@@ -163,3 +163,4 @@ Commit all source, test, and live-config changes together in a single commit on 
 | 2026-05-25T01:19Z | new | groomed | philippepascal |
 | 2026-05-25T01:20Z | groomed | in_design | philippepascal |
 | 2026-05-25T01:26Z | in_design | specd | claude |
+| 2026-05-25T01:41Z | specd | ammend | philippepascal |
