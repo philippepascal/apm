@@ -145,6 +145,9 @@ Lines 903–904: update the `--role worker` help text example to `--role coder`.
 - `git mv .apm/agents/claude/apm.worker.md .apm/agents/claude/apm.coder.md`.
 
 Commit all source, test, and live-config changes together in a single commit on the ticket branch.
+d) **`migrate_agents_default_to_claude()` — files array (line 280)**: change `"apm.worker.md"` → `"apm.coder.md"` in the `files` array so the migration moves the correctly-named file.
+
+e) **`migrate_agents_default_to_claude()` — rewrites array (line 299)**: change the tuple `("@.apm/agents/default/apm.worker.md", "@.apm/agents/claude/apm.worker.md")` → `("@.apm/agents/default/apm.coder.md", "@.apm/agents/claude/apm.coder.md")` so CLAUDE.md `@include` rewrite paths are updated correctly.
 
 ### Open questions
 
