@@ -1,7 +1,7 @@
 +++
 id = "9c0edcbb"
 title = "apm init creates commented-out manifest stubs for claude profiles"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c0edcbb-apm-init-creates-commented-out-manifest-"
 created_at = "2026-05-25T00:46:37.072625Z"
-updated_at = "2026-05-25T01:29:02.406997Z"
+updated_at = "2026-05-25T01:43:52.470228Z"
 depends_on = ["daf83745"]
 +++
 
@@ -104,3 +104,4 @@ Add setup_does_not_overwrite_edited_manifest_stub: calls setup(), writes user co
 | 2026-05-25T01:20Z | new | groomed | philippepascal |
 | 2026-05-25T01:26Z | groomed | in_design | philippepascal |
 | 2026-05-25T01:29Z | in_design | specd | claude |
+| 2026-05-25T01:43Z | specd | ready | philippepascal |
