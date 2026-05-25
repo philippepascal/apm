@@ -52,7 +52,7 @@ This ticket assumes the rename in the companion ticket (worker → coder) is com
 ### Acceptance criteria
 
 - [x] `apm init` on a fresh repo creates `.apm/agents/claude/spec-writer.toml` with all fields commented out
-- [ ] `apm init` on a fresh repo creates `.apm/agents/claude/coder.toml` with all fields commented out
+- [x] `apm init` on a fresh repo creates `.apm/agents/claude/coder.toml` with all fields commented out
 - [ ] The content of each stub file is valid TOML (parses without error; the all-comment file produces an empty table)
 - [ ] `apm init` output includes a `Created .apm/agents/claude/spec-writer.toml` line and a `Created .apm/agents/claude/coder.toml` line on first run
 - [ ] Re-running `apm init` when stub files are unchanged produces no new output for those files (idempotent)
