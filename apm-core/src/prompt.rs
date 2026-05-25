@@ -65,7 +65,7 @@ fn resolve_agent_role(
     agent_override: Option<&str>,
     role_override: Option<&str>,
 ) -> Result<(String, String)> {
-    let default_wp = config.workers.default.as_deref().unwrap_or("claude/worker");
+    let default_wp = config.workers.default.as_deref().unwrap_or("claude/coder");
     let wp_str = triggering_transition
         .and_then(|tr| tr.worker_profile.as_deref())
         .unwrap_or(default_wp);
@@ -430,7 +430,7 @@ Test.
         if create_per_agent_file {
             let agent_dir = root.join(format!(".apm/agents/{agent}"));
             fs::create_dir_all(&agent_dir).unwrap();
-            fs::write(agent_dir.join("apm.worker.md"), format!("INSTRUCTIONS FOR {agent}")).unwrap();
+            fs::write(agent_dir.join("apm.coder.md"), format!("INSTRUCTIONS FOR {agent}")).unwrap();
         }
 
         let agents_section = match project {
@@ -444,7 +444,7 @@ name = "explain-test"
 default_branch = "main"
 
 [workers]
-default = "{agent}/worker"
+default = "{agent}/coder"
 
 [tickets]
 dir = "tickets"
@@ -520,7 +520,7 @@ Test.
         let output = String::from_utf8(buf).unwrap();
 
         assert!(output.contains("level 0"), "should show level 0; got:\n{output}");
-        assert!(output.contains(".apm/agents/mock-happy/apm.worker.md"), "should show per-agent path; got:\n{output}");
+        assert!(output.contains(".apm/agents/mock-happy/apm.coder.md"), "should show per-agent path; got:\n{output}");
         assert_eq!(output.matches("not reached").count(), 2, "levels 1-2 should be not reached; got:\n{output}");
     }
 
@@ -565,12 +565,12 @@ Test.
         make_explain_project(root, "dddd0004", "mock-happy", true, None);
 
         let mut buf = Vec::new();
-        explain(root, "dddd0004", Some("claude"), Some("worker"), &mut buf).unwrap();
+        explain(root, "dddd0004", Some("claude"), Some("coder"), &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
         assert!(output.contains("level 2"), "claude override should fall to level 2; got:\n{output}");
-        assert!(output.contains("built-in default (claude/worker)"), "should name claude/worker; got:\n{output}");
-        assert!(output.contains(".apm/agents/claude/apm.worker.md"), "skipped level 0 should use overridden agent name; got:\n{output}");
+        assert!(output.contains("built-in default (claude/coder)"), "should name claude/coder; got:\n{output}");
+        assert!(output.contains(".apm/agents/claude/apm.coder.md"), "skipped level 0 should use overridden agent name; got:\n{output}");
     }
 
     #[test]

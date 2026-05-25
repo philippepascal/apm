@@ -900,8 +900,8 @@ Exits non-zero with a clear message when no instructions can be resolved.\n\
 \n\
 Examples:\n\
   apm prompt                                          # list available agents and roles\n\
-  apm prompt --agent claude --role worker            # base prompt for claude/worker\n\
-  apm prompt --agent claude --role worker --explain  # provenance without a ticket\n\
+  apm prompt --agent claude --role coder             # base prompt for claude/coder\n\
+  apm prompt --agent claude --role coder --explain   # provenance without a ticket\n\
   apm prompt ba121f45                                 # full context (system + user)\n\
   apm prompt ba121f45 --system                        # system prompt only\n\
   apm prompt ba121f45 --message                       # user message only\n\

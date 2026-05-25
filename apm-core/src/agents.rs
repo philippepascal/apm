@@ -86,7 +86,7 @@ fi
 exec claude "${ARGS[@]}" "$(cat "$APM_USER_MESSAGE_FILE")"
 "#;
 
-const DEFAULT_WORKER_MD: &str = include_str!("default/agents/claude/apm.worker.md");
+const DEFAULT_CODER_MD: &str = include_str!("default/agents/claude/apm.coder.md");
 const DEFAULT_SPEC_WRITER_MD: &str = include_str!("default/agents/claude/apm.spec-writer.md");
 
 pub fn list_wrappers(root: &Path, config: &Config) -> Result<Vec<WrapperEntry>> {
@@ -164,10 +164,10 @@ pub fn scaffold_wrapper(root: &Path, name: &str, force: bool) -> Result<()> {
     // Write manifest.toml
     std::fs::write(dir.join("manifest.toml"), MANIFEST_TEMPLATE)?;
 
-    // Write apm.worker.md
-    let worker_md = std::fs::read_to_string(root.join(".apm").join("apm.worker.md"))
-        .unwrap_or_else(|_| DEFAULT_WORKER_MD.to_string());
-    std::fs::write(dir.join("apm.worker.md"), &worker_md)?;
+    // Write apm.coder.md
+    let coder_md = std::fs::read_to_string(root.join(".apm").join("apm.coder.md"))
+        .unwrap_or_else(|_| DEFAULT_CODER_MD.to_string());
+    std::fs::write(dir.join("apm.coder.md"), &coder_md)?;
 
     // Write apm.spec-writer.md
     let spec_writer_md =

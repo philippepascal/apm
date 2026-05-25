@@ -1639,7 +1639,7 @@ fn setup_with_local_worktrees() -> TempDir {
 
     let config_path = p.join(".apm/config.toml");
     let config = std::fs::read_to_string(&config_path).unwrap();
-    let config = config.replace("default = \"claude/worker\"", "default = \"mock-happy/worker\"");
+    let config = config.replace("default = \"claude/coder\"", "default = \"mock-happy/coder\"");
     std::fs::write(&config_path, config).unwrap();
 
     let workflow_path = p.join(".apm/workflow.toml");
@@ -1985,7 +1985,7 @@ fn setup_for_prompt_dispatch() -> TempDir {
 
     let config_path = p.join(".apm/config.toml");
     let cfg = std::fs::read_to_string(&config_path).unwrap();
-    let cfg = cfg.replace("default = \"claude/worker\"", "default = \"mock-happy/worker\"");
+    let cfg = cfg.replace("default = \"claude/coder\"", "default = \"mock-happy/coder\"");
     std::fs::write(&config_path, cfg).unwrap();
 
     let workflow_path = p.join(".apm/workflow.toml");

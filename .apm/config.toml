@@ -31,5 +31,5 @@ enabled = true
 file = "/tmp/apm.log"
 
 [workers]
-default = "claude/worker"
+default = "claude/coder"
 model = "sonnet"
