@@ -4,15 +4,15 @@ use crate::wrapper::{WrapperContext, write_temp_file};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 
-const DEFAULT_WORKER_DEFAULT: &str = include_str!("default/agents/claude/apm.worker.md");
+const DEFAULT_CODER_DEFAULT: &str = include_str!("default/agents/claude/apm.coder.md");
 const DEFAULT_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/claude/apm.spec-writer.md");
-const MOCK_HAPPY_WORKER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.worker.md");
+const MOCK_HAPPY_CODER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.coder.md");
 const MOCK_HAPPY_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-happy/apm.spec-writer.md");
-const MOCK_SAD_WORKER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.worker.md");
+const MOCK_SAD_CODER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.coder.md");
 const MOCK_SAD_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-sad/apm.spec-writer.md");
-const MOCK_RANDOM_WORKER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.worker.md");
+const MOCK_RANDOM_CODER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.coder.md");
 const MOCK_RANDOM_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/mock-random/apm.spec-writer.md");
-const DEBUG_WORKER_DEFAULT: &str = include_str!("default/agents/debug/apm.worker.md");
+const DEBUG_CODER_DEFAULT: &str = include_str!("default/agents/debug/apm.coder.md");
 const DEBUG_SPEC_WRITER_DEFAULT: &str = include_str!("default/agents/debug/apm.spec-writer.md");
 const DEFAULT_MAIN_AGENT_MD: &str = include_str!("default/agents/claude/apm.main-agent.md");
 
@@ -318,7 +318,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     let worker_profile_str = triggering_transition
         .and_then(|tr| tr.worker_profile.as_deref())
         .or_else(|| config.workers.default.as_deref())
-        .unwrap_or("claude/worker")
+        .unwrap_or("claude/coder")
         .to_string();
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
     apply_profile_manifest(root, &mut wp)?;
@@ -446,7 +446,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     let worker_profile_str = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.worker_profile.as_deref())
         .or_else(|| config.workers.default.as_deref())
-        .unwrap_or("claude/worker")
+        .unwrap_or("claude/coder")
         .to_string();
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
@@ -623,7 +623,7 @@ pub fn spawn_next_worker(
     let worker_profile_str = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.worker_profile.as_deref())
         .or_else(|| config.workers.default.as_deref())
-        .unwrap_or("claude/worker")
+        .unwrap_or("claude/coder")
         .to_string();
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
@@ -764,16 +764,16 @@ pub fn build_user_message(
 
 pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'static str> {
     match (agent, role) {
-        ("claude", "worker") => Some(DEFAULT_WORKER_DEFAULT),
-        ("default", "worker") => Some(DEFAULT_WORKER_DEFAULT),
+        ("claude", "coder") => Some(DEFAULT_CODER_DEFAULT),
+        ("default", "coder") => Some(DEFAULT_CODER_DEFAULT),
         ("claude", "spec-writer") => Some(DEFAULT_SPEC_WRITER_DEFAULT),
-        ("mock-happy", "worker") => Some(MOCK_HAPPY_WORKER_DEFAULT),
+        ("mock-happy", "coder") => Some(MOCK_HAPPY_CODER_DEFAULT),
         ("mock-happy", "spec-writer") => Some(MOCK_HAPPY_SPEC_WRITER_DEFAULT),
-        ("mock-sad", "worker") => Some(MOCK_SAD_WORKER_DEFAULT),
+        ("mock-sad", "coder") => Some(MOCK_SAD_CODER_DEFAULT),
         ("mock-sad", "spec-writer") => Some(MOCK_SAD_SPEC_WRITER_DEFAULT),
-        ("mock-random", "worker") => Some(MOCK_RANDOM_WORKER_DEFAULT),
+        ("mock-random", "coder") => Some(MOCK_RANDOM_CODER_DEFAULT),
         ("mock-random", "spec-writer") => Some(MOCK_RANDOM_SPEC_WRITER_DEFAULT),
-        ("debug", "worker") => Some(DEBUG_WORKER_DEFAULT),
+        ("debug", "coder") => Some(DEBUG_CODER_DEFAULT),
         ("debug", "spec-writer") => Some(DEBUG_SPEC_WRITER_DEFAULT),
         (_, "main-agent") => Some(DEFAULT_MAIN_AGENT_MD),
         _ => None,
@@ -996,7 +996,7 @@ mod tests {
     fn resolve_worker_profile_inherits_workers_env() {
         let mut workers = WorkersConfig::default();
         workers.env.insert("FOO".into(), "bar".into());
-        let wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        let wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         assert_eq!(wp.env.get("FOO").map(|s| s.as_str()), Some("bar"));
     }
 
@@ -1004,7 +1004,7 @@ mod tests {
     fn resolve_worker_profile_inherits_model() {
         let mut workers = WorkersConfig::default();
         workers.model = Some("sonnet".into());
-        let wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        let wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         assert_eq!(wp.model.as_deref(), Some("sonnet"));
     }
 
@@ -1015,8 +1015,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "PER AGENT WORKER").unwrap();
-        let result = build_system_prompt(p, None, "claude", "worker").unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "PER AGENT WORKER").unwrap();
+        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
         assert!(result.contains("PER AGENT WORKER"), "layer 3 content missing: {result}");
     }
 
@@ -1024,8 +1024,8 @@ mod tests {
     fn build_system_prompt_falls_back_to_builtin_default() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "worker").unwrap();
-        assert!(result.contains(super::DEFAULT_WORKER_DEFAULT.trim()), "built-in default not found in output");
+        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
+        assert!(result.contains(super::DEFAULT_CODER_DEFAULT.trim()), "built-in default not found in output");
     }
 
     #[test]
@@ -1041,10 +1041,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "CLAUDE WORKER CONTENT").unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "CLAUDE CODER CONTENT").unwrap();
         // "my-bot" has no per-agent file; should fall back to claude/
-        let result = build_system_prompt(p, None, "my-bot", "worker").unwrap();
-        assert!(result.contains("CLAUDE WORKER CONTENT"), "claude fallback content missing: {result}");
+        let result = build_system_prompt(p, None, "my-bot", "coder").unwrap();
+        assert!(result.contains("CLAUDE CODER CONTENT"), "claude fallback content missing: {result}");
     }
 
     #[test]
@@ -1053,9 +1053,9 @@ mod tests {
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/my-bot")).unwrap();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/my-bot/apm.worker.md"), "AGENT SPECIFIC").unwrap();
-        std::fs::write(p.join(".apm/agents/claude/apm.worker.md"), "CLAUDE CONTENT").unwrap();
-        let result = build_system_prompt(p, None, "my-bot", "worker").unwrap();
+        std::fs::write(p.join(".apm/agents/my-bot/apm.coder.md"), "AGENT SPECIFIC").unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "CLAUDE CONTENT").unwrap();
+        let result = build_system_prompt(p, None, "my-bot", "coder").unwrap();
         assert!(result.contains("AGENT SPECIFIC"), "agent-specific file should win: {result}");
         assert!(!result.contains("CLAUDE CONTENT"), "claude fallback should be skipped: {result}");
     }
@@ -1064,11 +1064,11 @@ mod tests {
     fn build_system_prompt_errors_for_unknown_agent() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "custom-bot", "worker");
+        let result = build_system_prompt(p, None, "custom-bot", "coder");
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("custom-bot"), "error should name the agent: {msg}");
-        assert!(msg.contains("worker"), "error should name the role: {msg}");
+        assert!(msg.contains("coder"), "error should name the role: {msg}");
     }
 
     // --- layer 2 (project file) tests ---
@@ -1081,13 +1081,13 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("prefix.md")),
-            "claude", "worker",
+            "claude", "coder",
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
         let expected = format!(
             "{}\n\nPREFIX CONTENT\n\n{}",
             layer1.trim_end(),
-            super::DEFAULT_WORKER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1096,9 +1096,9 @@ mod tests {
     fn agents_instructions_none_is_no_op() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "worker").unwrap();
-        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_WORKER_DEFAULT.trim_end());
+        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
+        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_CODER_DEFAULT.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1109,10 +1109,10 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("")),
-            "claude", "worker",
+            "claude", "coder",
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_WORKER_DEFAULT.trim_end());
+        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_CODER_DEFAULT.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1123,7 +1123,7 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("no-such-file.md")),
-            "claude", "worker",
+            "claude", "coder",
         );
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
@@ -1139,13 +1139,13 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("prefix.md")),
-            "claude", "worker",
+            "claude", "coder",
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
         let expected = format!(
             "{}\n\nPREFIX\n\n{}",
             layer1.trim_end(),
-            super::DEFAULT_WORKER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1158,13 +1158,13 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("project.md")),
-            "claude", "worker",
+            "claude", "coder",
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("worker"), &[]).unwrap();
+        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
         let expected = format!(
             "{}\n\nPROJECT CONTEXT\n\n{}",
             layer1.trim_end(),
-            super::DEFAULT_WORKER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1600,7 +1600,7 @@ mod tests {
     #[test]
     fn load_profile_manifest_returns_none_when_absent() {
         let dir = tempfile::tempdir().unwrap();
-        let result = super::load_profile_manifest(dir.path(), "claude", "worker").unwrap();
+        let result = super::load_profile_manifest(dir.path(), "claude", "coder").unwrap();
         assert!(result.is_none());
     }
 
@@ -1609,8 +1609,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/claude/worker.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
-        let manifest = super::load_profile_manifest(p, "claude", "worker").unwrap().unwrap();
+        std::fs::write(p.join(".apm/agents/claude/coder.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
+        let manifest = super::load_profile_manifest(p, "claude", "coder").unwrap().unwrap();
         assert_eq!(manifest.model.as_deref(), Some("claude-opus-4-5"));
     }
 
@@ -1619,10 +1619,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/claude/worker.toml"), "not = [valid toml\n").unwrap();
-        let err = super::load_profile_manifest(p, "claude", "worker").unwrap_err();
+        std::fs::write(p.join(".apm/agents/claude/coder.toml"), "not = [valid toml\n").unwrap();
+        let err = super::load_profile_manifest(p, "claude", "coder").unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("worker.toml"), "error must include file path: {msg}");
+        assert!(msg.contains("coder.toml"), "error must include file path: {msg}");
     }
 
     #[test]
@@ -1630,10 +1630,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/claude/worker.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
+        std::fs::write(p.join(".apm/agents/claude/coder.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
         let mut workers = WorkersConfig::default();
         workers.model = Some("sonnet".into());
-        let mut wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        let mut wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         assert_eq!(wp.model.as_deref(), Some("sonnet"));
         super::apply_profile_manifest(p, &mut wp).unwrap();
         assert_eq!(wp.model.as_deref(), Some("claude-opus-4-5"));
@@ -1646,7 +1646,7 @@ mod tests {
         let mut workers = WorkersConfig::default();
         workers.model = Some("sonnet".into());
         workers.env.insert("FOO".into(), "bar".into());
-        let mut wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        let mut wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         super::apply_profile_manifest(p, &mut wp).unwrap();
         assert_eq!(wp.model.as_deref(), Some("sonnet"));
         assert_eq!(wp.env.get("FOO").map(|s| s.as_str()), Some("bar"));
@@ -1657,12 +1657,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
-        std::fs::write(p.join(".apm/agents/claude/worker.toml"),
+        std::fs::write(p.join(".apm/agents/claude/coder.toml"),
             "[env]\nFOO = \"manifest\"\nBAR = \"new\"\n").unwrap();
         let mut workers = WorkersConfig::default();
         workers.env.insert("FOO".into(), "global".into());
         workers.env.insert("BAZ".into(), "kept".into());
-        let mut wp = super::resolve_worker_profile("claude/worker", &workers).unwrap();
+        let mut wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         super::apply_profile_manifest(p, &mut wp).unwrap();
         assert_eq!(wp.env.get("FOO").map(|s| s.as_str()), Some("manifest"), "manifest should override global");
         assert_eq!(wp.env.get("BAR").map(|s| s.as_str()), Some("new"), "manifest-only key should be present");

@@ -719,7 +719,7 @@ fn format_wrapper(root: &Path, agent: &str) -> String {
 /// Build an agent-resolution audit for every `command:start` spawn transition in the config.
 pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAudit> {
     let mut result = Vec::new();
-    let default_profile = config.workers.default.as_deref().unwrap_or("claude/worker");
+    let default_profile = config.workers.default.as_deref().unwrap_or("claude/coder");
 
     for state in &config.workflow.states {
         for transition in &state.transitions {
@@ -2223,7 +2223,7 @@ terminal = true
         assert_eq!(ta.to_state, "in_progress");
         assert!(ta.worker_profile.is_none());
         assert_eq!(ta.agent, "claude");
-        assert_eq!(ta.role, "worker");
+        assert_eq!(ta.role, "coder");
         assert!(ta.wrapper.contains("claude"), "wrapper should mention claude: {}", ta.wrapper);
     }
 

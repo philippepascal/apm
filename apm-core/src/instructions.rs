@@ -595,7 +595,7 @@ actionable = ["agent"]
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "start"
-worker_profile = "claude/worker"
+worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "in_progress"
@@ -605,7 +605,7 @@ actionable = ["agent"]
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-worker_profile = "claude/worker"
+worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "implemented"
@@ -660,15 +660,15 @@ terminal = true
             &out[start..end]
         }
 
-        // Worker role: should include ready, in_progress, implemented but not groomed/specd/in_design
-        let out = generate(tmp.path(), Some("worker"), &commands).unwrap();
+        // Coder role: should include ready, in_progress, implemented but not groomed/specd/in_design
+        let out = generate(tmp.path(), Some("coder"), &commands).unwrap();
         let sm = state_machine_section(&out);
-        assert!(sm.contains("in_progress"), "in_progress missing for worker");
-        assert!(sm.contains("ready"), "ready (source of worker transition) missing");
-        assert!(sm.contains("implemented"), "implemented (target of worker transition) missing");
-        assert!(!sm.contains("groomed"), "groomed should not appear for worker role");
-        assert!(!sm.contains("in_design"), "in_design should not appear for worker role");
-        assert!(!sm.contains("specd"), "specd should not appear for worker role");
+        assert!(sm.contains("in_progress"), "in_progress missing for coder");
+        assert!(sm.contains("ready"), "ready (source of coder transition) missing");
+        assert!(sm.contains("implemented"), "implemented (target of coder transition) missing");
+        assert!(!sm.contains("groomed"), "groomed should not appear for coder role");
+        assert!(!sm.contains("in_design"), "in_design should not appear for coder role");
+        assert!(!sm.contains("specd"), "specd should not appear for coder role");
 
         // spec-writer role: should include groomed, in_design, specd but not ready/in_progress
         let out = generate(tmp.path(), Some("spec-writer"), &commands).unwrap();

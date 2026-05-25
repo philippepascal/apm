@@ -124,7 +124,7 @@ pub fn apply_config_migration_fixes(root: &Path) -> Result<bool> {
                 .and_then(|t| t.get("model"))
                 .and_then(|v| v.as_str()));
 
-        let default_wp = format!("{agent}/worker");
+        let default_wp = format!("{agent}/coder");
         let model_str = model.map(|s| s.to_string());
 
         let workers = doc.get_mut("workers").and_then(|v| v.as_table_mut()).expect("workers");

@@ -84,7 +84,7 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
             vec![effective_username]
         };
         let branch = detect_default_branch(root);
-        let wdefault = workers_default.unwrap_or("claude/worker");
+        let wdefault = workers_default.unwrap_or("claude/coder");
         std::fs::write(&config_path, default_config(default_name, effective_description, &branch, &collaborators, wdefault))?;
         messages.push("Created .apm/config.toml".to_string());
     } else {
@@ -115,7 +115,7 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
                 })
                 .unwrap_or_default();
             let collabs: Vec<&str> = collab_owned.iter().map(|s| s.as_str()).collect();
-            let wdefault = workers_default.unwrap_or("claude/worker");
+            let wdefault = workers_default.unwrap_or("claude/coder");
             write_default(&config_path, &default_config(n, d, b, &collabs, wdefault), ".apm/config.toml", &mut messages)?;
         }
     }
@@ -128,7 +128,7 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
     std::fs::create_dir_all(&agents_claude_dir)
         .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_claude_dir.display()))?;
     write_default(&agents_claude_dir.join("apm.spec-writer.md"), include_str!("default/agents/claude/apm.spec-writer.md"), ".apm/agents/claude/apm.spec-writer.md", &mut messages)?;
-    write_default(&agents_claude_dir.join("apm.worker.md"), include_str!("default/agents/claude/apm.worker.md"), ".apm/agents/claude/apm.worker.md", &mut messages)?;
+    write_default(&agents_claude_dir.join("apm.coder.md"), include_str!("default/agents/claude/apm.coder.md"), ".apm/agents/claude/apm.coder.md", &mut messages)?;
     write_default(
         &apm_dir.join("project.md"),
         include_str!("default/project.md"),
@@ -277,7 +277,7 @@ fn migrate_agents_default_to_claude(root: &Path, apm_dir: &Path, messages: &mut 
 
     std::fs::create_dir_all(&claude_dir)?;
 
-    let files = ["apm.spec-writer.md", "apm.worker.md", "apm.main-agent.md", "style.md", "agents.md"];
+    let files = ["apm.spec-writer.md", "apm.coder.md", "apm.main-agent.md", "style.md", "agents.md"];
     for file in &files {
         let old = default_dir.join(file);
         let new = claude_dir.join(file);
@@ -296,7 +296,7 @@ fn migrate_agents_default_to_claude(root: &Path, apm_dir: &Path, messages: &mut 
 
     let rewrites: &[(&str, &str)] = &[
         ("@.apm/agents/default/apm.main-agent.md", "@.apm/agents/claude/apm.main-agent.md"),
-        ("@.apm/agents/default/apm.worker.md", "@.apm/agents/claude/apm.worker.md"),
+        ("@.apm/agents/default/apm.coder.md", "@.apm/agents/claude/apm.coder.md"),
         ("@.apm/agents/default/apm.spec-writer.md", "@.apm/agents/claude/apm.spec-writer.md"),
         ("@.apm/agents/default/style.md", "@.apm/agents/claude/style.md"),
         ("@.apm/agents/default/agents.md", "@.apm/agents/claude/agents.md"),
@@ -732,7 +732,7 @@ mod tests {
         assert!(tmp.path().join(".apm/ticket.toml").exists());
         assert!(!tmp.path().join(".apm/agents/claude/agents.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.coder.md").exists());
         assert!(tmp.path().join(".apm/project.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.main-agent.md").exists());
         assert!(!tmp.path().join(".apm/agents.md").exists());
@@ -833,7 +833,7 @@ mod tests {
         let name = r#"my\"project"#;
         let description = r#"desc with "quotes" and \backslash"#;
         let branch = "main";
-        let config = default_config(name, description, branch, &[], "claude/worker");
+        let config = default_config(name, description, branch, &[], "claude/coder");
         toml::from_str::<toml::Value>(&config).expect("default_config output must be valid TOML");
     }
 
@@ -866,7 +866,7 @@ mod tests {
 
     #[test]
     fn default_config_with_collaborators() {
-        let config = default_config("proj", "desc", "main", &["alice"], "claude/worker");
+        let config = default_config("proj", "desc", "main", &["alice"], "claude/coder");
         let parsed: toml::Value = toml::from_str(&config).unwrap();
         let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
         assert_eq!(collaborators.len(), 1);
@@ -875,7 +875,7 @@ mod tests {
 
     #[test]
     fn default_config_empty_collaborators() {
-        let config = default_config("proj", "desc", "main", &[], "claude/worker");
+        let config = default_config("proj", "desc", "main", &[], "claude/coder");
         let parsed: toml::Value = toml::from_str(&config).unwrap();
         let collaborators = parsed["project"]["collaborators"].as_array().unwrap();
         assert!(collaborators.is_empty());
@@ -1034,7 +1034,7 @@ mod tests {
         // New paths must exist (in agents/claude/ after migration)
         assert!(tmp.path().join(".apm/agents/claude/agents.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
-        assert!(tmp.path().join(".apm/agents/claude/apm.worker.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/apm.coder.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/style.md").exists());
 
         // CLAUDE.md must be rewritten — cascade migrates agents.md → two new imports, then default → claude
@@ -1128,7 +1128,7 @@ mod tests {
 
     #[test]
     fn default_config_has_in_repo_worktrees_dir() {
-        let config = default_config("myproj", "desc", "main", &[], "claude/worker");
+        let config = default_config("myproj", "desc", "main", &[], "claude/coder");
         assert!(
             config.contains("dir = \".apm--worktrees\""),
             "default config should use .apm--worktrees dir: {config}"
@@ -1212,7 +1212,7 @@ mod tests {
 
     #[test]
     fn default_config_has_project_key() {
-        let config = default_config("proj", "desc", "main", &[], "claude/worker");
+        let config = default_config("proj", "desc", "main", &[], "claude/coder");
         assert!(config.contains("project = \".apm/project.md\""));
         assert!(!config.contains("instructions = "));
     }

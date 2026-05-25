@@ -132,7 +132,7 @@ satisfies_deps = "spec"
   [[workflow.states.transitions]]
   to             = "in_progress"
   trigger        = "command:start"
-  worker_profile = "claude/worker"
+  worker_profile = "claude/coder"
   outcome        = "needs_input"
 
   [[workflow.states.transitions]]

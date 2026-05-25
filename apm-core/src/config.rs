@@ -109,7 +109,7 @@ pub struct WorkersConfig {
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
     /// Default worker profile used when a transition has no `worker_profile` set.
-    /// Format: `"agent/role"` (e.g. `"claude/worker"`).
+    /// Format: `"agent/role"` (e.g. `"claude/coder"`).
     pub default: Option<String>,
     /// Model identifier passed to the worker agent (e.g. `"claude-sonnet-4-5"`).
     /// Can be overridden per-machine in `.apm/local.toml` under `[workers].model`.
@@ -929,10 +929,10 @@ name = "test"
 dir = "tickets"
 
 [workers]
-default = "claude/worker"
+default = "claude/coder"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
-        assert_eq!(config.workers.default.as_deref(), Some("claude/worker"));
+        assert_eq!(config.workers.default.as_deref(), Some("claude/coder"));
     }
 
     #[test]
