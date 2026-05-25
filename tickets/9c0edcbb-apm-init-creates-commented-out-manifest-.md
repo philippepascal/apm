@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c0edcbb-apm-init-creates-commented-out-manifest-"
 created_at = "2026-05-25T00:46:37.072625Z"
-updated_at = "2026-05-25T00:46:37.072625Z"
+updated_at = "2026-05-25T00:49:45.418656Z"
+depends_on = ["daf83745"]
 +++
 
 ## Spec
