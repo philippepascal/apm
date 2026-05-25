@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/daf83745-rename-worker-profile-to-coder-across-de"
 created_at = "2026-05-25T00:45:42.028363Z"
-updated_at = "2026-05-25T01:43:20.702390Z"
+updated_at = "2026-05-25T01:43:22.286936Z"
 +++
 
 ## Spec
