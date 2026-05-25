@@ -154,7 +154,7 @@ e) **`migrate_agents_default_to_claude()` — rewrites array (line 299)**: chang
 
 ### Amendment requests
 
-- [ ] Verify and update the files array in init.rs line ~280: ["apm.spec-writer.md", "apm.worker.md", ...] must have "apm.worker.md" changed to "apm.coder.md"
+- [x] Verify and update the files array in init.rs line ~280: ["apm.spec-writer.md", "apm.worker.md", ...] must have "apm.worker.md" changed to "apm.coder.md"
 
 ### Code review
 
