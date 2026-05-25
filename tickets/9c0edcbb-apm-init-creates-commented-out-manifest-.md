@@ -1,7 +1,7 @@
 +++
 id = "9c0edcbb"
 title = "apm init creates commented-out manifest stubs for claude profiles"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c0edcbb-apm-init-creates-commented-out-manifest-"
 created_at = "2026-05-25T00:46:37.072625Z"
-updated_at = "2026-05-25T01:20:02.510813Z"
+updated_at = "2026-05-25T01:26:21.855611Z"
 depends_on = ["daf83745"]
 +++
 
@@ -76,3 +76,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-25T00:46Z | — | new | philippepascal |
 | 2026-05-25T01:20Z | new | groomed | philippepascal |
+| 2026-05-25T01:26Z | groomed | in_design | philippepascal |
