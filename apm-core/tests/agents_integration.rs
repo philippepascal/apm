@@ -80,7 +80,7 @@ fn scaffold_creates_all_files() {
     let agent_dir = root.join(".apm").join("agents").join("test-wrap");
     assert!(agent_dir.join("wrapper.sh").exists(), "wrapper.sh missing");
     assert!(agent_dir.join("manifest.toml").exists(), "manifest.toml missing");
-    assert!(agent_dir.join("apm.worker.md").exists(), "apm.worker.md missing");
+    assert!(agent_dir.join("apm.coder.md").exists(), "apm.coder.md missing");
     assert!(agent_dir.join("apm.spec-writer.md").exists(), "apm.spec-writer.md missing");
 
     #[cfg(unix)]
