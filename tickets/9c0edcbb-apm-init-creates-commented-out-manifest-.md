@@ -1,7 +1,7 @@
 +++
 id = "9c0edcbb"
 title = "apm init creates commented-out manifest stubs for claude profiles"
-state = "implemented"
+state = "merge_failed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c0edcbb-apm-init-creates-commented-out-manifest-"
 created_at = "2026-05-25T00:46:37.072625Z"
-updated_at = "2026-05-25T02:10:44.991005Z"
+updated_at = "2026-05-25T02:10:47.069652Z"
 depends_on = ["daf83745"]
 +++
 
@@ -96,6 +96,10 @@ Add setup_does_not_overwrite_edited_manifest_stub: calls setup(), writes user co
 ### Code review
 
 
+### Merge notes
+
+merge conflict — resolve manually and push: 
+
 ## History
 
 | When | From | To | By |
@@ -107,3 +111,4 @@ Add setup_does_not_overwrite_edited_manifest_stub: calls setup(), writes user co
 | 2026-05-25T01:43Z | specd | ready | philippepascal |
 | 2026-05-25T02:03Z | ready | in_progress | philippepascal |
 | 2026-05-25T02:10Z | in_progress | implemented | claude |
+| 2026-05-25T02:10Z | implemented | merge_failed | claude |
