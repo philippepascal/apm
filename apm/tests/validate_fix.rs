@@ -49,7 +49,7 @@ model = "sonnet"
     let parsed: toml::Value = toml::from_str(&written).unwrap();
 
     let workers = parsed["workers"].as_table().unwrap();
-    assert_eq!(workers.get("default").and_then(|v| v.as_str()), Some("claude/worker"), "default should be set");
+    assert_eq!(workers.get("default").and_then(|v| v.as_str()), Some("claude/coder"), "default should be set");
     assert!(workers.get("command").is_none(), "command should be removed");
     assert!(workers.get("args").is_none(), "args should be removed");
     assert!(workers.get("agent").is_none(), "agent should be removed");
@@ -133,7 +133,7 @@ model = "opus"
     let parsed: toml::Value = toml::from_str(&written).unwrap();
 
     let workers = parsed["workers"].as_table().unwrap();
-    assert_eq!(workers.get("default").and_then(|v| v.as_str()), Some("claude/worker"), "default must be set");
+    assert_eq!(workers.get("default").and_then(|v| v.as_str()), Some("claude/coder"), "default must be set");
     assert!(workers.get("agent").is_none(), "agent must be removed");
     assert_eq!(workers.get("model").and_then(|v| v.as_str()), Some("opus"), "model must be at top level");
 }
@@ -148,7 +148,7 @@ name = "test"
 dir = "tickets"
 
 [workers]
-default = "claude/worker"
+default = "claude/coder"
 model = "sonnet"
 "#;
     let dir = setup(config);
