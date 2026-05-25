@@ -50,7 +50,15 @@ setup_with_local_worktrees() and setup_for_prompt_dispatch() patch "claude/worke
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm start` and `apm start --next` fall back to `claude/coder` (not `claude/worker`) when no `worker_profile` is set on the transition and no `default` is set in `[workers]`
+- [ ] `apm init` generates `.apm/config.toml` with `default = "claude/coder"` in `[workers]`
+- [ ] `apm init` generates `.apm/workflow.toml` with `worker_profile = "claude/coder"` on the `ready → in_progress` transition
+- [ ] `apm init` writes `.apm/agents/claude/apm.coder.md` (not `apm.worker.md`)
+- [ ] The built-in instruction cascade resolves `claude/coder`, `mock-happy/coder`, `mock-sad/coder`, `mock-random/coder`, and `debug/coder` without error
+- [ ] The live `.apm/config.toml` contains `default = "claude/coder"`
+- [ ] The live `.apm/workflow.toml` contains `worker_profile = "claude/coder"` on the `ready → in_progress` transition
+- [ ] The live `.apm/agents/claude/` directory contains `apm.coder.md` and no `apm.worker.md`
+- [ ] `cargo test --workspace` passes with all assertions updated to `"claude/coder"`
 
 ### Out of scope
 
