@@ -129,6 +129,8 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
         .map_err(|e| anyhow::anyhow!("cannot create {}: {e}", agents_claude_dir.display()))?;
     write_default(&agents_claude_dir.join("apm.spec-writer.md"), include_str!("default/agents/claude/apm.spec-writer.md"), ".apm/agents/claude/apm.spec-writer.md", &mut messages)?;
     write_default(&agents_claude_dir.join("apm.coder.md"), include_str!("default/agents/claude/apm.coder.md"), ".apm/agents/claude/apm.coder.md", &mut messages)?;
+    write_default(&agents_claude_dir.join("spec-writer.toml"), SPEC_WRITER_MANIFEST_STUB, ".apm/agents/claude/spec-writer.toml", &mut messages)?;
+    write_default(&agents_claude_dir.join("coder.toml"), CODER_MANIFEST_STUB, ".apm/agents/claude/coder.toml", &mut messages)?;
     write_default(
         &apm_dir.join("project.md"),
         include_str!("default/project.md"),
@@ -596,6 +598,20 @@ fn ensure_worktrees_dir(root: &Path, messages: &mut Vec<String>) -> Result<()> {
     Ok(())
 }
 
+const SPEC_WRITER_MANIFEST_STUB: &str = "\
+# model = \"sonnet\"   # model for the spec-writer profile; overrides [workers].model
+#
+# [env]
+# MY_VAR = \"value\"   # environment variables injected into spec-writer workers
+";
+
+const CODER_MANIFEST_STUB: &str = "\
+# model = \"sonnet\"   # model for the coder profile; overrides [workers].model
+#
+# [env]
+# MY_VAR = \"value\"   # environment variables injected into coder workers
+";
+
 pub fn setup_docker(root: &Path) -> Result<SetupDockerOutput> {
     let mut messages: Vec<String> = Vec::new();
     let apm_dir = root.join(".apm");
@@ -733,6 +749,8 @@ mod tests {
         assert!(!tmp.path().join(".apm/agents/claude/agents.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.spec-writer.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.coder.md").exists());
+        assert!(tmp.path().join(".apm/agents/claude/spec-writer.toml").exists());
+        assert!(tmp.path().join(".apm/agents/claude/coder.toml").exists());
         assert!(tmp.path().join(".apm/project.md").exists());
         assert!(tmp.path().join(".apm/agents/claude/apm.main-agent.md").exists());
         assert!(!tmp.path().join(".apm/agents.md").exists());
@@ -1279,5 +1297,69 @@ mod tests {
         let config = std::fs::read_to_string(tmp.path().join(".apm/config.toml")).unwrap();
         assert!(config.contains("project = \".apm/project.md\""));
         assert!(!config.contains("project = \".apm/agents/default/apm.project.md\""));
+    }
+
+    #[test]
+    fn setup_creates_valid_manifest_stubs() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path(), None, None, None, None).unwrap();
+
+        let spec_writer = std::fs::read_to_string(tmp.path().join(".apm/agents/claude/spec-writer.toml")).unwrap();
+        let coder = std::fs::read_to_string(tmp.path().join(".apm/agents/claude/coder.toml")).unwrap();
+
+        let sw_val: toml::Value = toml::from_str(&spec_writer).expect("spec-writer.toml must be valid TOML");
+        let co_val: toml::Value = toml::from_str(&coder).expect("coder.toml must be valid TOML");
+
+        assert_eq!(sw_val, toml::Value::Table(toml::map::Map::new()), "spec-writer.toml should parse to empty table");
+        assert_eq!(co_val, toml::Value::Table(toml::map::Map::new()), "coder.toml should parse to empty table");
+    }
+
+    #[test]
+    fn setup_manifest_stub_output_messages() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        let result = setup(tmp.path(), None, None, None, None).unwrap();
+
+        assert!(
+            result.messages.iter().any(|m| m.contains("spec-writer.toml")),
+            "setup output must mention spec-writer.toml on first run"
+        );
+        assert!(
+            result.messages.iter().any(|m| m.contains("coder.toml")),
+            "setup output must mention coder.toml on first run"
+        );
+
+        let result2 = setup(tmp.path(), None, None, None, None).unwrap();
+        assert!(
+            !result2.messages.iter().any(|m| m.contains("spec-writer.toml")),
+            "setup output must not mention spec-writer.toml on re-run when unchanged"
+        );
+        assert!(
+            !result2.messages.iter().any(|m| m.contains("coder.toml")),
+            "setup output must not mention coder.toml on re-run when unchanged"
+        );
+    }
+
+    #[test]
+    fn setup_does_not_overwrite_edited_manifest_stub() {
+        let tmp = TempDir::new().unwrap();
+        git_init(tmp.path());
+        setup(tmp.path(), None, None, None, None).unwrap();
+
+        let coder_path = tmp.path().join(".apm/agents/claude/coder.toml");
+        std::fs::write(&coder_path, "model = \"opus\"\n").unwrap();
+
+        setup(tmp.path(), None, None, None, None).unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(&coder_path).unwrap(),
+            "model = \"opus\"\n",
+            "user-edited coder.toml must not be overwritten"
+        );
+        assert!(
+            tmp.path().join(".apm/agents/claude/coder.toml.init").exists(),
+            "coder.toml.init comparison copy must be written"
+        );
     }
 }
