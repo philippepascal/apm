@@ -1,7 +1,7 @@
 +++
 id = "9c0edcbb"
 title = "apm init creates commented-out manifest stubs for claude profiles"
-state = "merge_failed"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c0edcbb-apm-init-creates-commented-out-manifest-"
 created_at = "2026-05-25T00:46:37.072625Z"
-updated_at = "2026-05-25T02:10:47.069652Z"
+updated_at = "2026-05-25T06:56:44.305131Z"
 depends_on = ["daf83745"]
 +++
 
@@ -112,3 +112,4 @@ merge conflict — resolve manually and push:
 | 2026-05-25T02:03Z | ready | in_progress | philippepascal |
 | 2026-05-25T02:10Z | in_progress | implemented | claude |
 | 2026-05-25T02:10Z | implemented | merge_failed | claude |
+| 2026-05-25T06:56Z | merge_failed | closed | philippepascal(apm-sync) |
