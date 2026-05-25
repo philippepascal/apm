@@ -151,6 +151,7 @@ Commit all source, test, and live-config changes together in a single commit on 
 
 ### Amendment requests
 
+- [ ] Verify and update the files array in init.rs line ~280: ["apm.spec-writer.md", "apm.worker.md", ...] must have "apm.worker.md" changed to "apm.coder.md"
 
 ### Code review
 
