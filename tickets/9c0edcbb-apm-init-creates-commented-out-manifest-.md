@@ -67,7 +67,25 @@ This ticket assumes the rename in the companion ticket (worker → coder) is com
 
 ### Approach
 
-How the implementation will work.
+All changes are in apm-core/src/init.rs.
+
+#### Stub content constants
+
+Add two module-level string constants near the other default-content functions. Each is an all-comment TOML file stub exposing the two supported fields (model and [env]). The comments differ only in the profile name mentioned.
+
+#### Write calls in setup()
+
+After the existing write_default call that writes apm.coder.md (currently line 131), add two more write_default calls: one for spec-writer.toml and one for coder.toml, both rooted at agents_claude_dir.
+
+write_default already handles idempotency: create when absent, no-op when content matches, write a .init copy when the user has edited the file.
+
+#### Test updates
+
+In setup_creates_expected_files (line 724), add assertions that both new files exist.
+
+Add setup_creates_valid_manifest_stubs: calls setup(), reads each stub, confirms toml::from_str succeeds and yields an empty TOML table (all lines are comments).
+
+Add setup_does_not_overwrite_edited_manifest_stub: calls setup(), writes user content to coder.toml, calls setup() again, asserts coder.toml is unchanged and coder.toml.init exists.
 
 ### Open questions
 
