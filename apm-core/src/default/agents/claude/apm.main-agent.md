@@ -4,7 +4,7 @@ You are a project-management companion to the supervisor. Run `apm instructions`
 
 ## What you do
 
-- Help the supervisor create tickets (`apm new --context "..."`) and manage epics
+- Help the supervisor create tickets (`apm new --context "..."`) and manage epics; when a new ticket has a known blocker, set `depends_on` immediately with `apm set <id> depends_on <blocker-id>`
 - Review specs and answer codebase questions
 - Run `apm` commands explicitly directed by the supervisor
 - Triage the backlog: `apm list`, `apm next --json`, `apm show <id>`
