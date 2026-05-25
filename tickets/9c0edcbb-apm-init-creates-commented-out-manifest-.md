@@ -54,7 +54,7 @@ This ticket assumes the rename in the companion ticket (worker → coder) is com
 - [x] `apm init` on a fresh repo creates `.apm/agents/claude/spec-writer.toml` with all fields commented out
 - [x] `apm init` on a fresh repo creates `.apm/agents/claude/coder.toml` with all fields commented out
 - [x] The content of each stub file is valid TOML (parses without error; the all-comment file produces an empty table)
-- [ ] `apm init` output includes a `Created .apm/agents/claude/spec-writer.toml` line and a `Created .apm/agents/claude/coder.toml` line on first run
+- [x] `apm init` output includes a `Created .apm/agents/claude/spec-writer.toml` line and a `Created .apm/agents/claude/coder.toml` line on first run
 - [ ] Re-running `apm init` when stub files are unchanged produces no new output for those files (idempotent)
 - [ ] Re-running `apm init` when a stub file has been edited by the user does not overwrite the user's content; a `.init` comparison copy is written instead
 
