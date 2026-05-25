@@ -62,7 +62,11 @@ setup_with_local_worktrees() and setup_for_prompt_dispatch() patch "claude/worke
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Renaming the TOML key `worker_profile` itself — it's a config field name, not a role name
+- Renaming Rust structs and types that contain "worker" (e.g., `ResolvedWorkerProfile`, `WorkerProfileManifest`, `WorkersConfig`)
+- Adding a backward-compatibility fallback for projects with `"claude/worker"` in their existing config
+- Updating documentation files (README.md, docs/)
+- Updating other tickets whose spec text references `"claude/worker"` as an example
 
 ### Approach
 
