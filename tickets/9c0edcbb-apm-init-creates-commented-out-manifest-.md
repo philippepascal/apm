@@ -60,7 +60,10 @@ This ticket assumes the rename in the companion ticket (worker → coder) is com
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Manifest stubs for agent directories other than `claude` (mock-happy, mock-sad, mock-random, debug)
+- Generating stubs for user-defined custom profiles beyond `spec-writer` and `coder`
+- Adding new fields to `WorkerProfileManifest` — the struct in `start.rs` is unchanged
+- Updating the `apm validate` or `apm instructions` output to document manifest files
 
 ### Approach
 
