@@ -1,7 +1,7 @@
 +++
 id = "daf83745"
 title = "Rename worker profile to coder across defaults and live config"
-state = "new"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/daf83745-rename-worker-profile-to-coder-across-de"
 created_at = "2026-05-25T00:45:42.028363Z"
-updated_at = "2026-05-25T00:45:42.028363Z"
+updated_at = "2026-05-25T01:20:01.848389Z"
 +++
 
 ## Spec
@@ -74,3 +74,5 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-25T00:45Z | — | new | philippepascal |
+| 2026-05-25T01:19Z | new | groomed | philippepascal |
+| 2026-05-25T01:20Z | groomed | in_design | philippepascal |
