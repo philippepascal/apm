@@ -493,7 +493,7 @@ project = ".apm/project.md"
 
 [workers]
 default = "{workers_default}"
-model = "sonnet"
+# model = "sonnet"            # default model for all workers; set per-agent in .apm/agents/<agent>/<role>.toml instead
 # container = "apm-worker"   # Docker image for worker agents; omit for local execution
 # env = {{}}                  # environment variables injected into every worker
 # keychain = {{}}             # macOS Keychain items resolved at worker launch (secret_name = keychain_item)
@@ -1360,6 +1360,15 @@ mod tests {
         assert!(
             tmp.path().join(".apm/agents/claude/coder.toml.init").exists(),
             "coder.toml.init comparison copy must be written"
+        );
+    }
+
+    #[test]
+    fn default_config_has_no_active_model_line() {
+        let config = default_config("proj", "desc", "main", &[], "claude/coder");
+        assert!(
+            !config.lines().any(|l| l.trim_start().starts_with("model =")),
+            "default_config must not emit an active model = line: {config}"
         );
     }
 }
