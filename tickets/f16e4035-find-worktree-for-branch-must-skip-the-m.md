@@ -20,7 +20,7 @@ find_worktree_for_branch in apm-core/src/worktree.rs returns the first git workt
 
 ### Acceptance criteria
 
-- [ ] When the main worktree has a ticket branch checked out, `find_worktree_for_branch` returns `None` for that branch
+- [x] When the main worktree has a ticket branch checked out, `find_worktree_for_branch` returns `None` for that branch
 - [ ] When a dedicated worktree exists for a ticket branch, `find_worktree_for_branch` returns its path
 - [ ] `find_worktree_for_branch` never returns a path for a branch that does not start with `ticket/`
 - [ ] `ensure_worktree` creates a new dedicated worktree when the main worktree holds the branch (i.e. does not reuse the main worktree path)
