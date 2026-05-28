@@ -1,7 +1,7 @@
 +++
 id = "d2720f0b"
 title = "apm new editor flow must not checkout the ticket branch in main"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d2720f0b-apm-new-editor-flow-must-not-checkout-th"
 created_at = "2026-05-28T07:37:16.051173Z"
-updated_at = "2026-05-28T07:37:20.981256Z"
+updated_at = "2026-05-28T07:37:57.310100Z"
 depends_on = ["f16e4035"]
 +++
 
@@ -45,3 +45,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-28T07:37Z | — | new | philippepascal |
+| 2026-05-28T07:37Z | new | groomed | philippepascal |
