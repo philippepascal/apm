@@ -30,7 +30,9 @@ The stale entry causes two concrete problems: new projects get a confusing `.git
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Retroactively removing `.apm/epics.toml` from `.gitignore` files in existing user repos when `apm init` is re-run (`ensure_gitignore` is append-only; removal logic is a separate concern)
+- Cleaning up `epics.toml` references in archived ticket files (those are historical records, not live documentation)
+- Any changes to `apm epic` commands or config parsing
 
 ### Approach
 
