@@ -7495,3 +7495,102 @@ fn load_all_from_git_classified_local_ahead_shows_local_state() {
         "should show local (unpushed) state; got: {}", t.frontmatter.state
     );
 }
+
+#[test]
+fn sync_detect_case4_regular_merge_into_target_branch() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Create epic/foo branch from main.
+    git(p, &["checkout", "-b", "epic/foo"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "epic/foo init"]);
+    git(p, &["checkout", "main"]);
+
+    // Create ticket branch with target_branch = "epic/foo" and state = "implemented".
+    let branch = "ticket/ab12cd34-target-branch-regular";
+    let rel_path = "tickets/ab12cd34-target-branch-regular.md";
+    git(p, &["checkout", "-b", branch]);
+    let content = "+++\nid = \"ab12cd34\"\ntitle = \"Target branch regular\"\nstate = \"implemented\"\nbranch = \"ticket/ab12cd34-target-branch-regular\"\ntarget_branch = \"epic/foo\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    std::fs::write(p.join(rel_path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "implement ticket"]);
+    git(p, &["checkout", "main"]);
+
+    // Merge ticket branch into epic/foo with --no-ff.
+    git(p, &["checkout", "epic/foo"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch, "--no-edit"]);
+    git(p, &["checkout", "main"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        close_branches.contains(&branch),
+        "regular-merged ticket should be in close candidates; got: {close_branches:?}"
+    );
+    let close_reasons: Vec<&str> = candidates.close.iter()
+        .filter(|c| c.ticket.frontmatter.branch.as_deref() == Some(branch))
+        .map(|c| c.reason)
+        .collect();
+    assert_eq!(
+        close_reasons, ["branch merged into target"],
+        "close reason mismatch; got: {close_reasons:?}"
+    );
+    assert!(
+        candidates.hints.is_empty(),
+        "hints should be empty for auto-closed ticket; got: {:?}", candidates.hints
+    );
+}
+
+#[test]
+fn sync_detect_case4_squash_merge_into_target_branch() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Create epic/bar branch from main.
+    git(p, &["checkout", "-b", "epic/bar"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "epic/bar init"]);
+    git(p, &["checkout", "main"]);
+
+    // Create ticket branch with target_branch = "epic/bar" and state = "implemented".
+    let branch = "ticket/cd56ef78-target-branch-squash";
+    let rel_path = "tickets/cd56ef78-target-branch-squash.md";
+    git(p, &["checkout", "-b", branch]);
+    let content = "+++\nid = \"cd56ef78\"\ntitle = \"Target branch squash\"\nstate = \"implemented\"\nbranch = \"ticket/cd56ef78-target-branch-squash\"\ntarget_branch = \"epic/bar\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    std::fs::write(p.join(rel_path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "implement ticket"]);
+    git(p, &["checkout", "main"]);
+
+    // Squash-merge ticket branch into epic/bar.
+    git(p, &["checkout", "epic/bar"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--squash", branch]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("squash {branch}")]);
+    git(p, &["checkout", "main"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        close_branches.contains(&branch),
+        "squash-merged ticket should be in close candidates; got: {close_branches:?}"
+    );
+    let close_reasons: Vec<&str> = candidates.close.iter()
+        .filter(|c| c.ticket.frontmatter.branch.as_deref() == Some(branch))
+        .map(|c| c.reason)
+        .collect();
+    assert_eq!(
+        close_reasons, ["branch merged into target"],
+        "close reason mismatch; got: {close_reasons:?}"
+    );
+    assert!(
+        candidates.hints.is_empty(),
+        "hints should be empty for auto-closed ticket; got: {:?}", candidates.hints
+    );
+}
