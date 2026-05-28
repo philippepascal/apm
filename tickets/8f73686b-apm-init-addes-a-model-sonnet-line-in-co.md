@@ -37,7 +37,42 @@ The correct output from `apm init` should omit `model` from `[workers]` entirely
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-core/src/init.rs` — `default_config` function (around line 496)
+
+Remove the active `model = "sonnet"` line and replace it with a commented-out hint in the `[workers]` block.
+
+Before (active assignment):
+```
+[workers]
+default = "{workers_default}"
+model = "sonnet"
+# container = "apm-worker"   ...
+```
+
+After (commented hint):
+```
+[workers]
+default = "{workers_default}"
+# model = "sonnet"            # default model for all workers; set per-agent in .apm/agents/<agent>/<role>.toml instead
+# container = "apm-worker"   ...
+```
+
+The format string uses `{{}}` for literal braces in the existing commented lines — keep that unchanged; only the `model = "sonnet"` line itself is removed and added back as a comment.
+
+**Test to add** (inline in the `#[cfg(test)]` block in `apm-core/src/init.rs`):
+
+```rust
+#[test]
+fn default_config_has_no_active_model_line() {
+    let config = default_config("proj", "desc", "main", &[], "claude/coder");
+    assert!(
+        !config.lines().any(|l| l.trim_start().starts_with("model =")),
+        "default_config must not emit an active model = line: {config}"
+    );
+}
+```
+
+This assertion catches any future re-introduction of an active `model =` key regardless of value, not just `"sonnet"`.
 
 ### Open questions
 
