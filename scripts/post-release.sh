@@ -82,8 +82,18 @@ publish_crate() {
         return
     fi
     bold "Publishing $crate $VERSION..."
-    cargo publish -p "$crate" || abort "$crate publish failed"
-    green "✓ $crate $VERSION published"
+    local err_file rc=0
+    err_file=$(mktemp)
+    cargo publish -p "$crate" 2>"$err_file" || rc=$?
+    cat "$err_file" >&2
+    if [[ $rc -eq 0 ]]; then
+        green "✓ $crate $VERSION published"
+    elif grep -q "already exists on crates.io" "$err_file"; then
+        green "✓ $crate $VERSION already published — skipping"
+    else
+        abort "$crate publish failed"
+    fi
+    rm -f "$err_file"
 }
 
 printf 'Publish crates to crates.io? [y/N] '
