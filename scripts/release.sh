@@ -89,17 +89,6 @@ if [[ "$CARGO_VERSION" != "$NEW_VERSION" ]]; then
     grep -n 'apm-core.*version' apm/Cargo.toml apm-server/Cargo.toml
     echo
 
-    # Verify it still builds
-    bold "Running cargo check..."
-    cargo check --workspace --quiet
-    green "cargo check passed"
-    echo
-
-    bold "Running cargo test..."
-    cargo test --workspace --quiet
-    green "All tests passed"
-    echo
-
     confirm "Commit version bump?"
     git add Cargo.toml apm/Cargo.toml apm-server/Cargo.toml Cargo.lock
     git commit -m "Release $TAG"
@@ -109,6 +98,18 @@ else
     bold "Cargo.toml already at $NEW_VERSION — skipping version bump"
     echo
 fi
+
+# Always verify the build and tests before tagging, regardless of whether
+# the version was just bumped or was already at the target.
+bold "Running cargo check..."
+cargo check --workspace --quiet
+green "cargo check passed"
+echo
+
+bold "Running cargo test..."
+cargo test --workspace --quiet
+green "All tests passed"
+echo
 
 # ---------------------------------------------------------------------------
 # Tag and push
