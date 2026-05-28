@@ -4,12 +4,12 @@ title = "find_worktree_for_branch must skip the main worktree"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f16e4035-find-worktree-for-branch-must-skip-the-m"
 created_at = "2026-05-28T07:31:38.018076Z"
-updated_at = "2026-05-28T07:39:08.264477Z"
+updated_at = "2026-05-28T07:39:10.353296Z"
 +++
 
 ## Spec
