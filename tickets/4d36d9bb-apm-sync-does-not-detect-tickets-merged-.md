@@ -1,7 +1,7 @@
 +++
 id = "4d36d9bb"
 title = "apm sync does not detect tickets merged into their target branch"
-state = "merge_failed"
+state = "implemented"
 priority = 6
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4d36d9bb-apm-sync-does-not-detect-tickets-merged-"
 created_at = "2026-05-28T20:46:27.893432Z"
-updated_at = "2026-05-28T21:00:38.092353Z"
+updated_at = "2026-05-28T21:01:00.153678Z"
 +++
 
 ## Spec
@@ -120,3 +120,4 @@ fatal: 'main' is already used by worktree at '/Users/philippepascal/repos/apm'
 | 2026-05-28T20:54Z | ready | in_progress | philippepascal |
 | 2026-05-28T21:00Z | in_progress | implemented | claude |
 | 2026-05-28T21:00Z | implemented | merge_failed | claude |
+| 2026-05-28T21:01Z | merge_failed | implemented | claude |
