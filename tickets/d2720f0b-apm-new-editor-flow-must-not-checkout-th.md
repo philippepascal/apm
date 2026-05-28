@@ -1,7 +1,7 @@
 +++
 id = "d2720f0b"
 title = "apm new editor flow must not checkout the ticket branch in main"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d2720f0b-apm-new-editor-flow-must-not-checkout-th"
 created_at = "2026-05-28T07:37:16.051173Z"
-updated_at = "2026-05-28T07:42:56.690246Z"
+updated_at = "2026-05-28T07:43:06.051699Z"
 depends_on = ["f16e4035"]
 +++
 
@@ -110,3 +110,4 @@ Use `std::process::Command` directly (not `run_apm`) so the `EDITOR` env var can
 | 2026-05-28T07:37Z | — | new | philippepascal |
 | 2026-05-28T07:37Z | new | groomed | philippepascal |
 | 2026-05-28T07:39Z | groomed | in_design | philippepascal |
+| 2026-05-28T07:43Z | in_design | specd | claude |
