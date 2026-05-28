@@ -20,7 +20,7 @@ pub fn find_worktree_for_branch(root: &Path, branch: &str) -> Option<PathBuf> {
         if let Some(p) = line.strip_prefix("worktree ") {
             current_path = Some(PathBuf::from(p));
         } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
-            if b == branch && b.starts_with("ticket/") {
+            if b == branch {
                 if let Some(p) = &current_path {
                     if p.canonicalize().unwrap_or_else(|_| p.clone()) != main {
                         return current_path;
