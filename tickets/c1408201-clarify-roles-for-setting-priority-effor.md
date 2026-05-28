@@ -22,7 +22,7 @@ The result is that priority is regularly left at `0` after grooming. A spec-writ
 
 ### Acceptance criteria
 
-- [ ] `apm.main-agent.md` states that setting priority with `apm set <id> priority <value>` is part of the `new → groomed` transition
+- [x] `apm.main-agent.md` states that setting priority with `apm set <id> priority <value>` is part of the `new → groomed` transition
 - [ ] `apm.spec-writer.md` "When you are done" lists `apm set <id> priority <1-10>` with the annotation "only if not already set by the supervisor"
 - [ ] `apm.spec-writer.md` still lists `apm set <id> effort <1-10>` and `apm set <id> risk <1-10>` as unconditional pre-transition steps
 
