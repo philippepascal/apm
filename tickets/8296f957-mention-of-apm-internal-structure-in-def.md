@@ -28,9 +28,9 @@ When a new (non-APM) project runs `apm init`, it receives this file verbatim. Th
 
 ### Acceptance criteria
 
-- [ ] The template file `apm-core/src/default/agents/claude/apm.coder.md` contains no reference to `apm-core/src/`, `apm-core/tests/`, `apm/tests/integration.rs`, or `cargo test`
-- [ ] The `## Tests and finishing` section in the template gives generic guidance that applies to any project, instructing the agent to consult `apm.project.md` for project-specific test conventions and commands
-- [ ] All other sections of the template file are unchanged
+- [x] The template file `apm-core/src/default/agents/claude/apm.coder.md` contains no reference to `apm-core/src/`, `apm-core/tests/`, `apm/tests/integration.rs`, or `cargo test`
+- [x] The `## Tests and finishing` section in the template gives generic guidance that applies to any project, instructing the agent to consult `apm.project.md` for project-specific test conventions and commands
+- [x] All other sections of the template file are unchanged
 
 ### Out of scope
 
