@@ -1,7 +1,7 @@
 +++
 id = "8296f957"
 title = "mention of apm internal structure in default claude apm.*.md"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8296f957-mention-of-apm-internal-structure-in-def"
 created_at = "2026-05-28T02:19:13.637222Z"
-updated_at = "2026-05-28T06:37:24.209705Z"
+updated_at = "2026-05-28T06:38:38.074378Z"
 +++
 
 ## Spec
@@ -77,3 +77,4 @@ No other files change. No Rust code is touched, so no `cargo test` run is needed
 | 2026-05-28T06:16Z | in_design | specd | claude |
 | 2026-05-28T06:27Z | specd | ready | philippepascal |
 | 2026-05-28T06:37Z | ready | in_progress | philippepascal |
+| 2026-05-28T06:38Z | in_progress | implemented | claude |
