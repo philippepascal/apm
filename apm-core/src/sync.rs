@@ -107,6 +107,30 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
         }
     }
 
+    // Case 4: implemented tickets merged into their target_branch.
+    for branch in &branches {
+        if merged_set.contains(branch.as_str()) { continue; }
+        let suffix = branch.trim_start_matches("ticket/");
+        let rel_path = format!("{tickets_dir}/{suffix}.md");
+        let content = match git::read_from_branch(root, branch, &rel_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let t = match Ticket::parse(&root.join(&rel_path), &content) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if t.frontmatter.state != "implemented" { continue; }
+        let target = match t.frontmatter.target_branch.as_deref() {
+            Some(tb) if !tb.is_empty() => tb.to_string(),
+            _ => continue,
+        };
+        if git::is_branch_merged_into(root, branch, &target)? {
+            merged_set.insert(branch.clone());
+            close.push(CloseCandidate { ticket: t, reason: "branch merged into target" });
+        }
+    }
+
     // Hint generation: implemented tickets whose branch was not detected by any pass.
     for branch in &branches {
         if merged_set.contains(branch.as_str()) { continue; }

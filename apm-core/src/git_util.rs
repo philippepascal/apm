@@ -747,6 +747,46 @@ pub fn is_ancestor(root: &Path, commit: &str, of_ref: &str) -> bool {
     run(root, &["merge-base", "--is-ancestor", commit, of_ref]).is_ok()
 }
 
+/// Return `true` when `branch` has been merged into `target_ref` — either by a
+/// regular merge (fast-forward or --no-ff) or by a squash merge.
+///
+/// Returns `Ok(false)` in any ambiguous case (unknown ref, git error, etc.) so
+/// that false positives are impossible.
+pub fn is_branch_merged_into(root: &Path, branch: &str, target_ref: &str) -> Result<bool> {
+    // Regular-merge check: branch is reachable from target_ref.
+    if is_ancestor(root, branch, target_ref) {
+        return Ok(true);
+    }
+    // Squash-merge check — mirrors the private squash_merged() helper.
+    let merge_base = match run(root, &["merge-base", target_ref, branch]) {
+        Ok(mb) => mb,
+        Err(_) => return Ok(false),
+    };
+    let branch_tip = match run(root, &["rev-parse", &format!("{branch}^{{commit}}")]) {
+        Ok(t) => t,
+        Err(_) => return Ok(false),
+    };
+    // Already an ancestor — belt-and-suspenders, caught above.
+    if branch_tip == merge_base {
+        return Ok(true);
+    }
+    // Virtual squash commit: aggregate diff from merge_base to branch tip.
+    let squash_commit = match run(root, &[
+        "commit-tree", &format!("{branch}^{{tree}}"),
+        "-p", &merge_base,
+        "-m", "squash",
+    ]) {
+        Ok(c) => c,
+        Err(_) => return Ok(false),
+    };
+    // `git cherry target squash_commit`: `-` prefix means target already has that patch.
+    let cherry_out = match run(root, &["cherry", target_ref, &squash_commit]) {
+        Ok(o) => o,
+        Err(_) => return Ok(false),
+    };
+    Ok(cherry_out.trim().starts_with('-'))
+}
+
 /// Classification of a local branch relative to its origin counterpart.
 ///
 /// Direction note: `merge-base --is-ancestor A B` returns 0 iff A is reachable from B.
