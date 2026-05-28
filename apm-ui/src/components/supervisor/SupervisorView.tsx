@@ -238,7 +238,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           <option value="">All epics</option>
           <option value="__none__">No epic</option>
           {epics.map((ep) => (
-            <option key={ep.id} value={ep.id}>{ep.title || ep.id}</option>
+            <option key={ep.id} value={ep.id}>{ep.id.slice(0, 8)}{ep.title ? ` · ${ep.title}` : ''}</option>
           ))}
         </select>
         <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
