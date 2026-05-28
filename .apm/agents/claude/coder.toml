@@ -1,0 +1,4 @@
+# model = "sonnet"   # model for the coder profile; overrides [workers].model
+#
+# [env]
+# MY_VAR = "value"   # environment variables injected into coder workers
