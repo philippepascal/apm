@@ -9,14 +9,19 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8f73686b-apm-init-addes-a-model-sonnet-line-in-co"
 created_at = "2026-05-28T01:54:59.492163Z"
-updated_at = "2026-05-28T01:54:59.492163Z"
+updated_at = "2026-05-28T02:18:40.400594Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+apm init create this in config.toml:
+[workers]
+default = "claude/coder"
+model = "sonnet"
+
+default is correct, but model isn't: it's part of the manifest for claude/coder and shouldn't defined at all in config.toml.
 
 ### Acceptance criteria
 
@@ -39,9 +44,6 @@ How the implementation will work.
 
 
 ### Code review
-
-
-
 ## History
 
 | When | From | To | By |
