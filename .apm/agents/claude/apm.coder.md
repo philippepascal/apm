@@ -51,9 +51,8 @@ your environment, ignore it entirely.
 
 ## Tests and finishing
 
-- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
-- Integration tests in `apm/tests/integration.rs` — temp git repos, no fixtures
-- Run `cargo test --workspace` — all tests must pass
+- Follow the test conventions described in `apm.project.md`
+- Run the project's test suite — all tests must pass
 - Then: `apm state <id> implemented` — pushes branch and opens PR automatically
 
 ---
