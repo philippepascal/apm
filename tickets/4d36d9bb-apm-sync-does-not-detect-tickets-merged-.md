@@ -32,7 +32,10 @@ The fix adds a Case 4 after Case 3 in `sync::detect`. It iterates every `impleme
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Case 3 analog for `target_branch`: detecting content-merged-but-trailing-state-commits into a non-default target (the `content_merged_into_main` logic extended to arbitrary refs)
+- Case 2 analog for `target_branch`: detecting implemented tickets whose branch has been deleted after merging into the target
+- Changing how `apm state <id> implemented` routes merges or PR bases
+- Remote-only `target_branch` values (refs not fetched locally); those return false and generate no hint
 
 ### Approach
 
