@@ -3,13 +3,13 @@ id = "8296f957"
 title = "mention of apm internal structure in default claude apm.*.md"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8296f957-mention-of-apm-internal-structure-in-def"
 created_at = "2026-05-28T02:19:13.637222Z"
-updated_at = "2026-05-28T06:14:03.889833Z"
+updated_at = "2026-05-28T06:16:10.554171Z"
 +++
 
 ## Spec
