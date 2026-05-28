@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/d2720f0b-apm-new-editor-flow-must-not-checkout-th"
 created_at = "2026-05-28T07:37:16.051173Z"
-updated_at = "2026-05-28T07:37:16.051173Z"
+updated_at = "2026-05-28T07:37:20.981256Z"
+depends_on = ["f16e4035"]
 +++
 
 ## Spec
