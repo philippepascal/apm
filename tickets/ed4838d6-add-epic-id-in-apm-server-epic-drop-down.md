@@ -29,7 +29,10 @@ The TicketCard already displays the first 8 characters of the epic ID as a chip.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The TicketCard epic chip (already shows 8-char ID; no change needed)
+- Backend API response shape for `/api/epics`
+- Epic filtering logic (no behaviour change, display only)
+- The NewEpicModal or any other epic-related UI component
 
 ### Approach
 
