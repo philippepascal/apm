@@ -22,7 +22,11 @@ The correct output from `apm init` should omit `model` from `[workers]` entirely
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm init` on a fresh repo produces a `config.toml` that does not contain `model = "sonnet"` (or any active `model =` assignment) under `[workers]`
+- [ ] The generated `config.toml` contains a commented-out `# model = "sonnet"` line under `[workers]` as a usage hint
+- [ ] Re-running `apm init` on an existing repo whose `config.toml` already has `model = "sonnet"` does not overwrite that file (idempotency is preserved via the existing `.init` copy mechanism)
+- [ ] A unit test in `apm-core/src/init.rs` asserts that `default_config(...)` output does not contain an active `model =` assignment under `[workers]`
+- [ ] All existing tests pass (`cargo test --workspace`)
 
 ### Out of scope
 
