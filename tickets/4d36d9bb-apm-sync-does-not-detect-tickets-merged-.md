@@ -1,7 +1,7 @@
 +++
 id = "4d36d9bb"
 title = "apm sync does not detect tickets merged into their target branch"
-state = "implemented"
+state = "merge_failed"
 priority = 6
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4d36d9bb-apm-sync-does-not-detect-tickets-merged-"
 created_at = "2026-05-28T20:46:27.893432Z"
-updated_at = "2026-05-28T21:00:35.480093Z"
+updated_at = "2026-05-28T21:00:38.092353Z"
 +++
 
 ## Spec
@@ -103,6 +103,11 @@ Test 2 (squash merge): same setup, but merge with `git merge --squash && git com
 ### Code review
 
 
+### Merge notes
+
+Preparing worktree (checking out 'main')
+fatal: 'main' is already used by worktree at '/Users/philippepascal/repos/apm'
+
 ## History
 
 | When | From | To | By |
@@ -114,3 +119,4 @@ Test 2 (squash merge): same setup, but merge with `git merge --squash && git com
 | 2026-05-28T20:54Z | specd | ready | philippepascal |
 | 2026-05-28T20:54Z | ready | in_progress | philippepascal |
 | 2026-05-28T21:00Z | in_progress | implemented | claude |
+| 2026-05-28T21:00Z | implemented | merge_failed | claude |
