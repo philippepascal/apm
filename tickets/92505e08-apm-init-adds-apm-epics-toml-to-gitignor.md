@@ -16,7 +16,9 @@ updated_at = "2026-05-28T06:09:51.420090Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm init` calls `ensure_gitignore()` in `apm-core/src/init.rs`, which includes `.apm/epics.toml` in its hardcoded `static_entries` list. That entry gets added to `.gitignore` on every fresh `apm init`, even though `.apm/epics.toml` is no longer a file that APM creates or reads anywhere. The file was removed as part of ticket 6e3f9e91, which replaced per-epic `max_workers` overrides with a global `max_workers_per_epic` setting in `[agents]` config.
+
+The stale entry causes two concrete problems: new projects get a confusing `.gitignore` line pointing to a non-existent file, and re-running `apm init` on existing repos adds the entry if it isn't already there. The `README.md` configuration table also still references `epics.toml` as a live file, which is misleading.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
