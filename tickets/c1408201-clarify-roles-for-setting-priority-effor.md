@@ -1,7 +1,7 @@
 +++
 id = "c1408201"
 title = "clarify roles for setting priority, effort and risk"
-state = "in_design"
+state = "specd"
 priority = 3
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c1408201-clarify-roles-for-setting-priority-effor"
 created_at = "2026-05-28T05:50:39.594077Z"
-updated_at = "2026-05-28T06:18:09.208221Z"
+updated_at = "2026-05-28T06:18:13.333062Z"
 +++
 
 ## Spec
@@ -81,3 +81,4 @@ No other sections of either file change.
 | 2026-05-28T05:50Z | — | new | philippepascal |
 | 2026-05-28T06:09Z | new | groomed | philippepascal |
 | 2026-05-28T06:16Z | groomed | in_design | philippepascal |
+| 2026-05-28T06:18Z | in_design | specd | claude |
