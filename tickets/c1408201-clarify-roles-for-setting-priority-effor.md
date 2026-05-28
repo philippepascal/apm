@@ -3,13 +3,13 @@ id = "c1408201"
 title = "clarify roles for setting priority, effort and risk"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c1408201-clarify-roles-for-setting-priority-effor"
 created_at = "2026-05-28T05:50:39.594077Z"
-updated_at = "2026-05-28T06:16:28.668237Z"
+updated_at = "2026-05-28T06:18:00.653337Z"
 +++
 
 ## Spec
