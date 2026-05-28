@@ -1,7 +1,7 @@
 +++
 id = "ed4838d6"
 title = "add epic id in apm-server epic drop-down"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ed4838d6-add-epic-id-in-apm-server-epic-drop-down"
 created_at = "2026-05-28T05:54:59.309955Z"
-updated_at = "2026-05-28T06:38:45.654916Z"
+updated_at = "2026-05-28T06:40:38.908781Z"
 +++
 
 ## Spec
@@ -71,3 +71,4 @@ No backend changes. No test changes needed (this is a pure display mutation on a
 | 2026-05-28T06:20Z | in_design | specd | claude |
 | 2026-05-28T06:27Z | specd | ready | philippepascal |
 | 2026-05-28T06:38Z | ready | in_progress | philippepascal |
+| 2026-05-28T06:40Z | in_progress | implemented | claude |
