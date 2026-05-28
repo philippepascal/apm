@@ -1082,8 +1082,9 @@ pub fn move_files_on_branch(
 pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str, warnings: &mut Vec<String>) -> Result<()> {
     let _ = run(root, &["fetch", "origin", default_branch]);
 
-    let merge_dir = if current_branch(root).ok().as_deref() == Some(default_branch) {
-        root.to_path_buf()
+    let main_root = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+    let merge_dir = if current_branch(&main_root).ok().as_deref() == Some(default_branch) {
+        main_root
     } else {
         find_worktree_for_branch(root, default_branch).unwrap_or_else(|| root.to_path_buf())
     };
@@ -1104,16 +1105,10 @@ pub fn merge_branch_into_default(root: &Path, branch: &str, default_branch: &str
 pub fn merge_into_default(root: &Path, config: &Config, branch: &str, default_branch: &str, skip_push: bool, messages: &mut Vec<String>, _warnings: &mut Vec<String>) -> Result<()> {
     let _ = run(root, &["fetch", "origin", default_branch]);
 
-    let current = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .current_dir(root)
-        .output()?;
-    let current_branch = String::from_utf8_lossy(&current.stdout).trim().to_string();
-
-    let merge_dir = if current_branch == default_branch {
-        root.to_path_buf()
+    let main_root = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
+    let merge_dir = if current_branch(&main_root).ok().as_deref() == Some(default_branch) {
+        main_root.clone()
     } else {
-        let main_root = main_worktree_root(root).unwrap_or_else(|| root.to_path_buf());
         let worktrees_base = main_root.join(&config.worktrees.dir);
         ensure_worktree(root, &worktrees_base, default_branch)?
     };
