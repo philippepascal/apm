@@ -40,7 +40,59 @@ The desired behaviour is: read the ticket file from the ticket branch via git pl
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/src/cmd/new.rs`.
+
+#### Replace `open_editor`
+
+Remove the `config: &Config` parameter — it was only used to compute the `prev_branch` fallback, which the new implementation does not need. Update the call site in `run()` accordingly.
+
+New body of `open_editor(root: &Path, branch: &str, rel_path: &str) -> Result<()>`:
+
+1. Read the ticket file content from the branch using git plumbing (no checkout):
+   ```rust
+   let content = apm_core::git_util::read_from_branch(root, branch, rel_path)?;
+   ```
+
+2. Create a temp file. Use the ticket filename as the suffix so the editor title bar is identifiable and syntax highlighting fires on `.md`:
+   ```rust
+   let fname = std::path::Path::new(rel_path)
+       .file_name().unwrap().to_string_lossy();
+   let tmp_path = std::env::temp_dir()
+       .join(format!("apm-{}-{}", std::process::id(), fname));
+   std::fs::write(&tmp_path, &content)?;
+   ```
+
+3. Open the editor on the temp file:
+   ```rust
+   crate::editor::open(&tmp_path)?;
+   ```
+
+4. Read back the (possibly modified) content:
+   ```rust
+   let new_content = std::fs::read_to_string(&tmp_path)?;
+   ```
+
+5. Commit to the ticket branch via the existing `commit_to_branch` helper, which uses a temp git worktree and never moves HEAD:
+   ```rust
+   apm_core::git_util::commit_to_branch(root, branch, rel_path, &new_content, "write spec")?;
+   ```
+
+6. Clean up the temp file (best-effort — a failure must not propagate):
+   ```rust
+   let _ = std::fs::remove_file(&tmp_path);
+   ```
+
+#### Integration test
+
+Add a test in `apm/tests/integration.rs` that:
+
+1. Calls `init_repo()` to get a clean repo on `main`.
+2. Records the current branch with `git branch --show-current`.
+3. Runs `apm new "My ticket"` (without `--no-edit`) with `EDITOR=true` in the environment. (`true` exits 0 without touching the file — simulates a no-op edit session.)
+4. Asserts the current branch is still `main`.
+5. Asserts a `ticket/` branch exists with a `write spec` commit at its tip (confirming the edit was committed).
+
+Use `std::process::Command` directly (not `run_apm`) so the `EDITOR` env var can be set on the command without affecting the test process.
 
 ### Open questions
 
