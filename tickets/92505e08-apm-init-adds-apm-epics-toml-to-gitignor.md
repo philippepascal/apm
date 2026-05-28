@@ -22,11 +22,11 @@ The stale entry causes two concrete problems: new projects get a confusing `.git
 
 ### Acceptance criteria
 
-- [ ] `apm init` on a fresh repo does not add `.apm/epics.toml` to `.gitignore`
-- [ ] Re-running `apm init` on an existing repo that already has `.apm/epics.toml` in `.gitignore` does not add a second copy of the entry
-- [ ] The repo's own `.gitignore` no longer contains `.apm/epics.toml`
-- [ ] `README.md` no longer lists `epics.toml` in the configuration files table
-- [ ] `cargo test --workspace` passes with no test changes required
+- [x] `apm init` on a fresh repo does not add `.apm/epics.toml` to `.gitignore`
+- [x] Re-running `apm init` on an existing repo that already has `.apm/epics.toml` in `.gitignore` does not add a second copy of the entry
+- [x] The repo's own `.gitignore` no longer contains `.apm/epics.toml`
+- [x] `README.md` no longer lists `epics.toml` in the configuration files table
+- [x] `cargo test --workspace` passes with no test changes required
 
 ### Out of scope
 
