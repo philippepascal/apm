@@ -16,7 +16,15 @@ updated_at = "2026-05-28T06:14:03.889833Z"
 
 ### Problem
 
-Wrong paths — the Tests section references apm-core/src/ and apm/tests/integration.rs, which are APM's own internals.
+The default Claude coder template shipped with APM (`apm-core/src/default/agents/claude/apm.coder.md`) has three APM-specific lines hardcoded in its `## Tests and finishing` section:
+
+```
+- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
+- Integration tests in `apm/tests/integration.rs` — temp git repos, no fixtures
+- Run `cargo test --workspace` — all tests must pass
+```
+
+When a new (non-APM) project runs `apm init`, it receives this file verbatim. The coder agent assigned to any ticket in that project is then told to look for `apm-core/src/`, `apm/tests/integration.rs`, and to run `cargo test --workspace` — paths and commands that do not exist in their repo. Any project using APM with a coder agent gets misleading test instructions unless they manually edit the file after init.
 
 ### Acceptance criteria
 
@@ -33,13 +41,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
