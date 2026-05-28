@@ -57,28 +57,6 @@ is_published() {
     [[ "$status" == "200" ]]
 }
 
-wait_for_published() {
-    local crate="$1"
-    local version="$2"
-    local max_wait=90
-    local elapsed=0
-    printf 'Waiting for %s %s to appear on crates.io' "$crate" "$version"
-    while ! is_published "$crate" "$version"; do
-        if (( elapsed >= max_wait )); then
-            echo
-            abort "Timed out waiting for $crate $version on crates.io"
-        fi
-        printf '.'
-        sleep 3
-        elapsed=$((elapsed + 3))
-    done
-    echo ' ok'
-}
-
-# Set to true by publish_crate when a crate is freshly uploaded (not skipped).
-# Used to decide whether to wait for API propagation before publishing dependents.
-CRATE_FRESHLY_UPLOADED=false
-
 publish_crate() {
     local crate="$1"
     if is_published "$crate" "$VERSION"; then
@@ -92,7 +70,6 @@ publish_crate() {
     cat "$err_file" >&2
     if [[ $rc -eq 0 ]]; then
         green "✓ $crate $VERSION published"
-        CRATE_FRESHLY_UPLOADED=true
     elif grep -q "already exists on crates.io" "$err_file"; then
         green "✓ $crate $VERSION already published — skipping"
     else
@@ -111,13 +88,10 @@ if [[ "$answer" =~ ^[Yy]$ ]]; then
         confirm "Continue anyway? cargo publish will use the current working tree."
     fi
 
-    # apm-core must be in the index before apm-cli and apm-server publish.
-    # Only wait for API propagation if we just did a fresh upload — if cargo
-    # reported "already exists", it's already in the index and no wait is needed.
+    # apm-core must be published before apm-cli and apm-server: cargo resolves
+    # dependencies from the registry index, which is updated synchronously when
+    # cargo reports "Published". No API-level wait is needed.
     publish_crate apm-core
-    if $CRATE_FRESHLY_UPLOADED && { ! is_published apm-cli "$VERSION" || ! is_published apm-server "$VERSION"; }; then
-        wait_for_published apm-core "$VERSION"
-    fi
     publish_crate apm-cli
     publish_crate apm-server
 
