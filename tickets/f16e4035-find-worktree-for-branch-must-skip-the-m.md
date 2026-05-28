@@ -35,7 +35,30 @@ find_worktree_for_branch in apm-core/src/worktree.rs returns the first git workt
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/src/worktree.rs`.
+
+#### Patch `find_worktree_for_branch`
+
+Mirror the two guards already present in `list_ticket_worktrees`:
+
+1. Canonicalize the main worktree root once before the loop, assigning to `main` (same variable name used in `list_ticket_worktrees`).
+
+2. In the branch-match arm, before returning `current_path`, apply both guards:
+   - Skip if `b` does not start with `"ticket/"` — a non-ticket branch in a worktree is never a valid return value.
+   - Skip if `current_path.canonicalize()` equals `main` — the main worktree must never be returned as a dedicated worker worktree.
+
+The only condition that allows a return is: branch matches, branch starts with `ticket/`, and the worktree path is not the main root.
+
+#### Add a unit test
+
+Add a test in the existing `#[cfg(test)] mod tests` block in `worktree.rs`. The test:
+
+1. Creates a temp git repo with an initial commit on `main`.
+2. Creates a `ticket/my-branch` local branch without adding a dedicated worktree.
+3. Checks out `ticket/my-branch` in the main worktree via `git checkout`.
+4. Calls `find_worktree_for_branch(repo, "ticket/my-branch")` and asserts the result is `None`.
+
+This directly exercises the bug scenario: the main repo has the ticket branch checked out, so before the fix the function would return the main repo path instead of `None`.
 
 ### Open questions
 
