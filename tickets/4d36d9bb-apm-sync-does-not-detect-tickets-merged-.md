@@ -1,7 +1,7 @@
 +++
 id = "4d36d9bb"
 title = "apm sync does not detect tickets merged into their target branch"
-state = "ready"
+state = "in_progress"
 priority = 6
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4d36d9bb-apm-sync-does-not-detect-tickets-merged-"
 created_at = "2026-05-28T20:46:27.893432Z"
-updated_at = "2026-05-28T20:54:43.026322Z"
+updated_at = "2026-05-28T20:54:55.600385Z"
 +++
 
 ## Spec
@@ -112,3 +112,4 @@ Test 2 (squash merge): same setup, but merge with `git merge --squash && git com
 | 2026-05-28T20:46Z | groomed | in_design | philippepascal |
 | 2026-05-28T20:52Z | in_design | specd | claude |
 | 2026-05-28T20:54Z | specd | ready | philippepascal |
+| 2026-05-28T20:54Z | ready | in_progress | philippepascal |
