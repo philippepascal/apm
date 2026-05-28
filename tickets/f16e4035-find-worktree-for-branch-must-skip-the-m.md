@@ -1,7 +1,7 @@
 +++
 id = "f16e4035"
 title = "find_worktree_for_branch must skip the main worktree"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f16e4035-find-worktree-for-branch-must-skip-the-m"
 created_at = "2026-05-28T07:31:38.018076Z"
-updated_at = "2026-05-28T07:37:54.867430Z"
+updated_at = "2026-05-28T07:38:00.796245Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-28T07:31Z | — | new | philippepascal |
 | 2026-05-28T07:37Z | new | groomed | philippepascal |
+| 2026-05-28T07:38Z | groomed | in_design | philippepascal |
