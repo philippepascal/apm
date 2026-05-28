@@ -22,10 +22,10 @@ The TicketCard already displays the first 8 characters of the epic ID as a chip.
 
 ### Acceptance criteria
 
-- [ ] Each epic option in the dropdown shows the first 8 characters of the epic ID followed by the title (e.g. `abcd1234 · My Epic Title`)
-- [ ] When an epic has no title, the option shows only the 8-char ID with no trailing separator
-- [ ] The "All epics" and "No epic" options are unchanged
-- [ ] Selecting an epic from the dropdown still filters tickets correctly (the option `value` remains the full ID)
+- [x] Each epic option in the dropdown shows the first 8 characters of the epic ID followed by the title (e.g. `abcd1234 · My Epic Title`)
+- [x] When an epic has no title, the option shows only the 8-char ID with no trailing separator
+- [x] The "All epics" and "No epic" options are unchanged
+- [x] Selecting an epic from the dropdown still filters tickets correctly (the option `value` remains the full ID)
 
 ### Out of scope
 
