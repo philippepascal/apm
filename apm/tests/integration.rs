@@ -626,6 +626,62 @@ fn new_increments_ids() {
     assert!(id2.chars().all(|c| c.is_ascii_hexdigit()), "ID must be hex: {id2}");
 }
 
+#[test]
+fn new_editor_flow_does_not_change_head() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Record the branch before running `apm new`.
+    let before = std::process::Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let branch_before = String::from_utf8(before.stdout).unwrap().trim().to_string();
+    assert_eq!(branch_before, "main");
+
+    // Run `apm new` without --no-edit; use `true` as the editor (exits 0, no-op).
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["new", "--no-aggressive", "My ticket"])
+        .current_dir(p)
+        .env("EDITOR", "true")
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm new failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
+    // HEAD must still be on main.
+    let after = std::process::Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let branch_after = String::from_utf8(after.stdout).unwrap().trim().to_string();
+    assert_eq!(branch_after, "main", "HEAD moved during editor session");
+
+    // A ticket/ branch with a 'write spec' commit must exist.
+    let ticket_branch = find_ticket_branch(p, "my-ticket");
+    let log = std::process::Command::new("git")
+        .args(["log", "--pretty=%s", &ticket_branch])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let log_text = String::from_utf8(log.stdout).unwrap();
+    assert!(
+        log_text.lines().any(|l| l == "write spec"),
+        "expected a 'write spec' commit on {ticket_branch}:\n{log_text}",
+    );
+}
+
 // --- list ---
 
 #[test]

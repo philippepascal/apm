@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::{Config, resolve_identity, resolve_caller_name}, epic, ticket};
+use apm_core::{config::{resolve_identity, resolve_caller_name}, epic, ticket};
 use std::path::Path;
 use crate::ctx::CmdContext;
 
@@ -88,44 +88,28 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
     println!("Created ticket {id}: {filename} (branch: {branch})");
 
     if !no_edit {
-        open_editor(root, &config, branch, &rel_path)?;
+        open_editor(root, branch, &rel_path)?;
     }
 
     Ok(())
 }
 
-fn open_editor(root: &Path, config: &Config, branch: &str, rel_path: &str) -> Result<()> {
-    // Check out the ticket branch, open editor, commit result, return to previous branch.
-    let prev_branch = std::process::Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
-        .current_dir(root)
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| config.project.default_branch.clone());
+fn open_editor(root: &Path, branch: &str, rel_path: &str) -> Result<()> {
+    let content = apm_core::git_util::read_from_branch(root, branch, rel_path)?;
 
-    let _ = std::process::Command::new("git")
-        .args(["checkout", branch])
-        .current_dir(root)
-        .status();
+    let fname = std::path::Path::new(rel_path)
+        .file_name().unwrap().to_string_lossy().into_owned();
+    let tmp_path = std::env::temp_dir()
+        .join(format!("apm-{}-{}", std::process::id(), fname));
+    std::fs::write(&tmp_path, &content)?;
 
-    let file_path = root.join(rel_path);
-    crate::editor::open(&file_path)?;
+    crate::editor::open(&tmp_path)?;
 
-    let _ = std::process::Command::new("git")
-        .args(["-c", "commit.gpgsign=false", "add", rel_path])
-        .current_dir(root)
-        .status();
-    let _ = std::process::Command::new("git")
-        .args(["-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "write spec"])
-        .current_dir(root)
-        .status();
+    let new_content = std::fs::read_to_string(&tmp_path)?;
 
-    let _ = std::process::Command::new("git")
-        .args(["checkout", &prev_branch])
-        .current_dir(root)
-        .status();
+    apm_core::git_util::commit_to_branch(root, branch, rel_path, &new_content, "write spec")?;
+
+    let _ = std::fs::remove_file(&tmp_path);
 
     Ok(())
 }
