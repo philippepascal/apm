@@ -291,7 +291,6 @@ Configuration is split across files in `.apm/`:
 | `config.toml` | Project settings, sync, workers, server |
 | `workflow.toml` | State machine: states, transitions, completion strategies |
 | `ticket.toml` | Ticket structure: sections, types, placeholders |
-| `epics.toml` | Per-epic settings (e.g. `max_workers`) — untracked |
 | `local.toml` | Per-user settings (username, worker overrides) — untracked |
 | `agents.md` | Agent instructions: roles, workflow rules, shell discipline |
 | `apm.spec-writer.md` | Instructions fed to agents during the spec phase |

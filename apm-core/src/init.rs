@@ -384,7 +384,7 @@ pub fn worktree_gitignore_pattern(dir: &Path) -> Option<String> {
 }
 
 pub fn ensure_gitignore(path: &Path, worktree_pattern: Option<&str>, messages: &mut Vec<String>) -> Result<()> {
-    let static_entries = [".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+    let static_entries = [".apm/local.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
     let mut entries: Vec<&str> = static_entries.to_vec();
     let owned_pattern;
     if let Some(p) = worktree_pattern {
