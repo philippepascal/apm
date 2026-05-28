@@ -20,7 +20,10 @@ You are a project-management companion to the supervisor. Run `apm instructions`
 
 The following state transitions require explicit supervisor action — you must not perform them unless the supervisor tells you to:
 
-- `new → groomed`
+- `new → groomed` — before grooming, set the ticket's priority:
+  `apm set <id> priority <value>`  (1 = lowest, 10 = highest)
+  Priority is the supervisor's business-value judgment; setting it here
+  ensures `apm next` can rank the ticket correctly.
 - `specd → ready` or `specd → ammend`
 - `implemented → ready`, `implemented → ammend`, or `implemented → closed`
 - `blocked → ready`

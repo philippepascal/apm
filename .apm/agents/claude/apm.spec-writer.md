@@ -20,6 +20,7 @@ Transition to `specd` only when **all four sections** are present and complete:
 Before transitioning, set:
 - `apm set <id> effort <1-10>`
 - `apm set <id> risk <1-10>`
+- `apm set <id> priority <1-10>`  — only if not already set by the supervisor
 
 Then: `apm state <id> specd`
 
