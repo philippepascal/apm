@@ -16,12 +16,9 @@ updated_at = "2026-05-28T06:11:39.276663Z"
 
 ### Problem
 
-apm init create this in config.toml:
-[workers]
-default = "claude/coder"
-model = "sonnet"
+`apm init` generates `.apm/config.toml` with `model = "sonnet"` as an active key under `[workers]`. This is wrong: `[workers].model` is a global fallback for all workers, but the intended pattern is to configure model per-agent in the manifest files (`.apm/agents/claude/coder.toml`, `.apm/agents/claude/spec-writer.toml`). Shipping a hardcoded `model = "sonnet"` overrides any deliberate per-agent or per-machine customisation and misleads users into thinking they need to keep it there.
 
-default is correct, but model isn't: it's part of the manifest for claude/coder and shouldn't defined at all in config.toml.
+The correct output from `apm init` should omit `model` from `[workers]` entirely (or at most leave it commented out as a hint), leaving model selection to the manifest files where it belongs.
 
 ### Acceptance criteria
 
@@ -38,12 +35,12 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
+
+
 ## History
 
 | When | From | To | By |
