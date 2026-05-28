@@ -1,7 +1,7 @@
 +++
 id = "f16e4035"
 title = "find_worktree_for_branch must skip the main worktree"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f16e4035-find-worktree-for-branch-must-skip-the-m"
 created_at = "2026-05-28T07:31:38.018076Z"
-updated_at = "2026-05-28T07:44:50.773243Z"
+updated_at = "2026-05-28T07:45:01.751575Z"
 +++
 
 ## Spec
@@ -78,3 +78,4 @@ This directly exercises the bug scenario: the main repo has the ticket branch ch
 | 2026-05-28T07:38Z | groomed | in_design | philippepascal |
 | 2026-05-28T07:39Z | in_design | specd | claude |
 | 2026-05-28T07:44Z | specd | ready | philippepascal |
+| 2026-05-28T07:45Z | ready | in_progress | philippepascal |
