@@ -1,7 +1,7 @@
 +++
 id = "8f73686b"
 title = "apm init addes a model sonnet line in config.toml"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8f73686b-apm-init-addes-a-model-sonnet-line-in-co"
 created_at = "2026-05-28T01:54:59.492163Z"
-updated_at = "2026-05-28T06:31:48.042452Z"
+updated_at = "2026-05-28T06:37:12.776077Z"
 +++
 
 ## Spec
@@ -93,3 +93,4 @@ This assertion catches any future re-introduction of an active `model =` key reg
 | 2026-05-28T06:13Z | in_design | specd | claude |
 | 2026-05-28T06:27Z | specd | ready | philippepascal |
 | 2026-05-28T06:31Z | ready | in_progress | philippepascal |
+| 2026-05-28T06:37Z | in_progress | implemented | claude |
