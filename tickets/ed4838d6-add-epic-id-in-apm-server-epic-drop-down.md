@@ -36,7 +36,21 @@ The TicketCard already displays the first 8 characters of the epic ID as a chip.
 
 ### Approach
 
-How the implementation will work.
+Edit one line in `apm-ui/src/components/supervisor/SupervisorView.tsx` (line 241).
+
+Current:
+```tsx
+<option key={ep.id} value={ep.id}>{ep.title || ep.id}</option>
+```
+
+Replace with:
+```tsx
+<option key={ep.id} value={ep.id}>{ep.id.slice(0, 8)}{ep.title ? ` · ${ep.title}` : ''}</option>
+```
+
+The `value` attribute stays `ep.id` (full UUID), so the existing filter logic (`t.epic === epicFilter`) is unaffected. The visible text becomes `abcd1234 · My Epic Title` when a title is present, or `abcd1234` when it is not — matching the convention already used in TicketCard.
+
+No backend changes. No test changes needed (this is a pure display mutation on a React option element).
 
 ### Open questions
 
