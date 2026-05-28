@@ -16,7 +16,9 @@ updated_at = "2026-05-28T20:46:53.536986Z"
 
 ### Problem
 
-Since b0ea6a04 (April 3), the Merge completion strategy routes tickets with target_branch set into that branch (e.g. an epic branch) rather than always into main. sync::detect only checks merges into the default branch (Cases 1, 2, 3 all use merged_into_main / content_merged_into_main). Tickets merged into an epic branch stay in implemented state forever and now emit a spurious hint asking the supervisor to close them manually. The fix: in sync::detect, after the three existing passes, add a pass that reads each remaining implemented ticket's target_branch field; if set, checks whether the ticket branch is merged into that target (using git::is_ancestor or merged_into equivalent); and if so, adds it to merged_set (suppressing the hint) and to close candidates (auto-closing it the same way Case 1 does). This mirrors exactly what sync already does for main-merged tickets. Root cause traced to b0ea6a04 changing Merge strategy to honor target_branch without a corresponding sync update. The hint generation added in 14338748 (May 3) made the gap visible.
+Since b0ea6a04 (April 3), the Merge completion strategy routes tickets with `target_branch` set into that branch (e.g. an epic branch) rather than always into main. `sync::detect` was not updated alongside that change: all three existing passes (Cases 1, 2, 3) check merges only against the project's default branch. Tickets merged into an epic branch therefore stay in `implemented` state permanently and, since 14338748 (May 3), emit a spurious hint asking the supervisor to close them manually.
+
+The fix adds a Case 4 after Case 3 in `sync::detect`. It iterates every `implemented` ticket branch that the earlier passes did not recognise; for any that carry a non-empty `target_branch` field, it checks whether that branch has been merged — by regular merge or squash — into the named target. Matches are added to `merged_set` (suppressing the hint) and to the close-candidates list, mirroring exactly what Case 1 already does for main-merged tickets.
 
 ### Acceptance criteria
 
