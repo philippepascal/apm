@@ -1,7 +1,7 @@
 +++
 id = "92505e08"
 title = "apm init adds .apm/epics.toml to .gitignore even though. epics.toml doesn't exist anymore"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/92505e08-apm-init-adds-apm-epics-toml-to-gitignor"
 created_at = "2026-05-28T01:48:16.673201Z"
-updated_at = "2026-05-28T06:29:07.583689Z"
+updated_at = "2026-05-28T06:31:38.992210Z"
 +++
 
 ## Spec
@@ -75,3 +75,4 @@ No test changes are needed: the existing `ensure_gitignore_creates_file` test do
 | 2026-05-28T06:11Z | in_design | specd | claude |
 | 2026-05-28T06:27Z | specd | ready | philippepascal |
 | 2026-05-28T06:29Z | ready | in_progress | philippepascal |
+| 2026-05-28T06:31Z | in_progress | implemented | claude |
