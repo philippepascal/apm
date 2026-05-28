@@ -35,7 +35,35 @@ The result is that priority is regularly left at `0` after grooming. A spec-writ
 
 ### Approach
 
-How the implementation will work.
+Two files change, both under `.apm/agents/claude/`.
+
+#### `apm.main-agent.md`
+
+In the `## Supervisor-only transitions` section, add a prose note under the `new → groomed` bullet explaining that the supervisor should set priority before grooming. The note should show the command and explain the rationale (priority is a business-value call that determines queue order):
+
+```
+- `new → groomed` — before grooming, set the ticket's priority:
+  `apm set <id> priority <value>`  (1 = lowest, 10 = highest)
+  Priority is the supervisor's business-value judgment; setting it here
+  ensures `apm next` can rank the ticket correctly.
+```
+
+Alternatively, a short "## Grooming" section can be added if the supervisor-only transitions block becomes too dense. Either presentation satisfies the AC.
+
+#### `apm.spec-writer.md`
+
+In the `## When you are done` section, add the priority command after the existing two `apm set` lines, with the conditional annotation:
+
+```
+Before transitioning, set:
+- `apm set <id> effort <1-10>`
+- `apm set <id> risk <1-10>`
+- `apm set <id> priority <1-10>`  — only if not already set by the supervisor
+
+Then: `apm state <id> specd`
+```
+
+No other sections of either file change.
 
 ### Open questions
 
