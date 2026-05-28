@@ -4,12 +4,12 @@ title = "apm sync does not detect tickets merged into their target branch"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4d36d9bb-apm-sync-does-not-detect-tickets-merged-"
 created_at = "2026-05-28T20:46:27.893432Z"
-updated_at = "2026-05-28T20:52:27.153052Z"
+updated_at = "2026-05-28T20:52:29.287802Z"
 +++
 
 ## Spec
