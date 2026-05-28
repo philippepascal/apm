@@ -28,7 +28,10 @@ The result is that priority is regularly left at `0` after grooming. A spec-writ
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to any agent files other than `apm.main-agent.md` and `apm.spec-writer.md`
+- Changes to other agent profiles (phi4, pi)
+- Runtime enforcement of the priority-fallback rule in the `apm` CLI
+- Changes to the effort or risk fields or their documentation
 
 ### Approach
 
