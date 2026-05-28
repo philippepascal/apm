@@ -30,7 +30,10 @@ The correct output from `apm init` should omit `model` from `[workers]` entirely
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing `WorkersConfig.model` from the config struct — the field is valid and users may set it explicitly
+- Migrating existing `config.toml` files that already contain `model = "sonnet"` (no active migration is needed; the field continues to work if present)
+- Changing model resolution logic in `apm-core/src/start.rs` — the cascade `workers.model` → manifest override is correct
+- Updating `SPEC_WRITER_MANIFEST_STUB` or `CODER_MANIFEST_STUB` comments in `init.rs` — they are already accurate
 
 ### Approach
 
