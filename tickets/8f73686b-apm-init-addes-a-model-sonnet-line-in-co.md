@@ -1,7 +1,7 @@
 +++
 id = "8f73686b"
 title = "apm init addes a model sonnet line in config.toml"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8f73686b-apm-init-addes-a-model-sonnet-line-in-co"
 created_at = "2026-05-28T01:54:59.492163Z"
-updated_at = "2026-05-28T02:18:40.400594Z"
+updated_at = "2026-05-28T06:09:28.641898Z"
 +++
 
 ## Spec
@@ -49,3 +49,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-28T01:54Z | — | new | philippepascal |
+| 2026-05-28T06:09Z | new | groomed | philippepascal |
