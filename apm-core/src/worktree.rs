@@ -9,7 +9,12 @@ use crate::ticket::{Ticket, load_all_from_git};
 /// is the main worktree, or if the branch does not start with "ticket/".
 pub fn find_worktree_for_branch(root: &Path, branch: &str) -> Option<PathBuf> {
     let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
-    let main = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+    // The first "worktree " line is always the main worktree, regardless of
+    // whether `root` is the main repo or a linked worktree.
+    let main_path = out.lines()
+        .find_map(|l| l.strip_prefix("worktree ").map(PathBuf::from))
+        .unwrap_or_else(|| root.to_path_buf());
+    let main = main_path.canonicalize().unwrap_or(main_path);
     let mut current_path: Option<PathBuf> = None;
     for line in out.lines() {
         if let Some(p) = line.strip_prefix("worktree ") {
