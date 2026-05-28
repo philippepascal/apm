@@ -32,7 +32,11 @@ The desired behaviour is: read the ticket file from the ticket branch via git pl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Conflict resolution when a concurrent process commits to the ticket branch while the editor is open.
+- Changes to `--no-edit` semantics.
+- Changes to how `ticket::create` writes the initial commit.
+- Changes to `apm-core` — all changes are in `apm/src/cmd/new.rs`.
+- Skipping the "write spec" commit when the user makes no edits (always commits if the editor exits 0).
 
 ### Approach
 
