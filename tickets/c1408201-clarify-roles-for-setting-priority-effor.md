@@ -16,17 +16,10 @@ updated_at = "2026-05-28T06:16:28.668237Z"
 
 ### Problem
 
-apm.main-agent.md — add to the grooming flow that setting priority is part of transitioning new → groomed. The supervisor makes the business-value call before handing it to the
-   spec-writer.
+The agent instructions do not clearly assign ownership of the `priority` field. `apm.main-agent.md` describes the grooming step (`new → groomed`) without mentioning that the supervisor should set priority at that point. `apm.spec-writer.md` instructs the spec-writer to set `effort` and `risk` before transitioning to `specd`, but says nothing about `priority`.
 
-  apm.spec-writer.md — change the pre-transition block from:
-  - apm set <id> effort <1-10>
-  - apm set <id> risk <1-10>
-  to include priority as a conditional:
-  - apm set <id> effort <1-10>
-  - apm set <id> risk <1-10>
-  - apm set <id> priority <1-10>  — only if not already set by the supervisor
-- 
+The result is that priority is regularly left at `0` after grooming. A spec-writer who sets it is overstepping (priority is a business-value judgment), while one who leaves it unset produces a ticket that `apm next` cannot rank. Clarifying each role's responsibility closes this gap: the supervisor owns priority at groom time; the spec-writer sets it only as a fallback if the supervisor skipped it.
+
 ### Acceptance criteria
 
 Checkboxes; each one independently testable.
@@ -42,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
