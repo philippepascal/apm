@@ -36,7 +36,25 @@ The stale entry causes two concrete problems: new projects get a confusing `.git
 
 ### Approach
 
-How the implementation will work.
+Three single-line removals across three files. No new code, no migration needed.
+
+**`apm-core/src/init.rs` line 387** — remove `.apm/epics.toml` from `static_entries`:
+```rust
+// Before
+let static_entries = [".apm/local.toml", ".apm/epics.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+
+// After
+let static_entries = [".apm/local.toml", ".apm/*.init", ".apm/sessions.json", ".apm/credentials.json"];
+```
+
+**`.gitignore` line 18** — remove the `.apm/epics.toml` line from the repo's own gitignore (this is the stale entry left over from before ticket 6e3f9e91 was implemented).
+
+**`README.md` line 294** — remove the `epics.toml` row from the configuration files table:
+```
+| `epics.toml` | Per-epic settings (e.g. `max_workers`) — untracked |
+```
+
+No test changes are needed: the existing `ensure_gitignore_creates_file` test does not assert on `.apm/epics.toml`, and all other gitignore tests remain valid.
 
 ### Open questions
 
