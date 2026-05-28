@@ -23,7 +23,12 @@ The desired behaviour is: read the ticket file from the ticket branch via git pl
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm new <title>` (without `--no-edit`) completes, `git branch --show-current` in the main repo returns the same branch that was checked out before the command ran.
+- [ ] The content shown in the editor is the content committed on the ticket branch at the moment the editor launches (not an empty file or stale content).
+- [ ] Changes made in the editor are committed to the ticket branch at `tickets/<id>-<slug>.md` with the commit message `write spec`.
+- [ ] `git checkout` is never invoked against the main repo during the editor session — no `git checkout <ticket-branch>` or `git checkout <prev-branch>` calls are made.
+- [ ] The temp file created for editing is removed after the editor exits (best-effort; a removal failure must not fail the command).
+- [ ] `--no-edit` is unaffected: when passed, no editor opens, no temp file is created, and HEAD is never moved.
 
 ### Out of scope
 
