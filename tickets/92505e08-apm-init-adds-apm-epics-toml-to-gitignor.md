@@ -1,7 +1,7 @@
 +++
 id = "92505e08"
 title = "apm init adds .apm/epics.toml to .gitignore even though. epics.toml doesn't exist anymore"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/92505e08-apm-init-adds-apm-epics-toml-to-gitignor"
 created_at = "2026-05-28T01:48:16.673201Z"
-updated_at = "2026-05-28T01:48:16.673201Z"
+updated_at = "2026-05-28T06:09:26.229913Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-28T01:48Z | — | new | philippepascal |
+| 2026-05-28T06:09Z | new | groomed | philippepascal |
