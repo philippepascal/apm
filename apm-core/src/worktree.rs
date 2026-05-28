@@ -5,16 +5,22 @@ use crate::git_util::run;
 use crate::ticket::{Ticket, load_all_from_git};
 
 /// Find the directory of an existing permanent worktree for the given branch.
-/// Returns None if no such worktree is registered.
+/// Returns None if no such worktree is registered, if the matching worktree
+/// is the main worktree, or if the branch does not start with "ticket/".
 pub fn find_worktree_for_branch(root: &Path, branch: &str) -> Option<PathBuf> {
     let out = run(root, &["worktree", "list", "--porcelain"]).ok()?;
+    let main = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     let mut current_path: Option<PathBuf> = None;
     for line in out.lines() {
         if let Some(p) = line.strip_prefix("worktree ") {
             current_path = Some(PathBuf::from(p));
         } else if let Some(b) = line.strip_prefix("branch refs/heads/") {
-            if b == branch {
-                return current_path;
+            if b == branch && b.starts_with("ticket/") {
+                if let Some(p) = &current_path {
+                    if p.canonicalize().unwrap_or_else(|_| p.clone()) != main {
+                        return current_path;
+                    }
+                }
             }
         }
     }
@@ -157,6 +163,22 @@ mod tests {
         Command::new("git").args(["init", "-b", "main"]).current_dir(dir).output().unwrap();
         Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(dir).output().unwrap();
         Command::new("git").args(["config", "user.name", "test"]).current_dir(dir).output().unwrap();
+    }
+
+    #[test]
+    fn find_worktree_for_branch_skips_main_worktree() {
+        let tmp = TempDir::new().unwrap();
+        let repo = tmp.path();
+        git_init(repo);
+        std::fs::write(repo.join("README"), "x").unwrap();
+        Command::new("git").args(["-c", "commit.gpgsign=false", "add", "README"]).current_dir(repo).output().unwrap();
+        Command::new("git").args(["-c", "commit.gpgsign=false", "commit", "-m", "init"]).current_dir(repo).output().unwrap();
+        // Create ticket branch and check it out in the main worktree (no dedicated worktree).
+        Command::new("git").args(["checkout", "-b", "ticket/my-branch"]).current_dir(repo).output().unwrap();
+        // The main worktree now has ticket/my-branch checked out.
+        // find_worktree_for_branch must return None, not the main repo path.
+        let result = super::find_worktree_for_branch(repo, "ticket/my-branch");
+        assert!(result.is_none(), "expected None when main worktree holds the ticket branch, got {:?}", result);
     }
 
     #[test]
