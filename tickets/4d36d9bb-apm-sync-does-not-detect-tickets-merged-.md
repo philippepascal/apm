@@ -22,13 +22,13 @@ The fix adds a Case 4 after Case 3 in `sync::detect`. It iterates every `impleme
 
 ### Acceptance criteria
 
-- [ ] `apm sync` closes an `implemented` ticket whose branch is regular-merged (--no-ff) into the branch named in its `target_branch` field, with close reason `"branch merged into target"`
-- [ ] `apm sync` closes an `implemented` ticket whose branch is squash-merged into its `target_branch`
-- [ ] `apm sync` does not emit the "close manually" hint for a ticket auto-closed by the new target-branch pass
-- [ ] Tickets without a `target_branch` field continue to be detected (or not) exactly as before — no regression in Cases 1, 2, or 3
-- [ ] `apm sync` does not error or falsely close a ticket whose `target_branch` value does not exist locally
-- [ ] An integration test in `apm/tests/integration.rs` verifies Case 4 for a regular merge into `target_branch`
-- [ ] An integration test in `apm/tests/integration.rs` verifies Case 4 for a squash merge into `target_branch`
+- [x] `apm sync` closes an `implemented` ticket whose branch is regular-merged (--no-ff) into the branch named in its `target_branch` field, with close reason `"branch merged into target"`
+- [x] `apm sync` closes an `implemented` ticket whose branch is squash-merged into its `target_branch`
+- [x] `apm sync` does not emit the "close manually" hint for a ticket auto-closed by the new target-branch pass
+- [x] Tickets without a `target_branch` field continue to be detected (or not) exactly as before — no regression in Cases 1, 2, or 3
+- [x] `apm sync` does not error or falsely close a ticket whose `target_branch` value does not exist locally
+- [x] An integration test in `apm/tests/integration.rs` verifies Case 4 for a regular merge into `target_branch`
+- [x] An integration test in `apm/tests/integration.rs` verifies Case 4 for a squash merge into `target_branch`
 
 ### Out of scope
 
