@@ -28,7 +28,10 @@ find_worktree_for_branch in apm-core/src/worktree.rs returns the first git workt
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `list_ticket_worktrees` — it already applies both guards correctly
+- Changes to `ensure_worktree`, `add_worktree`, or any other worktree lifecycle functions beyond what `find_worktree_for_branch` calls
+- Fixing any race condition where the main branch changes between the check and the worktree creation
+- Server dispatch logic or callers outside `worktree.rs`
 
 ### Approach
 
