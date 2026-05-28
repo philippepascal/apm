@@ -34,7 +34,10 @@ When a new (non-APM) project runs `apm init`, it receives this file verbatim. Th
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Updating `.apm/agents/claude/apm.coder.md` — APM's live copy, which correctly references APM's own test structure and is not a template
+- Updating test guidance in the debug, mock, phi4, or pi agent variants
+- Adding project-type detection or conditional content to the template
+- Changing the CLAUDE.md scaffold or `apm.project.md` template
 
 ### Approach
 
