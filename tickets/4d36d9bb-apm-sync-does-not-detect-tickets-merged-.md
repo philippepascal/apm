@@ -39,7 +39,60 @@ The fix adds a Case 4 after Case 3 in `sync::detect`. It iterates every `impleme
 
 ### Approach
 
-How the implementation will work.
+#### New function in `apm-core/src/git_util.rs`
+
+Add `pub fn is_branch_merged_into(root: &Path, branch: &str, target_ref: &str) -> Result<bool>`.
+
+1. Regular-merge check: `if is_ancestor(root, branch, target_ref) { return Ok(true); }` — `is_ancestor` returns `false` on any git error (unknown ref included), so no special-casing is needed.
+2. Squash-merge check — mirrors the private `squash_merged` helper:
+   a. `run(root, &["merge-base", target_ref, branch])` — return `Ok(false)` on error (target ref absent locally).
+   b. `run(root, &["rev-parse", &format!("{branch}^{{commit}}")])` — return `Ok(false)` on error.
+   c. If branch_tip == merge_base, return `Ok(true)` (belt-and-suspenders; already caught in step 1).
+   d. Create virtual squash commit: `git commit-tree <branch>^{tree} -p <merge_base> -m "squash"` — return `Ok(false)` on error.
+   e. `git cherry <target_ref> <squash_commit>` — return `Ok(false)` on error.
+   f. Return `Ok(cherry.trim().starts_with('-'))`.
+
+#### Case 4 in `apm-core/src/sync.rs`
+
+Insert between Case 3 (line 88) and the hint loop (line 110):
+
+```rust
+// Case 4: implemented tickets merged into their target_branch.
+for branch in &branches {
+    if merged_set.contains(branch.as_str()) { continue; }
+    let suffix = branch.trim_start_matches("ticket/");
+    let rel_path = format!("{tickets_dir}/{suffix}.md");
+    let content = match git::read_from_branch(root, branch, &rel_path) {
+        Ok(c) => c,
+        Err(_) => continue,
+    };
+    let t = match Ticket::parse(&root.join(&rel_path), &content) {
+        Ok(t) => t,
+        Err(_) => continue,
+    };
+    if t.frontmatter.state != "implemented" { continue; }
+    let target = match t.frontmatter.target_branch.as_deref() {
+        Some(tb) if !tb.is_empty() => tb.to_string(),
+        _ => continue,
+    };
+    if git::is_branch_merged_into(root, branch, &target)? {
+        merged_set.insert(branch.clone());
+        close.push(CloseCandidate { ticket: t, reason: "branch merged into target" });
+    }
+}
+```
+
+#### Tests in `apm/tests/integration.rs`
+
+Test 1 (regular merge): create a repo with `main` and an `epic/foo` branch; create a ticket branch with `target_branch = "epic/foo"` and state `implemented`; merge the ticket branch into `epic/foo` with `git merge --no-ff`; run `detect()`; assert the ticket is in `close` and `hints` is empty.
+
+Test 2 (squash merge): same setup, but merge with `git merge --squash && git commit`; assert the same outcome.
+
+#### Files changed
+
+- `apm-core/src/git_util.rs`: add `is_branch_merged_into`
+- `apm-core/src/sync.rs`: add Case 4 between Case 3 and the hint loop
+- `apm/tests/integration.rs`: add two tests
 
 ### Open questions
 
