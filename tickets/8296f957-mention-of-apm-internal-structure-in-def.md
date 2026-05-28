@@ -41,7 +41,22 @@ When a new (non-APM) project runs `apm init`, it receives this file verbatim. Th
 
 ### Approach
 
-How the implementation will work.
+Edit `apm-core/src/default/agents/claude/apm.coder.md`. In the `## Tests and finishing` section, replace the three APM-specific bullet points:
+
+```
+- Unit tests inline in each crate (`apm-core/src/`) or in `apm-core/tests/`
+- Integration tests in `apm/tests/integration.rs` — temp git repos, no fixtures
+- Run `cargo test --workspace` — all tests must pass
+```
+
+with generic alternatives:
+
+```
+- Follow the test conventions described in `apm.project.md`
+- Run the project's test suite — all tests must pass
+```
+
+No other files change. No Rust code is touched, so no `cargo test` run is needed.
 
 ### Open questions
 
