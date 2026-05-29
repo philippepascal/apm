@@ -4,12 +4,12 @@ title = "Surface epic freshness (behind-main status) in apm commands and UI"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7a76dd16-surface-epic-freshness-behind-main-statu"
 created_at = "2026-05-29T01:17:24.701677Z"
-updated_at = "2026-05-29T01:26:01.017081Z"
+updated_at = "2026-05-29T01:26:05.544486Z"
 +++
 
 ## Spec
