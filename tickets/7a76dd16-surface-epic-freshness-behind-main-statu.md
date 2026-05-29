@@ -42,7 +42,7 @@ OUT OF SCOPE: auto-merging main into the epic; blocking or gating dispatch on st
 - [x] `apm epic show <id>` prints a "Freshness:" line immediately after the "State:" line.
 - [x] `apm list` appends an epic freshness footer after the ticket rows with one entry per distinct epic that has at least one visible ticket; the footer is omitted when no visible ticket has an epic.
 - [x] `apm next` prints a freshness note on a line after the ticket line when the top ticket's `epic` field is set (non-JSON mode only; JSON output is unchanged).
-- [ ] `GET /api/epics` and `GET /api/epics/:id` include `behind_count` (integer ≥ 0) and `conflicts` (boolean) on every epic object in the response.
+- [x] `GET /api/epics` and `GET /api/epics/:id` include `behind_count` (integer ≥ 0) and `conflicts` (boolean) on every epic object in the response.
 - [ ] `SupervisorView.tsx` renders a freshness chip bar below the filter row for epics that have at least one ticket in the loaded set; chips are color-coded amber for behind/clean and red for behind/conflicts; the bar is hidden when all epics are up to date.
 - [ ] No code path that computes freshness is reachable from `apm state`, `apm start`, or `apm dispatch`; freshness is display-only.
 
