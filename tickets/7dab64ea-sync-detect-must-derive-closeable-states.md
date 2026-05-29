@@ -149,6 +149,7 @@ Add three new tests:
 
 ### Amendment requests
 
+- [ ] Make terminal-state exclusion uniform across ALL sync::detect passes. Cases 1 and 3 already skip terminal states; extend the same exclusion to Case 2, Case 4, and the hint pass, so the effective 'act-on' set is (merge_completed_state_ids MINUS terminal_state_ids) everywhere. Concretely: in Case 2 (if merge_completed.contains(state)), Case 4 (if !merge_completed.contains(state) continue), and the hint pass, add a !terminal.contains(state) condition. This guarantees sync never produces a close candidate or hint for an already-terminal ticket even when a workflow defines a merging-completion transition that targets a terminal state (merge_completed intersect terminal != empty). Add a test: a workflow whose merging transition targets a terminal state, asserting a ticket in that state is NOT pushed as a close candidate and generates no hint.
 
 ### Code review
 
