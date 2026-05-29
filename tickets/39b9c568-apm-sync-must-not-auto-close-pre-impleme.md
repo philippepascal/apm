@@ -1,7 +1,7 @@
 +++
 id = "39b9c568"
 title = "apm sync must not auto-close pre-implementation tickets"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/39b9c568-apm-sync-must-not-auto-close-pre-impleme"
 created_at = "2026-05-29T00:18:15.128911Z"
-updated_at = "2026-05-29T00:27:31.753979Z"
+updated_at = "2026-05-29T00:27:36.475618Z"
 +++
 
 ## Spec
@@ -117,3 +117,4 @@ Assertion: the ticket branch appears in `candidates.close` (reason `"branch merg
 | 2026-05-29T00:18Z | — | new | philippepascal |
 | 2026-05-29T00:20Z | new | groomed | philippepascal |
 | 2026-05-29T00:20Z | groomed | in_design | philippepascal |
+| 2026-05-29T00:27Z | in_design | specd | claude |
