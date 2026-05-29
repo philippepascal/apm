@@ -110,7 +110,8 @@ Make five substitutions:
    ```
    with:
    ```rust
-   if merge_completed.contains(t.frontmatter.state.as_str()) {
+   let state = t.frontmatter.state.as_str();
+   if merge_completed.contains(state) && !terminal.contains(state) {
    ```
 
 4. **Case 4** (merged into target_branch): Replace
@@ -119,7 +120,8 @@ Make five substitutions:
    ```
    with:
    ```rust
-   if !merge_completed.contains(t.frontmatter.state.as_str()) { continue; }
+   let state = t.frontmatter.state.as_str();
+   if !merge_completed.contains(state) || terminal.contains(state) { continue; }
    ```
 
 5. **Hint pass**: Replace
@@ -128,7 +130,8 @@ Make five substitutions:
    ```
    with:
    ```rust
-   if merge_completed.contains(t.frontmatter.state.as_str()) {
+   let state = t.frontmatter.state.as_str();
+   if merge_completed.contains(state) && !terminal.contains(state) {
    ```
 
 After these changes verify with `grep -n '"implemented"\|"new"\|"groomed"\|"specd"\|PRE_IMPL' apm-core/src/sync.rs` — the output should be empty.
@@ -137,13 +140,15 @@ After these changes verify with `grep -n '"implemented"\|"new"\|"groomed"\|"spec
 
 Existing tests need no modifications. The two pre-impl regression tests (`sync_detect_skips_pre_impl_ticket_with_fork_in_main`, `sync_detect_implemented_ticket_still_closed_after_pre_impl_filter`) pass unchanged: `"new"` is not in `merge_completed`, `"implemented"` is.
 
-Add three new tests:
+Add four new tests:
 
 1. **`sync_detect_skips_non_merge_completed_ticket_on_merged_branch`**: Force a ticket to `ready` state, merge its branch into main, assert the ticket does not appear in close candidates. Assert via `config.merge_completed_state_ids().contains("ready")` that `ready` is genuinely not in the set.
 
 2. **`sync_detect_uses_config_derived_merge_completed_state`**: Build a minimal repo with a custom workflow TOML where the merge-completion state is `shipped` (not `implemented`), `completion = "merge"`. Force a ticket to `shipped`, merge its branch, assert it appears in close candidates. Also force a second ticket to `ready`, merge its branch, assert it does not appear.
 
 3. **`merge_completed_state_ids_returns_correct_set`** (unit test in `config.rs`): Covered above in the Config helper step.
+
+4. **`sync_detect_no_candidate_for_terminal_merge_completed_ticket`**: Build a repo with a workflow TOML where a merging-completion transition targets a state also marked `terminal = true`. Force a ticket to that state, merge its branch into main. Assert: the ticket does not appear in close candidates and no hint is emitted. Confirm that `config.merge_completed_state_ids().contains(state)` and `config.terminal_state_ids().contains(state)` both return true, validating the test exercises the intended overlap case.
 
 ### Open questions
 
