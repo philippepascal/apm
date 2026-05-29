@@ -45,7 +45,11 @@ TESTS: validate_config rejects a workflow with a Merge or PrOrEpicMerge transiti
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `sync.rs` — the complementary runtime guard is covered by ticket 7dab64ea
+- `apm validate --fix` auto-remediation for this rule: no single safe fix exists (the supervisor must either retarget the transition or un-terminal the target state)
+- `Pull` completion strategy — it does not produce a branch that lands via PR/merge review and is exempt from this rule
+- `CompletionStrategy::None` transitions — no merge occurs, no review gate is bypassed
+- Validating that a merge-completed state is also used as a normal mid-flow target (observation 2 in the design discussion — too fuzzy to define crisply)
 
 ### Approach
 
