@@ -73,7 +73,7 @@ Existing `in_progress → implemented` tests are unaffected — they configure `
 
 ### Amendment requests
 
-- [ ] Three concerns from the spec review, in priority order:
+- [x] Three concerns from the spec review, in priority order:
 
 1) REFRAME THE PROBLEM AND ROOT CAUSE. The spec presents plan B (detect-skip via is_branch_merged_into) as load-bearing for the supervisor-fixed-externally flow. Trace the actual code timing: state.rs::transition appends a new ticket-branch commit at line 166 BEFORE the match completion block runs. That new state-change commit (merge_failed -> implemented in the frontmatter) is fresh and is NEVER in target by the time the completion arm runs. is_branch_merged_into therefore returns false. The detect-skip does NOT fire in the documented case. What actually fixes the documented case is plan A alone: adding completion = pr_or_epic_merge to merge_failed -> implemented in the default workflow makes the transition attempt a merge, and because target already contains all the work commits, the new state-row commit lands as a trivial fast-forward (or near-trivial non-ff). Update the Problem section, Root Cause section, and Fix section to state this clearly: plan A is the fix; plan B is defensive belt-and-suspenders for genuinely degenerate cases (cherry-pick equivalence, manual edits) and not the primary mechanism.
 
