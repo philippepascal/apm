@@ -403,6 +403,9 @@ fn init_yes_includes_edit_write_and_baseline() {
     let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
     assert!(entries.contains(&"Edit"), "Edit missing");
     assert!(entries.contains(&"Write"), "Write missing");
+    assert!(entries.contains(&"Read"), "Read missing");
+    assert!(entries.contains(&"Glob"), "Glob missing");
+    assert!(entries.contains(&"Grep"), "Grep missing");
     assert!(entries.contains(&"Bash(git -C *)"), "Bash(git -C *) missing");
     assert!(entries.contains(&"Bash(ls *)"), "Bash(ls *) missing");
     assert!(entries.contains(&"Bash(grep *)"), "Bash(grep *) missing");
@@ -502,6 +505,9 @@ fn init_yes_user_settings_include_all_toolchains() {
     let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
     assert!(entries.contains(&"Edit"), "Edit missing from user settings");
     assert!(entries.contains(&"Write"), "Write missing from user settings");
+    assert!(entries.contains(&"Read"), "Read missing from user settings");
+    assert!(entries.contains(&"Glob"), "Glob missing from user settings");
+    assert!(entries.contains(&"Grep"), "Grep missing from user settings");
     assert!(entries.contains(&"Bash(cargo *)"), "Bash(cargo *) missing from user settings");
     assert!(entries.contains(&"Bash(npm *)"), "Bash(npm *) missing from user settings");
     assert!(entries.contains(&"Bash(npx *)"), "Bash(npx *) missing from user settings");

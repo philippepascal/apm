@@ -169,6 +169,10 @@ const APM_ALLOW_ENTRIES: &[&str] = &[
     // code editing
     "Edit",
     "Write",
+    // read-only tools
+    "Read",
+    "Glob",
+    "Grep",
     // git ops in worktree
     "Bash(git -C *)",
     // read helpers
@@ -235,6 +239,10 @@ const APM_USER_ALLOW_ENTRIES: &[&str] = &[
     // code editing
     "Edit",
     "Write",
+    // read-only tools
+    "Read",
+    "Glob",
+    "Grep",
     // git ops in worktree
     "Bash(git -C *)",
     // read helpers
