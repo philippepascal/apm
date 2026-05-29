@@ -1,7 +1,7 @@
 +++
 id = "7a76dd16"
 title = "Surface epic freshness (behind-main status) in apm commands and UI"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7a76dd16-surface-epic-freshness-behind-main-statu"
 created_at = "2026-05-29T01:17:24.701677Z"
-updated_at = "2026-05-29T01:18:40.139213Z"
+updated_at = "2026-05-29T01:18:50.739757Z"
 +++
 
 ## Spec
@@ -61,3 +61,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T01:17Z | — | new | philippepascal |
 | 2026-05-29T01:18Z | new | groomed | philippepascal |
+| 2026-05-29T01:18Z | groomed | in_design | philippepascal |
