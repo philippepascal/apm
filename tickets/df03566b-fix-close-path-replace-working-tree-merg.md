@@ -4,12 +4,12 @@ title = "Fix close path: replace working-tree merge into default with commit_to_
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/df03566b-fix-close-path-replace-working-tree-merg"
 created_at = "2026-05-29T23:19:06.681786Z"
-updated_at = "2026-05-29T23:36:16.279711Z"
+updated_at = "2026-05-29T23:36:21.928375Z"
 +++
 
 ## Spec
