@@ -78,7 +78,12 @@ NON-GOAL: changing what 'close' means at the workflow level. The transition vali
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Propagating non-terminal state changes (e.g. `implemented → ammend`, `in_progress → blocked`) to `target_branch`.
+- Changing `merge_into_default` in state.rs's `in_progress → implemented` path (it correctly uses `target_branch` and performs a real content merge).
+- The PR completion strategy (`CompletionStrategy::Pr`, `CompletionStrategy::PrOrEpicMerge`).
+- Sync detection passes (Cases 1–4 are correct and unchanged).
+- apm-server / apm-ui.
+- Removing or renaming `merge_branch_into_default` in git_util.rs (it may be used elsewhere; only the call site in `ticket::close` changes).
 
 ### Approach
 
