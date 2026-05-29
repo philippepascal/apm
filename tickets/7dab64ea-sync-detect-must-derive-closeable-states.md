@@ -1,7 +1,7 @@
 +++
 id = "7dab64ea"
 title = "sync::detect must derive closeable states from config, not hardcoded IDs"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7dab64ea-sync-detect-must-derive-closeable-states"
 created_at = "2026-05-29T00:56:29.083955Z"
-updated_at = "2026-05-29T02:03:39.664377Z"
+updated_at = "2026-05-29T04:00:15.442567Z"
 +++
 
 ## Spec
@@ -174,3 +174,4 @@ Add four new tests:
 | 2026-05-29T01:47Z | specd | ready | philippepascal |
 | 2026-05-29T01:53Z | ready | in_progress | philippepascal |
 | 2026-05-29T02:03Z | in_progress | implemented | claude |
+| 2026-05-29T04:00Z | implemented | closed | philippepascal(apm-sync) |
