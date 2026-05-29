@@ -48,7 +48,7 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 - [x] A `completion = "none"` workflow still yields a non-empty `implementation_state_ids()` (`{in_progress}` via the coder `command:start` signal), and a workflow with no `command:start` but a merge-completion transition yields the merge target — neither signal alone can empty the set
 - [x] `ticket_fmt::history_target_states(body)` returns the `To` column of every History row (header and separator rows skipped); unit-tested
 - [x] `sync::detect` eligibility is computed per-ticket as `implementation_state_ids().contains(current_state) || any(history "To" in implementation_state_ids())`; an integration test asserts `detect`'s close candidates are identical when `[[workflow.states]]` are shuffled
-- [ ] `Config::merge_completed_state_ids()` is removed; `sync.rs` contains no string-literal state IDs for close-eligibility and no dependence on state list order
+- [x] `Config::merge_completed_state_ids()` is removed; `sync.rs` contains no string-literal state IDs for close-eligibility and no dependence on state list order
 
 ### Out of scope
 
