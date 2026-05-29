@@ -56,7 +56,111 @@ OUT OF SCOPE: auto-merging main into the epic; blocking or gating dispatch on st
 
 ### Approach
 
-How the implementation will work.
+#### Core primitive (`apm-core/src/epic.rs`)
+
+Add `EpicFreshness` and `epic_freshness`:
+
+```rust
+pub struct EpicFreshness {
+    pub behind: u32,
+    pub conflicts: bool,
+}
+
+pub fn epic_freshness(root: &Path, epic_branch: &str, default_branch: &str) -> Result<EpicFreshness> {
+    let behind: u32 = git_util::run(root, &[
+        "rev-list", "--count",
+        &format!("{epic_branch}..{default_branch}"),
+    ])?.trim().parse().unwrap_or(0);
+
+    if behind == 0 {
+        return Ok(EpicFreshness { behind: 0, conflicts: false });
+    }
+
+    // git merge-tree --write-tree requires git >= 2.38 (Oct 2022).
+    // Exit 0 = clean merge; exit 1 = conflicts.
+    // If stderr contains "unknown option" the installed git is too old — fall back to conflicts = false.
+    let out = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["merge-tree", "--write-tree", epic_branch, default_branch])
+        .output()?;
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let conflicts = !out.status.success() && !stderr.contains("unknown option");
+
+    Ok(EpicFreshness { behind, conflicts })
+}
+```
+
+Add a private helper `fn freshness_label(f: &EpicFreshness) -> String` used by all CLI call sites:
+- `behind == 0` → `"up to date"`
+- `behind > 0 && !conflicts` → `format!("↓{} clean", f.behind)`
+- `behind > 0 && conflicts` → `format!("↓{} CONFLICTS", f.behind)`
+
+Unit tests (in `apm-core/src/epic.rs`, following the temp-git-repo pattern already in the file):
+- Epic branch at same commit as default → `behind == 0`, `conflicts == false`.
+- Default has N commits ahead of the epic, no conflicting changes → `behind == N`, `conflicts == false`.
+
+#### CLI: `apm epic list` and `apm epic show` (`apm/src/cmd/epic.rs`)
+
+`run_list`: load `default_branch` from `ctx.config.project.default_branch`. After computing `counts_str`, call `epic_freshness(root, branch, &default_branch)`, unwrap with `unwrap_or(EpicFreshness { behind: 0, conflicts: false })`. Append the label as a trailing column:
+
+```rust
+println!("{id:<8} [{derived:<12}] {title:<40} {counts_str:<30} {}", freshness_label(&f));
+```
+
+`run_show`: after `println!("State:  {derived}");`, add:
+
+```rust
+let f = epic_freshness(root, &branch, &ctx.config.project.default_branch)
+    .unwrap_or(EpicFreshness { behind: 0, conflicts: false });
+println!("Freshness: {}", freshness_label(&f));
+```
+
+#### CLI: `apm list` (`apm/src/cmd/list.rs`)
+
+After the existing stale-tickets footer block, collect distinct `target_branch` values from `filtered` tickets that have one set. Deduplicate into a `BTreeMap<epic_id, branch>`. For each, call `epic_freshness(root, branch, &default_branch)`. Filter to those with `behind > 0`. If any remain, print:
+
+```
+(blank line)
+  epics:
+    {id:<8}  ↓N clean
+    {id:<8}  ↓N CONFLICTS
+```
+
+Only computes once per distinct epic branch regardless of how many tickets share it.
+
+#### CLI: `apm next` (`apm/src/cmd/next.rs`)
+
+In the `Some(t)` non-JSON branch: if `fm.epic.is_some()`, call `apm_core::epic::find_epic_branch(root, epic_id)`. If found, call `epic_freshness` and print `"  (epic {id}: {label})"` on the next line.
+
+#### Server: models and handlers (`apm-server/`)
+
+`models.rs` — add two fields to `EpicSummary`:
+
+```rust
+pub behind_count: u32,
+pub conflicts: bool,
+```
+
+`handlers/epics.rs` — `build_epic_summary` gains `root: &Path` and `default_branch: &str` parameters. Call `apm_core::epic::epic_freshness(root, branch, default_branch)` and populate the new fields; default to `(0, false)` on error. Update the two callers (`list_epics`, `get_epic`) to pass `root` and `config.project.default_branch`. In `create_epic`, set `behind_count: 0, conflicts: false` on the returned summary (newly-created epics branch from main and are always current).
+
+Extend `create_epic_round_trip` test to assert `behind_count == 0` and `conflicts == false`.
+
+#### Frontend (`apm-ui/src/components/supervisor/SupervisorView.tsx`)
+
+Extend the inline `Epic` interface:
+
+```ts
+interface Epic { id: string; title: string; branch: string; behind_count: number; conflicts: boolean }
+```
+
+After the filter bar closing `</div>` (currently line ~253), add a stale-epic chip bar. Compute `staleEpics` by filtering `epics` to those where `behind_count > 0` AND the epic ID appears in the loaded `tickets` (to avoid showing epics with no open tickets). If `staleEpics` is empty, render nothing.
+
+Each chip is a `<span>` with `onClick={() => setEpicFilter(ep.id)}`:
+- Amber chip class for `!conflicts`: `bg-amber-800/50 text-amber-200 border border-amber-600`
+- Red chip class for `conflicts`: `bg-red-900/50 text-red-200 border border-red-600`
+- Text: `"{ep.id.slice(0,8)} ↓{ep.behind_count}"` plus `" conflicts"` when `ep.conflicts`
+
+No changes to `Swimlane.tsx` or `TicketCard.tsx`.
 
 ### Open questions
 
