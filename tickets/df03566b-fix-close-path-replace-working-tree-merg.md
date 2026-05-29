@@ -152,6 +152,15 @@ Add to `apm/tests/integration.rs` (or a new `apm/tests/close_path.rs` if the fil
 
 ### Amendment requests
 
+- [ ] Three small but real concerns from the spec review:
+
+1) PRE-STAGED CHANGES LEAK INTO THE CLOSE COMMIT. commit_to_branch path 2 (current_branch == target) does git add rel_path then git commit -m MSG with no path argument. git commit without -a still commits everything that is currently staged in the index — so if the user has unrelated pre-staged changes when the close runs, those changes silently get folded into the close commit on target. Fix: constrain the commit to the ticket file only by passing the path to commit (e.g. git commit -m MSG -- rel_path), or use git's pathspec equivalent in the run() helper. Apply the same constraint in commit_to_branch's path 1 (permanent worktree) and path 3 (try_worktree_commit) for consistency. Add a unit test that pre-stages an unrelated file, calls commit_to_branch, and asserts the resulting commit contains only the ticket file.
+
+2) TARGET_BRANCH TEST FIXTURE USES THE WRONG FORM. The Approach in the Tests section writes target_branch = refs/heads/epic/abc. That is not the on-disk convention — apm/src/cmd/new.rs uses find_epic_branch which returns bare names like epic/abc1234-slug (no refs/heads/ prefix), and state.rs's merge_into_default callers all pass bare names. Fix the spec to use epic/abc1234-slug (or similar bare form) so the tests reflect real frontmatter. Same correction in any other place the spec mentions target_branch.
+
+3) DOCUMENT A BEHAVIOR CHANGE FOR apm close ON NEVER-MERGED TICKETS. Today apm close on a ticket whose work was never merged invokes merge_branch_into_default and tries to merge the ticket branch into main. Sometimes this succeeds and ships the work as a side effect. After this fix there is no merge — only the closed state-row is written to target via commit_to_branch. The work stays on the ticket branch and is abandoned at branch cleanup. The NON-GOAL paragraph hints at this (close is just close, not implement) but the explicit behavioral change is not stated. Add one sentence in the Problem section: apm close no longer ships unmerged work; that responsibility belongs to the implementation transition (state implemented), which has the correct merge completion strategy. Out of scope unchanged.
+
+OPTIONAL also-worth-doing (not blocking): add an AC and test for the failure case where the target-branch commit returns Err — drift persists, Case 2 may re-fire, that is the documented degraded behavior.
 
 ### Code review
 
