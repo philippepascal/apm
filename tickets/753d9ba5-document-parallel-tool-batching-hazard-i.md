@@ -39,7 +39,29 @@ These are distinct failure modes. A worker can be fully compliant with every exi
 
 ### Approach
 
-How the implementation will work.
+Edit `SHELL_DISCIPLINE_BODY` in `apm-core/src/instructions.rs`.
+
+Append a new block after the existing "Off-limits" block (the final block in the string). The wording below is the target; the implementer may adjust phrasing but must preserve the three elements: named hazard, failure mode, concrete rule + example.
+
+```
+Do not batch tool calls in parallel in a headless worker:
+
+  Claude Code runs all tool_use blocks emitted in a single turn concurrently.
+  In --print (headless) mode, if any one call requires approval, the entire
+  batch is cancelled — including calls that were individually allowed.
+
+  apm and bootstrap commands must be their own single tool call:
+
+    # Wrong — if apm instructions requires approval, Read is also cancelled
+    [Bash("apm instructions"), Read("some/file")]  <- emitted together
+
+    # Right — sequential, one at a time
+    Bash("apm instructions")
+    ... wait for result ...
+    Read("some/file")
+```
+
+No changes to agent template files. `apm.coder.md` already states that shell discipline is covered by `apm instructions`, so the new text propagates to all workers automatically.
 
 ### Open questions
 
