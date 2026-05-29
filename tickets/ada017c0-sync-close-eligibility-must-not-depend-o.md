@@ -38,7 +38,7 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 
 ### Acceptance criteria
 
-- [ ] `cargo test --workspace` passes after the fix; the `full_ticket_lifecycle` e2e test passes without any modification to the test itself
+- [x] `cargo test --workspace` passes after the fix; the `full_ticket_lifecycle` e2e test passes without any modification to the test itself
 - [ ] `apm sync` on a workflow where `in_progress → implemented` uses `completion = "none"` reports "branch merged" for an `implemented`-state ticket whose branch was `--no-ff` merged into main (the regression witness; covered by the e2e test, whose ticket has `in_progress` in its history)
 - [ ] `apm sync` produces no close candidate for a `new`-state ticket whose branch fork reaches main via an epic `--no-ff` merge (side-note guard preserved)
 - [ ] `apm sync` produces no close candidate for a `ready`-state ticket that never entered implementation, even when its branch is merged into main
