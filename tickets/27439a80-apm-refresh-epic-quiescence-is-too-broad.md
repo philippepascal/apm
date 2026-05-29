@@ -1,7 +1,7 @@
 +++
 id = "27439a80"
 title = "apm refresh-epic quiescence is too broad: it blocks on tickets with no real work yet"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/27439a80-apm-refresh-epic-quiescence-is-too-broad"
 created_at = "2026-05-29T22:07:24.444794Z"
-updated_at = "2026-05-29T22:08:12.815894Z"
+updated_at = "2026-05-29T22:08:17.390469Z"
 +++
 
 ## Spec
@@ -57,3 +57,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T22:07Z | — | new | philippepascal |
 | 2026-05-29T22:08Z | new | groomed | philippepascal |
+| 2026-05-29T22:08Z | groomed | in_design | philippepascal |
