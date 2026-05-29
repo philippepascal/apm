@@ -57,7 +57,55 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 
 ### Approach
 
-How the implementation will work.
+The fix has three parts: a new Config helper, a sync.rs swap, and updates to three integration tests.
+
+#### 1. `apm-core/src/config.rs` — replace `merge_completed_state_ids()` with `pre_implementation_state_ids()`
+
+Add `pub fn pre_implementation_state_ids(&self) -> std::collections::HashSet<String>` to `impl Config`, directly after `terminal_state_ids()`. Remove `merge_completed_state_ids()` entirely.
+
+Algorithm (tried in order):
+
+**Method 1 — coder `command:start` entry:** Walk `self.workflow.states` in config order. For each state, find the first transition where `trigger == "command:start"` and `worker_profile` does NOT end with `"/spec-writer"` (treat `None` as non-spec-writer). Look up the `to` state's index in `self.workflow.states`. Pre-implementation = all states at indices strictly less than that index.
+
+**Method 2 — first non-None completion source (fallback):** Walk states in config order. Find the first state that has any transition with `completion != CompletionStrategy::None`. That state's config index is the dividing line. Pre-implementation = all states at indices strictly less than that index.
+
+**Method 3 — no signal:** Return `HashSet::new()` (all non-terminal states are eligible).
+
+The returned set contains only state IDs (strings), never the implementation-entry state itself.
+
+Update the unit test block: remove `merge_completed_state_ids_returns_correct_set`. Add:
+- `pre_implementation_state_ids_default_workflow`: build a config with the default workflow shape (groomed/ammend → in_design via spec-writer command:start; ready → in_progress via coder command:start); assert the result is `{new, groomed, question, specd, ammend, in_design, ready}`.
+- `pre_implementation_state_ids_shipped_workflow`: build the custom shipped workflow (no command:start; in_progress → shipped with `completion = "merge"`); assert the result is `{"ready"}`.
+- `pre_implementation_state_ids_no_signal`: build a workflow with only `manual` transitions and `completion = "none"`; assert the result is empty.
+
+#### 2. `apm-core/src/sync.rs` — swap `merge_completed` for `pre_impl`
+
+Change line 28:
+```
+let merge_completed = config.merge_completed_state_ids();
+```
+to:
+```
+let pre_impl = config.pre_implementation_state_ids();
+```
+
+At each of the five eligibility gates, replace `merge_completed.contains(state)` with `!pre_impl.contains(state)` (and flip negations consistently):
+
+- Case 1 (line 60): `|| !merge_completed.contains(state)` → `|| pre_impl.contains(state)`
+- Case 3 (line 87): `&& merge_completed.contains(state)` → `&& !pre_impl.contains(state)`
+- Case 2 (line 106): `merge_completed.contains(state) &&` → `!pre_impl.contains(state) &&`
+- Case 4 (line 128): `!merge_completed.contains(state) ||` → `pre_impl.contains(state) ||`
+- Hints (line 153): `merge_completed.contains(state) &&` → `!pre_impl.contains(state) &&`
+
+#### 3. `apm/tests/integration.rs` — adapt the three tests that call `merge_completed_state_ids()`
+
+`sync_detect_skips_non_merge_completed_ticket_on_merged_branch` (line 7673): replace the pre-condition assertion — `!config.merge_completed_state_ids().contains("ready")` → `config.pre_implementation_state_ids().contains("ready")`. No other changes; the ticket A/B assertions still hold.
+
+`sync_detect_uses_config_derived_merge_completed_state` (line 7733): replace the `assert_eq!(config.merge_completed_state_ids(), ...)` block with `assert_eq!(config.pre_implementation_state_ids(), ["ready".to_string()].into_iter().collect::<std::collections::HashSet<_>>(), ...)`. The ticket A/B candidate assertions remain unchanged — both still hold under the new model because Method 2 identifies `ready` as pre-implementation and `shipped` as eligible.
+
+`sync_detect_no_candidate_for_terminal_merge_completed_ticket` (line 7816): replace `assert!(config.merge_completed_state_ids().contains("done"), ...)` with `assert!(config.terminal_state_ids().contains("done"), ...)`. The candidate assertion remains: `done` is terminal, so it is excluded by the existing terminal guard regardless of the new pre-impl logic.
+
+No changes to the fourth test `sync_detect_skips_pre_impl_ticket_with_fork_in_main` or `sync_detect_implemented_ticket_still_closed_after_pre_impl_filter` — they exercise the correct behaviour and pass with the new logic without modification.
 
 ### Open questions
 
