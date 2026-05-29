@@ -47,7 +47,12 @@ OUT OF SCOPE: auto-merging main into the epic; blocking or gating dispatch on st
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Auto-merging or refreshing the epic from main — that is `apm refresh-epic` (separate ticket)
+- Blocking `apm start`, ticket dispatch, or any state transition on freshness status
+- An "accept divergence" or "suppress this indicator" mechanism
+- Any new TOML field in `apm.toml` or ticket frontmatter
+- Persisting or caching freshness across invocations
+- Freshness for ticket branches relative to their epic — only epic branches relative to `config.project.default_branch`
 
 ### Approach
 
