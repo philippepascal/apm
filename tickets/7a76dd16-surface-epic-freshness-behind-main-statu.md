@@ -1,7 +1,7 @@
 +++
 id = "7a76dd16"
 title = "Surface epic freshness (behind-main status) in apm commands and UI"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7a76dd16-surface-epic-freshness-behind-main-statu"
 created_at = "2026-05-29T01:17:24.701677Z"
-updated_at = "2026-05-29T02:11:49.553365Z"
+updated_at = "2026-05-29T02:27:14.833971Z"
 depends_on = ["12f2c7fa"]
 +++
 
@@ -158,3 +158,4 @@ No changes to `Swimlane.tsx` or `TicketCard.tsx`.
 | 2026-05-29T01:44Z | in_design | specd | claude |
 | 2026-05-29T01:47Z | specd | ready | philippepascal |
 | 2026-05-29T02:11Z | ready | in_progress | philippepascal |
+| 2026-05-29T02:27Z | in_progress | implemented | claude |
