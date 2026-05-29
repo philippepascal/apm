@@ -1,7 +1,7 @@
 +++
 id = "df03566b"
 title = "Fix close path: replace working-tree merge into default with commit_to_branch on target_branch"
-state = "in_design"
+state = "specd"
 priority = 7
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/df03566b-fix-close-path-replace-working-tree-merg"
 created_at = "2026-05-29T23:19:06.681786Z"
-updated_at = "2026-05-29T23:44:34.692978Z"
+updated_at = "2026-05-29T23:48:39.807757Z"
 +++
 
 ## Spec
@@ -210,3 +210,4 @@ OPTIONAL also-worth-doing (not blocking): add an AC and test for the failure cas
 | 2026-05-29T23:36Z | in_design | specd | claude |
 | 2026-05-29T23:43Z | specd | ammend | philippepascal |
 | 2026-05-29T23:44Z | ammend | in_design | philippepascal |
+| 2026-05-29T23:48Z | in_design | specd | claude |
