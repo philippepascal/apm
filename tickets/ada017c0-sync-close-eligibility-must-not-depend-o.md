@@ -38,7 +38,14 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo test --workspace` passes after the fix; the `full_ticket_lifecycle` e2e test passes without modification to the test itself
+- [ ] `apm sync` on a workflow where `in_progress → implemented` uses `completion = "none"` reports "branch merged" for an `implemented`-state ticket whose branch was `--no-ff` merged into main
+- [ ] `apm sync` produces no close candidate for a `new`-state ticket whose branch fork reaches main via an epic `--no-ff` merge (the pre-implementation false-positive guard still applies)
+- [ ] `apm sync` produces no close candidate for a `ready`-state ticket (default workflow) whose branch is merged directly into main
+- [ ] `apm sync` produces no close candidate and emits no hint for a terminal-state ticket even when its branch is merged
+- [ ] `Config::pre_implementation_state_ids()` returns all states preceding the coder entry state in config order; for the default workflow this is `{new, groomed, question, specd, ammend, in_design, ready}`
+- [ ] `Config::pre_implementation_state_ids()` falls back to the first non-None completion source when no coder `command:start` exists; for the custom `shipped` workflow (`in_progress → shipped` with `completion = "merge"`) it returns `{"ready"}`
+- [ ] `Config::merge_completed_state_ids()` is removed from `config.rs`; `sync.rs` retains no hardcoded state-ID string literals for close-eligibility
 
 ### Out of scope
 
