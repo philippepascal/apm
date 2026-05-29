@@ -31,7 +31,11 @@ These are distinct failure modes. A worker can be fully compliant with every exi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing Claude Code's parallel batch-cancellation behavior — that is not APM's to change
+- Adding allow-list entries for any `apm` commands (covered by ticket e54a7adf)
+- Fixing `denial.rs` mislabeling of cancellations as denials (covered by ticket e54a7adf)
+- Any runtime enforcement — this is documentation only
+- Changes to agent template `.md` files; `apm.coder.md` already defers all shell discipline to `apm instructions`
 
 ### Approach
 
