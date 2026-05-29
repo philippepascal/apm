@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7a76dd16-surface-epic-freshness-behind-main-statu"
 created_at = "2026-05-29T01:17:24.701677Z"
-updated_at = "2026-05-29T01:26:17.451337Z"
+updated_at = "2026-05-29T01:41:18.432825Z"
+depends_on = ["12f2c7fa"]
 +++
 
 ## Spec
