@@ -34,15 +34,15 @@ TESTS: existing epic_is_quiescent_* unit tests in epic.rs must still pass (state
 
 ### Acceptance criteria
 
-- [ ] `apm refresh-epic --auto` on an epic whose tickets are all in pre-implementation states (`new`, `groomed`, `specd`, `ready`) with no implementation history reports zero blockers
-- [ ] A ticket currently in an implementation state (e.g. `in_progress`) blocks quiescence
-- [ ] A ticket currently in a post-implementation state (e.g. `implemented`) blocks quiescence
-- [ ] A ticket in `ammend` whose History table shows a prior transition into an implementation state (e.g. `in_progress`) blocks quiescence
-- [ ] A closed (terminal) ticket whose History shows entry into an implementation state (e.g. `in_progress`) does NOT block quiescence
-- [ ] A ticket in `ready` with no implementation history does not block quiescence
-- [ ] The live-worker check still independently blocks a ticket whose worktree has a live `.apm-worker.pid`, regardless of state
-- [ ] `epic_is_quiescent` results are invariant to the ordering of `[[workflow.states]]` in `apm.toml`
-- [ ] All existing `cargo test --workspace` tests pass
+- [x] `apm refresh-epic --auto` on an epic whose tickets are all in pre-implementation states (`new`, `groomed`, `specd`, `ready`) with no implementation history reports zero blockers
+- [x] A ticket currently in an implementation state (e.g. `in_progress`) blocks quiescence
+- [x] A ticket currently in a post-implementation state (e.g. `implemented`) blocks quiescence
+- [x] A ticket in `ammend` whose History table shows a prior transition into an implementation state (e.g. `in_progress`) blocks quiescence
+- [x] A closed (terminal) ticket whose History shows entry into an implementation state (e.g. `in_progress`) does NOT block quiescence
+- [x] A ticket in `ready` with no implementation history does not block quiescence
+- [x] The live-worker check still independently blocks a ticket whose worktree has a live `.apm-worker.pid`, regardless of state
+- [x] `epic_is_quiescent` results are invariant to the ordering of `[[workflow.states]]` in `apm.toml`
+- [x] All existing `cargo test --workspace` tests pass
 
 ### Out of scope
 
