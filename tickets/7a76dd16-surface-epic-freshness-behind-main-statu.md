@@ -168,6 +168,7 @@ No changes to `Swimlane.tsx` or `TicketCard.tsx`.
 
 ### Amendment requests
 
+- [ ] Consume the shared merge-status helper from ticket 12f2c7fa (now a depends_on) instead of defining a new one. CHANGES: (1) DELETE this ticket's own EpicFreshness struct and epic_freshness() function from the Approach — do NOT add a second git merge-tree / merge-base helper to apm-core/src/epic.rs. (2) 12f2c7fa adds the canonical helper: pub fn merge_tree_status(root, default_branch, epic_branch) -> Result<MergeStatus> where MergeStatus { ahead: usize, clean: bool }. Use it everywhere this spec previously called epic_freshness. (3) Map fields for display: behind = MergeStatus.ahead (commits default_branch is ahead of the epic), conflicts = !MergeStatus.clean. (4) KEEP all display/surfacing work unchanged in intent: the freshness_label() formatter ('up to date' / '↓N clean' / '↓N CONFLICTS'), apm epic list/show, the apm list epics footer, the apm next epic note, the server /api/epics + /api/epics/:id fields (keep field names behind_count and conflicts, computed as ahead and !clean), and the SupervisorView chip bar. (5) The behind==0 short-circuit is already handled inside merge_tree_status (ahead==0 => clean, no merge-tree run), so callers need no separate guard. (6) Because of depends_on 12f2c7fa, merge_tree_status will already exist when this ticket is implemented — rely on it; do not reimplement. Update the Approach 'Core primitive' section and all ACs that reference EpicFreshness/epic_freshness accordingly.
 
 ### Code review
 
