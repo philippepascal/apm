@@ -1,7 +1,7 @@
 +++
 id = "753d9ba5"
 title = "Document parallel tool-batching hazard in worker shell discipline"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/753d9ba5-document-parallel-tool-batching-hazard-i"
 created_at = "2026-05-29T18:47:28.479025Z"
-updated_at = "2026-05-29T18:49:34.634070Z"
+updated_at = "2026-05-29T19:04:42.387460Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T18:47Z | — | new | philippepascal |
 | 2026-05-29T18:49Z | new | groomed | philippepascal |
+| 2026-05-29T19:04Z | groomed | in_design | philippepascal |
