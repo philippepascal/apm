@@ -25,7 +25,7 @@ The command needs explicit mode flags. The default (no flags) should be read-onl
 - [x] `apm refresh-epic <id>` (no flags) prints the number of commits `main` is ahead of the epic branch and whether a merge would be clean or would conflict; it does not modify any branch, worktree, or PR.
 - [x] `apm refresh-epic <id>` (no flags) succeeds regardless of the epic's quiescence state.
 - [x] `apm refresh-epic <id>` (no flags) prints "epic branch is up to date with <default_branch>" and exits 0 when `main` has no commits ahead of the epic branch.
-- [ ] `apm refresh-epic <id> --merge` performs a local merge of `main` into the epic branch; on conflict it aborts the merge and exits with a clear error.
+- [x] `apm refresh-epic <id> --merge` performs a local merge of `main` into the epic branch; on conflict it aborts the merge and exits with a clear error.
 - [ ] `apm refresh-epic <id> --merge`, `--pr`, and `--auto` each fail with a clear error when the epic is not quiescent.
 - [ ] `apm refresh-epic <id> --pr` opens or updates a PR from `main` into the epic branch (unchanged from current behavior).
 - [ ] `apm refresh-epic <id> --auto` merges locally when the merge is clean and falls back to creating or updating a PR when there are conflicts.
