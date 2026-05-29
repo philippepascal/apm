@@ -4,12 +4,12 @@ title = "Document parallel tool-batching hazard in worker shell discipline"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/753d9ba5-document-parallel-tool-batching-hazard-i"
 created_at = "2026-05-29T18:47:28.479025Z"
-updated_at = "2026-05-29T19:06:24.762923Z"
+updated_at = "2026-05-29T19:06:27.028365Z"
 +++
 
 ## Spec
