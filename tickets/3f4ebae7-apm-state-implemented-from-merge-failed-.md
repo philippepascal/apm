@@ -1,7 +1,7 @@
 +++
 id = "3f4ebae7"
 title = "apm state implemented from merge_failed should detect already-merged work and skip re-merging"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3f4ebae7-apm-state-implemented-from-merge-failed-"
 created_at = "2026-05-29T23:03:15.303584Z"
-updated_at = "2026-05-29T23:28:29.715251Z"
+updated_at = "2026-05-29T23:28:39.910630Z"
 +++
 
 ## Spec
@@ -69,3 +69,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T23:03Z | — | new | philippepascal |
 | 2026-05-29T23:28Z | new | groomed | philippepascal |
+| 2026-05-29T23:28Z | groomed | in_design | philippepascal |
