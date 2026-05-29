@@ -1,7 +1,7 @@
 +++
 id = "ada017c0"
 title = "sync close-eligibility must not depend on completion strategy (fix 7dab64ea regression)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ada017c0-sync-close-eligibility-must-not-depend-o"
 created_at = "2026-05-29T02:52:06.091678Z"
-updated_at = "2026-05-29T02:53:36.484566Z"
+updated_at = "2026-05-29T02:55:30.619568Z"
 +++
 
 ## Spec
@@ -63,3 +63,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T02:52Z | — | new | philippepascal |
 | 2026-05-29T02:53Z | new | groomed | philippepascal |
+| 2026-05-29T02:55Z | groomed | in_design | philippepascal |
