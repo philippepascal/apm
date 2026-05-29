@@ -88,7 +88,39 @@ After this fix, `apm close` no longer ships unmerged work as a side effect; that
 
 ### Approach
 
-Two call sites change. No new functions, no new modules, no signature changes.
+Three call sites change. No new functions, no new modules, no signature changes.
+
+#### Change 0 — git_util.rs::commit_to_branch
+
+File: `apm-core/src/git_util.rs`, function `commit_to_branch` (~lines 353–411) and helper `try_worktree_commit` (~lines 414–460).
+
+All three paths that call `git commit` must be constrained to `rel_path` to prevent pre-staged unrelated changes from being folded into the close commit.
+
+**Path 1** — permanent worktree (~line 386):
+```rust
+// Before
+run(&wt_path, &["commit", "-m", message])
+// After
+run(&wt_path, &["commit", "-m", message, "--", rel_path])
+```
+
+**Path 2** — current branch equals target (~line 401):
+```rust
+// Before
+run(root, &["commit", "-m", message])
+// After
+run(root, &["commit", "-m", message, "--", rel_path])
+```
+
+**Path 3** — `try_worktree_commit` temp worktree (~line 452):
+```rust
+// Before
+run(&wt_path, &["commit", "-m", message])
+// After
+run(&wt_path, &["commit", "-m", message, "--", rel_path])
+```
+
+Path 3's temp worktree is always fresh so pre-staged drift cannot occur there, but the fix is applied uniformly for consistency.
 
 #### Change 1 — ticket_util.rs::close
 
@@ -138,9 +170,11 @@ if target_is_terminal {
 
 Add to `apm/tests/integration.rs` (or a new `apm/tests/close_path.rs` if the file is already large):
 
+- **`commit_to_branch_excludes_pre_staged_files`**: Create a temp git repo. Stage an unrelated file (`git add other.txt`). Call `git::commit_to_branch` targeting the current branch with the ticket-file path. Assert `git show --name-only HEAD` lists only the ticket file, not `other.txt`. Assert `other.txt` remains staged (uncommitted).
+
 - **`close_main_scoped_writes_to_target`**: Bootstrap a temp git repo. Create a ticket; write an "implemented" ticket file to both the ticket branch and main (simulating a prior merge). Call `ticket::close`. Assert the ticket file read from main shows `state = "closed"`. Assert the ticket file read from the ticket branch shows `state = "closed"`. Assert no changes exist in the main working tree (no `git status` output).
 
-- **`close_epic_scoped_writes_to_epic_not_main`**: Set `target_branch = "refs/heads/epic/abc"` in the ticket frontmatter. Write the ticket file to the epic branch. Call `ticket::close`. Assert the epic branch ticket file shows `state = "closed"`. Assert main does not contain the ticket file or shows an older state.
+- **`close_epic_scoped_writes_to_epic_not_main`**: Set `target_branch = "epic/abc1234-slug"` in the ticket frontmatter. Write the ticket file to the `epic/abc1234-slug` branch. Call `ticket::close`. Assert the `epic/abc1234-slug` branch ticket file shows `state = "closed"`. Assert main does not contain the ticket file or shows an older state.
 
 - **`state_transition_closed_writes_to_target`**: Call `state::transition` with `new_state = "closed"`. Assert the ticket branch shows `state = "closed"`. Assert `config.project.default_branch` (or `target_branch` if set) shows `state = "closed"`.
 
