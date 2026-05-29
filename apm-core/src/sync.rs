@@ -25,6 +25,7 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
     let mut merged_set: HashSet<String> = merged.into_iter().collect();
 
     let terminal = config.terminal_state_ids();
+    const PRE_IMPL: &[&str] = &["new", "groomed", "specd", "question"];
 
     let branch_set: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
 
@@ -56,6 +57,7 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
             Err(_) => continue,
         };
         if terminal.contains(t.frontmatter.state.as_str()) { continue; }
+        if PRE_IMPL.contains(&t.frontmatter.state.as_str()) { continue; }
         close.push(CloseCandidate { ticket: t, reason: "branch merged" });
     }
 
@@ -81,7 +83,8 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
                 }
             };
             merged_set.insert(branch.clone());
-            if !terminal.contains(t.frontmatter.state.as_str()) {
+            let state = t.frontmatter.state.as_str();
+            if !terminal.contains(state) && !PRE_IMPL.contains(&state) {
                 close.push(CloseCandidate { ticket: t, reason: "branch content merged" });
             }
         }

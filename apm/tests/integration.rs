@@ -7594,3 +7594,70 @@ fn sync_detect_case4_squash_merge_into_target_branch() {
         "hints should be empty for auto-closed ticket; got: {:?}", candidates.hints
     );
 }
+
+#[test]
+fn sync_detect_skips_pre_impl_ticket_with_fork_in_main() {
+    // Reproduces the bug: a side-note ticket (state = "new") whose branch forks
+    // from an epic that was --no-ff merged into main must NOT appear in close
+    // candidates, even though content_merged_into_main returns a false positive.
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Checkout epic/test from main; add an allow-empty commit E1; return to main.
+    git(p, &["checkout", "-b", "epic/test"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "epic/test init"]);
+    git(p, &["checkout", "main"]);
+
+    // Branch ticket/aa11bb22-side-note from epic/test (at E1).
+    let branch = "ticket/aa11bb22-side-note";
+    let rel_path = "tickets/aa11bb22-side-note.md";
+    git(p, &["checkout", "epic/test"]);
+    git(p, &["checkout", "-b", branch]);
+    let content = "+++\nid = \"aa11bb22\"\ntitle = \"side note\"\nstate = \"new\"\nbranch = \"ticket/aa11bb22-side-note\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    std::fs::write(p.join(rel_path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add side-note ticket"]);
+    git(p, &["checkout", "main"]);
+
+    // Merge epic/test (not the ticket branch) into main with --no-ff.
+    // This makes E1 reachable from main via main's non-first parent only,
+    // which triggers the content_merged_into_main false positive.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", "epic/test", "--no-edit"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        !close_branches.contains(&branch),
+        "pre-impl ticket should NOT appear in close candidates; got: {close_branches:?}"
+    );
+    assert!(
+        candidates.hints.is_empty(),
+        "hints should be empty for pre-impl ticket; got: {:?}", candidates.hints
+    );
+}
+
+#[test]
+fn sync_detect_implemented_ticket_still_closed_after_pre_impl_filter() {
+    // Regression: an implemented ticket whose branch is --no-ff merged into main
+    // must still appear in close candidates (Case 1) after the PRE_IMPL filter.
+    let dir = init_repo();
+    let p = dir.path();
+
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "regression-test");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        close_branches.contains(&branch.as_str()),
+        "implemented ticket should still appear in close candidates; got: {close_branches:?}"
+    );
+}
