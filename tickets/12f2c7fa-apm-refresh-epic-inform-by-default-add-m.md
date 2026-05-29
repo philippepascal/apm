@@ -1,7 +1,7 @@
 +++
 id = "12f2c7fa"
 title = "apm refresh-epic: inform by default, add --merge / --pr / --auto modes"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/12f2c7fa-apm-refresh-epic-inform-by-default-add-m"
 created_at = "2026-05-29T01:17:38.982422Z"
-updated_at = "2026-05-29T01:18:42.648015Z"
+updated_at = "2026-05-29T01:26:27.618639Z"
 +++
 
 ## Spec
@@ -59,3 +59,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T01:17Z | — | new | philippepascal |
 | 2026-05-29T01:18Z | new | groomed | philippepascal |
+| 2026-05-29T01:26Z | groomed | in_design | philippepascal |
