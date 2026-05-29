@@ -35,7 +35,10 @@ Two bugs exposed by a worker that died in progress. The root cause from the real
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Telling workers to skip `apm instructions` (its output is already baked into the system prompt by `build_system_prompt`; removing it from worker startup is a separate concern)
+- Changing `collect_unique_apm_commands` to also surface `RequiresApproval` entries
+- apm-server and apm-ui changes
+- Any changes to how `DenialSummary` is displayed or consumed beyond accurate classification
 
 ### Approach
 
