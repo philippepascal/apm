@@ -24,7 +24,14 @@ Two bugs exposed by a worker that died in progress. The root cause from the real
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] After `apm init --yes`, `.claude/settings.json` `permissions.allow` contains `"Bash(apm instructions*)"`
+- [ ] After `apm init --yes`, `~/.claude/settings.json` `permissions.allow` contains `"Bash(apm instructions*)"`
+- [ ] The integration test `init_yes_creates_settings_when_claude_dir_exists` asserts `"Bash(apm instructions*)"` is present in project settings
+- [ ] The integration test `init_yes_updates_user_settings` asserts `"Bash(apm instructions*)"` is present in user settings
+- [ ] `scan_transcript` returns `denial_count = 0` for a transcript whose only `is_error` results have content starting with `"Cancelled: parallel tool call"`
+- [ ] `scan_transcript` classifies a result with content `"This command requires approval"` as `DenialClass::RequiresApproval`, not as `ApmCommandDenial` or `UnknownPattern`
+- [ ] `scan_transcript` still classifies `"cannot be auto-allowed"` on a Bash `apm` command as `DenialClass::ApmCommandDenial`
+- [ ] `DenialClass::RequiresApproval` serialises as `"requires_approval"` in `summary.json`
 
 ### Out of scope
 
