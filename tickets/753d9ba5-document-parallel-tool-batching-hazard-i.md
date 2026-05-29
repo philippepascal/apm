@@ -1,7 +1,7 @@
 +++
 id = "753d9ba5"
 title = "Document parallel tool-batching hazard in worker shell discipline"
-state = "in_design"
+state = "specd"
 priority = 5
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/753d9ba5-document-parallel-tool-batching-hazard-i"
 created_at = "2026-05-29T18:47:28.479025Z"
-updated_at = "2026-05-29T19:06:30.897026Z"
+updated_at = "2026-05-29T19:06:38.280813Z"
 +++
 
 ## Spec
@@ -79,3 +79,4 @@ No changes to agent template files. `apm.coder.md` already states that shell dis
 | 2026-05-29T18:47Z | — | new | philippepascal |
 | 2026-05-29T18:49Z | new | groomed | philippepascal |
 | 2026-05-29T19:04Z | groomed | in_design | philippepascal |
+| 2026-05-29T19:06Z | in_design | specd | claude |
