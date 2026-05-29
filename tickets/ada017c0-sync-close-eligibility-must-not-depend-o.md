@@ -1,7 +1,7 @@
 +++
 id = "ada017c0"
 title = "sync close-eligibility must not depend on completion strategy (fix 7dab64ea regression)"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ada017c0-sync-close-eligibility-must-not-depend-o"
 created_at = "2026-05-29T02:52:06.091678Z"
-updated_at = "2026-05-29T03:30:08.449615Z"
+updated_at = "2026-05-29T03:40:55.474560Z"
 +++
 
 ## Spec
@@ -175,3 +175,4 @@ No string-literal state IDs remain in sync.rs.
 | 2026-05-29T03:19Z | in_design | specd | claude |
 | 2026-05-29T03:30Z | specd | ready | philippepascal |
 | 2026-05-29T03:30Z | ready | in_progress | philippepascal |
+| 2026-05-29T03:40Z | in_progress | implemented | claude |
