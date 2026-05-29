@@ -136,6 +136,13 @@ Existing tests in `setup_merge()` and `setup_on_failure_fix_project()` are unaff
 
 ### Amendment requests
 
+- [ ] Three concerns from the spec review, in priority order:
+
+1) REFRAME THE PROBLEM AND ROOT CAUSE. The spec presents plan B (detect-skip via is_branch_merged_into) as load-bearing for the supervisor-fixed-externally flow. Trace the actual code timing: state.rs::transition appends a new ticket-branch commit at line 166 BEFORE the match completion block runs. That new state-change commit (merge_failed -> implemented in the frontmatter) is fresh and is NEVER in target by the time the completion arm runs. is_branch_merged_into therefore returns false. The detect-skip does NOT fire in the documented case. What actually fixes the documented case is plan A alone: adding completion = pr_or_epic_merge to merge_failed -> implemented in the default workflow makes the transition attempt a merge, and because target already contains all the work commits, the new state-row commit lands as a trivial fast-forward (or near-trivial non-ff). Update the Problem section, Root Cause section, and Fix section to state this clearly: plan A is the fix; plan B is defensive belt-and-suspenders for genuinely degenerate cases (cherry-pick equivalence, manual edits) and not the primary mechanism.
+
+2) HANDLE THE DETECT-SKIP DRIFT GAP, OR DROP PLAN B. If plan B is kept, the case where it fires currently leaves the new state-row commit on the ticket branch and NEVER propagates it to target — target's view stays whatever it was last (possibly merge_failed). That is the same drift class that df03566b fixes for close. Two acceptable resolutions: (a) DROP PLAN B entirely; plan A handles the documented case correctly via the trivial merge. (b) KEEP PLAN B but add a commit_to_branch(root, target, rel_path, content, MSG) inside the skip branch so the new state-row reaches target via plumbing — same approach df03566b takes for the close path. Pick one; the spec author can decide which. Do not ship plan B without resolving the drift gap.
+
+3) NOTE THE GATING ON EXISTING PROJECT WORKFLOWS. The fix only updates apm-core/src/default/workflow.toml. Existing projects (e.g. syn) ship their own workflow.toml which today lacks completion on merge_failed -> implemented. Without a manual edit those projects get NO behavior change from this ticket — state.rs's completion match falls into the None arm. The Out of scope section acknowledges no auto-migration; the Problem section should ALSO state plainly that this fix is gated on each project adding completion = pr_or_epic_merge to their workflow.toml. apm validate cannot auto-add completion (only on_failure once completion is present), so this is a one-time manual edit per project.
 
 ### Code review
 
