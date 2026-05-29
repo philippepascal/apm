@@ -49,7 +49,11 @@ TESTS: existing sync integration tests must still pass. New/updated tests must n
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the git merge-detection functions (`merged_into_main`, `content_merged_into_main`, `is_branch_merged_into`) — those are correct and unchanged.
+- Adding new `CompletionStrategy` variants or changing existing ones.
+- Any change to `apm-server` — it calls `sync::detect` but contains no hardcoded state IDs.
+- Changes to the ticket state machine definition or workflow config format.
+- Behaviour changes beyond the strictness tightening described in the Problem section (Cases 2, 4, and the hint pass are a pure substitution of the literal for the config-derived set; no other logic changes).
 
 ### Approach
 
