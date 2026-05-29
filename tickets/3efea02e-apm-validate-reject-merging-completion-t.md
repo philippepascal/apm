@@ -3,13 +3,13 @@ id = "3efea02e"
 title = "apm validate: reject merging-completion transition targeting a terminal state"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3efea02e-apm-validate-reject-merging-completion-t"
 created_at = "2026-05-29T01:28:21.747382Z"
-updated_at = "2026-05-29T01:29:54.190968Z"
+updated_at = "2026-05-29T01:33:24.040770Z"
 +++
 
 ## Spec
