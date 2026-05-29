@@ -28,13 +28,13 @@ DO NOT change content_merged_into_main, merged_into_main, or any git_util functi
 
 ### Acceptance criteria
 
-- [ ] `apm sync detect` returns no close candidates for a ticket in state `new`, `groomed`, `specd`, or `question` whose branch's fork point is reachable from `main` only via a merge commit's non-first parent and whose branch contains no non-ticket-file commits (the side-note-on-epic-branch topology).
-- [ ] `apm sync detect` generates no hints for such a pre-implementation ticket (the hint pass already filters to `state == "implemented"`, and `merged_set` is populated correctly so Case 4 and the hint pass skip the branch).
-- [ ] `apm sync detect` still includes an `implemented` ticket in close candidates when its branch was merged into `main` via `--no-ff` (Case 1 regression).
-- [ ] `apm sync detect` still includes an `implemented` ticket in close candidates when its implementation commit was squash-merged into `main` with trailing state-only commits on the branch (Case 3 regression).
-- [ ] `git_util::content_merged_into_main`, `git_util::merged_into_main`, and all other `git_util` functions are unchanged.
-- [ ] All pre-existing `sync` integration tests pass without modification.
-- [ ] Two new integration tests are added to `apm/tests/integration.rs`: one reproducing the bug (pre-impl ticket not closed) and one confirming the regression (implemented ticket still closed).
+- [x] `apm sync detect` returns no close candidates for a ticket in state `new`, `groomed`, `specd`, or `question` whose branch's fork point is reachable from `main` only via a merge commit's non-first parent and whose branch contains no non-ticket-file commits (the side-note-on-epic-branch topology).
+- [x] `apm sync detect` generates no hints for such a pre-implementation ticket (the hint pass already filters to `state == "implemented"`, and `merged_set` is populated correctly so Case 4 and the hint pass skip the branch).
+- [x] `apm sync detect` still includes an `implemented` ticket in close candidates when its branch was merged into `main` via `--no-ff` (Case 1 regression).
+- [x] `apm sync detect` still includes an `implemented` ticket in close candidates when its implementation commit was squash-merged into `main` with trailing state-only commits on the branch (Case 3 regression).
+- [x] `git_util::content_merged_into_main`, `git_util::merged_into_main`, and all other `git_util` functions are unchanged.
+- [x] All pre-existing `sync` integration tests pass without modification.
+- [x] Two new integration tests are added to `apm/tests/integration.rs`: one reproducing the bug (pre-impl ticket not closed) and one confirming the regression (implemented ticket still closed).
 
 ### Out of scope
 
