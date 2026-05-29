@@ -53,7 +53,54 @@ TESTS: validate_config rejects a workflow with a Merge or PrOrEpicMerge transiti
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-core/src/validate.rs`.
+
+#### 1. Compute terminal-state set once before the outer loop
+
+After line 329 (`let state_ids: HashSet<&str> = …`), add:
+
+```rust
+let terminal_ids = config.terminal_state_ids(); // HashSet<String>; already includes "closed"
+```
+
+`terminal_state_ids()` (config.rs:655) collects all `terminal = true` state IDs from `workflow.states` and unconditionally inserts `"closed"`, so no additional "closed" special-casing is needed here.
+
+#### 2. Add the check inside the per-transition loop
+
+After the `on_failure` block (after line 427, still inside `for transition in &state.transitions`), add:
+
+```rust
+// Merging completions must not target a terminal state.
+if matches!(
+    transition.completion,
+    CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge
+) && terminal_ids.contains(transition.to.as_str()) {
+    errors.push(format!(
+        "config: state.{}.transition({}) — completion {} targets terminal state {}; \
+         merging completions must target a non-terminal (review) state",
+        state.id,
+        transition.to,
+        strategy_name(&transition.completion),
+        transition.to
+    ));
+}
+```
+
+`terminal_ids.contains(transition.to.as_str())` works because `HashSet<String>` implements `Contains<str>` via `Borrow`.
+
+#### 3. Add tests at the bottom of the `#[cfg(test)]` module
+
+Five new tests, each using `load_config` and `validate_config` (the same helpers already in the module):
+
+- **`merge_completion_targeting_terminal_rejected`** — `in_progress → done` (merge, on_failure=closed), `done` terminal; asserts error contains `state.in_progress.transition(done)` and `targets terminal state`.
+- **`pr_or_epic_merge_targeting_terminal_rejected`** — same shape with `pr_or_epic_merge` and `on_failure`; asserts same error pattern.
+- **`pr_completion_targeting_terminal_rejected`** — `in_progress → done` (pr), `done` terminal, `[git_host] provider = "github"` to pass the provider check; asserts terminal-state error.
+- **`merge_targeting_built_in_closed_rejected`** — `in_progress → closed` (merge, on_failure = some non-terminal state), `closed` not declared in `[[workflow.states]]`; asserts terminal-state error.
+- **`merge_targeting_non_terminal_accepted`** — `in_progress → review` (merge, on_failure=closed), `review` non-terminal with a transition to `closed`; asserts no error containing `targets terminal state`.
+
+No test is needed for the default workflow explicitly: `default_workflow_no_dead_end_warning` already builds the default workflow and would fail if `validate_config` produced new errors. Confirming `implemented` is non-terminal in the default config is sufficient (the ticket asserts this).
+
+The existing tests that use `config_with_merge_transition` (which sets `implemented` as terminal) will accumulate the new error in their error lists, but all assertions are `any(|e| e.contains(…))` or narrow-filtered, so none break.
 
 ### Open questions
 
