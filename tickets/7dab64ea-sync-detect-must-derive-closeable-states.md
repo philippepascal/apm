@@ -42,7 +42,7 @@ TESTS: existing sync integration tests must still pass. New/updated tests must n
 - [ ] For the default workflow, `merge_completed_state_ids()` returns `{"implemented"}`.
 - [ ] `sync::detect` produces no close candidates for a ticket whose branch is merged into main when the ticket's state is not in `merge_completed_state_ids()` (e.g., `ready`, `in_progress`, `specd`).
 - [x] `sync::detect` produces a close candidate for a ticket in a merge-completed state whose branch is merged into main (Cases 1 and 3 continue to work).
-- [ ] `sync::detect` produces a close candidate for a ticket in a merge-completed state on main with no surviving branch, and for one merged into a non-default `target_branch` (Cases 2 and 4 continue to work).
+- [x] `sync::detect` produces a close candidate for a ticket in a merge-completed state on main with no surviving branch, and for one merged into a non-default `target_branch` (Cases 2 and 4 continue to work).
 - [ ] `sync::detect` emits a hint only for tickets in the merge-completed state whose branch was not detected by any pass (hint pass continues to work).
 - [ ] `sync.rs` contains no string-literal state IDs after the change.
 - [ ] A custom-workflow project with a renamed merge-completion state (e.g., `shipped`) correctly triggers close detection for tickets in that renamed state and skips tickets not in that state.
