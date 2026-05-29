@@ -4,12 +4,12 @@ title = "apm state implemented from merge_failed should detect already-merged wo
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3f4ebae7-apm-state-implemented-from-merge-failed-"
 created_at = "2026-05-29T23:03:15.303584Z"
-updated_at = "2026-05-29T23:32:41.016982Z"
+updated_at = "2026-05-29T23:32:43.405250Z"
 +++
 
 ## Spec
