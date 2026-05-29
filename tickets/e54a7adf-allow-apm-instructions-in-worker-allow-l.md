@@ -1,7 +1,7 @@
 +++
 id = "e54a7adf"
 title = "Allow apm instructions in worker allow-list and stop denial scanner mislabeling approvals/cancellations"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e54a7adf-allow-apm-instructions-in-worker-allow-l"
 created_at = "2026-05-29T18:47:07.214401Z"
-updated_at = "2026-05-29T18:47:07.214401Z"
+updated_at = "2026-05-29T18:49:32.162940Z"
 +++
 
 ## Spec
@@ -50,3 +50,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-29T18:47Z | — | new | philippepascal |
+| 2026-05-29T18:49Z | new | groomed | philippepascal |
