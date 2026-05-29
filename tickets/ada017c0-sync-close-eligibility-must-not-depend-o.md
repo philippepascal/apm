@@ -49,7 +49,11 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The deeper `content_merged_into_main` false positive (a branch with no implementation commits whose merge_base reaches main via an epic's non-first parent) — deferred as before
+- Changes to detection functions `merged_into_main`, `content_merged_into_main`, `is_branch_merged_into` — correct and untouched
+- Changes to `apm-server` or `apm-ui`
+- History-based eligibility (approach b from the problem statement) — discarded in favour of workflow-structure approach
+- User-visible CLI or UI changes to expose the pre-implementation state concept
 
 ### Approach
 
