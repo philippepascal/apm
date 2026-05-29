@@ -25,7 +25,7 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
     let mut merged_set: HashSet<String> = merged.into_iter().collect();
 
     let terminal = config.terminal_state_ids();
-    const PRE_IMPL: &[&str] = &["new", "groomed", "specd", "question"];
+    let merge_completed = config.merge_completed_state_ids();
 
     let branch_set: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
 
@@ -56,8 +56,8 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
             Ok(t) => t,
             Err(_) => continue,
         };
-        if terminal.contains(t.frontmatter.state.as_str()) { continue; }
-        if PRE_IMPL.contains(&t.frontmatter.state.as_str()) { continue; }
+        let state = t.frontmatter.state.as_str();
+        if terminal.contains(state) || !merge_completed.contains(state) { continue; }
         close.push(CloseCandidate { ticket: t, reason: "branch merged" });
     }
 
@@ -84,7 +84,7 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
             };
             merged_set.insert(branch.clone());
             let state = t.frontmatter.state.as_str();
-            if !terminal.contains(state) && !PRE_IMPL.contains(&state) {
+            if !terminal.contains(state) && merge_completed.contains(state) {
                 close.push(CloseCandidate { ticket: t, reason: "branch content merged" });
             }
         }
@@ -102,7 +102,8 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
             Ok(t) => t,
             Err(_) => continue,
         };
-        if t.frontmatter.state == "implemented" {
+        let state = t.frontmatter.state.as_str();
+        if merge_completed.contains(state) && !terminal.contains(state) {
             let branch = t.frontmatter.branch.as_deref().unwrap_or("");
             if !branch.is_empty() && !branch_set.contains(branch) {
                 close.push(CloseCandidate { ticket: t, reason: "implemented, branch gone" });
@@ -123,7 +124,8 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
             Ok(t) => t,
             Err(_) => continue,
         };
-        if t.frontmatter.state != "implemented" { continue; }
+        let state = t.frontmatter.state.as_str();
+        if !merge_completed.contains(state) || terminal.contains(state) { continue; }
         let target = match t.frontmatter.target_branch.as_deref() {
             Some(tb) if !tb.is_empty() => tb.to_string(),
             _ => continue,
@@ -147,7 +149,8 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
             Ok(t) => t,
             Err(_) => continue,
         };
-        if t.frontmatter.state == "implemented" {
+        let state = t.frontmatter.state.as_str();
+        if merge_completed.contains(state) && !terminal.contains(state) {
             let id = &t.frontmatter.id;
             hints.push(format!(
                 "ticket #{id} is in `implemented` state but its branch was not detected as merged into \
