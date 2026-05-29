@@ -223,6 +223,7 @@ fn apm_env(dir: &Path, agent: &str, args: &[&str]) -> Output {
         .args(args)
         .current_dir(dir)
         .env("APM_AGENT_NAME", agent)
+        .env_remove("APM_AGENT_TYPE") // prevent inherited type from shadowing agent name
         .env("GIT_AUTHOR_NAME", "test")
         .env("GIT_AUTHOR_EMAIL", "test@test.com")
         .env("GIT_COMMITTER_NAME", "test")

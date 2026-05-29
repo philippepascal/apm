@@ -13,7 +13,7 @@ async function fetchTickets(includeClosed: boolean): Promise<{ tickets: Ticket[]
   return res.json()
 }
 
-interface Epic { id: string; title: string; branch: string }
+interface Epic { id: string; title: string; branch: string; behind_count: number; conflicts: boolean }
 
 async function fetchEpics(): Promise<Epic[]> {
   const res = await fetch('/api/epics')
@@ -251,6 +251,24 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           Show closed
         </label>
       </div>
+      {(() => {
+        const epicIdsInTickets = new Set(tickets.map((t) => t.epic).filter(Boolean))
+        const staleEpics = epics.filter((ep) => ep.behind_count > 0 && epicIdsInTickets.has(ep.id))
+        if (staleEpics.length === 0) return null
+        return (
+          <div className="px-3 py-1.5 border-b border-gray-700 shrink-0 flex flex-wrap items-center gap-2">
+            {staleEpics.map((ep) => (
+              <span
+                key={ep.id}
+                onClick={() => setEpicFilter(ep.id)}
+                className={`cursor-pointer px-2 py-0.5 rounded text-xs border ${ep.conflicts ? 'bg-red-900/50 text-red-200 border-red-600' : 'bg-amber-800/50 text-amber-200 border-amber-600'}`}
+              >
+                {ep.id.slice(0, 8)} ↓{ep.behind_count}{ep.conflicts ? ' conflicts' : ''}
+              </span>
+            ))}
+          </div>
+        )
+      })()}
       <div className="flex-1 flex flex-row gap-4 overflow-x-auto p-3">
         {columns.map(([state, colTickets]) => (
           <Swimlane key={state} state={state} tickets={colTickets} showAuthor={authorFilter === null} />

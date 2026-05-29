@@ -32,6 +32,20 @@ pub fn run(root: &Path, json: bool, no_aggressive: bool) -> Result<()> {
                 );
             } else {
                 println!("{} [{}] {}", fm.id, fm.state, fm.title);
+                if let Some(epic_id) = fm.epic.as_deref() {
+                    if let Some(epic_branch) = apm_core::epic::find_epic_branch(root, epic_id) {
+                        let s = apm_core::epic::merge_tree_status(root, &config.project.default_branch, &epic_branch)
+                            .unwrap_or(apm_core::epic::MergeStatus { ahead: 0, clean: true });
+                        let label = if s.ahead == 0 {
+                            "up to date".to_string()
+                        } else if s.clean {
+                            format!("↓{} clean", s.ahead)
+                        } else {
+                            format!("↓{} CONFLICTS", s.ahead)
+                        };
+                        println!("  (epic {epic_id}: {label})");
+                    }
+                }
             }
         }
     }
