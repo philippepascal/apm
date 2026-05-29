@@ -273,6 +273,7 @@ fn init_yes_creates_settings_when_claude_dir_exists() {
     assert!(entries.contains(&"Bash(apm show*)"), "Bash(apm show*) missing");
     assert!(entries.contains(&"Bash(apm state *)"), "Bash(apm state *) missing");
     assert!(entries.contains(&"Bash(apm spec *)"), "Bash(apm spec *) missing");
+    assert!(entries.contains(&"Bash(apm instructions*)"), "Bash(apm instructions*) missing");
 }
 
 #[test]
@@ -356,6 +357,7 @@ fn init_yes_updates_user_settings() {
     let entries: Vec<&str> = allow.iter().filter_map(|v| v.as_str()).collect();
     assert!(entries.contains(&"Bash(git -C*)"), "Bash(git -C*) missing from user settings");
     assert!(entries.contains(&"Bash(apm state *)"), "Bash(apm state *) missing from user settings");
+    assert!(entries.contains(&"Bash(apm instructions*)"), "Bash(apm instructions*) missing from user settings");
 }
 
 #[test]

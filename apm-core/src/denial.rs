@@ -63,7 +63,10 @@ pub enum DenialClass {
     ApmCommandDenial,
     /// Denied an Edit or Write whose path falls outside the ticket worktree.
     OutsideWorktree,
-    /// Any other denial not matching the two patterns above.
+    /// Command requires explicit approval — config-gap signal distinct from an
+    /// outright deny.  Content contains `"requires approval"`.
+    RequiresApproval,
+    /// Any other denial not matching the patterns above.
     UnknownPattern,
 }
 
@@ -165,6 +168,27 @@ pub fn scan_transcript(log_path: &Path, worktree: &Path, ticket_id: &str) -> Den
                 None => continue,
             };
             if content_str.starts_with("Exit code ") {
+                continue;
+            }
+            // Collateral cancellation from a failed parallel sibling — not a denial.
+            if content_str.contains("Cancelled: parallel tool call") {
+                continue;
+            }
+            // "This command requires approval" is a config-gap signal, not a deny.
+            if content_str.contains("requires approval") {
+                let tool_use_id = item["tool_use_id"].as_str().unwrap_or("");
+                let Some((tool_name, input_obj, _)) = tool_uses.get(tool_use_id) else { continue };
+                let input_str = if tool_name == "Bash" {
+                    input_obj["command"].as_str().unwrap_or("").to_string()
+                } else {
+                    serde_json::to_string(input_obj).unwrap_or_default()
+                };
+                denials.push(DenialEntry {
+                    timestamp: result_ts.clone(),
+                    tool: tool_name.clone(),
+                    input: truncate_str(&input_str, 200),
+                    classification: DenialClass::RequiresApproval,
+                });
                 continue;
             }
 
@@ -390,6 +414,32 @@ mod tests {
         std::fs::write(&log, content).unwrap();
         let summary = scan_transcript(&log, dir.path(), "t");
         assert_eq!(summary.denial_count, 0);
+    }
+
+    #[test]
+    fn test_cancelled_parallel_not_a_denial() {
+        let content = r#"{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"apm instructions"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","is_error":true,"content":"Cancelled: parallel tool call Bash(apm instructions) errored"}]},"timestamp":"2026-01-01T00:00:00Z"}
+"#;
+        let dir = tempfile::tempdir().unwrap();
+        let log = dir.path().join("test.jsonl");
+        std::fs::write(&log, content).unwrap();
+        let summary = scan_transcript(&log, dir.path(), "t");
+        assert_eq!(summary.denial_count, 0);
+        assert!(summary.denials.is_empty());
+    }
+
+    #[test]
+    fn test_requires_approval_classified_as_requires_approval() {
+        let content = r#"{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"apm instructions"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","is_error":true,"content":"This command requires approval"}]},"timestamp":"2026-01-01T00:00:00Z"}
+"#;
+        let dir = tempfile::tempdir().unwrap();
+        let log = dir.path().join("test.jsonl");
+        std::fs::write(&log, content).unwrap();
+        let summary = scan_transcript(&log, dir.path(), "t");
+        assert_eq!(summary.denial_count, 1);
+        assert_eq!(summary.denials[0].classification, DenialClass::RequiresApproval);
     }
 
     #[test]

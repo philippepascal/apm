@@ -166,6 +166,7 @@ const APM_ALLOW_ENTRIES: &[&str] = &[
     "Bash(apm sessions *)",
     "Bash(apm revoke *)",
     "Bash(apm version*)",
+    "Bash(apm instructions*)",
     // code editing
     "Edit",
     "Write",
@@ -236,6 +237,7 @@ const APM_USER_ALLOW_ENTRIES: &[&str] = &[
     "Bash(apm sessions *)",
     "Bash(apm revoke *)",
     "Bash(apm version*)",
+    "Bash(apm instructions*)",
     // code editing
     "Edit",
     "Write",
