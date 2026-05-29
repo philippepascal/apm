@@ -43,7 +43,12 @@ TESTS: existing epic_is_quiescent_* unit tests in epic.rs must still pass (state
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to the `refresh-epic` command surface (inform/--merge/--pr/--auto modes from 12f2c7fa)
+- The `inform` mode, which already skips quiescence entirely
+- The live-worker check in `apm-core/src/worker.rs`
+- The sync close-eligibility logic from ticket ada017c0
+- `Config::implementation_state_ids()` and `ticket_fmt::history_target_states()` — reused unchanged
+- Behaviour when `implementation_state_ids()` returns an empty set (workflows with no implementation-flavoured transitions); in that case no state blocks, which is the correct conservative outcome
 
 ### Approach
 
