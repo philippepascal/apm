@@ -41,7 +41,70 @@ The command needs explicit mode flags. The default (no flags) should be read-onl
 
 ### Approach
 
-How the implementation will work.
+#### 1. Add `merge_tree_status` to `apm-core/src/epic.rs`
+
+Add a public struct and function:
+
+```rust
+pub struct MergeStatus {
+    pub ahead: usize,  // commits default_branch has that epic_branch doesn't
+    pub clean: bool,   // true iff git merge-tree reports no conflict markers
+}
+
+pub fn merge_tree_status(root: &Path, default_branch: &str, epic_branch: &str) -> Result<MergeStatus>
+```
+
+Implementation steps:
+1. Count ahead commits: run `git log --oneline --no-decorate <epic_branch>..<default_branch>` and count non-empty lines.
+2. If `ahead == 0`, return `MergeStatus { ahead: 0, clean: true }` immediately.
+3. Compute merge base: run `git merge-base <epic_branch> <default_branch>`.
+4. Run `git merge-tree <merge_base> <default_branch> <epic_branch>` (three-argument form; no working-tree changes). Check whether stdout contains `<<<<<<< `. If yes, `clean = false`; otherwise `clean = true`.
+
+Add unit tests in `apm-core/src/epic.rs`:
+- Clean merge: commits on `main` that don't overlap with epic — `ahead > 0, clean = true`.
+- Conflicting merge: both branches modify the same line — `ahead > 0, clean = false`.
+- Up to date: no commits on main ahead — `ahead = 0, clean = true`.
+
+#### 2. Update `RefreshEpic` in `apm/src/main.rs`
+
+Replace the existing single-field variant with:
+
+```rust
+RefreshEpic {
+    id: String,
+    #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
+    merge: bool,
+    #[arg(long, conflicts_with_all = ["merge", "auto_mode"])]
+    pr: bool,
+    #[arg(long = "auto", conflicts_with_all = ["merge", "pr"])]
+    auto_mode: bool,
+}
+```
+
+Clap's `conflicts_with_all` enforces mutual exclusion automatically. Pass all four args through to `run_refresh_epic` in the dispatch arm.
+
+#### 3. Rewrite `run_refresh_epic` in `apm/src/cmd/epic.rs`
+
+New signature: `pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_mode: bool) -> Result<()>`
+
+Logic:
+1. Resolve epic branch (unchanged).
+2. Derive `epic_id` and load `config` (unchanged).
+3. Call `apm_core::epic::merge_tree_status(root, default_branch, &epic_branch)?`.
+
+**Inform mode** (all flags false):
+- If `status.ahead == 0`: print "epic branch is up to date with {default_branch}".
+- Otherwise: print "{N} commit(s) ahead on {default_branch}; merge would be {clean/conflicted}".
+- Return `Ok(())`.
+
+**Acting modes** (any flag set): run quiescence check; bail if not quiescent (unchanged error format).
+- If `status.ahead == 0`: print "epic branch is up to date with {default_branch}", return early.
+
+**`--pr` path**: existing behavior — push epic branch, call `gh_pr_create_or_update_between`.
+
+**`--merge` path**: use `apm_core::worktree::find_worktree_for_branch` to find a permanent worktree for the epic branch, falling back to `ensure_worktree` if absent. Call `apm_core::git_util::merge_ref(epic_wt_path, default_branch, &mut messages)`. If the merge returns `None` (conflict path), bail: "merge conflict — resolve manually after checking out {epic_branch}, or use --pr to open a PR instead".
+
+**`--auto` path**: if `status.clean`, run the `--merge` path; otherwise run the `--pr` path.
 
 ### Open questions
 
