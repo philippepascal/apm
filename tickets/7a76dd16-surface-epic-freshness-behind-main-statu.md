@@ -36,7 +36,14 @@ OUT OF SCOPE: auto-merging main into the epic; blocking or gating dispatch on st
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm-core` exports `pub struct EpicFreshness { pub behind: u32, pub conflicts: bool }` and `pub fn epic_freshness(root, epic_branch, default_branch) -> Result<EpicFreshness>` in `apm-core/src/epic.rs`; when `behind == 0` the function returns without invoking `git merge-tree`.
+- [ ] `apm epic list` includes a freshness indicator per epic: "up to date", "↓N clean", or "↓N CONFLICTS".
+- [ ] `apm epic show <id>` prints a "Freshness:" line immediately after the "State:" line.
+- [ ] `apm list` appends an epic freshness footer after the ticket rows with one entry per distinct epic that has at least one visible ticket; the footer is omitted when no visible ticket has an epic.
+- [ ] `apm next` prints a freshness note on a line after the ticket line when the top ticket's `epic` field is set (non-JSON mode only; JSON output is unchanged).
+- [ ] `GET /api/epics` and `GET /api/epics/:id` include `behind_count` (integer ≥ 0) and `conflicts` (boolean) on every epic object in the response.
+- [ ] `SupervisorView.tsx` renders a freshness chip bar below the filter row for epics that have at least one ticket in the loaded set; chips are color-coded amber for behind/clean and red for behind/conflicts; the bar is hidden when all epics are up to date.
+- [ ] No code path that computes `EpicFreshness` is reachable from `apm state`, `apm start`, or `apm dispatch`; freshness is display-only.
 
 ### Out of scope
 
