@@ -4,12 +4,12 @@ title = "apm refresh-epic: inform by default, add --merge / --pr / --auto modes"
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/12f2c7fa-apm-refresh-epic-inform-by-default-add-m"
 created_at = "2026-05-29T01:17:38.982422Z"
-updated_at = "2026-05-29T01:29:24.109469Z"
+updated_at = "2026-05-29T01:29:28.786196Z"
 +++
 
 ## Spec
