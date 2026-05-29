@@ -4,12 +4,12 @@ title = "apm sync must not auto-close pre-implementation tickets"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/39b9c568-apm-sync-must-not-auto-close-pre-impleme"
 created_at = "2026-05-29T00:18:15.128911Z"
-updated_at = "2026-05-29T00:27:26.616046Z"
+updated_at = "2026-05-29T00:27:31.753979Z"
 +++
 
 ## Spec
