@@ -4,6 +4,29 @@ use std::path::Path;
 use crate::config::StateConfig;
 use crate::git_util;
 
+pub struct MergeStatus {
+    pub ahead: usize,
+    pub clean: bool,
+}
+
+pub fn merge_tree_status(root: &Path, default_branch: &str, epic_branch: &str) -> Result<MergeStatus> {
+    let log_out = git_util::run(root, &[
+        "log", "--oneline", "--no-decorate",
+        &format!("{epic_branch}..{default_branch}"),
+    ])?;
+    let ahead = log_out.lines().filter(|l| !l.is_empty()).count();
+    if ahead == 0 {
+        return Ok(MergeStatus { ahead: 0, clean: true });
+    }
+    let merge_base = git_util::run(root, &["merge-base", epic_branch, default_branch])?;
+    let merge_base = merge_base.trim();
+    let merge_tree_out = git_util::run(root, &[
+        "merge-tree", merge_base, default_branch, epic_branch,
+    ])?;
+    let clean = !merge_tree_out.contains("<<<<<<< ");
+    Ok(MergeStatus { ahead, clean })
+}
+
 pub fn epic_is_quiescent(
     root: &Path,
     epic_id: &str,
@@ -315,6 +338,56 @@ mod tests {
         let a = make_state(false, false, vec![]);
         let b = make_state(true, false, vec![]);
         assert_eq!(derive_epic_state(&[&a, &b]), "in_progress");
+    }
+
+    #[test]
+    fn merge_tree_status_up_to_date() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        git_cmd(p, &["checkout", "-b", "epic/aa000001-test"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        let status = super::merge_tree_status(p, "main", "epic/aa000001-test").unwrap();
+        assert_eq!(status.ahead, 0);
+        assert!(status.clean);
+    }
+
+    #[test]
+    fn merge_tree_status_clean_merge() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        git_cmd(p, &["checkout", "-b", "epic/bb000002-test"]);
+        git_cmd(p, &["checkout", "main"]);
+        std::fs::write(p.join("main_only.md"), "content\n").unwrap();
+        git_cmd(p, &["add", "main_only.md"]);
+        git_cmd(p, &["commit", "-m", "add main-only file"]);
+
+        let status = super::merge_tree_status(p, "main", "epic/bb000002-test").unwrap();
+        assert!(status.ahead > 0, "expected main to be ahead");
+        assert!(status.clean, "expected clean merge");
+    }
+
+    #[test]
+    fn merge_tree_status_conflict() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::write(p.join("shared.md"), "original line\n").unwrap();
+        git_cmd(p, &["add", "shared.md"]);
+        git_cmd(p, &["commit", "-m", "add shared file"]);
+
+        git_cmd(p, &["checkout", "-b", "epic/cc000003-test"]);
+        std::fs::write(p.join("shared.md"), "epic branch content\n").unwrap();
+        git_cmd(p, &["add", "shared.md"]);
+        git_cmd(p, &["commit", "-m", "modify shared on epic"]);
+
+        git_cmd(p, &["checkout", "main"]);
+        std::fs::write(p.join("shared.md"), "main branch content\n").unwrap();
+        git_cmd(p, &["add", "shared.md"]);
+        git_cmd(p, &["commit", "-m", "modify shared on main"]);
+
+        let status = super::merge_tree_status(p, "main", "epic/cc000003-test").unwrap();
+        assert!(status.ahead > 0, "expected main to be ahead");
+        assert!(!status.clean, "expected conflicted merge");
     }
 }
 

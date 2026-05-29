@@ -119,7 +119,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn run_refresh_epic(root: &Path, id_arg: &str) -> Result<()> {
+pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_mode: bool) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
     let matches = apm_core::epic::find_epic_branches(root, id_arg);
@@ -134,6 +134,21 @@ pub fn run_refresh_epic(root: &Path, id_arg: &str) -> Result<()> {
     };
 
     let epic_id = epic_id_from_branch(&epic_branch);
+    let default_branch = &config.project.default_branch;
+
+    let status = apm_core::epic::merge_tree_status(root, default_branch, &epic_branch)?;
+
+    let acting = merge || pr || auto_mode;
+
+    if !acting {
+        if status.ahead == 0 {
+            println!("epic branch is up to date with {default_branch}");
+        } else {
+            let cleanliness = if status.clean { "clean" } else { "conflicted" };
+            println!("{} commit(s) ahead on {default_branch}; merge would be {cleanliness}", status.ahead);
+        }
+        return Ok(());
+    }
 
     let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;
     let blockers = apm_core::epic::epic_is_quiescent(root, epic_id, &config, &worktrees)?;
@@ -144,40 +159,58 @@ pub fn run_refresh_epic(root: &Path, id_arg: &str) -> Result<()> {
         );
     }
 
-    let default_branch = &config.project.default_branch;
-
-    let log_out = std::process::Command::new("git")
-        .current_dir(root)
-        .args(["log", "--oneline", "--no-decorate", &format!("{epic_branch}..{default_branch}")])
-        .output()?;
-    if !log_out.status.success() {
-        anyhow::bail!("git log failed: {}", String::from_utf8_lossy(&log_out.stderr).trim());
-    }
-    let log_str = String::from_utf8_lossy(&log_out.stdout);
-    let log_str = log_str.trim();
-
-    if log_str.is_empty() {
+    if status.ahead == 0 {
         println!("epic branch is up to date with {default_branch}");
         return Ok(());
     }
 
-    let pr_title = format!("{epic_id}: refresh from {default_branch}");
-    let pr_body = log_str.to_string();
+    let do_merge = merge || (auto_mode && status.clean);
 
-    apm_core::git::push_branch_tracking(root, &epic_branch)?;
+    if do_merge {
+        let main_root = apm_core::git_util::main_worktree_root(root)
+            .unwrap_or_else(|| root.to_path_buf());
+        let worktrees_base = main_root.join(&config.worktrees.dir);
+        let epic_wt_path = apm_core::worktree::find_worktree_for_branch(root, &epic_branch)
+            .map(Ok)
+            .unwrap_or_else(|| apm_core::worktree::ensure_worktree(root, &worktrees_base, &epic_branch))?;
+        let mut messages = vec![];
+        match apm_core::git_util::merge_ref(&epic_wt_path, default_branch, &mut messages) {
+            Some(msg) => {
+                for m in &messages {
+                    println!("{m}");
+                }
+                println!("{msg}");
+            }
+            None => {
+                anyhow::bail!(
+                    "merge conflict — resolve manually after checking out {epic_branch}, or use --pr to open a PR instead"
+                );
+            }
+        }
+    } else {
+        let log_out = std::process::Command::new("git")
+            .current_dir(root)
+            .args(["log", "--oneline", "--no-decorate", &format!("{epic_branch}..{default_branch}")])
+            .output()?;
+        let pr_body = String::from_utf8_lossy(&log_out.stdout).trim().to_string();
+        let pr_title = format!("{epic_id}: refresh from {default_branch}");
 
-    let mut messages = vec![];
-    apm_core::github::gh_pr_create_or_update_between(
-        root,
-        default_branch,
-        &epic_branch,
-        &pr_title,
-        &pr_body,
-        &mut messages,
-    )?;
-    for m in &messages {
-        println!("{m}");
+        apm_core::git::push_branch_tracking(root, &epic_branch)?;
+
+        let mut messages = vec![];
+        apm_core::github::gh_pr_create_or_update_between(
+            root,
+            default_branch,
+            &epic_branch,
+            &pr_title,
+            &pr_body,
+            &mut messages,
+        )?;
+        for m in &messages {
+            println!("{m}");
+        }
     }
+
     Ok(())
 }
 

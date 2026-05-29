@@ -768,6 +768,15 @@ ac.txt) are always removed automatically without needing --untracked."
     RefreshEpic {
         /// Epic ID (4–8 char hex prefix)
         id: String,
+        /// Perform a local merge of the default branch into the epic branch
+        #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
+        merge: bool,
+        /// Open or update a PR from the default branch into the epic branch
+        #[arg(long, conflicts_with_all = ["merge", "auto_mode"])]
+        pr: bool,
+        /// Merge locally when clean, fall back to PR when there are conflicts
+        #[arg(long = "auto", conflicts_with_all = ["merge", "pr"])]
+        auto_mode: bool,
     },
     /// Read or write individual spec sections of a ticket
     #[command(long_about = "Read or write individual sections of a ticket's spec.
@@ -1234,7 +1243,7 @@ fn main() -> Result<()> {
         Command::Epic {
             command: EpicCommand::Set { id, field, value },
         } => cmd::epic::run_set(&root, &id, &field, &value),
-        Command::RefreshEpic { id } => cmd::epic::run_refresh_epic(&root, &id),
+        Command::RefreshEpic { id, merge, pr, auto_mode } => cmd::epic::run_refresh_epic(&root, &id, merge, pr, auto_mode),
         Command::Register { username } => {
             let inferred = username.is_none();
             let config = apm_core::config::Config::load(&root)?;
