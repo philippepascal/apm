@@ -59,66 +59,38 @@ OUT OF SCOPE: auto-merging main into the epic; blocking or gating dispatch on st
 
 #### Core primitive (`apm-core/src/epic.rs`)
 
-Add `EpicFreshness` and `epic_freshness`:
+This ticket relies on `apm_core::epic::merge_tree_status` (added by ticket 12f2c7fa) — no new git merge-tree wrapper is added here.
 
-```rust
-pub struct EpicFreshness {
-    pub behind: u32,
-    pub conflicts: bool,
-}
+Field mapping for display: `behind = status.ahead`, `conflicts = !status.clean`.
 
-pub fn epic_freshness(root: &Path, epic_branch: &str, default_branch: &str) -> Result<EpicFreshness> {
-    let behind: u32 = git_util::run(root, &[
-        "rev-list", "--count",
-        &format!("{epic_branch}..{default_branch}"),
-    ])?.trim().parse().unwrap_or(0);
+Add a private helper `fn freshness_label(ahead: usize, clean: bool) -> String` in `apm/src/cmd/epic.rs` used by all CLI call sites:
+- `ahead == 0` → `"up to date"`
+- `ahead > 0 && clean` → `format!("↓{} clean", ahead)`
+- `ahead > 0 && !clean` → `format!("↓{} CONFLICTS", ahead)`
 
-    if behind == 0 {
-        return Ok(EpicFreshness { behind: 0, conflicts: false });
-    }
+Call sites call `merge_tree_status(root, &default_branch, epic_branch)` with `.unwrap_or(MergeStatus { ahead: 0, clean: true })` and pass `s.ahead, s.clean` to `freshness_label`.
 
-    // git merge-tree --write-tree requires git >= 2.38 (Oct 2022).
-    // Exit 0 = clean merge; exit 1 = conflicts.
-    // If stderr contains "unknown option" the installed git is too old — fall back to conflicts = false.
-    let out = std::process::Command::new("git")
-        .current_dir(root)
-        .args(["merge-tree", "--write-tree", epic_branch, default_branch])
-        .output()?;
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    let conflicts = !out.status.success() && !stderr.contains("unknown option");
-
-    Ok(EpicFreshness { behind, conflicts })
-}
-```
-
-Add a private helper `fn freshness_label(f: &EpicFreshness) -> String` used by all CLI call sites:
-- `behind == 0` → `"up to date"`
-- `behind > 0 && !conflicts` → `format!("↓{} clean", f.behind)`
-- `behind > 0 && conflicts` → `format!("↓{} CONFLICTS", f.behind)`
-
-Unit tests (in `apm-core/src/epic.rs`, following the temp-git-repo pattern already in the file):
-- Epic branch at same commit as default → `behind == 0`, `conflicts == false`.
-- Default has N commits ahead of the epic, no conflicting changes → `behind == N`, `conflicts == false`.
+No new unit tests in `apm-core/src/epic.rs` for this ticket — `merge_tree_status` is tested in ticket 12f2c7fa.
 
 #### CLI: `apm epic list` and `apm epic show` (`apm/src/cmd/epic.rs`)
 
-`run_list`: load `default_branch` from `ctx.config.project.default_branch`. After computing `counts_str`, call `epic_freshness(root, branch, &default_branch)`, unwrap with `unwrap_or(EpicFreshness { behind: 0, conflicts: false })`. Append the label as a trailing column:
+`run_list`: load `default_branch` from `ctx.config.project.default_branch`. After computing `counts_str`, call `apm_core::epic::merge_tree_status(root, &default_branch, branch)`, unwrap with `.unwrap_or(MergeStatus { ahead: 0, clean: true })`. Append the label as a trailing column:
 
 ```rust
-println!("{id:<8} [{derived:<12}] {title:<40} {counts_str:<30} {}", freshness_label(&f));
+println!("{id:<8} [{derived:<12}] {title:<40} {counts_str:<30} {}", freshness_label(s.ahead, s.clean));
 ```
 
 `run_show`: after `println!("State:  {derived}");`, add:
 
 ```rust
-let f = epic_freshness(root, &branch, &ctx.config.project.default_branch)
-    .unwrap_or(EpicFreshness { behind: 0, conflicts: false });
-println!("Freshness: {}", freshness_label(&f));
+let s = apm_core::epic::merge_tree_status(root, &ctx.config.project.default_branch, &branch)
+    .unwrap_or(MergeStatus { ahead: 0, clean: true });
+println!("Freshness: {}", freshness_label(s.ahead, s.clean));
 ```
 
 #### CLI: `apm list` (`apm/src/cmd/list.rs`)
 
-After the existing stale-tickets footer block, collect distinct `target_branch` values from `filtered` tickets that have one set. Deduplicate into a `BTreeMap<epic_id, branch>`. For each, call `epic_freshness(root, branch, &default_branch)`. Filter to those with `behind > 0`. If any remain, print:
+After the existing stale-tickets footer block, collect distinct `target_branch` values from `filtered` tickets that have one set. Deduplicate into a `BTreeMap<epic_id, branch>`. For each, call `apm_core::epic::merge_tree_status(root, &default_branch, branch)`. Filter to those with `s.ahead > 0`. If any remain, print:
 
 ```
 (blank line)
@@ -131,7 +103,7 @@ Only computes once per distinct epic branch regardless of how many tickets share
 
 #### CLI: `apm next` (`apm/src/cmd/next.rs`)
 
-In the `Some(t)` non-JSON branch: if `fm.epic.is_some()`, call `apm_core::epic::find_epic_branch(root, epic_id)`. If found, call `epic_freshness` and print `"  (epic {id}: {label})"` on the next line.
+In the `Some(t)` non-JSON branch: if `fm.epic.is_some()`, call `apm_core::epic::find_epic_branch(root, epic_id)`. If found, call `apm_core::epic::merge_tree_status(root, &default_branch, epic_branch)` and print `"  (epic {id}: {label})"` on the next line.
 
 #### Server: models and handlers (`apm-server/`)
 
@@ -142,7 +114,7 @@ pub behind_count: u32,
 pub conflicts: bool,
 ```
 
-`handlers/epics.rs` — `build_epic_summary` gains `root: &Path` and `default_branch: &str` parameters. Call `apm_core::epic::epic_freshness(root, branch, default_branch)` and populate the new fields; default to `(0, false)` on error. Update the two callers (`list_epics`, `get_epic`) to pass `root` and `config.project.default_branch`. In `create_epic`, set `behind_count: 0, conflicts: false` on the returned summary (newly-created epics branch from main and are always current).
+`handlers/epics.rs` — `build_epic_summary` gains `root: &Path` and `default_branch: &str` parameters. Call `apm_core::epic::merge_tree_status(root, default_branch, branch)` and populate the new fields (`behind_count = s.ahead as u32`, `conflicts = !s.clean`); default to `(0, false)` on error. Update the two callers (`list_epics`, `get_epic`) to pass `root` and `config.project.default_branch`. In `create_epic`, set `behind_count: 0, conflicts: false` on the returned summary (newly-created epics branch from main and are always current).
 
 Extend `create_epic_round_trip` test to assert `behind_count == 0` and `conflicts == false`.
 
