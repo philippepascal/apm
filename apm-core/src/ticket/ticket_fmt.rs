@@ -732,6 +732,26 @@ mod tests {
         assert!(s.contains("## History"));
         assert!(s.contains("| When |"));
     }
+
+    #[test]
+    fn history_target_states_parses_to_column() {
+        let body = "## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n| 2026-01-02T00:00Z | new | in_progress | test |\n| 2026-01-03T00:00Z | in_progress | implemented | test |\n";
+        let states = super::history_target_states(body);
+        assert_eq!(states, vec!["new", "in_progress", "implemented"]);
+    }
+
+    #[test]
+    fn history_target_states_empty_when_no_history_section() {
+        let body = "## Spec\n\n### Problem\n\nfoo\n";
+        assert!(super::history_target_states(body).is_empty());
+    }
+
+    #[test]
+    fn history_target_states_skips_header_and_separator() {
+        let body = "\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        let states = super::history_target_states(body);
+        assert!(states.is_empty(), "header and separator rows must be skipped");
+    }
 }
 
 /// Generate an 8-character hex ticket ID from local entropy (timestamp + PID).
@@ -778,6 +798,21 @@ pub fn resolve_ticket_branch(branches: &[String], arg: &str) -> Result<String> {
             bail!("{msg}")
         }
     }
+}
+
+/// Return the `To` column of every History table row, skipping the header and separator rows.
+pub fn history_target_states(body: &str) -> Vec<String> {
+    let Some(idx) = body.find("\n## History") else { return Vec::new() };
+    body[idx..].lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if !line.starts_with('|') { return None; }
+            // cols = ["", When, From, To, By, ""]; the To column is index 3
+            let to = line.split('|').map(str::trim).nth(3)?.to_string();
+            if to.is_empty() || to == "To" || to.chars().all(|c| c == '-') { return None; }
+            Some(to)
+        })
+        .collect()
 }
 
 /// Derive the ticket branch name from the ticket file path.
