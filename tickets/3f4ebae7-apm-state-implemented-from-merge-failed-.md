@@ -44,7 +44,7 @@ The root cause is a single missing field: the `merge_failed → implemented` tra
 
 #### 1. Update `apm-core/src/default/workflow.toml`
 
-In the `merge_failed` state block, add `completion` and `on_failure` to the `→ implemented` transition:
+In the `merge_failed` state block (lines 236–239), update the `→ implemented` transition to add `completion` and `on_failure`:
 
 ```toml
 [[workflow.states.transitions]]
@@ -55,59 +55,18 @@ on_failure = "merge_failed"
 outcome    = "needs_input"
 ```
 
-This makes the recovery path symmetric with `in_progress → implemented`. The `apply_on_failure_fixes` path in `validate --fix` benefits automatically because `default_on_failure_map()` reads this file, and the existing validate rule already enforces `on_failure` on all `Merge`/`PrOrEpicMerge` transitions.
+This is the only code change required. `state.rs` writes the new state-change commit to the ticket branch before the completion arm runs (line 166, before `match completion`). By the time `PrOrEpicMerge` calls `merge_into_default`, `target_branch` already holds all prior work commits — only the fresh state-row commit is missing. The merge fast-forwards cleanly. No changes to `state.rs` or any other file.
 
-#### 2. Add detect-skip to `apm-core/src/state.rs`
+**Gating note**: existing projects that maintain their own `workflow.toml` (e.g. syn) must manually add `completion = "pr_or_epic_merge"` to their `merge_failed → implemented` transition. Once that edit is made, `apm validate --fix` can add `on_failure` automatically. Without the manual edit, those projects continue to fall into `CompletionStrategy::None` and see no behavior change from this ticket.
 
-Both `CompletionStrategy::Merge` and `CompletionStrategy::PrOrEpicMerge` arms in the `match completion` block (after the state commit) need an already-merged check before calling `git::merge_into_default`.
+#### 2. Integration tests in `apm/tests/integration.rs`
 
-**`Merge` arm** (currently ~line 182): resolve `merge_target`, push branch, then wrap the `merge_into_default` call:
+Add two tests. Each sets up a temp repo with the default workflow, an epic branch, and a ticket with `target_branch` pointing to that epic, forced into `merge_failed` state.
 
-```rust
-if !git::is_branch_merged_into(root, &branch, merge_target).unwrap_or(false) {
-    let merge_result = git::merge_into_default(...);
-    if let Err(merge_err) = merge_result {
-        // existing on_failure handling — unchanged
-    }
-}
-```
+- **`merge_failed_to_implemented_succeeds`**: no pre-existing conflict on the target; call `apm state <id> implemented`; assert state = `implemented` on ticket branch and ticket-branch tip is reachable from `target_branch`.
+- **`merge_failed_to_implemented_fails`**: place a conflicting commit on `target_branch` before calling `apm state <id> implemented`; assert state stays `merge_failed` and the history table contains two `merge_failed` rows.
 
-The push remains unconditional so the remote ref stays current regardless.
-
-**`PrOrEpicMerge` arm** (currently ~line 227): inside the `if let Some(ref target) = t.frontmatter.target_branch` block, wrap `merge_into_default` similarly:
-
-```rust
-if let Some(ref target) = t.frontmatter.target_branch {
-    if !git::is_branch_merged_into(root, &branch, target).unwrap_or(false) {
-        let merge_result = git::merge_into_default(...);
-        if let Err(merge_err) = merge_result {
-            // existing on_failure handling — unchanged
-        }
-    }
-} else {
-    // PR path — unchanged
-}
-```
-
-`is_branch_merged_into` returns `Ok(false)` on any git error, so `unwrap_or(false)` is safe: on ambiguous result we fall through to the normal merge attempt rather than silently skipping it.
-
-No other files change in `apm-core`.
-
-#### 3. Integration tests in `apm/tests/integration.rs`
-
-Add a helper `setup_epic_with_ticket` or inline setup in each test that:
-- Inits a repo with the default workflow
-- Creates an epic branch
-- Creates a ticket with `target_branch = "epic/X"` and sets it to `merge_failed` via `--force`
-
-Then add four tests:
-
-- **`merge_failed_to_implemented_already_merged`**: manually merge ticket branch into the target before calling `apm state implemented`; assert state = `implemented` on ticket branch, assert `merge_into_default` was not attempted (no extra merge commit on target since the last manual merge).
-- **`merge_failed_to_implemented_not_yet_merged_succeeds`**: don't pre-merge; call `apm state implemented`; assert state = `implemented` and ticket branch tip is reachable from target.
-- **`merge_failed_to_implemented_not_yet_merged_fails`**: set up a conflicting commit on target so the merge cannot auto-resolve; call `apm state implemented`; assert state stays `merge_failed` and the history table contains two `merge_failed` rows.
-- **`in_progress_to_implemented_already_merged_skips`**: same setup but ticket starts `in_progress`; pre-merge; assert transition succeeds and no duplicate merge.
-
-Existing tests in `setup_merge()` and `setup_on_failure_fix_project()` are unaffected — they patch `completion` independently and don't assert on the `merge_failed → implemented` transition config.
+Existing `in_progress → implemented` tests are unaffected — they configure `completion` independently and do not assert on the `merge_failed → implemented` transition config.
 
 ### Open questions
 
