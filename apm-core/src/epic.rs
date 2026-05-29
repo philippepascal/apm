@@ -35,18 +35,19 @@ pub fn epic_is_quiescent(
 ) -> Result<Vec<String>> {
     let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)?;
     let mut blockers = Vec::new();
+    let impl_states = config.implementation_state_ids();
+    let terminal_states = config.terminal_state_ids();
 
     for t in all_tickets.iter().filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id)) {
         let id = &t.frontmatter.id;
         let title = &t.frontmatter.title;
         let state_id = &t.frontmatter.state;
 
-        let state_cfg = config.workflow.states.iter().find(|s| &s.id == state_id);
-        let is_terminal = state_cfg.map(|s| s.terminal).unwrap_or(false);
-        let is_worker_end = state_cfg.map(|s| s.worker_end).unwrap_or(false);
-
-        let state_blocks = !is_terminal && !is_worker_end;
-        if state_blocks {
+        let has_reached_impl = impl_states.contains(state_id.as_str())
+            || crate::ticket_fmt::history_target_states(&t.body)
+                .iter()
+                .any(|s| impl_states.contains(s.as_str()));
+        if has_reached_impl && !terminal_states.contains(state_id.as_str()) {
             blockers.push(format!("  {id} — {title} (state: {state_id})"));
             continue;
         }
@@ -224,6 +225,95 @@ mod tests {
         "[[workflow.states]]\nid = \"closed\"\nlabel = \"Closed\"\nterminal = true\n",
     );
 
+    const TOML_WITH_IMPL_STATES: &str = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "ammend"
+label = "Ammend"
+
+[[workflow.states]]
+id    = "closed"
+label = "Closed"
+terminal = true
+"#;
+
+    const TOML_WITH_IMPL_STATES_REVERSED: &str = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "closed"
+label = "Closed"
+terminal = true
+
+[[workflow.states]]
+id    = "ammend"
+label = "Ammend"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+"#;
+
+    fn make_ticket_content_with_history(id: &str, state: &str, epic: &str, history: &[(&str, &str)]) -> String {
+        let mut s = format!(
+            "+++\nid = \"{id}\"\ntitle = \"Ticket {id}\"\nstate = \"{state}\"\nepic = \"{epic}\"\n+++\n\nBody.\n"
+        );
+        s.push_str("\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n");
+        for (from, to) in history {
+            s.push_str(&format!("| 2026-01-01T00:00Z | {from} | {to} | test |\n"));
+        }
+        s
+    }
+
     #[test]
     fn epic_is_quiescent_all_done() {
         let tmp = setup_repo();
@@ -249,18 +339,18 @@ mod tests {
         let tmp = setup_repo();
         let p = tmp.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
-        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_WORKER_END).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_IMPL_STATES).unwrap();
         std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
 
         let config = crate::config::Config::load(p).unwrap();
 
-        let content = make_ticket_content("cccc0003", "ready", "epic0002");
+        let content = make_ticket_content("cccc0003", "in_progress", "epic0002");
         crate::git::commit_to_branch(p, "ticket/cccc0003-t3", "tickets/cccc0003-t3.md", &content, "add t3").unwrap();
 
         let blockers = epic_is_quiescent(p, "epic0002", &config, &[]).unwrap();
         assert_eq!(blockers.len(), 1);
         assert!(blockers[0].contains("cccc0003"));
-        assert!(blockers[0].contains("(state: ready)"));
+        assert!(blockers[0].contains("(state: in_progress)"));
     }
 
     #[test]
@@ -291,6 +381,93 @@ mod tests {
         assert_eq!(blockers.len(), 1);
         assert!(blockers[0].contains("dddd0004"));
         assert!(blockers[0].contains("(live worker)"));
+    }
+
+    #[test]
+    fn epic_is_quiescent_ready_no_history_does_not_block() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_IMPL_STATES).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let content = make_ticket_content("eeee0005", "ready", "epic0005");
+        crate::git::commit_to_branch(p, "ticket/eeee0005-t5", "tickets/eeee0005-t5.md", &content, "add t5").unwrap();
+
+        let blockers = epic_is_quiescent(p, "epic0005", &config, &[]).unwrap();
+        assert!(blockers.is_empty(), "expected no blockers for ready ticket with no history, got: {blockers:?}");
+    }
+
+    #[test]
+    fn epic_is_quiescent_ammend_with_impl_history_blocks() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_IMPL_STATES).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let content = make_ticket_content_with_history(
+            "ffff0006", "ammend", "epic0006",
+            &[("groomed", "in_progress"), ("in_progress", "ammend")],
+        );
+        crate::git::commit_to_branch(p, "ticket/ffff0006-t6", "tickets/ffff0006-t6.md", &content, "add t6").unwrap();
+
+        let blockers = epic_is_quiescent(p, "epic0006", &config, &[]).unwrap();
+        assert_eq!(blockers.len(), 1, "expected ammend ticket with impl history to block");
+        assert!(blockers[0].contains("ffff0006"));
+    }
+
+    #[test]
+    fn epic_is_quiescent_closed_with_impl_history_does_not_block() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_IMPL_STATES).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let content = make_ticket_content_with_history(
+            "gggg0007", "closed", "epic0007",
+            &[("in_progress", "implemented"), ("implemented", "closed")],
+        );
+        crate::git::commit_to_branch(p, "ticket/gggg0007-t7", "tickets/gggg0007-t7.md", &content, "add t7").unwrap();
+
+        let blockers = epic_is_quiescent(p, "epic0007", &config, &[]).unwrap();
+        assert!(blockers.is_empty(), "expected closed ticket with impl history not to block, got: {blockers:?}");
+    }
+
+    #[test]
+    fn epic_is_quiescent_order_invariant() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/local.toml"), "username = \"alice\"\n").unwrap();
+
+        // A blocking ticket (in_progress) and a non-blocking ticket (ready, no history).
+        let blocking = make_ticket_content("hhhh0008", "in_progress", "epic0008");
+        crate::git::commit_to_branch(p, "ticket/hhhh0008-t8", "tickets/hhhh0008-t8.md", &blocking, "add t8").unwrap();
+        let non_blocking = make_ticket_content("iiii0009", "ready", "epic0008");
+        crate::git::commit_to_branch(p, "ticket/iiii0009-t9", "tickets/iiii0009-t9.md", &non_blocking, "add t9").unwrap();
+
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_IMPL_STATES).unwrap();
+        let config1 = crate::config::Config::load(p).unwrap();
+        let blockers1 = epic_is_quiescent(p, "epic0008", &config1, &[]).unwrap();
+
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_IMPL_STATES_REVERSED).unwrap();
+        let config2 = crate::config::Config::load(p).unwrap();
+        let blockers2 = epic_is_quiescent(p, "epic0008", &config2, &[]).unwrap();
+
+        let mut b1 = blockers1.clone();
+        let mut b2 = blockers2.clone();
+        b1.sort();
+        b2.sort();
+        assert_eq!(b1, b2, "epic_is_quiescent must be invariant to [[workflow.states]] order");
+        assert_eq!(b1.len(), 1, "expected exactly one blocker (the in_progress ticket)");
     }
 
     fn make_state(terminal: bool, satisfies_deps: bool, actionable: Vec<&str>) -> StateConfig {
