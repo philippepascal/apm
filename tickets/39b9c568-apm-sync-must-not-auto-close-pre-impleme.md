@@ -38,7 +38,11 @@ DO NOT change content_merged_into_main, merged_into_main, or any git_util functi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Fixing `content_merged_into_main` to distinguish false positives from true merges at the git-util level.
+- Protecting tickets in states other than `new`, `groomed`, `specd`, `question` (e.g. `in_design`, `ammend`, `ready`, `in_progress`, `blocked`) — those states may have real implementation commits that were legitimately merged.
+- Changes to Case 2 (`implemented, branch gone`) or Case 4 (`branch merged into target_branch`) of `sync::detect`.
+- Changes to the hint-generation pass (it already restricts to `state == "implemented"` and is unaffected).
+- Changes to `apm-server` or `apm-ui`.
 
 ### Approach
 
