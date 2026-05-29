@@ -4,12 +4,12 @@ title = "apm refresh-epic quiescence is too broad: it blocks on tickets with no 
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/27439a80-apm-refresh-epic-quiescence-is-too-broad"
 created_at = "2026-05-29T22:07:24.444794Z"
-updated_at = "2026-05-29T22:11:23.742407Z"
+updated_at = "2026-05-29T22:11:27.935920Z"
 +++
 
 ## Spec
