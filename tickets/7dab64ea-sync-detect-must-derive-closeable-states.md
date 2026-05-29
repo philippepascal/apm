@@ -1,7 +1,7 @@
 +++
 id = "7dab64ea"
 title = "sync::detect must derive closeable states from config, not hardcoded IDs"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7dab64ea-sync-detect-must-derive-closeable-states"
 created_at = "2026-05-29T00:56:29.083955Z"
-updated_at = "2026-05-29T00:58:21.207767Z"
+updated_at = "2026-05-29T00:58:24.606615Z"
 +++
 
 ## Spec
@@ -63,3 +63,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T00:56Z | — | new | philippepascal |
 | 2026-05-29T00:58Z | new | groomed | philippepascal |
+| 2026-05-29T00:58Z | groomed | in_design | philippepascal |
