@@ -661,6 +661,18 @@ impl Config {
         ids
     }
 
+    pub fn merge_completed_state_ids(&self) -> std::collections::HashSet<String> {
+        self.workflow.states.iter()
+            .flat_map(|s| s.transitions.iter())
+            .filter(|t| matches!(t.completion,
+                CompletionStrategy::Pr
+                | CompletionStrategy::Merge
+                | CompletionStrategy::PrOrEpicMerge
+            ))
+            .map(|t| t.to.clone())
+            .collect()
+    }
+
     pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
         self.ticket.sections.iter()
             .find(|s| s.name.eq_ignore_ascii_case(name))
@@ -1062,6 +1074,59 @@ dir = "tickets"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.work.epic.is_none());
+    }
+
+    #[test]
+    fn merge_completed_state_ids_returns_correct_set() {
+        // A config with one pr_or_epic_merge transition targeting "implemented"
+        // should return {"implemented"}.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let ids = config.merge_completed_state_ids();
+        assert_eq!(ids, ["implemented".to_string()].into_iter().collect());
+
+        // A config with no merging transitions should return an empty set.
+        let toml_no_merge = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+        let config_no_merge: Config = toml::from_str(toml_no_merge).unwrap();
+        assert!(config_no_merge.merge_completed_state_ids().is_empty());
     }
 
     #[test]

@@ -7661,3 +7661,190 @@ fn sync_detect_implemented_ticket_still_closed_after_pre_impl_filter() {
         "implemented ticket should still appear in close candidates; got: {close_branches:?}"
     );
 }
+
+#[test]
+fn sync_detect_skips_non_merge_completed_ticket_on_merged_branch() {
+    // A ticket in `ready` state (not a merge-completed state) whose branch is
+    // merged into main must NOT appear in close candidates.
+    let dir = init_repo();
+    let p = dir.path();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert!(
+        !config.merge_completed_state_ids().contains("ready"),
+        "`ready` must not be in merge_completed_state_ids for this test to be valid"
+    );
+
+    let (_id, branch) = write_ticket_to_branch(p, "ready", "ready-ticket");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        !close_branches.contains(&branch.as_str()),
+        "ready-state ticket should NOT appear in close candidates; got: {close_branches:?}"
+    );
+    assert!(
+        candidates.hints.is_empty(),
+        "hints should be empty for non-merge-completed ticket; got: {:?}", candidates.hints
+    );
+}
+
+#[test]
+fn sync_detect_uses_config_derived_merge_completed_state() {
+    // A custom workflow with a renamed merge-completion state (`shipped`) must
+    // close tickets in `shipped` and skip tickets in `ready`.
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Replace default workflow with a custom one where `shipped` is the merge-completion state.
+    let custom_workflow = r#"[workflow]
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "shipped"
+  trigger    = "manual"
+  completion = "merge"
+
+[[workflow.states]]
+id    = "shipped"
+label = "Shipped"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+    std::fs::write(p.join(".apm/workflow.toml"), custom_workflow).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "use custom shipped workflow"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(
+        config.merge_completed_state_ids(),
+        ["shipped".to_string()].into_iter().collect(),
+        "custom workflow should report `shipped` as the merge-completed state"
+    );
+
+    // Ticket A: state = "shipped" — should be a close candidate.
+    let branch_a = "ticket/aa11bb22-shipped";
+    let rel_path_a = "tickets/aa11bb22-shipped.md";
+    git(p, &["checkout", "-b", branch_a]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    let content_a = "+++\nid = \"aa11bb22\"\ntitle = \"shipped ticket\"\nstate = \"shipped\"\nbranch = \"ticket/aa11bb22-shipped\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    std::fs::write(p.join(rel_path_a), content_a).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path_a]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add shipped ticket"]);
+    git(p, &["checkout", "main"]);
+
+    // Ticket B: state = "ready" — must NOT be a close candidate.
+    let branch_b = "ticket/bb22cc33-ready";
+    let rel_path_b = "tickets/bb22cc33-ready.md";
+    git(p, &["checkout", "-b", branch_b]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    let content_b = "+++\nid = \"bb22cc33\"\ntitle = \"ready ticket\"\nstate = \"ready\"\nbranch = \"ticket/bb22cc33-ready\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    std::fs::write(p.join(rel_path_b), content_b).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path_b]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add ready ticket"]);
+    git(p, &["checkout", "main"]);
+
+    // Merge both branches into main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch_a, "--no-edit"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch_b, "--no-edit"]);
+
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        close_branches.contains(&branch_a),
+        "shipped ticket should appear in close candidates; got: {close_branches:?}"
+    );
+    assert!(
+        !close_branches.contains(&branch_b),
+        "ready ticket should NOT appear in close candidates; got: {close_branches:?}"
+    );
+}
+
+#[test]
+fn sync_detect_no_candidate_for_terminal_merge_completed_ticket() {
+    // A workflow where a merging-completion transition targets a terminal state:
+    // tickets in that state must NOT produce close candidates or hints — they are
+    // already terminal and need no further transition.
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Replace default workflow with one where `done` is both terminal and the
+    // target of a merge completion transition.
+    let custom_workflow = r#"[workflow]
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "done"
+  trigger    = "manual"
+  completion = "merge"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+    std::fs::write(p.join(".apm/workflow.toml"), custom_workflow).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "workflow with terminal merge-completion state"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert!(
+        config.merge_completed_state_ids().contains("done"),
+        "`done` must be in merge_completed_state_ids"
+    );
+    assert!(
+        config.terminal_state_ids().contains("done"),
+        "`done` must be in terminal_state_ids"
+    );
+
+    // Create a ticket in `done` state and merge its branch into main.
+    let branch = "ticket/cc33dd44-done";
+    let rel_path = "tickets/cc33dd44-done.md";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    let content = "+++\nid = \"cc33dd44\"\ntitle = \"done ticket\"\nstate = \"done\"\nbranch = \"ticket/cc33dd44-done\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n";
+    std::fs::write(p.join(rel_path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add done ticket"]);
+    git(p, &["checkout", "main"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch, "--no-edit"]);
+
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    let close_branches: Vec<&str> = candidates.close.iter()
+        .map(|c| c.ticket.frontmatter.branch.as_deref().unwrap_or(""))
+        .collect();
+    assert!(
+        !close_branches.contains(&branch),
+        "terminal merge-completed ticket should NOT appear in close candidates; got: {close_branches:?}"
+    );
+    assert!(
+        candidates.hints.is_empty(),
+        "no hints should be emitted for terminal merge-completed ticket; got: {:?}", candidates.hints
+    );
+}
