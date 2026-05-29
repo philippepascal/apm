@@ -1,7 +1,7 @@
 +++
 id = "e54a7adf"
 title = "Allow apm instructions in worker allow-list and stop denial scanner mislabeling approvals/cancellations"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e54a7adf-allow-apm-instructions-in-worker-allow-l"
 created_at = "2026-05-29T18:47:07.214401Z"
-updated_at = "2026-05-29T19:04:29.695781Z"
+updated_at = "2026-05-29T19:22:03.513601Z"
 +++
 
 ## Spec
@@ -87,3 +87,4 @@ The existing `test_apm_command_denial` fixture (`transcript_apm_denial.jsonl`) u
 | 2026-05-29T18:49Z | new | groomed | philippepascal |
 | 2026-05-29T19:01Z | groomed | in_design | philippepascal |
 | 2026-05-29T19:04Z | in_design | specd | claude |
+| 2026-05-29T19:22Z | specd | ready | philippepascal |
