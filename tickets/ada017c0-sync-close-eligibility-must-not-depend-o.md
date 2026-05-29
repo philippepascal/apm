@@ -112,6 +112,17 @@ No changes to the fourth test `sync_detect_skips_pre_impl_ticket_with_fork_in_ma
 
 ### Amendment requests
 
+- [ ] HARD CONSTRAINT: the close-eligibility classification MUST be invariant to the order in which [[workflow.states]] are listed in config. The current Approach is REJECTED: both Method 1 and Method 2 use config list-position ('states at indices strictly less than the entry index') as a proxy for lifecycle progression. A project that lists its states out of lifecycle order would get a silently-wrong result. Re-derive eligibility from a signal that does not depend on state list order.
+
+REQUIRED INVARIANCE TEST: add a test that builds a workflow, computes the pre-implementation / eligible classification, then rebuilds the SAME workflow with the [[workflow.states]] entries shuffled into a different order, recomputes, and asserts the classification is identical. This test must exist and pass — it is the guard against reintroducing order dependence. Replace AC6/AC7 (which assert specific sets derived from config order) with order-independent assertions plus this invariance test.
+
+IMPL-ENTRY IDENTIFICATION must also be order-independent: identify the implementation-entry state(s) as the SET of  targets of transitions whose trigger == "command:start" and whose worker_profile does NOT end with "/spec-writer" (set membership — NOT 'the first one in config order'). For the default workflow this set is {in_progress}.
+
+RECOMMENDED APPROACH (history-based — cleanest order- AND cycle-independent option): a ticket is eligible for close-on-merge iff its ## History shows it has entered an implementation-entry state at least once (i.e. some History row's 'To' column is in the impl-entry set). Rationale: current-state classification cannot distinguish 'ready, never worked' (a side-note-like ticket, must NOT close) from 'ready, reverted after being worked' — only history disambiguates, and history is exactly 'did this ticket ever reach implementation'. This is immune to back-edges (in_progress->ready) and cancel-edges (X->closed) that make pure graph reachability unusable, and it is independent of state list order. NOTE: there is no existing history-row parser — the body is only split at '## History' (ticket_fmt.rs:187). A small parser is needed (read rows after '## History', take the 'To' column). The spec-writer should add a minimal helper (ideally on Ticket or in ticket_fmt) and unit-test it.
+
+IF a state-based or graph-based approach is chosen instead of history: it MUST still pass the shuffle-invariance test AND correctly handle cycles (back-edges and cancel/closed shortcut edges) — naive 'reachable from / can reach impl-entry' does NOT work because the default workflow has in_progress->ready back-edges and new->closed cancel edges. Do not rely on the  field being present unless you also handle its absence.
+
+ALL PRIOR CONSTRAINTS STILL HOLD: keep the side-note false-positive guard (a  ticket whose fork reached main via an epic merge must not close); keep terminal-state exclusion in all passes; the e2e full_ticket_lifecycle test (completion="none", external merge of an implemented ticket) MUST pass unmodified; no hardcoded state-ID string literals in sync.rs; remove merge_completed_state_ids(); validate against the default workflow, the custom 'shipped' workflow, AND the completion="none" workflow.
 
 ### Code review
 
