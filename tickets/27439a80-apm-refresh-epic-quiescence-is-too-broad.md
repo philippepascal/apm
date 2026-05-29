@@ -1,7 +1,7 @@
 +++
 id = "27439a80"
 title = "apm refresh-epic quiescence is too broad: it blocks on tickets with no real work yet"
-state = "specd"
+state = "ammend"
 priority = 7
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/27439a80-apm-refresh-epic-quiescence-is-too-broad"
 created_at = "2026-05-29T22:07:24.444794Z"
-updated_at = "2026-05-29T22:11:35.711266Z"
+updated_at = "2026-05-29T22:15:07.425581Z"
 +++
 
 ## Spec
@@ -108,3 +108,4 @@ The two existing tests `epic_is_quiescent_all_done` and `epic_is_quiescent_live_
 | 2026-05-29T22:08Z | new | groomed | philippepascal |
 | 2026-05-29T22:08Z | groomed | in_design | philippepascal |
 | 2026-05-29T22:11Z | in_design | specd | claude |
+| 2026-05-29T22:15Z | specd | ammend | philippepascal |
