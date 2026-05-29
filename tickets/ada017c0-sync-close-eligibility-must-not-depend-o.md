@@ -4,12 +4,12 @@ title = "sync close-eligibility must not depend on completion strategy (fix 7dab
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ada017c0-sync-close-eligibility-must-not-depend-o"
 created_at = "2026-05-29T02:52:06.091678Z"
-updated_at = "2026-05-29T03:06:42.596707Z"
+updated_at = "2026-05-29T03:06:46.726079Z"
 +++
 
 ## Spec
