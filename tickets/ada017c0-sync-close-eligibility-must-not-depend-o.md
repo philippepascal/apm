@@ -41,7 +41,7 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 - [x] `cargo test --workspace` passes after the fix; the `full_ticket_lifecycle` e2e test passes without any modification to the test itself
 - [x] `apm sync` on a workflow where `in_progress → implemented` uses `completion = "none"` reports "branch merged" for an `implemented`-state ticket whose branch was `--no-ff` merged into main (the regression witness; covered by the e2e test, whose ticket has `in_progress` in its history)
 - [x] `apm sync` produces no close candidate for a `new`-state ticket whose branch fork reaches main via an epic `--no-ff` merge (side-note guard preserved)
-- [ ] `apm sync` produces no close candidate for a `ready`-state ticket that never entered implementation, even when its branch is merged into main
+- [x] `apm sync` produces no close candidate for a `ready`-state ticket that never entered implementation, even when its branch is merged into main
 - [ ] `apm sync` produces no close candidate and emits no hint for a terminal-state ticket even when its branch is merged
 - [ ] `Config::implementation_state_ids()` returns the union of (a) `to` targets of `command:start` transitions whose `worker_profile` does not end with `/spec-writer`, and (b) `to` targets of `Pr`/`Merge`/`PrOrEpicMerge` completion transitions; for the default workflow it returns `{in_progress, implemented}`
 - [ ] `Config::implementation_state_ids()` is invariant to the order in which `[[workflow.states]]` are listed — a unit test builds the default workflow, then builds it again with the state entries shuffled, and asserts an identical result
