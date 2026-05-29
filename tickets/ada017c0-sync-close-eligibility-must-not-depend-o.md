@@ -57,55 +57,96 @@ OUT OF SCOPE: fixing the deeper content_merged_into_main false positive (a branc
 
 ### Approach
 
-The fix has three parts: a new Config helper, a sync.rs swap, and updates to three integration tests.
+The eligibility gate is decoupled from BOTH the completion strategy (the 7dab64ea bug) AND config order. A ticket is eligible for close-on-merge iff it has actually reached an implementation state — answered from the ticket's current state and its own History, never from where a state is listed in config.
 
-#### 1. `apm-core/src/config.rs` — replace `merge_completed_state_ids()` with `pre_implementation_state_ids()`
+#### 1. `apm-core/src/config.rs` — add `implementation_state_ids()`, remove `merge_completed_state_ids()`
 
-Add `pub fn pre_implementation_state_ids(&self) -> std::collections::HashSet<String>` to `impl Config`, directly after `terminal_state_ids()`. Remove `merge_completed_state_ids()` entirely.
+A state counts as an "implementation state" if a ticket can only be in it once real implementation work exists. Two order-independent signals identify these, and their UNION is used so no single signal can empty the set:
 
-Algorithm (tried in order):
+- the `to` target of any `command:start` transition whose `worker_profile` does NOT end with `/spec-writer` (a coder/implementer entry; `None` profile counts as non-spec-writer);
+- the `to` target of any transition whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge` (a merge-completion target).
 
-**Method 1 — coder `command:start` entry:** Walk `self.workflow.states` in config order. For each state, find the first transition where `trigger == "command:start"` and `worker_profile` does NOT end with `"/spec-writer"` (treat `None` as non-spec-writer). Look up the `to` state's index in `self.workflow.states`. Pre-implementation = all states at indices strictly less than that index.
-
-**Method 2 — first non-None completion source (fallback):** Walk states in config order. Find the first state that has any transition with `completion != CompletionStrategy::None`. That state's config index is the dividing line. Pre-implementation = all states at indices strictly less than that index.
-
-**Method 3 — no signal:** Return `HashSet::new()` (all non-terminal states are eligible).
-
-The returned set contains only state IDs (strings), never the implementation-entry state itself.
-
-Update the unit test block: remove `merge_completed_state_ids_returns_correct_set`. Add:
-- `pre_implementation_state_ids_default_workflow`: build a config with the default workflow shape (groomed/ammend → in_design via spec-writer command:start; ready → in_progress via coder command:start); assert the result is `{new, groomed, question, specd, ammend, in_design, ready}`.
-- `pre_implementation_state_ids_shipped_workflow`: build the custom shipped workflow (no command:start; in_progress → shipped with `completion = "merge"`); assert the result is `{"ready"}`.
-- `pre_implementation_state_ids_no_signal`: build a workflow with only `manual` transitions and `completion = "none"`; assert the result is empty.
-
-#### 2. `apm-core/src/sync.rs` — swap `merge_completed` for `pre_impl`
-
-Change line 28:
-```
-let merge_completed = config.merge_completed_state_ids();
-```
-to:
-```
-let pre_impl = config.pre_implementation_state_ids();
+```rust
+pub fn implementation_state_ids(&self) -> std::collections::HashSet<String> {
+    self.workflow.states.iter()
+        .flat_map(|s| s.transitions.iter())
+        .filter(|t| {
+            let is_coder_start = t.trigger == "command:start"
+                && t.worker_profile.as_deref().map_or(true, |p| !p.ends_with("/spec-writer"));
+            let is_merge_completion = matches!(t.completion,
+                CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge);
+            is_coder_start || is_merge_completion
+        })
+        .map(|t| t.to.clone())
+        .collect()
+}
 ```
 
-At each of the five eligibility gates, replace `merge_completed.contains(state)` with `!pre_impl.contains(state)` (and flip negations consistently):
+This is a SET built from transition fields; it does not read the position of any `[[workflow.states]]` entry. Remove `merge_completed_state_ids()` entirely.
 
-- Case 1 (line 60): `|| !merge_completed.contains(state)` → `|| pre_impl.contains(state)`
-- Case 3 (line 87): `&& merge_completed.contains(state)` → `&& !pre_impl.contains(state)`
-- Case 2 (line 106): `merge_completed.contains(state) &&` → `!pre_impl.contains(state) &&`
-- Case 4 (line 128): `!merge_completed.contains(state) ||` → `pre_impl.contains(state) ||`
-- Hints (line 153): `merge_completed.contains(state) &&` → `!pre_impl.contains(state) &&`
+Why this is NOT the 7dab64ea regression: completion strategy is only one of two unioned signals. In the `completion = "none"` workflow the merge-completion signal contributes nothing, but the coder `command:start` signal still yields `{in_progress}`, so the set is non-empty and detection keeps working (via History, below). Completion strategy can no longer be the sole gate that empties the set.
 
-#### 3. `apm/tests/integration.rs` — adapt the three tests that call `merge_completed_state_ids()`
+Resulting sets:
+- default workflow: `{in_progress, implemented}` (coder start → in_progress; pr_or_epic_merge → implemented)
+- the e2e `completion = "none"` workflow: `{in_progress}` (coder start only; no merge completion)
+- a custom workflow with no `command:start` but `in_progress → shipped` (`completion = "merge"`): `{shipped}`
 
-`sync_detect_skips_non_merge_completed_ticket_on_merged_branch` (line 7673): replace the pre-condition assertion — `!config.merge_completed_state_ids().contains("ready")` → `config.pre_implementation_state_ids().contains("ready")`. No other changes; the ticket A/B assertions still hold.
+Unit tests: default → `{in_progress, implemented}`; order-invariance (build the default workflow, then build it again with the `[[workflow.states]]` entries shuffled, assert identical result); a `command:start` transition with no `worker_profile` is treated as a coder entry.
 
-`sync_detect_uses_config_derived_merge_completed_state` (line 7733): replace the `assert_eq!(config.merge_completed_state_ids(), ...)` block with `assert_eq!(config.pre_implementation_state_ids(), ["ready".to_string()].into_iter().collect::<std::collections::HashSet<_>>(), ...)`. The ticket A/B candidate assertions remain unchanged — both still hold under the new model because Method 2 identifies `ready` as pre-implementation and `shipped` as eligible.
+#### 2. `apm-core/src/ticket/ticket_fmt.rs` — History "To"-column parser
 
-`sync_detect_no_candidate_for_terminal_merge_completed_ticket` (line 7816): replace `assert!(config.merge_completed_state_ids().contains("done"), ...)` with `assert!(config.terminal_state_ids().contains("done"), ...)`. The candidate assertion remains: `done` is terminal, so it is excluded by the existing terminal guard regardless of the new pre-impl logic.
+`Ticket` already exposes `pub body: String`. Add:
 
-No changes to the fourth test `sync_detect_skips_pre_impl_ticket_with_fork_in_main` or `sync_detect_implemented_ticket_still_closed_after_pre_impl_filter` — they exercise the correct behaviour and pass with the new logic without modification.
+```rust
+pub fn history_target_states(body: &str) -> Vec<String> {
+    let Some(idx) = body.find("\n## History") else { return Vec::new() };
+    body[idx..].lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if !line.starts_with('|') { return None; }
+            // cols = ["", When, From, To, By, ""]; the To column is index 3
+            let to = line.split('|').map(str::trim).nth(3)?.to_string();
+            if to.is_empty() || to == "To" || to.chars().all(|c| c == '-') { return None; }
+            Some(to)
+        })
+        .collect()
+}
+```
+
+Unit test: a body with header, separator, and two data rows returns just the To column (e.g. `["new", "in_progress", "implemented"]`), header/separator skipped.
+
+#### 3. `apm-core/src/sync.rs` — eligibility = reached an implementation state
+
+Replace line 28 (`let merge_completed = config.merge_completed_state_ids();`) with:
+
+```rust
+let impl_states = config.implementation_state_ids();
+let eligible = |t: &Ticket| -> bool {
+    impl_states.contains(t.frontmatter.state.as_str())
+        || crate::ticket_fmt::history_target_states(&t.body)
+            .iter().any(|s| impl_states.contains(s.as_str()))
+};
+```
+
+A ticket is eligible iff its current state is an implementation state OR its History shows it entered one at least once. This asks "did this ticket ever reach implementation" — immune to back-edges and cancel-edges (no graph reachability) and to state ordering. The current-state arm also covers tickets force-set to a done state without an intervening `in_progress` history row.
+
+At the five gates replace `merge_completed.contains(state)` with `eligible(&t)`, keeping the terminal check (`state` stays `t.frontmatter.state.as_str()`):
+- Case 1 (line 60): `if terminal.contains(state) || !eligible(&t) { continue; }`
+- Case 3 (line 87): `if !terminal.contains(state) && eligible(&t) {`
+- Case 2 (line 106): `if eligible(&t) && !terminal.contains(state) {`
+- Case 4 (line 128): `if !eligible(&t) || terminal.contains(state) { continue; }`
+- Hints (line 153): `if eligible(&t) && !terminal.contains(state) {`
+
+No string-literal state IDs remain in sync.rs.
+
+#### 4. Tests — `apm/tests/integration.rs`
+
+- `sync_detect_skips_pre_impl_ticket_with_fork_in_main` (side-note `new`): passes unchanged — a `new` ticket's history only contains `new`, never an implementation state.
+- `sync_detect_implemented_ticket_still_closed_after_pre_impl_filter`: passes — `implemented` is in the default `impl_states`, so the current-state arm makes it eligible even if the helper force-jumps without an `in_progress` row.
+- `sync_detect_skips_non_merge_completed_ticket_on_merged_branch` (ready): update the pre-condition assertion to `!config.implementation_state_ids().contains("ready")`. A `ready` ticket is not an implementation state and (force-created) has no `in_progress` history → not eligible. Assertions hold.
+- `sync_detect_uses_config_derived_merge_completed_state` (custom `shipped` workflow): replace the `merge_completed_state_ids()` assertion with `assert_eq!(config.implementation_state_ids(), {"shipped"})`. Ticket A (`state = "shipped"`) is eligible via the current-state arm (`shipped` ∈ `impl_states`); Ticket B (`state = "ready"`) is not. No fixture/history rewrite needed.
+- `sync_detect_no_candidate_for_terminal_merge_completed_ticket`: keep — `done` ∈ `impl_states` but is terminal, so the terminal guard excludes it. Update the pre-condition to assert `config.terminal_state_ids().contains("done")`.
+- ADD `sync_eligibility_invariant_to_state_order`: build a workflow plus a merged `implemented` ticket, run `detect`, then rebuild with `[[workflow.states]]` shuffled and run `detect` again; assert identical close candidates. Guards against reintroducing order dependence.
 
 ### Open questions
 
