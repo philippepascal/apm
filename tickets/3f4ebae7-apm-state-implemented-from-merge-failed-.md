@@ -1,7 +1,7 @@
 +++
 id = "3f4ebae7"
 title = "apm state implemented from merge_failed should detect already-merged work and skip re-merging"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3f4ebae7-apm-state-implemented-from-merge-failed-"
 created_at = "2026-05-29T23:03:15.303584Z"
-updated_at = "2026-05-29T23:32:43.405250Z"
+updated_at = "2026-05-29T23:32:46.770136Z"
 +++
 
 ## Spec
@@ -147,3 +147,4 @@ Existing tests in `setup_merge()` and `setup_on_failure_fix_project()` are unaff
 | 2026-05-29T23:03Z | — | new | philippepascal |
 | 2026-05-29T23:28Z | new | groomed | philippepascal |
 | 2026-05-29T23:28Z | groomed | in_design | philippepascal |
+| 2026-05-29T23:32Z | in_design | specd | claude |
