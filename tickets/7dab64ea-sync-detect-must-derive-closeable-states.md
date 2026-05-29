@@ -57,7 +57,92 @@ TESTS: existing sync integration tests must still pass. New/updated tests must n
 
 ### Approach
 
-How the implementation will work.
+#### Config helper — `apm-core/src/config.rs`
+
+Add `merge_completed_state_ids()` to `impl Config`, directly after `terminal_state_ids()`. It walks every transition in the workflow and collects the `to` IDs of transitions whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge`. `CompletionStrategy::Pull` is excluded: pull brings upstream into the ticket branch, not the reverse, and does not represent implementation completion. `CompletionStrategy::None` is likewise excluded.
+
+```rust
+pub fn merge_completed_state_ids(&self) -> std::collections::HashSet<String> {
+    self.workflow.states.iter()
+        .flat_map(|s| s.transitions.iter())
+        .filter(|t| matches!(t.completion,
+            CompletionStrategy::Pr
+            | CompletionStrategy::Merge
+            | CompletionStrategy::PrOrEpicMerge
+        ))
+        .map(|t| t.to.clone())
+        .collect()
+}
+```
+
+Add a unit test in `config.rs`'s `#[cfg(test)]` block asserting that a config with a single `pr_or_epic_merge` transition targeting `"implemented"` returns `{"implemented"}`, and that a config with no merging transitions returns an empty set.
+
+#### sync.rs — `apm-core/src/sync.rs`
+
+Remove `const PRE_IMPL` (line 28). Add `let merge_completed = config.merge_completed_state_ids();` immediately after `let terminal = config.terminal_state_ids();`.
+
+Make five substitutions:
+
+1. **Case 1** (branch merged): Replace the two `continue` guards
+   ```rust
+   if terminal.contains(t.frontmatter.state.as_str()) { continue; }
+   if PRE_IMPL.contains(&t.frontmatter.state.as_str()) { continue; }
+   ```
+   with a single guard:
+   ```rust
+   let state = t.frontmatter.state.as_str();
+   if terminal.contains(state) || !merge_completed.contains(state) { continue; }
+   ```
+
+2. **Case 3** (content merged): Replace
+   ```rust
+   if !terminal.contains(state) && !PRE_IMPL.contains(&state) {
+   ```
+   with:
+   ```rust
+   if !terminal.contains(state) && merge_completed.contains(state) {
+   ```
+
+3. **Case 2** (on main, branch gone): Replace
+   ```rust
+   if t.frontmatter.state == "implemented" {
+   ```
+   with:
+   ```rust
+   if merge_completed.contains(t.frontmatter.state.as_str()) {
+   ```
+
+4. **Case 4** (merged into target_branch): Replace
+   ```rust
+   if t.frontmatter.state != "implemented" { continue; }
+   ```
+   with:
+   ```rust
+   if !merge_completed.contains(t.frontmatter.state.as_str()) { continue; }
+   ```
+
+5. **Hint pass**: Replace
+   ```rust
+   if t.frontmatter.state == "implemented" {
+   ```
+   with:
+   ```rust
+   if merge_completed.contains(t.frontmatter.state.as_str()) {
+   ```
+
+After these changes verify with `grep -n '"implemented"\|"new"\|"groomed"\|"specd"\|PRE_IMPL' apm-core/src/sync.rs` — the output should be empty.
+
+#### Tests — `apm/tests/integration.rs`
+
+Existing tests need no modifications. The two pre-impl regression tests (`sync_detect_skips_pre_impl_ticket_with_fork_in_main`, `sync_detect_implemented_ticket_still_closed_after_pre_impl_filter`) pass unchanged: `"new"` is not in `merge_completed`, `"implemented"` is.
+
+Add three new tests:
+
+1. **`sync_detect_skips_non_merge_completed_ticket_on_merged_branch`**: Force a ticket to `ready` state, merge its branch into main, assert the ticket does not appear in close candidates. Assert via `config.merge_completed_state_ids().contains("ready")` that `ready` is genuinely not in the set.
+
+2. **`sync_detect_uses_config_derived_merge_completed_state`**: Build a minimal repo with a custom workflow TOML where the merge-completion state is `shipped` (not `implemented`), `completion = "merge"`. Force a ticket to `shipped`, merge its branch, assert it appears in close candidates. Also force a second ticket to `ready`, merge its branch, assert it does not appear.
+
+3. **`merge_completed_state_ids_returns_correct_set`** (unit test in `config.rs`): Covered above in the Config helper step.
 
 ### Open questions
 
