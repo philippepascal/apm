@@ -1332,8 +1332,18 @@ dir = "tickets"
     }
 
     #[test]
+    fn prefers_apm_agent_type() {
+        let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_NAME");
+        std::env::set_var("APM_AGENT_TYPE", "explicit-type");
+        assert_eq!(resolve_caller_name(), "explicit-type");
+        std::env::remove_var("APM_AGENT_TYPE");
+    }
+
+    #[test]
     fn prefers_apm_agent_name() {
         let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_TYPE");
         std::env::set_var("APM_AGENT_NAME", "explicit-agent");
         assert_eq!(resolve_caller_name(), "explicit-agent");
         std::env::remove_var("APM_AGENT_NAME");
@@ -1342,6 +1352,7 @@ dir = "tickets"
     #[test]
     fn falls_back_to_user() {
         let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_TYPE");
         std::env::remove_var("APM_AGENT_NAME");
         std::env::set_var("USER", "unix-user");
         std::env::remove_var("USERNAME");
@@ -1352,6 +1363,7 @@ dir = "tickets"
     #[test]
     fn defaults_to_apm() {
         let _g = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("APM_AGENT_TYPE");
         std::env::remove_var("APM_AGENT_NAME");
         std::env::remove_var("USER");
         std::env::remove_var("USERNAME");

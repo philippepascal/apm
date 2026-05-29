@@ -2,7 +2,17 @@ use anyhow::Result;
 use std::io::IsTerminal;
 use std::path::Path;
 use crate::ctx::CmdContext;
-use apm_core::epic::{branch_to_title, epic_id_from_branch};
+use apm_core::epic::{branch_to_title, epic_id_from_branch, MergeStatus};
+
+fn freshness_label(ahead: usize, clean: bool) -> String {
+    if ahead == 0 {
+        "up to date".to_string()
+    } else if clean {
+        format!("↓{ahead} clean")
+    } else {
+        format!("↓{ahead} CONFLICTS")
+    }
+}
 
 pub fn run_list(root: &Path) -> Result<()> {
     let ctx = CmdContext::load(root, false)?;
@@ -13,6 +23,7 @@ pub fn run_list(root: &Path) -> Result<()> {
     }
 
     let tickets = ctx.tickets;
+    let default_branch = &ctx.config.project.default_branch;
 
     for branch in &epic_branches {
         let id = epic_id_from_branch(branch);
@@ -44,7 +55,9 @@ pub fn run_list(root: &Path) -> Result<()> {
             .collect::<Vec<_>>()
             .join(", ");
 
-        println!("{id:<8} [{derived:<12}] {title:<40} {counts_str}");
+        let s = apm_core::epic::merge_tree_status(root, default_branch, branch)
+            .unwrap_or(MergeStatus { ahead: 0, clean: true });
+        println!("{id:<8} [{derived:<12}] {title:<40} {counts_str:<30} {}", freshness_label(s.ahead, s.clean));
     }
 
     Ok(())
@@ -242,9 +255,13 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
 
     let derived = apm_core::epic::derive_epic_state(&state_configs);
 
+    let s = apm_core::epic::merge_tree_status(root, &ctx.config.project.default_branch, &branch)
+        .unwrap_or(MergeStatus { ahead: 0, clean: true });
+
     println!("Epic:   {title}");
     println!("Branch: {branch}");
     println!("State:  {derived}");
+    println!("Freshness: {}", freshness_label(s.ahead, s.clean));
 
     if epic_tickets.is_empty() {
         println!();

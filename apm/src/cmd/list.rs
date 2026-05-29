@@ -66,5 +66,37 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         }
     }
 
+    // Epic freshness footer: one entry per distinct epic that has at least one visible ticket.
+    let default_branch = &ctx.config.project.default_branch;
+    let mut epic_map: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+    for t in &filtered {
+        if let Some(tb) = t.frontmatter.target_branch.as_deref() {
+            let id = apm_core::epic::epic_id_from_branch(tb).to_owned();
+            epic_map.entry(id).or_insert_with(|| tb.to_owned());
+        }
+    }
+    if !epic_map.is_empty() {
+        let mut stale_epics: Vec<(String, String)> = Vec::new();
+        for (id, branch) in &epic_map {
+            let s = apm_core::epic::merge_tree_status(root, default_branch, branch)
+                .unwrap_or(apm_core::epic::MergeStatus { ahead: 0, clean: true });
+            if s.ahead > 0 {
+                let label = if s.clean {
+                    format!("↓{} clean", s.ahead)
+                } else {
+                    format!("↓{} CONFLICTS", s.ahead)
+                };
+                stale_epics.push((id.clone(), label));
+            }
+        }
+        if !stale_epics.is_empty() {
+            println!();
+            println!("  epics:");
+            for (id, label) in &stale_epics {
+                println!("    {id:<8}  {label}");
+            }
+        }
+    }
+
     Ok(())
 }

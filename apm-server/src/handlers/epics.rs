@@ -76,6 +76,8 @@ fn derive_epic_state(
 }
 
 fn build_epic_summary(
+    root: &std::path::Path,
+    default_branch: &str,
     branch: &str,
     all_tickets: &[apm_core::ticket::Ticket],
     states: &[apm_core::config::StateConfig],
@@ -90,12 +92,16 @@ fn build_epic_summary(
         *ticket_counts.entry(t.frontmatter.state.clone()).or_insert(0) += 1;
     }
     let state = derive_epic_state(&epic_tickets, states);
+    let ms = apm_core::epic::merge_tree_status(root, default_branch, branch)
+        .unwrap_or(apm_core::epic::MergeStatus { ahead: 0, clean: true });
     Some(EpicSummary {
         id,
         title,
         branch: branch.to_string(),
         state,
         ticket_counts,
+        behind_count: ms.ahead as u32,
+        conflicts: !ms.clean,
     })
 }
 
@@ -108,10 +114,12 @@ pub async fn list_epics(
     };
     let tickets = load_tickets(&state).await?;
     let config = crate::util::load_config(root.clone()).await?;
-    let branches = crate::util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
+    let root_clone = root.clone();
+    let branches = crate::util::blocking(move || apm_core::epic::epic_branches(&root_clone)).await?;
+    let default_branch = config.project.default_branch.clone();
     let summaries: Vec<EpicSummary> = branches
         .iter()
-        .filter_map(|b| build_epic_summary(b, &tickets, &config.workflow.states))
+        .filter_map(|b| build_epic_summary(&root, &default_branch, b, &tickets, &config.workflow.states))
         .collect();
     Ok(Json(summaries).into_response())
 }
@@ -145,6 +153,8 @@ pub async fn create_epic(
             branch,
             state: "empty".to_string(),
             ticket_counts: HashMap::new(),
+            behind_count: 0,
+            conflicts: false,
         }),
     )
         .into_response())
@@ -160,7 +170,8 @@ pub async fn get_epic(
     };
     let tickets = load_tickets(&state).await?;
     let config = crate::util::load_config(root.clone()).await?;
-    let branches = crate::util::blocking(move || apm_core::epic::epic_branches(&root)).await?;
+    let root_clone = root.clone();
+    let branches = crate::util::blocking(move || apm_core::epic::epic_branches(&root_clone)).await?;
     let branch = match branches.iter().find(|b| {
         b.strip_prefix("epic/")
             .and_then(|s| s.split('-').next())
@@ -170,7 +181,8 @@ pub async fn get_epic(
         Some(b) => b.clone(),
         None => return Ok((StatusCode::NOT_FOUND, "epic not found").into_response()),
     };
-    let summary = match build_epic_summary(&branch, &tickets, &config.workflow.states) {
+    let default_branch = config.project.default_branch.clone();
+    let summary = match build_epic_summary(&root, &default_branch, &branch, &tickets, &config.workflow.states) {
         Some(s) => s,
         None => return Ok((StatusCode::NOT_FOUND, "epic not found").into_response()),
     };
@@ -359,6 +371,8 @@ mod tests {
         assert_eq!(json["state"], "empty");
         assert_eq!(json["title"], "My Epic");
         assert!(json["ticket_counts"].as_object().unwrap().is_empty());
+        assert_eq!(json["behind_count"], 0);
+        assert_eq!(json["conflicts"], false);
         let epic_id = json["id"].as_str().unwrap().to_string();
 
         // list should include the new epic

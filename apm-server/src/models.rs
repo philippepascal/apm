@@ -99,6 +99,8 @@ pub struct EpicSummary {
     pub branch: String,
     pub state: String,
     pub ticket_counts: std::collections::HashMap<String, usize>,
+    pub behind_count: u32,
+    pub conflicts: bool,
 }
 
 #[derive(serde::Serialize)]
