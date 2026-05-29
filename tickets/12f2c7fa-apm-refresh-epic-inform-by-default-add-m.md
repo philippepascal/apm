@@ -28,7 +28,7 @@ The command needs explicit mode flags. The default (no flags) should be read-onl
 - [x] `apm refresh-epic <id> --merge` performs a local merge of `main` into the epic branch; on conflict it aborts the merge and exits with a clear error.
 - [x] `apm refresh-epic <id> --merge`, `--pr`, and `--auto` each fail with a clear error when the epic is not quiescent.
 - [x] `apm refresh-epic <id> --pr` opens or updates a PR from `main` into the epic branch (unchanged from current behavior).
-- [ ] `apm refresh-epic <id> --auto` merges locally when the merge is clean and falls back to creating or updating a PR when there are conflicts.
+- [x] `apm refresh-epic <id> --auto` merges locally when the merge is clean and falls back to creating or updating a PR when there are conflicts.
 - [ ] Passing two or more of `--merge`, `--pr`, `--auto` simultaneously exits with a clear error before doing any git work.
 - [ ] A `merge_tree_status` function is exported from `apm-core` and used by `run_refresh_epic`; the logic is not duplicated in the CLI crate.
 
