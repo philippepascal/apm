@@ -88,19 +88,15 @@ if [[ "$CARGO_VERSION" != "$NEW_VERSION" ]]; then
     grep -n '^version' Cargo.toml
     grep -n 'apm-core.*version' apm/Cargo.toml apm-server/Cargo.toml
     echo
-
-    confirm "Commit version bump?"
-    git add Cargo.toml apm/Cargo.toml apm-server/Cargo.toml Cargo.lock
-    git commit -m "Release $TAG"
-    green "Committed version bump"
-    echo
 else
     bold "Cargo.toml already at $NEW_VERSION — skipping version bump"
     echo
 fi
 
-# Always verify the build and tests before tagging, regardless of whether
-# the version was just bumped or was already at the target.
+# Verify the build and tests. cargo check regenerates Cargo.lock so its crate
+# versions match Cargo.toml — this MUST run before the release commit so the
+# synced lockfile is captured in the tag. Otherwise the first `cargo build` in
+# CI rewrites Cargo.lock and the release binary reports a misleading `-dirty`.
 bold "Running cargo check..."
 cargo check --workspace --quiet
 green "cargo check passed"
@@ -111,9 +107,22 @@ cargo test --workspace --quiet
 green "All tests passed"
 echo
 
+# Commit any version/lockfile drift produced above.
+if [[ -n "$(git status --porcelain Cargo.toml apm/Cargo.toml apm-server/Cargo.toml Cargo.lock)" ]]; then
+    confirm "Commit version bump and lockfile?"
+    git add Cargo.toml apm/Cargo.toml apm-server/Cargo.toml Cargo.lock
+    git commit -m "Release $TAG"
+    green "Committed version bump"
+    echo
+fi
+
 # ---------------------------------------------------------------------------
 # Tag and push
 # ---------------------------------------------------------------------------
+
+# Refuse to tag a dirty tree: a stale Cargo.lock or stray change would be baked
+# into the release binary's `git describe --dirty` version string.
+[[ -z "$(git status --porcelain)" ]] || abort "Working tree not clean before tagging — inspect: git status"
 
 confirm "Create tag $TAG and push to origin?"
 
