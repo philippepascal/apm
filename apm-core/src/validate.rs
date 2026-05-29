@@ -328,6 +328,8 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
         .map(|s| s.id.as_str())
         .collect();
 
+    let terminal_ids = config.terminal_state_ids();
+
     let section_names: HashSet<&str> = config.ticket.sections.iter()
         .map(|s| s.name.as_str())
         .collect();
@@ -424,6 +426,21 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
                         ));
                     }
                 }
+            }
+
+            // Merging completions must not target a terminal state.
+            if matches!(
+                transition.completion,
+                CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge
+            ) && terminal_ids.contains(transition.to.as_str()) {
+                errors.push(format!(
+                    "config: state.{}.transition({}) — completion {} targets terminal state {}; \
+                     merging completions must target a non-terminal (review) state",
+                    state.id,
+                    transition.to,
+                    strategy_name(&transition.completion),
+                    transition.to
+                ));
             }
         }
     }
@@ -2300,5 +2317,167 @@ terminal = true
         let config = audit_config(toml);
         let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
         assert_eq!(result.len(), 1, "should not panic with no worker_profile");
+    }
+
+    #[test]
+    fn merge_completion_targeting_terminal_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "done"
+completion = "merge"
+on_failure = "closed"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("state.in_progress.transition(done)") && e.contains("targets terminal state")),
+            "expected terminal-state error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn pr_or_epic_merge_targeting_terminal_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "done"
+completion = "pr_or_epic_merge"
+on_failure = "closed"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("state.in_progress.transition(done)") && e.contains("targets terminal state")),
+            "expected terminal-state error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn pr_completion_targeting_terminal_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[git_host]
+provider = "github"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "done"
+completion = "pr"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("state.in_progress.transition(done)") && e.contains("targets terminal state")),
+            "expected terminal-state error; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn merge_targeting_built_in_closed_rejected() {
+        // "closed" is the built-in terminal state — absent from [[workflow.states]]
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "closed"
+completion = "merge"
+on_failure = "review"
+
+[[workflow.states]]
+id    = "review"
+label = "Review"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("state.in_progress.transition(closed)") && e.contains("targets terminal state")),
+            "expected terminal-state error for built-in closed; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn merge_targeting_non_terminal_accepted() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "review"
+completion = "merge"
+on_failure = "closed"
+
+[[workflow.states]]
+id    = "review"
+label = "Review"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            !errors.iter().any(|e| e.contains("targets terminal state")),
+            "unexpected terminal-state error; got: {errors:?}"
+        );
     }
 }
