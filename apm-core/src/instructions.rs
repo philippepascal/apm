@@ -162,7 +162,23 @@ Off-limits — do not read or write these files:\n\
 \n\
   .claude/              (settings, memory, CLAUDE.md)\n\
   .apm/                 (except the ticket file)\n\
-  .gitignore, .github/  (project config)\n";
+  .gitignore, .github/  (project config)\n\
+\n\
+Do not batch tool calls in parallel in a headless worker:\n\
+\n\
+  Claude Code runs all tool_use blocks emitted in a single turn concurrently.\n\
+  In --print (headless) mode, if any one call requires approval, the entire\n\
+  batch is cancelled — including calls that were individually allowed.\n\
+\n\
+  apm and bootstrap commands must be their own single tool call:\n\
+\n\
+    # Wrong — if apm instructions requires approval, Read is also cancelled\n\
+    [Bash(\"apm instructions\"), Read(\"some/file\")]  <- emitted together\n\
+\n\
+    # Right — sequential, one at a time\n\
+    Bash(\"apm instructions\")\n\
+    ... wait for result ...\n\
+    Read(\"some/file\")\n";
 
 static SESSION_IDENTITY_BODY: &str = "Generate a unique session name at the start of every session.\n\
 Use a fixed string — do not use $() substitution inline, as it triggers\n\
