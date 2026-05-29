@@ -52,7 +52,44 @@ TESTS: existing epic_is_quiescent_* unit tests in epic.rs must still pass (state
 
 ### Approach
 
-How the implementation will work.
+#### Change to `epic_is_quiescent` (`apm-core/src/epic.rs`)
+
+Hoist `config.implementation_state_ids()` before the ticket loop (it is constant for the call). Inside the loop, replace the current state-flag predicate with the implementation-reached check:
+
+```rust
+// Remove is_terminal / is_worker_end / state_blocks; hoist before the loop:
+let impl_states = config.implementation_state_ids();
+
+// Inside the loop, replace the state-blocks branch with:
+let has_reached_impl = impl_states.contains(state_id.as_str())
+    || crate::ticket_fmt::history_target_states(&t.body)
+        .iter()
+        .any(|s| impl_states.contains(s.as_str()));
+if has_reached_impl {
+    blockers.push(format!("  {id} — {title} (state: {state_id})"));
+    continue;
+}
+```
+
+The `state_cfg`, `is_terminal`, and `is_worker_end` lookups become dead code; remove them. The live-worker block (the `ticket_branch` / `worktrees` check that follows) is untouched.
+
+The `has_reached_impl` predicate mirrors the one in `apm-core/src/sync.rs:29–33` used for close-eligibility detection.
+
+#### Test updates (`apm-core/src/epic.rs` `#[cfg(test)]` block)
+
+**Add `TOML_WITH_IMPL_STATES` constant** for the quiescence tests. This workflow has a coder `command:start` transition to `in_progress` and a `pr_or_epic_merge` completion to `implemented`, so `implementation_state_ids()` returns `{"in_progress", "implemented"}`. Include `ready`, `in_progress`, `implemented`, `ammend`, and `closed` states.
+
+**Add `make_ticket_content_with_history` helper** that takes `(from, to)` row pairs and appends a `## History` table after the body, so `history_target_states` can find the `To` column values.
+
+**Update `epic_is_quiescent_state_blocker`** — switch to `TOML_WITH_IMPL_STATES` and change the ticket state from `ready` to `in_progress` (an implementation state). Assert one blocker with `"(state: in_progress)"`.
+
+**Add `epic_is_quiescent_ready_no_history_does_not_block`** — ticket in `ready` state, `TOML_WITH_IMPL_STATES`, no history. Assert `blockers.is_empty()`.
+
+**Add `epic_is_quiescent_ammend_with_impl_history_blocks`** — ticket in `ammend` state with history rows `[("groomed", "in_progress"), ("in_progress", "ammend")]` via `make_ticket_content_with_history`. Assert one blocker.
+
+**Add `epic_is_quiescent_order_invariant`** — build two configs from `TOML_WITH_IMPL_STATES` with `[[workflow.states]]` in reversed order; assert both produce the same blocker list for the same set of tickets.
+
+The two existing tests `epic_is_quiescent_all_done` and `epic_is_quiescent_live_worker_blocker` use `TOML_WITH_WORKER_END` which has no impl transitions, so `impl_states` is empty. For `all_done`: `has_reached_impl` is false for both tickets → no blockers → still passes. For `live_worker_blocker`: the state check yields no blocker, but the live-worker path (unchanged) still fires → still passes.
 
 ### Open questions
 
