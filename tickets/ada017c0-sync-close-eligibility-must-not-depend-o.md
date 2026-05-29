@@ -1,7 +1,7 @@
 +++
 id = "ada017c0"
 title = "sync close-eligibility must not depend on completion strategy (fix 7dab64ea regression)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ada017c0-sync-close-eligibility-must-not-depend-o"
 created_at = "2026-05-29T02:52:06.091678Z"
-updated_at = "2026-05-29T03:06:46.726079Z"
+updated_at = "2026-05-29T03:06:50.832092Z"
 +++
 
 ## Spec
@@ -123,3 +123,4 @@ No changes to the fourth test `sync_detect_skips_pre_impl_ticket_with_fork_in_ma
 | 2026-05-29T02:52Z | — | new | philippepascal |
 | 2026-05-29T02:53Z | new | groomed | philippepascal |
 | 2026-05-29T02:55Z | groomed | in_design | philippepascal |
+| 2026-05-29T03:06Z | in_design | specd | claude |
