@@ -39,7 +39,7 @@ OUT OF SCOPE: auto-merging main into the epic; blocking or gating dispatch on st
 
 - [x] All freshness computation uses `apm_core::epic::merge_tree_status` (defined in ticket 12f2c7fa); no new `EpicFreshness` struct or `epic_freshness` function is added in this ticket. Display mapping: `behind = status.ahead`, `conflicts = !status.clean`.
 - [x] `apm epic list` includes a freshness indicator per epic: "up to date", "↓N clean", or "↓N CONFLICTS".
-- [ ] `apm epic show <id>` prints a "Freshness:" line immediately after the "State:" line.
+- [x] `apm epic show <id>` prints a "Freshness:" line immediately after the "State:" line.
 - [ ] `apm list` appends an epic freshness footer after the ticket rows with one entry per distinct epic that has at least one visible ticket; the footer is omitted when no visible ticket has an epic.
 - [ ] `apm next` prints a freshness note on a line after the ticket line when the top ticket's `epic` field is set (non-JSON mode only; JSON output is unchanged).
 - [ ] `GET /api/epics` and `GET /api/epics/:id` include `behind_count` (integer ≥ 0) and `conflicts` (boolean) on every epic object in the response.
