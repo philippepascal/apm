@@ -1,7 +1,7 @@
 +++
 id = "3efea02e"
 title = "apm validate: reject merging-completion transition targeting a terminal state"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3efea02e-apm-validate-reject-merging-completion-t"
 created_at = "2026-05-29T01:28:21.747382Z"
-updated_at = "2026-05-29T01:33:28.827338Z"
+updated_at = "2026-05-29T01:33:38.263596Z"
 +++
 
 ## Spec
@@ -118,3 +118,4 @@ The existing tests that use `config_with_merge_transition` (which sets `implemen
 | 2026-05-29T01:28Z | — | new | philippepascal |
 | 2026-05-29T01:28Z | new | groomed | philippepascal |
 | 2026-05-29T01:29Z | groomed | in_design | philippepascal |
+| 2026-05-29T01:33Z | in_design | specd | claude |
