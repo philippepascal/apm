@@ -187,7 +187,7 @@ Add to `apm/tests/integration.rs` (or a new `apm/tests/close_path.rs` if the fil
 
 ### Amendment requests
 
-- [ ] Three small but real concerns from the spec review:
+- [x] Three small but real concerns from the spec review:
 
 1) PRE-STAGED CHANGES LEAK INTO THE CLOSE COMMIT. commit_to_branch path 2 (current_branch == target) does git add rel_path then git commit -m MSG with no path argument. git commit without -a still commits everything that is currently staged in the index — so if the user has unrelated pre-staged changes when the close runs, those changes silently get folded into the close commit on target. Fix: constrain the commit to the ticket file only by passing the path to commit (e.g. git commit -m MSG -- rel_path), or use git's pathspec equivalent in the run() helper. Apply the same constraint in commit_to_branch's path 1 (permanent worktree) and path 3 (try_worktree_commit) for consistency. Add a unit test that pre-stages an unrelated file, calls commit_to_branch, and asserts the resulting commit contains only the ticket file.
 
