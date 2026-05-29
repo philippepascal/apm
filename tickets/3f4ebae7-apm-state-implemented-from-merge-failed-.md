@@ -25,10 +25,8 @@ The root cause is a single missing field: the `merge_failed → implemented` tra
 ### Acceptance criteria
 
 - [ ] `apm-core/src/default/workflow.toml`'s `merge_failed → implemented` transition has `completion = "pr_or_epic_merge"` and `on_failure = "merge_failed"`.
-- [ ] `apm state <id> implemented` from `merge_failed` when the ticket branch is already merged into `target_branch` succeeds: state commits to ticket branch as `implemented` and `merge_into_default` is not invoked.
-- [ ] `apm state <id> implemented` from `merge_failed` when the branch is not yet merged and the merge succeeds: state lands as `implemented` and work is present in `target_branch`.
-- [ ] `apm state <id> implemented` from `merge_failed` when the branch is not yet merged and the merge fails: ticket stays `merge_failed`, a history row is appended for the failed attempt, and no `implemented` state commit is written.
-- [ ] `apm state <id> implemented` from `in_progress` when the branch is already merged into the target (edge case): succeeds without invoking `merge_into_default`.
+- [ ] `apm state <id> implemented` from `merge_failed` when the merge succeeds: state commits to ticket branch as `implemented` and the state row is present in `target_branch`.
+- [ ] `apm state <id> implemented` from `merge_failed` when the merge fails: ticket stays `merge_failed`, a history row is appended for the failed attempt, and no `implemented` state commit is written.
 - [ ] All pre-existing `in_progress → implemented` integration tests pass without modification.
 - [ ] `apm validate` reports an `on_failure` error for any project where `merge_failed → implemented` has a merging completion but no `on_failure`; `apm validate --fix` repairs it.
 - [ ] `cargo test --workspace` passes.
