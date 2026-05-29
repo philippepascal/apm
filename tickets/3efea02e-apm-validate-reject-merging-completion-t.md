@@ -36,7 +36,7 @@ TESTS: validate_config rejects a workflow with a Merge or PrOrEpicMerge transiti
 
 - [x] `apm validate` reports an error when a `Merge` completion transition targets an explicit terminal state
 - [x] `apm validate` reports an error when a `PrOrEpicMerge` completion transition targets an explicit terminal state
-- [ ] `apm validate` reports an error when a `Pr` completion transition targets an explicit terminal state
+- [x] `apm validate` reports an error when a `Pr` completion transition targets an explicit terminal state
 - [ ] `apm validate` reports an error when any merging completion targets the built-in `closed` state, even when `closed` is absent from `[[workflow.states]]`
 - [ ] The error message matches the format: `config: state.<id>.transition(<to>) — completion <strategy> targets terminal state <to>; merging completions must target a non-terminal (review) state`
 - [ ] `apm validate` accepts a merging completion transition that targets a non-terminal state
