@@ -87,7 +87,65 @@ NON-GOAL: changing what 'close' means at the workflow level. The transition vali
 
 ### Approach
 
-How the implementation will work.
+Two call sites change. No new functions, no new modules, no signature changes.
+
+#### Change 1 — ticket_util.rs::close
+
+File: `apm-core/src/ticket/ticket_util.rs`, function `close`, lines 329–333.
+
+Replace the four lines that declare `merge_warnings`, call `merge_branch_into_default`, and push its warnings:
+
+```rust
+let mut merge_warnings: Vec<String> = Vec::new();
+if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch, &mut merge_warnings) {
+    output.push(format!("warning: merge into {} failed: {e:#}", config.project.default_branch));
+}
+output.extend(merge_warnings);
+```
+
+With:
+
+```rust
+let target = t.frontmatter.target_branch.as_deref()
+    .unwrap_or(config.project.default_branch.as_str());
+if let Err(e) = crate::git::commit_to_branch(root, target, &rel_path, &content, &format!("ticket({id}): close")) {
+    output.push(format!("warning: commit closed state to {target} failed: {e:#}"));
+}
+```
+
+`t`, `config`, `rel_path`, and `content` are all already in scope at this point. The commit is non-fatal (same severity as the old merge warning) so a remote-push failure on `target` does not abort the close.
+
+#### Change 2 — state.rs::transition
+
+File: `apm-core/src/state.rs`, function `transition`, immediately after the existing `git::commit_to_branch` call and the `crate::logger::log` call (currently lines 166–173).
+
+Insert:
+
+```rust
+if target_is_terminal {
+    let target = t.frontmatter.target_branch.as_deref()
+        .unwrap_or(config.project.default_branch.as_str());
+    if let Err(e) = git::commit_to_branch(root, target, &rel_path, &content, &format!("ticket({id}): {old_state} \u{2192} {new_state}")) {
+        warnings.push(format!("warning: commit terminal state to {target} failed: {e:#}"));
+    }
+}
+```
+
+`target_is_terminal` is already computed at line 51. `t`, `config`, `rel_path`, `content`, `old_state`, and `new_state` are all in scope. The block runs unconditionally for any terminal transition, before the `match completion` block. For terminal states `completion` is always `CompletionStrategy::None`, so the subsequent push logic is unaffected.
+
+#### Change 3 — Tests
+
+Add to `apm/tests/integration.rs` (or a new `apm/tests/close_path.rs` if the file is already large):
+
+- **`close_main_scoped_writes_to_target`**: Bootstrap a temp git repo. Create a ticket; write an "implemented" ticket file to both the ticket branch and main (simulating a prior merge). Call `ticket::close`. Assert the ticket file read from main shows `state = "closed"`. Assert the ticket file read from the ticket branch shows `state = "closed"`. Assert no changes exist in the main working tree (no `git status` output).
+
+- **`close_epic_scoped_writes_to_epic_not_main`**: Set `target_branch = "refs/heads/epic/abc"` in the ticket frontmatter. Write the ticket file to the epic branch. Call `ticket::close`. Assert the epic branch ticket file shows `state = "closed"`. Assert main does not contain the ticket file or shows an older state.
+
+- **`state_transition_closed_writes_to_target`**: Call `state::transition` with `new_state = "closed"`. Assert the ticket branch shows `state = "closed"`. Assert `config.project.default_branch` (or `target_branch` if set) shows `state = "closed"`.
+
+- **`sync_close_succeeds_with_dirty_main_worktree`**: Create a temp repo. Introduce an uncommitted file in the main worktree (`git status` is dirty). Call `sync::apply` for a close candidate. Assert the call returns `Ok` (no error). Assert the ticket file on main shows `state = "closed"`.
+
+- **`no_case2_redetection_after_close`**: Close a main-scoped ticket (which writes state=closed to main). Delete the ticket branch. Run sync detect. Assert the ticket is not in the `candidates.close` list.
 
 ### Open questions
 
