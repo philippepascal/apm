@@ -661,14 +661,16 @@ impl Config {
         ids
     }
 
-    pub fn merge_completed_state_ids(&self) -> std::collections::HashSet<String> {
+    pub fn implementation_state_ids(&self) -> std::collections::HashSet<String> {
         self.workflow.states.iter()
             .flat_map(|s| s.transitions.iter())
-            .filter(|t| matches!(t.completion,
-                CompletionStrategy::Pr
-                | CompletionStrategy::Merge
-                | CompletionStrategy::PrOrEpicMerge
-            ))
+            .filter(|t| {
+                let is_coder_start = t.trigger == "command:start"
+                    && t.worker_profile.as_deref().map_or(true, |p| !p.ends_with("/spec-writer"));
+                let is_merge_completion = matches!(t.completion,
+                    CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge);
+                is_coder_start || is_merge_completion
+            })
             .map(|t| t.to.clone())
             .collect()
     }
@@ -1077,15 +1079,24 @@ dir = "tickets"
     }
 
     #[test]
-    fn merge_completed_state_ids_returns_correct_set() {
-        // A config with one pr_or_epic_merge transition targeting "implemented"
-        // should return {"implemented"}.
+    fn implementation_state_ids_coder_start_and_merge_completion() {
+        // A workflow with a coder command:start to in_progress and a pr_or_epic_merge
+        // to implemented should return {"in_progress", "implemented"}.
         let toml = r#"
 [project]
 name = "test"
 
 [tickets]
 dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -1101,11 +1112,17 @@ id    = "implemented"
 label = "Implemented"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
-        let ids = config.merge_completed_state_ids();
-        assert_eq!(ids, ["implemented".to_string()].into_iter().collect());
+        let ids = config.implementation_state_ids();
+        let expected: std::collections::HashSet<String> =
+            ["in_progress", "implemented"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(ids, expected);
+    }
 
-        // A config with no merging transitions should return an empty set.
-        let toml_no_merge = r#"
+    #[test]
+    fn implementation_state_ids_none_completion_still_nonempty_via_coder_start() {
+        // A workflow where in_progress->implemented uses completion="none" must still
+        // yield a non-empty set because the coder command:start signal provides in_progress.
+        let toml = r#"
 [project]
 name = "test"
 
@@ -1113,20 +1130,188 @@ name = "test"
 dir = "tickets"
 
 [[workflow.states]]
-id    = "new"
-label = "New"
+id    = "ready"
+label = "Ready"
 
   [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
 
 [[workflow.states]]
-id       = "closed"
-label    = "Closed"
-terminal = true
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "none"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
 "#;
-        let config_no_merge: Config = toml::from_str(toml_no_merge).unwrap();
-        assert!(config_no_merge.merge_completed_state_ids().is_empty());
+        let config: Config = toml::from_str(toml).unwrap();
+        let ids = config.implementation_state_ids();
+        assert_eq!(ids, ["in_progress".to_string()].into_iter().collect::<std::collections::HashSet<_>>());
+    }
+
+    #[test]
+    fn implementation_state_ids_no_coder_start_uses_merge_completion() {
+        // A workflow with no command:start but a merge-completion transition to "shipped"
+        // must return {"shipped"}.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "shipped"
+  trigger    = "manual"
+  completion = "merge"
+
+[[workflow.states]]
+id    = "shipped"
+label = "Shipped"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let ids = config.implementation_state_ids();
+        assert_eq!(ids, ["shipped".to_string()].into_iter().collect::<std::collections::HashSet<_>>());
+    }
+
+    #[test]
+    fn implementation_state_ids_command_start_no_profile_treated_as_coder() {
+        // A command:start transition with no worker_profile must be treated as a
+        // coder entry (None profile counts as non-spec-writer).
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let ids = config.implementation_state_ids();
+        assert_eq!(ids, ["in_progress".to_string()].into_iter().collect::<std::collections::HashSet<_>>());
+    }
+
+    #[test]
+    fn implementation_state_ids_spec_writer_start_excluded() {
+        // A command:start whose worker_profile ends with "/spec-writer" must NOT
+        // contribute an implementation state.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_design"
+  trigger        = "command:start"
+  worker_profile = "claude/spec-writer"
+
+[[workflow.states]]
+id    = "in_design"
+label = "In Design"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let ids = config.implementation_state_ids();
+        assert!(ids.is_empty(), "spec-writer start must not count as an implementation state");
+    }
+
+    #[test]
+    fn implementation_state_ids_order_invariant() {
+        // Building the workflow with states in two different orders must yield the
+        // same implementation_state_ids set.
+        let toml_v1 = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#;
+        // Same states, reversed order.
+        let toml_v2 = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+"#;
+        let c1: Config = toml::from_str(toml_v1).unwrap();
+        let c2: Config = toml::from_str(toml_v2).unwrap();
+        assert_eq!(
+            c1.implementation_state_ids(),
+            c2.implementation_state_ids(),
+            "implementation_state_ids must be invariant to state list order"
+        );
     }
 
     #[test]

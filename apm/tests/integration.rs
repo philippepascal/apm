@@ -7671,8 +7671,8 @@ fn sync_detect_skips_non_merge_completed_ticket_on_merged_branch() {
 
     let config = apm_core::config::Config::load(p).unwrap();
     assert!(
-        !config.merge_completed_state_ids().contains("ready"),
-        "`ready` must not be in merge_completed_state_ids for this test to be valid"
+        !config.implementation_state_ids().contains("ready"),
+        "`ready` must not be in implementation_state_ids for this test to be valid"
     );
 
     let (_id, branch) = write_ticket_to_branch(p, "ready", "ready-ticket");
@@ -7731,9 +7731,9 @@ terminal = true
 
     let config = apm_core::config::Config::load(p).unwrap();
     assert_eq!(
-        config.merge_completed_state_ids(),
+        config.implementation_state_ids(),
         ["shipped".to_string()].into_iter().collect(),
-        "custom workflow should report `shipped` as the merge-completed state"
+        "custom workflow should report `shipped` as the implementation state"
     );
 
     // Ticket A: state = "shipped" — should be a close candidate.
@@ -7814,8 +7814,8 @@ terminal = true
 
     let config = apm_core::config::Config::load(p).unwrap();
     assert!(
-        config.merge_completed_state_ids().contains("done"),
-        "`done` must be in merge_completed_state_ids"
+        config.implementation_state_ids().contains("done"),
+        "`done` must be in implementation_state_ids"
     );
     assert!(
         config.terminal_state_ids().contains("done"),
@@ -7846,5 +7846,119 @@ terminal = true
     assert!(
         candidates.hints.is_empty(),
         "no hints should be emitted for terminal merge-completed ticket; got: {:?}", candidates.hints
+    );
+}
+
+#[test]
+fn sync_eligibility_invariant_to_state_order() {
+    // Build a repo with a simple custom workflow and a merged implemented ticket.
+    // Run detect twice: once with states in normal order, once with them reversed.
+    // The set of close candidates must be identical.
+    let dir = init_repo();
+    let p = dir.path();
+
+    let workflow_v1 = r#"[workflow]
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+    std::fs::write(p.join(".apm/workflow.toml"), workflow_v1).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", ".apm/workflow.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "simple workflow"]);
+
+    // Create a ticket that went through in_progress before reaching implemented.
+    let branch = "ticket/aa11bb22-order-test";
+    let rel_path = "tickets/aa11bb22-order-test.md";
+    git(p, &["checkout", "-b", branch]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    let content = "+++\nid = \"aa11bb22\"\ntitle = \"order test\"\nstate = \"implemented\"\nbranch = \"ticket/aa11bb22-order-test\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|  \n| 2026-01-01T00:00Z | — | new | test |\n| 2026-01-02T00:00Z | new | in_progress | test |\n| 2026-01-03T00:00Z | in_progress | implemented | test |\n";
+    std::fs::write(p.join(rel_path), content).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add impl ticket"]);
+    git(p, &["checkout", "main"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", branch, "--no-edit"]);
+
+    let config1 = apm_core::config::Config::load(p).unwrap();
+    let candidates1 = apm_core::sync::detect(p, &config1).unwrap();
+    let close1: std::collections::HashSet<String> = candidates1.close.iter()
+        .map(|c| c.ticket.frontmatter.id.clone())
+        .collect();
+
+    // Same workflow with states in reversed order — transitions are unchanged.
+    let workflow_v2 = r#"[workflow]
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+"#;
+    // Write the shuffled workflow to disk (no commit needed — Config::load reads from disk).
+    std::fs::write(p.join(".apm/workflow.toml"), workflow_v2).unwrap();
+
+    let config2 = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(
+        config1.implementation_state_ids(),
+        config2.implementation_state_ids(),
+        "implementation_state_ids must be invariant to state list order"
+    );
+
+    let candidates2 = apm_core::sync::detect(p, &config2).unwrap();
+    let close2: std::collections::HashSet<String> = candidates2.close.iter()
+        .map(|c| c.ticket.frontmatter.id.clone())
+        .collect();
+
+    assert_eq!(
+        close1, close2,
+        "close candidates must be identical regardless of workflow state order; v1={close1:?} v2={close2:?}"
+    );
+    assert!(
+        close1.contains("aa11bb22"),
+        "the implemented ticket should appear in close candidates; got: {close1:?}"
     );
 }
