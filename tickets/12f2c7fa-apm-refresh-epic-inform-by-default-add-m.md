@@ -1,7 +1,7 @@
 +++
 id = "12f2c7fa"
 title = "apm refresh-epic: inform by default, add --merge / --pr / --auto modes"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/12f2c7fa-apm-refresh-epic-inform-by-default-add-m"
 created_at = "2026-05-29T01:17:38.982422Z"
-updated_at = "2026-05-29T01:29:39.346306Z"
+updated_at = "2026-05-29T01:47:49.397111Z"
 +++
 
 ## Spec
@@ -123,3 +123,4 @@ Logic:
 | 2026-05-29T01:18Z | new | groomed | philippepascal |
 | 2026-05-29T01:26Z | groomed | in_design | philippepascal |
 | 2026-05-29T01:29Z | in_design | specd | claude |
+| 2026-05-29T01:47Z | specd | ready | philippepascal |
