@@ -46,7 +46,60 @@ DO NOT change content_merged_into_main, merged_into_main, or any git_util functi
 
 ### Approach
 
-How the implementation will work.
+The fix is two guard clauses in `apm-core/src/sync.rs` and two new integration tests. No other files change.
+
+#### apm-core/src/sync.rs
+
+At the top of `detect`, after `let terminal = config.terminal_state_ids();`, add:
+
+```rust
+const PRE_IMPL: &[&str] = &["new", "groomed", "specd", "question"];
+```
+
+**Case 1** (currently lines 58–59): insert a guard between the terminal check and the `close.push`:
+
+```rust
+if terminal.contains(t.frontmatter.state.as_str()) { continue; }
+if PRE_IMPL.contains(&t.frontmatter.state.as_str()) { continue; }
+close.push(CloseCandidate { ticket: t, reason: "branch merged" });
+```
+
+**Case 3** (currently lines 83–86): `merged_set.insert` must still run unconditionally (so later passes skip the branch), but `close.push` is guarded by both the existing terminal check and the new pre-impl check:
+
+```rust
+merged_set.insert(branch.clone());
+let state = t.frontmatter.state.as_str();
+if !terminal.contains(state) && !PRE_IMPL.contains(&state) {
+    close.push(CloseCandidate { ticket: t, reason: "branch content merged" });
+}
+```
+
+The hint-generation pass (checking `state == "implemented"`) is already safe and needs no change.
+
+#### apm/tests/integration.rs — two new tests
+
+**Test 1: `sync_detect_skips_pre_impl_ticket_with_fork_in_main`** (bug reproduction)
+
+Build the topology that triggers the false positive:
+
+1. `init_repo()` — main at commit A.
+2. Checkout `epic/test` from A; add an allow-empty commit E1; return to main.
+3. Checkout `epic/test` again; branch off to `ticket/aa11bb22-side-note`; write `tickets/aa11bb22-side-note.md` with `state = "new"` and no implementation content; commit T1; return to main.
+4. `git merge --no-ff epic/test` — main is now M with parents A (first) and E1 (second).
+
+Topology result: `merge_base(main, ticket_branch) = E1`, which is reachable from main only via M's second parent (not the first-parent chain). `content_merged_into_main` sees `content_tip = None` (all commits touch only `tickets/`) and the regular-merge sub-case incorrectly returns `true` — exactly the bug.
+
+Assertions:
+- `candidates.close` does not contain the ticket branch.
+- `candidates.hints` is empty.
+
+**Test 2: `sync_detect_implemented_ticket_still_closed_after_pre_impl_filter`** (Case 1 regression)
+
+1. `write_ticket_to_branch(p, "implemented", "regression-test")` — uses the existing helper to create an implemented ticket.
+2. Retrieve the branch; `git merge --no-ff <branch>` into main.
+3. Call `sync::detect`.
+
+Assertion: the ticket branch appears in `candidates.close` (reason `"branch merged"`), confirming the new PRE_IMPL filter does not block implemented tickets.
 
 ### Open questions
 
