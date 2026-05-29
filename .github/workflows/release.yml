@@ -1,5 +1,13 @@
 name: Release
 
+# Linux musl build only. macOS aarch64 is built locally by scripts/release.sh
+# and uploaded to the GitHub Release before this workflow runs. The release
+# itself is created by scripts/release.sh; softprops/action-gh-release below
+# is idempotent (create-or-update), so the Linux tarball is appended.
+#
+# Tests are run locally by scripts/release.sh before the tag is created;
+# this workflow does not re-run them.
+
 on:
   push:
     tags:
@@ -7,8 +15,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  build-linux:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -18,49 +28,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Set up Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build apm-ui assets
-        working-directory: apm-ui
-        run: |
-          npm ci
-          npm run build
-
-      - name: Run tests
-        run: cargo test --workspace
-
-  build:
-    needs: test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: macos-14
-            target: aarch64-apple-darwin
-            musl: false
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-musl
-            musl: true
-
-    steps:
-      - name: Clear macOS git credential helper
-        if: runner.os == 'macOS'
-        run: git config --global credential.helper ''
-
-      - uses: actions/checkout@v4
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-x86_64-unknown-linux-musl-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Set up Node 20
         uses: actions/setup-node@v4
@@ -74,54 +42,27 @@ jobs:
           npm run build
 
       - name: Add Rust target
-        run: rustup target add ${{ matrix.target }}
+        run: rustup target add x86_64-unknown-linux-musl
 
       - name: Install musl-tools
-        if: matrix.musl
         run: sudo apt-get install -y musl-tools
 
       - name: Build binaries
-        run: cargo build --release --target ${{ matrix.target }} -p apm-cli -p apm-server
+        run: cargo build --release --target x86_64-unknown-linux-musl -p apm-cli -p apm-server
 
       - name: Strip binaries
         run: |
-          strip target/${{ matrix.target }}/release/apm
-          strip target/${{ matrix.target }}/release/apm-server
-
-      - name: Get tag name
-        id: tag
-        run: echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          strip target/x86_64-unknown-linux-musl/release/apm
+          strip target/x86_64-unknown-linux-musl/release/apm-server
 
       - name: Package archive
         run: |
-          tar -czf apm-${{ steps.tag.outputs.name }}-${{ matrix.target }}.tar.gz \
-            -C target/${{ matrix.target }}/release apm apm-server
+          tar -czf apm-${GITHUB_REF_NAME}-x86_64-unknown-linux-musl.tar.gz \
+            -C target/x86_64-unknown-linux-musl/release apm apm-server
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: apm-${{ steps.tag.outputs.name }}-${{ matrix.target }}
-          path: apm-${{ steps.tag.outputs.name }}-${{ matrix.target }}.tar.gz
-
-  release:
-    needs: build
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-
-      - name: Generate checksums
-        run: sha256sum *.tar.gz > checksums.txt
-
-      - name: Create GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            *.tar.gz
-            checksums.txt
+          files: apm-${{ github.ref_name }}-x86_64-unknown-linux-musl.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

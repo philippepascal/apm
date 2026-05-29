@@ -25,9 +25,12 @@ confirm() {
 # Pre-flight checks
 # ---------------------------------------------------------------------------
 
-command -v cargo >/dev/null || abort "cargo not found"
-command -v git   >/dev/null || abort "git not found"
-command -v gh    >/dev/null || abort "gh CLI not found"
+command -v cargo  >/dev/null || abort "cargo not found"
+command -v git    >/dev/null || abort "git not found"
+command -v gh     >/dev/null || abort "gh CLI not found"
+command -v rustup >/dev/null || abort "rustup not found (needed to install aarch64-apple-darwin target)"
+command -v npm    >/dev/null || abort "npm not found (needed to build apm-ui)"
+command -v shasum >/dev/null || abort "shasum not found"
 
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] || abort "Not on main branch"
 [[ -z "$(git status --porcelain)" ]] || abort "Working tree is not clean — commit or stash first"
@@ -117,27 +120,72 @@ if [[ -n "$(git status --porcelain Cargo.toml apm/Cargo.toml apm-server/Cargo.to
 fi
 
 # ---------------------------------------------------------------------------
-# Tag and push
+# Tag, build macOS artifact locally, push, create GitHub Release
 # ---------------------------------------------------------------------------
 
 # Refuse to tag a dirty tree: a stale Cargo.lock or stray change would be baked
 # into the release binary's `git describe --dirty` version string.
 [[ -z "$(git status --porcelain)" ]] || abort "Working tree not clean before tagging — inspect: git status"
 
-confirm "Create tag $TAG and push to origin?"
+confirm "Create tag $TAG, build macOS artifact, and push to origin?"
 
+# Print a recovery hint if anything below this point fails after the tag is created.
+trap 'rc=$?; if [[ $rc -ne 0 ]] && git rev-parse "$TAG" >/dev/null 2>&1; then echo; red "Release failed after the local tag $TAG was created."; red "Remove the local tag and retry: git tag -d $TAG"; fi; exit $rc' EXIT
+
+# Create the tag locally BEFORE building so the binary's `git describe --tags`
+# resolves to a clean $TAG (no -N-gSHA suffix, no -dirty).
 git tag -a "$TAG" -m "Release $TAG"
-green "Created tag $TAG"
+green "Created local tag $TAG"
+echo
+
+# Build macOS arm64 release artifact locally (replaces the dropped macos-14 CI job).
+ARTIFACTS_DIR="target/release-artifacts"
+MAC_TARBALL_NAME="apm-${TAG}-aarch64-apple-darwin.tar.gz"
+MAC_TARBALL="$ARTIFACTS_DIR/$MAC_TARBALL_NAME"
+CHECKSUMS="$ARTIFACTS_DIR/checksums.txt"
+mkdir -p "$ARTIFACTS_DIR"
+
+bold "Ensuring aarch64-apple-darwin Rust target is installed..."
+rustup target add aarch64-apple-darwin >/dev/null
+echo
+
+bold "Building apm-ui assets..."
+( cd apm-ui && npm ci --silent && npm run build --silent )
+green "apm-ui built"
+echo
+
+bold "Building macOS arm64 release binaries..."
+cargo build --release --target aarch64-apple-darwin -p apm-cli -p apm-server --quiet
+strip target/aarch64-apple-darwin/release/apm
+strip target/aarch64-apple-darwin/release/apm-server
+green "Binaries built and stripped"
+echo
+
+bold "Packaging $MAC_TARBALL_NAME..."
+tar -czf "$MAC_TARBALL" -C target/aarch64-apple-darwin/release apm apm-server
+( cd "$ARTIFACTS_DIR" && shasum -a 256 "$MAC_TARBALL_NAME" > "checksums.txt" )
+green "Packaged: $MAC_TARBALL"
+echo
 
 git push origin main
 git push origin "$TAG"
 green "Pushed main and $TAG to origin"
+echo
 
+bold "Creating GitHub Release $TAG..."
+if gh release view "$TAG" >/dev/null 2>&1; then
+    gh release upload "$TAG" --clobber "$MAC_TARBALL" "$CHECKSUMS"
+    green "Uploaded macOS asset to existing release $TAG"
+else
+    gh release create "$TAG" --generate-notes "$MAC_TARBALL" "$CHECKSUMS"
+    green "Created release $TAG with macOS asset and checksums"
+fi
 echo
-bold "Release CI triggered. Monitor at:"
+
+bold "Linux musl build is running in CI. Monitor at:"
 echo "  https://github.com/philippepascal/apm/actions"
+echo "  (CI will append apm-${TAG}-x86_64-unknown-linux-musl.tar.gz to the release.)"
 echo
-bold "After CI completes:"
-echo "  1. Check the release at https://github.com/philippepascal/apm/releases/tag/$TAG"
-echo "  2. Update homebrew-tap Formula/apm.rb with SHA-256 values from checksums.txt"
-echo "  3. Run: brew tap philippepascal/tap && brew install philippepascal/tap/apm"
+bold "Next steps:"
+echo "  1. Verify the release: https://github.com/philippepascal/apm/releases/tag/$TAG"
+echo "  2. Run ./scripts/post-release.sh (Homebrew formula + crates.io publish)"
