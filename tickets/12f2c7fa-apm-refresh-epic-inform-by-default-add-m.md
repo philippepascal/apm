@@ -29,7 +29,7 @@ The command needs explicit mode flags. The default (no flags) should be read-onl
 - [x] `apm refresh-epic <id> --merge`, `--pr`, and `--auto` each fail with a clear error when the epic is not quiescent.
 - [x] `apm refresh-epic <id> --pr` opens or updates a PR from `main` into the epic branch (unchanged from current behavior).
 - [x] `apm refresh-epic <id> --auto` merges locally when the merge is clean and falls back to creating or updating a PR when there are conflicts.
-- [ ] Passing two or more of `--merge`, `--pr`, `--auto` simultaneously exits with a clear error before doing any git work.
+- [x] Passing two or more of `--merge`, `--pr`, `--auto` simultaneously exits with a clear error before doing any git work.
 - [ ] A `merge_tree_status` function is exported from `apm-core` and used by `run_refresh_epic`; the logic is not duplicated in the CLI crate.
 
 ### Out of scope
