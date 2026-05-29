@@ -1,7 +1,7 @@
 +++
 id = "df03566b"
 title = "Fix close path: replace working-tree merge into default with commit_to_branch on target_branch"
-state = "specd"
+state = "ammend"
 priority = 7
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/df03566b-fix-close-path-replace-working-tree-merg"
 created_at = "2026-05-29T23:19:06.681786Z"
-updated_at = "2026-05-29T23:36:30.645832Z"
+updated_at = "2026-05-29T23:43:20.891646Z"
 +++
 
 ## Spec
@@ -164,3 +164,4 @@ Add to `apm/tests/integration.rs` (or a new `apm/tests/close_path.rs` if the fil
 | 2026-05-29T23:28Z | new | groomed | philippepascal |
 | 2026-05-29T23:32Z | groomed | in_design | philippepascal |
 | 2026-05-29T23:36Z | in_design | specd | claude |
+| 2026-05-29T23:43Z | specd | ammend | philippepascal |
