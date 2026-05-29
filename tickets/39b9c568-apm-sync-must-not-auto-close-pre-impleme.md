@@ -1,7 +1,7 @@
 +++
 id = "39b9c568"
 title = "apm sync must not auto-close pre-implementation tickets"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/39b9c568-apm-sync-must-not-auto-close-pre-impleme"
 created_at = "2026-05-29T00:18:15.128911Z"
-updated_at = "2026-05-29T00:20:11.374615Z"
+updated_at = "2026-05-29T00:20:14.529754Z"
 +++
 
 ## Spec
@@ -53,3 +53,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-29T00:18Z | — | new | philippepascal |
 | 2026-05-29T00:20Z | new | groomed | philippepascal |
+| 2026-05-29T00:20Z | groomed | in_design | philippepascal |
