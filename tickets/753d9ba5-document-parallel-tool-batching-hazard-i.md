@@ -22,12 +22,12 @@ These are distinct failure modes. A worker can be fully compliant with every exi
 
 ### Acceptance criteria
 
-- [ ] `apm instructions` output contains a named block under Shell Discipline that describes the parallel tool-call batching hazard
-- [ ] The block states that in headless (`--print`) mode a single unapproved call cancels every sibling call in the batch
-- [ ] The block gives a concrete rule: issue `apm` and bootstrap commands as their own tool call, not batched with other work
-- [ ] The block includes a wrong/right example showing sequential emission versus parallel batching
-- [ ] The new text is in `SHELL_DISCIPLINE_BODY` in `apm-core/src/instructions.rs`
-- [ ] No duplicate guidance is added to any agent template file under `apm-core/src/default/agents/`
+- [x] `apm instructions` output contains a named block under Shell Discipline that describes the parallel tool-call batching hazard
+- [x] The block states that in headless (`--print`) mode a single unapproved call cancels every sibling call in the batch
+- [x] The block gives a concrete rule: issue `apm` and bootstrap commands as their own tool call, not batched with other work
+- [x] The block includes a wrong/right example showing sequential emission versus parallel batching
+- [x] The new text is in `SHELL_DISCIPLINE_BODY` in `apm-core/src/instructions.rs`
+- [x] No duplicate guidance is added to any agent template file under `apm-core/src/default/agents/`
 
 ### Out of scope
 
