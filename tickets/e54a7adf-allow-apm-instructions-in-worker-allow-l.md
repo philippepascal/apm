@@ -4,12 +4,12 @@ title = "Allow apm instructions in worker allow-list and stop denial scanner mis
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e54a7adf-allow-apm-instructions-in-worker-allow-l"
 created_at = "2026-05-29T18:47:07.214401Z"
-updated_at = "2026-05-29T19:04:20.628800Z"
+updated_at = "2026-05-29T19:04:25.010406Z"
 +++
 
 ## Spec
