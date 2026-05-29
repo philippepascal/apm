@@ -42,7 +42,33 @@ Two bugs exposed by a worker that died in progress. The root cause from the real
 
 ### Approach
 
-How the implementation will work.
+#### Part A — allow-list entries (`apm/src/cmd/init.rs`)
+
+Add `"Bash(apm instructions*)"` to `APM_ALLOW_ENTRIES` alongside the other `apm` subcommands (e.g., after `"Bash(apm version*)"`). Do the same in `APM_USER_ALLOW_ENTRIES`.
+
+Pattern rationale: `Bash(apm instructions*)` (no space before `*`) matches the bare `apm instructions` invocation and any future flags, consistent with how other zero-or-one-arg subcommands are written in the same list (`Bash(apm sync*)`, `Bash(apm version*)`, etc.). The broken form `Bash(apm instructions *)` (space before `*`) requires at least one argument and would miss the bare call.
+
+Update two integration tests in `apm/tests/integration.rs`:
+- `init_yes_creates_settings_when_claude_dir_exists` — add `assert!(entries.contains(&"Bash(apm instructions*)"), "Bash(apm instructions*) missing");`
+- `init_yes_updates_user_settings` — add the same assertion checking the user settings entries
+
+#### Part B — denial scanner (`apm-core/src/denial.rs`)
+
+**Enum change:** add `RequiresApproval` to `DenialClass`. It serialises as `"requires_approval"` automatically via the existing `#[serde(rename_all = "snake_case")]` attribute.
+
+**Scanner change:** in `scan_transcript` pass 2, after the `"Exit code "` early-continue and before calling `classify_denial`, add two short-circuit checks in order:
+
+1. `content_str.contains("Cancelled: parallel tool call")` → `continue` (collateral cancellation; not a denial; drop entirely from the count)
+2. `content_str.contains("requires approval")` → extract the command string the same way `classify_denial` does for the relevant tool (Bash: `input_obj["command"]`; others: serialise `input_obj`), push a `DenialEntry` with `classification: DenialClass::RequiresApproval`, then `continue`
+
+`classify_denial` itself is unchanged; all three new paths are handled at the call site where `content_str` is already in scope.
+
+**Unit tests:** add two inline tests to the existing `#[cfg(test)] mod tests` block (inline style, using `tempfile::tempdir()` and `std::fs::write`, consistent with `test_regular_error_not_classified_as_denial`):
+
+- `test_cancelled_parallel_not_a_denial` — transcript with one Bash tool whose result content is `"Cancelled: parallel tool call Bash(apm instructions) errored"`; assert `denial_count == 0` and `denials.is_empty()`
+- `test_requires_approval_classified_as_requires_approval` — transcript with a Bash tool (`apm instructions`) whose result content is `"This command requires approval"`; assert `denial_count == 1` and `denials[0].classification == DenialClass::RequiresApproval`
+
+The existing `test_apm_command_denial` fixture (`transcript_apm_denial.jsonl`) uses content `"apm doesnotexist cannot be auto-allowed"` — it continues to pass unchanged, verifying genuine denials are still classified as `ApmCommandDenial`.
 
 ### Open questions
 
