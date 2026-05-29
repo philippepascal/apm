@@ -46,6 +46,7 @@ TESTS: existing sync integration tests must still pass. New/updated tests must n
 - [ ] `sync::detect` emits a hint only for tickets in the merge-completed state whose branch was not detected by any pass (hint pass continues to work).
 - [ ] `sync.rs` contains no string-literal state IDs after the change.
 - [ ] A custom-workflow project with a renamed merge-completion state (e.g., `shipped`) correctly triggers close detection for tickets in that renamed state and skips tickets not in that state.
+- [ ] `sync::detect` produces no close candidate and emits no hint for a ticket in a state that belongs to both `merge_completed_state_ids()` and `terminal_state_ids()`.
 
 ### Out of scope
 
