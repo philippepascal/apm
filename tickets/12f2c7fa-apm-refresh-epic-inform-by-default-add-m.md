@@ -16,21 +16,9 @@ updated_at = "2026-05-29T01:26:27.618639Z"
 
 ### Problem
 
-CURRENT BEHAVIOR: apm refresh-epic <id> (apm/src/cmd/epic.rs run_refresh_epic) always opens a PR from the default branch (main) into the epic branch. It requires the epic to be quiescent (epic_is_quiescent) and bails otherwise. There is no way to just check the situation, and no way to do a direct local merge.
+The current `apm refresh-epic <id>` always creates a GitHub PR from the default branch into the epic branch. There is no way to check whether main is ahead without making changes, no way to see if a merge would conflict, and no way to perform a local merge without going through GitHub. The quiescence requirement fires even for read-only status checks, which is unnecessarily restrictive.
 
-DESIRED BEHAVIOR — make the mode explicit:
-- Default (no flags): INFORM ONLY. Detect whether main merges cleanly into the epic branch and report the result — ahead-count of main over the epic plus clean-vs-conflict status. Do NOT modify anything. Use git merge-tree for the clean/conflict detection (no working-tree changes). This mode is read-only, so it should work regardless of whether the epic is quiescent.
-- --merge: actually perform the merge of main into the epic branch (local merge).
-- --pr: create/update the PR from main into the epic branch (the current behavior).
-- --auto: merge if the merge is clean; otherwise fall back to creating a PR.
-
-QUIESCENCE: the acting modes (--merge, --pr, --auto) keep the existing quiescence requirement — refreshing an epic while its tickets are in flight is unsafe. The default inform mode must NOT require quiescence (it only reads).
-
-FLAG VALIDATION: --merge, --pr, --auto are mutually exclusive; reject combinations with a clear error.
-
-SHARED PRIMITIVE: the clean/conflict detection (main -> epic via git merge-tree) is the same primitive needed by the epic-freshness surfacing work (separate ticket, 7a76dd16). Implement it once as a reusable apm-core helper and use it in both places rather than duplicating.
-
-OUT OF SCOPE: surfacing freshness in apm list/UI (separate ticket 7a76dd16); auto-detecting staleness at dispatch time or gating dispatch; an 'accept divergence' mechanism. This ticket is only about the refresh-epic command's modes.
+The command needs explicit mode flags. The default (no flags) should be read-only: report how many commits main is ahead of the epic branch and whether a merge would be clean or conflicted. `--merge` performs a local merge, `--pr` retains the existing GitHub PR behavior, and `--auto` merges locally when clean and falls back to a PR when there are conflicts. The quiescence requirement applies only to the three acting modes (`--merge`, `--pr`, `--auto`), not to the default inform mode. The clean/conflict detection (via `git merge-tree`) is also needed by a separate freshness-surfacing ticket (7a76dd16) and must be extracted into `apm-core` as a reusable helper rather than duplicated.
 
 ### Acceptance criteria
 
