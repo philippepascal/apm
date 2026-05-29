@@ -34,7 +34,10 @@ The command needs explicit mode flags. The default (no flags) should be read-onl
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Surfacing freshness data in `apm list`, `apm epic list`, or the web UI (ticket 7a76dd16).
+- Auto-detecting staleness at dispatch time or gating ticket dispatch on epic freshness.
+- An "accept divergence" mechanism for epics that have commits not yet on main.
+- Any changes to `apm epic close`.
 
 ### Approach
 
