@@ -38,6 +38,7 @@ TESTS: existing epic_is_quiescent_* unit tests in epic.rs must still pass (state
 - [ ] A ticket currently in an implementation state (e.g. `in_progress`) blocks quiescence
 - [ ] A ticket currently in a post-implementation state (e.g. `implemented`) blocks quiescence
 - [ ] A ticket in `ammend` whose History table shows a prior transition into an implementation state (e.g. `in_progress`) blocks quiescence
+- [ ] A closed (terminal) ticket whose History shows entry into an implementation state (e.g. `in_progress`) does NOT block quiescence
 - [ ] A ticket in `ready` with no implementation history does not block quiescence
 - [ ] The live-worker check still independently blocks a ticket whose worktree has a live `.apm-worker.pid`, regardless of state
 - [ ] `epic_is_quiescent` results are invariant to the ordering of `[[workflow.states]]` in `apm.toml`
