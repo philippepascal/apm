@@ -33,10 +33,10 @@ The root cause is a single missing field: the `merge_failed → implemented` tra
 
 ### Out of scope
 
-- Changes to the `pr` completion strategy — PR-based workflows are unaffected; the detect-skip check only applies to the `merge` and `pr_or_epic_merge` (epic-merge) paths.
+- Changes to the `pr` completion strategy — PR-based workflows are unaffected; only the epic-merge path is touched.
 - Retroactive repair of tickets currently stuck in a drifted `merge_failed` state; those require supervisor intervention (`apm state <id> implemented` after this fix is deployed, or manual close).
 - Auto-migration of existing project `workflow.toml` files to add `completion = "pr_or_epic_merge"` — only the default template is updated; existing projects must add `completion` manually (after which `apm validate --fix` can add `on_failure`).
-- Changes to the merge-failure detection functions (`is_branch_merged_into`, `merged_into_main`, `content_merged_into_main`) — these are correct and untouched.
+- Changes to `apm-core/src/state.rs` or any git helper functions — the fix is purely a config change in `workflow.toml`.
 - Changes to `apm-server`, `apm-ui`, or `apm sync`.
 - Making `merge_failed` recoverable without supervisor action — the supervisor still decides when and how to recover.
 
