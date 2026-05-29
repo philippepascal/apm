@@ -65,6 +65,7 @@ TESTS to consider:
 - After branch cleanup of a main-scoped closed ticket, sync no longer re-offers the ticket via Case 2 (main's view now reads closed which is terminal).
 
 NON-GOAL: changing what 'close' means at the workflow level. The transition validity rules are unchanged; only the side-effect on target_branch changes.
+After this fix, `apm close` no longer ships unmerged work as a side effect; that responsibility belongs solely to the implementation transition (`state implemented`), which has the correct merge completion strategy. A ticket whose work was never merged to target before close will have its ticket-file state updated to closed on target, but the code content on the ticket branch is not promoted.
 
 ### Acceptance criteria
 
