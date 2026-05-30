@@ -1,7 +1,7 @@
 +++
 id = "3f4ebae7"
 title = "apm state implemented from merge_failed should detect already-merged work and skip re-merging"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3f4ebae7-apm-state-implemented-from-merge-failed-"
 created_at = "2026-05-29T23:03:15.303584Z"
-updated_at = "2026-05-30T01:14:34.773943Z"
+updated_at = "2026-05-30T01:22:56.450845Z"
 +++
 
 ## Spec
@@ -105,3 +105,4 @@ The other AC (merge succeeds) is correct as written and needs no change.
 | 2026-05-30T00:55Z | in_design | specd | claude |
 | 2026-05-30T01:03Z | specd | ready | philippepascal |
 | 2026-05-30T01:14Z | ready | in_progress | philippepascal |
+| 2026-05-30T01:22Z | in_progress | implemented | claude |
