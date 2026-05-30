@@ -22,7 +22,18 @@ The fix is to move the entire `SHELL_DISCIPLINE_BODY` block out of `apm instruct
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions` output does not contain a `## Shell Discipline` heading
+- [ ] `apm instructions` output does not contain the text "Do not batch tool calls in parallel"
+- [ ] `apm instructions` output does not contain `&&` as shell-discipline guidance
+- [ ] `apm prompt` output for a `claude/coder` ticket contains `## Shell Discipline` and the no-chaining rule
+- [ ] `apm prompt` output for a `claude/spec-writer` ticket contains `## Shell Discipline`
+- [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.coder.md`
+- [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.spec-writer.md`
+- [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.main-agent.md`
+- [ ] `apm-core/src/default/agents/claude/apm.coder.md` is byte-identical to `.apm/agents/claude/apm.coder.md`
+- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` is byte-identical to `.apm/agents/claude/apm.spec-writer.md`
+- [ ] `apm-core/src/default/agents/claude/apm.main-agent.md` is byte-identical to `.apm/agents/claude/apm.main-agent.md`
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
