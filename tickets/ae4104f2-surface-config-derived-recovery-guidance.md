@@ -1,7 +1,7 @@
 +++
 id = "ae4104f2"
 title = "Surface config-derived recovery guidance for merge-failure states in apm CLI"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ae4104f2-surface-config-derived-recovery-guidance"
 created_at = "2026-05-30T02:11:03.737221Z"
-updated_at = "2026-05-30T02:14:06.275610Z"
+updated_at = "2026-05-30T02:14:18.952503Z"
 +++
 
 ## Spec
@@ -71,3 +71,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-30T02:11Z | — | new | philippepascal |
 | 2026-05-30T02:14Z | new | groomed | philippepascal |
+| 2026-05-30T02:14Z | groomed | in_design | philippepascal |
