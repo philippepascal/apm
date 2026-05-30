@@ -1040,6 +1040,14 @@ mod tests {
         assert!(msg.contains("coder"), "error should name the role: {msg}");
     }
 
+    #[test]
+    fn build_system_prompt_coder_contains_shell_discipline() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
+        assert!(result.contains("## Shell Discipline"), "Shell Discipline section missing from coder prompt");
+    }
+
     // --- layer 2 (project file) tests ---
 
     #[test]
