@@ -31,6 +31,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     Ok(())
 }
 
+#[allow(clippy::type_complexity)]
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,

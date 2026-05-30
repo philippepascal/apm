@@ -249,6 +249,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::print_stderr)]
     #[test]
     fn installed_claude_binary_supports_disable_slash_commands() {
         let Ok(out) = std::process::Command::new("claude").arg("--help").output() else {
