@@ -68,7 +68,13 @@ TESTS:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo build --workspace` emits zero warnings after all changes are committed
+- [ ] `cargo clippy --workspace --all-targets` emits zero warnings after all changes are committed
+- [ ] `cargo test --workspace` passes after the auto-fix commit (Phase 1)
+- [ ] `cargo test --workspace` passes after all manual-fix commits (Phase 2)
+- [ ] All four `too-many-arguments` sites (`apm-core/src/start.rs:574`, `apm/src/cmd/list.rs:6`, `apm/src/cmd/new.rs:6`, `apm/src/cmd/spec.rs:5`) are suppressed with `#[allow(clippy::too_many_arguments)]`, not restructured
+- [ ] The `unused variable: id` at `apm-server/src/handlers/maintenance.rs:259` is resolved by renaming to `_id`
+- [ ] `push_remote_state_update` at `apm/tests/integration.rs:7395` is either deleted (with rationale in commit message) or annotated with `#[allow(dead_code)]` and a comment explaining the intent
 
 ### Out of scope
 
