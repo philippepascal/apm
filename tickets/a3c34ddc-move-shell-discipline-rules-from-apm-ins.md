@@ -37,7 +37,11 @@ The fix is to move the entire `SHELL_DISCIPLINE_BODY` block out of `apm instruct
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Reformatting or restructuring any other section of `apm instructions`
+- Changes to the role-file cascade logic in `build_system_prompt_body`
+- Non-Claude agent files (`.apm/agents/<other>/`)
+- The `CLAUDE.md` `@`-import pattern — rules go directly into role files, not a shared imported file
+- Adding shell-discipline rules to any agent outside of the three Claude role files listed above
 
 ### Approach
 
