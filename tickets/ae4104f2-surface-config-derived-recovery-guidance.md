@@ -24,7 +24,7 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 
 - [x] `classify_recovery_options(state_id, config)` classifies a transition as `RetryMerge` when its to-state is the target of at least one merging-completion transition (Pr, Merge, or PrOrEpicMerge) anywhere in the workflow
 - [x] `classify_recovery_options` classifies a transition as `ReturnToWorker` when its to-state is the target of at least one non-spec-writer `command:start` transition anywhere in the workflow
-- [ ] `classify_recovery_options` classifies a transition as `Abandon` when its to-state has `terminal: true`
+- [x] `classify_recovery_options` classifies a transition as `Abandon` when its to-state has `terminal: true`
 - [ ] `classify_recovery_options` classifies a transition as `Other` when none of the above apply
 - [x] Each `RecoveryOption` carries: to-state ID, display label (from `transition.label`, falling back to to-state ID when label is empty), and `RecoveryKind`
 - [x] Results are ordered by `workflow.states` declaration order; classification is independent of that order (shuffling the states list produces identical results)
