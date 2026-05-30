@@ -127,6 +127,14 @@ enum AgentsCommand {
         /// Built-in wrapper name to eject (e.g. claude)
         name: String,
     },
+    /// Show the resolved agent, role, model, and manifest for a ticket
+    Resolve {
+        /// Ticket ID or unambiguous prefix
+        ticket_id: String,
+        /// Emit JSON instead of the human-readable table
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1171,6 +1179,9 @@ fn main() -> Result<()> {
         Command::Agents {
             command: AgentsCommand::Eject { name },
         } => cmd::agents::run_eject(&root, &name),
+        Command::Agents {
+            command: AgentsCommand::Resolve { ticket_id, json },
+        } => cmd::agents::run_resolve(&root, &ticket_id, json),
         Command::Work {
             skip_permissions,
             dry_run,

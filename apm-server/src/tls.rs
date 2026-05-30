@@ -75,57 +75,6 @@ pub async fn serve_tls(addr: SocketAddr, app: Router, config: Arc<ServerConfig>)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    fn install_provider() {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-    }
-
-    #[test]
-    fn self_signed_config_succeeds() {
-        install_provider();
-        let config = self_signed_config("localhost").expect("self_signed_config failed");
-        drop(config);
-    }
-
-    #[test]
-    fn self_signed_config_custom_domain() {
-        install_provider();
-        let config = self_signed_config("example.internal").expect("self_signed_config failed");
-        drop(config);
-    }
-
-    #[test]
-    fn custom_cert_config_roundtrip() {
-        install_provider();
-        let certified = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
-            .expect("rcgen failed");
-        let cert_pem = certified.cert.pem();
-        let key_pem = certified.key_pair.serialize_pem();
-
-        let dir = tempdir().expect("tempdir");
-        let cert_path = dir.path().join("cert.pem");
-        let key_path = dir.path().join("key.pem");
-        std::fs::write(&cert_path, &cert_pem).expect("write cert");
-        std::fs::write(&key_path, &key_pem).expect("write key");
-
-        let config = custom_cert_config(&cert_path, &key_path)
-            .expect("custom_cert_config failed");
-        drop(config);
-    }
-
-    #[test]
-    fn custom_cert_config_missing_cert_file() {
-        let dir = tempdir().expect("tempdir");
-        let cert_path = dir.path().join("nonexistent.pem");
-        let key_path = dir.path().join("nonexistent.key");
-        assert!(custom_cert_config(&cert_path, &key_path).is_err());
-    }
-}
-
 pub async fn serve_acme(
     addr: SocketAddr,
     app: Router,
@@ -199,5 +148,56 @@ pub async fn serve_acme(
                 Err(e) => eprintln!("tls accept error: {e}"),
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    fn install_provider() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    }
+
+    #[test]
+    fn self_signed_config_succeeds() {
+        install_provider();
+        let config = self_signed_config("localhost").expect("self_signed_config failed");
+        drop(config);
+    }
+
+    #[test]
+    fn self_signed_config_custom_domain() {
+        install_provider();
+        let config = self_signed_config("example.internal").expect("self_signed_config failed");
+        drop(config);
+    }
+
+    #[test]
+    fn custom_cert_config_roundtrip() {
+        install_provider();
+        let certified = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
+            .expect("rcgen failed");
+        let cert_pem = certified.cert.pem();
+        let key_pem = certified.key_pair.serialize_pem();
+
+        let dir = tempdir().expect("tempdir");
+        let cert_path = dir.path().join("cert.pem");
+        let key_path = dir.path().join("key.pem");
+        std::fs::write(&cert_path, &cert_pem).expect("write cert");
+        std::fs::write(&key_path, &key_pem).expect("write key");
+
+        let config = custom_cert_config(&cert_path, &key_path)
+            .expect("custom_cert_config failed");
+        drop(config);
+    }
+
+    #[test]
+    fn custom_cert_config_missing_cert_file() {
+        let dir = tempdir().expect("tempdir");
+        let cert_path = dir.path().join("nonexistent.pem");
+        let key_path = dir.path().join("nonexistent.key");
+        assert!(custom_cert_config(&cert_path, &key_path).is_err());
     }
 }

@@ -6,6 +6,76 @@ act on it without needing to ask questions.
 
 ---
 
+## Shell Discipline
+
+Keep each Bash call to a single operation.
+
+Do not chain commands:
+
+  # Wrong — && chains defeat allow-list matching
+  apm sync && apm list --state ready
+
+  # Right — one call per operation
+  apm sync
+  apm list --state ready
+
+Do not use $() subshells:
+
+  # Wrong — triggers permission prompt
+  apm spec 1234 --section Problem --set "$(cat /tmp/problem.md)"
+
+  # Right — write content with the Write tool, then reference by file
+  apm spec 1234 --section Problem --set-file /tmp/problem.md
+
+Do not use background jobs (&):
+
+  # Wrong — & defeats pattern matching
+  apm state 1234 implemented & apm state 5678 implemented & wait
+
+  # Right — sequential calls
+  apm state 1234 implemented
+  apm state 5678 implemented
+
+Use git -C for all git operations in worktrees:
+
+  # Wrong — cd && git triggers security check
+  cd "$wt" && git add .
+
+  # Right
+  git -C "$wt" add <files>
+
+Use bash -c for multi-step commands that must share a directory:
+
+  # Right — single bash call, matches Bash(bash *)
+  bash -c "cd $wt && cargo test --workspace 2>&1"
+
+Use the Write tool instead of heredocs or $() for temp files:
+  Write the file via the Write tool, then pass --set-file to apm spec.
+
+Off-limits — do not read or write these files:
+
+  .claude/              (settings, memory, CLAUDE.md)
+  .apm/                 (except the ticket file)
+  .gitignore, .github/  (project config)
+
+Do not batch tool calls in parallel in a headless worker:
+
+  Claude Code runs all tool_use blocks emitted in a single turn concurrently.
+  In --print (headless) mode, if any one call requires approval, the entire
+  batch is cancelled — including calls that were individually allowed.
+
+  apm and bootstrap commands must be their own single tool call:
+
+    # Wrong — if apm instructions requires approval, Read is also cancelled
+    [Bash("apm instructions"), Read("some/file")]  <- emitted together
+
+    # Right — sequential, one at a time
+    Bash("apm instructions")
+    ... wait for result ...
+    Read("some/file")
+
+---
+
 ## How to save spec sections
 
 Do NOT write the ticket markdown file directly. Always use `apm spec`.

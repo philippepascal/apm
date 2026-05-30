@@ -3,6 +3,8 @@ use apm_core::{classify_recovery_options, config::resolve_identity, is_merge_fai
 use std::path::Path;
 use crate::ctx::CmdContext;
 
+#[allow(clippy::too_many_arguments)]
+// Each argument maps to a distinct CLI flag.
 pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>) -> Result<()> {
     let ctx = CmdContext::load(root, no_aggressive)?;
 
