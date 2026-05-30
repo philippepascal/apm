@@ -46,7 +46,11 @@ Reference: run_refresh_epic in apm/src/cmd/epic.rs already implements the --merg
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- A `--yes` flag to bypass the auto-close prompt in non-TTY / scripted mode
+- Changes to `apm sync`, `apm epic refresh`, or any other subcommand
+- Modifying the quiescence definition (which states or conditions block)
+- Auto-pushing the default branch after a `--merge` close
+- Web UI changes (`apm-server` / `apm-ui`)
 
 ### Approach
 
