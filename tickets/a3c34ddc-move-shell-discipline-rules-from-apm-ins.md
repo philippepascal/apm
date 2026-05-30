@@ -33,7 +33,7 @@ The fix is to move the entire `SHELL_DISCIPLINE_BODY` block out of `apm instruct
 - [x] `apm-core/src/default/agents/claude/apm.coder.md` is byte-identical to `.apm/agents/claude/apm.coder.md`
 - [x] `apm-core/src/default/agents/claude/apm.spec-writer.md` is byte-identical to `.apm/agents/claude/apm.spec-writer.md`
 - [x] `apm-core/src/default/agents/claude/apm.main-agent.md` is byte-identical to `.apm/agents/claude/apm.main-agent.md`
-- [ ] `cargo test --workspace` passes
+- [x] `cargo test --workspace` passes
 
 ### Out of scope
 
