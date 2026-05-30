@@ -1,7 +1,7 @@
 +++
 id = "48d3932b"
 title = "Simplify apm prompt --explain output: hide cascade detail when no fallback fired"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/48d3932b-simplify-apm-prompt-explain-output-hide-"
 created_at = "2026-05-30T07:40:46.558546Z"
-updated_at = "2026-05-30T07:40:46.558546Z"
+updated_at = "2026-05-30T17:08:49.948965Z"
 +++
 
 ## Spec
@@ -111,3 +111,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-30T07:40Z | — | new | philippepascal |
+| 2026-05-30T17:08Z | new | groomed | philippepascal |
