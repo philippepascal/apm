@@ -1,7 +1,7 @@
 +++
 id = "a3c34ddc"
 title = "Move shell-discipline rules from apm instructions into Claude role files"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3c34ddc-move-shell-discipline-rules-from-apm-ins"
 created_at = "2026-05-30T16:45:44.032054Z"
-updated_at = "2026-05-30T17:08:52.174080Z"
+updated_at = "2026-05-30T17:17:19.246527Z"
 +++
 
 ## Spec
@@ -70,3 +70,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-30T16:45Z | — | new | philippepascal |
 | 2026-05-30T17:08Z | new | groomed | philippepascal |
+| 2026-05-30T17:17Z | groomed | in_design | philippepascal |
