@@ -61,7 +61,15 @@ TESTS:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions --role coder` emits a Markdown table under `## State Machine` with rows only for transitions the coder role can act on; rows for `in_design`, `groomed`, and `specd` are absent from the table.
+- [ ] `apm instructions --role spec-writer` emits a Markdown table with no rows for `in_progress` or `implemented`.
+- [ ] The state machine table produced for any role has a header row with `From`, `To`, and `Command` columns; each data row contains the exact runnable apm command (`apm start <id>` for `command:start` transitions, `apm state <id> <to>` for all others).
+- [ ] `apm instructions abc12345 --role coder` produces output containing no occurrence of the literal string `<id>`; every `Command` cell contains `abc12345`.
+- [ ] `apm instructions` (no arguments) prints a role index that includes `coder`, `spec-writer`, and `main-agent`, each with a one-line description; the output does not contain a `## State Machine` section.
+- [ ] `build_system_prompt` called with `ticket_id = Some("abc12345")` returns a string where no `<id>` literal appears in the instructions layer and `abc12345` appears in every former `<id>` position.
+- [ ] `build_system_prompt` called with both a project file and a ticket id returns output in which the role-file content appears at an earlier character position than the project content, which appears before the instructions content.
+- [ ] `apm prompt --explain` shows "layer 1:" identifying the role file and "layer 3:" identifying `apm instructions`; these labels are the reverse of the previous order.
+- [ ] `cargo test --workspace` passes after all test additions and updates.
 
 ### Out of scope
 
