@@ -1,7 +1,7 @@
 +++
 id = "48d3932b"
 title = "Simplify apm prompt --explain output: hide cascade detail when no fallback fired"
-state = "implemented"
+state = "merge_failed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/48d3932b-simplify-apm-prompt-explain-output-hide-"
 created_at = "2026-05-30T07:40:46.558546Z"
-updated_at = "2026-05-30T18:29:51.916294Z"
+updated_at = "2026-05-30T18:29:53.930690Z"
 +++
 
 ## Spec
@@ -119,6 +119,10 @@ Add four new tests using a helper that constructs a `PromptProvenance` directly 
 ### Code review
 
 
+### Merge notes
+
+merge conflict — resolve manually and push: 
+
 ## History
 
 | When | From | To | By |
@@ -130,3 +134,4 @@ Add four new tests using a helper that constructs a `PromptProvenance` directly 
 | 2026-05-30T18:09Z | specd | ready | philippepascal |
 | 2026-05-30T18:22Z | ready | in_progress | philippepascal |
 | 2026-05-30T18:29Z | in_progress | implemented | claude |
+| 2026-05-30T18:29Z | implemented | merge_failed | claude |
