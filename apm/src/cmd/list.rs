@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::config::resolve_identity;
+use apm_core::{classify_recovery_options, config::resolve_identity, is_merge_failure_state, RecoveryKind, RecoveryOption};
 use std::path::Path;
 use crate::ctx::CmdContext;
 
@@ -91,6 +91,22 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         println!("  * local ref behind origin — run `apm sync` to fast-forward:");
         for (id, title) in &stale_tickets {
             println!("      *{}  {}", id, title);
+        }
+    }
+
+    if let Some(state) = &state_filter {
+        if is_merge_failure_state(state, &ctx.config.workflow) {
+            let opts = classify_recovery_options(state, &ctx.config.workflow);
+            let relevant: Vec<&RecoveryOption> = opts.iter().filter(|o| matches!(
+                o.kind,
+                RecoveryKind::RetryMerge | RecoveryKind::ReturnToWorker
+            )).collect();
+            if !relevant.is_empty() {
+                let parts: Vec<String> = relevant.iter()
+                    .map(|o| format!("{} → apm state <id> {}", o.label, o.to))
+                    .collect();
+                println!("\nRecovery: {}", parts.join("  "));
+            }
         }
     }
 

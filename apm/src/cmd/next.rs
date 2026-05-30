@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::{config::Config, ticket};
+use apm_core::{classify_recovery_options, config::Config, is_merge_failure_state, ticket, RecoveryKind, RecoveryOption};
 use std::path::Path;
 
 pub fn run(root: &Path, json: bool, no_aggressive: bool) -> Result<()> {
@@ -45,6 +45,24 @@ pub fn run(root: &Path, json: bool, no_aggressive: bool) -> Result<()> {
                         };
                         println!("  (epic {epic_id}: {label})");
                     }
+                }
+                if is_merge_failure_state(&fm.state, &config.workflow) {
+                    let opts = classify_recovery_options(&fm.state, &config.workflow);
+                    let mut groups: [Vec<&RecoveryOption>; 4] = [vec![], vec![], vec![], vec![]];
+                    for opt in &opts {
+                        let idx = match opt.kind {
+                            RecoveryKind::RetryMerge     => 0,
+                            RecoveryKind::ReturnToWorker => 1,
+                            RecoveryKind::Abandon        => 2,
+                            RecoveryKind::Other          => 3,
+                        };
+                        groups[idx].push(opt);
+                    }
+                    println!("\nRecovery options:");
+                    for opt in groups.iter().flatten() {
+                        println!("  {}  →  apm state {} {}", opt.label, fm.id, opt.to);
+                    }
+                    println!();
                 }
             }
         }

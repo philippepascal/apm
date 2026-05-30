@@ -1,5 +1,8 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, git, ticket, ticket_fmt};
+use apm_core::{
+    classify_recovery_options, config::{Config, WorkflowConfig}, git, is_merge_failure_state,
+    ticket, ticket_fmt, RecoveryKind, RecoveryOption,
+};
 use std::path::Path;
 
 pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result<()> {
@@ -30,11 +33,11 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result
                     _ => {}
                 }
                 let t = ticket::Ticket::parse(&dummy_path, &content)?;
-                show_ticket(&t, &content, root, &branch, &rel_path, edit)
+                show_ticket(&t, &content, root, &branch, &rel_path, edit, &config.workflow)
             } else {
                 let content = git::read_from_branch(root, &branch, &rel_path)?;
                 let t = ticket::Ticket::parse(&dummy_path, &content)?;
-                show_ticket(&t, &content, root, &branch, &rel_path, edit)
+                show_ticket(&t, &content, root, &branch, &rel_path, edit, &config.workflow)
             }
         }
         Err(_) => {
@@ -50,7 +53,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result
             ) {
                 let dummy_path = root.join(&rel_path);
                 let t = ticket::Ticket::parse(&dummy_path, &content)?;
-                return show_ticket_readonly(&t, &content, edit);
+                return show_ticket_readonly(&t, &content, edit, &config.workflow);
             }
 
             if let Some(archive_dir) = &config.tickets.archive_dir {
@@ -62,7 +65,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, edit: bool) -> Result
                 ) {
                     let dummy_path = root.join(&rel_path);
                     let t = ticket::Ticket::parse(&dummy_path, &content)?;
-                    return show_ticket_readonly(&t, &content, edit);
+                    return show_ticket_readonly(&t, &content, edit, &config.workflow);
                 }
             }
 
@@ -97,9 +100,10 @@ fn show_ticket(
     branch: &str,
     rel_path: &str,
     edit: bool,
+    workflow: &WorkflowConfig,
 ) -> Result<()> {
     if !edit {
-        print_ticket(t);
+        print_ticket(t, workflow);
         return Ok(());
     }
 
@@ -122,15 +126,20 @@ fn show_ticket(
     Ok(())
 }
 
-fn show_ticket_readonly(t: &ticket::Ticket, _content: &str, edit: bool) -> Result<()> {
+fn show_ticket_readonly(
+    t: &ticket::Ticket,
+    _content: &str,
+    edit: bool,
+    workflow: &WorkflowConfig,
+) -> Result<()> {
     if edit {
         bail!("--edit is not supported for archived tickets (no active branch)");
     }
-    print_ticket(t);
+    print_ticket(t, workflow);
     Ok(())
 }
 
-fn print_ticket(t: &ticket::Ticket) {
+fn print_ticket(t: &ticket::Ticket, workflow: &WorkflowConfig) {
     let fm = &t.frontmatter;
     println!("{} — {}", fm.id, fm.title);
     println!("state:    {}", fm.state);
@@ -159,4 +168,24 @@ fn print_ticket(t: &ticket::Ticket) {
     }
     println!();
     print!("{}", t.body);
+
+    if is_merge_failure_state(&fm.state, workflow) {
+        let opts = classify_recovery_options(&fm.state, workflow);
+        let mut groups: [Vec<&RecoveryOption>; 4] = [vec![], vec![], vec![], vec![]];
+        for opt in &opts {
+            let idx = match opt.kind {
+                RecoveryKind::RetryMerge     => 0,
+                RecoveryKind::ReturnToWorker => 1,
+                RecoveryKind::Abandon        => 2,
+                RecoveryKind::Other          => 3,
+            };
+            groups[idx].push(opt);
+        }
+        println!("\nRecovery options:");
+        for opt in groups.iter().flatten() {
+            println!("  {}  →  apm state {} {}", opt.label, fm.id, opt.to);
+        }
+        println!("\n  See: docs/merge-failed-recovery.md");
+        println!();
+    }
 }
