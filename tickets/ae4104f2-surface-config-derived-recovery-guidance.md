@@ -22,7 +22,20 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `classify_recovery_options(state_id, config)` classifies a transition as `RetryMerge` when its to-state is the target of at least one merging-completion transition (Pr, Merge, or PrOrEpicMerge) anywhere in the workflow
+- [ ] `classify_recovery_options` classifies a transition as `ReturnToWorker` when its to-state is the target of at least one non-spec-writer `command:start` transition anywhere in the workflow
+- [ ] `classify_recovery_options` classifies a transition as `Abandon` when its to-state has `terminal: true`
+- [ ] `classify_recovery_options` classifies a transition as `Other` when none of the above apply
+- [ ] Each `RecoveryOption` carries: to-state ID, display label (from `transition.label`, falling back to to-state ID when label is empty), and `RecoveryKind`
+- [ ] Results are ordered by `workflow.states` declaration order; classification is independent of that order (shuffling the states list produces identical results)
+- [ ] Against the default workflow, `classify_recovery_options("merge_failed", config)` returns `implemented` as `RetryMerge` and `in_progress` as `ReturnToWorker`
+- [ ] Against a workflow where the merge-target state is renamed (e.g. `implemented` → `shipped`), the helper classifies `shipped` as `RetryMerge`
+- [ ] When the queried state has no transitions to merge-target states, `classify_recovery_options` returns no `RetryMerge` entries
+- [ ] `apm show <id>` prints a "Recovery options" block when the ticket's current state has any `RetryMerge` transitions OR the ticket body contains a section headed "Merge notes"
+- [ ] The recovery block in `apm show` lists each option with its display label and the exact command `apm state <id> <to>`, and includes a reference to `docs/merge-failed-recovery.md`
+- [ ] `apm show <id>` does not print a recovery block when no `RetryMerge` transitions exist and the body contains no "Merge notes" section
+- [ ] `apm list --state <STATE>` appends a one-line recovery summary below ticket rows when STATE has `RetryMerge` transitions; omits the summary otherwise
+- [ ] `apm next` (plain-text mode) prints recovery options below the ticket line when the selected ticket's state has `RetryMerge` transitions; JSON mode output is unchanged
 
 ### Out of scope
 
