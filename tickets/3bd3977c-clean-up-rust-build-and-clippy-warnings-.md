@@ -1,7 +1,7 @@
 +++
 id = "3bd3977c"
 title = "Clean up rust build and clippy warnings across the workspace"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3bd3977c-clean-up-rust-build-and-clippy-warnings-"
 created_at = "2026-05-30T07:17:32.280247Z"
-updated_at = "2026-05-30T17:08:47.625197Z"
+updated_at = "2026-05-30T17:09:04.255397Z"
 +++
 
 ## Spec
@@ -93,3 +93,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-30T07:17Z | — | new | philippepascal |
 | 2026-05-30T17:08Z | new | groomed | philippepascal |
+| 2026-05-30T17:09Z | groomed | in_design | philippepascal |
