@@ -22,14 +22,14 @@ The `apm list` output includes an `epics:` footer block (introduced by ticket 7a
 
 ### Acceptance criteria
 
-- [ ] `apm list` output never contains an `epics:` section header or footer block under any circumstances.
-- [ ] A ticket whose `target_branch` starts with `epic/` and whose epic branch is behind `main` shows `↓` appended to the epic ID in the base column (e.g. `ab12cd34↓`).
-- [ ] A ticket whose `target_branch` starts with `epic/` and whose epic branch is up to date with `main` shows no `↓` in its row.
-- [ ] A ticket with no `target_branch` (main-scoped) shows no `↓` in its row.
-- [ ] A ticket whose `target_branch` does not start with `epic/` shows no `↓` in its row.
-- [ ] When two tickets share the same stale epic, both rows show `↓` (epic freshness is deduped per epic ID, not computed per ticket row).
-- [ ] The `↓` marker appears unchanged in piped (non-TTY) output — no ANSI codes surround it.
-- [ ] `apm epic list` output is unchanged by this ticket.
+- [x] `apm list` output never contains an `epics:` section header or footer block under any circumstances.
+- [x] A ticket whose `target_branch` starts with `epic/` and whose epic branch is behind `main` shows `↓` appended to the epic ID in the base column (e.g. `ab12cd34↓`).
+- [x] A ticket whose `target_branch` starts with `epic/` and whose epic branch is up to date with `main` shows no `↓` in its row.
+- [x] A ticket with no `target_branch` (main-scoped) shows no `↓` in its row.
+- [x] A ticket whose `target_branch` does not start with `epic/` shows no `↓` in its row.
+- [x] When two tickets share the same stale epic, both rows show `↓` (epic freshness is deduped per epic ID, not computed per ticket row).
+- [x] The `↓` marker appears unchanged in piped (non-TTY) output — no ANSI codes surround it.
+- [x] `apm epic list` output is unchanged by this ticket.
 
 ### Out of scope
 
