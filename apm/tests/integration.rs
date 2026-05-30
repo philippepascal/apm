@@ -8339,3 +8339,94 @@ fn close_already_closed_returns_error() {
     assert_eq!(rev_parse(p, &branch), ticket_tip, "ticket branch must not change");
     assert_eq!(rev_parse(p, "main"), main_tip, "main must not change");
 }
+
+/// `apm list` shows `↓` on stale-epic ticket rows and nothing on fresh/main-scoped rows.
+#[test]
+fn apm_list_epic_stale_marker() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Create stale epic: branch before advancing main.
+    git(p, &["checkout", "-b", "epic/aa000001-stale-epic"]);
+    git(p, &["checkout", "main"]);
+
+    // Advance main so the epic branch is now behind.
+    std::fs::write(p.join("advance.txt"), "advance").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "advance.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "advance main"]);
+
+    // Create fresh epic: branch from updated main.
+    git(p, &["checkout", "-b", "epic/bb000002-fresh-epic"]);
+    git(p, &["checkout", "main"]);
+
+    // Ticket on stale epic.
+    let t_stale = "+++\nid = \"cc000001\"\ntitle = \"Stale epic ticket\"\nstate = \"ready\"\nbranch = \"ticket/cc000001-stale-epic-ticket\"\ntarget_branch = \"epic/aa000001-stale-epic\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/cc000001-stale-epic-ticket", "tickets/cc000001-stale-epic-ticket.md", t_stale);
+
+    // Ticket on fresh epic.
+    let t_fresh = "+++\nid = \"dd000001\"\ntitle = \"Fresh epic ticket\"\nstate = \"ready\"\nbranch = \"ticket/dd000001-fresh-epic-ticket\"\ntarget_branch = \"epic/bb000002-fresh-epic\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/dd000001-fresh-epic-ticket", "tickets/dd000001-fresh-epic-ticket.md", t_fresh);
+
+    // Main-scoped ticket.
+    let t_main = "+++\nid = \"ee000001\"\ntitle = \"Main scoped ticket\"\nstate = \"ready\"\nbranch = \"ticket/ee000001-main-scoped-ticket\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/ee000001-main-scoped-ticket", "tickets/ee000001-main-scoped-ticket.md", t_main);
+
+    let out = run_apm(p, &["list", "--all", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+
+    assert!(
+        stdout.lines().any(|l| l.contains("cc000001") && l.contains('\u{2193}')),
+        "stale epic ticket must show ↓; got:\n{stdout}"
+    );
+    assert!(
+        stdout.lines().any(|l| l.contains("dd000001") && !l.contains('\u{2193}')),
+        "fresh epic ticket must not show ↓; got:\n{stdout}"
+    );
+    assert!(
+        stdout.lines().any(|l| l.contains("ee000001") && !l.contains('\u{2193}')),
+        "main-scoped ticket must not show ↓; got:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("epics:"),
+        "output must not contain 'epics:' footer; got:\n{stdout}"
+    );
+}
+
+/// When two tickets share the same stale epic, both rows show `↓`.
+#[test]
+fn apm_list_shared_epic_stale_marker() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Create stale epic: branch before advancing main.
+    git(p, &["checkout", "-b", "epic/aa000001-stale-epic"]);
+    git(p, &["checkout", "main"]);
+
+    // Advance main so the epic branch is now behind.
+    std::fs::write(p.join("advance.txt"), "advance").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "advance.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "advance main"]);
+
+    // Two tickets both on the stale epic.
+    let t1 = "+++\nid = \"ff000001\"\ntitle = \"Stale epic ticket 1\"\nstate = \"ready\"\nbranch = \"ticket/ff000001-stale-1\"\ntarget_branch = \"epic/aa000001-stale-epic\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/ff000001-stale-1", "tickets/ff000001-stale-1.md", t1);
+
+    let t2 = "+++\nid = \"gg000001\"\ntitle = \"Stale epic ticket 2\"\nstate = \"ready\"\nbranch = \"ticket/gg000001-stale-2\"\ntarget_branch = \"epic/aa000001-stale-epic\"\n+++\n\nbody\n";
+    commit_ticket_to_branch(p, "ticket/gg000001-stale-2", "tickets/gg000001-stale-2.md", t2);
+
+    let out = run_apm(p, &["list", "--all", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+
+    assert!(
+        stdout.lines().any(|l| l.contains("ff000001") && l.contains('\u{2193}')),
+        "first stale ticket must show ↓; got:\n{stdout}"
+    );
+    assert!(
+        stdout.lines().any(|l| l.contains("gg000001") && l.contains('\u{2193}')),
+        "second stale ticket must show ↓; got:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("epics:"),
+        "output must not contain 'epics:' footer; got:\n{stdout}"
+    );
+}

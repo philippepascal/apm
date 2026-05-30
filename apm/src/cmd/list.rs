@@ -25,6 +25,26 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         mine_user.as_deref(),
     );
 
+    // Pre-compute stale epic IDs before printing rows.
+    let default_branch = &ctx.config.project.default_branch;
+    let mut epic_map: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+    for t in &filtered {
+        if let Some(tb) = t.frontmatter.target_branch.as_deref() {
+            if tb.starts_with("epic/") {
+                let id = apm_core::epic::epic_id_from_branch(tb).to_owned();
+                epic_map.entry(id).or_insert_with(|| tb.to_owned());
+            }
+        }
+    }
+    let mut stale_epic_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for (id, branch) in &epic_map {
+        let s = apm_core::epic::merge_tree_status(root, default_branch, branch)
+            .unwrap_or(apm_core::epic::MergeStatus { ahead: 0, clean: true });
+        if s.ahead > 0 {
+            stale_epic_ids.insert(id.clone());
+        }
+    }
+
     let mut stale_tickets: Vec<(&str, &str)> = Vec::new();
     let mut diverged_tickets: Vec<(&str, &str)> = Vec::new();
 
@@ -32,6 +52,14 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         let fm = &t.frontmatter;
         let owner = fm.owner.as_deref().unwrap_or("-");
         let base = match fm.target_branch.as_deref() {
+            Some(branch) if branch.starts_with("epic/") => {
+                let id = apm_core::epic::epic_id_from_branch(branch);
+                if stale_epic_ids.contains(id) {
+                    format!("{}↓", id)
+                } else {
+                    id.to_owned()
+                }
+            }
             Some(branch) => apm_core::epic::epic_id_from_branch(branch).to_owned(),
             None => ctx.config.project.default_branch.clone(),
         };
@@ -63,38 +91,6 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         println!("  * local ref behind origin — run `apm sync` to fast-forward:");
         for (id, title) in &stale_tickets {
             println!("      *{}  {}", id, title);
-        }
-    }
-
-    // Epic freshness footer: one entry per distinct epic that has at least one visible ticket.
-    let default_branch = &ctx.config.project.default_branch;
-    let mut epic_map: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
-    for t in &filtered {
-        if let Some(tb) = t.frontmatter.target_branch.as_deref() {
-            let id = apm_core::epic::epic_id_from_branch(tb).to_owned();
-            epic_map.entry(id).or_insert_with(|| tb.to_owned());
-        }
-    }
-    if !epic_map.is_empty() {
-        let mut stale_epics: Vec<(String, String)> = Vec::new();
-        for (id, branch) in &epic_map {
-            let s = apm_core::epic::merge_tree_status(root, default_branch, branch)
-                .unwrap_or(apm_core::epic::MergeStatus { ahead: 0, clean: true });
-            if s.ahead > 0 {
-                let label = if s.clean {
-                    format!("↓{} clean", s.ahead)
-                } else {
-                    format!("↓{} CONFLICTS", s.ahead)
-                };
-                stale_epics.push((id.clone(), label));
-            }
-        }
-        if !stale_epics.is_empty() {
-            println!();
-            println!("  epics:");
-            for (id, label) in &stale_epics {
-                println!("    {id:<8}  {label}");
-            }
         }
     }
 
