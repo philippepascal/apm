@@ -76,8 +76,7 @@ Restructure the config loading block so the `Config` value is retained after the
 
 ```rust
 let merge_failure_state_ids: Vec<String> = cfg.workflow.states.iter()
-    .filter(|s| apm_core::recovery::classify_recovery_options(&s.id, &cfg.workflow)
-        .iter().any(|r| matches!(r.kind, apm_core::recovery::RecoveryKind::RetryMerge)))
+    .filter(|s| apm_core::recovery::is_merge_failure_state(&s.id, &cfg.workflow))
     .map(|s| s.id.clone())
     .collect();
 ```
@@ -86,31 +85,37 @@ Fall back to `vec![]` when there is no git root or the config fails to load. Inc
 
 #### `apm-server/src/handlers/tickets.rs` — `get_ticket`
 
-Extend the first synchronous `Config::load` call (the one used to compute `blocking_deps`) to also build `recovery_options`:
+Extend the first synchronous `Config::load` call (the one used to compute `blocking_deps`) to also build `recovery_options`. Gate the call on `is_merge_failure_state` so non-failure-state tickets always return an empty array:
 
 ```rust
 let (blocking_deps, recovery_options) = match apm_core::config::Config::load(&root) {
     Ok(config) => {
         let deps = apm_core::compute_blocking_deps(ticket_ref, &tickets, &config);
-        let opts = apm_core::recovery::classify_recovery_options(
-            &ticket_ref.frontmatter.state, &config.workflow,
-        )
-        .into_iter()
-        .map(|opt| {
-            let kind = match opt.kind {
-                RecoveryKind::RetryMerge      => "retry_merge",
-                RecoveryKind::ReturnToWorker  => "return_to_worker",
-                RecoveryKind::Abandon         => "abandon",
-                RecoveryKind::Other           => "other",
-            }.to_string();
-            RecoveryOptionDto {
-                command: format!("apm state {} {}", full_id, opt.to),
-                to: opt.to,
-                label: opt.label,
-                kind,
-            }
-        })
-        .collect();
+        let opts = if apm_core::recovery::is_merge_failure_state(
+            &ticket_ref.frontmatter.state, &config.workflow
+        ) {
+            apm_core::recovery::classify_recovery_options(
+                &ticket_ref.frontmatter.state, &config.workflow,
+            )
+            .into_iter()
+            .map(|opt| {
+                let kind = match opt.kind {
+                    RecoveryKind::RetryMerge      => "retry_merge",
+                    RecoveryKind::ReturnToWorker  => "return_to_worker",
+                    RecoveryKind::Abandon         => "abandon",
+                    RecoveryKind::Other           => "other",
+                }.to_string();
+                RecoveryOptionDto {
+                    command: format!("apm state {} {}", full_id, opt.to),
+                    to: opt.to,
+                    label: opt.label,
+                    kind,
+                }
+            })
+            .collect()
+        } else {
+            vec![]
+        };
         (deps, opts)
     }
     Err(_) => (vec![], vec![]),
@@ -197,7 +202,7 @@ function kindLabel(kind: string): string {
 
 Three new tests in the `tests` module:
 
-**`list_tickets_merge_failure_state_ids`** (git-based): Initialise a temp repo using the default workflow TOML from `apm-core::init` (copy the inline TOML string that includes `merge_failed` with transitions back to `implemented`). Call `GET /api/tickets`. Assert `json["merge_failure_state_ids"]` is an array that contains `"merge_failed"`. Reuse the git setup pattern from `list_tickets_blocking_deps`.
+**`list_tickets_merge_failure_state_ids`** (git-based): Initialise a temp repo using the default workflow TOML from `apm-core::init` (copy the inline TOML string that includes `merge_failed` with transitions back to `implemented`). Call `GET /api/tickets`. Assert `json["merge_failure_state_ids"]` is an array that contains `"merge_failed"` and does not contain `"in_progress"`. Reuse the git setup pattern from `list_tickets_blocking_deps`.
 
 **`get_ticket_merge_notes_extracted`** (InMemory): Create a ticket with `body = "### Merge notes\n\ngit error: conflict in foo.rs\n### Other\n\n"`. Call `GET /api/tickets/:id`. Assert `json["merge_notes"] == "git error: conflict in foo.rs"`. Also test the absent-section case: ticket with no `### Merge notes` section returns `merge_notes` as `null` or absent.
 
@@ -218,12 +223,14 @@ test: {
 - Before each test, mock `useLayoutStore` to return stable no-op defaults (`selectedTicketId: null`, `selectedTicketIds: []`, `lastClickedTicketId: null`, stubs for all setters).
 - `shows_merge_failure_badge_when_state_in_list`: render `<TicketCard ticket={{...baseTicket, state: 'merge_failed'}} columnTicketIds={[]} mergeFailureStateIds={['merge_failed']} />`. Assert the `!` badge element is in the document.
 - `no_badge_when_state_not_in_list`: render with `mergeFailureStateIds={[]}`. Assert the `!` badge is absent.
+- `no_badge_for_in_progress`: render `<TicketCard ticket={{...baseTicket, state: 'in_progress'}} columnTicketIds={[]} mergeFailureStateIds={['merge_failed']} />`. Assert the `!` badge is absent.
 
 **`apm-ui/src/components/TicketDetail.test.tsx`**:
 - Wrap renders in a `QueryClientProvider` with a fresh `QueryClient`. Mock `global.fetch` to return the fixture ticket data.
 - `shows_merge_failure_section`: fixture has `merge_notes: "fatal: merge conflict"`. Assert text "Merge failure" and "fatal: merge conflict" appear.
 - `shows_recovery_section`: fixture has `recovery_options: [{to: 'implemented', label: 'Retry', kind: 'retry_merge', command: 'apm state abc12345 implemented'}]`. Assert "Recovery" heading and command text appear.
 - `hides_sections_when_empty`: fixture has `merge_notes: null` and `recovery_options: []`. Assert neither "Merge failure" nor "Recovery" appears.
+- `hides_sections_for_normal_state`: fixture has `state: 'in_progress'`, `merge_notes: null`, and `recovery_options: []`. Assert neither "Merge failure" nor "Recovery" appears.
 
 ### Open questions
 
