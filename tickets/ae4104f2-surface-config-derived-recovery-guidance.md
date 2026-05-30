@@ -4,12 +4,12 @@ title = "Surface config-derived recovery guidance for merge-failure states in ap
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ae4104f2-surface-config-derived-recovery-guidance"
 created_at = "2026-05-30T02:11:03.737221Z"
-updated_at = "2026-05-30T02:21:25.445797Z"
+updated_at = "2026-05-30T02:21:29.770347Z"
 +++
 
 ## Spec
