@@ -28,7 +28,7 @@ The fix is to move the entire `SHELL_DISCIPLINE_BODY` block out of `apm instruct
 - [x] `apm prompt` output for a `claude/coder` ticket contains `## Shell Discipline` and the no-chaining rule
 - [x] `apm prompt` output for a `claude/spec-writer` ticket contains `## Shell Discipline`
 - [x] The `## Shell Discipline` section appears before the first role-specific section in `apm.coder.md`
-- [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.spec-writer.md`
+- [x] The `## Shell Discipline` section appears before the first role-specific section in `apm.spec-writer.md`
 - [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.main-agent.md`
 - [ ] `apm-core/src/default/agents/claude/apm.coder.md` is byte-identical to `.apm/agents/claude/apm.coder.md`
 - [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` is byte-identical to `.apm/agents/claude/apm.spec-writer.md`
