@@ -132,7 +132,7 @@ Three negative tests (new):
 
 ### Amendment requests
 
-- [ ] REAL BUG: the spec uses 'state has a RetryMerge transition' as the trigger for surfacing recovery hints, but classify_recovery_options labels a transition as RetryMerge when its to-state is in merge_target_ids — and that includes the normal in_progress -> implemented transition. So under the spec as written, every in_progress ticket has a RetryMerge transition and would trigger the recovery block in apm show, the recovery summary in apm list --state in_progress, and the recovery note in apm next. That is over-fire on the most common state in the workflow.
+- [x] REAL BUG: the spec uses 'state has a RetryMerge transition' as the trigger for surfacing recovery hints, but classify_recovery_options labels a transition as RetryMerge when its to-state is in merge_target_ids — and that includes the normal in_progress -> implemented transition. So under the spec as written, every in_progress ticket has a RetryMerge transition and would trigger the recovery block in apm show, the recovery summary in apm list --state in_progress, and the recovery note in apm next. That is over-fire on the most common state in the workflow.
 
 The classifier itself is correct; only the consumer trigger is wrong. The right signal for 'this state is a merge-failure state' is set membership in 'states that appear as the on_failure value of some merging-completion transition'. That is order-independent, rename-safe, and precise (only fires on actual on_failure targets — merge_failed in the default workflow, whatever a custom workflow calls it).
 
