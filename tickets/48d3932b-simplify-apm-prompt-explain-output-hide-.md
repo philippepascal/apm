@@ -4,12 +4,12 @@ title = "Simplify apm prompt --explain output: hide cascade detail when no fallb
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/48d3932b-simplify-apm-prompt-explain-output-hide-"
 created_at = "2026-05-30T07:40:46.558546Z"
-updated_at = "2026-05-30T17:16:55.821922Z"
+updated_at = "2026-05-30T17:17:00.283744Z"
 +++
 
 ## Spec
