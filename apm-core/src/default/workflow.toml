@@ -234,9 +234,11 @@ label      = "Merge failed"
 actionable = ["supervisor"]
 
   [[workflow.states.transitions]]
-  to      = "implemented"
-  trigger = "manual"
-  outcome = "needs_input"
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
+  outcome    = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "in_progress"

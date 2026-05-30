@@ -6615,6 +6615,156 @@ fn merge_failed_to_in_progress_succeeds() {
     );
 }
 
+#[test]
+fn merge_failed_to_implemented_with_epic_merge_succeeds() {
+    let (_bare, local) = init_remote_repo();
+    let p = local.path();
+
+    // Create epic branch and push to origin.
+    git(p, &["checkout", "-b", "epic/mf-succeed"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic init", "--allow-empty"]);
+    git(p, &["push", "origin", "epic/mf-succeed"]);
+    git(p, &["checkout", "main"]);
+
+    // Create a ticket with merge_failed state and target_branch pointing to the epic.
+    // BYPASS: target_branch has no CLI setter; write the ticket directly.
+    let branch = "ticket/bb000001-mf-succeed";
+    let path = "tickets/bb000001-mf-succeed.md";
+    {
+        let content = "+++\nid = \"bb000001\"\ntitle = \"MF succeed\"\nstate = \"merge_failed\"\nbranch = \"ticket/bb000001-mf-succeed\"\ntarget_branch = \"epic/mf-succeed\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        git(p, &["checkout", "-b", branch]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        std::fs::write(p.join(path), content).unwrap();
+        git(p, &["-c", "commit.gpgsign=false", "add", path]);
+        git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: bb000001 merge_failed"]);
+        git(p, &["checkout", "main"]);
+    }
+    git(p, &["push", "origin", branch]);
+
+    // Check out the epic branch so merge_into_default uses it directly.
+    git(p, &["checkout", "epic/mf-succeed"]);
+
+    let result = apm_core::state::transition(p, "bb000001", "implemented".into(), true, false);
+    assert!(
+        result.is_ok(),
+        "merge_failed → implemented should succeed: {}",
+        result.err().map(|e| e.to_string()).unwrap_or_default()
+    );
+
+    // Ticket branch must now be in implemented state.
+    let content = branch_content(p, branch, path);
+    assert!(
+        content.contains("state = \"implemented\""),
+        "expected implemented state on ticket branch:\n{content}"
+    );
+    assert!(
+        content.contains("| merge_failed | implemented |"),
+        "expected history row:\n{content}"
+    );
+
+    // Epic branch must have a new merge commit containing the ticket branch tip.
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline", "epic/mf-succeed"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let log_str = String::from_utf8_lossy(&log.stdout);
+    assert!(
+        log_str.lines().count() > 1,
+        "epic branch should have additional commits after merge:\n{log_str}"
+    );
+}
+
+#[test]
+fn merge_failed_to_implemented_with_epic_merge_fails() {
+    let (_bare, local) = init_remote_repo();
+    let p = local.path();
+
+    // Create epic branch with a file that will conflict with the ticket branch.
+    git(p, &["checkout", "-b", "epic/mf-fail"]);
+    std::fs::write(p.join("conflict.txt"), "epic content\n").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "conflict.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic: add conflict file"]);
+    git(p, &["push", "origin", "epic/mf-fail"]);
+    git(p, &["checkout", "main"]);
+
+    // Create a ticket with merge_failed state, target_branch, and a conflicting file.
+    // BYPASS: target_branch has no CLI setter; write the ticket directly.
+    let branch = "ticket/cc000001-mf-fail";
+    let path = "tickets/cc000001-mf-fail.md";
+    {
+        let content = "+++\nid = \"cc000001\"\ntitle = \"MF fail\"\nstate = \"merge_failed\"\nbranch = \"ticket/cc000001-mf-fail\"\ntarget_branch = \"epic/mf-fail\"\n+++\n\n## Spec\n\n### Acceptance criteria\n\n- [x] Done\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+        git(p, &["checkout", "-b", branch]);
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        std::fs::write(p.join(path), content).unwrap();
+        std::fs::write(p.join("conflict.txt"), "branch content\n").unwrap();
+        git(p, &["-c", "commit.gpgsign=false", "add", path]);
+        git(p, &["-c", "commit.gpgsign=false", "add", "conflict.txt"]);
+        git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "ticket: cc000001 with conflict"]);
+        git(p, &["checkout", "main"]);
+    }
+    git(p, &["push", "origin", branch]);
+
+    // Capture the epic branch tip before the transition attempt.
+    let epic_tip_before = String::from_utf8(
+        std::process::Command::new("git")
+            .args(["rev-parse", "epic/mf-fail"])
+            .current_dir(p)
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+
+    // Check out the epic branch so merge_into_default uses it directly.
+    git(p, &["checkout", "epic/mf-fail"]);
+
+    // Transition merge_failed → implemented triggers a merge that fails;
+    // the on_failure path transitions back to merge_failed, returning Ok.
+    let result = apm_core::state::transition(p, "cc000001", "implemented".into(), true, false);
+    assert!(
+        result.is_ok(),
+        "on_failure path should return Ok with merge_failed state: {}",
+        result.err().map(|e| e.to_string()).unwrap_or_default()
+    );
+    let out = result.unwrap();
+    assert_eq!(out.new_state, "merge_failed", "final state should be merge_failed");
+
+    // Ticket branch must end in merge_failed state with both history rows.
+    let content = branch_content(p, branch, path);
+    assert!(
+        content.contains("state = \"merge_failed\""),
+        "expected final state merge_failed:\n{content}"
+    );
+    assert!(
+        content.contains("| merge_failed | implemented |"),
+        "expected history row for merge_failed → implemented:\n{content}"
+    );
+    assert!(
+        content.contains("| implemented | merge_failed |"),
+        "expected history row for implemented → merge_failed (on_failure):\n{content}"
+    );
+
+    // Epic branch must not have advanced.
+    let epic_tip_after = String::from_utf8(
+        std::process::Command::new("git")
+            .args(["rev-parse", "epic/mf-fail"])
+            .current_dir(p)
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+    assert_eq!(
+        epic_tip_before, epic_tip_after,
+        "epic branch should not have advanced after merge failure"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // apm clean — in-repo worktree safety
 // ---------------------------------------------------------------------------
