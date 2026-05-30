@@ -3,13 +3,13 @@ id = "a3c34ddc"
 title = "Move shell-discipline rules from apm instructions into Claude role files"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3c34ddc-move-shell-discipline-rules-from-apm-ins"
 created_at = "2026-05-30T16:45:44.032054Z"
-updated_at = "2026-05-30T17:17:19.246527Z"
+updated_at = "2026-05-30T17:21:25.448861Z"
 +++
 
 ## Spec
