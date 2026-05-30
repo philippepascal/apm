@@ -7970,3 +7970,222 @@ label = "Ready"
         "the implemented ticket should appear in close candidates; got: {close1:?}"
     );
 }
+
+// --- close path: fix for AC df03566b ---
+
+/// Verify that commit_to_branch commits only the target file even when
+/// unrelated changes are already staged in the index.
+#[test]
+fn commit_to_branch_excludes_pre_staged_files() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Write and stage an unrelated file before calling commit_to_branch.
+    std::fs::write(p.join("other.txt"), "unrelated").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "other.txt"]);
+
+    // Commit a ticket file to the current branch (main) via the library.
+    let rel_path = "tickets/aabbccdd-test.md";
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+    let content = "+++\nid = \"aabbccdd\"\ntitle = \"test\"\nstate = \"new\"\nbranch = \"ticket/aabbccdd-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n";
+    apm_core::git::commit_to_branch(p, "main", rel_path, content, "test commit").unwrap();
+
+    // The HEAD commit must contain only the ticket file, not other.txt.
+    let show_out = std::process::Command::new("git")
+        .args(["show", "--name-only", "--format=", "HEAD"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let changed = String::from_utf8(show_out.stdout).unwrap();
+    let files: Vec<&str> = changed.lines().filter(|l| !l.is_empty()).collect();
+    assert!(files.contains(&rel_path), "commit must include ticket file: {files:?}");
+    assert!(!files.contains(&"other.txt"), "commit must not include pre-staged other.txt: {files:?}");
+
+    // other.txt must still be staged (not swept into the commit).
+    let staged_out = std::process::Command::new("git")
+        .args(["diff", "--cached", "--name-only"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let staged = String::from_utf8(staged_out.stdout).unwrap();
+    assert!(staged.trim().contains("other.txt"), "other.txt must remain staged: {staged:?}");
+}
+
+/// Closing a main-scoped ticket (no target_branch) writes state=closed to both
+/// the ticket branch and main without performing a working-tree merge.
+#[test]
+fn close_main_scoped_writes_to_target() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (id, branch) = write_ticket_to_branch(p, "implemented", "close main scoped");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    apm_core::ticket::close(p, &config, &id, None, "test", false).unwrap();
+
+    let rel = ticket_rel_path(&branch);
+    let on_ticket = branch_content(p, &branch, &rel);
+    let on_main = branch_content(p, "main", &rel);
+    assert!(on_ticket.contains("state = \"closed\""), "ticket branch must be closed: {on_ticket}");
+    assert!(on_main.contains("state = \"closed\""), "main must be closed: {on_main}");
+
+    // No working-tree side-effects: no ticket files must be modified in the working tree.
+    let status_out = std::process::Command::new("git")
+        .args(["status", "--porcelain", "tickets/"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let status = String::from_utf8(status_out.stdout).unwrap();
+    assert!(status.trim().is_empty(), "ticket files must not be dirty after close: {status}");
+}
+
+/// Closing an epic-scoped ticket writes state=closed to the epic branch only;
+/// main is not touched.
+#[test]
+fn close_epic_scoped_writes_to_epic_not_main() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    let epic_branch = "epic/aa111111-my-epic";
+
+    // Create the epic branch from main.
+    git(p, &["checkout", "-b", epic_branch]);
+    git(p, &["checkout", "main"]);
+
+    // Write the ticket directly with target_branch pointing to the epic.
+    let ticket_id = "bb222222";
+    let ticket_slug = format!("{ticket_id}-epic-scoped");
+    let ticket_branch = format!("ticket/{ticket_slug}");
+    let rel = format!("tickets/{ticket_slug}.md");
+    let content = format!(
+        "+++\nid = \"{ticket_id}\"\ntitle = \"epic scoped\"\nstate = \"implemented\"\nbranch = \"{ticket_branch}\"\ntarget_branch = \"{epic_branch}\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+
+    // Write the ticket to both its own branch and the epic branch.
+    apm_core::git::commit_to_branch(p, &ticket_branch, &rel, &content, "add ticket").unwrap();
+    apm_core::git::commit_to_branch(p, epic_branch, &rel, &content, "merge ticket to epic").unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    apm_core::ticket::close(p, &config, ticket_id, None, "test", false).unwrap();
+
+    // The epic branch must show state=closed.
+    let on_epic = branch_content(p, epic_branch, &rel);
+    assert!(on_epic.contains("state = \"closed\""), "epic branch must be closed: {on_epic}");
+
+    // Main must not have the ticket file (it was never merged there).
+    let files_on_main = apm_core::git::list_files_on_branch(p, "main", "tickets").unwrap_or_default();
+    assert!(
+        !files_on_main.contains(&rel),
+        "main must not contain the epic-scoped ticket: {files_on_main:?}"
+    );
+}
+
+/// state::transition to "closed" writes state=closed to both the ticket branch
+/// and the effective target branch (same resolution used by ticket::close).
+#[test]
+fn state_transition_closed_writes_to_target() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (id, branch) = write_ticket_to_branch(p, "implemented", "state close target");
+    // Merge into main so main has the implemented view.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    let out = apm_core::state::transition(p, &id, "closed".into(), true, false).unwrap();
+    assert!(
+        out.warnings.iter().all(|w| !w.contains("error")),
+        "unexpected errors: {:?}", out.warnings
+    );
+
+    let rel = ticket_rel_path(&branch);
+    let on_ticket = branch_content(p, &branch, &rel);
+    let on_main = branch_content(p, "main", &rel);
+    assert!(on_ticket.contains("state = \"closed\""), "ticket branch: {on_ticket}");
+    assert!(on_main.contains("state = \"closed\""), "main: {on_main}");
+}
+
+/// apm sync auto-close succeeds even when the main worktree has an uncommitted
+/// file (the old merge-based path would fail or warn in this situation).
+#[test]
+fn sync_close_succeeds_with_dirty_main_worktree() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (id, branch) = write_ticket_to_branch(p, "implemented", "dirty worktree close");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    // Dirty the main worktree — uncommitted file.
+    std::fs::write(p.join("dirty.txt"), "uncommitted").unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert!(
+        candidates.close.iter().any(|c| c.ticket.frontmatter.id == id),
+        "ticket should be a close candidate"
+    );
+
+    // Apply must succeed without error even though the worktree is dirty.
+    apm_core::sync::apply(p, &config, &candidates, "test", false).unwrap();
+
+    let rel = ticket_rel_path(&branch);
+    let on_main = branch_content(p, "main", &rel);
+    assert!(on_main.contains("state = \"closed\""), "main must show closed: {on_main}");
+}
+
+/// After a main-scoped ticket is closed (state=closed written to main) and its
+/// ticket branch is deleted, sync must not re-offer it as a close candidate
+/// (Case 2 must not re-fire for already-closed tickets).
+#[test]
+fn no_case2_redetection_after_close() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (id, branch) = write_ticket_to_branch(p, "implemented", "no redetect");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    // Close the ticket — this now writes state=closed to main as well as the ticket branch.
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert!(candidates.close.iter().any(|c| c.ticket.frontmatter.id == id));
+    apm_core::sync::apply(p, &config, &candidates, "test", false).unwrap();
+
+    // Delete the ticket branch (simulates post-cleanup state).
+    git(p, &["branch", "-D", &branch]);
+
+    // Detect again — the ticket must NOT reappear (main now shows "closed").
+    let candidates2 = apm_core::sync::detect(p, &config).unwrap();
+    assert!(
+        !candidates2.close.iter().any(|c| c.ticket.frontmatter.id == id),
+        "already-closed ticket must not reappear after branch deletion: {:?}",
+        candidates2.close.iter().map(|c| &c.ticket.frontmatter.id).collect::<Vec<_>>()
+    );
+}
+
+/// Calling close on an already-closed ticket returns an error and makes no
+/// additional commits on any branch.
+#[test]
+fn close_already_closed_returns_error() {
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (id, branch) = write_ticket_to_branch(p, "implemented", "already closed guard");
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    apm_core::ticket::close(p, &config, &id, None, "test", false).unwrap();
+
+    let ticket_tip = rev_parse(p, &branch);
+    let main_tip = rev_parse(p, "main");
+
+    // Second call must fail with an "already closed" error.
+    let err = apm_core::ticket::close(p, &config, &id, None, "test", false).unwrap_err();
+    assert!(
+        err.to_string().contains("already closed"),
+        "error must mention already closed: {err}"
+    );
+
+    // No additional commits must have been made.
+    assert_eq!(rev_parse(p, &branch), ticket_tip, "ticket branch must not change");
+    assert_eq!(rev_parse(p, "main"), main_tip, "main must not change");
+}

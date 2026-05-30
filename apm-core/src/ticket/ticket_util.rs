@@ -326,11 +326,11 @@ pub fn close(
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
     crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
 
-    let mut merge_warnings: Vec<String> = Vec::new();
-    if let Err(e) = crate::git::merge_branch_into_default(root, &branch, &config.project.default_branch, &mut merge_warnings) {
-        output.push(format!("warning: merge into {} failed: {e:#}", config.project.default_branch));
+    let target = t.frontmatter.target_branch.as_deref()
+        .unwrap_or(config.project.default_branch.as_str());
+    if let Err(e) = crate::git::commit_to_branch(root, target, &rel_path, &content, &format!("ticket({id}): close")) {
+        output.push(format!("warning: commit closed state to {target} failed: {e:#}"));
     }
-    output.extend(merge_warnings);
 
     if aggressive {
         if let Err(e) = crate::git::push_branch(root, &branch) {

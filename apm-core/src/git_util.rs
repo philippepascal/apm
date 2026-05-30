@@ -383,7 +383,7 @@ pub fn commit_to_branch(
         std::fs::write(&full_path, content)?;
         run(&wt_path, &["add", rel_path])
             .with_context(|| format!("git add {rel_path} in worktree {} failed", wt_path.display()))?;
-        run(&wt_path, &["commit", "-m", message])
+        run(&wt_path, &["commit", "-m", message, "--", rel_path])
             .with_context(|| format!("git commit on {branch} in worktree {} failed", wt_path.display()))?;
         crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
@@ -398,7 +398,7 @@ pub fn commit_to_branch(
         std::fs::write(&local_path, content)?;
         run(root, &["add", rel_path])
             .with_context(|| format!("git add {rel_path} failed"))?;
-        run(root, &["commit", "-m", message])
+        run(root, &["commit", "-m", message, "--", rel_path])
             .with_context(|| format!("git commit on {branch} failed"))?;
         crate::logger::log("commit_to_branch", &format!("{branch} {message}"));
         return Ok(());
@@ -449,7 +449,7 @@ fn try_worktree_commit(
         }
         std::fs::write(&full_path, content)?;
         run(&wt_path, &["add", rel_path])?;
-        run(&wt_path, &["commit", "-m", message])?;
+        run(&wt_path, &["commit", "-m", message, "--", rel_path])?;
         Ok(())
     })();
 
