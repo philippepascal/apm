@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9ea43165-restructure-apm-instructions-imperative-"
 created_at = "2026-05-30T16:49:25.808040Z"
-updated_at = "2026-05-30T16:49:25.808040Z"
+updated_at = "2026-05-30T16:50:08.240411Z"
+depends_on = ["a3c34ddc"]
 +++
 
 ## Spec
