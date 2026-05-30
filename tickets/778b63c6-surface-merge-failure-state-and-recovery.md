@@ -32,7 +32,7 @@ This ticket extends `apm-server` and `apm-ui` to surface two pieces of recovery 
 - [x] The `TicketDetail` panel for a ticket with a non-empty `recovery_options` array displays a "Recovery" section listing each option's label, a human-readable kind description (e.g. "Retry merge", "Return to worker", "Abandon"), and the `command` string in a monospace code block styled for easy copying; the section ends with a reference link to `docs/merge-failed-recovery.md`.
 - [x] A ticket whose `recovery_options` is an empty array and `merge_notes` is `null` renders neither the "Merge failure" section nor the "Recovery" section in the detail panel.
 - [x] `merge_failure_state_ids` under the default workflow contains `"merge_failed"` and does not contain `"in_progress"`, `"implemented"`, or `"ready"`.
-- [ ] A `TicketCard` with `ticket.state` equal to `"in_progress"` does not render the merge-failure badge, even when `in_progress` has an outgoing transition to `implemented`.
+- [x] A `TicketCard` with `ticket.state` equal to `"in_progress"` does not render the merge-failure badge, even when `in_progress` has an outgoing transition to `implemented`.
 - [ ] A `TicketDetail` for a ticket in `"in_progress"` state with no `### Merge notes` section and an empty `recovery_options` array renders neither the "Merge failure" section nor the "Recovery" section.
 - [ ] Server integration test (git-based, default workflow): `GET /api/tickets` returns `merge_failure_state_ids` containing `"merge_failed"` and not containing `"in_progress"`.
 - [ ] Server integration test (InMemory): `GET /api/tickets/:id` for a ticket whose body contains `### Merge notes\n\ngit error text` returns `merge_notes: "git error text"`.
