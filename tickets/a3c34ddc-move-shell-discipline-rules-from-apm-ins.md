@@ -1,7 +1,7 @@
 +++
 id = "a3c34ddc"
 title = "Move shell-discipline rules from apm instructions into Claude role files"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3c34ddc-move-shell-discipline-rules-from-apm-ins"
 created_at = "2026-05-30T16:45:44.032054Z"
-updated_at = "2026-05-30T18:09:15.047972Z"
+updated_at = "2026-05-30T18:33:30.981458Z"
 +++
 
 ## Spec
@@ -106,3 +106,4 @@ The existing `default_and_project_apm_worker_md_are_identical` and `default_and_
 | 2026-05-30T17:17Z | groomed | in_design | philippepascal |
 | 2026-05-30T17:21Z | in_design | specd | claude |
 | 2026-05-30T18:09Z | specd | ready | philippepascal |
+| 2026-05-30T18:33Z | ready | in_progress | philippepascal |
