@@ -1,7 +1,7 @@
 +++
 id = "48d3932b"
 title = "Simplify apm prompt --explain output: hide cascade detail when no fallback fired"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/48d3932b-simplify-apm-prompt-explain-output-hide-"
 created_at = "2026-05-30T07:40:46.558546Z"
-updated_at = "2026-05-30T17:17:00.283744Z"
+updated_at = "2026-05-30T17:17:05.338346Z"
 +++
 
 ## Spec
@@ -126,3 +126,4 @@ Add four new tests using a helper that constructs a `PromptProvenance` directly 
 | 2026-05-30T07:40Z | — | new | philippepascal |
 | 2026-05-30T17:08Z | new | groomed | philippepascal |
 | 2026-05-30T17:13Z | groomed | in_design | philippepascal |
+| 2026-05-30T17:17Z | in_design | specd | claude |
