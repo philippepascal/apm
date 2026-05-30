@@ -8339,3 +8339,184 @@ fn close_already_closed_returns_error() {
     assert_eq!(rev_parse(p, &branch), ticket_tip, "ticket branch must not change");
     assert_eq!(rev_parse(p, "main"), main_tip, "main must not change");
 }
+
+// --- recovery guidance ---
+
+/// Init a repo with a workflow that has merge_failed actionable for "agent"
+/// so that apm next can surface it.
+fn setup_for_recovery() -> TempDir {
+    let dir = init_repo();
+    // Use pr_or_epic_merge (no git_host required).  Add transitions out of
+    // implemented so the workflow passes apm validate.
+    std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+  [[workflow.states.transitions]]
+  to      = "closed"
+  trigger = "manual"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#).unwrap();
+    git(dir.path(), &["add", ".apm/workflow.toml"]);
+    git(dir.path(), &["-c", "commit.gpgsign=false", "commit", "-m", "recovery workflow"]);
+    // Update validate stamp so mutating commands are not blocked.
+    run_apm(dir.path(), &["validate"]);
+    dir
+}
+
+/// Overwrite the ticket file on its branch to change from_state to to_state.
+fn force_ticket_state(dir: &std::path::Path, branch: &str, rel: &str, from_state: &str, to_state: &str) {
+    let existing = branch_content(dir, branch, rel);
+    let updated = existing.replace(
+        &format!("state = \"{from_state}\""),
+        &format!("state = \"{to_state}\""),
+    );
+    git(dir, &["checkout", branch]);
+    std::fs::write(dir.join(rel), &updated).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", rel]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("set {to_state}")]);
+    git(dir, &["checkout", "-"]);
+}
+
+#[test]
+fn recovery_show_displays_block_for_merge_failed() {
+    let dir = setup_for_recovery();
+    let p = dir.path();
+    let (id, branch) = create_ticket(p, "Recovery show test");
+    let rel = ticket_rel_path(&branch);
+    force_ticket_state(p, &branch, &rel, "new", "merge_failed");
+
+    let out = run_apm(p, &["show", &id, "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("Recovery options:"),
+        "expected 'Recovery options:' in show output:\n{stdout}"
+    );
+    assert!(
+        stdout.contains(&format!("apm state {id} implemented")),
+        "expected 'apm state {id} implemented' in show output:\n{stdout}"
+    );
+}
+
+#[test]
+fn recovery_list_shows_summary_for_merge_failed() {
+    let dir = setup_for_recovery();
+    let p = dir.path();
+    let (_, branch) = create_ticket(p, "Recovery list test");
+    let rel = ticket_rel_path(&branch);
+    force_ticket_state(p, &branch, &rel, "new", "merge_failed");
+
+    let out = run_apm(p, &["list", "--state", "merge_failed", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("Recovery:"),
+        "expected 'Recovery:' in list output:\n{stdout}"
+    );
+}
+
+#[test]
+fn recovery_next_shows_options_for_merge_failed() {
+    let dir = setup_for_recovery();
+    let p = dir.path();
+    let (id, branch) = create_ticket(p, "Recovery next test");
+    let rel = ticket_rel_path(&branch);
+    force_ticket_state(p, &branch, &rel, "new", "merge_failed");
+    run_apm(p, &["set", &id, "priority", "10", "--no-aggressive"]);
+
+    let out = run_apm(p, &["next", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("Recovery options:"),
+        "expected 'Recovery options:' in next output:\n{stdout}"
+    );
+}
+
+#[test]
+fn recovery_show_no_block_for_in_progress() {
+    let dir = setup_for_recovery();
+    let p = dir.path();
+    let (id, branch) = create_ticket(p, "No recovery show");
+    let rel = ticket_rel_path(&branch);
+    force_ticket_state(p, &branch, &rel, "new", "in_progress");
+
+    let out = run_apm(p, &["show", &id, "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("Recovery options:"),
+        "unexpected 'Recovery options:' in show output for in_progress:\n{stdout}"
+    );
+}
+
+#[test]
+fn recovery_list_no_summary_for_in_progress() {
+    let dir = setup_for_recovery();
+    let p = dir.path();
+    let (_, branch) = create_ticket(p, "No recovery list");
+    let rel = ticket_rel_path(&branch);
+    force_ticket_state(p, &branch, &rel, "new", "in_progress");
+
+    let out = run_apm(p, &["list", "--state", "in_progress", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("Recovery:"),
+        "unexpected 'Recovery:' in list output for in_progress:\n{stdout}"
+    );
+}
+
+#[test]
+fn recovery_next_no_options_for_in_progress() {
+    let dir = setup_for_recovery();
+    let p = dir.path();
+    let (id, branch) = create_ticket(p, "No recovery next");
+    let rel = ticket_rel_path(&branch);
+    force_ticket_state(p, &branch, &rel, "new", "in_progress");
+    run_apm(p, &["set", &id, "priority", "10", "--no-aggressive"]);
+
+    // in_progress has no actionable = ["agent"] so apm next returns no ticket;
+    // stdout must not contain "Recovery options:".
+    let out = run_apm(p, &["next", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("Recovery options:"),
+        "unexpected 'Recovery options:' in next output for in_progress:\n{stdout}"
+    );
+}
