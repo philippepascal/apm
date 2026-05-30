@@ -227,6 +227,31 @@ test: {
 
 ### Amendment requests
 
+- [ ] PARALLEL AMENDMENT to ae4104f2: the spec computes merge_failure_state_ids using 'state's available transitions include at least one RetryMerge recovery option', but that proxy over-fires. RetryMerge labels a transition whose to-state is in merge_target_ids (the set of states reached by Pr/Merge/PrOrEpicMerge completions anywhere in the workflow) — and the normal in_progress -> implemented transition matches that. So under the spec as written, in_progress would land in merge_failure_state_ids, every in_progress ticket would render with the red badge in the SupervisorView, and the detail panel would show Recovery on tickets that are not stuck.
+
+The fix lives in ae4104f2 (adds a new helper pub fn is_merge_failure_state(state_id: &str, workflow: &WorkflowConfig) -> bool that iterates every transition and returns true iff state_id matches transition.on_failure for any transition whose completion is Pr/Merge/PrOrEpicMerge). This ticket consumes that helper.
+
+REQUIRED CHANGES:
+1. SWITCH the server-side computation of merge_failure_state_ids in list_tickets to use apm_core::recovery::is_merge_failure_state instead of the current 'classify_recovery_options(...).any RetryMerge' check. New body:
+
+   let merge_failure_state_ids: Vec<String> = cfg.workflow.states.iter()
+       .filter(|s| apm_core::recovery::is_merge_failure_state(&s.id, &cfg.workflow))
+       .map(|s| s.id.clone())
+       .collect();
+
+2. UPDATE the AC that defines merge_failure_state_ids to say: 'a JSON array of state ID strings for which apm_core::recovery::is_merge_failure_state returns true — i.e. states that appear as the on_failure value of at least one transition whose completion is Pr, Merge, or PrOrEpicMerge'.
+
+3. ADD negative ACs:
+   - merge_failure_state_ids under the default workflow contains exactly {merge_failed} — not in_progress, not implemented, not ready.
+   - A TicketCard with state 'in_progress' does NOT render the merge-failure badge, even though in_progress has an outgoing transition to implemented.
+   - A TicketDetail for an in_progress ticket with no Merge notes section and no failure-state recovery options renders neither the Merge failure section nor the Recovery section.
+
+4. ADD negative tests:
+   - Server: list_tickets_merge_failure_state_ids must assert merge_failure_state_ids contains 'merge_failed' AND does NOT contain 'in_progress'. Currently the AC only checks contains. Without the negative check the over-fire passes silently.
+   - Frontend: add no_badge_for_in_progress to TicketCard.test.tsx — render a ticket with state 'in_progress' and a mergeFailureStateIds list containing only 'merge_failed'. Assert no badge.
+   - Frontend: hides_sections_for_normal_state in TicketDetail.test.tsx — fixture with state 'in_progress', merge_notes null, recovery_options empty (since the server should not return options for non-failure states once is_merge_failure_state gates it). Assert neither section renders.
+
+5. The recovery_options field on GET /api/tickets/:id should ALSO be gated on is_merge_failure_state(current state) — return an empty array when the ticket is not in a failure state. This prevents the detail panel from ever rendering the Recovery section on a normal-state ticket. Update the relevant AC accordingly: 'recovery_options is empty when is_merge_failure_state(ticket.state, workflow) returns false, or when no git root is present, or when config fails to load'.
 
 ### Code review
 
