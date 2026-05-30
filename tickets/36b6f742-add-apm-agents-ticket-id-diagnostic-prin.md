@@ -3,13 +3,13 @@ id = "36b6f742"
 title = "Add apm agents <ticket-id> diagnostic: print resolved agent, role, model, manifest with provenance"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/36b6f742-add-apm-agents-ticket-id-diagnostic-prin"
 created_at = "2026-05-30T16:50:01.198693Z"
-updated_at = "2026-05-30T17:29:53.756055Z"
+updated_at = "2026-05-30T17:34:30.746231Z"
 +++
 
 ## Spec
