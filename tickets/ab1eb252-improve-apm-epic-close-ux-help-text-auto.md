@@ -1,7 +1,7 @@
 +++
 id = "ab1eb252"
 title = "Improve apm epic close UX: help text, auto-sync mergeable tickets, --merge/--pr/--auto"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab1eb252-improve-apm-epic-close-ux-help-text-auto"
 created_at = "2026-05-30T18:53:24.160398Z"
-updated_at = "2026-05-30T19:09:12.793651Z"
+updated_at = "2026-05-30T19:09:16.667944Z"
 +++
 
 ## Spec
@@ -222,3 +222,4 @@ Note: when `--merge` is given and `merge_ref` encounters a conflict, it returns 
 | 2026-05-30T18:53Z | — | new | philippepascal |
 | 2026-05-30T18:57Z | new | groomed | philippepascal |
 | 2026-05-30T19:01Z | groomed | in_design | philippepascal |
+| 2026-05-30T19:09Z | in_design | specd | claude |
