@@ -91,6 +91,165 @@ pub(crate) fn apply_frontmatter_agent(
     }
 }
 
+pub struct AgentDiagnostic {
+    pub ticket_id: String,
+    pub ticket_state: String,
+    /// False when the ticket's current state has no `command:start` transition.
+    pub dispatchable: bool,
+    /// The state whose `command:start` transition was used for resolution.
+    /// Equals `ticket_state` when `dispatchable` is true.
+    pub resolved_from_state: String,
+    /// Human-readable label, e.g. `"ready → in_progress"`.
+    pub transition_label: String,
+    /// The literal `"agent/role"` string resolved by the cascade.
+    pub worker_profile_str: String,
+    /// Layer that supplied `worker_profile_str`.
+    pub profile_source: String,
+    pub agent: String,
+    pub agent_source: String,
+    pub role: String,
+    pub role_source: String,
+    pub model: Option<String>,
+    pub model_source: String,
+    pub container: Option<String>,
+    pub container_source: String,
+    /// Path to `.apm/agents/<agent>/<role>.toml` (relative), shown whether present or absent.
+    pub manifest_path: String,
+    pub manifest_present: bool,
+    /// Each entry is `(key, value, source_label)`.
+    pub env: Vec<(String, String, String)>,
+    pub keychain: std::collections::HashMap<String, String>,
+}
+
+pub fn resolve_for_diagnostic(root: &Path, id_arg: &str) -> Result<AgentDiagnostic> {
+    let config = Config::load(root)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+    let t = tickets.iter().find(|t| t.frontmatter.id == id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {:?} not found", id))?;
+
+    let ticket_state = t.frontmatter.state.clone();
+
+    // Find command:start for current state; if absent scan all states for fallback.
+    let (dispatchable, resolved_from_state, from_id, to_id, wp_from_transition) = {
+        let current = config.workflow.states.iter()
+            .find(|s| s.id == ticket_state)
+            .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
+
+        if let Some(tr) = current {
+            (true, ticket_state.clone(), ticket_state.clone(), tr.to.clone(), tr.worker_profile.clone())
+        } else {
+            let mut found: Option<(String, String, Option<String>)> = None;
+            for state in &config.workflow.states {
+                if let Some(tr) = state.transitions.iter().find(|tr| tr.trigger == "command:start") {
+                    found = Some((state.id.clone(), tr.to.clone(), tr.worker_profile.clone()));
+                    break;
+                }
+            }
+            if let Some((from, to, wp)) = found {
+                (false, from.clone(), from, to, wp)
+            } else {
+                return Ok(AgentDiagnostic {
+                    ticket_id: id,
+                    ticket_state: ticket_state.clone(),
+                    dispatchable: false,
+                    resolved_from_state: ticket_state,
+                    transition_label: "none".to_string(),
+                    worker_profile_str: String::new(),
+                    profile_source: "none".to_string(),
+                    agent: String::new(),
+                    agent_source: String::new(),
+                    role: String::new(),
+                    role_source: String::new(),
+                    model: None,
+                    model_source: String::new(),
+                    container: None,
+                    container_source: String::new(),
+                    manifest_path: String::new(),
+                    manifest_present: false,
+                    env: vec![],
+                    keychain: config.workers.keychain.clone(),
+                });
+            }
+        }
+    };
+
+    let transition_label = format!("{from_id} → {to_id}");
+
+    // Derive worker_profile_str using the same priority as run(): transition wp → workers.default → built-in.
+    let (worker_profile_str, profile_source) = if let Some(wp) = wp_from_transition {
+        (wp, format!("workflow.toml transition {transition_label}"))
+    } else if let Some(default) = &config.workers.default {
+        (default.clone(), "workers.default".to_string())
+    } else {
+        ("claude/coder".to_string(), "built-in fallback".to_string())
+    };
+
+    let (agent_base, role) = parse_worker_profile(&worker_profile_str)?;
+    let mut agent = agent_base;
+    let mut agent_source = profile_source.clone();
+    let role_source = profile_source.clone();
+
+    // Inherit model and container from workers config.
+    let mut model = config.workers.model.clone();
+    let mut model_source = "workers config".to_string();
+    let container = config.workers.container.clone();
+    let container_source = "workers config".to_string();
+
+    // Env from workers config.
+    let mut env: Vec<(String, String, String)> = config.workers.env.iter()
+        .map(|(k, v)| (k.clone(), v.clone(), "workers config".to_string()))
+        .collect();
+
+    // Load profile manifest.
+    let manifest_path = format!(".apm/agents/{agent}/{role}.toml");
+    let manifest_present;
+    if let Some(manifest) = load_profile_manifest(root, &agent, &role)? {
+        manifest_present = true;
+        if let Some(m) = manifest.model {
+            model = Some(m);
+            model_source = manifest_path.clone();
+        }
+        for (k, v) in manifest.env {
+            env.retain(|(ek, _, _)| ek != &k);
+            env.push((k, v, manifest_path.clone()));
+        }
+    } else {
+        manifest_present = false;
+    }
+
+    // Apply frontmatter agent overrides (same logic as apply_frontmatter_agent).
+    if let Some(ov) = t.frontmatter.agent_overrides.get(&worker_profile_str) {
+        agent_source = format!("frontmatter agent_overrides[\"{worker_profile_str}\"]");
+        agent = ov.clone();
+    } else if let Some(a) = &t.frontmatter.agent {
+        agent_source = "frontmatter.agent".to_string();
+        agent = a.clone();
+    }
+
+    Ok(AgentDiagnostic {
+        ticket_id: id,
+        ticket_state,
+        dispatchable,
+        resolved_from_state,
+        transition_label,
+        worker_profile_str,
+        profile_source,
+        agent,
+        agent_source,
+        role,
+        role_source,
+        model,
+        model_source,
+        container,
+        container_source,
+        manifest_path,
+        manifest_present,
+        env,
+        keychain: config.workers.keychain.clone(),
+    })
+}
+
 pub struct StartOutput {
     pub id: String,
     pub old_state: String,
@@ -1667,6 +1826,119 @@ mod tests {
         assert_eq!(wp.env.get("FOO").map(|s| s.as_str()), Some("manifest"), "manifest should override global");
         assert_eq!(wp.env.get("BAR").map(|s| s.as_str()), Some("new"), "manifest-only key should be present");
         assert_eq!(wp.env.get("BAZ").map(|s| s.as_str()), Some("kept"), "global-only key should be kept");
+    }
+
+    // --- resolve_for_diagnostic ---
+
+    fn make_diagnostic_repo(
+        root: &std::path::Path,
+        ticket_state: &str,
+        ticket_id: &str,
+        workers_default: Option<&str>,
+        transition_worker_profile: Option<&str>,
+        manifest_model: Option<&str>,
+        agent_overrides: Option<(&str, &str)>,
+    ) {
+        use std::fs;
+
+        fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
+        fs::create_dir_all(root.join("tickets")).unwrap();
+
+        let workers_section = if let Some(d) = workers_default {
+            format!("[workers]\ndefault = \"{d}\"\n")
+        } else {
+            "[workers]\n".to_string()
+        };
+        fs::write(root.join(".apm/config.toml"), format!(
+            "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
+        )).unwrap();
+
+        let wp_line = if let Some(wp) = transition_worker_profile {
+            format!("  worker_profile = \"{wp}\"\n")
+        } else {
+            String::new()
+        };
+        fs::write(root.join(".apm/workflow.toml"), format!(
+            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n{wp_line}\n[[workflow.states]]\nid = \"in_progress\"\nlabel = \"In Progress\"\n\n  [[workflow.states.transitions]]\n  to = \"done\"\n  trigger = \"manual\"\n  outcome = \"success\"\n\n[[workflow.states]]\nid = \"done\"\nlabel = \"Done\"\nterminal = true\n\n[[workflow.states]]\nid = \"new\"\nlabel = \"New\"\n\n  [[workflow.states.transitions]]\n  to = \"ready\"\n  trigger = \"manual\"\n  outcome = \"success\"\n"
+        )).unwrap();
+
+        if let Some(model) = manifest_model {
+            fs::write(root.join(".apm/agents/claude/coder.toml"), format!("model = \"{model}\"\n")).unwrap();
+        }
+
+        let overrides_section = if let Some((key, val)) = agent_overrides {
+            format!("\n[agent_overrides]\n\"{key}\" = \"{val}\"\n")
+        } else {
+            String::new()
+        };
+        let ticket_content = format!(
+            "+++\nid = \"{ticket_id}\"\ntitle = \"T\"\nstate = \"{ticket_state}\"\npriority = 0\neffort = 1\nrisk = 1\nauthor = \"test\"\nowner = \"test\"\nbranch = \"ticket/{ticket_id}-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n{overrides_section}+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] AC\n\n### Out of scope\n\nNone.\n\n### Approach\n\nSomething.\n\n### Open questions\n\n### Amendment requests\n\n### Code review\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+        );
+        fs::write(root.join(format!("tickets/{ticket_id}-test.md")), ticket_content).unwrap();
+
+        std::process::Command::new("git").arg("init").current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.name", "T"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", ".apm"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "init"]).current_dir(root).output().unwrap();
+        let branch = format!("ticket/{ticket_id}-test");
+        std::process::Command::new("git").args(["checkout", "-b", &branch]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", &format!("tickets/{ticket_id}-test.md")]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "add ticket"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["checkout", "main"]).current_dir(root).output().unwrap();
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_happy_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_diagnostic_repo(root, "ready", "aa000001", Some("claude/coder"), Some("claude/coder"), Some("sonnet"), None);
+        let diag = super::resolve_for_diagnostic(root, "aa000001").unwrap();
+        assert_eq!(diag.agent, "claude");
+        assert_eq!(diag.role, "coder");
+        assert_eq!(diag.model.as_deref(), Some("sonnet"));
+        assert!(diag.manifest_present);
+        assert!(diag.agent_source.contains("workflow.toml transition"), "expected workflow.toml source, got: {}", diag.agent_source);
+        assert!(diag.model_source.contains("coder.toml"), "expected manifest source, got: {}", diag.model_source);
+        assert!(diag.dispatchable);
+        assert_eq!(diag.resolved_from_state, "ready");
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_override_test() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_diagnostic_repo(root, "ready", "aa000002", Some("claude/coder"), Some("claude/coder"), Some("sonnet"), Some(("claude/coder", "mock-happy")));
+        let diag = super::resolve_for_diagnostic(root, "aa000002").unwrap();
+        assert_eq!(diag.agent, "mock-happy");
+        assert!(diag.agent_source.contains("agent_overrides"), "provenance must mention agent_overrides: {}", diag.agent_source);
+        assert!(diag.agent_source.contains("claude/coder"), "provenance must include matched key: {}", diag.agent_source);
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_manifest_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_diagnostic_repo(root, "ready", "aa000003", Some("claude/coder"), None, None, None);
+        let diag = super::resolve_for_diagnostic(root, "aa000003").unwrap();
+        assert_eq!(diag.model, None);
+        assert!(!diag.manifest_present);
+        assert!(diag.agent_source.contains("workers.default") || diag.agent_source.contains("workflow.toml"),
+            "agent_source should trace to workers layer: {}", diag.agent_source);
+        assert!(diag.role_source.contains("workers.default") || diag.role_source.contains("workflow.toml"),
+            "role_source should trace to workers layer: {}", diag.role_source);
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_non_dispatchable() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        // Ticket is in "new" state which has no command:start transition.
+        make_diagnostic_repo(root, "new", "aa000004", Some("claude/coder"), None, None, None);
+        let diag = super::resolve_for_diagnostic(root, "aa000004").unwrap();
+        assert!(!diag.dispatchable);
+        assert_ne!(diag.resolved_from_state, "new", "resolved_from_state should differ from ticket_state");
+        assert_eq!(diag.ticket_state, "new");
     }
 
     // --- mock wrapper integration tests ---
