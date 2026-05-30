@@ -85,7 +85,15 @@ TESTS:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Spawning a worker or triggering any state transition
+- Validating that the resolved agent binary exists or that the model is available (no network calls, no binary probing)
+- Resolving keychain secret values — only the name→item mapping from config is displayed, not the actual secrets
+- Rendering the full system prompt or user message text — use `apm prompt` for that
+- Container existence or pull checks
+- Modifying ticket frontmatter or any project file
+- Changes to `apm-server` or `apm-ui`
+- A bulk form that shows resolutions across all tickets — `apm agents resolve` is per-ticket only
+- Renaming or removing any existing `apm agents` subcommands (`list`, `new`, `test`, `eject`)
 
 ### Approach
 
