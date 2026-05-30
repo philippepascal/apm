@@ -781,23 +781,10 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
 }
 
 pub(crate) struct PromptProvenance {
-    pub instructions_role: Option<String>,
     pub layer2_path: Option<String>,
-    pub winner: ProvenanceEntry,
-    pub skipped: Vec<ProvenanceEntry>,
+    pub layer3_source: String,
+    pub missed_paths: Vec<String>,
 }
-
-pub(crate) struct ProvenanceEntry {
-    pub level: u8,
-    pub label: &'static str,
-    pub source: String,
-}
-
-const LEVEL_LABELS: [&str; 3] = [
-    "per-agent file",
-    "claude-fallback file",
-    "built-in default",
-];
 
 pub(crate) fn build_system_prompt(
     root: &Path,
@@ -880,53 +867,34 @@ pub(crate) fn explain_system_prompt(
     agent: &str,
     role: &str,
 ) -> Result<PromptProvenance> {
-    let instructions_role = Some(role.to_string());
     let layer2_path = project_file
         .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.display().to_string());
 
-    let mut skipped: Vec<ProvenanceEntry> = Vec::new();
+    let mut missed_paths: Vec<String> = Vec::new();
 
     // Level 0: per-agent file
     let per_agent_rel = format!(".apm/agents/{agent}/apm.{role}.md");
     let per_agent = root.join(&per_agent_rel);
     if per_agent.exists() {
-        let winner = ProvenanceEntry { level: 0, label: LEVEL_LABELS[0], source: per_agent_rel };
-        for i in 1usize..=2 {
-            skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
-        }
-        return Ok(PromptProvenance { instructions_role, layer2_path, winner, skipped });
+        return Ok(PromptProvenance { layer2_path, layer3_source: per_agent_rel, missed_paths });
     }
-    skipped.push(ProvenanceEntry {
-        level: 0,
-        label: LEVEL_LABELS[0],
-        source: format!("file absent: {per_agent_rel}"),
-    });
+    missed_paths.push(per_agent_rel.clone());
 
     // Level 1: .apm/agents/claude/apm.<role>.md fallback (for non-claude agents)
     if agent != "claude" {
         let claude_rel = format!(".apm/agents/claude/apm.{role}.md");
         let claude_file = root.join(&claude_rel);
         if claude_file.exists() {
-            let winner = ProvenanceEntry {
-                level: 1,
-                label: LEVEL_LABELS[1],
-                source: format!("{claude_rel} (claude fallback — {per_agent_rel} absent)"),
-            };
-            skipped.push(ProvenanceEntry { level: 2, label: LEVEL_LABELS[2], source: "not reached".to_string() });
-            return Ok(PromptProvenance { instructions_role, layer2_path, winner, skipped });
+            return Ok(PromptProvenance { layer2_path, layer3_source: claude_rel, missed_paths });
         }
+        missed_paths.push(claude_rel);
     }
-    skipped.push(ProvenanceEntry { level: 1, label: LEVEL_LABELS[1], source: "none found".to_string() });
 
     // Level 2: built-in default
     if resolve_builtin_instructions(agent, role).is_some() {
-        let winner = ProvenanceEntry {
-            level: 2,
-            label: LEVEL_LABELS[2],
-            source: format!("built-in default ({agent}/{role})"),
-        };
-        return Ok(PromptProvenance { instructions_role, layer2_path, winner, skipped });
+        let layer3_source = format!("built-in {agent}/{role} default");
+        return Ok(PromptProvenance { layer2_path, layer3_source, missed_paths });
     }
 
     // Level 3: hard error

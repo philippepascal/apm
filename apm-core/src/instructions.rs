@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::collections::HashSet;
 use std::path::Path;
 
 use crate::config::{Config, TransitionConfig};
@@ -75,72 +76,6 @@ Ticket file rules:\n\
     from the branch name and is load-bearing for all apm lookups.\n\
   - Find the exact filename with: ls tickets/<id>-*.md\n";
 
-static SHELL_DISCIPLINE_BODY: &str = "Keep each Bash call to a single operation.\n\
-\n\
-Do not chain commands:\n\
-\n\
-  # Wrong — && chains defeat allow-list matching\n\
-  apm sync && apm list --state ready\n\
-\n\
-  # Right — one call per operation\n\
-  apm sync\n\
-  apm list --state ready\n\
-\n\
-Do not use $() subshells:\n\
-\n\
-  # Wrong — triggers permission prompt\n\
-  apm spec 1234 --section Problem --set \"$(cat /tmp/problem.md)\"\n\
-\n\
-  # Right — write content with the Write tool, then reference by file\n\
-  apm spec 1234 --section Problem --set-file /tmp/problem.md\n\
-\n\
-Do not use background jobs (&):\n\
-\n\
-  # Wrong — & defeats pattern matching\n\
-  apm state 1234 implemented & apm state 5678 implemented & wait\n\
-\n\
-  # Right — sequential calls\n\
-  apm state 1234 implemented\n\
-  apm state 5678 implemented\n\
-\n\
-Use git -C for all git operations in worktrees:\n\
-\n\
-  # Wrong — cd && git triggers security check\n\
-  cd \"$wt\" && git add .\n\
-\n\
-  # Right\n\
-  git -C \"$wt\" add <files>\n\
-\n\
-Use bash -c for multi-step commands that must share a directory:\n\
-\n\
-  # Right — single bash call, matches Bash(bash *)\n\
-  bash -c \"cd $wt && cargo test --workspace 2>&1\"\n\
-\n\
-Use the Write tool instead of heredocs or $() for temp files:\n\
-  Write the file via the Write tool, then pass --set-file to apm spec.\n\
-\n\
-Off-limits — do not read or write these files:\n\
-\n\
-  .claude/              (settings, memory, CLAUDE.md)\n\
-  .apm/                 (except the ticket file)\n\
-  .gitignore, .github/  (project config)\n\
-\n\
-Do not batch tool calls in parallel in a headless worker:\n\
-\n\
-  Claude Code runs all tool_use blocks emitted in a single turn concurrently.\n\
-  In --print (headless) mode, if any one call requires approval, the entire\n\
-  batch is cancelled — including calls that were individually allowed.\n\
-\n\
-  apm and bootstrap commands must be their own single tool call:\n\
-\n\
-    # Wrong — if apm instructions requires approval, Read is also cancelled\n\
-    [Bash(\"apm instructions\"), Read(\"some/file\")]  <- emitted together\n\
-\n\
-    # Right — sequential, one at a time\n\
-    Bash(\"apm instructions\")\n\
-    ... wait for result ...\n\
-    Read(\"some/file\")\n";
-
 static SESSION_IDENTITY_BODY: &str = "Generate a unique session name at the start of every session.\n\
 Use a fixed string — do not use $() substitution inline, as it triggers\n\
 permission prompts. Pick a name of the form claude-MMDD-HHMM-XXXX\n\
@@ -185,17 +120,12 @@ pub fn generate(root: &Path, role: Option<&str>, ticket_id: Option<&str>, comman
     out.push_str("## Ticket Format\n\n");
     out.push_str(&ticket_format_body(config.as_ref()));
 
-    // 3. Shell discipline
-    out.push_str("## Shell Discipline\n\n");
-    out.push_str(SHELL_DISCIPLINE_BODY);
-    out.push('\n');
-
-    // 4. Session identity
+    // 3. Session identity
     out.push_str("## Session Identity\n\n");
     out.push_str(SESSION_IDENTITY_BODY);
     out.push('\n');
 
-    // 5. Command reference — omit section entirely when no commands are provided
+    // 4. Command reference — omit section entirely when no commands are provided
     let cr = command_reference_body(role, commands);
     if !cr.is_empty() {
         out.push_str("## Command Reference\n\n");
@@ -296,8 +226,6 @@ fn format_live_ticket_format(config: &Config) -> String {
 }
 
 fn role_index_body(root: &Path) -> String {
-    use std::collections::HashSet;
-
     let mut out = String::from("## Available Roles\n\n");
 
     let hardcoded: &[(&str, &str)] = &[
@@ -469,6 +397,14 @@ mod tests {
         assert!(out.contains("APM_AGENT_NAME"), "APM_AGENT_NAME identity missing");
         // State machine must use table format
         assert!(out.contains("| From | To | Command |"), "table header missing");
+    }
+
+    #[test]
+    fn shell_discipline_absent_from_instructions() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = generate(tmp.path(), None, None, &empty_commands()).unwrap();
+        assert!(!out.contains("## Shell Discipline"), "Shell Discipline must not appear in apm instructions");
+        assert!(!out.contains("Do not batch tool calls in parallel"), "parallel batching rule must not appear in apm instructions");
     }
 
     #[test]
