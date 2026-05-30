@@ -1,7 +1,7 @@
 +++
 id = "ae4104f2"
 title = "Surface config-derived recovery guidance for merge-failure states in apm CLI"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ae4104f2-surface-config-derived-recovery-guidance"
 created_at = "2026-05-30T02:11:03.737221Z"
-updated_at = "2026-05-30T04:22:16.587910Z"
+updated_at = "2026-05-30T07:15:05.499148Z"
 +++
 
 ## Spec
@@ -179,3 +179,4 @@ merge conflict — resolve manually and push:
 | 2026-05-30T04:22Z | in_progress | implemented | claude |
 | 2026-05-30T04:22Z | implemented | merge_failed | claude |
 | 2026-05-30T04:22Z | merge_failed | implemented | claude |
+| 2026-05-30T07:15Z | implemented | closed | philippepascal(apm-sync) |
