@@ -237,7 +237,7 @@ test: {
 
 ### Amendment requests
 
-- [ ] PARALLEL AMENDMENT to ae4104f2: the spec computes merge_failure_state_ids using 'state's available transitions include at least one RetryMerge recovery option', but that proxy over-fires. RetryMerge labels a transition whose to-state is in merge_target_ids (the set of states reached by Pr/Merge/PrOrEpicMerge completions anywhere in the workflow) — and the normal in_progress -> implemented transition matches that. So under the spec as written, in_progress would land in merge_failure_state_ids, every in_progress ticket would render with the red badge in the SupervisorView, and the detail panel would show Recovery on tickets that are not stuck.
+- [x] PARALLEL AMENDMENT to ae4104f2: the spec computes merge_failure_state_ids using 'state's available transitions include at least one RetryMerge recovery option', but that proxy over-fires. RetryMerge labels a transition whose to-state is in merge_target_ids (the set of states reached by Pr/Merge/PrOrEpicMerge completions anywhere in the workflow) — and the normal in_progress -> implemented transition matches that. So under the spec as written, in_progress would land in merge_failure_state_ids, every in_progress ticket would render with the red badge in the SupervisorView, and the detail panel would show Recovery on tickets that are not stuck.
 
 The fix lives in ae4104f2 (adds a new helper pub fn is_merge_failure_state(state_id: &str, workflow: &WorkflowConfig) -> bool that iterates every transition and returns true iff state_id matches transition.on_failure for any transition whose completion is Pr/Merge/PrOrEpicMerge). This ticket consumes that helper.
 
