@@ -88,7 +88,46 @@ TESTS:
 
 ### Approach
 
-How the implementation will work.
+#### Phase 1 — Auto-fix batch
+
+Run `cargo clippy --fix --workspace --allow-dirty --allow-staged` to apply all machine-safe suggestions in one pass. This covers approximately 33 warnings:
+
+- `apm-core` lib (~13): consecutive `str::replace` chains collapsed to single call, redundant closures, `Option::and_then(|x| Some(y))` → `map`, `map_or` simplifications, `clone` → `std::slice::from_ref`, `field_reassign_with_default`, loop-index-only variables
+- `apm-cli` lib (~10): same categories
+- `apm-server` bin (~2): `literal with empty format string`, `manual char comparison`
+- `apm/tests/validate_fix.rs` (~8): `assert_eq!(x, true)` → `assert!(x)`
+
+Run `cargo test --workspace` to confirm no regressions. Commit: `Fix: apply clippy auto-fix suggestions across workspace`.
+
+#### Phase 2 — Manual fixes
+
+**`too-many-arguments`** — Add `#[allow(clippy::too_many_arguments)]` directly above each `pub fn run` or `pub fn spawn_next_worker` declaration. Do not change signatures. Add a one-line comment: `// Each argument maps to a distinct CLI flag.`
+- `apm-core/src/start.rs:574` (`spawn_next_worker`, 8 args)
+- `apm/src/cmd/list.rs:6` (`run`, 9 args)
+- `apm/src/cmd/new.rs:6` (`run`, 11 args)
+- `apm/src/cmd/spec.rs:5` (`run`, 11 args)
+
+**`very complex type`** — Add `#[allow(clippy::type_complexity)]` at `apm/src/cmd/start.rs:41`.
+
+**`items after a test module`** — In each file, move the non-test items that appear after `mod tests { ... }` to above the test module block:
+- `apm-server/src/tls.rs:79`
+- `apm-core/src/epic.rs:97`
+- `apm-core/src/worktree.rs:163`
+- `apm-core/src/logger.rs:59`
+- `apm-core/src/ticket/ticket_fmt.rs:316`
+
+**`unused variable: id`** — Rename `id` to `_id` at `apm-server/src/handlers/maintenance.rs:259`.
+
+**`push_remote_state_update` unused** — Read `apm/tests/integration.rs` around line 7395 to check context. If the function has no pending callers or TODO comments, delete it and state the rationale in the commit message. If evidence suggests it was written for a planned test, keep it with `#[allow(dead_code)]` and a `// Reserved for <test name>` comment instead.
+
+Run `cargo test --workspace` after this batch. Commit: `Fix: resolve remaining clippy and compiler warnings manually`.
+
+#### Phase 3 — Verify zero warnings
+
+Run all three checks and confirm clean output:
+- `cargo build --workspace`
+- `cargo clippy --workspace --all-targets`
+- `cargo test --workspace`
 
 ### Open questions
 
