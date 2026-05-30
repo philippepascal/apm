@@ -75,7 +75,7 @@ After this fix, `apm close` no longer ships unmerged work as a side effect; that
 - [x] `apm sync` auto-close of a main-scoped ticket succeeds even when the main worktree has uncommitted changes (no merge error, no dirty-worktree error).
 - [x] After a successful close of a main-scoped ticket and deletion of the ticket branch, `apm sync` no longer re-offers the ticket as a close candidate (Case 2 does not re-fire).
 - [x] Calling `apm close <id>` on an already-closed ticket returns an "already closed" error without making additional commits to any branch.
-- [ ] When the target-branch commit fails during close, the failure is reported as a warning (non-fatal); the ticket-branch commit has already succeeded.
+- [x] When the target-branch commit fails during close, the failure is reported as a warning (non-fatal); the ticket-branch commit has already succeeded.
 
 ### Out of scope
 
