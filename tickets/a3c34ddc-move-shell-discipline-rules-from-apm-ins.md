@@ -4,12 +4,12 @@ title = "Move shell-discipline rules from apm instructions into Claude role file
 state = "in_design"
 priority = 0
 effort = 4
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a3c34ddc-move-shell-discipline-rules-from-apm-ins"
 created_at = "2026-05-30T16:45:44.032054Z"
-updated_at = "2026-05-30T17:21:25.448861Z"
+updated_at = "2026-05-30T17:21:29.262570Z"
 +++
 
 ## Spec
