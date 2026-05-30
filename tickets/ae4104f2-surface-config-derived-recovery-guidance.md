@@ -30,7 +30,7 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 - [x] Results are ordered by `workflow.states` declaration order; classification is independent of that order (shuffling the states list produces identical results)
 - [x] Against the default workflow, `classify_recovery_options("merge_failed", config)` returns `implemented` as `RetryMerge` and `in_progress` as `ReturnToWorker`
 - [x] Against a workflow where the merge-target state is renamed (e.g. `implemented` → `shipped`), the helper classifies `shipped` as `RetryMerge`
-- [ ] When the queried state has no transitions to merge-target states, `classify_recovery_options` returns no `RetryMerge` entries
+- [x] When the queried state has no transitions to merge-target states, `classify_recovery_options` returns no `RetryMerge` entries
 - [ ] `is_merge_failure_state(state_id, workflow)` returns true iff `state_id` equals `transition.on_failure` for at least one transition in the entire workflow whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge`; transitions with a missing or empty `on_failure` are skipped
 - [ ] `is_merge_failure_state` returns false for all non-failure states in the default workflow — `new`, `groomed`, `specd`, `ready`, `in_progress`, `implemented`, `closed` — and true only for `merge_failed`
 - [ ] `apm show <id>` prints a "Recovery options" block iff `is_merge_failure_state(ticket.state, workflow)` returns true; the block lists each option with its display label and the exact command `apm state <id> <to>`, and includes a reference to `docs/merge-failed-recovery.md`
