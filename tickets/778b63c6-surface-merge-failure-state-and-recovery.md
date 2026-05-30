@@ -47,7 +47,180 @@ This ticket extends `apm-server` and `apm-ui` to surface two pieces of recovery 
 
 ### Approach
 
-How the implementation will work.
+#### `apm-server/src/models.rs`
+
+Add `merge_failure_state_ids: Vec<String>` to `TicketsEnvelope`.
+
+Add `recovery_options: Vec<RecoveryOptionDto>` and `merge_notes: Option<String>` to `TicketDetailResponse`.
+
+Define a new serializable DTO:
+
+```rust
+#[derive(serde::Serialize)]
+pub struct RecoveryOptionDto {
+    pub to: String,
+    pub label: String,
+    pub kind: String,    // "retry_merge" | "return_to_worker" | "abandon" | "other"
+    pub command: String, // "apm state {ticket_id} {to}"
+}
+```
+
+`RecoveryOptionDto` is constructed by the handler from `apm_core::recovery::RecoveryOption`; no serde dependency is added to `apm-core` for this type.
+
+#### `apm-server/src/handlers/tickets.rs` — `list_tickets`
+
+Restructure the config loading block so the `Config` value is retained after the `(resolved_ids, terminal_ids, supervisor_states)` computation. Add a parallel computation:
+
+```rust
+let merge_failure_state_ids: Vec<String> = cfg.workflow.states.iter()
+    .filter(|s| apm_core::recovery::classify_recovery_options(&s.id, &cfg.workflow)
+        .iter().any(|r| matches!(r.kind, apm_core::recovery::RecoveryKind::RetryMerge)))
+    .map(|s| s.id.clone())
+    .collect();
+```
+
+Fall back to `vec![]` when there is no git root or the config fails to load. Include in `TicketsEnvelope { tickets, supervisor_states, merge_failure_state_ids }`.
+
+#### `apm-server/src/handlers/tickets.rs` — `get_ticket`
+
+Extend the first synchronous `Config::load` call (the one used to compute `blocking_deps`) to also build `recovery_options`:
+
+```rust
+let (blocking_deps, recovery_options) = match apm_core::config::Config::load(&root) {
+    Ok(config) => {
+        let deps = apm_core::compute_blocking_deps(ticket_ref, &tickets, &config);
+        let opts = apm_core::recovery::classify_recovery_options(
+            &ticket_ref.frontmatter.state, &config.workflow,
+        )
+        .into_iter()
+        .map(|opt| {
+            let kind = match opt.kind {
+                RecoveryKind::RetryMerge      => "retry_merge",
+                RecoveryKind::ReturnToWorker  => "return_to_worker",
+                RecoveryKind::Abandon         => "abandon",
+                RecoveryKind::Other           => "other",
+            }.to_string();
+            RecoveryOptionDto {
+                command: format!("apm state {} {}", full_id, opt.to),
+                to: opt.to,
+                label: opt.label,
+                kind,
+            }
+        })
+        .collect();
+        (deps, opts)
+    }
+    Err(_) => (vec![], vec![]),
+};
+```
+
+Extract `merge_notes` using the existing `extract_section` helper:
+
+```rust
+let merge_notes = {
+    let s = extract_section(&ticket.body, "Merge notes").trim();
+    if s.is_empty() { None } else { Some(s.to_string()) }
+};
+```
+
+Add both fields to the `TicketDetailResponse { ..., recovery_options, merge_notes }` constructor.
+
+#### apm-ui type definitions
+
+`TicketDetail.tsx` — extend the inline `TicketDetail` interface:
+
+```ts
+recovery_options?: Array<{ to: string; label: string; kind: string; command: string }>
+merge_notes?: string | null
+```
+
+`SupervisorView.tsx` — extend the `fetchTickets` return type to include `merge_failure_state_ids: string[]`. Extract from data: `const mergeFailureStateIds = data?.merge_failure_state_ids ?? []`. Pass to `<Swimlane mergeFailureStateIds={mergeFailureStateIds} ... />`.
+
+#### apm-ui component changes
+
+**`Swimlane.tsx`** — add `mergeFailureStateIds: string[]` to `SwimlaneProps`. Pass through to `<TicketCard mergeFailureStateIds={mergeFailureStateIds} ... />`.
+
+**`TicketCard.tsx`** — add `mergeFailureStateIds: string[]` to `TicketCardProps`. Derive `const isMergeFailed = mergeFailureStateIds.includes(ticket.state)`. When true:
+- Render a red badge pill (analogous to the existing amber `?` and `A` pills): `<span title="Merge failure" className="text-[10px] px-1 rounded bg-red-900/60 text-red-300">!</span>`
+- Apply red border/background to the card container (analogous to the existing `isDepBlocked` amber treatment).
+
+**`TicketDetail.tsx`** — after the `<div className="prose ...">` body section and before `<TransitionButtons>`, add two conditional blocks:
+
+```tsx
+{data.merge_notes && (
+  <div className="px-6 py-4 border-t border-gray-700">
+    <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wide mb-2">Merge failure</p>
+    <pre className="text-xs text-gray-300 bg-gray-800 rounded p-3 overflow-x-auto whitespace-pre-wrap break-words">
+      {data.merge_notes}
+    </pre>
+  </div>
+)}
+{data.recovery_options && data.recovery_options.length > 0 && (
+  <div className="px-6 py-4 border-t border-gray-700">
+    <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wide mb-3">Recovery</p>
+    {data.recovery_options.map(opt => (
+      <div key={opt.to} className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm text-gray-200">{opt.label}</span>
+          <span className="text-[10px] text-gray-500">{kindLabel(opt.kind)}</span>
+        </div>
+        <code className="block text-xs bg-gray-800 rounded px-3 py-2 font-mono text-green-300 select-all cursor-text">
+          {opt.command}
+        </code>
+      </div>
+    ))}
+    <a href="/docs/merge-failed-recovery.md"
+       className="text-[10px] text-blue-400 hover:underline mt-2 inline-block"
+       target="_blank" rel="noreferrer">
+      See: docs/merge-failed-recovery.md
+    </a>
+  </div>
+)}
+```
+
+Define `kindLabel` as a module-level helper:
+```ts
+function kindLabel(kind: string): string {
+  switch (kind) {
+    case 'retry_merge':      return 'Retry merge'
+    case 'return_to_worker': return 'Return to worker'
+    case 'abandon':          return 'Abandon'
+    default:                 return ''
+  }
+}
+```
+
+#### Server tests (`apm-server/src/main.rs`)
+
+Three new tests in the `tests` module:
+
+**`list_tickets_merge_failure_state_ids`** (git-based): Initialise a temp repo using the default workflow TOML from `apm-core::init` (copy the inline TOML string that includes `merge_failed` with transitions back to `implemented`). Call `GET /api/tickets`. Assert `json["merge_failure_state_ids"]` is an array that contains `"merge_failed"`. Reuse the git setup pattern from `list_tickets_blocking_deps`.
+
+**`get_ticket_merge_notes_extracted`** (InMemory): Create a ticket with `body = "### Merge notes\n\ngit error: conflict in foo.rs\n### Other\n\n"`. Call `GET /api/tickets/:id`. Assert `json["merge_notes"] == "git error: conflict in foo.rs"`. Also test the absent-section case: ticket with no `### Merge notes` section returns `merge_notes` as `null` or absent.
+
+**`get_ticket_recovery_options_populated`** (git-based): Use the same git setup as the first test. Commit a ticket with `state = "merge_failed"`. Call `GET /api/tickets/:id`. Assert `json["recovery_options"]` is a non-empty array. Assert at least one entry satisfies: `kind == "retry_merge"` and `command` contains both `"apm state"` and `"implemented"`.
+
+The default workflow TOML for these tests only needs the `implemented` state (with `completion = "Pr"` and `on_failure = "merge_failed"`) and the `merge_failed` state (with a transition `to = "implemented"`). Minimal subset — no need for the full workflow.
+
+#### Frontend tests (`apm-ui`)
+
+Add to `package.json` devDependencies: `@testing-library/react` and `@testing-library/jest-dom`. Add to `vite.config.ts`:
+```ts
+test: {
+  environment: 'happy-dom',
+}
+```
+
+**`apm-ui/src/components/supervisor/TicketCard.test.tsx`**:
+- Before each test, mock `useLayoutStore` to return stable no-op defaults (`selectedTicketId: null`, `selectedTicketIds: []`, `lastClickedTicketId: null`, stubs for all setters).
+- `shows_merge_failure_badge_when_state_in_list`: render `<TicketCard ticket={{...baseTicket, state: 'merge_failed'}} columnTicketIds={[]} mergeFailureStateIds={['merge_failed']} />`. Assert the `!` badge element is in the document.
+- `no_badge_when_state_not_in_list`: render with `mergeFailureStateIds={[]}`. Assert the `!` badge is absent.
+
+**`apm-ui/src/components/TicketDetail.test.tsx`**:
+- Wrap renders in a `QueryClientProvider` with a fresh `QueryClient`. Mock `global.fetch` to return the fixture ticket data.
+- `shows_merge_failure_section`: fixture has `merge_notes: "fatal: merge conflict"`. Assert text "Merge failure" and "fatal: merge conflict" appear.
+- `shows_recovery_section`: fixture has `recovery_options: [{to: 'implemented', label: 'Retry', kind: 'retry_merge', command: 'apm state abc12345 implemented'}]`. Assert "Recovery" heading and command text appear.
+- `hides_sections_when_empty`: fixture has `merge_notes: null` and `recovery_options: []`. Assert neither "Merge failure" nor "Recovery" appears.
 
 ### Open questions
 
