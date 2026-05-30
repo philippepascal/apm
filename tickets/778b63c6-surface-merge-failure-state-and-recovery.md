@@ -37,7 +37,13 @@ This ticket extends `apm-server` and `apm-ui` to surface two pieces of recovery 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Action buttons or any new API endpoint that triggers a state transition; recovery happens exclusively via the `apm` CLI.
+- Inline editing of `### Merge notes` or any other ticket body section in the UI.
+- Dispatcher or `apm work` behavior changes around merge failure.
+- Hardcoding `"merge_failed"` or any other state name in the server or frontend; all merge-failure classification flows through `classify_recovery_options`.
+- Changes to the recovery classification logic itself (delivered by ae4104f2).
+- CLI changes to `apm show`, `apm list`, or `apm next` (covered by ae4104f2).
+- The `TicketResponse` (list endpoint per-ticket object) gaining a per-ticket `recovery_options` field; the badge is driven by the envelope-level `merge_failure_state_ids` to avoid computing classification for every ticket on every list call.
 
 ### Approach
 
