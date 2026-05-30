@@ -33,7 +33,12 @@ The `apm list` output includes an `epics:` footer block (introduced by ticket 7a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to `apm epic list` (it already shows the full freshness label per ticket 7a76dd16).
+- Changes to `apm-server` or `apm-ui` (the SupervisorView chip bar from ticket 7a76dd16 is unaffected).
+- Changes to `apm next` (its existing freshness note when the top ticket has a stale epic stays as-is).
+- A new CLI flag to toggle the marker or restore the footer.
+- Changes to `merge_tree_status` itself.
+- Color highlighting of the `↓` marker (the marker renders in plain text; color is a future concern).
 
 ### Approach
 
