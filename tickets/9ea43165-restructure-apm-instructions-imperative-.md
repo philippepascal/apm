@@ -1,7 +1,7 @@
 +++
 id = "9ea43165"
 title = "Restructure apm instructions: imperative format, role filtering, ticket-id substitution, layer reorder"
-state = "merge_failed"
+state = "implemented"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9ea43165-restructure-apm-instructions-imperative-"
 created_at = "2026-05-30T16:49:25.808040Z"
-updated_at = "2026-05-30T19:39:42.334555Z"
+updated_at = "2026-05-30T19:42:44.609237Z"
 depends_on = ["48d3932b"]
 +++
 
@@ -177,3 +177,4 @@ merge conflict — resolve manually and push:
 | 2026-05-30T19:25Z | implemented | merge_failed | claude |
 | 2026-05-30T19:39Z | merge_failed | implemented | claude |
 | 2026-05-30T19:39Z | implemented | merge_failed | claude |
+| 2026-05-30T19:42Z | merge_failed | implemented | claude |
