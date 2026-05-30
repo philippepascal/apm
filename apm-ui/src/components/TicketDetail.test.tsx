@@ -30,10 +30,10 @@ const baseTicketData = {
   body: '## Spec\n\nSome content\n',
   raw: '+++\nid = "aabbccdd"\n+++\n\n## Spec\n\nSome content\n',
   spec: '## Spec\n\nSome content\n',
-  valid_transitions: [],
-  blocking_deps: [],
-  recovery_options: [],
-  merge_notes: null,
+  valid_transitions: [] as string[],
+  blocking_deps: [] as string[],
+  recovery_options: [] as Array<{ to: string; label: string; kind: string; command: string }>,
+  merge_notes: null as string | null,
 }
 
 function renderWithClient(fixture: typeof baseTicketData) {
