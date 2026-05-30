@@ -326,7 +326,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("{}-{}-{:04x}", wp.agent, now_str, rand_u16());
-    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role)?;
+    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role, Some(&id))?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(&wp.role, &id));
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, raw_prompt);
     let role_prefix = Some(agent_role_prefix(&wp.role, &id));
@@ -494,7 +494,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("{}-{}-{:04x}", wp.agent, now_str, rand_u16());
-    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role)?;
+    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role, Some(&id))?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -665,7 +665,7 @@ pub fn spawn_next_worker(
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("{}-{}-{:04x}", wp.agent, now_str, rand_u16());
-    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role)?;
+    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role, Some(&id))?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -781,7 +781,7 @@ pub(crate) fn resolve_builtin_instructions(agent: &str, role: &str) -> Option<&'
 }
 
 pub(crate) struct PromptProvenance {
-    pub layer1_role: Option<String>,
+    pub instructions_role: Option<String>,
     pub layer2_path: Option<String>,
     pub winner: ProvenanceEntry,
     pub skipped: Vec<ProvenanceEntry>,
@@ -804,12 +804,13 @@ pub(crate) fn build_system_prompt(
     project_file: Option<&Path>,
     agent: &str,
     role: &str,
+    ticket_id: Option<&str>,
 ) -> Result<String> {
-    // Layer 1: APM system knowledge (always present, scoped to role)
-    let layer1 = crate::instructions::generate(root, Some(role), &[])?;
+    // Role layer: role-file cascade (highest-attention position)
+    let role_layer = build_system_prompt_body(root, agent, role)?;
 
-    // Layer 2: project context file (absent when not configured or path is empty)
-    let layer2: Option<String> = if let Some(path) = project_file {
+    // Project layer: project context file (absent when not configured or path is empty)
+    let project_layer: Option<String> = if let Some(path) = project_file {
         if path.as_os_str().is_empty() {
             None
         } else {
@@ -821,17 +822,17 @@ pub(crate) fn build_system_prompt(
         None
     };
 
-    // Layer 3: role-file cascade
-    let layer3 = build_system_prompt_body(root, agent, role)?;
+    // Instructions layer: APM system knowledge (reference material, scoped to role)
+    let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &[])?;
 
-    // Compose layers joined by a single blank line
-    let mut result = layer1.trim_end().to_owned();
-    if let Some(ref l2) = layer2 {
+    // Compose layers: role → project → instructions
+    let mut result = role_layer.trim_end().to_owned();
+    if let Some(ref l2) = project_layer {
         result.push_str("\n\n");
         result.push_str(l2.trim_end());
     }
     result.push_str("\n\n");
-    result.push_str(layer3.trim_end());
+    result.push_str(instructions_layer.trim_end());
 
     Ok(result)
 }
@@ -879,7 +880,7 @@ pub(crate) fn explain_system_prompt(
     agent: &str,
     role: &str,
 ) -> Result<PromptProvenance> {
-    let layer1_role = Some(role.to_string());
+    let instructions_role = Some(role.to_string());
     let layer2_path = project_file
         .filter(|p| !p.as_os_str().is_empty())
         .map(|p| p.display().to_string());
@@ -894,7 +895,7 @@ pub(crate) fn explain_system_prompt(
         for i in 1usize..=2 {
             skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
         }
-        return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
+        return Ok(PromptProvenance { instructions_role, layer2_path, winner, skipped });
     }
     skipped.push(ProvenanceEntry {
         level: 0,
@@ -913,7 +914,7 @@ pub(crate) fn explain_system_prompt(
                 source: format!("{claude_rel} (claude fallback — {per_agent_rel} absent)"),
             };
             skipped.push(ProvenanceEntry { level: 2, label: LEVEL_LABELS[2], source: "not reached".to_string() });
-            return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
+            return Ok(PromptProvenance { instructions_role, layer2_path, winner, skipped });
         }
     }
     skipped.push(ProvenanceEntry { level: 1, label: LEVEL_LABELS[1], source: "none found".to_string() });
@@ -925,7 +926,7 @@ pub(crate) fn explain_system_prompt(
             label: LEVEL_LABELS[2],
             source: format!("built-in default ({agent}/{role})"),
         };
-        return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
+        return Ok(PromptProvenance { instructions_role, layer2_path, winner, skipped });
     }
 
     // Level 3: hard error
@@ -1016,15 +1017,15 @@ mod tests {
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "PER AGENT WORKER").unwrap();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
-        assert!(result.contains("PER AGENT WORKER"), "layer 3 content missing: {result}");
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
+        assert!(result.contains("PER AGENT WORKER"), "role-file content missing: {result}");
     }
 
     #[test]
     fn build_system_prompt_falls_back_to_builtin_default() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
         assert!(result.contains(super::DEFAULT_CODER_DEFAULT.trim()), "built-in default not found in output");
     }
 
@@ -1032,7 +1033,7 @@ mod tests {
     fn build_system_prompt_falls_back_to_builtin_spec_writer() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "spec-writer").unwrap();
+        let result = build_system_prompt(p, None, "claude", "spec-writer", None).unwrap();
         assert!(result.contains(super::DEFAULT_SPEC_WRITER_DEFAULT.trim()), "built-in spec-writer default not found in output");
     }
 
@@ -1043,7 +1044,7 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "CLAUDE CODER CONTENT").unwrap();
         // "my-bot" has no per-agent file; should fall back to claude/
-        let result = build_system_prompt(p, None, "my-bot", "coder").unwrap();
+        let result = build_system_prompt(p, None, "my-bot", "coder", None).unwrap();
         assert!(result.contains("CLAUDE CODER CONTENT"), "claude fallback content missing: {result}");
     }
 
@@ -1055,7 +1056,7 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/my-bot/apm.coder.md"), "AGENT SPECIFIC").unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "CLAUDE CONTENT").unwrap();
-        let result = build_system_prompt(p, None, "my-bot", "coder").unwrap();
+        let result = build_system_prompt(p, None, "my-bot", "coder", None).unwrap();
         assert!(result.contains("AGENT SPECIFIC"), "agent-specific file should win: {result}");
         assert!(!result.contains("CLAUDE CONTENT"), "claude fallback should be skipped: {result}");
     }
@@ -1064,7 +1065,7 @@ mod tests {
     fn build_system_prompt_errors_for_unknown_agent() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "custom-bot", "coder");
+        let result = build_system_prompt(p, None, "custom-bot", "coder", None);
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("custom-bot"), "error should name the agent: {msg}");
@@ -1081,13 +1082,14 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("prefix.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX CONTENT\n\n{}",
-            layer1.trim_end(),
-            super::DEFAULT_CODER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end(),
+            instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1096,9 +1098,10 @@ mod tests {
     fn agents_instructions_none_is_no_op() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_CODER_DEFAULT.trim_end());
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        // New order: role file → instructions (no project)
+        let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1109,10 +1112,11 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_CODER_DEFAULT.trim_end());
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        // New order: role file → instructions (empty path = no project)
+        let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1123,7 +1127,7 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("no-such-file.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         );
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
@@ -1139,13 +1143,14 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("prefix.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX\n\n{}",
-            layer1.trim_end(),
-            super::DEFAULT_CODER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end(),
+            instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1158,15 +1163,54 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("project.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPROJECT CONTEXT\n\n{}",
-            layer1.trim_end(),
-            super::DEFAULT_CODER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end(),
+            instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn build_system_prompt_layer_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "ROLE CONTENT").unwrap();
+        std::fs::write(p.join("project.md"), "PROJECT CONTENT").unwrap();
+        let result = build_system_prompt(
+            p,
+            Some(std::path::Path::new("project.md")),
+            "claude", "coder", None,
+        ).unwrap();
+        let role_pos = result.find("ROLE CONTENT").unwrap();
+        let project_pos = result.find("PROJECT CONTENT").unwrap();
+        // Instructions layer contains "## State Machine" header
+        let instructions_pos = result.find("## State Machine").unwrap();
+        assert!(
+            role_pos < project_pos,
+            "role layer must precede project layer; role_pos={role_pos}, project_pos={project_pos}"
+        );
+        assert!(
+            project_pos < instructions_pos,
+            "project layer must precede instructions layer; project_pos={project_pos}, instructions_pos={instructions_pos}"
+        );
+    }
+
+    #[test]
+    fn build_system_prompt_ticket_id_substituted() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        // Use a simple role file with no <id> so the assertion covers the instructions layer.
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "ROLE FILE CONTENT").unwrap();
+        let result = build_system_prompt(p, None, "claude", "coder", Some("abc12345")).unwrap();
+        assert!(result.contains("abc12345"), "ticket id should appear in output");
+        assert!(!result.contains("<id>"), "no <id> placeholder should remain after substitution");
     }
 
     // --- agent_role_prefix ---

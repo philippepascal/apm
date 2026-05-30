@@ -939,7 +939,9 @@ Examples:\n\
     },
     /// Output APM system knowledge for agents: state machine, ticket format, shell discipline, session identity, and command reference
     Instructions {
-        /// Scope output to this role (e.g. worker, spec-writer); omit for full output
+        /// Ticket ID — substitutes <id> placeholders in command output
+        ticket_id: Option<String>,
+        /// Scope output to this role (e.g. worker, spec-writer); omit for role listing
         #[arg(long, value_name = "ROLE")]
         role: Option<String>,
     },
@@ -1266,7 +1268,7 @@ fn main() -> Result<()> {
             cmd::revoke::run(&root, username.as_deref(), device.as_deref(), all)
         }
         Command::Prompt { id, agent, role, system, message, explain } => cmd::prompt::run(&root, id.as_deref(), agent, role, system, message, explain),
-        Command::Instructions { role } => cmd::instructions::run(Cli::command(), &root, role.as_deref()),
+        Command::Instructions { ticket_id, role } => cmd::instructions::run(Cli::command(), &root, role.as_deref(), ticket_id.as_deref()),
         Command::Version => {
             cmd::version::run();
             Ok(())

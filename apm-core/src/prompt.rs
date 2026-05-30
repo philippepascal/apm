@@ -101,7 +101,7 @@ pub fn run(
 
     let (agent, role) = resolve_agent_role(&config, triggering_transition, &t.frontmatter, agent_override, role_override)?;
     let project_file = config.agents.project.as_deref().map(Path::new);
-    let prompt = build_system_prompt(root, project_file, &agent, &role)?;
+    let prompt = build_system_prompt(root, project_file, &agent, &role, Some(&ticket_id))?;
 
     out.write_all(prompt.as_bytes())?;
     Ok(())
@@ -144,7 +144,7 @@ pub fn run_without_ticket(
 ) -> Result<()> {
     let config = Config::load(root)?;
     let project_file = config.agents.project.as_deref().map(Path::new);
-    let prompt = build_system_prompt(root, project_file, agent, role)?;
+    let prompt = build_system_prompt(root, project_file, agent, role, None)?;
     out.write_all(prompt.as_bytes())?;
     Ok(())
 }
@@ -204,7 +204,7 @@ pub fn run_full(
     let project_file = config.agents.project.as_deref().map(Path::new);
     let depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
 
-    let sys = build_system_prompt(root, project_file, &agent, &role)?;
+    let sys = build_system_prompt(root, project_file, &agent, &role, Some(&ticket_id))?;
     let msg = build_user_message(root, t, &depends_on, &role, &config)?;
 
     writeln!(out, "=== system ===")?;
@@ -228,20 +228,23 @@ pub fn explain_without_ticket(
 }
 
 fn format_provenance(prov: &PromptProvenance, out: &mut dyn Write) -> Result<()> {
-    let role_str = prov.layer1_role.as_deref().unwrap_or("(none)");
-    writeln!(out, "{:<16}apm instructions (dynamic, role: {})", "layer 1:", role_str)?;
-    match &prov.layer2_path {
-        Some(path) => writeln!(out, "{:<16}{}", "layer 2:", path)?,
-        None => writeln!(out, "{:<16}not configured", "layer 2:")?,
-    }
+    // Layer 1: role file (highest-attention position, was previously layer 3)
     writeln!(
         out,
         "{:<16}{}  (level {} \u{2014} {})",
-        "layer 3:",
+        "layer 1:",
         prov.winner.source,
         prov.winner.level,
         prov.winner.label,
     )?;
+    // Layer 2: project context (unchanged)
+    match &prov.layer2_path {
+        Some(path) => writeln!(out, "{:<16}{}", "layer 2:", path)?,
+        None => writeln!(out, "{:<16}not configured", "layer 2:")?,
+    }
+    // Layer 3: apm instructions (reference material, was previously layer 1)
+    let role_str = prov.instructions_role.as_deref().unwrap_or("(none)");
+    writeln!(out, "{:<16}apm instructions (dynamic, role: {})", "layer 3:", role_str)?;
     let mut first = true;
     for entry in &prov.skipped {
         let label = if first { "skipped:" } else { "" };
@@ -356,6 +359,7 @@ Test.
             None,
             "mock-happy",
             "worker",
+            Some("abcd0001"),
         ).unwrap();
 
         let mut buf = Vec::new();
@@ -365,6 +369,44 @@ Test.
         assert_eq!(
             actual, expected,
             "prompt::run output must match build_system_prompt output for same inputs"
+        );
+    }
+
+    #[test]
+    fn explain_role_file_is_layer1() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "eeee0005", "mock-happy", true, None);
+
+        let mut buf = Vec::new();
+        explain(root, "eeee0005", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        let layer1_line = output.lines().find(|l| l.starts_with("layer 1:")).unwrap();
+        assert!(
+            layer1_line.contains(".apm/agents/mock-happy/apm.coder.md"),
+            "layer 1 should identify the role file, not apm instructions; got: {layer1_line:?}"
+        );
+        assert!(
+            !layer1_line.contains("apm instructions"),
+            "apm instructions should not appear on layer 1 line; got: {layer1_line:?}"
+        );
+    }
+
+    #[test]
+    fn explain_instructions_is_layer3() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "ffff0006", "claude", false, None);
+
+        let mut buf = Vec::new();
+        explain(root, "ffff0006", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        let layer3_line = output.lines().find(|l| l.starts_with("layer 3:")).unwrap();
+        assert!(
+            layer3_line.contains("apm instructions"),
+            "layer 3 should identify apm instructions; got: {layer3_line:?}"
         );
     }
 
