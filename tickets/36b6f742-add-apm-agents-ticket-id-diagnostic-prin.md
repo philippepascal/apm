@@ -1,7 +1,7 @@
 +++
 id = "36b6f742"
 title = "Add apm agents <ticket-id> diagnostic: print resolved agent, role, model, manifest with provenance"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/36b6f742-add-apm-agents-ticket-id-diagnostic-prin"
 created_at = "2026-05-30T16:50:01.198693Z"
-updated_at = "2026-05-30T16:50:01.198693Z"
+updated_at = "2026-05-30T17:08:56.894215Z"
 +++
 
 ## Spec
@@ -94,3 +94,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-30T16:50Z | — | new | philippepascal |
+| 2026-05-30T17:08Z | new | groomed | philippepascal |
