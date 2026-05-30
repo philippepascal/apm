@@ -317,7 +317,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let worker_profile_str = triggering_transition
         .and_then(|tr| tr.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
+        .or(config.workers.default.as_deref())
         .unwrap_or("claude/coder")
         .to_string();
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
@@ -445,7 +445,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .cloned();
     let worker_profile_str = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
+        .or(config.workers.default.as_deref())
         .unwrap_or("claude/coder")
         .to_string();
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
@@ -622,7 +622,7 @@ pub fn spawn_next_worker(
         .cloned();
     let worker_profile_str = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
+        .or(config.workers.default.as_deref())
         .unwrap_or("claude/coder")
         .to_string();
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;

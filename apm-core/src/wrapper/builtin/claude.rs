@@ -163,7 +163,7 @@ fn spawn_container(
     for (k, v) in &ctx.options {
         let env_key = format!(
             "APM_OPT_{}",
-            k.to_uppercase().replace('.', "_").replace('-', "_")
+            k.to_uppercase().replace(['.', '-'], "_")
         );
         cmd.args(["--env", &format!("{env_key}={v}")]);
     }
@@ -200,7 +200,7 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
     for (k, v) in &ctx.options {
         let env_key = format!(
             "APM_OPT_{}",
-            k.to_uppercase().replace('.', "_").replace('-', "_")
+            k.to_uppercase().replace(['.', '-'], "_")
         );
         cmd.env(&env_key, v);
     }
