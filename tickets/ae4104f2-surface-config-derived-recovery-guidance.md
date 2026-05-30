@@ -39,7 +39,12 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Terminal hint printed immediately after `apm state` completes (deliberately dropped — the high-value surfaces are the ones the supervisor reaches during triage)
+- `apm work` / dispatcher changes (the dispatcher already treats merge-failure states as supervisor-actionable)
+- Auto-recovery, auto-retry, or action buttons of any kind
+- `apm-server` / `apm-ui` surfaces (covered by a separate ticket)
+- Adding or modifying `[[workflow.states]]` entries or transitions in `workflow.toml`
+- Hardcoding any state name or state ID as a string literal in CLI output paths
 
 ### Approach
 
