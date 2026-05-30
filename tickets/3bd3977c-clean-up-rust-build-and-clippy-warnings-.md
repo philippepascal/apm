@@ -78,7 +78,13 @@ TESTS:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Introducing new lints, `RUSTFLAGS`, `deny` attributes, or `clippy.toml` configuration
+- Refactoring code structure beyond what a single clippy suggestion demands
+- Changing function signatures to reduce argument count
+- Touching `apm-ui`, frontend assets, or any non-Rust file
+- TypeScript/JavaScript tooling (tsc, eslint)
+- Suppressing warnings via blanket `#![allow(...)]` at the crate level
+- Deleting or modifying test logic beyond the mechanical `assert_eq!(x, true)` → `assert!(x)` auto-fix
 
 ### Approach
 
