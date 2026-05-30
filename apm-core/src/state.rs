@@ -172,6 +172,14 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     )?;
     crate::logger::log("state_transition", &format!("{id:?} {old_state} -> {new_state}"));
 
+    if target_is_terminal {
+        let target = t.frontmatter.target_branch.as_deref()
+            .unwrap_or(config.project.default_branch.as_str());
+        if let Err(e) = git::commit_to_branch(root, target, &rel_path, &content, &format!("ticket({id}): {old_state} \u{2192} {new_state}")) {
+            warnings.push(format!("warning: commit terminal state to {target} failed: {e:#}"));
+        }
+    }
+
     match completion {
         CompletionStrategy::Pr => {
             git::push_branch_tracking(root, &branch)?;
