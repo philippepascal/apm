@@ -132,7 +132,7 @@ pub fn explain(
     let project_file = config.agents.project.as_deref().map(Path::new);
     let prov = explain_system_prompt(root, project_file, &agent, &role)?;
 
-    format_provenance(&prov, out)
+    format_provenance(&prov, &agent, &role, out)
 }
 
 /// Build and print the system prompt for a given agent+role without a ticket.
@@ -224,36 +224,27 @@ pub fn explain_without_ticket(
     let config = Config::load(root)?;
     let project_file = config.agents.project.as_deref().map(Path::new);
     let prov = explain_system_prompt(root, project_file, agent, role)?;
-    format_provenance(&prov, out)
+    format_provenance(&prov, agent, role, out)
 }
 
-fn format_provenance(prov: &PromptProvenance, out: &mut dyn Write) -> Result<()> {
-    let role_str = prov.layer1_role.as_deref().unwrap_or("(none)");
-    writeln!(out, "{:<16}apm instructions (dynamic, role: {})", "layer 1:", role_str)?;
+fn format_provenance(prov: &PromptProvenance, agent: &str, role: &str, out: &mut dyn Write) -> Result<()> {
+    writeln!(out, "System prompt for {agent}/{role} \u{2014} 3 layers composed:")?;
+    writeln!(out)?;
+    writeln!(out, "  1  apm instructions (dynamic)")?;
     match &prov.layer2_path {
-        Some(path) => writeln!(out, "{:<16}{}", "layer 2:", path)?,
-        None => writeln!(out, "{:<16}not configured", "layer 2:")?,
+        Some(path) => writeln!(out, "  2  {path}")?,
+        None => writeln!(out, "  2  (not configured)")?,
     }
-    writeln!(
-        out,
-        "{:<16}{}  (level {} \u{2014} {})",
-        "layer 3:",
-        prov.winner.source,
-        prov.winner.level,
-        prov.winner.label,
-    )?;
-    let mut first = true;
-    for entry in &prov.skipped {
-        let label = if first { "skipped:" } else { "" };
-        writeln!(
-            out,
-            "{:<16}level {} ({} \u{2014} {})",
-            label,
-            entry.level,
-            entry.label,
-            entry.source,
-        )?;
-        first = false;
+    writeln!(out, "  3  {}", prov.layer3_source)?;
+    match prov.missed_paths.len() {
+        0 => {}
+        1 => {
+            writeln!(out, "     (fallback \u{2014} {} not found)", prov.missed_paths[0])?;
+        }
+        _ => {
+            writeln!(out, "     (fallback \u{2014} {} not found,", prov.missed_paths[0])?;
+            writeln!(out, "                 {} not found)", prov.missed_paths[1])?;
+        }
     }
     Ok(())
 }
@@ -519,9 +510,10 @@ Test.
         explain(root, "aaaa0001", None, None, &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        assert!(output.contains("level 0"), "should show level 0; got:\n{output}");
         assert!(output.contains(".apm/agents/mock-happy/apm.coder.md"), "should show per-agent path; got:\n{output}");
-        assert_eq!(output.matches("not reached").count(), 2, "levels 1-2 should be not reached; got:\n{output}");
+        assert!(!output.contains("(fallback"), "no fallback sub-line when level 0 wins; got:\n{output}");
+        assert!(!output.contains("skipped"), "no 'skipped' word when level 0 wins; got:\n{output}");
+        assert!(!output.contains("cascade"), "no 'cascade' word when level 0 wins; got:\n{output}");
     }
 
     #[test]
@@ -534,8 +526,7 @@ Test.
         explain(root, "bbbb0002", None, None, &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        assert!(output.contains("level 2"), "should show level 2; got:\n{output}");
-        assert!(output.contains("built-in default"), "should show built-in default; got:\n{output}");
+        assert!(output.contains("built-in claude/coder default"), "should show built-in default; got:\n{output}");
     }
 
     #[test]
@@ -551,7 +542,7 @@ Test.
         explain(root, "cccc0003", None, None, &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        let layer2_line = output.lines().find(|l| l.starts_with("layer 2:")).unwrap();
+        let layer2_line = output.lines().find(|l| l.starts_with("  2  ")).unwrap();
         assert!(
             layer2_line.contains(project_path),
             "layer 2 line should name the configured file; got: {layer2_line:?}"
@@ -568,9 +559,71 @@ Test.
         explain(root, "dddd0004", Some("claude"), Some("coder"), &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
 
-        assert!(output.contains("level 2"), "claude override should fall to level 2; got:\n{output}");
-        assert!(output.contains("built-in default (claude/coder)"), "should name claude/coder; got:\n{output}");
-        assert!(output.contains(".apm/agents/claude/apm.coder.md"), "skipped level 0 should use overridden agent name; got:\n{output}");
+        assert!(output.contains("built-in claude/coder default"), "should name claude/coder default; got:\n{output}");
+        assert!(output.contains(".apm/agents/claude/apm.coder.md"), "fallback sub-line should use overridden agent name; got:\n{output}");
+    }
+
+    #[test]
+    fn format_provenance_no_fallback() {
+        let prov = PromptProvenance {
+            layer2_path: None,
+            layer3_source: ".apm/agents/claude/apm.coder.md".to_string(),
+            missed_paths: vec![],
+        };
+        let mut buf = Vec::new();
+        format_provenance(&prov, "claude", "coder", &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(!output.contains("(fallback"), "no fallback sub-line expected; got:\n{output}");
+        assert!(!output.contains("skipped"), "no 'skipped' expected; got:\n{output}");
+        assert!(!output.contains("cascade"), "no 'cascade' expected; got:\n{output}");
+    }
+
+    #[test]
+    fn format_provenance_one_fallback() {
+        let prov = PromptProvenance {
+            layer2_path: None,
+            layer3_source: ".apm/agents/claude/apm.coder.md".to_string(),
+            missed_paths: vec![".apm/agents/phi4/apm.coder.md".to_string()],
+        };
+        let mut buf = Vec::new();
+        format_provenance(&prov, "phi4", "coder", &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("(fallback"), "fallback sub-line expected; got:\n{output}");
+        assert!(output.contains(".apm/agents/phi4/apm.coder.md"), "missed path should appear; got:\n{output}");
+        assert!(output.contains("not found"), "should say 'not found'; got:\n{output}");
+    }
+
+    #[test]
+    fn format_provenance_two_fallbacks() {
+        let prov = PromptProvenance {
+            layer2_path: None,
+            layer3_source: "built-in my-bot/coder default".to_string(),
+            missed_paths: vec![
+                ".apm/agents/my-bot/apm.coder.md".to_string(),
+                ".apm/agents/claude/apm.coder.md".to_string(),
+            ],
+        };
+        let mut buf = Vec::new();
+        format_provenance(&prov, "my-bot", "coder", &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains(".apm/agents/my-bot/apm.coder.md"), "first missed path should appear; got:\n{output}");
+        assert!(output.contains(".apm/agents/claude/apm.coder.md"), "second missed path should appear; got:\n{output}");
+        let has_indented = output.lines().any(|l| l.starts_with("                 .apm/agents/claude/apm.coder.md"));
+        assert!(has_indented, "second path should be indented by 17 spaces; got:\n{output}");
+    }
+
+    #[test]
+    fn format_provenance_claude_no_cascade_keywords() {
+        let prov = PromptProvenance {
+            layer2_path: None,
+            layer3_source: ".apm/agents/claude/apm.coder.md".to_string(),
+            missed_paths: vec![],
+        };
+        let mut buf = Vec::new();
+        format_provenance(&prov, "claude", "coder", &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(!output.contains("skipped"), "no 'skipped' for claude; got:\n{output}");
+        assert!(!output.contains("cascade"), "no 'cascade' for claude; got:\n{output}");
     }
 
     #[test]
