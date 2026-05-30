@@ -1,7 +1,7 @@
 +++
 id = "778b63c6"
 title = "Surface merge-failure state and recovery hints in apm-server and apm-ui (read-only)"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 6
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/778b63c6-surface-merge-failure-state-and-recovery"
 created_at = "2026-05-30T02:11:35.270399Z"
-updated_at = "2026-05-30T04:22:36.079630Z"
+updated_at = "2026-05-30T04:37:30.265009Z"
 depends_on = ["ae4104f2"]
 +++
 
@@ -279,3 +279,4 @@ REQUIRED CHANGES:
 | 2026-05-30T03:40Z | in_design | specd | claude |
 | 2026-05-30T03:59Z | specd | ready | philippepascal |
 | 2026-05-30T04:22Z | ready | in_progress | philippepascal |
+| 2026-05-30T04:37Z | in_progress | implemented | claude |
