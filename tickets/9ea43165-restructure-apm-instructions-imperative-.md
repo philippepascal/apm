@@ -3,13 +3,13 @@ id = "9ea43165"
 title = "Restructure apm instructions: imperative format, role filtering, ticket-id substitution, layer reorder"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9ea43165-restructure-apm-instructions-imperative-"
 created_at = "2026-05-30T16:49:25.808040Z"
-updated_at = "2026-05-30T17:21:47.541231Z"
+updated_at = "2026-05-30T17:29:22.660662Z"
 depends_on = ["a3c34ddc"]
 +++
 
