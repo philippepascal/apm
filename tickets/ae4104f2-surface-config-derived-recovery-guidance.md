@@ -36,7 +36,7 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 - [x] `apm show <id>` prints a "Recovery options" block iff `is_merge_failure_state(ticket.state, workflow)` returns true; the block lists each option with its display label and the exact command `apm state <id> <to>`, and includes a reference to `docs/merge-failed-recovery.md`
 - [x] `apm show <id>` does not print a recovery block when `is_merge_failure_state(ticket.state, workflow)` returns false, including when the ticket is in `in_progress`
 - [x] `apm list --state <STATE>` appends a one-line recovery summary below ticket rows when `is_merge_failure_state(STATE, workflow)` returns true; omits the summary otherwise, including for `--state in_progress`
-- [ ] `apm next` (plain-text mode) prints recovery options below the ticket line when `is_merge_failure_state(ticket.state, workflow)` returns true; JSON mode output is unchanged; no recovery options are printed when the selected ticket is in `in_progress` or any other non-failure state
+- [x] `apm next` (plain-text mode) prints recovery options below the ticket line when `is_merge_failure_state(ticket.state, workflow)` returns true; JSON mode output is unchanged; no recovery options are printed when the selected ticket is in `in_progress` or any other non-failure state
 
 ### Out of scope
 
