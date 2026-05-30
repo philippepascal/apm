@@ -1,7 +1,7 @@
 +++
 id = "ac87718b"
 title = "Replace apm list epics footer with inline ↓ marker on tickets whose epic is behind main"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ac87718b-replace-apm-list-epics-footer-with-inlin"
 created_at = "2026-05-30T02:17:52.780155Z"
-updated_at = "2026-05-30T02:17:52.780155Z"
+updated_at = "2026-05-30T02:18:34.572545Z"
 +++
 
 ## Spec
@@ -70,3 +70,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-30T02:17Z | — | new | philippepascal |
+| 2026-05-30T02:18Z | new | groomed | philippepascal |
