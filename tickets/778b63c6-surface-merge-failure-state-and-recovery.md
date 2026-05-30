@@ -23,15 +23,18 @@ This ticket extends `apm-server` and `apm-ui` to surface two pieces of recovery 
 
 ### Acceptance criteria
 
-- [ ] `GET /api/tickets` response envelope includes a `merge_failure_state_ids` field — a JSON array of state ID strings whose available transitions include at least one `RetryMerge` recovery option, as determined by `classify_recovery_options`; the array is empty when no git root is present or config fails to load.
+- [ ] `GET /api/tickets` response envelope includes a `merge_failure_state_ids` field — a JSON array of state ID strings for which `apm_core::recovery::is_merge_failure_state` returns true — i.e. states that appear as the `on_failure` value of at least one transition whose completion is `Pr`, `Merge`, or `PrOrEpicMerge`; the array is empty when no git root is present or config fails to load.
 - [ ] `GET /api/tickets/:id` response includes `merge_notes` — the trimmed string content of the `### Merge notes` section of the ticket body, or `null` when that section is absent or empty.
-- [ ] `GET /api/tickets/:id` response includes `recovery_options` — a JSON array of objects each with `to` (target state ID), `label` (human-readable name), `kind` (one of `"retry_merge"`, `"return_to_worker"`, `"abandon"`, `"other"`), and `command` (the literal string `"apm state <ticket-id> <to>"`); the array is empty when the ticket's current state has no outgoing transitions or no git root is present.
+- [ ] `GET /api/tickets/:id` response includes `recovery_options` — a JSON array of objects each with `to` (target state ID), `label` (human-readable name), `kind` (one of `"retry_merge"`, `"return_to_worker"`, `"abandon"`, `"other"`), and `command` (the literal string `"apm state <ticket-id> <to>"`); the array is empty when `is_merge_failure_state(ticket.state, workflow)` returns false, or when no git root is present, or when config fails to load.
 - [ ] A `TicketCard` whose `ticket.state` is present in the `merge_failure_state_ids` array received from the list endpoint renders a distinct red visual marker.
 - [ ] A `TicketCard` whose `ticket.state` is absent from `merge_failure_state_ids` renders no merge-failure marker, even if the state name happens to be `"merge_failed"`.
 - [ ] The `TicketDetail` panel for a ticket with a non-null `merge_notes` value displays a "Merge failure" section with the notes rendered verbatim inside a monospace pre block.
 - [ ] The `TicketDetail` panel for a ticket with a non-empty `recovery_options` array displays a "Recovery" section listing each option's label, a human-readable kind description (e.g. "Retry merge", "Return to worker", "Abandon"), and the `command` string in a monospace code block styled for easy copying; the section ends with a reference link to `docs/merge-failed-recovery.md`.
 - [ ] A ticket whose `recovery_options` is an empty array and `merge_notes` is `null` renders neither the "Merge failure" section nor the "Recovery" section in the detail panel.
-- [ ] Server integration test (git-based, default workflow): `GET /api/tickets` returns `merge_failure_state_ids` containing `"merge_failed"`.
+- [ ] `merge_failure_state_ids` under the default workflow contains `"merge_failed"` and does not contain `"in_progress"`, `"implemented"`, or `"ready"`.
+- [ ] A `TicketCard` with `ticket.state` equal to `"in_progress"` does not render the merge-failure badge, even when `in_progress` has an outgoing transition to `implemented`.
+- [ ] A `TicketDetail` for a ticket in `"in_progress"` state with no `### Merge notes` section and an empty `recovery_options` array renders neither the "Merge failure" section nor the "Recovery" section.
+- [ ] Server integration test (git-based, default workflow): `GET /api/tickets` returns `merge_failure_state_ids` containing `"merge_failed"` and not containing `"in_progress"`.
 - [ ] Server integration test (InMemory): `GET /api/tickets/:id` for a ticket whose body contains `### Merge notes\n\ngit error text` returns `merge_notes: "git error text"`.
 - [ ] Server integration test (git-based, default workflow): `GET /api/tickets/:id` for a ticket in `merge_failed` state returns `recovery_options` with at least one entry where `kind` is `"retry_merge"` and `command` matches `"apm state <id> implemented"`.
 
