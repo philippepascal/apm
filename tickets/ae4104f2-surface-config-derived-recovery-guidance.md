@@ -57,12 +57,15 @@ Define:
 pub enum RecoveryKind { RetryMerge, ReturnToWorker, Abandon, Other }
 pub struct RecoveryOption { pub to: String, pub label: String, pub kind: RecoveryKind }
 pub fn classify_recovery_options(state_id: &str, config: &WorkflowConfig) -> Vec<RecoveryOption>
+pub fn is_merge_failure_state(state_id: &str, workflow: &WorkflowConfig) -> bool
 ```
 
-Implementation of `classify_recovery_options`:
+**`is_merge_failure_state`**: iterate every `StateConfig` in `workflow.states`, then every `TransitionConfig` in each state. Return true iff `state_id == transition.on_failure` (as string equality) for any transition whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge`. Skip transitions where `on_failure` is `None` or the empty string. Return false if no match is found.
+
+**`classify_recovery_options`**:
 
 1. Build `merge_target_ids: HashSet<String>` — collect `transition.to` for every transition in the entire workflow whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge`.
-2. Build `coder_start_ids: HashSet<String>` — collect `transition.to` for every transition with `trigger == "command:start"` and a `worker_profile` that does not end with `/spec-writer` (mirrors the existing logic in `implementation_state_ids`).
+2. Build `coder_start_ids: HashSet<String>` — collect `transition.to` for every transition with `trigger == "command:start"` and a `worker_profile` that does not end with `/spec-writer`.
 3. Locate the `StateConfig` for `state_id`; return an empty vec if not found.
 4. For each transition in that state's `transitions`, in declaration order:
    - `transition.to ∈ merge_target_ids` → `RetryMerge`
@@ -72,7 +75,7 @@ Implementation of `classify_recovery_options`:
    - Label: `transition.label` if non-empty, otherwise `transition.to`
 5. Return the `Vec<RecoveryOption>`.
 
-The two-set approach (rather than checking the transition's own `completion`) is necessary because transitions FROM a merge-failure state do not themselves carry a merging completion — they are plain manual hops to states that were previously reached via a merge. Classifying by to-state ancestry is order-independent and rename-safe.
+The two-set approach (rather than checking the transition's own `completion`) is necessary because transitions from a merge-failure state do not themselves carry a merging completion — they are plain manual hops to states that were previously reached via a merge. Classifying by to-state membership is order-independent and rename-safe.
 
 Export via `pub mod recovery` in `apm-core/src/lib.rs`; re-export the public types at crate root.
 
@@ -81,12 +84,12 @@ Unit tests inline in `apm-core/src/recovery.rs`:
 - `test_shuffled_order_same_classification`: same workflow with `[[workflow.states]]` entries reversed; assert identical classification results.
 - `test_renamed_merge_target`: workflow where `implemented` is renamed to `shipped`; assert `shipped` → RetryMerge.
 - `test_no_merge_transitions`: state with no transitions to merge-target states; assert result contains no RetryMerge entries.
+- `test_is_merge_failure_state_default_workflow`: assert `is_merge_failure_state("merge_failed", &config)` is true; assert false for `"new"`, `"groomed"`, `"specd"`, `"ready"`, `"in_progress"`, `"implemented"`, and `"closed"`.
+- `test_is_merge_failure_state_renamed`: workflow where the `on_failure` target is renamed from `merge_failed` to `pr_failed`; assert `is_merge_failure_state("pr_failed", &config)` is true and `is_merge_failure_state("merge_failed", &config)` is false.
 
 #### `apm/src/cmd/show.rs`
 
-After the existing ticket output, call `classify_recovery_options` on the ticket's current state. Also scan the ticket body for any markdown heading that starts with "Merge notes" (case-insensitive prefix match on `## ` or `### ` lines).
-
-If either condition is true, print (blank line before, blank line after):
+In `print_ticket`, after the existing output, load the workflow config and call `is_merge_failure_state(&fm.state, &config.workflow)`. If true, call `classify_recovery_options(&fm.state, &config.workflow)` and print (blank line before, blank line after):
 
 ```
 Recovery options:
@@ -96,30 +99,33 @@ Recovery options:
   See: docs/merge-failed-recovery.md
 ```
 
-Within the block, list RetryMerge options first, then ReturnToWorker, then Abandon, then Other; within each group, preserve the order returned by `classify_recovery_options`.
+Within the block, list RetryMerge options first, then ReturnToWorker, then Abandon, then Other; within each group, preserve the order returned by `classify_recovery_options`. Do not print the block when `is_merge_failure_state` returns false. Do not scan the ticket body for "Merge notes" headings.
 
 #### `apm/src/cmd/list.rs`
 
-When `--state <STATE>` is given, after printing all ticket rows call `classify_recovery_options(STATE, config)`. If any RetryMerge entries exist, print a blank line followed by:
+When `--state <STATE>` is given, after printing all ticket rows call `is_merge_failure_state(STATE, &ctx.config.workflow)`. If true, call `classify_recovery_options(STATE, &ctx.config.workflow)` and print a blank line followed by:
 
 ```
 Recovery: <label> → apm state <id> <to>  [<label2> → apm state <id> <to2> ...]
 ```
 
-Use the literal text `<id>` as a placeholder (the list covers multiple tickets). Show only RetryMerge and ReturnToWorker options; omit Abandon and Other to keep the line concise. Print nothing if no RetryMerge entries exist.
+Use the literal text `<id>` as a placeholder (the list covers multiple tickets). Show only RetryMerge and ReturnToWorker options; omit Abandon and Other. Print nothing when `is_merge_failure_state` returns false.
 
 #### `apm/src/cmd/next.rs`
 
-In plain-text mode, after printing the selected ticket line, call `classify_recovery_options` on the ticket's current state. If any RetryMerge entries exist, print the recovery options in the same indented format used by `apm show` (omit the `docs/` pointer, which appears in full only on `apm show`).
-
-JSON mode: no change.
+In plain-text mode, after printing the selected ticket line, call `is_merge_failure_state(&fm.state, &config.workflow)`. If true, call `classify_recovery_options` and print the recovery options in the same indented format used by `apm show` (omit the `docs/` pointer). JSON mode: no change.
 
 #### Integration tests (`apm/tests/integration.rs`)
 
-Three tests in a temp repo with the default workflow:
-- Set a ticket to `merge_failed`, run `apm show <id>`: assert stdout contains "Recovery options:" and the string `apm state <id> implemented`.
-- Same setup, run `apm list --state merge_failed`: assert stdout ends with a line containing "Recovery:".
-- Same setup with the ticket at highest priority, run `apm next`: assert stdout contains "Recovery options:".
+Three positive tests in a temp repo with the default workflow:
+- Set ticket to `merge_failed`, run `apm show <id>`: assert stdout contains "Recovery options:" and the string `apm state <id> implemented`.
+- Same setup, run `apm list --state merge_failed`: assert stdout contains "Recovery:".
+- Same setup with ticket at highest priority, run `apm next`: assert stdout contains "Recovery options:".
+
+Three negative tests (new):
+- Ticket in `in_progress`, run `apm show <id>`: assert stdout does NOT contain "Recovery options:".
+- Run `apm list --state in_progress`: assert stdout does NOT contain "Recovery:".
+- Highest-priority ticket in `in_progress`, run `apm next`: assert stdout does NOT contain "Recovery options:".
 
 ### Open questions
 
