@@ -69,7 +69,7 @@ After this fix, `apm close` no longer ships unmerged work as a side effect; that
 
 ### Acceptance criteria
 
-- [ ] `apm close <id>` on a main-scoped ticket (no `target_branch`) writes state=closed to both the ticket branch and `main`; no working-tree merge is performed.
+- [x] `apm close <id>` on a main-scoped ticket (no `target_branch`) writes state=closed to both the ticket branch and `main`; no working-tree merge is performed.
 - [ ] `apm close <id>` on an epic-scoped ticket writes state=closed to both the ticket branch and `target_branch`; `main` is not touched.
 - [ ] `apm state <id> closed` writes state=closed to both the ticket branch and the effective target branch (same resolution: `target_branch` if set, else `default_branch`).
 - [ ] `apm sync` auto-close of a main-scoped ticket succeeds even when the main worktree has uncommitted changes (no merge error, no dirty-worktree error).
