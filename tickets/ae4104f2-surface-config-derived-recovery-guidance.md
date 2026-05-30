@@ -125,6 +125,29 @@ Three tests in a temp repo with the default workflow:
 
 ### Amendment requests
 
+- [ ] REAL BUG: the spec uses 'state has a RetryMerge transition' as the trigger for surfacing recovery hints, but classify_recovery_options labels a transition as RetryMerge when its to-state is in merge_target_ids — and that includes the normal in_progress -> implemented transition. So under the spec as written, every in_progress ticket has a RetryMerge transition and would trigger the recovery block in apm show, the recovery summary in apm list --state in_progress, and the recovery note in apm next. That is over-fire on the most common state in the workflow.
+
+The classifier itself is correct; only the consumer trigger is wrong. The right signal for 'this state is a merge-failure state' is set membership in 'states that appear as the on_failure value of some merging-completion transition'. That is order-independent, rename-safe, and precise (only fires on actual on_failure targets — merge_failed in the default workflow, whatever a custom workflow calls it).
+
+REQUIRED CHANGES:
+1. ADD a second helper in apm-core/src/recovery.rs alongside classify_recovery_options: pub fn is_merge_failure_state(state_id: &str, workflow: &WorkflowConfig) -> bool. It iterates every transition in workflow.states, returning true iff state_id equals transition.on_failure (as a string match) for any transition whose completion is Pr, Merge, or PrOrEpicMerge. Defensive on missing/empty on_failure: skip. Export from apm_core::recovery.
+
+2. SWITCH the trigger for surfacing in all three CLI commands from 'has RetryMerge transitions' to 'is_merge_failure_state(current_state, workflow)':
+   - apm show: print the Recovery options block iff is_merge_failure_state(ticket.state, workflow). The list of options inside the block still comes from classify_recovery_options(ticket.state, workflow). The body 'Merge notes' check is DROPPED entirely (it is stale signal after a ticket recovers; see below).
+   - apm list --state STATE: print the recovery summary iff is_merge_failure_state(STATE, workflow).
+   - apm next: print recovery options below the ticket line iff is_merge_failure_state(ticket.state, workflow). JSON mode unchanged.
+
+3. DROP the body-section trigger from apm show. set_merge_notes writes the 'Merge notes' section when on_failure fires and nothing currently removes it on recovery, so the section persists indefinitely. Once is_merge_failure_state drives surfacing, the body section becomes incidental historical content, not a control signal. Showing the merge notes content inside apm show is fine if you want it, but it must not gate whether the recovery block prints.
+
+4. ADD negative ACs:
+   - is_merge_failure_state returns false for 'new', 'groomed', 'specd', 'ready', 'in_progress', 'implemented', 'closed', and any other normal state in the default workflow — only 'merge_failed' returns true.
+   - apm show on an in_progress ticket prints no Recovery options block.
+   - apm list --state in_progress prints no recovery summary.
+   - apm next selecting an in_progress ticket prints no recovery options.
+
+5. ADD negative tests mirroring the negative ACs. The current tests only assert the positive direction (merge_failed shows the block); the over-fire passes silently without negative coverage.
+
+6. UPDATE the apm-server consumer (covered by ticket 778b63c6) — a parallel amendment is being filed there to use is_merge_failure_state for merge_failure_state_ids.
 
 ### Code review
 
