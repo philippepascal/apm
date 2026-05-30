@@ -8,9 +8,10 @@ interface SwimlaneProps {
   state: string
   tickets: Ticket[]
   showAuthor?: boolean
+  mergeFailureStateIds: string[]
 }
 
-export default function Swimlane({ state, tickets, showAuthor }: SwimlaneProps) {
+export default function Swimlane({ state, tickets, showAuthor, mergeFailureStateIds }: SwimlaneProps) {
   const colors = getStateColors(state)
   const { selectedTicketId, selectedTicketIds, selectColumn, deselectColumn, setSelectedTicketId } = useLayoutStore()
   const columnIds = tickets.map((t) => t.id)
@@ -64,7 +65,7 @@ export default function Swimlane({ state, tickets, showAuthor }: SwimlaneProps) 
       </div>
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 p-2">
         {tickets.map((ticket) => (
-          <TicketCard key={ticket.id} ticket={ticket} columnTicketIds={columnIds} showAuthor={showAuthor} />
+          <TicketCard key={ticket.id} ticket={ticket} columnTicketIds={columnIds} showAuthor={showAuthor} mergeFailureStateIds={mergeFailureStateIds} />
         ))}
       </div>
     </div>

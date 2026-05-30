@@ -6,7 +6,7 @@ import type { Ticket } from './types'
 import { useLayoutStore } from '../../store/useLayoutStore'
 import WorkflowGraphModal from '../WorkflowGraphModal'
 
-async function fetchTickets(includeClosed: boolean): Promise<{ tickets: Ticket[]; supervisor_states: string[] }> {
+async function fetchTickets(includeClosed: boolean): Promise<{ tickets: Ticket[]; supervisor_states: string[]; merge_failure_state_ids: string[] }> {
   const url = includeClosed ? '/api/tickets?include_closed=true' : '/api/tickets'
   const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch tickets')
@@ -55,6 +55,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   })
   const tickets = data?.tickets ?? []
   const supervisorStates = data?.supervisor_states ?? ['new', 'question', 'specd', 'blocked', 'implemented']
+  const mergeFailureStateIds = data?.merge_failure_state_ids ?? []
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -271,7 +272,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
       })()}
       <div className="flex-1 flex flex-row gap-4 overflow-x-auto p-3">
         {columns.map(([state, colTickets]) => (
-          <Swimlane key={state} state={state} tickets={colTickets} showAuthor={authorFilter === null} />
+          <Swimlane key={state} state={state} tickets={colTickets} showAuthor={authorFilter === null} mergeFailureStateIds={mergeFailureStateIds} />
         ))}
         {columns.length === 0 && (
           <div className="flex-1 flex items-center justify-center text-xs text-gray-400">
