@@ -25,7 +25,7 @@ The fix is to move the entire `SHELL_DISCIPLINE_BODY` block out of `apm instruct
 - [x] `apm instructions` output does not contain a `## Shell Discipline` heading
 - [x] `apm instructions` output does not contain the text "Do not batch tool calls in parallel"
 - [x] `apm instructions` output does not contain `&&` as shell-discipline guidance
-- [ ] `apm prompt` output for a `claude/coder` ticket contains `## Shell Discipline` and the no-chaining rule
+- [x] `apm prompt` output for a `claude/coder` ticket contains `## Shell Discipline` and the no-chaining rule
 - [ ] `apm prompt` output for a `claude/spec-writer` ticket contains `## Shell Discipline`
 - [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.coder.md`
 - [ ] The `## Shell Discipline` section appears before the first role-specific section in `apm.spec-writer.md`
