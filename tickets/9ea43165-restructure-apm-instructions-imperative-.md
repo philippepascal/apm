@@ -83,7 +83,72 @@ TESTS:
 
 ### Approach
 
-How the implementation will work.
+All five requirements are implemented in parallel (no ordering dependency between them). Six files change; call sites in `prompt.rs` and `start.rs` propagate the new `ticket_id` param.
+
+#### 1. Imperative transitions table (`apm-core/src/instructions.rs`)
+
+Replace `format_live_state_machine()` body with a Markdown table renderer:
+
+- Emit a `| From | To | Command |` header and separator row, then iterate over every `(state, transition)` pair.
+- For each transition: if `role = Some(r)`, skip unless `derive_transition_role(t) == r`.
+- Command cell: emit `apm start <id>` when `t.trigger == "command:start"`, else `apm state <id> <t.to>`.
+- Drop all per-state prose (heading, description, "Actionable by:" lines). The table is the only output.
+- Remove the `filter` `HashSet` that was used to include target states in the block output — with the table format, only source-state rows are emitted; target-state visibility is automatic from the `To` column.
+- Update `STATIC_STATE_MACHINE` constant to the same three-column table format using the same role-filtering rules.
+
+#### 2. Ticket-id substitution (`instructions.rs`, `start.rs`, `cmd/instructions.rs`, `main.rs`)
+
+- Add `ticket_id: Option<&str>` after `role` in `generate()`. After building `out`, if `ticket_id.is_some()` perform `out = out.replace("<id>", ticket_id.unwrap())`.
+- Add `ticket_id: Option<&str>` to `build_system_prompt(root, project_file, agent, role, ticket_id)`; pass it through to `generate()`.
+- In `start.rs`: every call to `build_system_prompt` (in `run()`, `run_next()`, `spawn_next_worker()`) passes `Some(&id)`.
+- In `prompt.rs`: calls to `build_system_prompt` pass `Some(&ticket_id)` when the ticket id is known (the `run`, `run_full`, `run_message` functions), and `None` for `run_without_ticket` and `explain_without_ticket`.
+- In `main.rs::Instructions`: add `ticket_id: Option<String>` as a positional argument before `--role`. Pass `ticket_id.as_deref()` to `cmd::instructions::run()`.
+- In `cmd/instructions.rs::run()`: add `ticket_id: Option<&str>` param; pass to `generate()`.
+
+#### 3. No-role listing (`instructions.rs`)
+
+Add a guard at the top of `generate()`: when `role.is_none()`, return `role_index_body(root, config.as_ref())` immediately (skip all other sections).
+
+New function `role_index_body(root: &Path, config: Option<&Config>) -> String`:
+- Emits a `## Available Roles` section with a two-column list.
+- Hardcoded entries: `coder` → "Implements tickets in a git worktree", `spec-writer` → "Writes and revises ticket specs", `main-agent` → "Project management companion for the supervisor".
+- Scan `.apm/agents/` for `apm.<role>.md` files; add any role names not already in the hardcoded set with description "(custom role)".
+
+#### 4. Layer reorder (`start.rs`, `prompt.rs`)
+
+In `build_system_prompt()`:
+
+- Rename locals for clarity: `instructions_layer` (was `layer1`), `project_layer` (was `layer2`), `role_layer` (was `layer3`).
+- New compose order: `role_layer` → `project_layer` → `instructions_layer`.
+
+In `prompt.rs::format_provenance()`:
+
+- "layer 1:" now labels the role file: emit `prov.winner.source` and its level/label.
+- "layer 3:" now labels `apm instructions (dynamic, role: ...)`.
+- Rename `PromptProvenance.layer1_role` → `PromptProvenance.instructions_role`; update `explain_system_prompt()` and `format_provenance()` accordingly.
+
+#### 5. Tests
+
+**`apm-core/src/instructions.rs`** — add `ticket_id` (as `None`) to all existing `generate()` calls:
+- Replace `generate_no_role_contains_all_sections` → `generate_no_role_lists_roles`: `generate(tmp, None, None, &[])` asserts output contains "coder" and "spec-writer", does not contain `## State Machine`.
+- Replace `generate_no_role_sections_in_order` → `generate_role_table_precedes_command_reference`: `generate(tmp, Some("worker"), None, &sample_commands())` asserts `## State Machine` position < `## Command Reference` position.
+- Update `generate_role_independent_sections`: remove Shell Discipline assertions (handled by a3c34ddc); assert `| From | To | Command |` present.
+- Update `live_ticket_format_from_config`: use `role = Some("worker")` (no-role now returns role index).
+- Add `generate_with_id_no_placeholder_remains`: `generate(tmp, Some("worker"), Some("abc12345"), &[])` asserts `!out.contains("<id>")` and `out.contains("abc12345")`.
+- Add `imperative_table_format_header`: live config + `role = Some("coder")` asserts `## State Machine` section contains `| From | To | Command |`.
+
+**`apm-core/src/start.rs`** — add `ticket_id = None` to all existing `build_system_prompt()` calls; update `expected` strings from `L1 + L2 + L3` to `L3 + L2 + L1` in tests that assert exact output:
+- Add `build_system_prompt_layer_order`: write a role file ("ROLE CONTENT") and project file ("PROJECT CONTENT"), call with `ticket_id = None`; assert `role_pos < project_pos < instructions_pos` by `str::find`.
+- Add `build_system_prompt_ticket_id_substituted`: call with `ticket_id = Some("abc12345")`, no project file; assert `out.contains("abc12345")` and `!out.contains("<id>")`.
+
+**`apm-core/src/prompt.rs`** — add `ticket_id` to `build_system_prompt` call sites:
+- Add `explain_role_file_is_layer1`: call `explain()`, assert the line starting "layer 1:" contains the role file path, not "apm instructions".
+- Add `explain_instructions_is_layer3`: assert the line starting "layer 3:" contains "apm instructions".
+- Update `parity_build_system_prompt_matches_prompt_run` to pass `ticket_id`.
+
+**`apm/src/cmd/instructions.rs`** — update `run()` signature; update tests:
+- `generate_contains_all_sections`: rewrite to assert role index is returned when `role = None`.
+- Add `ticket_id = None` to all `generate()` calls in existing tests.
 
 ### Open questions
 
