@@ -43,7 +43,72 @@ The desired output collapses to the minimum needed: show what was used, and when
 
 ### Approach
 
-How the implementation will work.
+#### Data structure (`apm-core/src/start.rs`)
+
+Replace the existing `PromptProvenance` / `ProvenanceEntry` pair with a leaner shape:
+
+```rust
+pub(crate) struct PromptProvenance {
+    pub layer2_path: Option<String>,
+    pub layer3_source: String,     // resolved path or "built-in {agent}/{role} default"
+    pub missed_paths: Vec<String>, // paths tried and absent, in traversal order
+}
+```
+
+Remove `layer1_role` (the header line now carries agent/role), `ProvenanceEntry`, and `LEVEL_LABELS`. `missed_paths` contains only paths that were actually tried and found absent — "not reached" entries are never recorded.
+
+#### `explain_system_prompt` (`apm-core/src/start.rs`)
+
+Rewrite to populate the new struct. The cascade check order is unchanged; only the reporting changes:
+
+- Level 0 found: `layer3_source = per_agent_rel`, `missed_paths = []`
+- Level 0 absent: push `per_agent_rel` to `missed_paths`; check level 1
+- Level 1 found (only when `agent != "claude"`): `layer3_source = claude_rel`, `missed_paths = [per_agent_rel]`
+- Level 1 absent: push `claude_rel` to `missed_paths`; check level 2
+- Level 2 (built-in): `layer3_source = "built-in {agent}/{role} default"`, `missed_paths` holds what was tried
+
+The `agent != "claude"` guard that skips the claude-fallback check is unchanged; when agent is claude the fallback level is structurally the same path as level 0, so no entry is added for it.
+
+#### `format_provenance` (`apm-core/src/prompt.rs`)
+
+Change signature to accept `agent` and `role`:
+
+```rust
+fn format_provenance(prov: &PromptProvenance, agent: &str, role: &str, out: &mut dyn Write) -> Result<()>
+```
+
+Update the two call sites (`explain` and `explain_without_ticket`) to pass the already-resolved agent and role strings.
+
+Rewrite the body to emit:
+
+```
+System prompt for {agent}/{role} — 3 layers composed:
+
+  1  apm instructions (dynamic)
+  2  {layer2_path or "(not configured)"}
+  3  {layer3_source}
+     (fallback — {missed[0]} not found)           // only when missed_paths non-empty
+     (fallback — {missed[0]} not found,            // two-path form for Case 3
+                 {missed[1]} not found)
+```
+
+Layout constants: layer lines use `  N  ` (2-space + digit + 2-space = 5-char) prefix. The fallback sub-line uses 5 spaces then `(fallback — ` (12 chars = 17 chars total) before the first path. When a second missed path exists, it continues on the same opening line ending in `,` and a newline, then a continuation line indented by 17 spaces to align under `— `.
+
+#### Tests (`apm-core/src/prompt.rs`)
+
+Update four existing explain tests to match the new output shape:
+
+- `explain_level0_wins` — remove `level 0` and `not reached` assertions; add assertion that the per-agent path appears in the output and no fallback sub-line is present.
+- `explain_level2_wins` — remove `level 2` assertion; change `built-in default` check to `built-in claude/coder default`.
+- `explain_prefix_shown` — update to find the `  2  ` line (not `layer 2:`) for the project path assertion.
+- `explain_agent_role_override` — remove `level 2` assertion; check `built-in claude/coder default` and that the agent-specific path appears in the fallback sub-line.
+
+Add four new tests using a helper that constructs a `PromptProvenance` directly and calls `format_provenance` without a git repo:
+
+1. **Case 1 (no fallback)** — `missed_paths = []`: assert output has no `(fallback` line and no `skipped` or `cascade` words.
+2. **Case 2 (one fallback)** — `missed_paths = [".apm/agents/phi4/apm.coder.md"]`: assert the fallback sub-line names that path with `not found`.
+3. **Case 3 (two fallbacks)** — `missed_paths = [".apm/agents/my-bot/apm.coder.md", ".apm/agents/claude/apm.coder.md"]`: assert both paths appear and the second is indented by 17 spaces.
+4. **Regression guard (agent=claude)** — same as Case 1 but `agent=claude`: assert neither `skipped` nor `cascade` appears in the output.
 
 ### Open questions
 
