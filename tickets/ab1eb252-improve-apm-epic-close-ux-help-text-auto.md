@@ -4,12 +4,12 @@ title = "Improve apm epic close UX: help text, auto-sync mergeable tickets, --me
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab1eb252-improve-apm-epic-close-ux-help-text-auto"
 created_at = "2026-05-30T18:53:24.160398Z"
-updated_at = "2026-05-30T19:09:08.355442Z"
+updated_at = "2026-05-30T19:09:12.793651Z"
 +++
 
 ## Spec
