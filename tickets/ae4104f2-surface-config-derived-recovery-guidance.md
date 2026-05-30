@@ -31,11 +31,12 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 - [ ] Against the default workflow, `classify_recovery_options("merge_failed", config)` returns `implemented` as `RetryMerge` and `in_progress` as `ReturnToWorker`
 - [ ] Against a workflow where the merge-target state is renamed (e.g. `implemented` → `shipped`), the helper classifies `shipped` as `RetryMerge`
 - [ ] When the queried state has no transitions to merge-target states, `classify_recovery_options` returns no `RetryMerge` entries
-- [ ] `apm show <id>` prints a "Recovery options" block when the ticket's current state has any `RetryMerge` transitions OR the ticket body contains a section headed "Merge notes"
-- [ ] The recovery block in `apm show` lists each option with its display label and the exact command `apm state <id> <to>`, and includes a reference to `docs/merge-failed-recovery.md`
-- [ ] `apm show <id>` does not print a recovery block when no `RetryMerge` transitions exist and the body contains no "Merge notes" section
-- [ ] `apm list --state <STATE>` appends a one-line recovery summary below ticket rows when STATE has `RetryMerge` transitions; omits the summary otherwise
-- [ ] `apm next` (plain-text mode) prints recovery options below the ticket line when the selected ticket's state has `RetryMerge` transitions; JSON mode output is unchanged
+- [ ] `is_merge_failure_state(state_id, workflow)` returns true iff `state_id` equals `transition.on_failure` for at least one transition in the entire workflow whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge`; transitions with a missing or empty `on_failure` are skipped
+- [ ] `is_merge_failure_state` returns false for all non-failure states in the default workflow — `new`, `groomed`, `specd`, `ready`, `in_progress`, `implemented`, `closed` — and true only for `merge_failed`
+- [ ] `apm show <id>` prints a "Recovery options" block iff `is_merge_failure_state(ticket.state, workflow)` returns true; the block lists each option with its display label and the exact command `apm state <id> <to>`, and includes a reference to `docs/merge-failed-recovery.md`
+- [ ] `apm show <id>` does not print a recovery block when `is_merge_failure_state(ticket.state, workflow)` returns false, including when the ticket is in `in_progress`
+- [ ] `apm list --state <STATE>` appends a one-line recovery summary below ticket rows when `is_merge_failure_state(STATE, workflow)` returns true; omits the summary otherwise, including for `--state in_progress`
+- [ ] `apm next` (plain-text mode) prints recovery options below the ticket line when `is_merge_failure_state(ticket.state, workflow)` returns true; JSON mode output is unchanged; no recovery options are printed when the selected ticket is in `in_progress` or any other non-failure state
 
 ### Out of scope
 
