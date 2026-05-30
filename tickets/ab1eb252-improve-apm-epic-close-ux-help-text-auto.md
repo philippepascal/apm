@@ -1,7 +1,7 @@
 +++
 id = "ab1eb252"
 title = "Improve apm epic close UX: help text, auto-sync mergeable tickets, --merge/--pr/--auto"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab1eb252-improve-apm-epic-close-ux-help-text-auto"
 created_at = "2026-05-30T18:53:24.160398Z"
-updated_at = "2026-05-30T18:53:24.160398Z"
+updated_at = "2026-05-30T18:57:50.967317Z"
 +++
 
 ## Spec
@@ -56,3 +56,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-30T18:53Z | — | new | philippepascal |
+| 2026-05-30T18:57Z | new | groomed | philippepascal |
