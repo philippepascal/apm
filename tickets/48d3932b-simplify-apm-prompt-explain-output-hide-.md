@@ -34,7 +34,12 @@ The desired output collapses to the minimum needed: show what was used, and when
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Layer 1 and layer 2 output changes beyond removing the role parenthetical from layer 1 and renaming the `layer N:` prefix to the numbered format.
+- Removing the layer 2 line when `.apm/project.md` is unset.
+- Changing the cascade resolution order or adding new cascade levels.
+- JSON output of `apm prompt` (if any) — this ticket is purely the human-readable text path.
+- `apm-server` / `apm-ui` surfacing of prompt provenance.
+- TTY colorization or width-detection beyond the existing baseline.
 
 ### Approach
 
