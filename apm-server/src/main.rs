@@ -2519,4 +2519,191 @@ label = "In Progress"
         assert!(json["prompt"].is_string(), "prompt field should be present");
         assert!(!json["prompt"].as_str().unwrap().is_empty(), "prompt should not be empty");
     }
+
+    const MERGE_FAILED_WORKFLOW_CONFIG: &str = r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+
+    fn git_setup_with_config(p: &std::path::Path, config_toml: &str) {
+        for args in [
+            vec!["init", "-q", "-b", "main"],
+            vec!["config", "user.email", "test@test.com"],
+            vec!["config", "user.name", "test"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(p)
+                .status()
+                .unwrap();
+        }
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), config_toml).unwrap();
+        std::fs::create_dir_all(p.join("tickets")).unwrap();
+        for args in [
+            vec!["add", ".apm/config.toml"],
+            vec!["-c", "commit.gpgsign=false", "commit", "-m", "init"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(p)
+                .env("GIT_AUTHOR_NAME", "test")
+                .env("GIT_AUTHOR_EMAIL", "test@test.com")
+                .env("GIT_COMMITTER_NAME", "test")
+                .env("GIT_COMMITTER_EMAIL", "test@test.com")
+                .status()
+                .unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn list_tickets_merge_failure_state_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup_with_config(&p, MERGE_FAILED_WORKFLOW_CONFIG);
+
+        let app = build_app(p.clone(), None);
+        let response = app
+            .oneshot(Request::builder().uri("/api/tickets").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let ids = json["merge_failure_state_ids"].as_array().unwrap();
+        assert!(
+            ids.iter().any(|s| s == "merge_failed"),
+            "merge_failed must be in merge_failure_state_ids; got: {ids:?}"
+        );
+        assert!(
+            !ids.iter().any(|s| s == "in_progress"),
+            "in_progress must not be in merge_failure_state_ids; got: {ids:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn get_ticket_merge_notes_extracted() {
+        let mut ticket = fake_ticket("aabbccdd-merge-notes-test", "Merge notes ticket");
+        ticket.body = "### Merge notes\n\ngit error: conflict in foo.rs\n\n### Other\n\nsome text\n".to_string();
+        let app = build_app_with_tickets(vec![ticket]);
+        let response = app
+            .oneshot(Request::builder().uri("/api/tickets/aabbccdd").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["merge_notes"], "git error: conflict in foo.rs");
+
+        // absent section
+        let mut ticket2 = fake_ticket("ccddaabb-no-notes", "No notes ticket");
+        ticket2.body = "### Other\n\nsome text\n".to_string();
+        let app2 = build_app_with_tickets(vec![ticket2]);
+        let response2 = app2
+            .oneshot(Request::builder().uri("/api/tickets/ccddaabb").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response2.status(), StatusCode::OK);
+        let bytes2 = response2.into_body().collect().await.unwrap().to_bytes();
+        let json2: serde_json::Value = serde_json::from_slice(&bytes2).unwrap();
+        assert!(json2["merge_notes"].is_null(), "merge_notes should be null when section absent");
+    }
+
+    #[tokio::test]
+    async fn get_ticket_recovery_options_populated() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().to_path_buf();
+        git_setup_with_config(&p, MERGE_FAILED_WORKFLOW_CONFIG);
+
+        let ticket_id = "aabbccdd-0011-2233-4455-66778899aabb";
+        let ticket_content = format!(
+            "+++\nid = \"{ticket_id}\"\ntitle = \"Test ticket\"\nstate = \"merge_failed\"\n+++\n\n"
+        );
+        let filename = format!("tickets/{ticket_id}.md");
+        let ticket_branch = format!("ticket/{ticket_id}");
+        std::fs::write(p.join(&filename), &ticket_content).unwrap();
+        for args in [
+            vec!["checkout", "-b", ticket_branch.as_str()],
+            vec!["add", filename.as_str()],
+            vec!["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(&p)
+                .env("GIT_AUTHOR_NAME", "test")
+                .env("GIT_AUTHOR_EMAIL", "test@test.com")
+                .env("GIT_COMMITTER_NAME", "test")
+                .env("GIT_COMMITTER_EMAIL", "test@test.com")
+                .status()
+                .unwrap();
+        }
+        std::process::Command::new("git")
+            .args(["checkout", "main"])
+            .current_dir(&p)
+            .status()
+            .unwrap();
+
+        let app = build_app(p.clone(), None);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/tickets/{}", &ticket_id[..8]))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let opts = json["recovery_options"].as_array().unwrap();
+        assert!(!opts.is_empty(), "recovery_options should be non-empty for merge_failed ticket");
+        let retry = opts.iter().find(|o| o["kind"] == "retry_merge").expect("expected retry_merge option");
+        let cmd = retry["command"].as_str().unwrap();
+        assert!(cmd.contains("apm state"), "command should contain 'apm state': {cmd}");
+        assert!(cmd.contains("implemented"), "command should contain 'implemented': {cmd}");
+    }
 }

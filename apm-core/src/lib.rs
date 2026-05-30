@@ -29,5 +29,7 @@ pub mod worker;
 pub mod hash_stamp;
 pub mod validate;
 pub mod instructions;
+pub mod recovery;
+pub use recovery::{RecoveryKind, RecoveryOption, classify_recovery_options, is_merge_failure_state};
 pub use state::{TransitionOption, compute_valid_transitions};
 pub use ticket::{BlockingDep, compute_blocking_deps};

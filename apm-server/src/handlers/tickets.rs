@@ -42,7 +42,7 @@ pub async fn list_tickets(
         "new".to_string(), "question".to_string(), "specd".to_string(),
         "blocked".to_string(), "implemented".to_string(), "merge_failed".to_string(),
     ];
-    let (resolved_ids, terminal_ids, supervisor_states): (Vec<String>, Vec<String>, Vec<String>) = match state.git_root() {
+    let (resolved_ids, terminal_ids, supervisor_states, merge_failure_state_ids): (Vec<String>, Vec<String>, Vec<String>, Vec<String>) = match state.git_root() {
         Some(root) => match apm_core::config::Config::load(root) {
             Ok(cfg) => {
                 let resolved = cfg.workflow.states.iter()
@@ -55,15 +55,19 @@ pub async fn list_tickets(
                         .filter(|s| !s.terminal && s.id != "new" && s.actionable.iter().any(|a| a == "supervisor"))
                         .map(|s| s.id.clone())
                 );
+                let merge_failure: Vec<String> = cfg.workflow.states.iter()
+                    .filter(|s| apm_core::recovery::is_merge_failure_state(&s.id, &cfg.workflow))
+                    .map(|s| s.id.clone())
+                    .collect();
                 let terminal = cfg.workflow.states.into_iter()
                     .filter(|s| s.terminal)
                     .map(|s| s.id)
                     .collect();
-                (resolved, terminal, supervisor)
+                (resolved, terminal, supervisor, merge_failure)
             }
-            Err(_) => (vec![], vec!["closed".to_string()], fallback_supervisor_states()),
+            Err(_) => (vec![], vec!["closed".to_string()], fallback_supervisor_states(), vec![]),
         },
-        None => (vec![], vec!["closed".to_string()], fallback_supervisor_states()),
+        None => (vec![], vec!["closed".to_string()], fallback_supervisor_states(), vec![]),
     };
     if !params.include_closed.unwrap_or(false) {
         let terminal_set: std::collections::HashSet<&str> =
@@ -122,7 +126,7 @@ pub async fn list_tickets(
             }
         })
         .collect();
-    Ok(Json(TicketsEnvelope { tickets, supervisor_states }))
+    Ok(Json(TicketsEnvelope { tickets, supervisor_states, merge_failure_state_ids }))
 }
 
 pub async fn get_ticket(
@@ -142,27 +146,57 @@ pub async fn get_ticket(
             }
         }
         Ok(full_id) => {
-            let (blocking_deps, valid_transitions) = match state.git_root() {
-                None => (vec![], vec![]),
+            let (blocking_deps, valid_transitions, recovery_options) = match state.git_root() {
+                None => (vec![], vec![], vec![]),
                 Some(root) => {
                     let root = root.clone();
                     let ticket_ref = tickets.iter().find(|t| t.frontmatter.id == full_id).unwrap();
-                    let deps = match apm_core::config::Config::load(&root) {
-                        Ok(config) => apm_core::compute_blocking_deps(ticket_ref, &tickets, &config),
-                        Err(_) => vec![],
+                    let ticket_state = ticket_ref.frontmatter.state.clone();
+                    let (deps, opts) = match apm_core::config::Config::load(&root) {
+                        Ok(config) => {
+                            let deps = apm_core::compute_blocking_deps(ticket_ref, &tickets, &config);
+                            let opts = if apm_core::recovery::is_merge_failure_state(&ticket_state, &config.workflow) {
+                                apm_core::recovery::classify_recovery_options(&ticket_state, &config.workflow)
+                                    .into_iter()
+                                    .map(|opt| {
+                                        let kind = match opt.kind {
+                                            apm_core::RecoveryKind::RetryMerge => "retry_merge",
+                                            apm_core::RecoveryKind::ReturnToWorker => "return_to_worker",
+                                            apm_core::RecoveryKind::Abandon => "abandon",
+                                            apm_core::RecoveryKind::Other => "other",
+                                        }.to_string();
+                                        RecoveryOptionDto {
+                                            command: format!("apm state {} {}", full_id, opt.to),
+                                            to: opt.to,
+                                            label: opt.label,
+                                            kind,
+                                        }
+                                    })
+                                    .collect()
+                            } else {
+                                vec![]
+                            };
+                            (deps, opts)
+                        }
+                        Err(_) => (vec![], vec![]),
                     };
                     let state_str = ticket_ref.frontmatter.state.clone();
+                    let root2 = root.clone();
                     let transitions = tokio::task::spawn_blocking(move || {
-                        let config = match apm_core::config::Config::load(&root) {
+                        let config = match apm_core::config::Config::load(&root2) {
                             Ok(c) => c,
                             Err(_) => return vec![],
                         };
                         apm_core::compute_valid_transitions(&state_str, &config)
                     }).await?;
-                    (deps, transitions)
+                    (deps, transitions, opts)
                 }
             };
             let mut ticket = tickets.into_iter().find(|t| t.frontmatter.id == full_id).unwrap();
+            let merge_notes = {
+                let s = extract_section(&ticket.body, "Merge notes").trim().to_string();
+                if s.is_empty() { None } else { Some(s) }
+            };
             let raw = ticket.serialize().unwrap_or_default();
             let (spec, _) = apm_core::review::split_body(&ticket.body);
             if ticket.frontmatter.author.is_none() {
@@ -177,6 +211,8 @@ pub async fn get_ticket(
                 valid_transitions,
                 blocking_deps,
                 owner,
+                recovery_options,
+                merge_notes,
             })
             .into_response())
         }
@@ -256,6 +292,8 @@ pub async fn transition_ticket(
                         valid_transitions,
                         blocking_deps,
                         owner,
+                        recovery_options: vec![],
+                        merge_notes: None,
                     })
                     .into_response())
                 }
@@ -458,6 +496,8 @@ pub async fn patch_ticket(
         valid_transitions,
         blocking_deps,
         owner,
+        recovery_options: vec![],
+        merge_notes: None,
     })
     .into_response())
 }
