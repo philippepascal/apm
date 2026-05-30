@@ -29,7 +29,7 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 - [x] Each `RecoveryOption` carries: to-state ID, display label (from `transition.label`, falling back to to-state ID when label is empty), and `RecoveryKind`
 - [x] Results are ordered by `workflow.states` declaration order; classification is independent of that order (shuffling the states list produces identical results)
 - [x] Against the default workflow, `classify_recovery_options("merge_failed", config)` returns `implemented` as `RetryMerge` and `in_progress` as `ReturnToWorker`
-- [ ] Against a workflow where the merge-target state is renamed (e.g. `implemented` → `shipped`), the helper classifies `shipped` as `RetryMerge`
+- [x] Against a workflow where the merge-target state is renamed (e.g. `implemented` → `shipped`), the helper classifies `shipped` as `RetryMerge`
 - [ ] When the queried state has no transitions to merge-target states, `classify_recovery_options` returns no `RetryMerge` entries
 - [ ] `is_merge_failure_state(state_id, workflow)` returns true iff `state_id` equals `transition.on_failure` for at least one transition in the entire workflow whose `completion` is `Pr`, `Merge`, or `PrOrEpicMerge`; transitions with a missing or empty `on_failure` are skipped
 - [ ] `is_merge_failure_state` returns false for all non-failure states in the default workflow — `new`, `groomed`, `specd`, `ready`, `in_progress`, `implemented`, `closed` — and true only for `merge_failed`
