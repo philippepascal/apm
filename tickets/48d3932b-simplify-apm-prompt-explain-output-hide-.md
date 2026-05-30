@@ -22,15 +22,15 @@ The desired output collapses to the minimum needed: show what was used, and when
 
 ### Acceptance criteria
 
-- [ ] When the per-agent file `.apm/agents/{agent}/apm.{role}.md` exists, `apm prompt --explain` prints exactly three numbered layer lines and no cascade sub-line or skipped block.
-- [ ] When one fallback fired (per-agent file absent, claude default file present), layer 3 shows the claude default path followed by a single `(fallback — <agent-specific path> not found)` sub-line indented to align with the layer-3 content.
-- [ ] When both on-disk candidates are absent and the built-in default is used, layer 3 shows `built-in {agent}/{role} default` followed by a `(fallback — <path1> not found,` line and a continuation line `<path2> not found)` aligned under `— `.
-- [ ] The output begins with a header `System prompt for {agent}/{role} — 3 layers composed:` followed by a blank line.
-- [ ] Layer 1 reads `  1  apm instructions (dynamic)` with no role parenthetical.
-- [ ] Layer 2 reads `  2  {path}` when a project file is configured, or `  2  (not configured)` when it is not.
-- [ ] When the per-agent file exists and `agent=claude`, the output contains neither the word `skipped` nor the word `cascade`.
-- [ ] `apm prompt --explain` without a ticket (using `--agent`/`--role` flags) produces the same new format.
-- [ ] All existing `cargo test --workspace` tests pass after the changes.
+- [x] When the per-agent file `.apm/agents/{agent}/apm.{role}.md` exists, `apm prompt --explain` prints exactly three numbered layer lines and no cascade sub-line or skipped block.
+- [x] When one fallback fired (per-agent file absent, claude default file present), layer 3 shows the claude default path followed by a single `(fallback — <agent-specific path> not found)` sub-line indented to align with the layer-3 content.
+- [x] When both on-disk candidates are absent and the built-in default is used, layer 3 shows `built-in {agent}/{role} default` followed by a `(fallback — <path1> not found,` line and a continuation line `<path2> not found)` aligned under `— `.
+- [x] The output begins with a header `System prompt for {agent}/{role} — 3 layers composed:` followed by a blank line.
+- [x] Layer 1 reads `  1  apm instructions (dynamic)` with no role parenthetical.
+- [x] Layer 2 reads `  2  {path}` when a project file is configured, or `  2  (not configured)` when it is not.
+- [x] When the per-agent file exists and `agent=claude`, the output contains neither the word `skipped` nor the word `cascade`.
+- [x] `apm prompt --explain` without a ticket (using `--agent`/`--role` flags) produces the same new format.
+- [x] All existing `cargo test --workspace` tests pass after the changes.
 
 ### Out of scope
 
