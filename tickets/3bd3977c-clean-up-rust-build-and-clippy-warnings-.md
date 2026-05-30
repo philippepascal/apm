@@ -1,7 +1,7 @@
 +++
 id = "3bd3977c"
 title = "Clean up rust build and clippy warnings across the workspace"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3bd3977c-clean-up-rust-build-and-clippy-warnings-"
 created_at = "2026-05-30T07:17:32.280247Z"
-updated_at = "2026-05-30T17:13:09.520072Z"
+updated_at = "2026-05-30T18:09:10.905849Z"
 +++
 
 ## Spec
@@ -146,3 +146,4 @@ Run all three checks and confirm clean output:
 | 2026-05-30T17:08Z | new | groomed | philippepascal |
 | 2026-05-30T17:09Z | groomed | in_design | philippepascal |
 | 2026-05-30T17:13Z | in_design | specd | claude |
+| 2026-05-30T18:09Z | specd | ready | philippepascal |
