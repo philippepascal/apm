@@ -70,7 +70,18 @@ TESTS:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm agents resolve <ticket-id>` prints the resolved agent name with its provenance source in parentheses
+- [ ] `apm agents resolve <ticket-id>` prints the resolved role with its provenance source
+- [ ] `apm agents resolve <ticket-id>` prints the resolved model (or `—` if unset) with its provenance source
+- [ ] `apm agents resolve <ticket-id>` prints the manifest path and whether it is present or absent
+- [ ] `apm agents resolve <ticket-id>` prints the container value (or `—` if unset) with its provenance source
+- [ ] `apm agents resolve <ticket-id>` prints each env key/value pair and the layer that supplied it (workers config or manifest)
+- [ ] `apm agents resolve <ticket-id>` prints the keychain map entries (names only, not resolved secrets)
+- [ ] When `frontmatter.agent_overrides` supplies the agent, the provenance line names the matched key and identifies the layer it overrode
+- [ ] When the ticket's current state has no `command:start` transition, the output includes a note identifying the non-dispatchable state and names the state whose transition was used for resolution
+- [ ] `apm agents resolve <ticket-id> --json` emits a valid JSON object containing all the same fields, including provenance values as `<field>_source` keys
+- [ ] Passing an unknown or ambiguous ticket ID produces a clear error on stderr and exits non-zero, consistent with other `apm` commands that accept a ticket ID
+- [ ] Running `apm agents resolve <ticket-id>` makes no git commits, no state transitions, and no file writes
 
 ### Out of scope
 
