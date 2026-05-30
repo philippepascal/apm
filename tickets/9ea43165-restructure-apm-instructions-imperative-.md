@@ -73,7 +73,13 @@ TESTS:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Shell-discipline content movement (covered by a3c34ddc).
+- The cascade that resolves which role file to use (unchanged).
+- apm-server / apm-ui display of instructions content.
+- New placeholder substitutions beyond `<id>` (e.g., no `<branch>`, no frontmatter field insertion).
+- Per-ticket personalization beyond `<id>` substitution (no history insertion, no dependency injection into the instructions layer).
+- Changing the command-reference section format (it remains a flat aligned list, not a table).
+- The `apm prompt` command itself beyond updating `--explain` layer labels and passing `ticket_id` through `build_system_prompt`.
 
 ### Approach
 
