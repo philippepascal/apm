@@ -203,7 +203,7 @@ fn run_dry(root: &Path, config: &Config, epic_filter: Option<&str>) -> Result<()
             actionable.contains(&state)
                 && (startable.is_empty() || startable.contains(&state))
                 && epic_filter
-                    .map_or(true, |id| t.frontmatter.epic.as_deref() == Some(id))
+                    .is_none_or(|id| t.frontmatter.epic.as_deref() == Some(id))
         })
         .collect();
     candidates.sort_by(|a, b| {

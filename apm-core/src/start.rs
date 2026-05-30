@@ -317,7 +317,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
 
     let worker_profile_str = triggering_transition
         .and_then(|tr| tr.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
+        .or(config.workers.default.as_deref())
         .unwrap_or("claude/coder")
         .to_string();
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
@@ -445,7 +445,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .cloned();
     let worker_profile_str = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
+        .or(config.workers.default.as_deref())
         .unwrap_or("claude/coder")
         .to_string();
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
@@ -571,6 +571,8 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 }
 
 #[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments)]
+// Each argument maps to a distinct CLI flag.
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,
@@ -622,7 +624,7 @@ pub fn spawn_next_worker(
         .cloned();
     let worker_profile_str = triggering_transition_owned.as_ref()
         .and_then(|tr| tr.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
+        .or(config.workers.default.as_deref())
         .unwrap_or("claude/coder")
         .to_string();
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
@@ -891,8 +893,8 @@ pub(crate) fn explain_system_prompt(
     let per_agent = root.join(&per_agent_rel);
     if per_agent.exists() {
         let winner = ProvenanceEntry { level: 0, label: LEVEL_LABELS[0], source: per_agent_rel };
-        for i in 1usize..=2 {
-            skipped.push(ProvenanceEntry { level: i as u8, label: LEVEL_LABELS[i], source: "not reached".to_string() });
+        for (i, &label) in LEVEL_LABELS.iter().enumerate().skip(1) {
+            skipped.push(ProvenanceEntry { level: i as u8, label, source: "not reached".to_string() });
         }
         return Ok(PromptProvenance { layer1_role, layer2_path, winner, skipped });
     }
@@ -1002,8 +1004,7 @@ mod tests {
 
     #[test]
     fn resolve_worker_profile_inherits_model() {
-        let mut workers = WorkersConfig::default();
-        workers.model = Some("sonnet".into());
+        let workers = WorkersConfig { model: Some("sonnet".into()), ..Default::default() };
         let wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         assert_eq!(wp.model.as_deref(), Some("sonnet"));
     }
@@ -1631,8 +1632,7 @@ mod tests {
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/coder.toml"), "model = \"claude-opus-4-5\"\n").unwrap();
-        let mut workers = WorkersConfig::default();
-        workers.model = Some("sonnet".into());
+        let workers = WorkersConfig { model: Some("sonnet".into()), ..Default::default() };
         let mut wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         assert_eq!(wp.model.as_deref(), Some("sonnet"));
         super::apply_profile_manifest(p, &mut wp).unwrap();
@@ -1643,8 +1643,7 @@ mod tests {
     fn apply_profile_manifest_noop_when_absent() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let mut workers = WorkersConfig::default();
-        workers.model = Some("sonnet".into());
+        let mut workers = WorkersConfig { model: Some("sonnet".into()), ..Default::default() };
         workers.env.insert("FOO".into(), "bar".into());
         let mut wp = super::resolve_worker_profile("claude/coder", &workers).unwrap();
         super::apply_profile_manifest(p, &mut wp).unwrap();
