@@ -1,7 +1,7 @@
 +++
 id = "ac87718b"
 title = "Replace apm list epics footer with inline ↓ marker on tickets whose epic is behind main"
-state = "ready"
+state = "in_progress"
 priority = 5
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ac87718b-replace-apm-list-epics-footer-with-inlin"
 created_at = "2026-05-30T02:17:52.780155Z"
-updated_at = "2026-05-30T03:59:28.652081Z"
+updated_at = "2026-05-30T03:59:37.481943Z"
 +++
 
 ## Spec
@@ -146,3 +146,4 @@ No existing tests assert on the `"epics:"` footer wording (confirmed by grep), s
 | 2026-05-30T02:32Z | groomed | in_design | philippepascal |
 | 2026-05-30T02:36Z | in_design | specd | claude |
 | 2026-05-30T03:59Z | specd | ready | philippepascal |
+| 2026-05-30T03:59Z | ready | in_progress | philippepascal |
