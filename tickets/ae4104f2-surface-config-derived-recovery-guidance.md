@@ -27,7 +27,7 @@ With config-aware surfacing, the CLI derives recovery options directly from the 
 - [ ] `classify_recovery_options` classifies a transition as `Abandon` when its to-state has `terminal: true`
 - [ ] `classify_recovery_options` classifies a transition as `Other` when none of the above apply
 - [x] Each `RecoveryOption` carries: to-state ID, display label (from `transition.label`, falling back to to-state ID when label is empty), and `RecoveryKind`
-- [ ] Results are ordered by `workflow.states` declaration order; classification is independent of that order (shuffling the states list produces identical results)
+- [x] Results are ordered by `workflow.states` declaration order; classification is independent of that order (shuffling the states list produces identical results)
 - [ ] Against the default workflow, `classify_recovery_options("merge_failed", config)` returns `implemented` as `RetryMerge` and `in_progress` as `ReturnToWorker`
 - [ ] Against a workflow where the merge-target state is renamed (e.g. `implemented` → `shipped`), the helper classifies `shipped` as `RetryMerge`
 - [ ] When the queried state has no transitions to merge-target states, `classify_recovery_options` returns no `RetryMerge` entries
