@@ -3,13 +3,13 @@ id = "ae4104f2"
 title = "Surface config-derived recovery guidance for merge-failure states in apm CLI"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ae4104f2-surface-config-derived-recovery-guidance"
 created_at = "2026-05-30T02:11:03.737221Z"
-updated_at = "2026-05-30T02:14:18.952503Z"
+updated_at = "2026-05-30T02:21:25.445797Z"
 +++
 
 ## Spec
