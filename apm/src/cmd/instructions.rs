@@ -114,9 +114,9 @@ mod tests {
         let out = apm_core::instructions::generate(tmp.path(), None, &commands).unwrap();
         assert!(out.contains("## State Machine"));
         assert!(out.contains("## Ticket Format"));
-        assert!(out.contains("## Shell Discipline"));
         assert!(out.contains("## Session Identity"));
         assert!(out.contains("## Command Reference"));
+        assert!(!out.contains("## Shell Discipline"), "Shell Discipline must not appear in apm instructions output");
     }
 
     #[test]
