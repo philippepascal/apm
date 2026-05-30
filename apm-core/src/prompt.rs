@@ -101,7 +101,7 @@ pub fn run(
 
     let (agent, role) = resolve_agent_role(&config, triggering_transition, &t.frontmatter, agent_override, role_override)?;
     let project_file = config.agents.project.as_deref().map(Path::new);
-    let prompt = build_system_prompt(root, project_file, &agent, &role)?;
+    let prompt = build_system_prompt(root, project_file, &agent, &role, Some(&ticket_id))?;
 
     out.write_all(prompt.as_bytes())?;
     Ok(())
@@ -144,7 +144,7 @@ pub fn run_without_ticket(
 ) -> Result<()> {
     let config = Config::load(root)?;
     let project_file = config.agents.project.as_deref().map(Path::new);
-    let prompt = build_system_prompt(root, project_file, agent, role)?;
+    let prompt = build_system_prompt(root, project_file, agent, role, None)?;
     out.write_all(prompt.as_bytes())?;
     Ok(())
 }
@@ -204,7 +204,7 @@ pub fn run_full(
     let project_file = config.agents.project.as_deref().map(Path::new);
     let depends_on = t.frontmatter.depends_on.clone().unwrap_or_default();
 
-    let sys = build_system_prompt(root, project_file, &agent, &role)?;
+    let sys = build_system_prompt(root, project_file, &agent, &role, Some(&ticket_id))?;
     let msg = build_user_message(root, t, &depends_on, &role, &config)?;
 
     writeln!(out, "=== system ===")?;
@@ -230,12 +230,8 @@ pub fn explain_without_ticket(
 fn format_provenance(prov: &PromptProvenance, agent: &str, role: &str, out: &mut dyn Write) -> Result<()> {
     writeln!(out, "System prompt for {agent}/{role} \u{2014} 3 layers composed:")?;
     writeln!(out)?;
-    writeln!(out, "  1  apm instructions (dynamic)")?;
-    match &prov.layer2_path {
-        Some(path) => writeln!(out, "  2  {path}")?,
-        None => writeln!(out, "  2  (not configured)")?,
-    }
-    writeln!(out, "  3  {}", prov.layer3_source)?;
+    // Layer 1: role file (was layer 3 before this reorder; now highest-attention position)
+    writeln!(out, "  1  {}", prov.layer3_source)?;
     match prov.missed_paths.len() {
         0 => {}
         1 => {
@@ -246,6 +242,13 @@ fn format_provenance(prov: &PromptProvenance, agent: &str, role: &str, out: &mut
             writeln!(out, "                 {} not found)", prov.missed_paths[1])?;
         }
     }
+    // Layer 2: project context (unchanged)
+    match &prov.layer2_path {
+        Some(path) => writeln!(out, "  2  {path}")?,
+        None => writeln!(out, "  2  (not configured)")?,
+    }
+    // Layer 3: apm instructions (was layer 1 before this reorder; now reference material)
+    writeln!(out, "  3  apm instructions (dynamic)")?;
     Ok(())
 }
 
@@ -347,6 +350,7 @@ Test.
             None,
             "mock-happy",
             "worker",
+            Some("abcd0001"),
         ).unwrap();
 
         let mut buf = Vec::new();
@@ -573,6 +577,9 @@ Test.
         let mut buf = Vec::new();
         format_provenance(&prov, "claude", "coder", &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
+        // Layer 1 = role file, layer 3 = apm instructions
+        assert!(output.contains("  1  .apm/agents/claude/apm.coder.md"), "role file on layer 1; got:\n{output}");
+        assert!(output.contains("  3  apm instructions (dynamic)"), "apm instructions on layer 3; got:\n{output}");
         assert!(!output.contains("(fallback"), "no fallback sub-line expected; got:\n{output}");
         assert!(!output.contains("skipped"), "no 'skipped' expected; got:\n{output}");
         assert!(!output.contains("cascade"), "no 'cascade' expected; got:\n{output}");
@@ -624,6 +631,44 @@ Test.
         let output = String::from_utf8(buf).unwrap();
         assert!(!output.contains("skipped"), "no 'skipped' for claude; got:\n{output}");
         assert!(!output.contains("cascade"), "no 'cascade' for claude; got:\n{output}");
+    }
+
+    #[test]
+    fn explain_role_file_is_layer1() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "eeee0005", "mock-happy", true, None);
+
+        let mut buf = Vec::new();
+        explain(root, "eeee0005", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        let layer1_line = output.lines().find(|l| l.starts_with("  1  ")).unwrap();
+        assert!(
+            layer1_line.contains(".apm/agents/mock-happy/apm.coder.md"),
+            "layer 1 should identify the role file; got: {layer1_line:?}"
+        );
+        assert!(
+            !layer1_line.contains("apm instructions"),
+            "apm instructions should not appear on layer 1 line; got: {layer1_line:?}"
+        );
+    }
+
+    #[test]
+    fn explain_instructions_is_layer3() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_explain_project(root, "ffff0006", "claude", false, None);
+
+        let mut buf = Vec::new();
+        explain(root, "ffff0006", None, None, &mut buf).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+
+        let layer3_line = output.lines().find(|l| l.starts_with("  3  ")).unwrap();
+        assert!(
+            layer3_line.contains("apm instructions"),
+            "layer 3 should identify apm instructions; got: {layer3_line:?}"
+        );
     }
 
     #[test]
