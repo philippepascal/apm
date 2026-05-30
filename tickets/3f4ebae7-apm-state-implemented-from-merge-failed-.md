@@ -24,12 +24,12 @@ The root cause is a single missing field: the `merge_failed → implemented` tra
 
 ### Acceptance criteria
 
-- [ ] `apm-core/src/default/workflow.toml`'s `merge_failed → implemented` transition has `completion = "pr_or_epic_merge"` and `on_failure = "merge_failed"`.
-- [ ] `apm state <id> implemented` from `merge_failed` when the merge succeeds: state commits to ticket branch as `implemented` and the state row is present in `target_branch`.
-- [ ] `apm state <id> implemented` from `merge_failed` when the merge fails: the ticket branch ends with two new commits — first `merge_failed → implemented` (line 166), then `implemented → merge_failed` via the `on_failure` path; the ticket frontmatter final state is `merge_failed`; the History table contains both the failed `implemented` transition row and the `on_failure` `merge_failed` row; no work commits land on `target_branch`.
-- [ ] All pre-existing `in_progress → implemented` integration tests pass without modification.
-- [ ] `apm validate` reports an `on_failure` error for any project where `merge_failed → implemented` has a merging completion but no `on_failure`; `apm validate --fix` repairs it.
-- [ ] `cargo test --workspace` passes.
+- [x] `apm-core/src/default/workflow.toml`'s `merge_failed → implemented` transition has `completion = "pr_or_epic_merge"` and `on_failure = "merge_failed"`.
+- [x] `apm state <id> implemented` from `merge_failed` when the merge succeeds: state commits to ticket branch as `implemented` and the state row is present in `target_branch`.
+- [x] `apm state <id> implemented` from `merge_failed` when the merge fails: the ticket branch ends with two new commits — first `merge_failed → implemented` (line 166), then `implemented → merge_failed` via the `on_failure` path; the ticket frontmatter final state is `merge_failed`; the History table contains both the failed `implemented` transition row and the `on_failure` `merge_failed` row; no work commits land on `target_branch`.
+- [x] All pre-existing `in_progress → implemented` integration tests pass without modification.
+- [x] `apm validate` reports an `on_failure` error for any project where `merge_failed → implemented` has a merging completion but no `on_failure`; `apm validate --fix` repairs it.
+- [x] `cargo test --workspace` passes.
 
 ### Out of scope
 
