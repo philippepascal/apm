@@ -25,6 +25,17 @@ interface TicketDetail {
   epic?: string
   depends_on?: string[]
   blocking_deps?: Array<{ id: string; state: string }>
+  recovery_options?: Array<{ to: string; label: string; kind: string; command: string }>
+  merge_notes?: string | null
+}
+
+function kindLabel(kind: string): string {
+  switch (kind) {
+    case 'retry_merge':      return 'Retry merge'
+    case 'return_to_worker': return 'Return to worker'
+    case 'abandon':          return 'Abandon'
+    default:                 return ''
+  }
 }
 
 async function fetchTicket(id: string): Promise<TicketDetail> {
@@ -443,6 +454,38 @@ export default function TicketDetail({ onMinimize }: { onMinimize?: () => void }
         {data && (
           <div className="prose prose-sm prose-invert px-6 py-4">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.body}</ReactMarkdown>
+          </div>
+        )}
+        {data?.merge_notes && (
+          <div className="px-6 py-4 border-t border-gray-700">
+            <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wide mb-2">Merge failure</p>
+            <pre className="text-xs text-gray-300 bg-gray-800 rounded p-3 overflow-x-auto whitespace-pre-wrap break-words">
+              {data.merge_notes}
+            </pre>
+          </div>
+        )}
+        {data?.recovery_options && data.recovery_options.length > 0 && (
+          <div className="px-6 py-4 border-t border-gray-700">
+            <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wide mb-3">Recovery</p>
+            {data.recovery_options.map(opt => (
+              <div key={opt.to} className="mb-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm text-gray-200">{opt.label}</span>
+                  <span className="text-[10px] text-gray-500">{kindLabel(opt.kind)}</span>
+                </div>
+                <code className="block text-xs bg-gray-800 rounded px-3 py-2 font-mono text-green-300 select-all cursor-text">
+                  {opt.command}
+                </code>
+              </div>
+            ))}
+            <a
+              href="/docs/merge-failed-recovery.md"
+              className="text-[10px] text-blue-400 hover:underline mt-2 inline-block"
+              target="_blank"
+              rel="noreferrer"
+            >
+              See: docs/merge-failed-recovery.md
+            </a>
           </div>
         )}
       </div>

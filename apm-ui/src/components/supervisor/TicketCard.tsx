@@ -6,13 +6,15 @@ interface TicketCardProps {
   ticket: Ticket
   columnTicketIds: string[]
   showAuthor?: boolean
+  mergeFailureStateIds: string[]
 }
 
-export default function TicketCard({ ticket, columnTicketIds, showAuthor }: TicketCardProps) {
+export default function TicketCard({ ticket, columnTicketIds, showAuthor, mergeFailureStateIds }: TicketCardProps) {
   const { selectedTicketId, selectedTicketIds, lastClickedTicketId, setSelectedTicketId, selectTicketRange, epicFilter, setEpicFilter } = useLayoutStore()
   const isSelected = ticket.id === selectedTicketId
   const isMultiSelected = selectedTicketIds.includes(ticket.id)
   const isDepBlocked = !!ticket.blocking_deps?.length
+  const isMergeFailed = mergeFailureStateIds.includes(ticket.state)
 
   function handleClick(event: React.MouseEvent) {
     if (event.shiftKey && lastClickedTicketId && columnTicketIds.includes(lastClickedTicketId)) {
@@ -32,9 +34,11 @@ export default function TicketCard({ ticket, columnTicketIds, showAuthor }: Tick
       onClick={handleClick}
       className={
         'rounded-md border p-2.5 cursor-pointer shadow-sm ' +
-        (isDepBlocked
-          ? 'border-amber-700/60 bg-amber-950/20 hover:bg-amber-950/30 '
-          : 'border-gray-600 bg-gray-800 hover:bg-gray-700 ') +
+        (isMergeFailed
+          ? 'border-red-700/60 bg-red-950/20 hover:bg-red-950/30 '
+          : isDepBlocked
+            ? 'border-amber-700/60 bg-amber-950/20 hover:bg-amber-950/30 '
+            : 'border-gray-600 bg-gray-800 hover:bg-gray-700 ') +
         (isMultiSelected ? 'ring-2 ring-blue-400 bg-gray-700/60 ' : '') +
         (!isMultiSelected && isSelected ? 'ring-2 ring-blue-500' : '')
       }
@@ -80,6 +84,14 @@ export default function TicketCard({ ticket, columnTicketIds, showAuthor }: Tick
               className="text-[10px] px-1 rounded bg-sky-900/60 text-sky-300"
             >
               stale
+            </span>
+          )}
+          {isMergeFailed && (
+            <span
+              title="Merge failure"
+              className="text-[10px] px-1 rounded bg-red-900/60 text-red-300"
+            >
+              !
             </span>
           )}
           {isDepBlocked && (

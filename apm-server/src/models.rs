@@ -2,6 +2,14 @@
 pub use apm_core::{BlockingDep, TransitionOption};
 
 #[derive(serde::Serialize)]
+pub struct RecoveryOptionDto {
+    pub to: String,
+    pub label: String,
+    pub kind: String,
+    pub command: String,
+}
+
+#[derive(serde::Serialize)]
 pub struct TicketResponse {
     #[serde(flatten)]
     pub frontmatter: apm_core::ticket::Frontmatter,
@@ -17,6 +25,7 @@ pub struct TicketResponse {
 pub struct TicketsEnvelope {
     pub tickets: Vec<TicketResponse>,
     pub supervisor_states: Vec<String>,
+    pub merge_failure_state_ids: Vec<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -29,6 +38,8 @@ pub struct TicketDetailResponse {
     pub valid_transitions: Vec<TransitionOption>,
     pub blocking_deps: Vec<BlockingDep>,
     pub owner: Option<String>,
+    pub recovery_options: Vec<RecoveryOptionDto>,
+    pub merge_notes: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
