@@ -4,12 +4,12 @@ title = "Replace apm list epics footer with inline ↓ marker on tickets whose e
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ac87718b-replace-apm-list-epics-footer-with-inlin"
 created_at = "2026-05-30T02:17:52.780155Z"
-updated_at = "2026-05-30T02:36:14.318481Z"
+updated_at = "2026-05-30T02:36:18.420049Z"
 +++
 
 ## Spec
