@@ -36,7 +36,7 @@ This ticket extends `apm-server` and `apm-ui` to surface two pieces of recovery 
 - [x] A `TicketDetail` for a ticket in `"in_progress"` state with no `### Merge notes` section and an empty `recovery_options` array renders neither the "Merge failure" section nor the "Recovery" section.
 - [x] Server integration test (git-based, default workflow): `GET /api/tickets` returns `merge_failure_state_ids` containing `"merge_failed"` and not containing `"in_progress"`.
 - [x] Server integration test (InMemory): `GET /api/tickets/:id` for a ticket whose body contains `### Merge notes\n\ngit error text` returns `merge_notes: "git error text"`.
-- [ ] Server integration test (git-based, default workflow): `GET /api/tickets/:id` for a ticket in `merge_failed` state returns `recovery_options` with at least one entry where `kind` is `"retry_merge"` and `command` matches `"apm state <id> implemented"`.
+- [x] Server integration test (git-based, default workflow): `GET /api/tickets/:id` for a ticket in `merge_failed` state returns `recovery_options` with at least one entry where `kind` is `"retry_merge"` and `command` matches `"apm state <id> implemented"`.
 
 ### Out of scope
 
