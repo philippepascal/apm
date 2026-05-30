@@ -97,7 +97,99 @@ TESTS:
 
 ### Approach
 
-How the implementation will work.
+#### Data structures
+
+Add to `apm-core/src/start.rs`:
+
+```rust
+pub struct AgentDiagnostic {
+    pub ticket_id: String,
+    pub ticket_state: String,
+    pub dispatchable: bool,          // false when current state has no command:start
+    pub resolved_from_state: String, // equals ticket_state when dispatchable; otherwise first startable state
+    pub transition_label: String,    // e.g. "ready → in_progress"
+    pub worker_profile_str: String,  // the literal "agent/role" string resolved
+    pub profile_source: String,      // "workflow.toml transition" | "workers.default" | "built-in fallback"
+    pub agent: String,
+    pub agent_source: String,        // layer that supplied the final agent name
+    pub role: String,
+    pub role_source: String,
+    pub model: Option<String>,
+    pub model_source: String,
+    pub container: Option<String>,
+    pub container_source: String,
+    pub manifest_path: String,       // .apm/agents/<agent>/<role>.toml (shown whether present or not)
+    pub manifest_present: bool,
+    pub env: Vec<(String, String, String)>,           // (key, value, source)
+    pub keychain: std::collections::HashMap<String, String>, // from config.workers.keychain
+}
+```
+
+#### Resolution logic
+
+Add `pub fn resolve_for_diagnostic(root: &Path, id_arg: &str) -> Result<AgentDiagnostic>` to `apm-core/src/start.rs`:
+
+1. `Config::load(root)?` and `ticket::load_all_from_git`.
+2. Resolve the ticket with `ticket::resolve_id_in_slice` — propagates the existing ambiguous/not-found error.
+3. Find the `command:start` transition for the ticket's current state. If absent, scan `config.workflow.states` in order for the first state that has a `command:start` transition and set `dispatchable = false`.  If no such state exists anywhere, set `transition_label = "none"` and return a minimal diagnostic.
+4. Derive `worker_profile_str` using the same priority logic as `run()`: transition `worker_profile` → `config.workers.default` → `"claude/coder"`. Record which layer supplied it in `profile_source`.
+5. Parse `worker_profile_str` with `parse_worker_profile`. Set `agent`, `role`, and `role_source` from this parse. Set initial `agent_source` to match `profile_source`.
+6. Inherit `model`, `container`, and `env` from `config.workers` with source label `"workers config"`.
+7. Attempt `load_profile_manifest(root, &agent, &role)`. If present, override `model` (source = manifest path) and merge `env` entries (per-key source = manifest path). Set `manifest_present = true`.
+8. Call `apply_frontmatter_agent` logic inline (don't mutate a string — check `agent_overrides[worker_profile_str]` first, then `frontmatter.agent`). Update `agent` and `agent_source` with the appropriate label, including the matched key when `agent_overrides` is used.
+9. Build and return the `AgentDiagnostic`.
+
+Do not modify the existing `run()` or `spawn_next_worker()` paths.
+
+#### CLI wiring
+
+In `apm/src/main.rs`, add to `AgentsCommand`:
+
+```rust
+/// Show the resolved agent, role, model, and manifest for a ticket
+Resolve {
+    /// Ticket ID or unambiguous prefix
+    ticket_id: String,
+    /// Emit JSON instead of the human-readable table
+    #[arg(long)]
+    json: bool,
+}
+```
+
+Add a dispatch arm routing to `cmd::agents::run_resolve(&root, &ticket_id, json)`.
+
+#### Output format
+
+**Human-readable**: Two-column aligned table. Left column is the field label (padded to a fixed width), right column is the value followed by the provenance source in parentheses. Use `—` for absent values. Example:
+
+```
+Agent assignment for abc123 (state: ready):
+  agent          claude         (workflow.toml: ready → in_progress)
+  role           coder          (workflow.toml: ready → in_progress)
+  model          sonnet         (.apm/agents/claude/coder.toml)
+  container      —              (workers config)
+  manifest       .apm/agents/claude/coder.toml  [present]
+  env            (none)
+  keychain       (none)
+```
+
+When env is non-empty, list each key on its own indented line with its source. When `dispatchable = false`, prepend a note line: `  note: state "<X>" has no worker dispatch; showing resolution for "<Y> → <Z>"`.
+
+**JSON**: Flat object. Provenance is in `<field>_source` sibling keys. Boolean `dispatchable` and `manifest_present` are top-level fields. Emit env as an array of `{key, value, source}` objects.
+
+#### Tests
+
+Unit tests inline in `apm-core/src/start.rs`:
+
+- **Happy path**: build a `Config` with `workers.default = "claude/coder"`, write `.apm/agents/claude/coder.toml` with `model = "sonnet"`, create a synthetic ticket in a state with a `command:start` transition. Assert `agent = "claude"`, `role = "coder"`, `model = Some("sonnet")`, `manifest_present = true`, `agent_source` names the workers.default layer, `model_source` names the manifest path.
+- **Override test**: same setup plus `frontmatter.agent_overrides = {"claude/coder": "mock-happy"}`. Assert `agent = "mock-happy"` and `agent_source` identifies `agent_overrides` with the matched key `"claude/coder"`.
+- **Manifest absent**: no `.apm/agents/claude/coder.toml`. Assert `model = None`, `manifest_present = false`, `agent_source` and `role_source` trace back to `workers.default`.
+- **Non-dispatchable**: ticket in a state with no `command:start` transition. Assert `dispatchable = false` and `resolved_from_state` differs from `ticket_state`.
+
+Integration tests in `apm/tests/e2e.rs` (temp git repo, default workflow):
+
+- Run `apm agents resolve <id>` on a valid ticket; assert stdout contains `agent`, `role`, and `manifest` lines.
+- Run `apm agents resolve <id> --json`; assert output parses as JSON and contains the keys `agent`, `role`, `model`, `dispatchable`.
 
 ### Open questions
 
