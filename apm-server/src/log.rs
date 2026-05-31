@@ -79,7 +79,7 @@ pub async fn stream_handler(State(state): State<Arc<AppState>>) -> Response {
                 if line.is_empty() {
                     continue;
                 }
-                if tx.send(Ok(Event::default().data(line.to_string()))).await.is_err() {
+                if tx.send(Ok(Event::default().data(line))).await.is_err() {
                     return;
                 }
             }

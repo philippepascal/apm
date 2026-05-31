@@ -276,12 +276,12 @@ pub fn run_show(root: &std::path::Path, id_arg: &str, no_aggressive: bool) -> an
 
     println!();
     println!(
-        "{:<id_w$}  {:<state_w$}  {:<title_w$}  {}",
-        "ID", "State", "Title", "Depends on"
+        "{:<id_w$}  {:<state_w$}  {:<title_w$}  Depends on",
+        "ID", "State", "Title"
     );
     println!(
-        "{:-<id_w$}  {:-<state_w$}  {:-<title_w$}  {}",
-        "", "", "", "----------"
+        "{:-<id_w$}  {:-<state_w$}  {:-<title_w$}  ----------",
+        "", "", ""
     );
 
     for t in &epic_tickets {
