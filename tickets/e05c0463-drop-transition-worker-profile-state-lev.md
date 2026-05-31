@@ -146,7 +146,7 @@ Add to `apm-core/src/start.rs` test block:
 
 - [x] Add a note acknowledging this ticket assumes 28ac0f43 has landed and merged. The worker should rebase their branch onto current main before starting implementation. Pseudocode and references to state.worker_profile in this ticket assume the field already exists on StateConfig.
 - [x] Pin the exact location of the parse-error wrapping site: which of the two parse sites in config.rs (config.toml around line 686 vs workflow.toml around line 693) receives the friendly migration-pointing error message. Specify the exact wrapping pattern (anyhow::Context or thiserror) and the message text.
-- [ ] Specify whether derive_transition_role in instructions.rs is deleted as part of this ticket or left for a later cleanup. If 28ac0f43 has already migrated the instructions filter to use state.worker_profile, derive_transition_role has no callers and should be deleted here. Otherwise, state the criteria for keeping it.
+- [x] Specify whether derive_transition_role in instructions.rs is deleted as part of this ticket or left for a later cleanup. If 28ac0f43 has already migrated the instructions filter to use state.worker_profile, derive_transition_role has no callers and should be deleted here. Otherwise, state the criteria for keeping it.
 
 ### Code review
 
