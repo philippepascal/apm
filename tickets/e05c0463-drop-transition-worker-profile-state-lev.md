@@ -37,7 +37,10 @@ This ticket removes `worker_profile` from `TransitionConfig` entirely, adds `#[s
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Removing the built-in `"claude/coder"` fallback (covered by the later ticket: mandatory workers.default)
+- Workflow transition corrections or reordering
+- Validate rules for state.worker_profile format
+- Any changes to the `workers.default` field behaviour
 
 ### Approach
 
