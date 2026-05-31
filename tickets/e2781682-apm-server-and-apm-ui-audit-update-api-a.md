@@ -25,7 +25,14 @@ The audit of the remaining surfaces found no other breaking changes. The `apm-se
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `cargo test -p apm-server` passes with the updated fixture
+- [ ] `MERGE_FAILED_WORKFLOW_CONFIG` in `apm-server/src/main.rs` contains no `worker_profile` key in any `[[workflow.states.transitions]]` block
+- [ ] `MERGE_FAILED_WORKFLOW_CONFIG` contains a `[workers]` section with a non-empty `default` value
+- [ ] `MERGE_FAILED_WORKFLOW_CONFIG` contains no `merge_failed → in_progress` transition
+- [ ] `get_ticket_recovery_options_populated` test finds a `retry_merge` option pointing to `implemented`
+- [ ] `list_tickets_merge_failure_state_ids` test still identifies `merge_failed` in `merge_failure_state_ids` and excludes `in_progress`
+- [ ] No field named `worker_profile` appears in any `#[derive(serde::Serialize)]` struct in `apm-server/src/models.rs` or `apm-server/src/handlers/workflow.rs`
+- [ ] No TypeScript `interface` or `type` in `apm-ui/src/` contains a field named `worker_profile` or a transition-level `role`
 
 ### Out of scope
 
