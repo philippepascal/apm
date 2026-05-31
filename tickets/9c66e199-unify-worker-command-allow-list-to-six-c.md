@@ -1,7 +1,7 @@
 +++
 id = "9c66e199"
 title = "Unify worker command allow-list to six commands; remove per-role lists"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c66e199-unify-worker-command-allow-list-to-six-c"
 created_at = "2026-05-31T02:57:57.400665Z"
-updated_at = "2026-05-31T02:57:57.400665Z"
+updated_at = "2026-05-31T07:04:40.561120Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
@@ -99,3 +99,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-31T02:57Z | — | new | philippepascal |
+| 2026-05-31T07:04Z | new | groomed | philippepascal |
