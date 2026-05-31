@@ -48,9 +48,23 @@ This ticket assumes 9c66e199 has landed on the target branch (`epic/9c3c4c20-…
 
 #### 1. Add `WORKER_COMMANDS` const — `apm-core/src/instructions.rs`
 
-Add a `pub(crate)` const immediately after the existing `static` declarations (around line 88):
+This ticket defines a separate const from 9c66e199's `WORKER_COMMAND_ALLOWLIST`. The two consts serve different purposes and must coexist:
+
+- `WORKER_COMMAND_ALLOWLIST: &[&str]` (landed by 9c66e199) — used by `role_command_allowlist` to filter the CLI-extracted command list at runtime.
+- `WORKER_COMMANDS: &[(&str, &str)]` (this ticket) — used by `build_system_prompt` to render the Command Reference when no CLI is present.
+
+Both consts are `pub(crate)` in `instructions.rs`. The six command names in `WORKER_COMMANDS` must exactly match those in `WORKER_COMMAND_ALLOWLIST`. A comment in each cross-references the other. No merge into a single const is attempted because the two types (`&[&str]` vs `&[(&str, &str)]`) serve different call sites and a `const fn` bridge is not worth the complexity.
+
+Descriptions are purpose-built for agent consumption and are **not** synced from clap `///` doc comments. `apm-core` carries no clap dependency and should not grow one. If a subcommand's fundamental purpose changes, update both `WORKER_COMMANDS` here and the clap string in `apm/src/main.rs` in the same commit. A comment in the const documents this rule.
+
+Add `WORKER_COMMANDS` immediately after `WORKER_COMMAND_ALLOWLIST` (or after the existing `static` declarations if 9c66e199 has not yet landed):
 
 ```rust
+/// Name + description tuples for the six worker-permitted `apm` commands.
+/// Names must stay in sync with WORKER_COMMAND_ALLOWLIST (ticket 9c66e199).
+/// Descriptions are purpose-built for agent consumption; they are NOT copied
+/// from clap `///` doc comments. If a subcommand's fundamental purpose changes,
+/// update both this const and the clap string in apm/src/main.rs in the same commit.
 pub(crate) const WORKER_COMMANDS: &[(&str, &str)] = &[
     ("instructions", "Output APM system knowledge for agents: state machine, ticket format, shell discipline, session identity, and command reference"),
     ("new",          "Create a new ticket"),
@@ -61,7 +75,7 @@ pub(crate) const WORKER_COMMANDS: &[(&str, &str)] = &[
 ];
 ```
 
-The descriptions are sourced verbatim from the clap `///` doc comments in `apm/src/main.rs` for the six matching subcommands. Alphabetical order matches `extract_commands`'s sort, so the CLI and worker-spawn paths produce identical sections.
+Alphabetical order matches `extract_commands`'s sort so the CLI and worker-spawn paths produce sections with identical ordering.
 
 #### 2. Pass the const in `build_system_prompt` — `apm-core/src/start.rs`
 
@@ -81,23 +95,30 @@ let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
 let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &cmds)?;
 ```
 
-No signature change to `build_system_prompt` or `generate` is required.
+No signature change to `build_system_prompt` or `generate` is required. All production call sites reach this path (lines 488, 656, 829 in `start.rs` and lines 104, 147, 207 in `prompt.rs`), so fixing this one call site fixes all of them.
 
 #### 3. Update layer-composition tests — `apm-core/src/start.rs`
 
-Four tests construct an expected string by calling `crate::instructions::generate(p, Some("coder"), None, &[])` and asserting `result == expected`. After step 2 they will diverge. Fix each by replacing `&[]` with the converted const:
+Five tests call `crate::instructions::generate(p, Some("coder"), None, &[])` to build an expected string that is compared against `build_system_prompt` output. After step 2 the production call passes `WORKER_COMMANDS` while these tests pass `&[]`, causing them to diverge.
+
+Affected call sites (all in the `start.rs` test module):
+- Line 1223 — `agents_instructions_prepended_with_blank_line`
+- Line 1238 — `agents_instructions_none_is_no_op`
+- Line 1253 — `agents_instructions_empty_path_is_no_op`
+- Line 1284 — `agents_instructions_trailing_whitespace_trimmed`
+- Line 1304 — `project_file_in_layer2`
+
+For each, replace `&[]` with:
 
 ```rust
 let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
     .iter()
     .map(|(n, a)| (n.to_string(), a.to_string()))
     .collect();
-let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+// pass &cmds where &[] was used
 ```
 
-Affected tests: `agents_instructions_prepended_with_blank_line`, `agents_instructions_none_is_no_op`, `agents_instructions_empty_path_is_no_op`, `agents_instructions_trailing_whitespace_trimmed`.
-
-Also check `project_file_in_layer2` and any other tests that call `generate` with `&[]` inside a `build_system_prompt` comparison; apply the same fix.
+Three call sites in `instructions.rs` tests (lines 467, 506, 685) pass `&[]` intentionally — they test ID substitution, state-machine table format, and live-config filtering respectively, none of which depend on the command list. Leave them unchanged.
 
 #### 4. Add a new test — `apm-core/src/start.rs`
 
@@ -116,11 +137,11 @@ fn build_system_prompt_contains_command_reference() {
 
 #### 5. Verify no changes needed to the CLI path
 
-`apm/src/cmd/instructions.rs` extracts all clap commands, `role_command_allowlist` (after 9c66e199) filters to the six-command list. The output will match what `build_system_prompt` now produces via `WORKER_COMMANDS`. No edits required.
+`apm/src/cmd/instructions.rs` already passes a non-empty `commands` vec extracted from clap. After 9c66e199 lands, `role_command_allowlist` filters that list to the same six commands whose names appear in `WORKER_COMMANDS`. No edits required.
 
 #### 6. `instructions.rs` test hygiene
 
-If 9c66e199's approach for `sample_commands()` (adding `"instructions"`) has not yet landed, add it here so tests that assert on the six-command output pass:
+If 9c66e199's `sample_commands()` update (adding `"instructions"`) has not yet landed, add it here so assertions on the six-command set pass:
 
 ```rust
 ("instructions".to_string(), "Output APM system knowledge…".to_string()),
