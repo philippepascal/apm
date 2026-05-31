@@ -95,8 +95,9 @@ satisfies_deps = "spec"
   outcome = "cancelled"
 
 [[workflow.states]]
-id    = "in_design"
-label = "In Design"
+id             = "in_design"
+label          = "In Design"
+worker_profile = "claude/spec-writer"
 
   [[workflow.states.transitions]]
   to      = "specd"
@@ -150,6 +151,7 @@ satisfies_deps = "spec"
 id             = "in_progress"
 label          = "In Progress"
 satisfies_deps = "spec"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"

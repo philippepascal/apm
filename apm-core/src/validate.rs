@@ -146,6 +146,15 @@ pub fn configured_agent_names(config: &Config) -> HashSet<String> {
         .and_then(|s| s.split_once('/').map(|(a, _)| a.to_string()))
         .unwrap_or_else(|| "claude".to_string());
     names.insert(primary);
+    // Walk state-level worker_profile fields
+    for state in &config.workflow.states {
+        if let Some(ref wp) = state.worker_profile {
+            if let Some((agent, _)) = wp.split_once('/') {
+                names.insert(agent.to_string());
+            }
+        }
+    }
+    // Walk transition-level worker_profile fields
     for state in &config.workflow.states {
         for transition in &state.transitions {
             if let Some(ref wp) = transition.worker_profile {

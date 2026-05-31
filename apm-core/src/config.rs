@@ -316,6 +316,11 @@ pub struct StateConfig {
     /// Optional string tag that must appear in a dependency's `satisfies_deps` for it to count as satisfied.
     #[serde(default)]
     pub dep_requires: Option<String>,
+    /// Worker profile for agents that operate in this state. Format: `"agent/role"`
+    /// (e.g. `"claude/coder"`). When set, dispatch resolution prefers this over
+    /// transition-level `worker_profile`.
+    #[serde(default)]
+    pub worker_profile: Option<String>,
     /// List of outgoing transitions from this state.
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
@@ -661,17 +666,28 @@ impl Config {
     }
 
     pub fn implementation_state_ids(&self) -> std::collections::HashSet<String> {
-        self.workflow.states.iter()
-            .flat_map(|s| s.transitions.iter())
-            .filter(|t| {
+        let mut ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+        // State-level path: states with a non-spec-writer worker_profile
+        for state in &self.workflow.states {
+            if let Some(ref wp) = state.worker_profile {
+                if !wp.ends_with("/spec-writer") {
+                    ids.insert(state.id.clone());
+                }
+            }
+        }
+        // Transition-based path (existing logic, additive)
+        for state in &self.workflow.states {
+            for t in &state.transitions {
                 let is_coder_start = t.trigger == "command:start"
                     && t.worker_profile.as_deref().is_none_or(|p| !p.ends_with("/spec-writer"));
                 let is_merge_completion = matches!(t.completion,
                     CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge);
-                is_coder_start || is_merge_completion
-            })
-            .map(|t| t.to.clone())
-            .collect()
+                if is_coder_start || is_merge_completion {
+                    ids.insert(t.to.clone());
+                }
+            }
+        }
+        ids
     }
 
     pub fn find_section(&self, name: &str) -> Option<&TicketSection> {
@@ -1396,6 +1412,55 @@ label = "Ready"
             c2.implementation_state_ids(),
             "implementation_state_ids must be invariant to state list order"
         );
+    }
+
+    #[test]
+    fn state_worker_profile_parses() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let state = config.workflow.states.iter().find(|s| s.id == "in_progress").unwrap();
+        assert_eq!(state.worker_profile.as_deref(), Some("claude/coder"));
+    }
+
+    #[test]
+    fn implementation_state_ids_state_worker_profile_preferred() {
+        // A workflow where in_progress has state-level worker_profile = "claude/coder"
+        // but no command:start transition — must still appear in implementation_state_ids.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let ids = config.implementation_state_ids();
+        assert!(ids.contains(&"in_progress".to_string()),
+            "in_progress must appear when state has worker_profile = claude/coder; got: {:?}", ids);
     }
 
     #[test]
