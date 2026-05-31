@@ -1,7 +1,7 @@
 +++
 id = "8332cb09"
 title = "build_system_prompt: thread CLI command list into Layer 3 of worker prompt"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8332cb09-build-system-prompt-thread-cli-command-l"
 created_at = "2026-05-31T02:58:36.745209Z"
-updated_at = "2026-05-31T19:36:06.381487Z"
+updated_at = "2026-05-31T20:07:48.371310Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["9c66e199"]
@@ -147,3 +147,4 @@ If 9c66e199's approach for `sample_commands()` (adding `"instructions"`) has not
 | 2026-05-31T07:41Z | groomed | in_design | philippepascal |
 | 2026-05-31T07:46Z | in_design | specd | claude |
 | 2026-05-31T19:36Z | specd | ammend | philippepascal |
+| 2026-05-31T20:07Z | ammend | in_design | philippepascal |
