@@ -207,6 +207,7 @@ After all changes: `cargo test --workspace` must pass. The `actionable_states_fo
 
 ### Amendment requests
 
+- [ ] Add AC verifying that supervisor-actionable derivation works for states with no outgoing command:start. Today in_design has no outgoing command:start; under the new derivation logic this state should derive as supervisor-actionable. Add a behavioural test covering this case.
 
 ### Code review
 
