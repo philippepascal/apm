@@ -34,7 +34,10 @@ The fix is to make `[workers].default` mandatory in `config.toml`: change its ty
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Schema changes to `apm.toml` or other config sections (covered by earlier tickets in this epic).
+- Changes to the worker command list or help text.
+- Migrating existing user `config.toml` files that lack `[workers].default` — migration path is documented in the problem statement: run `apm init` or add the line manually.
+- Removing `DEFAULT_CODER_DEFAULT` and related `include_str!` constants from `start.rs` — they serve `resolve_builtin_instructions()`, which provides default role instruction files and is unrelated to the `workers.default` cascade.
 
 ### Approach
 
