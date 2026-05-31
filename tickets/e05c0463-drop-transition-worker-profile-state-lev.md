@@ -25,7 +25,15 @@ This ticket removes `worker_profile` from `TransitionConfig` entirely, adds `#[s
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] A workflow.toml with `worker_profile` under any `[[workflow.states.transitions]]` block fails to parse
+- [ ] The parse error message names `worker_profile` and tells the user to move it to the state block
+- [ ] A workflow.toml with `worker_profile` only at the state level parses correctly
+- [ ] `apm start` resolves the worker profile via `state.worker_profile` → `workers.default` → built-in; no transition-level lookup occurs
+- [ ] `configured_agent_names` collects agent names from state-level `worker_profile` only
+- [ ] `format_live_state_machine` filters transitions by role using only state-level `worker_profile`; `derive_transition_role` is deleted
+- [ ] `apm-core/src/default/workflow.toml` contains no `worker_profile` keys under any transition block
+- [ ] `.apm/workflow.toml` contains no `worker_profile` keys under any transition block
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
