@@ -108,6 +108,7 @@ Add to `apm-core/src/start.rs` test block:
 
 ### Amendment requests
 
+- [ ] Add a note acknowledging this ticket assumes 28ac0f43 has landed and merged. The worker should rebase their branch onto current main before starting implementation. Pseudocode and references to state.worker_profile in this ticket assume the field already exists on StateConfig.
 
 ### Code review
 
