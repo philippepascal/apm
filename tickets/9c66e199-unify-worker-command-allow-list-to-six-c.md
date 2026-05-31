@@ -45,7 +45,60 @@ The fix is to replace the per-role match arms with a single `WORKER_COMMAND_ALLO
 
 ### Approach
 
-How the implementation will work.
+#### `apm-core/src/instructions.rs`
+
+1. Add a constant after the existing `static` declarations near the top of the file:
+   ```rust
+   const WORKER_COMMAND_ALLOWLIST: &[&str] = &["show", "state", "spec", "set", "new", "instructions"];
+   ```
+
+2. Replace the body of `role_command_allowlist` — keep the signature unchanged so the call site in `command_reference_body` requires no edits:
+   ```rust
+   fn role_command_allowlist(_role: &str) -> Option<&'static [&'static str]> {
+       Some(WORKER_COMMAND_ALLOWLIST)
+   }
+   ```
+
+3. Update `sample_commands()` in the test module to include `("instructions", "Print APM system knowledge".to_string())` so assertions on that command entry are possible.
+
+4. Rewrite the three tests whose assertions no longer hold:
+   - `generate_worker_scopes_commands`: assert the six unified commands are present; assert `apm start`, `apm sync`, `apm prompt` are absent.
+   - `generate_spec_writer_scopes_commands`: assert the same six commands; assert `apm start` is absent.
+   - `generate_unknown_role_falls_back_to_full_commands`: rename and rewrite — unknown roles now receive the allowlist, not the full set; assert the six commands appear and `apm prompt` does not.
+
+#### `apm-core/src/default/agents/claude/apm.coder.md`
+
+Replace the "Permitted `apm` commands" block (currently four bullets) with:
+
+```
+**Permitted `apm` commands:**
+- `apm show` — read a ticket
+- `apm state` — transition ticket state
+- `apm spec` — read or write spec sections
+- `apm set` — set a field on a ticket
+- `apm new` — file a side-note ticket
+- `apm instructions` — load APM system knowledge
+```
+
+#### `apm-core/src/default/agents/claude/apm.spec-writer.md`
+
+The file has no "Permitted `apm` commands" section. Add a `## Scope limits` section immediately before `## How to save spec sections`:
+
+```markdown
+## Scope limits
+
+**Permitted `apm` commands:**
+- `apm show` — read a ticket
+- `apm state` — transition ticket state
+- `apm spec` — read or write spec sections
+- `apm set` — set a field on a ticket
+- `apm new` — file a side-note ticket
+- `apm instructions` — load APM system knowledge
+```
+
+#### `.apm/agents/claude/apm.coder.md` and `.apm/agents/claude/apm.spec-writer.md`
+
+Apply the same edits as above to the project copies. These files mirror the defaults and must stay in sync.
 
 ### Open questions
 
