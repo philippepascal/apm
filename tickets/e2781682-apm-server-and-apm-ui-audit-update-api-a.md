@@ -36,7 +36,13 @@ The audit of the remaining surfaces found no other breaking changes. The `apm-se
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Schema struct changes in `apm-core` — owned by e05c0463 (`TransitionConfig.worker_profile` removal, `StateConfig.worker_profile` addition) and 4d20ba2f (`WorkersConfig.default` type change)
+- Updating `apm-core/src/recovery.rs` `classify_recovery_options` to look up state-level `worker_profile` instead of transition-level — this is a compile-time consequence of e05c0463 and is fixed there
+- Removing `merge_failed → in_progress` from `.apm/workflow.toml` and `apm-core/src/default/workflow.toml` — owned by 071886fc
+- Test fixture changes in `apm-core/src/recovery.rs` (`DEFAULT_WF`, `shuffled`, `renamed` have `worker_profile` on transitions) — owned by e05c0463
+- Help text and documentation sweep — a5cffb01
+- Adding `worker_profile` to the `StateNode` response in `handlers/workflow.rs` — the UI workflow graph does not consume it; this is a new feature, not a fix
+- New UI features or visual changes
 
 ### Approach
 
