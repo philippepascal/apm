@@ -26,7 +26,7 @@ This ticket adds `state.worker_profile: Option<String>` to `StateConfig` and tea
 ### Acceptance criteria
 
 - [x] A `workflow.toml` with `worker_profile = "claude/coder"` on a state parses without error; the field is accessible on `StateConfig.worker_profile`.
-- [ ] `apm-core/src/default/workflow.toml` has `worker_profile = "claude/spec-writer"` on `in_design` and `worker_profile = "claude/coder"` on `in_progress`.
+- [x] `apm-core/src/default/workflow.toml` has `worker_profile = "claude/spec-writer"` on `in_design` and `worker_profile = "claude/coder"` on `in_progress`.
 - [x] `.apm/workflow.toml` has the same two additions.
 - [ ] Dispatching from a state whose **destination** state carries `state.worker_profile` resolves to that profile — even when `transition.worker_profile` is absent on the firing transition.
 - [ ] When both `state.worker_profile` (on the destination state) and `transition.worker_profile` (on the firing transition) are set, the state-level value wins.
