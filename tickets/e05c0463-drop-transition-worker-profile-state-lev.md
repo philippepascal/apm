@@ -1,7 +1,7 @@
 +++
 id = "e05c0463"
 title = "Drop transition.worker_profile (state-level is the only source)"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e05c0463-drop-transition-worker-profile-state-lev"
 created_at = "2026-05-31T02:57:03.550888Z"
-updated_at = "2026-05-31T20:04:09.280070Z"
+updated_at = "2026-05-31T20:07:36.091542Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["28ac0f43"]
@@ -161,3 +161,4 @@ Add to `apm-core/src/start.rs` test block:
 | 2026-05-31T07:20Z | in_design | specd | claude |
 | 2026-05-31T19:35Z | specd | ammend | philippepascal |
 | 2026-05-31T20:04Z | ammend | in_design | philippepascal |
+| 2026-05-31T20:07Z | in_design | specd | claude |
