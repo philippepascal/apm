@@ -49,7 +49,54 @@ The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain thr
 
 ### Approach
 
-How the implementation will work.
+#### workflow.toml changes (both files)
+
+Apply the same three edits to `apm-core/src/default/workflow.toml` and `.apm/workflow.toml`:
+
+1. **Remove** the `[[workflow.states.transitions]]` block under the `in_design` state with `to = "ammend"`.
+
+2. **Remove** the `[[workflow.states.transitions]]` block under the `merge_failed` state with `to = "in_progress"`.
+
+3. Under the `ammend` state, replace the `[[workflow.states.transitions]]` block that has `to = "in_design"` / `trigger = "command:start"` / `worker_profile = "claude/spec-writer"` with:
+   ```toml
+   [[workflow.states.transitions]]
+   to      = "groomed"
+   trigger = "manual"
+   outcome = "needs_input"
+   ```
+
+4. On the `ammend` state header, change `actionable = ["agent"]` to `actionable = ["supervisor"]`. Removing the only `command:start` exit means `apm start` will no longer dispatch from `ammend`; keeping it `agent`-actionable would produce misleading `apm list` output.
+
+#### instructions.rs static table
+
+In `apm-core/src/instructions.rs`, in `STATIC_STATE_MACHINE`, change:
+```
+| ammend | in_design | apm state <id> in_design |
+```
+to:
+```
+| ammend | groomed | apm state <id> groomed |
+```
+
+#### Agent prompt updates
+
+**`apm-core/src/default/agents/claude/apm.spec-writer.md`** and **`.apm/agents/claude/apm.spec-writer.md`** (same content in both):
+
+In the "Handling `ammend` tickets" section:
+- Remove step 2 (`apm state <id> in_design — claim the ticket…`). The agent is already in `in_design` when dispatched; the supervisor moved the ticket from `ammend → groomed` first, then `apm start` dispatched the agent via `groomed → in_design`.
+- Renumber the remaining steps.
+- Add a note: "If you are in `in_design` and cannot proceed, transition to `question`. Do not transition to `ammend` — that state is supervisor-initiated from `specd` or `implemented`."
+
+**`.apm/agents/pi/apm.spec-writer.md`**:
+
+In the "Ammend tickets" section, the opening condition says "If the ticket starts in state `ammend` instead of `in_design`". Replace this with: "If `### Amendment requests` has unchecked items, the ticket is an amendment. You are already in `in_design`." Remove any instructions to claim the ticket from `ammend` (there are none in the pi prompt, so this is a wording fix only).
+
+#### Test changes (`apm/tests/integration.rs`)
+
+- **Delete** `spawn_ammend_ticket_transitions_to_in_design` (lines ~2079–2093). It verifies that `apm start` picks up an `ammend` ticket via `command:start`, which no longer exists.
+- **Add** `ammend_to_groomed_succeeds`: create a ticket in `ammend` state via direct branch write, call `apm::cmd::state::run(p, &id, "groomed", false, false)`, assert the resulting ticket content contains `state = "groomed"`.
+- **Delete** `merge_failed_to_in_progress_succeeds` (lines ~6591–6616).
+- **Add** `merge_failed_to_in_progress_rejected`: create a ticket in `merge_failed` state, call `apm::cmd::state::run(p, &id, "in_progress", false, false)`, assert it returns `Err`.
 
 ### Open questions
 
