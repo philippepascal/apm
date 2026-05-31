@@ -43,7 +43,7 @@ model = "sonnet"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), true, "expected migration to occur");
+    assert!(result.unwrap(), "expected migration to occur");
 
     let written = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     let parsed: toml::Value = toml::from_str(&written).unwrap();
@@ -75,7 +75,7 @@ model = "opus"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), false, "expected no migration for non-claude command");
+    assert!(!result.unwrap(), "expected no migration for non-claude command");
 
     let after = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     assert_eq!(original, after, "file must be unchanged when command is not claude");
@@ -101,7 +101,7 @@ model = "opus"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), true, "expected migration to remove worker_profiles");
+    assert!(result.unwrap(), "expected migration to remove worker_profiles");
 
     let written = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     let parsed: toml::Value = toml::from_str(&written).unwrap();
@@ -127,7 +127,7 @@ model = "opus"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), true, "expected migration to occur");
+    assert!(result.unwrap(), "expected migration to occur");
 
     let written = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     let parsed: toml::Value = toml::from_str(&written).unwrap();
@@ -156,7 +156,7 @@ model = "sonnet"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), false, "expected no-op on already-migrated config");
+    assert!(!result.unwrap(), "expected no-op on already-migrated config");
 
     let after = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     assert_eq!(original, after, "file must be byte-identical for already-migrated config");
@@ -182,7 +182,7 @@ model = "sonnet"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), true, "expected migration to occur");
+    assert!(result.unwrap(), "expected migration to occur");
 
     let written = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     assert!(
@@ -212,7 +212,7 @@ model = "opus"
 
     let result = apm::cmd::validate::apply_config_migration_fixes(dir.path());
     assert!(result.is_ok(), "expected Ok, got {result:?}");
-    assert_eq!(result.unwrap(), true, "expected migration to occur");
+    assert!(result.unwrap(), "expected migration to occur");
 
     let written = fs::read_to_string(dir.path().join(".apm/config.toml")).unwrap();
     let parsed: toml::Value = toml::from_str(&written).unwrap();
@@ -241,7 +241,7 @@ model = "sonnet"
     // apply_config_migration_fixes internally calls validate_config and bails if it fails.
     // A successful Ok(true) here means re-validation passed.
     assert!(result.is_ok(), "apply_config_migration_fixes should not error: {result:?}");
-    assert_eq!(result.unwrap(), true, "migration should have occurred");
+    assert!(result.unwrap(), "migration should have occurred");
 
     // Double-check by calling validate_config directly on the migrated config.
     let migrated = apm_core::config::Config::load(dir.path()).unwrap();
