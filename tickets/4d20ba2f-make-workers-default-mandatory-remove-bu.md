@@ -9,9 +9,10 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4d20ba2f-make-workers-default-mandatory-remove-bu"
 created_at = "2026-05-31T02:58:15.922691Z"
-updated_at = "2026-05-31T07:41:36.353160Z"
+updated_at = "2026-05-31T19:35:50.349619Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
+depends_on = ["e05c0463"]
 +++
 
 ## Spec
