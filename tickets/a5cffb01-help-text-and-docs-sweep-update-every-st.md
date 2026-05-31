@@ -94,7 +94,78 @@ REFERENCES:
 
 ### Approach
 
-How the implementation will work.
+This ticket runs after e05c0463, 9c66e199, and 4d20ba2f are merged into the epic branch.
+
+#### Phase 1 — Grep sweep
+
+Confirm scope before editing. Run these searches from the repo root:
+
+```
+grep -rn "shell discipline"          apm/src/ apm-core/src/
+grep -n  "Layer 1"                   apm/src/main.rs
+grep -n  "skipped:"                  apm/src/main.rs
+grep -rn "transition\.worker_profile" apm/src/ apm-core/src/ apm-server/src/
+grep -rn "derive_transition_role"    apm/src/ apm-core/src/
+```
+
+The last two should return zero hits if e05c0463 landed cleanly. Any remaining hits there are also in scope for this ticket.
+
+#### Phase 2 — File-by-file updates
+
+**`apm/src/main.rs` — `apm prompt` long_about (~lines 873–914)**
+
+Rewrite the SYSTEM PROMPT three-layer block to reflect the current order (role first, APM knowledge last):
+
+- Layer 1 — Role instructions (cascade: per-agent file → claude fallback → built-in → error)
+- Layer 2 — Project context (path at `[agents].project` in config; typically `.apm/project.md`; omitted if unset)
+- Layer 3 — APM system knowledge (`apm instructions`, dynamic, role-scoped): covers state machine, ticket format, session identity, and command reference
+
+Remove `"shell discipline,"` from the Layer 3 description.
+
+Rewrite the `--explain` example to match `format_provenance`'s current output (see `apm-core/src/prompt.rs:230–252`). The current format is:
+
+```
+System prompt for claude/worker — 3 layers composed:
+
+  1  .apm/agents/claude/apm.worker.md
+  2  .apm/project.md
+  3  apm instructions (dynamic)
+```
+
+Fallback lines appear inline under layer 1 (`(fallback — <path> not found)`), not as a separate `skipped:` entry.
+
+Update the "Without a ticket ID" paragraph: replace "layer 3 levels 1 and 2 are skipped" with wording that uses correct layer numbers (the cascade is within Layer 1; layers 2 and 3 are always included when --agent and --role are both provided).
+
+**`apm/src/main.rs` — `apm instructions` about (line 948)**
+
+Remove `"shell discipline, "`:
+```
+Before: "state machine, ticket format, shell discipline, session identity, and command reference"
+After:  "state machine, ticket format, session identity, and command reference"
+```
+
+**`apm-core/src/default/agents/claude/apm.spec-writer.md` line 3**
+
+```
+Before: This file applies when you pick up a ticket in **`new`** or **`ammend`** state.
+After:  This file applies when you pick up a ticket in **`groomed`** or **`ammend`** state.
+```
+
+Spec-writers enter via `groomed → in_design`; there is no `new → in_design` transition for spec-writers.
+
+**`README.md` line 295**
+
+Remove or rewrite the `agents.md` table row. That file no longer exists as a single document; shell discipline now lives in each role-specific instruction file (`.apm/agents/claude/apm.<role>.md`). Update the table to describe the role file structure accurately, or drop the row if the table already documents the role files elsewhere.
+
+#### Phase 3 — Validation
+
+```bash
+cargo build --workspace
+cargo test --workspace
+apm instructions | grep "shell discipline"    # must print nothing
+apm prompt --help | grep "Layer 1 — APM"     # must print nothing
+apm prompt --help | grep "skipped:"          # must print nothing
+```
 
 ### Open questions
 
