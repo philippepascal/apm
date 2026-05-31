@@ -104,6 +104,7 @@ In the "Ammend tickets" section, the opening condition says "If the ticket start
 ### Amendment requests
 
 - [ ] Provide concrete test code patterns for the new and replaced tests. Specify how to construct an ammend ticket fixture in tests, mirroring how existing merge_failed tests build their fixtures. Specify which error type or message to assert for the rejected merge_failed to in_progress transition path.
+- [ ] Add an explicit step listing every file beyond workflow.toml that references the removed transitions: apm-core/src/instructions.rs static state machine table around line 22 (shows ammend to in_design), apm-core/src/default/agents/claude/apm.spec-writer.md around lines 205 to 209, .apm/agents/pi/apm.spec-writer.md around line 158. Each file needs its specific update.
 
 ### Code review
 
