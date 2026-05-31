@@ -37,7 +37,11 @@ The fix is to replace the per-role match arms with a single `WORKER_COMMAND_ALLO
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Workflow schema changes (covered by other tickets in the epic)
+- The `build_system_prompt` empty-commands bug (separate ticket)
+- Help text sweep for other `apm` subcommands (separate ticket)
+- The hardcoded `"claude/coder"` fallback in `start.rs` (separate ticket covering `workers.default`)
+- Changing which transitions appear in the State Machine section — unrelated to command filtering
 
 ### Approach
 
