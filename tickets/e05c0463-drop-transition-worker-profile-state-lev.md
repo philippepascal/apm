@@ -1,7 +1,7 @@
 +++
 id = "e05c0463"
 title = "Drop transition.worker_profile (state-level is the only source)"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e05c0463-drop-transition-worker-profile-state-lev"
 created_at = "2026-05-31T02:57:03.550888Z"
-updated_at = "2026-05-31T07:04:32.935016Z"
+updated_at = "2026-05-31T07:16:34.260985Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["28ac0f43"]
@@ -88,3 +88,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-31T02:57Z | — | new | philippepascal |
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
+| 2026-05-31T07:16Z | groomed | in_design | philippepascal |
