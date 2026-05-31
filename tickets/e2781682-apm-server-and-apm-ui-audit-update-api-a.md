@@ -33,6 +33,7 @@ The audit of the remaining surfaces found no other breaking changes. The `apm-se
 - [ ] `list_tickets_merge_failure_state_ids` test still identifies `merge_failed` in `merge_failure_state_ids` and excludes `in_progress`
 - [ ] No field named `worker_profile` appears in any `#[derive(serde::Serialize)]` struct in `apm-server/src/models.rs` or `apm-server/src/handlers/workflow.rs`
 - [ ] No TypeScript `interface` or `type` in `apm-ui/src/` contains a field named `worker_profile` or a transition-level `role`
+- [ ] get_ticket_recovery_options_populated finds exactly one recovery option (kind = "retry_merge", to = "implemented"); no return_to_worker entry is present
 
 ### Out of scope
 
