@@ -2,14 +2,14 @@
 id = "52d2a814"
 title = "apm validate: enforce trigger-uniqueness and worker_profile shape"
 state = "in_design"
-priority = 0
+priority = 5
 effort = 3
 risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/52d2a814-apm-validate-enforce-trigger-uniqueness-"
 created_at = "2026-05-31T02:57:37.160432Z"
-updated_at = "2026-05-31T07:32:46.304738Z"
+updated_at = "2026-05-31T07:33:09.411568Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["071886fc"]
