@@ -481,7 +481,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "in_progress"
@@ -491,7 +490,6 @@ worker_profile = "claude/coder"
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "implemented"
@@ -562,7 +560,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "in_progress"
@@ -572,7 +569,6 @@ worker_profile = "claude/coder"
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "implemented"
@@ -582,7 +578,6 @@ worker_profile = "claude/coder"
 [[workflow.states]]
 id = "implemented"
 label = "Implemented"
-actionable = ["supervisor"]
 
 [[workflow.states.transitions]]
 to = "closed"
@@ -591,7 +586,6 @@ trigger = "approve"
 [[workflow.states]]
 id = "groomed"
 label = "Groomed"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "in_design"
@@ -601,7 +595,6 @@ worker_profile = "claude/spec-writer"
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "specd"
@@ -611,7 +604,6 @@ worker_profile = "claude/spec-writer"
 [[workflow.states]]
 id = "specd"
 label = "Specd"
-actionable = ["supervisor"]
 
 [[workflow.states]]
 id = "closed"

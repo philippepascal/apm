@@ -680,7 +680,7 @@ fn validate_warnings_no_agents(config: &crate::config::Config, _root: &Path) -> 
             .collect();
 
     let agent_startable: Vec<&str> = config.workflow.states.iter()
-        .filter(|s| s.actionable.iter().any(|a| a == "agent" || a == "any"))
+        .filter(|s| s.transitions.iter().any(|t| t.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
 
@@ -1677,12 +1677,12 @@ name = "test"
 dir = "tickets"
 
 [[workflow.states]]
-id         = "start"
-label      = "Start"
-actionable = ["agent"]
+id    = "start"
+label = "Start"
 
 [[workflow.states.transitions]]
-to = "middle"
+to      = "middle"
+trigger = "command:start"
 
 [[workflow.states]]
 id    = "middle"
