@@ -27,7 +27,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 - [x] `StateConfig` has no `actionable` field; the struct compiles without it.
 - [x] `StateConfig` is annotated with `deny_unknown_fields`; parsing a `[[workflow.states]]` block that contains `actionable = ["agent"]` returns a TOML error.
 - [x] A workflow TOML with no `actionable` keys parses successfully and all states are accessible.
-- [ ] `Config::actionable_states_for("agent")` returns exactly the state IDs that have at least one outgoing transition with `trigger = "command:start"`.
+- [x] `Config::actionable_states_for("agent")` returns exactly the state IDs that have at least one outgoing transition with `trigger = "command:start"`.
 - [ ] `Config::actionable_states_for("supervisor")` returns exactly the non-terminal state IDs that have no `command:start` outgoing transition.
 - [ ] A unit test in `apm-core/src/config.rs` asserts that `actionable_states_for("supervisor")` includes `in_design` given a state with only manual outgoing transitions and `terminal` unset (defaulting to `false`).
 - [ ] `Config::actionable_states_for("engineer")` returns an empty vec.
