@@ -46,6 +46,7 @@ The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain thr
 - The `specd → in_design` stale row in the `STATIC_STATE_MACHINE` table (unrelated cleanup)
 - Help text or documentation sweep (separate ticket)
 - Any code changes — this is a pure content change to TOML and Markdown files
+- Changes to the `actionable` field: ticket f7340b57 drops the field entirely from `StateConfig` and removes all `actionable = [...]` lines from both workflow.toml files. No `actionable` change is needed in this ticket.
 
 ### Approach
 
