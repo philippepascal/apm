@@ -1,7 +1,7 @@
 +++
 id = "4d20ba2f"
 title = "Make [workers].default mandatory; remove built-in coder fallback"
-state = "ammend"
+state = "in_design"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/4d20ba2f-make-workers-default-mandatory-remove-bu"
 created_at = "2026-05-31T02:58:15.922691Z"
-updated_at = "2026-05-31T19:36:04.174456Z"
+updated_at = "2026-05-31T20:11:39.338134Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["e05c0463"]
@@ -156,3 +156,4 @@ Tests to update in `validate.rs`:
 | 2026-05-31T07:36Z | groomed | in_design | philippepascal |
 | 2026-05-31T07:41Z | in_design | specd | claude |
 | 2026-05-31T19:36Z | specd | ammend | philippepascal |
+| 2026-05-31T20:11Z | ammend | in_design | philippepascal |
