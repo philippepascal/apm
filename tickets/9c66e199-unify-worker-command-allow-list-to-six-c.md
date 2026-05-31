@@ -3,13 +3,13 @@ id = "9c66e199"
 title = "Unify worker command allow-list to six commands; remove per-role lists"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c66e199-unify-worker-command-allow-list-to-six-c"
 created_at = "2026-05-31T02:57:57.400665Z"
-updated_at = "2026-05-31T07:33:30.439351Z"
+updated_at = "2026-05-31T07:36:09.554850Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
