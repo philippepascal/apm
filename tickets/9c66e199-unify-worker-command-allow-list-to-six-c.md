@@ -26,7 +26,14 @@ The fix is to replace the per-role match arms with a single `WORKER_COMMAND_ALLO
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions --role coder` Command Reference lists exactly the six commands: show, state, spec, set, new, instructions
+- [ ] `apm instructions --role spec-writer` Command Reference lists the same six commands as coder
+- [ ] `apm instructions --role any-unknown-role` Command Reference lists the same six commands
+- [ ] `apm instructions` (no role) Command Reference remains unfiltered
+- [ ] The literal strings `"spec-writer"` and `"worker"` do not appear in the command-filtering logic of `instructions.rs`
+- [ ] `cargo test --workspace` passes with updated test assertions
+- [ ] `apm.coder.md` (default and project copy) Permitted commands section lists: show, state, spec, set, new, instructions
+- [ ] `apm.spec-writer.md` (default and project copy) Permitted commands section lists: show, state, spec, set, new, instructions
 
 ### Out of scope
 
