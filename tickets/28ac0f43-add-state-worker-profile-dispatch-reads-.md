@@ -240,6 +240,7 @@ Add dispatch tests (can be unit tests without a full git repo, using the `resolv
 ### Amendment requests
 
 - [ ] Fix the transition-label pseudocode in Approach section 3. The format string currently shows dest_state_id followed by tr.to, both of which equal the destination state, producing a nonsensical destination-arrow-destination label. The source state must be threaded into the helper or extracted from the calling context. Specify how — either pass source_state_id as a parameter, or have callers format the label themselves.
+- [ ] Specify the return type and lifetime for the new profile resolution helper. The static fallback 'claude/coder' is a &static str while values from config are owned Strings. Decide whether to return String for all paths, use Cow, or have callers handle the label formatting. Current spec is ambiguous about borrow semantics and may not compile as written.
 
 ### Code review
 
