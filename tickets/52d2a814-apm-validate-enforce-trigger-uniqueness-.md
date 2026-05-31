@@ -66,11 +66,16 @@ for each state:
     incoming[transition.to].push((state.id, transition.trigger))
 ```
 
-For each `(dest, sources)` pair where any entry has `trigger != "manual"`: if `sources.len() > 1`, push an error:
+For each `(dest, sources)` pair where any entry has `trigger == "command:start"` (only `command:start` targets require uniqueness of incoming edges — states reachable exclusively via manual transitions may have multiple incoming edges without issue): if `sources.len() > 1`, push an error:
 
 ```
 "config: state.{dest} — {N} incoming transitions but trigger 'command:start' requires \
  exactly one; incoming from: {src1} (trigger: {t1}), {src2} (trigger: {t2})"
+```
+
+Add a one-line comment in the code immediately before this check:
+```rust
+// Only states targeted by command:start require unique incoming edges.
 ```
 
 Note: `"closed"` is a valid target even when absent from `config.workflow.states`; include it in the incoming map regardless (the duplicate-incoming check is still correct for it).
