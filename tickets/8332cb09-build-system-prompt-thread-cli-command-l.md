@@ -153,7 +153,7 @@ If 9c66e199's `sample_commands()` update (adding `"instructions"`) has not yet l
 ### Amendment requests
 
 - [x] Reconcile const naming and shape with 9c66e199. The two specs currently propose different shapes — 9c66e199 defines an allow-list of command names; this ticket needs name plus description tuples for the Command Reference section. Clarify whether this ticket reuses 9c66e199's const, defines its own const alongside it, or extends 9c66e199's const with descriptions. Pick one approach and document it.
-- [ ] Pin the description source for the unified command list. Either mirror the clap long_about strings from main.rs (single source of truth, but the apm-core const must be kept in sync manually), or maintain shorter purpose-built descriptions in apm-core (decoupled but two sources). Pick one and document the synchronisation strategy.
+- [x] Pin the description source for the unified command list. Either mirror the clap long_about strings from main.rs (single source of truth, but the apm-core const must be kept in sync manually), or maintain shorter purpose-built descriptions in apm-core (decoupled but two sources). Pick one and document the synchronisation strategy.
 - [ ] Grep for every call site of build_system_prompt and of instructions::generate with an empty commands slice. The spec mentions four tests that pass empty slices but should verify the list is exhaustive; missing call sites would silently produce empty command references for those code paths.
 
 ### Code review
