@@ -66,7 +66,12 @@ fn collect_workers(root: &FsPath, tickets_dir: &FsPath) -> anyhow::Result<Vec<Wo
         .workflow
         .states
         .iter()
-        .filter(|s| !s.terminal && !s.worker_end && s.actionable.is_empty())
+        .filter(|s| {
+            let entered_by_start = config.workflow.states.iter()
+                .flat_map(|st| st.transitions.iter())
+                .any(|t| t.trigger == "command:start" && t.to == s.id);
+            !s.terminal && !s.worker_end && entered_by_start
+        })
         .map(|s| s.id.as_str())
         .collect();
 

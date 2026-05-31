@@ -41,7 +41,7 @@ fn derive_epic_state(
     if tickets.iter().any(|t| {
         state_map
             .get(t.frontmatter.state.as_str())
-            .map(|s| s.actionable.iter().any(|a| a == "agent"))
+            .map(|s| s.transitions.iter().any(|t| t.trigger == "command:start"))
             .unwrap_or(false)
     }) {
         return "active".to_string();

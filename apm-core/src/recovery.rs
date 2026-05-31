@@ -130,9 +130,8 @@ id    = "implemented"
 label = "Implemented"
 
 [[states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[states.transitions]]
   to      = "implemented"
