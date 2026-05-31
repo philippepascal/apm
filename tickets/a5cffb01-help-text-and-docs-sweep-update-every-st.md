@@ -193,7 +193,7 @@ apm help workflow | grep "transitions.worker_profile"  # must print nothing
 - [x] Add explicit exclusion paths to every grep returns nothing AC. Use --exclude-dir tests, --exclude-dir archive, --exclude-dir tickets, --exclude-dir .apm--worktrees, --exclude-dir target. Without these, the ACs will fail on legitimate test fixtures, archived tickets, and worktree copies.
 - [x] Clarify ordering: is the Phase 1 grep sweep run before or after dependent tickets are merged into the branch on which this ticket runs. If before, the sweep finds stale references that should be flagged but not yet fixable. If after, the sweep verifies the dependent work landed cleanly. Specify which.
 - [x] Add AC verifying apm help workflow output reflects the new schema after dependent tickets land. Either include a smoke test that runs apm help workflow and checks for absence of old field names, or document that the output is auto-generated from the schema source and therefore correct by construction.
-- [ ] Specify the exact text for the README agents.md row update or removal. The current AC says 'updated or removed' which is too vague. If the row is removed entirely (because agents.md no longer exists as a concept), state so. If updated, provide the exact new row text describing what role files now contain.
+- [x] Specify the exact text for the README agents.md row update or removal. The current AC says 'updated or removed' which is too vague. If the row is removed entirely (because agents.md no longer exists as a concept), state so. If updated, provide the exact new row text describing what role files now contain.
 
 ### Code review
 
