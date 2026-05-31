@@ -50,17 +50,71 @@ The audit of the remaining surfaces found no other breaking changes. The `apm-se
 
 A full read of `apm-server/src/{models,handlers/tickets,handlers/workflow,handlers/maintenance,handlers/mod,agents,work,workers}.rs` and all `apm-ui/src/` TypeScript files confirms only one file needs editing: `apm-server/src/main.rs`.
 
+#### Recovery-options pipeline
+
+`apm-server/src/handlers/tickets.rs` `get_ticket` calls `is_merge_failure_state("merge_failed", &config.workflow)`. This returns `true` because the `in_progress → implemented` transition (`completion = "pr_or_epic_merge"`, `on_failure = "merge_failed"`) still exists in the updated fixture.
+
+`classify_recovery_options("merge_failed", &config.workflow)` then maps over `merge_failed`'s outgoing transitions. With the updated fixture only `merge_failed → implemented` remains (the `merge_failed → in_progress` block is deleted). The function classifies `implemented` as `RetryMerge` because it is the target of the merge-completion transition `in_progress → implemented`. Result: one `RecoveryOption { to: "implemented", kind: RetryMerge }`.
+
+The handler serialises this into `RecoveryOptionDto { to: "implemented", kind: "retry_merge", command: "apm state <id> implemented" }` and returns it in `TicketDetailResponse.recovery_options`.
+
+`TicketDetail.tsx` receives `recovery_options` via `GET /api/tickets/:id` and renders each item by iterating the array. No state names or kinds are hardcoded for display logic; the `kindLabel()` helper is formatting-only. With one item in the array, only the `retry_merge → implemented` row renders. The "Return to worker / in_progress" option disappears automatically.
+
 #### apm-server/src/main.rs — MERGE_FAILED_WORKFLOW_CONFIG
 
-Locate the `const MERGE_FAILED_WORKFLOW_CONFIG: &str = r#"..."#;` block (around line 2523). Make three changes:
+**Before** (current fixture, lines ~2523–2569):
 
-1. **Move `worker_profile` from transition to state.** Under the `ready` state, remove `worker_profile = "claude/coder"` from the `[[workflow.states.transitions]]` block. Under the `in_progress` state header, add `worker_profile = "claude/coder"` as a field on the state block itself.
+```toml
+[project]
+name = "test"
 
-2. **Add `[workers]` section.** Insert `[workers]\ndefault = "claude/coder"\n` before the `[tickets]` section. This satisfies 4d20ba2f's mandatory `workers.default` requirement.
+[tickets]
+dir = "tickets"
 
-3. **Remove `merge_failed → in_progress` transition.** Delete the `[[workflow.states.transitions]]` block under `merge_failed` that has `to = "in_progress"`. Leave only the `to = "implemented"` block.
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
 
-The updated constant looks like:
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+```
+
+**After** (replace the constant body with this verbatim):
+
 ```toml
 [project]
 name = "test"
@@ -87,7 +141,7 @@ worker_profile = "claude/coder"
   [[workflow.states.transitions]]
   to         = "implemented"
   trigger    = "manual"
-  completion = "merge"
+  completion = "pr_or_epic_merge"
   on_failure = "merge_failed"
 
 [[workflow.states]]
@@ -102,15 +156,22 @@ actionable = ["supervisor"]
   [[workflow.states.transitions]]
   to      = "implemented"
   trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
 ```
+
+Three diffs: (1) `[workers]\ndefault = "claude/coder"` inserted after `[project]`. (2) `worker_profile = "claude/coder"` removed from the `ready → in_progress` transition block; the field moves to the `in_progress` state header. (3) The second `[[workflow.states.transitions]]` block under `merge_failed` (`to = "in_progress"`) is deleted.
 
 #### Test assertion review
 
-No assertion changes are needed.
+No assertion changes are required.
 
-`get_ticket_recovery_options_populated` asserts `!opts.is_empty()` and that a `retry_merge` option exists pointing to `implemented`. After removing `merge_failed → in_progress`, only the `retry_merge` option remains, which still satisfies both assertions.
+`get_ticket_recovery_options_populated` asserts `!opts.is_empty()` and that a `retry_merge` option exists pointing to `implemented`. With only `merge_failed → implemented` remaining, `opts.len()` is 1 and both assertions still pass.
 
-`list_tickets_merge_failure_state_ids` asserts `merge_failed` is in `merge_failure_state_ids` and `in_progress` is not. `is_merge_failure_state("merge_failed")` checks whether any merge-completion transition names `merge_failed` as `on_failure`. The `in_progress → implemented` transition (`completion = "merge"`, `on_failure = "merge_failed"`) still exists, so `merge_failed` is still classified correctly.
+`list_tickets_merge_failure_state_ids` asserts `merge_failed` is in `merge_failure_state_ids` and `in_progress` is not. `is_merge_failure_state("merge_failed")` checks whether any merge-completion transition names `merge_failed` as `on_failure`. The `in_progress → implemented` transition (`completion = "pr_or_epic_merge"`, `on_failure = "merge_failed"`) still exists, so `merge_failed` remains classified correctly.
 
 #### Verification
 
