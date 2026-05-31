@@ -634,6 +634,7 @@ label = "Ready"
             worker_end: false,
             satisfies_deps: crate::config::SatisfiesDeps::Bool(satisfies_deps),
             dep_requires: None,
+            worker_profile: None,
             transitions: vec![],
         }
     }

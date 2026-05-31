@@ -269,6 +269,7 @@ mod tests {
             worker_end: false,
             satisfies_deps: crate::config::SatisfiesDeps::Bool(false),
             dep_requires: None,
+            worker_profile: None,
             transitions: vec![],
         }
     }

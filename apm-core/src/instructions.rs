@@ -159,10 +159,14 @@ fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
     out.push_str("|------|----|----------|\n");
 
     for state in &config.workflow.states {
+        let state_role: Option<&str> = state.worker_profile.as_deref()
+            .and_then(|wp| wp.split_once('/').map(|(_, r)| r));
+
         for transition in &state.transitions {
             if let Some(role_name) = role {
-                let t_role = derive_transition_role(transition);
-                if t_role != role_name {
+                let owned_by_state = state_role == Some(role_name);
+                let owned_by_transition = derive_transition_role(transition) == role_name;
+                if !owned_by_state && !owned_by_transition {
                     continue;
                 }
             }
@@ -490,6 +494,7 @@ worker_profile = "claude/coder"
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "implemented"
@@ -569,11 +574,11 @@ worker_profile = "claude/coder"
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "implemented"
@@ -595,6 +600,7 @@ worker_profile = "claude/spec-writer"
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
+worker_profile = "claude/spec-writer"
 
 [[workflow.states.transitions]]
 to = "specd"
