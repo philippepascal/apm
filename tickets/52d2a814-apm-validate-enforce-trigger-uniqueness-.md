@@ -129,6 +129,7 @@ The default-workflow test does not load `apm-core/src/default/workflow.toml` fro
 
 ### Amendment requests
 
+- [ ] Clarify the trigger-uniqueness rule wording in both the spec body and as a one-line comment near the validation code. The clarification should read: only triggered destination states must be unique. States reachable only via manual transitions may have multiple incoming edges. The current wording can be misread as enforcing uniqueness on all destinations.
 
 ### Code review
 
