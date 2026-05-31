@@ -4,12 +4,12 @@ title = "Drop state.actionable; derive actor from outgoing triggers"
 state = "in_design"
 priority = 0
 effort = 5
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7340b57-drop-state-actionable-derive-actor-from-"
 created_at = "2026-05-31T02:56:19.482471Z"
-updated_at = "2026-05-31T07:09:20.642971Z"
+updated_at = "2026-05-31T07:09:27.397043Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
