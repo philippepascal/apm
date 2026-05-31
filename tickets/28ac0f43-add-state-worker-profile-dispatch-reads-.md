@@ -39,7 +39,13 @@ This ticket adds `state.worker_profile: Option<String>` to `StateConfig` and tea
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Dropping `transition.worker_profile` — retained as fallback; removal is the next ticket.
+- Removing the built-in `"claude/coder"` fallback — a later ticket that makes `[workers].default` mandatory.
+- Modifying any existing workflow transitions or removing redundant ones.
+- Trigger uniqueness validation.
+- Help text updates.
+- Server and UI surfaces (`apm-server/`, `apm-ui/`) — later ticket.
+- Adding `#[serde(deny_unknown_fields)]` to `StateConfig` — handled by dependency f7340b57.
 
 ### Approach
 
