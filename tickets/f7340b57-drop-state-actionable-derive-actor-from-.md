@@ -38,7 +38,12 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `worker_profile` changes (separate ticket).
+- Workflow transition restructuring (separate ticket).
+- Validate-rule additions beyond updating the existing reachability check.
+- Help-text and command-reference list updates.
+- `apm-server` UI changes beyond keeping the derived `actionable` field in the workflow graph API response.
+- Any workflow other than the two files listed in scope (third-party user workflows are migrated by parse-error guidance, not by this ticket).
 
 ### Approach
 
