@@ -18,60 +18,11 @@ target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 
 ### Problem
 
-STEP 6 of the incremental workflow schema cleanup. Independent of the schema changes; can land in parallel.
+The `role_command_allowlist` function in `apm-core/src/instructions.rs` hard-codes two named roles — `"spec-writer"` and `"worker"` — each with its own 8-command list. Any role not matching those two strings (including `"coder"`) falls through to `None` and receives the full, unfiltered command list of 30+ entries. A coder agent today sees supervisor commands like `apm sync`, `apm list`, `apm next`, and `apm start` in its Command Reference — noise at best, misleading at worst.
 
-PROBLEM: instructions.rs has TWO hardcoded role-specific command lists:
+Beyond the coder gap, the design is fragile: adding a new role requires editing match arms in code. Per project convention, role names belong in config, not in code. Both role lists also include supervisor-tier commands (`sync`, `list`, `next`) that workers should never invoke.
 
-  match role {
-    'spec-writer' => Some(8 commands),
-    'worker'      => Some(8 commands different from spec-writer),
-    _             => None,  // no filter, shows EVERY apm command
-  }
-
-Three issues:
-- 'coder' is missing → falls to None → coder sees all 30+ apm commands in the Command Reference (the bug spotted in our earlier review)
-- The two lists embed role names ('spec-writer', 'worker') in code; per project rule, role names belong in configs, not code
-- Workers really only need the same small subset; role-specific lists are overengineering
-
-DESIGN:
-
-Replace with a single hardcoded constant in apm-core/src/instructions.rs:
-
-  const WORKER_COMMAND_ALLOWLIST: &[&str] = &['show', 'state', 'spec', 'set', 'new', 'instructions'];
-
-Every dispatched worker sees this same list in the Command Reference section, regardless of role.
-
-Rationale: a worker's job is to edit tickets (show, state, spec, set, new for side-notes) and bootstrap its session (instructions). Anything else (sync, list, next, start, work, validate, etc.) belongs to supervisors or the orchestrator.
-
-SCOPE:
-
-1. apm-core/src/instructions.rs:
-   - Add WORKER_COMMAND_ALLOWLIST constant with the six commands above.
-   - Replace role_command_allowlist function with logic that returns the constant when a role is supplied, None otherwise. (Or inline the constant lookup in the Command Reference rendering path; whichever is cleaner.)
-   - Delete the per-role match arms (no more 'spec-writer' / 'worker' string-matching for command filtering).
-
-2. Update unit tests that asserted the old per-role lists. Each role now produces the same 6-command Command Reference.
-
-3. Update apm-core/src/default/agents/claude/apm.coder.md and apm-core/src/default/agents/claude/apm.spec-writer.md (and their .apm/ project copies) Permitted apm commands section to match the unified list. Currently coder.md lists show / state / new --side-note / spec; spec-writer.md lists show / spec / set / state / new. Bring both to: show, state, spec, set, new, instructions.
-
-OUT OF SCOPE:
-- Schema changes (covered by earlier tickets).
-- build_system_prompt empty commands bug (separate ticket).
-- Help text sweep (separate ticket).
-- The hardcoded 'claude/coder' fallback in start.rs (separate ticket about mandatory workers.default).
-
-TESTS:
-- apm instructions --role coder Command Reference section lists exactly: show, state, spec, set, new, instructions.
-- apm instructions --role spec-writer Command Reference section lists the same six commands.
-- apm instructions --role anything-else lists the same six commands.
-- No reference to 'spec-writer' or 'worker' literal strings in instructions.rs after this change (grep for them; they should not appear in code paths, only in tests if at all).
-
-REFERENCES:
-- apm-core/src/instructions.rs (role_command_allowlist)
-- apm-core/src/default/agents/claude/apm.coder.md
-- apm-core/src/default/agents/claude/apm.spec-writer.md
-- .apm/agents/claude/apm.coder.md
-- .apm/agents/claude/apm.spec-writer.md
+The fix is to replace the per-role match arms with a single `WORKER_COMMAND_ALLOWLIST` constant returned for any supplied role. The six commands — `show`, `state`, `spec`, `set`, `new`, `instructions` — cover everything a worker needs: reading the ticket, transitioning state, editing the spec, adjusting fields, filing side-notes, and bootstrapping the session. No role-name strings belong in the filtering logic after this change.
 
 ### Acceptance criteria
 
