@@ -65,11 +65,11 @@ Apply the same three edits to `apm-core/src/default/workflow.toml` and `.apm/wor
    outcome = "needs_input"
    ```
 
-4. On the `ammend` state header, change `actionable = ["agent"]` to `actionable = ["supervisor"]`. Removing the only `command:start` exit means `apm start` will no longer dispatch from `ammend`; keeping it `agent`-actionable would produce misleading `apm list` output.
+Note: the `actionable` field on the `ammend` state header (`actionable = ["agent"]`) is removed by ticket f7340b57 which lands before this ticket. No `actionable` change is needed here.
 
 #### instructions.rs static table
 
-In `apm-core/src/instructions.rs`, in `STATIC_STATE_MACHINE`, change:
+In `apm-core/src/instructions.rs`, the `STATIC_STATE_MACHINE` const is defined on line 11. On **line 22**, change:
 ```
 | ammend | in_design | apm state <id> in_design |
 ```
@@ -80,23 +80,89 @@ to:
 
 #### Agent prompt updates
 
-**`apm-core/src/default/agents/claude/apm.spec-writer.md`** and **`.apm/agents/claude/apm.spec-writer.md`** (same content in both):
+**`apm-core/src/default/agents/claude/apm.spec-writer.md`** (the "Handling `ammend` tickets" section, lines 203–219):
 
-In the "Handling `ammend` tickets" section:
-- Remove step 2 (`apm state <id> in_design — claim the ticket…`). The agent is already in `in_design` when dispatched; the supervisor moved the ticket from `ammend → groomed` first, then `apm start` dispatched the agent via `groomed → in_design`.
-- Renumber the remaining steps.
-- Add a note: "If you are in `in_design` and cannot proceed, transition to `question`. Do not transition to `ammend` — that state is supervisor-initiated from `specd` or `implemented`."
+The section currently reads:
+```
+When the ticket is in `ammend` state:
+1. `apm show <id>` — read `### Amendment requests` in `## Spec` carefully; …
+2. `apm state <id> in_design` — claim the ticket and provision its worktree; …
+3. For each checkbox, make the requested change …
+4. Update `### Approach` if the amendments change the implementation plan
+5. Do not delete answered questions …
+6. `apm spec` auto-commits …
+7. `apm state <id> specd` — resubmit …
+```
 
-**`.apm/agents/pi/apm.spec-writer.md`**:
+Apply these changes:
+- Change the opening condition from "When the ticket is in `ammend` state:" to "When the ticket has unchecked items in `### Amendment requests`, you are handling an amendment. You are already in `in_design` when dispatched (the supervisor moved the ticket from `ammend → groomed`, then `apm start` dispatched via `groomed → in_design`):"
+- Remove step 2 (`apm state <id> in_design — claim the ticket and provision its worktree; prints the worktree path`).
+- Renumber the remaining steps (old step 3 becomes step 2, etc.).
+- After the renumbered final step (old step 7, new step 6: `apm state <id> specd`), add a blank line and then: "If you cannot proceed during design, transition to `question`. Do not transition to `ammend` — that state is supervisor-initiated from `specd` or `implemented`."
 
-In the "Ammend tickets" section, the opening condition says "If the ticket starts in state `ammend` instead of `in_design`". Replace this with: "If `### Amendment requests` has unchecked items, the ticket is an amendment. You are already in `in_design`." Remove any instructions to claim the ticket from `ammend` (there are none in the pi prompt, so this is a wording fix only).
+**`.apm/agents/pi/apm.spec-writer.md`** (the "Ammend tickets" section, around line 156):
+
+The section currently opens at **line 158** with:
+```
+If the ticket starts in state `ammend` instead of `in_design`:
+```
+
+Replace that opening line with:
+```
+If `### Amendment requests` has unchecked items, the ticket is an amendment. You are already in `in_design` when dispatched.
+```
+
+No other changes are needed in this file — it has no step instructing the agent to claim from `ammend`.
 
 #### Test changes (`apm/tests/integration.rs`)
 
-- **Delete** `spawn_ammend_ticket_transitions_to_in_design` (lines ~2079–2093). It verifies that `apm start` picks up an `ammend` ticket via `command:start`, which no longer exists.
-- **Add** `ammend_to_groomed_succeeds`: create a ticket in `ammend` state via direct branch write, call `apm::cmd::state::run(p, &id, "groomed", false, false)`, assert the resulting ticket content contains `state = "groomed"`.
-- **Delete** `merge_failed_to_in_progress_succeeds` (lines ~6591–6616).
-- **Add** `merge_failed_to_in_progress_rejected`: create a ticket in `merge_failed` state, call `apm::cmd::state::run(p, &id, "in_progress", false, false)`, assert it returns `Err`.
+**Delete** `spawn_ammend_ticket_transitions_to_in_design` (lines 2079–2093). It verifies that `apm start` picks up an `ammend` ticket via `command:start`, which no longer exists.
+
+**Add** `ammend_to_groomed_succeeds` after the deleted test:
+```rust
+#[test]
+fn ammend_to_groomed_succeeds() {
+    let dir = init_repo();
+    let p = dir.path();
+    let (id, branch) = write_ticket_to_branch(p, "ammend", "needs revision");
+    let rel = ticket_rel_path(&branch);
+
+    apm::cmd::state::run(p, &id, "groomed".into(), false, false).unwrap();
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"groomed\""),
+        "expected groomed state:\n{content}"
+    );
+}
+```
+
+Note: `write_ticket_to_branch` uses `apm state --force` internally to advance state, so it can place a ticket in `ammend` without needing the full `groomed → in_design → specd → ammend` lifecycle. `init_repo()` (not `setup_with_merge_workflow()`) is sufficient here — no merge completion logic is needed.
+
+**Delete** `merge_failed_to_in_progress_succeeds` (lines 6591–6616).
+
+**Add** `merge_failed_to_in_progress_rejected` after the deleted test, mirroring the fixture setup of the deleted test but asserting failure. Use `init_repo()` so the default workflow applies (without `merge_failed → in_progress`):
+```rust
+#[test]
+fn merge_failed_to_in_progress_rejected() {
+    let dir = init_repo();
+    let p = dir.path();
+    let (id, branch) = write_ticket_to_branch(p, "merge_failed", "retry rejected");
+    let rel = ticket_rel_path(&branch);
+
+    let result = apm::cmd::state::run(p, &id, "in_progress".into(), false, false);
+    assert!(result.is_err(), "expected merge_failed → in_progress to be rejected");
+    let msg = result.unwrap_err().to_string();
+    assert!(
+        msg.contains("no transition"),
+        "expected 'no transition' in error message: {msg}"
+    );
+    // State must not have changed.
+    let content = branch_content(p, &branch, &rel);
+    assert!(content.contains("state = \"merge_failed\""), "state should remain merge_failed:\n{content}");
+}
+```
+
+The error text `"no transition"` comes from the `bail!("no transition from {:?} to {:?} …")` in `apm-core/src/state.rs` line 64.
 
 ### Open questions
 
