@@ -1,7 +1,7 @@
 +++
 id = "e2781682"
 title = "apm-server and apm-ui audit: update API and frontend for schema changes"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e2781682-apm-server-and-apm-ui-audit-update-api-a"
 created_at = "2026-05-31T02:59:20.324716Z"
-updated_at = "2026-05-31T02:59:20.324716Z"
+updated_at = "2026-05-31T07:04:50.827867Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["e05c0463", "4d20ba2f"]
@@ -87,3 +87,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-31T02:59Z | — | new | philippepascal |
+| 2026-05-31T07:04Z | new | groomed | philippepascal |
