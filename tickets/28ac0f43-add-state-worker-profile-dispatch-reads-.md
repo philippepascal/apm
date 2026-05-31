@@ -54,9 +54,6 @@ This ticket adds `state.worker_profile: Option<String>` to `StateConfig` and tea
 Add after `dep_requires`:
 
 ```rust
-/// Owner profile for this state. Format: `"agent/role"` (e.g. `"claude/coder"`).
-/// When set, the dispatcher uses this as the preferred profile when spawning a
-/// worker that enters this state.
 #[serde(default)]
 pub worker_profile: Option<String>,
 ```
@@ -69,170 +66,154 @@ Add `worker_profile = "claude/spec-writer"` to the `in_design` state block, and 
 
 #### 3. `apm-core/src/start.rs` — Shared resolution helper
 
-Extract a private function used by all four dispatch sites:
+Extract a private function with the following signature and priority order:
 
 ```rust
-fn resolve_dispatch_profile<'a>(
+fn resolve_dispatch_profile(
+    source_state_id: &str,
     dest_state_id: &str,
-    triggering_transition: Option<&'a TransitionConfig>,
-    config: &'a Config,
-) -> (&'a str /* profile */, String /* source label */) {
+    triggering_transition: Option<&TransitionConfig>,
+    config: &Config,
+) -> (String, String) {
     // 1. Destination state's worker_profile
     if let Some(wp) = config.workflow.states.iter()
         .find(|s| s.id == dest_state_id)
         .and_then(|s| s.worker_profile.as_deref())
     {
-        return (wp, format!("workflow.toml state {dest_state_id}.worker_profile"));
+        return (
+            wp.to_string(),
+            format!("workflow.toml state {dest_state_id}.worker_profile"),
+        );
     }
     // 2. Firing transition's worker_profile
     if let Some(wp) = triggering_transition.and_then(|tr| tr.worker_profile.as_deref()) {
-        let label = if let Some(tr) = triggering_transition {
-            format!("workflow.toml transition {} → {}", dest_state_id, tr.to)
-            // Note: label uses from→to which the caller can compute
-        } else { "workflow.toml transition".to_string() };
-        return (wp, label);
+        return (
+            wp.to_string(),
+            format!("workflow.toml transition {source_state_id} → {dest_state_id}"),
+        );
     }
     // 3. workers.default
     if let Some(wp) = config.workers.default.as_deref() {
-        return (wp, "workers.default".to_string());
+        return (wp.to_string(), "workers.default".to_string());
     }
     // 4. Built-in fallback
-    ("claude/coder", "built-in fallback".to_string())
+    ("claude/coder".to_string(), "built-in fallback".to_string())
 }
 ```
 
-Because the helper needs owned data in some paths, the actual implementation may return a `String` rather than `&str`. The exact signature can be adjusted for the borrow checker; the priority order is what matters.
+Returns `(String, String)` throughout — the built-in `"claude/coder"` literal is converted with `.to_string()`, avoiding `&'static str` / owned `String` lifetime conflicts. No `Cow` needed.
 
 Apply at each dispatch site:
 
-- **`run()`** (line ~477): `new_state` is the destination. Call `resolve_dispatch_profile(&new_state, triggering_transition, &config)`.
-- **`run_next()`** (line ~605): destination is `triggering_transition_owned.as_ref().map(|tr| tr.to.as_str()).unwrap_or("in_progress")`. Call helper.
-- **`spawn_next_worker()`** (line ~784): same as `run_next()`.
-- **`resolve_for_diagnostic()`** (line ~179): destination is `to_id`. Replace the `(worker_profile_str, profile_source)` tuple construction with the helper. The `profile_source` string now correctly names the state when the profile comes from state-level.
+**`run()` (line ~476):** `old_state` (source) and `new_state` (dest) are both available. Replace the four-line chain with:
 
-The existing `profile_source` format for the transition case must remain `"workflow.toml transition {from} → {to}"` so diagnostic output is unchanged for legacy configs.
+```rust
+let (worker_profile_str, _) = resolve_dispatch_profile(
+    &old_state,
+    &new_state,
+    triggering_transition,
+    &config,
+);
+```
+
+**`run_next()` (line ~601):** `old_state` is the source. `triggering_transition_owned` holds the full `Option<TransitionConfig>`. Replace with:
+
+```rust
+let dest = triggering_transition_owned.as_ref()
+    .map(|tr| tr.to.as_str())
+    .unwrap_or("in_progress");
+let (worker_profile_str, _) = resolve_dispatch_profile(
+    &old_state,
+    dest,
+    triggering_transition_owned.as_ref(),
+    &config,
+);
+```
+
+**`spawn_next_worker()` (line ~780):** identical pattern to `run_next()` — `old_state`, `triggering_transition_owned` are already computed the same way.
+
+**`resolve_for_diagnostic()` (line ~134):** The current code extracts only `wp_from_transition: Option<String>` from the transition. To use the helper, capture the full transition instead:
+
+```rust
+let (dispatchable, resolved_from_state, from_id, to_id, transition_for_resolution) = {
+    // ...same lookup logic...
+    if let Some(tr) = current {
+        (true, ticket_state.clone(), ticket_state.clone(), tr.to.clone(), Some(tr.clone()))
+    } else {
+        // fallback scan...
+        (false, from.clone(), from, to, Some(tr.clone()))
+    }
+};
+```
+
+Then replace the `(worker_profile_str, profile_source)` tuple at line ~180 with:
+
+```rust
+let (worker_profile_str, profile_source) = resolve_dispatch_profile(
+    &from_id,
+    &to_id,
+    transition_for_resolution.as_ref(),
+    &config,
+);
+```
+
+The `profile_source` string for the transition case becomes `"workflow.toml transition {from_id} → {to_id}"`, which matches the existing format and keeps diagnostic output unchanged for legacy configs.
 
 #### 4. `apm-core/src/instructions.rs` — State-based role filter
 
-Replace the per-transition `derive_transition_role` call in `format_live_state_machine` with a per-state lookup:
-
-```rust
-fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
-    let mut out = String::new();
-    out.push_str("| From | To | Command |\n");
-    out.push_str("|------|----|----------|\n");
-
-    for state in &config.workflow.states {
-        // Determine the role that owns this state (state-level takes precedence).
-        let state_role: Option<&str> = state.worker_profile.as_deref()
-            .and_then(|wp| wp.split_once('/').map(|(_, r)| r));
-
-        for transition in &state.transitions {
-            if let Some(role_name) = role {
-                // Include this transition if the state's role matches,
-                // OR (legacy fallback) the transition's worker_profile role matches.
-                let owned_by_state = state_role == Some(role_name);
-                let owned_by_transition = derive_transition_role(transition) == role_name;
-                if !owned_by_state && !owned_by_transition {
-                    continue;
-                }
-            }
-            let command = if transition.trigger == "command:start" {
-                "apm start <id>".to_string()
-            } else {
-                format!("apm state <id> {}", transition.to)
-            };
-            out.push_str(&format!("| {} | {} | {} |\n", state.id, transition.to, command));
-        }
-    }
-    out.push('\n');
-    out
-}
-```
-
-The legacy fallback (`owned_by_transition`) ensures configs without `state.worker_profile` still produce correct output during the migration window. After all state profiles are set and transition profiles are dropped (a later ticket), `derive_transition_role` will have no callers and can be deleted then. Do not delete it in this ticket.
-
-Update the existing test `live_state_machine_filters_by_role` in `instructions.rs`: add `worker_profile = "claude/spec-writer"` to `in_design` and `worker_profile = "claude/coder"` to `in_progress` in the inline TOML. Update assertions:
-- Coder: assert `in_progress` (FROM), `implemented` (TO of `in_progress → implemented`), and `ready` (TO of `in_progress → ready`) appear; assert `groomed` does not appear as a FROM row.
-- Spec-writer: assert `in_design` (FROM), `specd` (TO) appear; the `groomed` TO assertion can remain because the legacy fallback still emits `groomed → in_design` (that transition has `worker_profile = "claude/spec-writer"`).
-
-Update `imperative_table_format_header` test: add `worker_profile = "claude/coder"` to `in_progress` state so the `coder` role filter finds something.
-
-#### 5. `apm-core/src/validate.rs` — `configured_agent_names`
-
-Add a walk over `state.worker_profile` before the existing transition walk:
+Replace the per-transition filter in `format_live_state_machine` with a per-state lookup:
 
 ```rust
 for state in &config.workflow.states {
-    if let Some(ref wp) = state.worker_profile {
-        if let Some((agent, _)) = wp.split_once('/') {
-            names.insert(agent.to_string());
-        }
-    }
+    let state_role: Option<&str> = state.worker_profile.as_deref()
+        .and_then(|wp| wp.split_once('/').map(|(_, r)| r));
+
     for transition in &state.transitions {
-        if let Some(ref wp) = transition.worker_profile {
-            if let Some((agent, _)) = wp.split_once('/') {
-                names.insert(agent.to_string());
+        if let Some(role_name) = role {
+            let owned_by_state = state_role == Some(role_name);
+            let owned_by_transition = derive_transition_role(transition) == role_name;
+            if !owned_by_state && !owned_by_transition {
+                continue;
             }
         }
+        // emit row...
     }
 }
 ```
 
-No test changes needed for this function; the existing tests pass because state-level agents are now additive.
+The legacy `owned_by_transition` fallback ensures configs without `state.worker_profile` still produce correct output. Do not delete `derive_transition_role` in this ticket.
+
+Update `live_state_machine_filters_by_role` test: add `worker_profile` fields to `in_design` and `in_progress` in the inline TOML; update assertions as described in the original spec.
+
+Update `imperative_table_format_header` test: add `worker_profile = "claude/coder"` to `in_progress` so the coder filter finds it.
+
+#### 5. `apm-core/src/validate.rs` — `configured_agent_names`
+
+Add a walk over `state.worker_profile` before the existing transition walk (additive; existing tests unaffected).
 
 #### 6. `apm-core/src/config.rs` — `implementation_state_ids`
 
-Add a state-level path before the existing transition-based path:
+Add a state-level path before the existing transition-based path (additive). Both paths contribute to the set.
 
-```rust
-pub fn implementation_state_ids(&self) -> std::collections::HashSet<String> {
-    let mut ids = std::collections::HashSet::new();
-
-    // State-level: states with worker_profile set and not spec-writer.
-    for state in &self.workflow.states {
-        if let Some(wp) = state.worker_profile.as_deref() {
-            if !wp.ends_with("/spec-writer") {
-                ids.insert(state.id.clone());
-            }
-        }
-    }
-
-    // Transition-level: command:start with non-spec-writer profile (legacy fallback),
-    // and merge-completion targets (always transition-based).
-    for state in &self.workflow.states {
-        for t in &state.transitions {
-            let is_merge_completion = matches!(
-                t.completion,
-                CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge
-            );
-            let is_coder_start = t.trigger == "command:start"
-                && t.worker_profile.as_deref().is_none_or(|p| !p.ends_with("/spec-writer"));
-            if is_merge_completion || is_coder_start {
-                ids.insert(t.to.clone());
-            }
-        }
-    }
-
-    ids
-}
-```
-
-This is additive: both the state-level and transition-level paths contribute to the set. Existing tests (`implementation_state_ids_command_start_no_profile_treated_as_coder`, etc.) continue to pass unchanged because the transition-level path still runs. The default workflow now also contributes `in_progress` via the state-level path.
-
-Add a new test `implementation_state_ids_state_worker_profile_preferred`: workflow has `in_progress.worker_profile = "claude/coder"` with no `command:start` transition; `implementation_state_ids()` returns a set containing `"in_progress"`.
+Add test `implementation_state_ids_state_worker_profile_preferred`: workflow has `in_progress.worker_profile = "claude/coder"` with no `command:start` transition; assert `in_progress` appears in the result.
 
 #### 7. New tests in `apm-core/src/start.rs`
 
-Add to the `resolve_for_diagnostic` test block:
+**`resolve_for_diagnostic` tests** (extend existing block):
 
-- `resolve_for_diagnostic_state_worker_profile_wins`: workflow where the destination state has `worker_profile = "claude/coder"` and the transition also has `worker_profile = "claude/spec-writer"`; assert `diag.worker_profile_str == "claude/coder"` and `diag.profile_source` contains `"state"`.
-- `resolve_for_diagnostic_transition_fallback_when_no_state_profile`: workflow with only `transition.worker_profile`; assert `diag.profile_source` contains `"transition"`.
+- `resolve_for_diagnostic_state_worker_profile_wins`: destination state has `worker_profile = "claude/coder"`, transition has `worker_profile = "claude/spec-writer"`; assert `diag.worker_profile_str == "claude/coder"` and `diag.profile_source` contains `"state"`.
+- `resolve_for_diagnostic_transition_fallback_when_no_state_profile`: transition has `worker_profile`, destination state has none; assert `diag.profile_source` contains `"transition"`.
 
-Add dispatch tests (can be unit tests without a full git repo, using the `resolve_dispatch_profile` function directly if extracted):
+**`resolve_dispatch_profile` unit tests** (new block; no git repo needed):
 
-- Profile precedence: state > transition > workers.default > built-in.
-- Legacy shape (no state profile): transition profile used.
+The helper is a pure function — construct `Config` values inline using TOML deserialization or struct literals. Add:
+
+- `dispatch_profile_state_wins_over_transition`: dest state has `worker_profile = "claude/coder"`, transition has `worker_profile = "claude/spec-writer"`; assert returned profile is `"claude/coder"` and source contains `"state"`.
+- `dispatch_profile_transition_fallback`: no state profile, transition has `worker_profile = "claude/spec-writer"`; assert `"claude/spec-writer"` returned.
+- `dispatch_profile_workers_default_fallback`: neither state nor transition has a profile, `config.workers.default = Some("claude/custom")`; assert `"claude/custom"` returned.
+- `dispatch_profile_builtin_fallback`: nothing set anywhere; assert `"claude/coder"` returned.
+
+These four unit tests on `resolve_dispatch_profile` directly verify the priority order at the logic level. Because all three dispatch functions (`run`, `run_next`, `spawn_next_worker`) are updated to call this helper, the unit tests cover the behavioural dispatch path. Integration-level tests via `resolve_for_diagnostic` (above) additionally verify the full end-to-end path through a real git repo.
 
 ### Open questions
 
