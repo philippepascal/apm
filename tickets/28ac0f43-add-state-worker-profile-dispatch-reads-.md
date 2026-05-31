@@ -35,7 +35,7 @@ This ticket adds `state.worker_profile: Option<String>` to `StateConfig` and tea
 - [x] `apm instructions --role coder` (with the updated default workflow) emits all transitions out of `in_progress` — not only the `command:start` spawn row.
 - [x] `configure_agent_names` (in `validate.rs`) includes agents referenced in `state.worker_profile` fields, in addition to those in `transition.worker_profile`.
 - [x] `implementation_state_ids` returns `in_progress` for the updated default workflow (derived from `in_progress.worker_profile = "claude/coder"`, not from the spawn transition).
-- [ ] `cargo test --workspace` passes with all existing and new tests.
+- [x] `cargo test --workspace` passes with all existing and new tests.
 
 ### Out of scope
 
