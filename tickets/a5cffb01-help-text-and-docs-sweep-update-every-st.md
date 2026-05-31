@@ -172,6 +172,7 @@ apm prompt --help | grep "skipped:"          # must print nothing
 
 ### Amendment requests
 
+- [ ] Add explicit exclusion paths to every grep returns nothing AC. Use --exclude-dir tests, --exclude-dir archive, --exclude-dir tickets, --exclude-dir .apm--worktrees, --exclude-dir target. Without these, the ACs will fail on legitimate test fixtures, archived tickets, and worktree copies.
 
 ### Code review
 
