@@ -1,7 +1,7 @@
 +++
 id = "a5cffb01"
 title = "Help text and docs sweep: update every stale reference to old schema"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a5cffb01-help-text-and-docs-sweep-update-every-st"
 created_at = "2026-05-31T02:59:02.592158Z"
-updated_at = "2026-05-31T07:55:12.478336Z"
+updated_at = "2026-05-31T07:55:18.222058Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["e05c0463", "9c66e199", "4d20ba2f"]
@@ -183,3 +183,4 @@ apm prompt --help | grep "skipped:"          # must print nothing
 | 2026-05-31T02:59Z | — | new | philippepascal |
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
 | 2026-05-31T07:46Z | groomed | in_design | philippepascal |
+| 2026-05-31T07:55Z | in_design | specd | claude |
