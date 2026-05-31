@@ -1,7 +1,7 @@
 +++
 id = "8332cb09"
 title = "build_system_prompt: thread CLI command list into Layer 3 of worker prompt"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8332cb09-build-system-prompt-thread-cli-command-l"
 created_at = "2026-05-31T02:58:36.745209Z"
-updated_at = "2026-05-31T07:04:45.649530Z"
+updated_at = "2026-05-31T07:41:47.983826Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["9c66e199"]
@@ -86,3 +86,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-31T02:58Z | — | new | philippepascal |
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
+| 2026-05-31T07:41Z | groomed | in_design | philippepascal |
