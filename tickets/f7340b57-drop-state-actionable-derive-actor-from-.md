@@ -36,7 +36,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 - [x] `apm-core/src/default/workflow.toml` contains no `actionable` lines.
 - [x] `.apm/workflow.toml` contains no `actionable` lines.
 - [x] `cargo test --workspace` passes with no failures.
-- [ ] The doc comment on `Config::actionable_states_for` in `apm-core/src/config.rs` does not reference `any` as a valid actor value.
+- [x] The doc comment on `Config::actionable_states_for` in `apm-core/src/config.rs` does not reference `any` as a valid actor value.
 
 ### Out of scope
 
