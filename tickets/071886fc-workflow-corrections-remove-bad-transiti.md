@@ -19,41 +19,13 @@ depends_on = ["e05c0463"]
 
 ### Problem
 
-STEP 4 of the incremental workflow schema cleanup. Pure workflow.toml content change. No code change needed (the state machine accepts whatever transitions are defined).
+The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain three transitions that contradict the intended design:
 
-PROBLEM: the default workflow has three transitions that should not exist:
-- in_design to ammend: a spec-writer mid-flow does not jump to ammend; ammend is a supervisor-initiated state from specd.
-- merge_failed to in_progress: a merge failure recovers to ready (escalate) or implemented (retry merge); never back to in_progress.
-- ammend to in_design via command:start: this makes in_design have TWO triggered entries (groomed and ammend), violating the trigger-uniqueness rule planned for step 5. The clean path is ammend to groomed (manual), then groomed to in_design (command:start).
+**`in_design → ammend`**: A spec-writer encountering a blocker during design should route to `question`, not `ammend`. The `ammend` state is supervisor-initiated from `specd` or `implemented`; a spec-writer agent cannot self-request an amendment.
 
-SCOPE:
+**`merge_failed → in_progress`**: When a merge fails, the correct recovery is to retry the merge (`merge_failed → implemented`) or escalate to the supervisor. Routing back to `in_progress` re-spawns the coder without new guidance and bypasses any supervisor review of the failure.
 
-1. apm-core/src/default/workflow.toml:
-   - Remove the transition from in_design with to = 'ammend'.
-   - Remove the transition from merge_failed with to = 'in_progress'.
-   - On the ammend state: change the transition with to = 'in_design' (trigger command:start) to to = 'groomed' (trigger manual).
-
-2. .apm/workflow.toml (this project): apply the same three changes.
-
-3. Update any unit / integration tests that exercised these specific transitions. They were probably the inverse of the desired invariant; the tests can be deleted or repurposed.
-
-4. Update apm-core/src/default/agents/claude/apm.spec-writer.md and apm-core/src/default/agents/claude/apm.coder.md (and their .apm/ project copies) if they reference the removed transitions in their guidance prose. Spec-writers should be told 'when blocked from in_design, transition to question; do not transition to ammend.'
-
-OUT OF SCOPE:
-- The trigger-uniqueness validate rule (next ticket, which depends on this correction).
-- Other workflow content changes.
-- Help text or docs sweep (later ticket).
-
-TESTS:
-- The default workflow parses (already covered by the earlier tickets).
-- apm next + apm list --actionable behave correctly with the new state graph. Specifically: ammend is supervisor-actionable (no command:start out), groomed is agent-actionable.
-- A ticket can go specd to ammend (manual) to groomed (manual) to in_design (command:start) and back to specd (manual).
-
-REFERENCES:
-- apm-core/src/default/workflow.toml
-- .apm/workflow.toml
-- apm-core/src/default/agents/claude/apm.spec-writer.md
-- apm-core/src/default/agents/claude/apm.coder.md
+**`ammend → in_design` via `command:start`**: This creates two `command:start`-triggered paths into `in_design` (one from `groomed`, one from `ammend`), violating the trigger-uniqueness invariant planned for enforcement in the next ticket. The correct path is `ammend → groomed` (supervisor, manual), then `groomed → in_design` (command:start via `apm start`). The `ammend` state should become supervisor-actionable, since the only agent-dispatch path from it is being removed.
 
 ### Acceptance criteria
 
