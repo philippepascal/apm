@@ -33,7 +33,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 - [x] `Config::actionable_states_for("engineer")` returns an empty vec.
 - [x] `apm next` returns the same highest-priority ticket before and after the migration when run against the default workflow with tickets in various states.
 - [x] `apm list --actionable agent` returns the same set of tickets before and after the migration.
-- [ ] `apm-core/src/default/workflow.toml` contains no `actionable` lines.
+- [x] `apm-core/src/default/workflow.toml` contains no `actionable` lines.
 - [ ] `.apm/workflow.toml` contains no `actionable` lines.
 - [ ] `cargo test --workspace` passes with no failures.
 - [ ] The doc comment on `Config::actionable_states_for` in `apm-core/src/config.rs` does not reference `any` as a valid actor value.
