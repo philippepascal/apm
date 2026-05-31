@@ -18,8 +18,6 @@ label = "New"
 [[workflow.states]]
 id           = "groomed"
 label        = "Groomed"
-
-actionable   = ["agent"]
 dep_requires = "spec"
 
   [[workflow.states.transitions]]
@@ -35,10 +33,8 @@ dep_requires = "spec"
   outcome = "cancelled"
 
 [[workflow.states]]
-id         = "question"
-label      = "Question"
-
-actionable = ["supervisor"]
+id    = "question"
+label = "Question"
 
   [[workflow.states.transitions]]
   to      = "groomed"
@@ -53,8 +49,6 @@ actionable = ["supervisor"]
 [[workflow.states]]
 id             = "specd"
 label          = "Specd"
-
-actionable     = ["supervisor"]
 satisfies_deps = "spec"
 worker_end     = true
 
@@ -76,7 +70,6 @@ worker_end     = true
 [[workflow.states]]
 id             = "ammend"
 label          = "Ammend"
-actionable     = ["agent"]
 dep_requires   = "spec"
 satisfies_deps = "spec"
 
@@ -102,8 +95,9 @@ satisfies_deps = "spec"
   outcome = "cancelled"
 
 [[workflow.states]]
-id    = "in_design"
-label = "In Design"
+id             = "in_design"
+label          = "In Design"
+worker_profile = "claude/spec-writer"
 
   [[workflow.states.transitions]]
   to      = "specd"
@@ -130,7 +124,6 @@ label = "In Design"
 [[workflow.states]]
 id             = "ready"
 label          = "Ready"
-actionable     = ["agent"]
 satisfies_deps = "spec"
 
   [[workflow.states.transitions]]
@@ -158,6 +151,7 @@ satisfies_deps = "spec"
 id             = "in_progress"
 label          = "In Progress"
 satisfies_deps = "spec"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -189,10 +183,8 @@ satisfies_deps = "spec"
   outcome = "cancelled"
 
 [[workflow.states]]
-id         = "blocked"
-label      = "Blocked"
-
-actionable = ["supervisor"]
+id    = "blocked"
+label = "Blocked"
 
   [[workflow.states.transitions]]
   to      = "ready"
@@ -208,7 +200,6 @@ actionable = ["supervisor"]
 [[workflow.states]]
 id             = "implemented"
 label          = "Implemented"
-actionable     = ["supervisor"]
 satisfies_deps = true
 worker_end     = true
 
@@ -234,9 +225,8 @@ worker_end     = true
   outcome = "cancelled"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to         = "implemented"
