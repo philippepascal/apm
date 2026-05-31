@@ -103,6 +103,7 @@ In the "Ammend tickets" section, the opening condition says "If the ticket start
 
 ### Amendment requests
 
+- [ ] Provide concrete test code patterns for the new and replaced tests. Specify how to construct an ammend ticket fixture in tests, mirroring how existing merge_failed tests build their fixtures. Specify which error type or message to assert for the rejected merge_failed to in_progress transition path.
 
 ### Code review
 
