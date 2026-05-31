@@ -35,7 +35,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 - [x] `apm list --actionable agent` returns the same set of tickets before and after the migration.
 - [x] `apm-core/src/default/workflow.toml` contains no `actionable` lines.
 - [x] `.apm/workflow.toml` contains no `actionable` lines.
-- [ ] `cargo test --workspace` passes with no failures.
+- [x] `cargo test --workspace` passes with no failures.
 - [ ] The doc comment on `Config::actionable_states_for` in `apm-core/src/config.rs` does not reference `any` as a valid actor value.
 
 ### Out of scope
