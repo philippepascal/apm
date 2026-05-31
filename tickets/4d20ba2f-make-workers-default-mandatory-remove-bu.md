@@ -142,6 +142,7 @@ Tests to update in `validate.rs`:
 
 - [ ] Resolve silent panic risk in resolve_for_diagnostic. After removing the unwrap_or claude/coder fallback, the function still calls unwrap on workers.default. Either add an explicit assertion documenting the validation invariant, or use unwrap_or_else with a descriptive error message that names the missing field, so a misconfigured project produces a clear error rather than a confusing crash.
 - [ ] Specify exclusion paths for AC #6 (grep for claude/coder literal). The grep needs to skip test fixtures and TOML setup snippets that legitimately set the field (config.rs test inputs around lines 936, 1089, 1129, 1253, 1296; start.rs test fixtures around 1129, 1136, 1815, 1827, 1843, 1914, 1930), and init scaffolds (init.rs lines 87, 118 that supply the default). Specify the grep command exactly so the AC is unambiguous.
+- [ ] Add suggested fix text to the apm validate error message for a missing or empty workers.default. The message should explicitly tell the user how to fix it, for example: add default equal claude/coder under the workers section in .apm/config.toml. The current spec says the error is clear but does not specify the actual text.
 
 ### Code review
 
