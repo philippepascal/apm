@@ -52,7 +52,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 #### 1. `apm-core/src/config.rs` — struct and method
 
 In `StateConfig`:
-- Delete the `actionable` field and its doc comment (currently `pub actionable: Vec<String>`).
+- Delete the `actionable` field and its doc comment (currently `pub actionable: Vec<String>`). The doc comment references `any` as a valid value; drop that concept entirely — no workflow TOML file in the repository uses `actionable = ["any"]`, so there are no callers to migrate.
 - Add `#[serde(deny_unknown_fields)]` to the `StateConfig` derive block. Note: `StateConfig` already derives `Deserialize` and `JsonSchema`; add the serde attribute directly above the `pub struct StateConfig` line.
 
 Rewrite `Config::actionable_states_for`:
@@ -73,7 +73,53 @@ pub fn actionable_states_for(&self, actor: &str) -> Vec<String> {
 }
 ```
 
-Update the unit test `actionable_states_for_agent_includes_ready` (line ~1013): remove `actionable = ["agent"]` and `actionable = ["supervisor"]` from the inline TOML. Add a `command:start` transition on `ready` so it remains agent-actionable. The test assertion stays the same.
+The `any` wildcard is not carried into the new implementation. Update the doc comment on `actionable_states_for` to remove any mention of `any` as a valid actor.
+
+Update the unit test `actionable_states_for_agent_includes_ready` (line ~1013): remove `actionable = ["agent"]` and `actionable = ["supervisor"]` from the inline TOML. Add a `command:start` transition on `ready` so it remains agent-actionable. The test assertions stay the same.
+
+Add a second test in the same `#[cfg(test)]` block covering the supervisor derivation for `in_design`, a concrete state that has only manual outgoing transitions:
+
+```rust
+#[test]
+fn actionable_states_for_supervisor_includes_in_design() {
+    let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "in_design"
+label = "In Design"
+
+  [[workflow.states.transitions]]
+  to = "specd"
+  trigger = "manual"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to = "in_progress"
+  trigger = "command:start"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+terminal = true
+"#;
+    let config: Config = toml::from_str(toml).unwrap();
+    let states = config.actionable_states_for("supervisor");
+    assert!(states.contains(&"in_design".to_string()),
+        "in_design has no command:start outgoing; must be supervisor-actionable");
+    assert!(!states.contains(&"ready".to_string()),
+        "ready has command:start outgoing; must not be supervisor-actionable");
+    assert!(!states.contains(&"in_progress".to_string()),
+        "terminal states must not be supervisor-actionable");
+}
+```
 
 #### 2. `apm-core/src/default/workflow.toml`
 
@@ -150,7 +196,7 @@ with:
 
 #### 9. `apm-core/src/ticket/ticket_util.rs`
 
-- `list_filtered` builds an `actionable_map` from `s.actionable` (line ~478). Replace with a derived lookup: for each state, the actionable actors are determined by whether `command:start` transitions exist. The simplest fix: build the map using the same derivation as `actionable_states_for`.
+- `list_filtered` builds an `actionable_map` from `s.actionable` (line ~478). Replace with a derived lookup: for each state, the actionable actors are determined by whether `command:start` transitions exist. Drop the `|| a == "any"` wildcard — it was never set in any workflow TOML file. The simplest fix: build the map using the same derivation as `actionable_states_for`.
 
   Replace the `actionable_map` construction and the `actionable_ok` check with:
   ```rust
@@ -203,6 +249,16 @@ Remove `actionable = ["agent"]` from the inline TOML fixture in that test file.
 #### Verification
 
 After all changes: `cargo test --workspace` must pass. The `actionable_states_for` rewrite is the single source of truth used by `apm next`, `apm list --actionable`, and `apm start`; no other behaviour changes.
+
+To verify no stale `.actionable` field accesses remain in production Rust source:
+
+```
+grep -rn '\.actionable' apm-core/src apm-server/src apm/src --include='*.rs' \
+  --exclude-dir=tests --exclude-dir=archive --exclude-dir=tickets \
+  --exclude-dir=.apm--worktrees --exclude-dir=target
+```
+
+Expected: zero matches. The string `actionable` will still appear inside `#[cfg(test)]` blocks — specifically in the fixture that verifies `deny_unknown_fields` rejects the stale key (AC 2) — and that is intentional.
 
 ### Open questions
 
