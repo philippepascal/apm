@@ -256,7 +256,7 @@ pub async fn clean_handler(
             for branch in &epic_candidates {
                 let after_prefix = branch.trim_start_matches("epic/");
                 let id_end = after_prefix.find('-').unwrap_or(after_prefix.len()).min(8);
-                let id = after_prefix[..id_end].to_string();
+                let _id = after_prefix[..id_end].to_string();
 
                 if dry_run {
                     log.push(format!("would delete epic branch {branch}"));
