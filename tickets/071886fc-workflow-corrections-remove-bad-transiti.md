@@ -1,7 +1,7 @@
 +++
 id = "071886fc"
 title = "Workflow corrections: remove bad transitions, restructure ammend path"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/071886fc-workflow-corrections-remove-bad-transiti"
 created_at = "2026-05-31T02:57:20.412089Z"
-updated_at = "2026-05-31T19:43:31.013665Z"
+updated_at = "2026-05-31T19:43:35.135974Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["e05c0463"]
@@ -187,3 +187,4 @@ The error text `"no transition"` comes from the `bail!("no transition from {:?} 
 | 2026-05-31T07:26Z | in_design | specd | claude |
 | 2026-05-31T19:35Z | specd | ammend | philippepascal |
 | 2026-05-31T19:38Z | ammend | in_design | philippepascal |
+| 2026-05-31T19:43Z | in_design | specd | claude |
