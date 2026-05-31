@@ -74,7 +74,14 @@ REFERENCES:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions --help` output does not contain the phrase "shell discipline"
+- [ ] `apm prompt --help` SYSTEM PROMPT section lists role instructions as Layer 1 and APM system knowledge as Layer 3
+- [ ] `apm prompt --help` `--explain` example shows the current numbered format (`1  …`, `2  …`, `3  …`) and contains no `skipped:` or `level N —` lines
+- [ ] `grep -rn "shell discipline" apm/src/ apm-core/src/` returns no hits outside of test-assertion strings
+- [ ] `apm-core/src/default/agents/claude/apm.spec-writer.md` describes spec-writers as picking up tickets in `groomed` (or `ammend`) state, not `new`
+- [ ] `README.md` table row for `agents.md` is removed or updated to reflect role-specific instruction files; "shell discipline" no longer appears in that table
+- [ ] After all dependent tickets are merged, `grep -rn "transition\.worker_profile\|derive_transition_role" apm/src/ apm-core/src/ apm-server/src/` returns no hits outside of test files
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
