@@ -19,45 +19,11 @@ depends_on = ["9c66e199"]
 
 ### Problem
 
-STEP 8 of the incremental workflow schema cleanup. Bug fix surfaced during earlier review.
+`build_system_prompt` in `apm-core/src/start.rs` calls `instructions::generate(root, Some(role), ticket_id, &[])` with an empty commands slice. `command_reference_body` returns an empty string when commands is empty, so `generate` skips the `## Command Reference` block entirely. Every system prompt produced by `build_system_prompt` — covering all workers dispatched via `apm start`, the `apm work` loop, and the server dispatcher — ends at Session Identity with no command listing. Workers have no indication of which `apm` commands they are permitted to run.
 
-PROBLEM: apm-core/src/start.rs::build_system_prompt at line ~974 calls instructions::generate(root, Some(role), ticket_id, &[]) — passing an EMPTY commands slice. The CLI path (apm/src/cmd/instructions.rs) extracts the clap command list and passes it in. The worker-spawn path does not. Result: every worker dispatched via apm start / apm work / UI dispatcher receives a system prompt whose Layer 3 (apm instructions) is missing the Command Reference section entirely.
+The `apm instructions` CLI command produces the correct output because `apm/src/cmd/instructions.rs` extracts the clap subcommand list and passes it to `generate`. `build_system_prompt` lives in `apm-core`, which intentionally carries no clap dependency, so there is no equivalent extraction there.
 
-EVIDENCE: 'apm prompt <id> --system' on current main shows Layer 3 ending at Session Identity. The standalone 'apm instructions <id> --role coder' shows the full Command Reference. The diff is the missing section.
-
-CONSTRAINT: apm-core cannot depend on clap. The command list must come from outside.
-
-DESIGN OPTIONS for the spec-writer to choose:
-
-(A) Thread the command list through. build_system_prompt grows a parameter commands: &[(String, String)]. Every caller passes the clap-extracted list. apm-server constructs an empty list or a hard-coded one.
-
-(B) Hard-coded constant in apm-core. After 9c66e199 unifies the command list to six commands, apm-core can know them by name without external input. Define a static const SHARED_COMMANDS in apm-core, use it in build_system_prompt. The CLI keeps using clap introspection for its own --help output, but build_system_prompt does not depend on clap.
-
-(C) Function pointer / registration callback. Overkill.
-
-Recommendation: (B). After 9c66e199, the worker command list is a fixed set of six commands. apm-core can carry the names + descriptions as a static const and the CLI does not need to pass them. This removes the apm-core / clap split concern entirely.
-
-SCOPE:
-
-1. apm-core/src/instructions.rs: add a static const that holds the six worker commands with descriptions (name, one-line about). 
-
-2. apm-core/src/start.rs::build_system_prompt: replace &[] with that const at the instructions::generate call site.
-
-3. Consider also updating the CLI path to use the same const for consistency. The CLI currently extracts the clap subcommand list to render the FULL apm command reference. After 9c66e199, the role-filtered output is just the six worker commands. The CLI extraction can be kept for the no-role case (which lists every apm command in the role index? actually no, no-role prints the role index, not the command reference). Verify the CLI flow after 9c66e199.
-
-OUT OF SCOPE:
-- Schema changes.
-- Per-role allow-list (unified in 9c66e199; this ticket assumes that has landed).
-- Help text sweep.
-
-TESTS:
-- A worker dispatched against a real ticket sees Layer 3 with a populated Command Reference. Diff apm prompt <id> --system against apm instructions <id> --role coder; the Command Reference content should appear in both.
-- apm-server endpoints that call build_system_prompt produce a coherent prompt.
-
-REFERENCES:
-- apm-core/src/start.rs::build_system_prompt
-- apm/src/cmd/instructions.rs::run (the clap extraction)
-- 9c66e199 (this epic) for the unified command list
+After 9c66e199 unifies the worker allow-list to exactly six commands, the set is stable and fully knowable inside `apm-core`. A static const in `instructions.rs` can carry the names and descriptions; `build_system_prompt` converts it and passes it, closing the gap without adding a clap dependency.
 
 ### Acceptance criteria
 
