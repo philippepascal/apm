@@ -173,6 +173,7 @@ apm prompt --help | grep "skipped:"          # must print nothing
 ### Amendment requests
 
 - [ ] Add explicit exclusion paths to every grep returns nothing AC. Use --exclude-dir tests, --exclude-dir archive, --exclude-dir tickets, --exclude-dir .apm--worktrees, --exclude-dir target. Without these, the ACs will fail on legitimate test fixtures, archived tickets, and worktree copies.
+- [ ] Clarify ordering: is the Phase 1 grep sweep run before or after dependent tickets are merged into the branch on which this ticket runs. If before, the sweep finds stale references that should be flagged but not yet fixable. If after, the sweep verifies the dependent work landed cleanly. Specify which.
 
 ### Code review
 
