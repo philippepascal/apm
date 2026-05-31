@@ -29,7 +29,7 @@ This ticket adds `state.worker_profile: Option<String>` to `StateConfig` and tea
 - [x] `apm-core/src/default/workflow.toml` has `worker_profile = "claude/spec-writer"` on `in_design` and `worker_profile = "claude/coder"` on `in_progress`.
 - [x] `.apm/workflow.toml` has the same two additions.
 - [x] Dispatching from a state whose **destination** state carries `state.worker_profile` resolves to that profile — even when `transition.worker_profile` is absent on the firing transition.
-- [ ] When both `state.worker_profile` (on the destination state) and `transition.worker_profile` (on the firing transition) are set, the state-level value wins.
+- [x] When both `state.worker_profile` (on the destination state) and `transition.worker_profile` (on the firing transition) are set, the state-level value wins.
 - [ ] A workflow with only `transition.worker_profile` (no `state.worker_profile`) still dispatches correctly via the transition fallback.
 - [ ] `resolve_for_diagnostic` labels the profile source as `"workflow.toml state <name>.worker_profile"` when the profile came from a state, and `"workflow.toml transition <from> → <to>"` when it came from a transition.
 - [ ] `apm instructions --role coder` (with the updated default workflow) emits all transitions out of `in_progress` — not only the `command:start` spawn row.
