@@ -312,6 +312,74 @@ pub fn resolve_id_in_slice(tickets: &[Ticket], arg: &str) -> Result<String> {
     }
 }
 
+/// Generate an 8-character hex ticket ID from local entropy (timestamp + PID).
+/// No network access or shared state is required. Birthday collision probability
+/// at N=1000 tickets: N²/2³² ≈ 0.023% — acceptable at this scale.
+pub fn gen_hex_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let dur = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let secs = dur.as_secs();
+    let nanos = dur.subsec_nanos() as u64;
+    let pid = std::process::id() as u64;
+    // splitmix64-style mixing for good bit avalanche
+    let a = secs.wrapping_mul(0x9e3779b97f4a7c15).wrapping_add(nanos);
+    let b = (a ^ (a >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+    let c = (b ^ (b >> 27)).wrapping_mul(0x94d049bb133111eb);
+    let result = (c ^ (c >> 31)) ^ pid.wrapping_mul(0x6c62272e07bb0142);
+    format!("{:016x}", result)[..8].to_string()
+}
+
+/// Find a ticket branch matching a user-supplied ID argument (prefix or full hex).
+/// Normalizes plain integers (e.g. 35 → 0035) via `id_arg_prefixes`.
+pub fn resolve_ticket_branch(branches: &[String], arg: &str) -> Result<String> {
+    let prefixes = id_arg_prefixes(arg)?;
+    let mut seen = std::collections::HashSet::new();
+    let matches: Vec<&String> = branches.iter()
+        .filter(|b| {
+            let id = b.strip_prefix("ticket/")
+                .and_then(|s| s.split('-').next())
+                .unwrap_or("");
+            prefixes.iter().any(|p| id.starts_with(p.as_str())) && seen.insert(id.to_string())
+        })
+        .collect();
+    match matches.len() {
+        0 => bail!("no ticket matches '{arg}'"),
+        1 => Ok(matches[0].clone()),
+        _ => {
+            let mut msg = format!("error: prefix '{arg}' is ambiguous");
+            for b in &matches {
+                let id = b.strip_prefix("ticket/")
+                    .and_then(|s| s.split('-').next())
+                    .unwrap_or(b.as_str());
+                msg.push_str(&format!("\n  {id}  ({})", b));
+            }
+            bail!("{msg}")
+        }
+    }
+}
+
+/// Return the `To` column of every History table row, skipping the header and separator rows.
+pub fn history_target_states(body: &str) -> Vec<String> {
+    let Some(idx) = body.find("\n## History") else { return Vec::new() };
+    body[idx..].lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if !line.starts_with('|') { return None; }
+            // cols = ["", When, From, To, By, ""]; the To column is index 3
+            let to = line.split('|').map(str::trim).nth(3)?.to_string();
+            if to.is_empty() || to == "To" || to.chars().all(|c| c == '-') { return None; }
+            Some(to)
+        })
+        .collect()
+}
+
+/// Derive the ticket branch name from the ticket file path.
+/// e.g. tickets/0001-my-ticket.md → ticket/0001-my-ticket
+pub fn branch_name_from_path(path: &Path) -> Option<String> {
+    let stem = path.file_stem()?.to_str()?;
+    Some(format!("ticket/{stem}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -752,72 +820,4 @@ mod tests {
         let states = super::history_target_states(body);
         assert!(states.is_empty(), "header and separator rows must be skipped");
     }
-}
-
-/// Generate an 8-character hex ticket ID from local entropy (timestamp + PID).
-/// No network access or shared state is required. Birthday collision probability
-/// at N=1000 tickets: N²/2³² ≈ 0.023% — acceptable at this scale.
-pub fn gen_hex_id() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let dur = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
-    let secs = dur.as_secs();
-    let nanos = dur.subsec_nanos() as u64;
-    let pid = std::process::id() as u64;
-    // splitmix64-style mixing for good bit avalanche
-    let a = secs.wrapping_mul(0x9e3779b97f4a7c15).wrapping_add(nanos);
-    let b = (a ^ (a >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-    let c = (b ^ (b >> 27)).wrapping_mul(0x94d049bb133111eb);
-    let result = (c ^ (c >> 31)) ^ pid.wrapping_mul(0x6c62272e07bb0142);
-    format!("{:016x}", result)[..8].to_string()
-}
-
-/// Find a ticket branch matching a user-supplied ID argument (prefix or full hex).
-/// Normalizes plain integers (e.g. 35 → 0035) via `id_arg_prefixes`.
-pub fn resolve_ticket_branch(branches: &[String], arg: &str) -> Result<String> {
-    let prefixes = id_arg_prefixes(arg)?;
-    let mut seen = std::collections::HashSet::new();
-    let matches: Vec<&String> = branches.iter()
-        .filter(|b| {
-            let id = b.strip_prefix("ticket/")
-                .and_then(|s| s.split('-').next())
-                .unwrap_or("");
-            prefixes.iter().any(|p| id.starts_with(p.as_str())) && seen.insert(id.to_string())
-        })
-        .collect();
-    match matches.len() {
-        0 => bail!("no ticket matches '{arg}'"),
-        1 => Ok(matches[0].clone()),
-        _ => {
-            let mut msg = format!("error: prefix '{arg}' is ambiguous");
-            for b in &matches {
-                let id = b.strip_prefix("ticket/")
-                    .and_then(|s| s.split('-').next())
-                    .unwrap_or(b.as_str());
-                msg.push_str(&format!("\n  {id}  ({})", b));
-            }
-            bail!("{msg}")
-        }
-    }
-}
-
-/// Return the `To` column of every History table row, skipping the header and separator rows.
-pub fn history_target_states(body: &str) -> Vec<String> {
-    let Some(idx) = body.find("\n## History") else { return Vec::new() };
-    body[idx..].lines()
-        .filter_map(|line| {
-            let line = line.trim();
-            if !line.starts_with('|') { return None; }
-            // cols = ["", When, From, To, By, ""]; the To column is index 3
-            let to = line.split('|').map(str::trim).nth(3)?.to_string();
-            if to.is_empty() || to == "To" || to.chars().all(|c| c == '-') { return None; }
-            Some(to)
-        })
-        .collect()
-}
-
-/// Derive the ticket branch name from the ticket file path.
-/// e.g. tickets/0001-my-ticket.md → ticket/0001-my-ticket
-pub fn branch_name_from_path(path: &Path) -> Option<String> {
-    let stem = path.file_stem()?.to_str()?;
-    Some(format!("ticket/{stem}"))
 }

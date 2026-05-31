@@ -159,6 +159,22 @@ pub fn provision_worktree(root: &Path, config: &Config, branch: &str, warnings: 
     Ok(wt)
 }
 
+pub fn list_worktrees_with_tickets(
+    root: &Path,
+    tickets_dir: &Path,
+) -> Result<Vec<(PathBuf, String, Option<Ticket>)>> {
+    let worktrees = list_ticket_worktrees(root)?;
+    let tickets = load_all_from_git(root, tickets_dir).unwrap_or_default();
+    let result = worktrees.into_iter().map(|(wt_path, branch)| {
+        let ticket = tickets.iter().find(|t| {
+            t.frontmatter.branch.as_deref() == Some(branch.as_str())
+                || crate::ticket_fmt::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
+        }).cloned();
+        (wt_path, branch, ticket)
+    }).collect();
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use std::process::Command;
@@ -258,20 +274,4 @@ dir = "../external-worktrees"
         );
         assert!(wt.is_dir(), "external worktree dir must exist on disk: {}", wt.display());
     }
-}
-
-pub fn list_worktrees_with_tickets(
-    root: &Path,
-    tickets_dir: &Path,
-) -> Result<Vec<(PathBuf, String, Option<Ticket>)>> {
-    let worktrees = list_ticket_worktrees(root)?;
-    let tickets = load_all_from_git(root, tickets_dir).unwrap_or_default();
-    let result = worktrees.into_iter().map(|(wt_path, branch)| {
-        let ticket = tickets.iter().find(|t| {
-            t.frontmatter.branch.as_deref() == Some(branch.as_str())
-                || crate::ticket_fmt::branch_name_from_path(&t.path).as_deref() == Some(branch.as_str())
-        }).cloned();
-        (wt_path, branch, ticket)
-    }).collect();
-    Ok(result)
 }

@@ -99,6 +99,7 @@ pub struct GitHostConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Default)]
 pub struct WorkersConfig {
     /// Docker image used to run worker agents; omit for local execution.
     pub container: Option<String>,
@@ -116,17 +117,6 @@ pub struct WorkersConfig {
     pub model: Option<String>,
 }
 
-impl Default for WorkersConfig {
-    fn default() -> Self {
-        Self {
-            container: None,
-            keychain: std::collections::HashMap::new(),
-            env: std::collections::HashMap::new(),
-            default: None,
-            model: None,
-        }
-    }
-}
 
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct WorkConfig {
@@ -666,7 +656,7 @@ impl Config {
             .flat_map(|s| s.transitions.iter())
             .filter(|t| {
                 let is_coder_start = t.trigger == "command:start"
-                    && t.worker_profile.as_deref().map_or(true, |p| !p.ends_with("/spec-writer"));
+                    && t.worker_profile.as_deref().is_none_or(|p| !p.ends_with("/spec-writer"));
                 let is_merge_completion = matches!(t.completion,
                     CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge);
                 is_coder_start || is_merge_completion
