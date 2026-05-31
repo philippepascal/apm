@@ -46,7 +46,75 @@ The audit of the remaining surfaces found no other breaking changes. The `apm-se
 
 ### Approach
 
-How the implementation will work.
+#### Audit results
+
+A full read of `apm-server/src/{models,handlers/tickets,handlers/workflow,handlers/maintenance,handlers/mod,agents,work,workers}.rs` and all `apm-ui/src/` TypeScript files confirms only one file needs editing: `apm-server/src/main.rs`.
+
+#### apm-server/src/main.rs — MERGE_FAILED_WORKFLOW_CONFIG
+
+Locate the `const MERGE_FAILED_WORKFLOW_CONFIG: &str = r#"..."#;` block (around line 2523). Make three changes:
+
+1. **Move `worker_profile` from transition to state.** Under the `ready` state, remove `worker_profile = "claude/coder"` from the `[[workflow.states.transitions]]` block. Under the `in_progress` state header, add `worker_profile = "claude/coder"` as a field on the state block itself.
+
+2. **Add `[workers]` section.** Insert `[workers]\ndefault = "claude/coder"\n` before the `[tickets]` section. This satisfies 4d20ba2f's mandatory `workers.default` requirement.
+
+3. **Remove `merge_failed → in_progress` transition.** Delete the `[[workflow.states.transitions]]` block under `merge_failed` that has `to = "in_progress"`. Leave only the `to = "implemented"` block.
+
+The updated constant looks like:
+```toml
+[project]
+name = "test"
+
+[workers]
+default = "claude/coder"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "merge"
+  on_failure = "merge_failed"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+```
+
+#### Test assertion review
+
+No assertion changes are needed.
+
+`get_ticket_recovery_options_populated` asserts `!opts.is_empty()` and that a `retry_merge` option exists pointing to `implemented`. After removing `merge_failed → in_progress`, only the `retry_merge` option remains, which still satisfies both assertions.
+
+`list_tickets_merge_failure_state_ids` asserts `merge_failed` is in `merge_failure_state_ids` and `in_progress` is not. `is_merge_failure_state("merge_failed")` checks whether any merge-completion transition names `merge_failed` as `on_failure`. The `in_progress → implemented` transition (`completion = "merge"`, `on_failure = "merge_failed"`) still exists, so `merge_failed` is still classified correctly.
+
+#### Verification
+
+Run `cargo test -p apm-server` to confirm all tests pass. No UI build or `vitest` changes are required.
 
 ### Open questions
 
