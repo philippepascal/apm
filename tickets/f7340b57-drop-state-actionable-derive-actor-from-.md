@@ -29,12 +29,14 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 - [ ] A workflow TOML with no `actionable` keys parses successfully and all states are accessible.
 - [ ] `Config::actionable_states_for("agent")` returns exactly the state IDs that have at least one outgoing transition with `trigger = "command:start"`.
 - [ ] `Config::actionable_states_for("supervisor")` returns exactly the non-terminal state IDs that have no `command:start` outgoing transition.
+- [ ] A unit test in `apm-core/src/config.rs` asserts that `actionable_states_for("supervisor")` includes `in_design` given a state with only manual outgoing transitions and `terminal` unset (defaulting to `false`).
 - [ ] `Config::actionable_states_for("engineer")` returns an empty vec.
 - [ ] `apm next` returns the same highest-priority ticket before and after the migration when run against the default workflow with tickets in various states.
 - [ ] `apm list --actionable agent` returns the same set of tickets before and after the migration.
 - [ ] `apm-core/src/default/workflow.toml` contains no `actionable` lines.
 - [ ] `.apm/workflow.toml` contains no `actionable` lines.
 - [ ] `cargo test --workspace` passes with no failures.
+- [ ] The doc comment on `Config::actionable_states_for` in `apm-core/src/config.rs` does not reference `any` as a valid actor value.
 
 ### Out of scope
 
