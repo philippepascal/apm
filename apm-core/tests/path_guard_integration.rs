@@ -1,8 +1,8 @@
-/// Integration tests for PathGuard and hook_config.
-///
-/// These tests cover the acceptance criteria for the filesystem path validator
-/// by invoking the core library directly and, where the `apm` binary is
-/// available, via subprocess.
+//! Integration tests for PathGuard and hook_config.
+//!
+//! These tests cover the acceptance criteria for the filesystem path validator
+//! by invoking the core library directly and, where the `apm` binary is
+//! available, via subprocess.
 
 use apm_core::config::IsolationConfig;
 use apm_core::wrapper::path_guard::{PathGuard, canonicalize_lenient};
@@ -249,7 +249,7 @@ fn ac_apm_bin_write_rejected() {
     std::fs::create_dir_all(apm_bin.parent().unwrap()).unwrap();
     std::fs::write(&apm_bin, "binary").unwrap();
 
-    let guard = make_guard_with_protected(&wt, &[apm_bin.clone()]);
+    let guard = make_guard_with_protected(&wt, std::slice::from_ref(&apm_bin));
     assert!(guard.check_write(&apm_bin).is_err());
 }
 
@@ -263,7 +263,7 @@ fn ac_system_prompt_file_write_rejected() {
     let sys_file = tmp.path().join("apm-sys-1234.txt");
     std::fs::write(&sys_file, "system prompt").unwrap();
 
-    let guard = make_guard_with_protected(&wt, &[sys_file.clone()]);
+    let guard = make_guard_with_protected(&wt, std::slice::from_ref(&sys_file));
     assert!(guard.check_write(&sys_file).is_err());
 }
 
@@ -275,7 +275,7 @@ fn ac_user_message_file_write_rejected() {
     let msg_file = tmp.path().join("apm-msg-5678.txt");
     std::fs::write(&msg_file, "message").unwrap();
 
-    let guard = make_guard_with_protected(&wt, &[msg_file.clone()]);
+    let guard = make_guard_with_protected(&wt, std::slice::from_ref(&msg_file));
     assert!(guard.check_write(&msg_file).is_err());
 }
 
@@ -322,7 +322,7 @@ fn ac_apm_bin_inside_worktree_still_rejected() {
     let apm_bin = bin_dir.join("apm");
     std::fs::write(&apm_bin, "binary").unwrap();
 
-    let guard = make_guard_with_protected(&wt, &[apm_bin.clone()]);
+    let guard = make_guard_with_protected(&wt, std::slice::from_ref(&apm_bin));
     // Even though apm_bin is inside the worktree, it must be rejected
     assert!(
         guard.check_write(&apm_bin).is_err(),

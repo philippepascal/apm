@@ -11,7 +11,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     }
     println!("{}: {} → {} (caller: {}, branch: {})", out.id, out.old_state, out.new_state, out.caller_name, out.branch);
     println!("Worktree: {}", out.worktree_path.display());
-    if let (Some(pid), Some(ref log)) = (out.worker_pid, out.log_path.as_ref()) {
+    if let (Some(pid), Some(log)) = (out.worker_pid, out.log_path.as_ref()) {
         println!("Worker spawned: PID={pid}, log={}", log.display());
     }
     if let Some(ref wn) = out.worker_name {
@@ -31,6 +31,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
     Ok(())
 }
 
+#[allow(clippy::type_complexity)]
 pub fn spawn_next_worker(
     root: &Path,
     no_aggressive: bool,

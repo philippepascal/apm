@@ -12,7 +12,7 @@ enum ParserStrategy {
 
 impl ParserStrategy {
     fn from_manifest(m: Option<&Manifest>) -> Self {
-        match m.and_then(|m| Some(m.parser.as_str())) {
+        match m.map(|m| m.parser.as_str()) {
             Some("external") => Self::External,
             _ => Self::Canonical,
         }
@@ -133,7 +133,7 @@ impl Wrapper for CustomWrapper {
         let apm_bin = super::resolve_apm_cli_bin();
 
         // Write the path-guard hook for canonical wrappers that request isolation.
-        let enforce = self.manifest.as_ref().map_or(false, |m| m.enforce_worktree_isolation);
+        let enforce = self.manifest.as_ref().is_some_and(|m| m.enforce_worktree_isolation);
         let strategy = ParserStrategy::from_manifest(self.manifest.as_ref());
         if enforce && strategy == ParserStrategy::Canonical {
             crate::wrapper::hook_config::write_hook_config(&ctx.worktree_path, &apm_bin)?;
@@ -248,7 +248,7 @@ fn set_apm_env(cmd: &mut std::process::Command, ctx: &WrapperContext, apm_bin: &
     for (k, v) in &ctx.options {
         let env_key = format!(
             "APM_OPT_{}",
-            k.to_uppercase().replace('.', "_").replace('-', "_")
+            k.to_uppercase().replace(['.', '-'], "_")
         );
         cmd.env(&env_key, v);
     }
