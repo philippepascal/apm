@@ -221,7 +221,7 @@ These four unit tests on `resolve_dispatch_profile` directly verify the priority
 ### Amendment requests
 
 - [x] Fix the transition-label pseudocode in Approach section 3. The format string currently shows dest_state_id followed by tr.to, both of which equal the destination state, producing a nonsensical destination-arrow-destination label. The source state must be threaded into the helper or extracted from the calling context. Specify how — either pass source_state_id as a parameter, or have callers format the label themselves.
-- [ ] Specify the return type and lifetime for the new profile resolution helper. The static fallback 'claude/coder' is a &static str while values from config are owned Strings. Decide whether to return String for all paths, use Cow, or have callers handle the label formatting. Current spec is ambiguous about borrow semantics and may not compile as written.
+- [x] Specify the return type and lifetime for the new profile resolution helper. The static fallback 'claude/coder' is a &static str while values from config are owned Strings. Decide whether to return String for all paths, use Cow, or have callers handle the label formatting. Current spec is ambiguous about borrow semantics and may not compile as written.
 - [ ] Add test cases for the both-set scenario where state.worker_profile and transition.worker_profile are both present, asserting state wins, in the actual dispatch functions (run, run_next, spawn_next_worker). Currently only resolve_for_diagnostic has a test for this preference. The dispatch sites are the behavioural ones that matter for real worker spawning.
 
 ### Code review
