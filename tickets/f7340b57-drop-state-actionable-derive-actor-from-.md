@@ -31,7 +31,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 - [x] `Config::actionable_states_for("supervisor")` returns exactly the non-terminal state IDs that have no `command:start` outgoing transition.
 - [x] A unit test in `apm-core/src/config.rs` asserts that `actionable_states_for("supervisor")` includes `in_design` given a state with only manual outgoing transitions and `terminal` unset (defaulting to `false`).
 - [x] `Config::actionable_states_for("engineer")` returns an empty vec.
-- [ ] `apm next` returns the same highest-priority ticket before and after the migration when run against the default workflow with tickets in various states.
+- [x] `apm next` returns the same highest-priority ticket before and after the migration when run against the default workflow with tickets in various states.
 - [ ] `apm list --actionable agent` returns the same set of tickets before and after the migration.
 - [ ] `apm-core/src/default/workflow.toml` contains no `actionable` lines.
 - [ ] `.apm/workflow.toml` contains no `actionable` lines.
