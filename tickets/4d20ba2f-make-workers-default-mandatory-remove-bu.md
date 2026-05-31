@@ -77,7 +77,7 @@ let worker_profile_str = triggering_transition
 
 **`run_next()`** (~line 605) and **`spawn_next_worker()`** (~line 784): identical substitution.
 
-**`resolve_for_diagnostic()`** (~line 180): replace the three-arm `if/else if/else` with a two-arm form:
+**`resolve_for_diagnostic()`** (~line 180): replace the three-arm `if/else if/else` with a two-arm form, then add an explicit guard before `parse_worker_profile`:
 ```rust
 // Before (three arms, last arm hardcodes "claude/coder")
 let (worker_profile_str, profile_source) = if let Some(wp) = wp_from_transition {
@@ -93,9 +93,28 @@ let (worker_profile_str, profile_source) = if let Some(wp) = wp_from_transition 
 } else {
     (config.workers.default.clone(), "workers.default".to_string())
 };
+if worker_profile_str.is_empty() {
+    anyhow::bail!(
+        "workers.default is not set — add `default = \"claude/coder\"` under [workers] in .apm/config.toml"
+    );
+}
 ```
 
+The guard documents the validation invariant: `apm validate` enforces that `workers.default` is non-empty, but `resolve_for_diagnostic` may be called independently. If the string is empty, the subsequent `parse_worker_profile` call would fail with a generic format error; the guard replaces that with a message naming the config field.
+
 The `include_str!` constants at the top of the file are not touched — they are used by `resolve_builtin_instructions()` for the role-file cascade, which is separate from the `workers.default` dispatch cascade.
+
+#### `apm-core/src/prompt.rs` — one dispatch site
+
+**`resolve_agent_role()`** (~line 68): change the fallback from `Option` unwrap to direct use of the `String` field:
+```rust
+// Before
+let default_wp = config.workers.default.as_deref().unwrap_or("claude/coder");
+// After
+let default_wp = config.workers.default.as_str();
+```
+
+No test changes needed: `make_explain_project` already writes `[workers]\ndefault = "{agent}/coder"` to the test config, so the resolved profile remains unchanged.
 
 #### `apm-core/src/validate.rs` — three sites
 
@@ -103,8 +122,7 @@ The `include_str!` constants at the top of the file are not touched — they are
 ```rust
 if config.workers.default.is_empty() {
     errors.push(
-        "config: workers.default is not set; add `default = \"<agent/role>\"` \
-         under [workers] in .apm/config.toml".into()
+        "config: workers.default is not set — add `default = \"claude/coder\"` under [workers] in .apm/config.toml".into()
     );
 }
 ```
