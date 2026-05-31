@@ -1,7 +1,7 @@
 +++
 id = "f7340b57"
 title = "Drop state.actionable; derive actor from outgoing triggers"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7340b57-drop-state-actionable-derive-actor-from-"
 created_at = "2026-05-31T02:56:19.482471Z"
-updated_at = "2026-05-31T21:03:58.459091Z"
+updated_at = "2026-05-31T21:05:22.919160Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
@@ -284,3 +284,4 @@ Expected: zero matches. The string `actionable` will still appear inside `#[cfg(
 | 2026-05-31T20:22Z | ammend | in_design | philippepascal |
 | 2026-05-31T20:27Z | in_design | specd | claude |
 | 2026-05-31T21:03Z | specd | ready | philippepascal |
+| 2026-05-31T21:05Z | ready | in_progress | philippepascal |
