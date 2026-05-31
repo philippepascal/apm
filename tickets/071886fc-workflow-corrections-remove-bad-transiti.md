@@ -40,7 +40,12 @@ The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain thr
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Trigger-uniqueness validation rule (enforced in the next ticket in this epic, which depends on this one)
+- Adding a `merge_failed → ready` escape hatch (only the `in_progress` removal is in scope)
+- Removing the `ammend → specd` or `ammend → question` transitions (kept for supervisor edge-case use)
+- The `specd → in_design` stale row in the `STATIC_STATE_MACHINE` table (unrelated cleanup)
+- Help text or documentation sweep (separate ticket)
+- Any code changes — this is a pure content change to TOML and Markdown files
 
 ### Approach
 
