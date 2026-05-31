@@ -239,6 +239,7 @@ Add dispatch tests (can be unit tests without a full git repo, using the `resolv
 
 ### Amendment requests
 
+- [ ] Fix the transition-label pseudocode in Approach section 3. The format string currently shows dest_state_id followed by tr.to, both of which equal the destination state, producing a nonsensical destination-arrow-destination label. The source state must be threaded into the helper or extracted from the calling context. Specify how — either pass source_state_id as a parameter, or have callers format the label themselves.
 
 ### Code review
 
