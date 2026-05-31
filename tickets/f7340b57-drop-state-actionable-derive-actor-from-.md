@@ -24,7 +24,7 @@ This ticket removes the field entirely and rewrites every callsite to derive act
 
 ### Acceptance criteria
 
-- [ ] `StateConfig` has no `actionable` field; the struct compiles without it.
+- [x] `StateConfig` has no `actionable` field; the struct compiles without it.
 - [ ] `StateConfig` is annotated with `deny_unknown_fields`; parsing a `[[workflow.states]]` block that contains `actionable = ["agent"]` returns a TOML error.
 - [ ] A workflow TOML with no `actionable` keys parses successfully and all states are accessible.
 - [ ] `Config::actionable_states_for("agent")` returns exactly the state IDs that have at least one outgoing transition with `trigger = "command:start"`.
