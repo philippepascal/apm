@@ -121,6 +121,7 @@ Run `cargo test -p apm-server` to confirm all tests pass. No UI build or `vitest
 
 ### Amendment requests
 
+- [ ] Trace the recovery-options pipeline explicitly. Identify where the UI's recovery options are computed (apm-core/src/recovery.rs::classify_recovery_options reads valid transitions from merge_failed). Confirm that after removing merge_failed to in_progress, only retry_merge to implemented remains, and that the UI consumes that result correctly. Add this to the Approach section.
 
 ### Code review
 
