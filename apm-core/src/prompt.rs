@@ -277,7 +277,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to = "in_progress"
@@ -449,7 +448,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to = "in_progress"

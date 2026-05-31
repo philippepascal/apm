@@ -295,6 +295,7 @@ impl Default for SatisfiesDeps {
 
 /// A single state in the workflow state machine.
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct StateConfig {
     /// Unique state identifier (e.g. `new`, `in_progress`). Used in ticket frontmatter and transition targets.
     pub id: String,
@@ -318,9 +319,6 @@ pub struct StateConfig {
     /// List of outgoing transitions from this state.
     #[serde(default)]
     pub transitions: Vec<TransitionConfig>,
-    /// Roles that can actively pick up / act on tickets in this state. Valid values: `agent`, `supervisor`, `engineer`, `any`. Drives `apm next`, `apm start`, and `apm list --actionable`.
-    #[serde(default)]
-    pub actionable: Vec<String>,
 }
 
 /// A directed edge in the state machine: from the parent state to `to`.
@@ -634,12 +632,23 @@ impl Config {
     }
 
     /// States where `actor` can actively pick up / act on tickets.
-    /// Matches "any" as a wildcard in addition to the literal actor name.
+    ///
+    /// - `"agent"`: states that have at least one outgoing transition with `trigger = "command:start"`.
+    /// - `"supervisor"`: non-terminal states that have no `command:start` outgoing transition.
+    /// - Any other value: empty vec.
     pub fn actionable_states_for(&self, actor: &str) -> Vec<String> {
-        self.workflow.states.iter()
-            .filter(|s| s.actionable.iter().any(|a| a == actor || a == "any"))
-            .map(|s| s.id.clone())
-            .collect()
+        match actor {
+            "agent" => self.workflow.states.iter()
+                .filter(|s| s.transitions.iter().any(|t| t.trigger == "command:start"))
+                .map(|s| s.id.clone())
+                .collect(),
+            "supervisor" => self.workflow.states.iter()
+                .filter(|s| !s.terminal
+                    && !s.transitions.iter().any(|t| t.trigger == "command:start"))
+                .map(|s| s.id.clone())
+                .collect(),
+            _ => vec![],
+        }
     }
 
     pub fn terminal_state_ids(&self) -> std::collections::HashSet<String> {
@@ -1021,7 +1030,10 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
 id = "in_progress"
@@ -1030,13 +1042,95 @@ label = "In Progress"
 [[workflow.states]]
 id = "specd"
 label = "Specd"
-actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "ready"
+  trigger = "manual"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         let states = config.actionable_states_for("agent");
         assert!(states.contains(&"ready".to_string()));
         assert!(!states.contains(&"specd".to_string()));
         assert!(!states.contains(&"in_progress".to_string()));
+    }
+
+    #[test]
+    fn actionable_states_for_supervisor_includes_in_design() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "in_design"
+label = "In Design"
+
+  [[workflow.states.transitions]]
+  to = "specd"
+  trigger = "manual"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to = "in_progress"
+  trigger = "command:start"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+terminal = true
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        let states = config.actionable_states_for("supervisor");
+        assert!(states.contains(&"in_design".to_string()),
+            "in_design has no command:start outgoing; must be supervisor-actionable");
+        assert!(!states.contains(&"ready".to_string()),
+            "ready has command:start outgoing; must not be supervisor-actionable");
+        assert!(!states.contains(&"in_progress".to_string()),
+            "terminal states must not be supervisor-actionable");
+    }
+
+    #[test]
+    fn actionable_states_for_unknown_actor_returns_empty() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert!(config.actionable_states_for("engineer").is_empty());
+    }
+
+    #[test]
+    fn state_config_deny_unknown_fields_rejects_actionable() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id         = "ready"
+label      = "Ready"
+actionable = ["agent"]
+"#;
+        let result: Result<Config, _> = toml::from_str(toml);
+        assert!(result.is_err(), "actionable field must be rejected by deny_unknown_fields");
     }
 
     #[test]

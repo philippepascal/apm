@@ -36,7 +36,13 @@ pub async fn workflow_handler(State(state): State<Arc<AppState>>) -> Json<Workfl
         id: s.id.clone(),
         label: s.label.clone(),
         terminal: s.terminal,
-        actionable: s.actionable.clone(),
+        actionable: if s.transitions.iter().any(|t| t.trigger == "command:start") {
+            vec!["agent".to_string()]
+        } else if !s.terminal {
+            vec!["supervisor".to_string()]
+        } else {
+            vec![]
+        },
     }).collect();
     let transitions = cfg.workflow.states.iter().flat_map(|s| {
         s.transitions.iter().map(move |tr| TransitionEdge {
