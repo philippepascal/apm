@@ -19,57 +19,9 @@ depends_on = ["f7340b57"]
 
 ### Problem
 
-STEP 2 of the incremental workflow schema cleanup. After this lands, dispatch resolution and the instructions state-machine filter both prefer state.worker_profile, with the old transition.worker_profile still functional as a fallback. The system stays fully working.
+Dispatch resolution in `apm-core/src/start.rs` currently reads the worker profile exclusively from the firing `transition.worker_profile`. This means the profile that determines which agent spawns into `in_progress` is declared on the `ready → in_progress` transition rather than on `in_progress` itself. As the workflow grows, every spawn transition must repeat the profile — and the `instructions.rs` role filter can only show transitions tagged with a matching `worker_profile`, so a coder currently sees only the single `ready → in_progress` spawn row, not the full set of state-exits (`in_progress → implemented`, `in_progress → blocked`, etc.) that describe its actual job.
 
-SCOPE:
-
-1. Update apm-core/src/config.rs::StateConfig:
-   - Add a new field worker_profile: Option<String>. Format: agent/role.
-   - Document the field in the doc comment: when set, the state is owned by that worker profile. The dispatcher reads this on transitions into the state.
-
-2. Update apm-core/src/default/workflow.toml:
-   - Add worker_profile = 'claude/spec-writer' on the in_design state.
-   - Add worker_profile = 'claude/coder' on the in_progress state.
-
-3. Migrate this project's .apm/workflow.toml the same way.
-
-4. Update apm-core/src/start.rs dispatch resolution (run, run_next, spawn_next_worker, resolve_for_diagnostic):
-   - When determining the worker profile to dispatch, look at the destination state's worker_profile FIRST.
-   - Fall back to the firing transition's worker_profile if the destination state has none. (Backwards compatibility during the staged migration.)
-   - Then fall back to config.workers.default.
-   - Then fall back to the built-in 'claude/coder'.
-
-5. Update apm-core/src/instructions.rs::format_live_state_machine — the per-role filter:
-   - Change the filter from derive_transition_role(transition) to a state-based lookup: identify states whose worker_profile role component equals the requested role; emit all transitions out of those states.
-   - Keep derive_transition_role for now if it still has callers; if it has no callers after this change, delete it.
-
-6. Update apm-core/src/agents.rs scan logic — the bit that walks worker_profile transitions to determine referenced agents. Update to walk worker_profile states first, transitions as fallback.
-
-7. Update apm-core/src/config.rs::implementation_state_ids — the helper that returns implementation state ids. The 'coder start' part should derive from state worker_profile presence; keep the 'merge completion' part on transitions. Result set must remain semantically equivalent on the default workflow.
-
-OUT OF SCOPE:
-- Dropping transition.worker_profile (next ticket).
-- Removing the built-in 'claude/coder' fallback (later ticket about making [workers].default mandatory).
-- Updating workflow transitions or removing bad ones (later ticket).
-- Trigger uniqueness validate (later ticket).
-- Help text (later ticket).
-- Server / UI surfaces (later ticket).
-
-TESTS:
-- A workflow.toml with state.worker_profile = 'claude/coder' parses correctly.
-- Dispatching a worker for a ticket transitioning from ready to in_progress reads worker_profile from in_progress state (not from the transition). Add a test that explicitly removes the transition.worker_profile and confirms the dispatch still resolves to claude/coder via the state.
-- A workflow.toml that has BOTH state.worker_profile and transition.worker_profile prefers the state value.
-- A workflow.toml that has only transition.worker_profile (legacy shape) still dispatches correctly via the transition fallback path.
-- The instructions filter for role = coder includes all transitions out of in_progress (the coder's full lifecycle: implemented, blocked, and any other), not only the command:start row.
-- resolve_for_diagnostic provenance correctly names the state when worker_profile was sourced from the state (label: 'workflow.toml state <name>.worker_profile').
-
-REFERENCES:
-- apm-core/src/config.rs
-- apm-core/src/start.rs (the four resolution sites and resolve_for_diagnostic)
-- apm-core/src/instructions.rs (format_live_state_machine, derive_transition_role)
-- apm-core/src/agents.rs (the scan logic)
-- apm-core/src/default/workflow.toml
-- .apm/workflow.toml
+This ticket adds `state.worker_profile: Option<String>` to `StateConfig` and teaches the four dispatch resolution sites to prefer it over `transition.worker_profile`. It also updates the instructions filter to show all transitions out of a state the role owns, and updates `configured_agent_names` and `implementation_state_ids` to read state-level profiles. The old `transition.worker_profile` is retained as a working fallback throughout; no existing configurations break.
 
 ### Acceptance criteria
 
