@@ -2,6 +2,8 @@ use anyhow::{bail, Result};
 use apm_core::{config::{Config, SectionType}, git, spec, ticket, ticket_fmt};
 use std::{io::Read, path::Path};
 
+#[allow(clippy::too_many_arguments)]
+// Each argument maps to a distinct CLI flag.
 pub fn run(root: &Path, id_arg: &str, section: Option<String>, set: Option<String>, set_file: Option<String>, check: bool, mark: Option<String>, append: Option<String>, append_file: Option<String>, add_task: Option<String>, no_aggressive: bool) -> Result<()> {
     if set.is_some() && section.is_none() { bail!("--set requires --section"); }
     if set_file.is_some() && section.is_none() { bail!("--set-file requires --section"); }
