@@ -3,6 +3,8 @@ use apm_core::{config::{resolve_identity, resolve_caller_name}, epic, ticket};
 use std::path::Path;
 use crate::ctx::CmdContext;
 
+#[allow(clippy::too_many_arguments)]
+// Each argument maps to a distinct CLI flag.
 pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: Option<String>, context_section: Option<String>, no_aggressive: bool, sections: Vec<String>, sets: Vec<String>, epic: Option<String>, depends_on: Vec<String>) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
