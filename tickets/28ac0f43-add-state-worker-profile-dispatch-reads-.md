@@ -1,7 +1,7 @@
 +++
 id = "28ac0f43"
 title = "Add state.worker_profile; dispatch reads it (transition fallback retained)"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/28ac0f43-add-state-worker-profile-dispatch-reads-"
 created_at = "2026-05-31T02:56:42.034762Z"
-updated_at = "2026-05-31T02:56:42.034762Z"
+updated_at = "2026-05-31T07:04:30.323405Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["f7340b57"]
@@ -97,3 +97,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-31T02:56Z | — | new | philippepascal |
+| 2026-05-31T07:04Z | new | groomed | philippepascal |
