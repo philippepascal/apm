@@ -140,6 +140,7 @@ Tests to update in `validate.rs`:
 
 ### Amendment requests
 
+- [ ] Resolve silent panic risk in resolve_for_diagnostic. After removing the unwrap_or claude/coder fallback, the function still calls unwrap on workers.default. Either add an explicit assertion documenting the validation invariant, or use unwrap_or_else with a descriptive error message that names the missing field, so a misconfigured project produces a clear error rather than a confusing crash.
 
 ### Code review
 
