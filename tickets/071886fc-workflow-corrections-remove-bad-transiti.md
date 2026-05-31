@@ -29,7 +29,14 @@ The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain thr
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm state <id> ammend` on a ticket in `in_design` returns an error (transition not defined)
+- [ ] `apm state <id> in_progress` on a ticket in `merge_failed` returns an error (transition not defined)
+- [ ] `apm state <id> groomed` on a ticket in `ammend` succeeds and the ticket reaches `groomed`
+- [ ] `apm start` does not pick up tickets in `ammend` state (no `command:start` exits from `ammend`)
+- [ ] A ticket can traverse `specd → ammend → groomed → in_design → specd` without error
+- [ ] `apm list --actionable` does not include `ammend` tickets in the agent-actionable set
+- [ ] The spec-writer agent prompts no longer instruct the agent to run `apm state <id> in_design` from `ammend`
+- [ ] `cargo test --workspace` passes after all changes
 
 ### Out of scope
 
