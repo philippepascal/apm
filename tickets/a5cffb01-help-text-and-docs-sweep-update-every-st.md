@@ -99,17 +99,19 @@ This ticket runs after e05c0463, 9c66e199, and 4d20ba2f are merged into the epic
 
 #### Phase 1 — Grep sweep
 
-Confirm scope before editing. Run these searches from the repo root:
+Phase 1 runs **after** the three dependencies are merged. Its purpose is to verify clean landing and catch any stale references in files not covered by those tickets. The `transition.worker_profile` and `derive_transition_role` greps must return zero hits; any remaining hit belongs to this ticket's scope.
+
+Run these searches from the repo root:
 
 ```
-grep -rn "shell discipline"          apm/src/ apm-core/src/
-grep -n  "Layer 1"                   apm/src/main.rs
-grep -n  "skipped:"                  apm/src/main.rs
-grep -rn "transition\.worker_profile" apm/src/ apm-core/src/ apm-server/src/
-grep -rn "derive_transition_role"    apm/src/ apm-core/src/
+grep -rn "shell discipline"           apm/src/ apm-core/src/ --exclude-dir=target
+grep -n  "Layer 1"                    apm/src/main.rs
+grep -n  "skipped:"                   apm/src/main.rs
+grep -rn "transition\.worker_profile" apm/src/ apm-core/src/ apm-server/src/ --exclude-dir=target --exclude-dir=tests
+grep -rn "derive_transition_role"     apm/src/ apm-core/src/ --exclude-dir=target --exclude-dir=tests
 ```
 
-The last two should return zero hits if e05c0463 landed cleanly. Any remaining hits there are also in scope for this ticket.
+The last two should return zero hits. Any `shell discipline` hits in `main.rs` are fixed in Phase 2.
 
 #### Phase 2 — File-by-file updates
 
@@ -154,18 +156,33 @@ After:  This file applies when you pick up a ticket in **`groomed`** or **`ammen
 
 Spec-writers enter via `groomed → in_design`; there is no `new → in_design` transition for spec-writers.
 
-**`README.md` line 295**
+**`README.md` — Configuration table (~lines 289–297)**
 
-Remove or rewrite the `agents.md` table row. That file no longer exists as a single document; shell discipline now lives in each role-specific instruction file (`.apm/agents/claude/apm.<role>.md`). Update the table to describe the role file structure accurately, or drop the row if the table already documents the role files elsewhere.
+Remove the `agents.md` row (this file does not exist in the scaffold or in `.apm/`) and replace the two stale role-file rows with a single row covering the general pattern:
+
+Before (three rows):
+```
+| `agents.md`           | Agent instructions: roles, workflow rules, shell discipline |
+| `apm.spec-writer.md`  | Instructions fed to agents during the spec phase            |
+| `apm.worker.md`       | Instructions fed to agents during the implementation phase  |
+```
+
+After (one row):
+```
+| `agents/<agent>/apm.<role>.md` | Role-specific agent instructions (generated per role by `apm init`) |
+```
+
+The `apm help workflow` output is auto-generated from the `WorkflowConfig` struct via `schema_entries::<WorkflowConfig>()` in `apm/src/cmd/help.rs`. Once e05c0463 removes `worker_profile` from `TransitionConfig`, the field `transitions.worker_profile` disappears from the output automatically — no manual edit to `help.rs` is needed.
 
 #### Phase 3 — Validation
 
 ```bash
 cargo build --workspace
 cargo test --workspace
-apm instructions | grep "shell discipline"    # must print nothing
-apm prompt --help | grep "Layer 1 — APM"     # must print nothing
-apm prompt --help | grep "skipped:"          # must print nothing
+apm instructions | grep "shell discipline"       # must print nothing
+apm prompt --help | grep "Layer 1 — APM"        # must print nothing
+apm prompt --help | grep "skipped:"             # must print nothing
+apm help workflow | grep "transitions.worker_profile"  # must print nothing
 ```
 
 ### Open questions
