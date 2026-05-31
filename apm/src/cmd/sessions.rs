@@ -37,8 +37,8 @@ pub fn run(root: &Path) -> Result<()> {
         .unwrap_or(0)
         .max(6);
     println!(
-        "{:<col_user$}  {:<col_device$}  {:<20}  {}",
-        "USERNAME", "DEVICE", "LAST SEEN", "EXPIRES"
+        "{:<col_user$}  {:<col_device$}  {:<20}  EXPIRES",
+        "USERNAME", "DEVICE", "LAST SEEN"
     );
     for s in &sessions {
         let device = s.device_hint.as_deref().unwrap_or("-");

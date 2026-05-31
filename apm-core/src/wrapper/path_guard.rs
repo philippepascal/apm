@@ -243,8 +243,7 @@ fn detect_command_writes(tokens: &[&str], targets: &mut Vec<String>) {
         match tok {
             "tee" => {
                 // First non-flag absolute path argument
-                for j in (i + 1)..n {
-                    let arg = tokens[j];
+                for &arg in &tokens[i + 1..n] {
                     if is_shell_sep(arg) {
                         break;
                     }
@@ -260,8 +259,7 @@ fn detect_command_writes(tokens: &[&str], targets: &mut Vec<String>) {
             "cp" | "mv" => {
                 // Destination = last non-flag absolute path argument
                 let mut last: Option<String> = None;
-                for j in (i + 1)..n {
-                    let arg = tokens[j];
+                for &arg in &tokens[i + 1..n] {
                     if is_shell_sep(arg) {
                         break;
                     }
@@ -436,7 +434,7 @@ mod tests {
         let apm_bin = wt.join("target").join("debug").join("apm");
         std::fs::create_dir_all(apm_bin.parent().unwrap()).unwrap();
         std::fs::write(&apm_bin, "binary").unwrap();
-        let guard = PathGuard::new(&wt, &[], &[apm_bin.clone()]).unwrap();
+        let guard = PathGuard::new(&wt, &[], std::slice::from_ref(&apm_bin)).unwrap();
         let err = guard.check_write(&apm_bin).unwrap_err();
         assert!(err.contains("path outside ticket worktree"));
     }
@@ -449,7 +447,7 @@ mod tests {
         let apm_bin = tmp.path().join("usr").join("bin").join("apm");
         std::fs::create_dir_all(apm_bin.parent().unwrap()).unwrap();
         std::fs::write(&apm_bin, "binary").unwrap();
-        let guard = PathGuard::new(&wt, &[], &[apm_bin.clone()]).unwrap();
+        let guard = PathGuard::new(&wt, &[], std::slice::from_ref(&apm_bin)).unwrap();
         assert!(guard.check_write(&apm_bin).is_err());
     }
 

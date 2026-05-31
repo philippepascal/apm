@@ -257,7 +257,7 @@ fn render_config() -> String {
     let mut sections: Vec<(String, Vec<FieldEntry>)> = Vec::new();
     for e in all_entries {
         let seg = e.toml_path
-            .split(|c: char| c == '.' || c == '[')
+            .split(['.', '['])
             .next()
             .unwrap_or(e.toml_path.as_str())
             .to_string();

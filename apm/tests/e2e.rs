@@ -5,6 +5,7 @@
 use std::path::Path;
 use std::process::{Command, Output};
 use tempfile::TempDir;
+use serde_json;
 
 const APM: &str = env!("CARGO_BIN_EXE_apm");
 
@@ -741,4 +742,162 @@ fn next_respects_priority_and_actionable_states() {
         json.contains(&format!("\"id\":\"{id3}\"")) || json.contains(&format!("\"id\": \"{id3}\"")),
         "expected ticket id3 after id2 moved to specd, got: {json}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// apm agents resolve
+// ---------------------------------------------------------------------------
+
+fn setup_resolve_repo(dir: &std::path::Path, ticket_id: &str) {
+    use std::fs;
+
+    fs::create_dir_all(dir.join(".apm/agents/claude")).unwrap();
+    fs::create_dir_all(dir.join("tickets")).unwrap();
+
+    fs::write(dir.join(".apm/config.toml"), r#"
+[project]
+name = "resolve-test"
+default_branch = "main"
+
+[workers]
+default = "claude/coder"
+
+[tickets]
+dir = "tickets"
+"#).unwrap();
+
+    fs::write(dir.join(".apm/workflow.toml"), r#"
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to      = "done"
+  trigger = "manual"
+  outcome = "success"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#).unwrap();
+
+    fs::write(dir.join(".apm/agents/claude/coder.toml"), "model = \"sonnet\"\n").unwrap();
+
+    let ticket_content = format!(r#"+++
+id = "{ticket_id}"
+title = "Resolve test ticket"
+state = "ready"
+priority = 5
+effort = 2
+risk = 1
+author = "test"
+owner = "test"
+branch = "ticket/{ticket_id}-resolve-test"
+created_at = "2026-01-01T00:00:00Z"
+updated_at = "2026-01-01T00:00:00Z"
++++
+
+## Spec
+
+### Problem
+
+Test.
+
+### Acceptance criteria
+
+- [ ] AC
+
+### Out of scope
+
+None.
+
+### Approach
+
+Something.
+
+### Open questions
+
+### Amendment requests
+
+### Code review
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+"#);
+    fs::write(dir.join(format!("tickets/{ticket_id}-resolve-test.md")), ticket_content).unwrap();
+
+    git_ok(dir, &["init", "-q", "-b", "main"]);
+    git_ok(dir, &["config", "user.email", "test@test.com"]);
+    git_ok(dir, &["config", "user.name", "test"]);
+    git_ok(dir, &["add", ".apm"]);
+    git_ok(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    let branch = format!("ticket/{ticket_id}-resolve-test");
+    git_ok(dir, &["checkout", "-b", &branch]);
+    git_ok(dir, &["add", &format!("tickets/{ticket_id}-resolve-test.md")]);
+    git_ok(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+    git_ok(dir, &["checkout", "main"]);
+}
+
+#[test]
+fn agents_resolve_human_readable() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    let ticket_id = "ee200001";
+    setup_resolve_repo(p, ticket_id);
+
+    let out = apm(p, "apm", &["agents", "resolve", ticket_id]);
+    assert!(out.status.success(), "apm agents resolve failed:\n{}", stderr(&out));
+    let text = stdout(&out);
+
+    assert!(text.contains("agent"), "output must include 'agent' field: {text}");
+    assert!(text.contains("role"), "output must include 'role' field: {text}");
+    assert!(text.contains("manifest"), "output must include 'manifest' field: {text}");
+    assert!(text.contains("claude"), "agent should be 'claude': {text}");
+    assert!(text.contains("coder"), "role should be 'coder': {text}");
+    assert!(text.contains("[present]"), "manifest should be present: {text}");
+}
+
+#[test]
+fn agents_resolve_json() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    let ticket_id = "ee200002";
+    setup_resolve_repo(p, ticket_id);
+
+    let out = apm(p, "apm", &["agents", "resolve", ticket_id, "--json"]);
+    assert!(out.status.success(), "apm agents resolve --json failed:\n{}", stderr(&out));
+    let text = stdout(&out);
+
+    let val: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or_else(|e| panic!("output is not valid JSON: {e}\n{text}"));
+    assert_eq!(val["agent"], "claude", "agent mismatch");
+    assert_eq!(val["role"], "coder", "role mismatch");
+    assert_eq!(val["model"], "sonnet", "model mismatch");
+    assert_eq!(val["dispatchable"], true, "should be dispatchable");
+    assert!(val["manifest_present"].as_bool().unwrap(), "manifest_present must be true");
+}
+
+#[test]
+fn agents_resolve_unknown_id_exits_nonzero() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    setup_resolve_repo(p, "ee200003");
+
+    let out = apm(p, "apm", &["agents", "resolve", "no-such-ticket"]);
+    assert!(!out.status.success(), "should exit non-zero for unknown id");
+    let err = stderr(&out);
+    assert!(!err.is_empty(), "should print error message to stderr: {err}");
 }
