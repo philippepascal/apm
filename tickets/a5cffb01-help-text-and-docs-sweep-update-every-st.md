@@ -85,7 +85,12 @@ REFERENCES:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Functional code changes — removing `transition.worker_profile` from `validate.rs`, deleting `derive_transition_role`, unifying `role_command_allowlist` — handled by e05c0463, 9c66e199, and 4d20ba2f
+- `apm-server` and `apm-ui` web UI surfaces (separate follow-on ticket in the epic)
+- Historical records: `tickets/` and `archive/` Markdown files
+- The `apm.coder.md` "Permitted apm commands" section — rewritten by 9c66e199
+- `apm-core/src/default/workflow.toml` data fields — `worker_profile` moves from transition to state blocks via e05c0463; that file has no prose comments to update
+- The static fallback state machine table in `apm-core/src/instructions.rs` (shows `apm state` instead of `apm start` for spawn transitions) — a functional correction, not a doc sweep change
 
 ### Approach
 
