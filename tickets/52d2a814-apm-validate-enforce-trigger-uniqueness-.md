@@ -21,7 +21,7 @@ depends_on = ["071886fc"]
 
 `apm validate` currently enforces that transition targets exist, that terminal states have no outgoing edges, and that merge completions have `on_failure` set. It does not check three structural properties that, when violated, produce silently broken dispatch behaviour at runtime:
 
-1. **Trigger uniqueness.** A `command:start` transition marks its destination state as a fresh dispatch point. If a second transition (manual or otherwise) can also land on that state, being in the state no longer reliably means the dispatcher should act — the flag becomes ambiguous. No error is emitted today when two transitions converge on the same `command:start` target.
+1. **Trigger uniqueness.** A `command:start` transition marks its destination state as a fresh dispatch point. If any other transition can also reach that same state, the dispatcher can no longer reliably determine that it should act — the flag becomes ambiguous. This rule applies only to states that receive at least one `command:start` incoming edge; states reachable exclusively via manual transitions may have multiple incoming edges without issue. No error is emitted today when a `command:start` target also has other incoming transitions.
 
 2. **`worker_profile` shape.** Dispatch reads `state.worker_profile` and splits on `/` to extract the agent name and role. A value without a `/`, with empty halves, or with the reserved role `worker` causes a runtime panic or silently falls back to the wrong wrapper. The field is currently accepted without format validation.
 
