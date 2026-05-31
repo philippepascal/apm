@@ -265,7 +265,7 @@ Expected: zero matches. The string `actionable` will still appear inside `#[cfg(
 
 ### Amendment requests
 
-- [ ] Add AC verifying that supervisor-actionable derivation works for states with no outgoing command:start. Today in_design has no outgoing command:start; under the new derivation logic this state should derive as supervisor-actionable. Add a behavioural test covering this case.
+- [x] Add AC verifying that supervisor-actionable derivation works for states with no outgoing command:start. Today in_design has no outgoing command:start; under the new derivation logic this state should derive as supervisor-actionable. Add a behavioural test covering this case.
 - [ ] Clarify how the 'any' wildcard value, currently supported in the actionable Vec<String> per the doc comment on StateConfig, is handled in the new derivation logic. Options: drop it entirely if no workflow uses it (confirm by grep), or document a mapping from 'any' to both agent and supervisor. Pick one and specify.
 - [ ] Specify exclusion paths for any grep ACs added to this spec. Use --exclude-dir tests, --exclude-dir archive, --exclude-dir tickets, --exclude-dir .apm--worktrees, --exclude-dir target so the ACs do not fail on legitimate fixture matches in test code or historical tickets.
 
