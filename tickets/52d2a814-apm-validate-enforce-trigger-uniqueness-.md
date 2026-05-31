@@ -54,7 +54,75 @@ All three checks are pure additive validation in `validate_config_no_agents`. No
 
 ### Approach
 
-How the implementation will work.
+Only one file changes: `apm-core/src/validate.rs`. Add three new validation blocks inside `validate_config_no_agents`, after the existing per-transition checks (after line 444) and before the worktree gitignore check.
+
+#### Rule 1 — Trigger uniqueness
+
+Build a `HashMap<&str, Vec<(&str, &str)>>` mapping each destination state ID to its incoming `(source_state_id, trigger)` pairs:
+
+```
+for each state:
+  for each transition:
+    incoming[transition.to].push((state.id, transition.trigger))
+```
+
+For each `(dest, sources)` pair where any entry has `trigger != "manual"`: if `sources.len() > 1`, push an error:
+
+```
+"config: state.{dest} — {N} incoming transitions but trigger 'command:start' requires \
+ exactly one; incoming from: {src1} (trigger: {t1}), {src2} (trigger: {t2})"
+```
+
+Note: `"closed"` is a valid target even when absent from `config.workflow.states`; include it in the incoming map regardless (the duplicate-incoming check is still correct for it).
+
+#### Rule 2 — `worker_profile` shape
+
+For each state where `worker_profile` is `Some(wp)`:
+
+1. Count `/` characters in `wp`. If count ≠ 1, push:
+   `"config: state.{id}.worker_profile — '{wp}' must contain exactly one '/' separator"`
+2. If count == 1, call `split_once('/')` to get `(agent, role)`:
+   - If `agent.is_empty()` or `role.is_empty()`, push:
+     `"config: state.{id}.worker_profile — '{wp}' agent and role components must both be non-empty"`
+   - If `role == "worker"`, push:
+     `"config: state.{id}.worker_profile — role 'worker' is reserved as a process category; use a specific role name"`
+
+#### Rule 3 — `command:start` targets a dispatch-capable state
+
+Build a `HashSet<&str>` of state IDs where `worker_profile.is_some()`:
+
+```
+let dispatch_states: HashSet<&str> = config.workflow.states.iter()
+    .filter(|s| s.worker_profile.is_some())
+    .map(|s| s.id.as_str())
+    .collect();
+```
+
+For each transition with `trigger == "command:start"` where the target is not in `dispatch_states`, push:
+
+```
+"config: state.{src}.transition({dest}) — trigger 'command:start' targets state '{dest}' \
+ which has no worker_profile; the dispatcher has nothing to spawn"
+```
+
+Skip this check for transitions already flagged by Rule 1 (optional; duplicate errors on the same transition are acceptable since they flag different problems).
+
+#### Tests
+
+Add to the existing `#[cfg(test)] mod tests` in `validate.rs`. Each test builds a minimal TOML config, calls `validate_config_no_agents(&config, Path::new("/tmp"))`, and asserts on the returned error strings.
+
+- `trigger_uniqueness_two_manual_to_same_dest_ok` — two manual transitions to same dest, no error
+- `trigger_uniqueness_command_start_plus_manual_same_dest_rejected` — one `command:start` + one `manual` both pointing to the same dest; assert error contains dest ID and both source state IDs
+- `trigger_uniqueness_two_command_start_same_dest_rejected` — two `command:start` to same dest; assert error contains dest ID and both source state IDs
+- `worker_profile_valid_passes` — well-formed `"claude/coder"`; assert no new errors
+- `worker_profile_reserved_role_rejected` — `"claude/worker"`; assert error mentions `"worker"`
+- `worker_profile_no_slash_rejected` — `"claudecoder"`; assert error mentions `"exactly one"`
+- `worker_profile_empty_agent_rejected` — `"/coder"`; assert error mentions "non-empty"
+- `worker_profile_empty_role_rejected` — `"claude/"`; assert error mentions "non-empty"
+- `command_start_missing_worker_profile_rejected` — `command:start → state_without_profile`; assert error mentions destination state ID
+- `default_workflow_passes` — inline TOML replicating the default workflow structure after 071886fc (groomed → in_design via command:start, ready → in_progress via command:start, in_design and in_progress each carry `worker_profile`); assert `validate_config_no_agents` returns no errors for the new rules
+
+The default-workflow test does not load `apm-core/src/default/workflow.toml` from disk; it embeds the relevant states inline to avoid I/O in unit tests and stay resilient to future file changes.
 
 ### Open questions
 
