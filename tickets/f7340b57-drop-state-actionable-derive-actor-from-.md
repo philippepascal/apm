@@ -1,7 +1,7 @@
 +++
 id = "f7340b57"
 title = "Drop state.actionable; derive actor from outgoing triggers"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 5
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7340b57-drop-state-actionable-derive-actor-from-"
 created_at = "2026-05-31T02:56:19.482471Z"
-updated_at = "2026-05-31T07:09:27.397043Z"
+updated_at = "2026-05-31T07:09:32.430251Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
@@ -218,3 +218,4 @@ After all changes: `cargo test --workspace` must pass. The `actionable_states_fo
 | 2026-05-31T02:56Z | — | new | philippepascal |
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
 | 2026-05-31T07:05Z | groomed | in_design | philippepascal |
+| 2026-05-31T07:09Z | in_design | specd | claude |
