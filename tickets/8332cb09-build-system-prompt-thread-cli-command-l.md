@@ -35,7 +35,12 @@ After 9c66e199 unifies the worker allow-list to exactly six commands, the set is
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Per-role allow-list changes — handled by 9c66e199
+- Changes to `apm instructions` CLI output — it already works and is unchanged
+- Changing the signature of `instructions::generate` or `build_system_prompt`
+- Updates to `apm --help` or `--help` output on any subcommand
+- Any `apm-server` route changes beyond what is fixed by `build_system_prompt` passing the const
+- Documentation outside of inline code comments
 
 ### Approach
 
