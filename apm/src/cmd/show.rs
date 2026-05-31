@@ -82,7 +82,7 @@ fn find_in_dir(
 ) -> Option<(String, String)> {
     let files = git::list_files_on_branch(root, branch, dir).ok()?;
     for rel_path in files {
-        let filename = rel_path.split('/').last().unwrap_or("");
+        let filename = rel_path.split('/').next_back().unwrap_or("");
         let file_id = filename.split('-').next().unwrap_or("");
         if prefixes.iter().any(|p| file_id.starts_with(p.as_str())) {
             if let Ok(content) = git::read_from_branch(root, branch, &rel_path) {

@@ -7392,6 +7392,8 @@ fn state_implemented_refuses_when_main_has_untracked_overlap() {
 
 /// Push a new commit to the bare origin from a second clone, simulating
 /// another machine updating the ticket branch.
+// Reserved for local_stale staleness classification tests.
+#[allow(dead_code)]
 fn push_remote_state_update(bare_path: &std::path::Path, branch: &str, rel_path: &str, new_content: &str) {
     let remote2 = tempfile::tempdir().unwrap();
     let r2 = remote2.path();

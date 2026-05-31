@@ -66,7 +66,7 @@ pub fn classify_recovery_options(state_id: &str, workflow: &WorkflowConfig) -> V
             t.trigger == "command:start"
                 && t.worker_profile
                     .as_deref()
-                    .map_or(true, |p| !p.ends_with("/spec-writer"))
+                    .is_none_or(|p| !p.ends_with("/spec-writer"))
         })
         .map(|t| t.to.clone())
         .collect();
