@@ -1,7 +1,7 @@
 +++
 id = "9c66e199"
 title = "Unify worker command allow-list to six commands; remove per-role lists"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9c66e199-unify-worker-command-allow-list-to-six-c"
 created_at = "2026-05-31T02:57:57.400665Z"
-updated_at = "2026-05-31T07:36:19.800933Z"
+updated_at = "2026-05-31T21:04:10.080736Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
@@ -117,3 +117,4 @@ Apply the same edits as above to the project copies. These files mirror the defa
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
 | 2026-05-31T07:33Z | groomed | in_design | philippepascal |
 | 2026-05-31T07:36Z | in_design | specd | claude |
+| 2026-05-31T21:04Z | specd | ready | philippepascal |
