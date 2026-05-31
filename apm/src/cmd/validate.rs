@@ -47,12 +47,12 @@ pub fn apply_config_migration_fixes(root: &Path) -> Result<bool> {
     let has_v1_legacy = doc
         .get("workers")
         .and_then(|v| v.as_table())
-        .map_or(false, |t| t.contains_key("command") || t.contains_key("args"));
+        .is_some_and(|t| t.contains_key("command") || t.contains_key("args"));
 
     let has_v2_legacy = doc
         .get("workers")
         .and_then(|v| v.as_table())
-        .map_or(false, |t| t.contains_key("agent"));
+        .is_some_and(|t| t.contains_key("agent"));
 
     let has_worker_profiles = doc.get("worker_profiles").is_some();
 
@@ -114,7 +114,7 @@ pub fn apply_config_migration_fixes(root: &Path) -> Result<bool> {
             .and_then(|t| t.get("model"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        has_model_at_top = workers.map_or(false, |t| t.contains_key("model"));
+        has_model_at_top = workers.is_some_and(|t| t.contains_key("model"));
     }
 
     if agent_val.is_some() || options_model.is_some() || has_model_at_top {

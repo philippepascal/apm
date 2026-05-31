@@ -1,54 +1,54 @@
-/// Transcript denial scanner for APM worker logs.
-///
-/// # Event format (stream-json JSONL from `claude --output-format stream-json`)
-///
-/// Tool use — carried in an assistant message event:
-/// ```json
-/// {
-///   "type": "assistant",
-///   "message": {
-///     "role": "assistant",
-///     "content": [
-///       {
-///         "type": "tool_use",
-///         "id": "toolu_01JZREMrBXn3AkQaBfgyaFvc",
-///         "name": "Bash",
-///         "input": { "command": "apm doesnotexist", "description": "..." }
-///       }
-///     ]
-///   }
-/// }
-/// ```
-///
-/// Tool result — carried in a user message event (includes timestamp):
-/// ```json
-/// {
-///   "type": "user",
-///   "message": {
-///     "role": "user",
-///     "content": [
-///       {
-///         "type": "tool_result",
-///         "tool_use_id": "toolu_01JZREMrBXn3AkQaBfgyaFvc",
-///         "is_error": true,
-///         "content": "cannot be auto-allowed"
-///       }
-///     ]
-///   },
-///   "timestamp": "2026-05-02T03:28:24.500Z"
-/// }
-/// ```
-///
-/// # Discriminating permission denials from regular errors
-///
-/// Both use `is_error: true`.  Regular Bash failures have content starting with
-/// `"Exit code "` followed by a digit.  Permission denials never do.
-///
-/// Confirmed denial substrings (from real `.apm-worker.log` files):
-/// - `"but you haven't granted it yet"` — Write/Edit to an unapproved path
-/// - `"was blocked. For security"` — Bash output redirection blocked
-/// - `"cannot be auto-allowed"` — Bash pattern rule mismatch (e.g. `find -exec`)
-/// - `"Approve only if you trust it"` — compound `cd && git` safety warning
+//! Transcript denial scanner for APM worker logs.
+//!
+//! # Event format (stream-json JSONL from `claude --output-format stream-json`)
+//!
+//! Tool use — carried in an assistant message event:
+//! ```json
+//! {
+//!   "type": "assistant",
+//!   "message": {
+//!     "role": "assistant",
+//!     "content": [
+//!       {
+//!         "type": "tool_use",
+//!         "id": "toolu_01JZREMrBXn3AkQaBfgyaFvc",
+//!         "name": "Bash",
+//!         "input": { "command": "apm doesnotexist", "description": "..." }
+//!       }
+//!     ]
+//!   }
+//! }
+//! ```
+//!
+//! Tool result — carried in a user message event (includes timestamp):
+//! ```json
+//! {
+//!   "type": "user",
+//!   "message": {
+//!     "role": "user",
+//!     "content": [
+//!       {
+//!         "type": "tool_result",
+//!         "tool_use_id": "toolu_01JZREMrBXn3AkQaBfgyaFvc",
+//!         "is_error": true,
+//!         "content": "cannot be auto-allowed"
+//!       }
+//!     ]
+//!   },
+//!   "timestamp": "2026-05-02T03:28:24.500Z"
+//! }
+//! ```
+//!
+//! # Discriminating permission denials from regular errors
+//!
+//! Both use `is_error: true`.  Regular Bash failures have content starting with
+//! `"Exit code "` followed by a digit.  Permission denials never do.
+//!
+//! Confirmed denial substrings (from real `.apm-worker.log` files):
+//! - `"but you haven't granted it yet"` — Write/Edit to an unapproved path
+//! - `"was blocked. For security"` — Bash output redirection blocked
+//! - `"cannot be auto-allowed"` — Bash pattern rule mismatch (e.g. `find -exec`)
+//! - `"Approve only if you trust it"` — compound `cd && git` safety warning
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

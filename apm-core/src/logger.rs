@@ -55,6 +55,17 @@ pub fn init(root: &Path, log_file: &Path, agent: &str) {
     LOGGER.get_or_init(|| file.map(|f| Mutex::new(std::io::BufWriter::new(f))));
 }
 
+pub fn log(action: &str, detail: &str) {
+    let Some(Some(mutex)) = LOGGER.get() else { return };
+    let agent = AGENT.get().map(|s| s.as_str()).unwrap_or("apm");
+    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
+    let line = format!("{now} [{agent}] {action} {detail}\n");
+    if let Ok(mut writer) = mutex.lock() {
+        let _ = writer.write_all(line.as_bytes());
+        let _ = writer.flush();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,16 +82,5 @@ mod tests {
         let home = std::env::var("HOME").unwrap();
         let result = expand_tilde(std::path::Path::new("~/foo.log"));
         assert_eq!(result, std::path::PathBuf::from(&home).join("foo.log"));
-    }
-}
-
-pub fn log(action: &str, detail: &str) {
-    let Some(Some(mutex)) = LOGGER.get() else { return };
-    let agent = AGENT.get().map(|s| s.as_str()).unwrap_or("apm");
-    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
-    let line = format!("{now} [{agent}] {action} {detail}\n");
-    if let Ok(mut writer) = mutex.lock() {
-        let _ = writer.write_all(line.as_bytes());
-        let _ = writer.flush();
     }
 }

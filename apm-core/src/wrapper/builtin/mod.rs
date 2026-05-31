@@ -127,7 +127,7 @@ pub(crate) fn write_and_spawn_script(
     // Determine APM_BIN: ctx.options["apm_bin"] for tests, else current_exe
     let apm_bin = ctx.options.get("apm_bin")
         .cloned()
-        .unwrap_or_else(|| super::resolve_apm_cli_bin());
+        .unwrap_or_else(super::resolve_apm_cli_bin);
 
     let mut cmd = std::process::Command::new("/bin/sh");
     cmd.arg(&script_path);
@@ -153,7 +153,7 @@ pub(crate) fn write_and_spawn_script(
     for (k, v) in &ctx.options {
         let env_key = format!(
             "APM_OPT_{}",
-            k.to_uppercase().replace('.', "_").replace('-', "_")
+            k.to_uppercase().replace(['.', '-'], "_")
         );
         cmd.env(&env_key, v);
     }
