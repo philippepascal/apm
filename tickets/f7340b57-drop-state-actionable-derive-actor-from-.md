@@ -1,7 +1,7 @@
 +++
 id = "f7340b57"
 title = "Drop state.actionable; derive actor from outgoing triggers"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7340b57-drop-state-actionable-derive-actor-from-"
 created_at = "2026-05-31T02:56:19.482471Z"
-updated_at = "2026-05-31T07:04:27.800038Z"
+updated_at = "2026-05-31T07:05:07.625091Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 +++
@@ -91,3 +91,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-05-31T02:56Z | — | new | philippepascal |
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
+| 2026-05-31T07:05Z | groomed | in_design | philippepascal |
