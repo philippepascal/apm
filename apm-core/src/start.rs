@@ -2006,8 +2006,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to = "specd"
@@ -2022,7 +2020,6 @@ instructions = ".apm/apm.spec-writer.md"
 [[workflow.states]]
 id = "specd"
 label = "Specd"
-actionable = ["supervisor"]
 satisfies_deps = true
 worker_end = true
 
@@ -2039,7 +2036,6 @@ worker_end = true
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to = "implemented"
@@ -2054,7 +2050,6 @@ instructions = ".apm/apm.worker.md"
 [[workflow.states]]
 id = "implemented"
 label = "Implemented"
-actionable = ["supervisor"]
 satisfies_deps = true
 worker_end = true
 terminal = false
@@ -2256,7 +2251,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to = "closed"

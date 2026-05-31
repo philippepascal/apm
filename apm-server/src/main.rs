@@ -1090,9 +1090,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -2550,9 +2549,8 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"

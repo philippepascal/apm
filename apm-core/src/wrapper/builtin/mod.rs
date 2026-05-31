@@ -265,7 +265,6 @@ mod tests {
             id: id.into(),
             label: id.into(),
             description: String::new(),
-            actionable: vec![],
             terminal: false,
             worker_end: false,
             satisfies_deps: crate::config::SatisfiesDeps::Bool(false),
