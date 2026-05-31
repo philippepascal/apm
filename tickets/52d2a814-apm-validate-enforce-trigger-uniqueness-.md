@@ -42,7 +42,15 @@ All three checks are pure additive validation in `validate_config_no_agents`. No
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Validating that exactly one initial state named `"new"` exists — separate ticket.
+- Validating that every non-terminal state is reachable from the initial state — separate ticket.
+- Unifying the worker command list under `[workers]` — separate ticket.
+- Making `[workers].default` mandatory — separate ticket.
+- `apm validate --fix` auto-repair for the new rules — separate ticket.
+- Help text / `apm validate --help` changes — separate ticket.
+- Changes to `apm/src/cmd/validate.rs` — the new checks live entirely in `apm-core/src/validate.rs`.
+- Changes to `TransitionConfig` — `worker_profile` is state-level after ticket e05c0463; this ticket only validates `StateConfig.worker_profile`.
+- Integration tests in `apm/tests/integration.rs` — unit tests in `apm-core/src/validate.rs` are sufficient.
 
 ### Approach
 
