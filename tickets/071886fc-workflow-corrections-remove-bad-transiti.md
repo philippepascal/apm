@@ -1,7 +1,7 @@
 +++
 id = "071886fc"
 title = "Workflow corrections: remove bad transitions, restructure ammend path"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/071886fc-workflow-corrections-remove-bad-transiti"
 created_at = "2026-05-31T02:57:20.412089Z"
-updated_at = "2026-05-31T07:26:32.725234Z"
+updated_at = "2026-05-31T19:35:59.576066Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["e05c0463"]
@@ -115,3 +115,4 @@ In the "Ammend tickets" section, the opening condition says "If the ticket start
 | 2026-05-31T07:04Z | new | groomed | philippepascal |
 | 2026-05-31T07:20Z | groomed | in_design | philippepascal |
 | 2026-05-31T07:26Z | in_design | specd | claude |
+| 2026-05-31T19:35Z | specd | ammend | philippepascal |
