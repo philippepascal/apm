@@ -19,45 +19,15 @@ depends_on = ["071886fc"]
 
 ### Problem
 
-STEP 5 of the incremental workflow schema cleanup. Pure additive validation. After this lands, malformed workflow.toml files are rejected with clear errors.
+`apm validate` currently enforces that transition targets exist, that terminal states have no outgoing edges, and that merge completions have `on_failure` set. It does not check three structural properties that, when violated, produce silently broken dispatch behaviour at runtime:
 
-NEW RULES:
+1. **Trigger uniqueness.** A `command:start` transition marks its destination state as a fresh dispatch point. If a second transition (manual or otherwise) can also land on that state, being in the state no longer reliably means the dispatcher should act — the flag becomes ambiguous. No error is emitted today when two transitions converge on the same `command:start` target.
 
-1. TRIGGER UNIQUENESS. Any state that is the destination of a transition with a non-manual trigger (currently only 'command:start') must have exactly one incoming transition in the entire workflow. No other transition — triggered or manual — may land on that state.
+2. **`worker_profile` shape.** Dispatch reads `state.worker_profile` and splits on `/` to extract the agent name and role. A value without a `/`, with empty halves, or with the reserved role `worker` causes a runtime panic or silently falls back to the wrong wrapper. The field is currently accepted without format validation.
 
-   Rationale: triggers mark a state as freshly ready for an external dispatcher (apm start, apm work, UI dispatcher) to pick up. If another transition can also land on that state, being in the state no longer reliably implies a fresh dispatch is needed. The flag becomes ambiguous.
+3. **`command:start` → dispatch-capable state.** A `command:start` transition that targets a state with no `worker_profile` gives the dispatcher nothing to spawn. This is caught at runtime (no agent is launched) rather than at config-load time.
 
-   Error message names both transitions that violate the rule and identifies the destination state.
-
-2. WORKER_PROFILE SHAPE. If a state declares worker_profile, the value must parse as agent/role where:
-   - It contains exactly one '/' separator
-   - Both halves are non-empty
-   - The role component is not the literal string 'worker' (reserved as process category, not a configured role)
-
-3. COMMAND:START LANDS ON DISPATCH-CAPABLE STATE. Every transition with trigger = 'command:start' must land on a state with worker_profile set. A command:start pointing to a supervisor-owned state has nothing to dispatch.
-
-CONSOLIDATE EXISTING RULES (keep, verify they still fire):
-- Terminal states have no outgoing transitions.
-- Every non-terminal state is reachable from the new state.
-- Workflow has exactly one initial state ('new').
-
-TESTS:
-- A workflow where two transitions land on the same state and one is command:start fails validate. Error names both source states.
-- A workflow with state.worker_profile = 'claude/worker' fails validate.
-- A workflow with state.worker_profile = 'claudecoder' (no slash) fails validate.
-- A workflow with state.worker_profile = '/coder' or 'claude/' fails validate.
-- A workflow with a command:start to a state without worker_profile fails validate.
-- The default workflow (after 071886fc) passes validate.
-- This project's .apm/workflow.toml (after 071886fc) passes validate.
-
-OUT OF SCOPE:
-- Unifying worker command list (separate ticket).
-- Mandatory [workers].default (separate ticket).
-- Help text (separate ticket).
-
-REFERENCES:
-- apm-core/src/validate.rs or wherever apm validate lives
-- apm-core/src/config.rs for the State and Transition struct shapes (after e05c0463)
+All three checks are pure additive validation in `validate_config_no_agents`. No existing API changes, no new config fields — malformed `workflow.toml` files are rejected with clear, actionable error messages instead of failing silently at dispatch time.
 
 ### Acceptance criteria
 
