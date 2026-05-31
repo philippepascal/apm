@@ -109,6 +109,7 @@ Add to `apm-core/src/start.rs` test block:
 ### Amendment requests
 
 - [ ] Add a note acknowledging this ticket assumes 28ac0f43 has landed and merged. The worker should rebase their branch onto current main before starting implementation. Pseudocode and references to state.worker_profile in this ticket assume the field already exists on StateConfig.
+- [ ] Pin the exact location of the parse-error wrapping site: which of the two parse sites in config.rs (config.toml around line 686 vs workflow.toml around line 693) receives the friendly migration-pointing error message. Specify the exact wrapping pattern (anyhow::Context or thiserror) and the message text.
 
 ### Code review
 
