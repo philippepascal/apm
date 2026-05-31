@@ -41,7 +41,98 @@ The fix is to make `[workers].default` mandatory in `config.toml`: change its ty
 
 ### Approach
 
-How the implementation will work.
+#### `apm-core/src/config.rs` — type change
+
+`WorkersConfig.default` is currently `pub default: Option<String>` (line 114). The struct derives `Default` (line 102) via `#[derive(Default)]`.
+
+- Change the field type: `pub default: Option<String>` → `pub default: String`.
+- Remove `#[derive(Default)]` from `WorkersConfig`.
+- Add a manual `impl Default for WorkersConfig` that sets `default: String::new()` (empty string — caught by the new validation check below) and leaves the other fields as before.
+- With this change, when `[workers]` is present but `default` is absent, serde returns a deserialization error. When `[workers]` is absent, `Config.workers` uses `WorkersConfig::default()` (empty string), caught by validation.
+
+Tests to update in `config.rs`:
+- `workers_config_default`: change `assert!(config.workers.default.is_none())` → `assert!(config.workers.default.is_empty())`.
+- `workers_config_default_field`: change `assert_eq!(config.workers.default.as_deref(), Some("claude/coder"))` → `assert_eq!(config.workers.default, "claude/coder")`.
+- Add a new test `workers_default_missing_fails_parse` that asserts `toml::from_str::<Config>(toml_with_workers_but_no_default)` returns `Err`.
+
+#### `apm-core/src/start.rs` — four dispatch sites
+
+Each site follows the same pattern. Replace `.or(config.workers.default.as_deref()).unwrap_or("claude/coder")` with `.unwrap_or(config.workers.default.as_str())`.
+
+**`run()`** (~line 479):
+```rust
+// Before
+let worker_profile_str = triggering_transition
+    .and_then(|tr| tr.worker_profile.as_deref())
+    .or(config.workers.default.as_deref())
+    .unwrap_or("claude/coder")
+    .to_string();
+// After
+let worker_profile_str = triggering_transition
+    .and_then(|tr| tr.worker_profile.as_deref())
+    .unwrap_or(config.workers.default.as_str())
+    .to_string();
+```
+
+**`run_next()`** (~line 605) and **`spawn_next_worker()`** (~line 784): identical substitution.
+
+**`resolve_for_diagnostic()`** (~line 180): replace the three-arm `if/else if/else` with a two-arm form:
+```rust
+// Before (three arms, last arm hardcodes "claude/coder")
+let (worker_profile_str, profile_source) = if let Some(wp) = wp_from_transition {
+    (wp, format!("workflow.toml transition {transition_label}"))
+} else if let Some(default) = &config.workers.default {
+    (default.clone(), "workers.default".to_string())
+} else {
+    ("claude/coder".to_string(), "built-in fallback".to_string())
+};
+// After
+let (worker_profile_str, profile_source) = if let Some(wp) = wp_from_transition {
+    (wp, format!("workflow.toml transition {transition_label}"))
+} else {
+    (config.workers.default.clone(), "workers.default".to_string())
+};
+```
+
+The `include_str!` constants at the top of the file are not touched — they are used by `resolve_builtin_instructions()` for the role-file cascade, which is separate from the `workers.default` dispatch cascade.
+
+#### `apm-core/src/validate.rs` — three sites
+
+**`validate_config_no_agents()`**: add near the top of the function (before the state-level checks):
+```rust
+if config.workers.default.is_empty() {
+    errors.push(
+        "config: workers.default is not set; add `default = \"<agent/role>\"` \
+         under [workers] in .apm/config.toml".into()
+    );
+}
+```
+
+**`configured_agent_names()`** (~line 143): the current code uses `as_deref().and_then(...).unwrap_or_else(|| "claude".to_string())`. Replace with a conditional insert:
+```rust
+if let Some((agent, _)) = config.workers.default.split_once('/') {
+    names.insert(agent.to_string());
+}
+```
+This correctly handles an empty `default` (no insert, no fallback).
+
+**`audit_agent_resolution()`** (~line 739):
+```rust
+// Before
+let default_profile = config.workers.default.as_deref().unwrap_or("claude/coder");
+// After
+let default_profile = config.workers.default.as_str();
+```
+
+Tests to update in `validate.rs`:
+- `setup_verify_repo()`: add `[workers]\ndefault = "claude/coder"\n` to the config it writes, so all tests that load from that repo see a valid config.
+- `correct_config_passes()`: add `[workers]\ndefault = "claude/coder"\n` to its TOML.
+- `audit_default_agent_resolution()` and `audit_no_worker_profiles_no_panic()`: add `[workers]\ndefault = "claude/coder"\n` via the extra_toml argument to `audit_config()`.
+- Add new tests: `workers_default_absent_fails_validate` (no `[workers]` → error contains "workers.default") and `workers_default_empty_fails_validate` (`default = ""` → same error).
+
+#### `apm-core/src/init.rs` — verify only
+
+`default_config()` (~line 460) already emits `[workers]\ndefault = "{workers_default}"` and the `setup()` function uses `workers_default.unwrap_or("claude/coder")`. No code change needed; the scaffold is already correct.
 
 ### Open questions
 
