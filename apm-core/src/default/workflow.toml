@@ -82,8 +82,8 @@ satisfies_deps = "spec"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to      = "in_design"
-  trigger = "command:start"
+  to      = "groomed"
+  trigger = "manual"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
@@ -103,11 +103,6 @@ worker_profile = "claude/spec-writer"
 
   [[workflow.states.transitions]]
   to      = "question"
-  trigger = "manual"
-  outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "ammend"
   trigger = "manual"
   outcome = "needs_input"
 
@@ -228,11 +223,6 @@ label = "Merge failed"
   completion = "pr_or_epic_merge"
   on_failure = "merge_failed"
   outcome    = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "manual"
-  outcome = "needs_input"
 
 [[workflow.states]]
 id             = "closed"
