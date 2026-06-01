@@ -1,7 +1,7 @@
 +++
 id = "28ac0f43"
 title = "Add state.worker_profile; dispatch reads it (transition fallback retained)"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/28ac0f43-add-state-worker-profile-dispatch-reads-"
 created_at = "2026-05-31T02:56:42.034762Z"
-updated_at = "2026-05-31T21:39:30.925589Z"
+updated_at = "2026-06-01T02:40:47.951578Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["f7340b57"]
@@ -241,3 +241,4 @@ These four unit tests on `resolve_dispatch_profile` directly verify the priority
 | 2026-05-31T21:04Z | specd | ready | philippepascal |
 | 2026-05-31T21:25Z | ready | in_progress | philippepascal |
 | 2026-05-31T21:39Z | in_progress | implemented | claude |
+| 2026-06-01T02:40Z | implemented | closed | philippepascal(apm-sync) |
