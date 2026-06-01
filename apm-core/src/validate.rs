@@ -449,10 +449,12 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
         }
     }
 
-    // Rule 1 — Trigger uniqueness.
-    // Only states targeted by command:start require unique incoming edges.
-    // States reachable exclusively via manual transitions may have multiple
-    // incoming edges without issue.
+    // Rule 1 — Trigger / manual separation.
+    // A state reached via a triggered transition (command:start) must not also
+    // be reached via a manual transition. Multiple triggered entries are fine
+    // (each implies a fresh dispatch); multiple manual entries are fine; the
+    // forbidden case is the mix, which makes "being in this state" ambiguous
+    // about whether a dispatch happened.
     {
         let mut incoming: std::collections::HashMap<&str, Vec<(&str, &str)>> =
             std::collections::HashMap::new();
@@ -466,16 +468,17 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
         }
         for (dest, sources) in &incoming {
             let has_command_start = sources.iter().any(|(_, t)| *t == "command:start");
-            if has_command_start && sources.len() > 1 {
+            let has_manual = sources.iter().any(|(_, t)| *t != "command:start");
+            if has_command_start && has_manual {
                 let src_list = sources
                     .iter()
                     .map(|(src, t)| format!("{src} (trigger: {t})"))
                     .collect::<Vec<_>>()
                     .join(", ");
                 errors.push(format!(
-                    "config: state.{dest} — {} incoming transitions but trigger \
-                     'command:start' requires exactly one; incoming from: {src_list}",
-                    sources.len()
+                    "config: state.{dest} — has both triggered and manual incoming \
+                     transitions; a triggered destination must not also be reachable \
+                     via manual transitions. Incoming from: {src_list}"
                 ));
             }
         }
@@ -2729,7 +2732,7 @@ to = "closed"
     }
 
     #[test]
-    fn trigger_uniqueness_two_command_start_same_dest_rejected() {
+    fn trigger_uniqueness_two_command_start_same_dest_ok() {
         let toml = r#"
 [project]
 name = "test"
@@ -2764,16 +2767,12 @@ to = "closed"
         let config = load_config(toml);
         let errors = validate_config_no_agents(&config, Path::new("/tmp"));
         let rule1_errors: Vec<&String> = errors.iter()
-            .filter(|e| e.contains("incoming transitions"))
+            .filter(|e| e.contains("triggered and manual"))
             .collect();
         assert!(
-            !rule1_errors.is_empty(),
-            "expected trigger-uniqueness error for two command:start; got: {errors:?}"
+            rule1_errors.is_empty(),
+            "two command:start incoming should pass — both imply dispatch; got: {errors:?}"
         );
-        let msg = rule1_errors[0];
-        assert!(msg.contains("dest"), "expected dest in error: {msg}");
-        assert!(msg.contains("src_a"), "expected src_a in error: {msg}");
-        assert!(msg.contains("src_b"), "expected src_b in error: {msg}");
     }
 
     // --- Rule 2: worker_profile shape ---
@@ -2939,10 +2938,10 @@ to = "closed"
 
     #[test]
     fn default_workflow_passes() {
-        // Inline TOML replicating the key structural parts of the default workflow
-        // after ticket 071886fc: groomed → in_design via command:start,
-        // ready → in_progress via command:start, with worker_profile on both targets.
-        // No state receives more than one command:start incoming edge.
+        // Inline TOML replicating the key structural parts of the default workflow:
+        // groomed → in_design via command:start, ready → in_progress via command:start,
+        // with worker_profile on both targets. No state mixes triggered and manual
+        // incoming transitions.
         let toml = r#"
 [project]
 name = "test"
