@@ -80,7 +80,7 @@ REFERENCES:
 - [x] `grep -rn "shell discipline" apm/src/ apm-core/src/ --exclude-dir=target --exclude-dir=archive --exclude-dir=tickets --exclude-dir=.apm--worktrees` returns no hits
 - [x] `apm-core/src/default/agents/claude/apm.spec-writer.md` describes spec-writers as picking up tickets in `groomed` (or `ammend`) state, not `new`
 - [x] `README.md` `agents.md` row is removed and the two role-file rows are replaced with a single `agents/<agent>/apm.<role>.md` row described as "Role-specific agent instructions (generated per role by `apm init`)"; the phrase "shell discipline" no longer appears in the table
-- [ ] `grep -rn "transition\.worker_profile\|derive_transition_role" apm/src/ apm-core/src/ apm-server/src/ --exclude-dir=target --exclude-dir=tests --exclude-dir=archive --exclude-dir=tickets --exclude-dir=.apm--worktrees` returns no hits
+- [x] `grep -rn "transition\.worker_profile\|derive_transition_role" apm/src/ apm-core/src/ apm-server/src/ --exclude-dir=target --exclude-dir=tests --exclude-dir=archive --exclude-dir=tickets --exclude-dir=.apm--worktrees` returns no hits
 - [ ] `apm help workflow` output does not contain the string `transitions.worker_profile`
 - [ ] `cargo test --workspace` passes
 
