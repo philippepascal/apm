@@ -1091,7 +1091,7 @@ mod tests {
         let ids: Vec<&str> = states.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(
             ids,
-            ["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "blocked", "implemented", "merge_failed", "closed"]
+            ["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "blocked", "implemented", "fix", "merge_failed", "closed"]
         );
 
         for id in ["groomed", "ammend"] {

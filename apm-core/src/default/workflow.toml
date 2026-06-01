@@ -82,11 +82,6 @@ satisfies_deps = "spec"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to      = "ammend"
-  trigger = "manual"
-  outcome = "needs_input"
-
-  [[workflow.states.transitions]]
   to      = "specd"
   trigger = "manual"
   outcome = "needs_input"
@@ -116,11 +111,6 @@ worker_profile = "claude/coder"
   warning = "Reverting in_progress ticket to ready — any uncommitted work on the branch may be lost"
   outcome = "needs_input"
 
-  [[workflow.states.transitions]]
-  to      = "ammend"
-  trigger = "manual"
-  outcome = "needs_input"
-
 [[workflow.states]]
 id    = "blocked"
 label = "Blocked"
@@ -138,13 +128,23 @@ satisfies_deps = true
 worker_end     = true
 
   [[workflow.states.transitions]]
-  to            = "ready"
+  to            = "fix"
   trigger       = "manual"
   focus_section = "Code review"
   outcome       = "needs_input"
 
+[[workflow.states]]
+id             = "fix"
+label          = "Fix Implementation"
+satisfies_deps = "spec"
+
   [[workflow.states.transitions]]
-  to      = "ammend"
+  to      = "in_progress"
+  trigger = "command:start"
+  outcome = "needs_input"
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
   trigger = "manual"
   outcome = "needs_input"
 
