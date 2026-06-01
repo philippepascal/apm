@@ -370,18 +370,19 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
             ));
         }
 
-        // Non-terminal state with no outgoing transitions (tickets will be stranded).
-        if !state.terminal && state.transitions.is_empty() {
-            errors.push(format!(
-                "config: state.{} — no outgoing transitions (tickets will be stranded)",
-                state.id
-            ));
-        }
-
         for transition in &state.transitions {
-            // Transition target must exist.  "closed" is a built-in terminal state
-            // that is always valid even when absent from [[workflow.states]].
-            if transition.to != "closed" && !state_ids.contains(transition.to.as_str()) {
+            // Explicit transitions to terminal states are forbidden; terminal states are
+            // always reachable as a supervisor close action.
+            if terminal_ids.contains(transition.to.as_str()) {
+                errors.push(format!(
+                    "config: state.{}.transition({}) — explicit transitions to terminal states are not \
+                     allowed; {} is always reachable as a supervisor close action",
+                    state.id, transition.to, transition.to
+                ));
+            }
+
+            // Transition target must exist.
+            if !terminal_ids.contains(transition.to.as_str()) && !state_ids.contains(transition.to.as_str()) {
                 errors.push(format!(
                     "config: state.{}.transition({}) — target state '{}' does not exist",
                     state.id, transition.to, transition.to
@@ -449,10 +450,12 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
         }
     }
 
-    // Rule 1 — Trigger uniqueness.
-    // Only states targeted by command:start require unique incoming edges.
-    // States reachable exclusively via manual transitions may have multiple
-    // incoming edges without issue.
+    // Rule 1 — Trigger / manual separation.
+    // A state reached via a triggered transition (command:start) must not also
+    // be reached via a manual transition. Multiple triggered entries are fine
+    // (each implies a fresh dispatch); multiple manual entries are fine; the
+    // forbidden case is the mix, which makes "being in this state" ambiguous
+    // about whether a dispatch happened.
     {
         let mut incoming: std::collections::HashMap<&str, Vec<(&str, &str)>> =
             std::collections::HashMap::new();
@@ -466,16 +469,17 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
         }
         for (dest, sources) in &incoming {
             let has_command_start = sources.iter().any(|(_, t)| *t == "command:start");
-            if has_command_start && sources.len() > 1 {
+            let has_manual = sources.iter().any(|(_, t)| *t != "command:start");
+            if has_command_start && has_manual {
                 let src_list = sources
                     .iter()
                     .map(|(src, t)| format!("{src} (trigger: {t})"))
                     .collect::<Vec<_>>()
                     .join(", ");
                 errors.push(format!(
-                    "config: state.{dest} — {} incoming transitions but trigger \
-                     'command:start' requires exactly one; incoming from: {src_list}",
-                    sources.len()
+                    "config: state.{dest} — has both triggered and manual incoming \
+                     transitions; a triggered destination must not also be reachable \
+                     via manual transitions. Incoming from: {src_list}"
                 ));
             }
         }
@@ -1228,9 +1232,6 @@ id       = "in_progress"
 label    = "In Progress"
 terminal = false
 
-[[workflow.states.transitions]]
-to = "closed"
-
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -1310,9 +1311,10 @@ to = "closed"
         assert!(!known_states.contains(ticket.frontmatter.state.as_str()));
     }
 
-    // Test 6: dead-end non-terminal state is detected
+    // Test 6: dead-end non-terminal state is no longer an error — implicit close
+    // means any non-terminal state can always be closed by the supervisor.
     #[test]
-    fn dead_end_non_terminal_detected() {
+    fn dead_end_non_terminal_not_an_error() {
         let toml = r#"
 [project]
 name = "test"
@@ -1332,8 +1334,48 @@ terminal = true
         let config = load_config(toml);
         let errors = validate_config(&config, Path::new("/tmp"));
         assert!(
-            errors.iter().any(|e| e.contains("state.stuck") && e.contains("no outgoing transitions")),
-            "expected dead-end error in {errors:?}"
+            !errors.iter().any(|e| e.contains("state.stuck") && e.contains("no outgoing transitions")),
+            "dead-end should not be an error after implicit-close rule; got: {errors:?}"
+        );
+    }
+
+    // Test 6b: explicit terminal transition is rejected with a clear error naming
+    // the source state and the terminal target.
+    #[test]
+    fn explicit_terminal_transition_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = "claude/coder"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+outcome = "cancelled"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("state.new.transition(closed)") && e.contains("explicit transitions to terminal states")),
+            "expected explicit-terminal-transition error naming source and target; got: {errors:?}"
+        );
+        assert!(
+            errors.iter().any(|e| e.contains("closed") && e.contains("always reachable")),
+            "error should mention that closed is always reachable; got: {errors:?}"
         );
     }
 
@@ -1994,9 +2036,6 @@ dir = "{dir}"
 [[workflow.states]]
 id       = "merge_failed"
 label    = "Merge failed"
-
-[[workflow.states.transitions]]
-to = "closed"
 "#
         } else {
             ""
@@ -2729,7 +2768,7 @@ to = "closed"
     }
 
     #[test]
-    fn trigger_uniqueness_two_command_start_same_dest_rejected() {
+    fn trigger_uniqueness_two_command_start_same_dest_ok() {
         let toml = r#"
 [project]
 name = "test"
@@ -2764,16 +2803,12 @@ to = "closed"
         let config = load_config(toml);
         let errors = validate_config_no_agents(&config, Path::new("/tmp"));
         let rule1_errors: Vec<&String> = errors.iter()
-            .filter(|e| e.contains("incoming transitions"))
+            .filter(|e| e.contains("triggered and manual"))
             .collect();
         assert!(
-            !rule1_errors.is_empty(),
-            "expected trigger-uniqueness error for two command:start; got: {errors:?}"
+            rule1_errors.is_empty(),
+            "two command:start incoming should pass — both imply dispatch; got: {errors:?}"
         );
-        let msg = rule1_errors[0];
-        assert!(msg.contains("dest"), "expected dest in error: {msg}");
-        assert!(msg.contains("src_a"), "expected src_a in error: {msg}");
-        assert!(msg.contains("src_b"), "expected src_b in error: {msg}");
     }
 
     // --- Rule 2: worker_profile shape ---
@@ -2939,10 +2974,10 @@ to = "closed"
 
     #[test]
     fn default_workflow_passes() {
-        // Inline TOML replicating the key structural parts of the default workflow
-        // after ticket 071886fc: groomed → in_design via command:start,
-        // ready → in_progress via command:start, with worker_profile on both targets.
-        // No state receives more than one command:start incoming edge.
+        // Inline TOML replicating the key structural parts of the default workflow:
+        // groomed → in_design via command:start, ready → in_progress via command:start,
+        // with worker_profile on both targets. No state mixes triggered and manual
+        // incoming transitions.
         let toml = r#"
 [project]
 name = "test"

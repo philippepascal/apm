@@ -214,7 +214,7 @@ be low-risk if the path is clear.
 
 ## Handling `ammend` tickets
 
-When the ticket has unchecked items in `### Amendment requests`, you are handling an amendment. You are already in `in_design` when dispatched (the supervisor moved the ticket from `ammend → groomed`, then `apm start` dispatched via `groomed → in_design`):
+When the ticket has unchecked items in `### Amendment requests`, you are handling an amendment. You are already in `in_design` when dispatched (the supervisor ran `apm start` on an `ammend` ticket, which dispatched via `ammend → in_design`):
 1. `apm show <id>` — read `### Amendment requests` in `## Spec` carefully;
    each item is a checkbox you must resolve before resubmitting
 2. For each checkbox, make the requested change to the relevant spec section,

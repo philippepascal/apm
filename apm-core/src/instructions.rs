@@ -19,7 +19,7 @@ static STATIC_STATE_MACHINE: &str = "| From | To | Command |\n\
 | specd | ready | apm state <id> ready |\n\
 | specd | ammend | apm state <id> ammend |\n\
 | specd | in_design | apm state <id> in_design |\n\
-| ammend | groomed | apm state <id> groomed |\n\
+| ammend | in_design | apm start <id> |\n\
 | ready | in_progress | apm start <id> |\n\
 | in_progress | implemented | apm state <id> implemented |\n\
 | in_progress | blocked | apm state <id> blocked |\n\

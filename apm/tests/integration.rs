@@ -1875,10 +1875,6 @@ id             = "in_design"
 label          = "In Design"
 worker_profile = "claude/coder"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -2081,18 +2077,19 @@ fn spawn_new_ticket_transitions_to_in_design() {
 }
 
 #[test]
-fn ammend_to_groomed_succeeds() {
-    let dir = init_repo();
+fn spawn_ammend_ticket_transitions_to_in_design() {
+    let dir = setup_for_prompt_dispatch();
     let p = dir.path();
+    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
     let (id, branch) = write_ticket_to_branch(p, "ammend", "needs revision");
-    let rel = ticket_rel_path(&branch);
 
-    apm::cmd::state::run(p, &id, "groomed".into(), false, false).unwrap();
-    let content = branch_content(p, &branch, &rel);
-    assert!(
-        content.contains("state = \"groomed\""),
-        "expected groomed state:\n{content}"
-    );
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"specd\""), "ammend ticket should transition through in_design to specd: {content}");
 }
 
 #[test]
@@ -2710,8 +2707,12 @@ id    = "new"
 label = "New"
 
 [[workflow.states.transitions]]
-to              = "closed"
+to              = "review"
 context_section = "NonExistentSection"
+
+[[workflow.states]]
+id    = "review"
+label = "Review"
 
 [[workflow.states]]
 id       = "closed"
@@ -3112,10 +3113,6 @@ risk_weight = -1.0
 id    = "new"
 label = "New"
 
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
-
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -3335,10 +3332,6 @@ risk_weight = -1.0
 [[workflow.states]]
 id    = "new"
 label = "New"
-
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -3626,10 +3619,6 @@ label = "In Progress"
 [[workflow.states]]
 id    = "implemented"
 label = "Implemented"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -4465,10 +4454,6 @@ dir = "tickets"
 [[workflow.states]]
 id    = "new"
 label = "New"
-
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -8373,10 +8358,6 @@ worker_profile = "claude/coder"
 id    = "implemented"
 label = "Implemented"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-
 [[workflow.states]]
 id    = "merge_failed"
 label = "Merge failed"
@@ -8619,4 +8600,142 @@ fn apm_list_shared_epic_stale_marker() {
         !stdout.contains("epics:"),
         "output must not contain 'epics:' footer; got:\n{stdout}"
     );
+}
+
+// --- refresh-epic --merge push / no-push behavior ---
+
+fn setup_refresh_epic_for_push(epic_id: &str, slug: &str) -> (TempDir, TempDir) {
+    let (bare, local) = init_remote_repo();
+    let p = local.path();
+    let epic_branch = format!("epic/{epic_id}-{slug}");
+
+    // Create epic branch with an initial commit and push to origin.
+    git(p, &["checkout", "-b", &epic_branch]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic init", "--allow-empty"]);
+    git(p, &["push", "origin", &epic_branch]);
+    git(p, &["checkout", "main"]);
+
+    // Add a commit to main that is ahead of the epic branch, then push.
+    std::fs::write(p.join("new-on-main.txt"), "content").unwrap();
+    git(p, &["add", "new-on-main.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add file on main"]);
+    git(p, &["push", "origin", "main"]);
+
+    (bare, local)
+}
+
+#[test]
+fn refresh_epic_merge_push_flag_pushes_to_origin() {
+    let (bare, local) = setup_refresh_epic_for_push("ab12cd34", "push-test");
+    let p = local.path();
+
+    let out = run_apm(p, &["refresh-epic", "ab12cd34", "--merge", "--push"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("pushed"),
+        "stdout should mention push; got:\n{stdout}"
+    );
+
+    // After push, origin should have the same tip as the local epic branch.
+    let local_tip = rev_parse(p, "epic/ab12cd34-push-test");
+    let origin_tip = rev_parse(bare.path(), "epic/ab12cd34-push-test");
+    assert_eq!(
+        local_tip, origin_tip,
+        "origin epic branch should equal local tip after --push"
+    );
+}
+
+#[test]
+fn refresh_epic_merge_no_push_flag_skips_push() {
+    let (bare, local) = setup_refresh_epic_for_push("cd56ef78", "nopush-test");
+    let p = local.path();
+
+    // Record origin tip before the merge.
+    let origin_before = rev_parse(bare.path(), "epic/cd56ef78-nopush-test");
+
+    let out = run_apm(p, &["refresh-epic", "cd56ef78", "--merge", "--no-push"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // Origin should be unchanged.
+    let origin_after = rev_parse(bare.path(), "epic/cd56ef78-nopush-test");
+    assert_eq!(
+        origin_before, origin_after,
+        "origin epic branch must not advance when --no-push is passed"
+    );
+
+    // Warning must appear on stderr.
+    assert!(
+        stderr.contains("was not pushed"),
+        "stderr should contain stale-origin warning; got:\n{stderr}"
+    );
+}
+
+#[test]
+fn refresh_epic_merge_noninteractive_skips_push() {
+    let (bare, local) = setup_refresh_epic_for_push("ef901234", "nointeractive-test");
+    let p = local.path();
+
+    // Record origin tip before the merge.
+    let origin_before = rev_parse(bare.path(), "epic/ef901234-nointeractive-test");
+
+    // No --push / --no-push; stdout is not a terminal in the test harness.
+    let out = run_apm(p, &["refresh-epic", "ef901234", "--merge"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // Origin should be unchanged.
+    let origin_after = rev_parse(bare.path(), "epic/ef901234-nointeractive-test");
+    assert_eq!(
+        origin_before, origin_after,
+        "origin epic branch must not advance when non-interactive and no --push flag"
+    );
+
+    // Warning must appear on stderr.
+    assert!(
+        stderr.contains("was not pushed"),
+        "stderr should contain stale-origin warning; got:\n{stderr}"
+    );
+}
+
+// ── Implicit close: no explicit transition required ───────────────────────────
+
+/// Closing a non-terminal ticket succeeds without any explicit `to = "closed"`
+/// transition in the workflow — the state machine allows it implicitly.
+#[test]
+fn implicit_close_succeeds_without_explicit_transition() {
+    let dir = init_repo();
+    let p = dir.path();
+    // init_repo() uses the default workflow which has no `to = "closed"` entries.
+    let (id, _branch) = create_ticket(p, "implicit close test");
+    // Ticket starts in "new". The workflow has no explicit closed transition for new,
+    // but the implicit rule should allow it.
+    let result = apm_core::state::transition(p, &id, "closed".into(), true, false);
+    assert!(
+        result.is_ok(),
+        "implicit close should succeed from non-terminal state; got: {}",
+        result.err().map(|e| e.to_string()).unwrap_or_default()
+    );
+    assert_eq!(result.unwrap().new_state, "closed");
+}
+
+/// Attempting to transition a ticket that is already in a terminal state fails
+/// with a clear error message.
+#[test]
+fn close_from_terminal_state_fails() {
+    let dir = init_repo();
+    let p = dir.path();
+    let (id, _branch) = create_ticket(p, "close from terminal test");
+    // Force-close the ticket first (bypasses the terminal-source guard).
+    apm_core::state::transition(p, &id, "closed".into(), true, true).unwrap();
+    // Now try to close again without force — must fail.
+    let result = apm_core::state::transition(p, &id, "closed".into(), true, false);
+    match result {
+        Ok(_) => panic!("transition from terminal state should have failed"),
+        Err(e) => {
+            let msg = e.to_string();
+            assert!(
+                msg.contains("terminal state"),
+                "expected 'terminal state' in error; got: {msg}"
+            );
+        }
+    }
 }
