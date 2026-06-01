@@ -60,14 +60,11 @@ Reference: run_refresh_epic in apm/src/cmd/epic.rs already implements the --merg
 Update `EpicCommand::Close`:
 
 - Replace the one-line `/// Open a PR…` doc comment with a short summary line (e.g. "Merge the epic branch into default or open a PR for it").
-- Add `#[command(long_about = "...")]` with a multi-line string that walks through the four stages the command performs:
-  1. Quiescence check — all epic tickets must be closed or otherwise quiescent (no live workers, no tickets stuck in in-progress states). Merged-but-unclosed tickets are offered for auto-close interactively.
-  2. Already-merged shortcut — if the epic branch has no commits ahead of the default branch, the branch is deleted locally and remotely without creating a PR.
-  3. `--pr` (default) — pushes the epic branch and creates or updates a GitHub PR targeting the default branch.
-  4. `--merge` — merges the epic branch into the default branch in a local working tree; no PR is created. `--auto` merges locally when clean and falls back to `--pr` when there would be conflicts.
-  Follow the existing `long_about` pattern used by the `Spec` command at line 782 of `main.rs`.
-- Add three bool fields to the `Close` variant, mirroring `RefreshEpic`:
+- Add `#[command(long_about = "...")]` with a multi-line string covering four stages: (1) quiescence check — all epic tickets must be non-terminal; merged-but-unclosed tickets are offered for auto-close on TTY; (2) already-merged shortcut — if the epic branch has no commits ahead of default, the branch is deleted locally and remotely, no PR created; (3) `--pr` (default) — pushes the epic branch and creates or updates a GitHub PR targeting the default branch; (4) `--merge` / `--auto` — local merge alternatives. Follow the `long_about` pattern at line 782 of `main.rs`.
+- Add all four flags. `--close-all` comes from e96593f5; `--merge/--pr/--auto` are new here:
   ```rust
+  #[arg(long)]
+  close_all: bool,
   #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
   merge: bool,
   #[arg(long, conflicts_with_all = ["merge", "auto_mode"])]
@@ -77,18 +74,19 @@ Update `EpicCommand::Close`:
   ```
 - Update the dispatch arm:
   ```rust
-  Command::Epic { command: EpicCommand::Close { id, merge, pr, auto_mode } }
-      => cmd::epic::run_close(&root, &id, merge, pr, auto_mode),
+  Command::Epic { command: EpicCommand::Close { id, close_all, merge, pr, auto_mode } }
+      => cmd::epic::run_close(&root, &id, close_all, merge, pr, auto_mode),
   ```
 
-#### `apm-core/src/epic.rs` — Classification function
+#### `apm-core/src/epic.rs` — Replace `non_terminal_epic_tickets` with `classify_epic_quiescence`
 
-Add alongside `epic_is_quiescent` (keep that function unchanged — `run_refresh_epic` still calls it):
+e96593f5 adds `EpicTicketInfo { id, state, title }` and `non_terminal_epic_tickets()`. ab1eb252 replaces `non_terminal_epic_tickets` with `classify_epic_quiescence`, which applies the same `!terminal` filtering but classifies results into three buckets. Delete `non_terminal_epic_tickets` — its only caller is `run_close`, which now calls `classify_epic_quiescence` instead.
 
 ```rust
 pub struct EpicQuiescenceResult {
-    pub auto_closeable: Vec<crate::ticket::Ticket>,
-    pub genuine_blockers: Vec<String>,   // same display format as existing blockers
+    pub unsafe_tickets: Vec<EpicTicketInfo>,   // blocked/question — must resolve manually
+    pub auto_closeable: Vec<EpicTicketInfo>,   // safe non-terminal, branch merged, no live worker
+    pub genuine_blockers: Vec<EpicTicketInfo>, // safe non-terminal, branch not merged or has live worker
 }
 
 pub fn classify_epic_quiescence(
@@ -100,63 +98,98 @@ pub fn classify_epic_quiescence(
 ) -> anyhow::Result<EpicQuiescenceResult>
 ```
 
-Logic (mirrors `epic_is_quiescent`'s per-ticket iteration):
-1. Load all tickets for the epic.
-2. For each ticket, apply the same `has_reached_impl && !terminal` guard — skip tickets that are not blocking.
-3. For each blocking ticket:
-   - If it has a live `.apm-worker.pid` → `genuine_blockers`.
-   - Else, resolve the ticket branch (`frontmatter.branch` or `ticket_fmt::branch_name_from_path`). If the branch is merged into `epic_branch` OR into `config.project.default_branch` via `git_util::is_branch_merged_into` → `auto_closeable`.
-   - Otherwise → `genuine_blockers`.
-4. Return `EpicQuiescenceResult`.
+For each non-terminal ticket in the epic (same `!terminal` predicate as `non_terminal_epic_tickets`), classify in this order:
 
-#### `apm/src/cmd/epic.rs` — Update `run_close`
+1. State is `blocked` or `question` → `unsafe_tickets`.
+2. Has a live `.apm-worker.pid` (check via the `worktrees` list) → `genuine_blockers`.
+3. Ticket branch merged into `epic_branch` OR into `config.project.default_branch` via `git_util::is_branch_merged_into` → `auto_closeable`.
+4. Otherwise → `genuine_blockers`.
+
+`epic_is_quiescent` (used by `run_refresh_epic`) remains untouched.
+
+Port the three unit tests that e96593f5 adds for `non_terminal_epic_tickets` to cover `classify_epic_quiescence` instead:
+- `classify_epic_quiescence_all_closed_returns_empty` — all buckets empty when all tickets are terminal
+- `classify_epic_quiescence_ignores_other_epics` — tickets belonging to another epic are ignored
+- `classify_epic_quiescence_three_buckets` — blocked → unsafe; safe with merged branch → auto_closeable; safe with unmerged branch → genuine_blockers
+
+#### `apm/src/cmd/epic.rs` — Updated `run_close`
 
 New signature:
 ```rust
-pub fn run_close(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_mode: bool) -> Result<()>
+pub fn run_close(root: &Path, id_arg: &str, close_all: bool, merge: bool, pr: bool, auto_mode: bool) -> Result<()>
 ```
 
-**Step 3 — quiescence check with auto-close offer:**
-
-Replace the existing `epic_is_quiescent` bail block with:
+Replace all three quiescence-related code blocks — the original `epic_is_quiescent` bail, the earlier re-check from the first draft of this spec, and the `non_terminal_epic_tickets` guard added by e96593f5 — with a single unified section:
 
 ```rust
 let result = apm_core::epic::classify_epic_quiescence(
     root, epic_id, &config, &worktrees, &epic_branch,
 )?;
 
-if !result.auto_closeable.is_empty() && std::io::stdout().is_terminal() {
-    let n = result.auto_closeable.len();
-    println!("\nTickets merged but not yet closed ({n}):");
-    for t in &result.auto_closeable {
-        println!("  {}  {}", t.frontmatter.id, t.frontmatter.title);
-    }
-    if crate::util::prompt_yes_no(&format!("\nClose {n} merged ticket(s)? [y/N] "))? {
-        let caller = apm_core::config::resolve_caller_name();
-        let actor = format!("{}(apm-epic-close)", caller);
+// Unsafe tickets always block — no flag overrides this.
+if !result.unsafe_tickets.is_empty() {
+    let rows = result.unsafe_tickets.iter()
+        .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+        .collect::<Vec<_>>().join("\n");
+    anyhow::bail!(
+        "cannot close epic: the following tickets require manual resolution:\n{}\nResolve them manually, then retry.",
+        rows
+    );
+}
+
+// Merged but not yet closed: offer auto-close.
+// --close-all closes without prompt; on TTY ask interactively; on non-TTY treat as blocker.
+let mut remaining: Vec<&apm_core::epic::EpicTicketInfo> =
+    result.genuine_blockers.iter().collect();
+if !result.auto_closeable.is_empty() {
+    let should_close = close_all || (std::io::stdout().is_terminal() && {
+        let n = result.auto_closeable.len();
+        println!("\nTickets merged but not yet closed ({n}):");
         for t in &result.auto_closeable {
-            match apm_core::ticket::close(root, &config, &t.frontmatter.id, None, &actor, false) {
+            println!("  {}  {}", t.id, t.title);
+        }
+        crate::util::prompt_yes_no(&format!("\nClose {n} merged ticket(s)? [y/N] "))?
+    });
+    if should_close {
+        let actor = format!("{}(apm-epic-close)", apm_core::config::resolve_caller_name());
+        for t in &result.auto_closeable {
+            match apm_core::ticket::close(root, &config, &t.id, None, &actor, false) {
                 Ok(msgs) => msgs.iter().for_each(|m| println!("{m}")),
-                Err(e) => eprintln!("warning: could not close {}: {e:#}", t.frontmatter.id),
+                Err(e) => eprintln!("warning: could not close {}: {e:#}", t.id),
             }
         }
+    } else {
+        // User declined or non-TTY — treat declined tickets as blockers.
+        remaining.extend(result.auto_closeable.iter());
     }
 }
 
-// Re-check after any auto-closes to get the definitive blocker list.
-let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;
-let blockers = apm_core::epic::epic_is_quiescent(root, epic_id, &config, &worktrees)?;
-if !blockers.is_empty() {
-    anyhow::bail!(
-        "cannot close epic: the following tickets are not quiescent:\n{}",
-        blockers.join("\n")
-    );
+// Genuine blockers (unmerged tickets, live-worker tickets, any declined auto-closeables).
+if !remaining.is_empty() {
+    if !close_all {
+        let rows = remaining.iter()
+            .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+            .collect::<Vec<_>>().join("\n");
+        anyhow::bail!(
+            "epic has {} non-terminal ticket(s):\n{}\nRe-run with --close-all to cascade close, or close them manually first.",
+            remaining.len(), rows
+        );
+    }
+    let actor = format!("{}(apm-epic-close)", apm_core::config::resolve_caller_name());
+    for t in &remaining {
+        print!("closing ticket #{} ... ", t.id);
+        apm_core::ticket::close(root, &config, &t.id, None, &actor, false)
+            .with_context(|| format!("failed to close ticket #{}", t.id))?;
+        println!("done");
+    }
 }
 ```
 
-**Steps 5-6 — flag-conditional merge or PR:**
+When `close_all` is set, `should_close` is always `true` for `auto_closeable` tickets (closed without prompt) and `remaining` holds only `genuine_blockers`, which are then cascade-closed. This is e96593f5's `--close-all` semantics applied uniformly across all safe non-terminal tickets.
 
-After the already-merged shortcut (which stays unchanged), replace the existing push-and-PR block:
+**Steps 5-6 — flag-conditional merge or PR** (unchanged from previous draft):
+
+After the already-merged shortcut (unchanged), replace the existing push-and-PR block:
 
 ```rust
 let do_merge = merge || (auto_mode && {
@@ -165,7 +198,6 @@ let do_merge = merge || (auto_mode && {
 });
 
 if do_merge {
-    // Find the main worktree root; it must be on the default branch.
     let main_root = apm_core::git_util::main_worktree_root(root)
         .unwrap_or_else(|| root.to_path_buf());
     let head = apm_core::git_util::run(&main_root, &["symbolic-ref", "--short", "HEAD"])
@@ -189,7 +221,6 @@ if do_merge {
         ),
     }
 } else {
-    // push + PR: existing code unchanged
     apm_core::git::push_branch_tracking(root, &epic_branch)?;
     let mut messages = vec![];
     apm_core::github::gh_pr_create_or_update(
@@ -200,12 +231,17 @@ if do_merge {
 }
 ```
 
-Note: when `--merge` is given and `merge_ref` encounters a conflict, it returns `None` (it already aborts the merge). When `--auto` is given and the merge would conflict, `do_merge` is `false`, so `merge_ref` is never called and the PR path runs instead.
+When `--merge` is given and `merge_ref` encounters a conflict it returns `None` (already aborts the merge). When `--auto` is given and the merge would conflict, `do_merge` is `false`, so `merge_ref` is never called and the PR path runs.
 
-**Tests to add:**
+#### Integration tests
 
-- Unit test in `apm-core/src/epic.rs`: `classify_epic_quiescence_separates_merged_from_active` — one ticket whose branch is merged into the epic branch (auto-closeable) and one in `in_progress` with no merge (genuine blocker); assert each appears in the correct bucket.
-- Integration test in `apm/tests/integration.rs`: `epic_close_auto_closes_merged_tickets` — set up an epic with one implemented ticket whose branch is merged into the epic branch; run `apm epic close` in non-TTY mode and assert it exits with a blocker message (since no prompt). Add a separate test variant that mocks TTY acceptance if feasible, or document that the auto-close path is covered by the unit test.
+Reuse the four integration tests e96593f5 adds to `apm/tests/integration.rs`, adjusting the single assertion that previously referenced `non_terminal_epic_tickets` to match the new three-bucket behavior:
+- `epic_close_no_flag_bails_on_non_terminal_ticket` — ticket with unmerged branch → `genuine_blockers` → bails without `--close-all`
+- `epic_close_all_bails_on_blocked_ticket` — blocked ticket → `unsafe_tickets` → bails even with `--close-all`
+- `epic_close_all_bails_on_mixed_blocked_and_safe` — unsafe check fires before cascade attempt
+
+Add from ab1eb252:
+- `epic_close_auto_close_non_tty` — epic with one safe ticket whose branch is merged; run `run_close` with `stdout` not a TTY (default in test harness); assert `Err` and that the message lists the merged ticket as a blocker (auto-close was not offered)
 
 ### Open questions
 
