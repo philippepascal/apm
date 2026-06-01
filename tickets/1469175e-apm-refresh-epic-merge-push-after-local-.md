@@ -24,7 +24,7 @@ This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <
 
 - [x] `apm refresh-epic <id> --merge --push` pushes the epic branch to origin after a successful local merge; `git rev-parse origin/<epic-branch>` equals the post-merge local tip.
 - [x] `apm refresh-epic <id> --merge --no-push` completes the local merge without pushing; `origin/<epic-branch>` is unchanged; a warning is printed to stderr stating that downstream `apm start` will read stale content until the branch is pushed manually.
-- [ ] `apm refresh-epic <id> --merge` with stdout connected to a terminal prompts `Push refreshed epic to origin? [Y/n]`; pressing Enter or typing `y`/`Y` pushes; typing `n`/`N` skips with the stale-origin warning.
+- [x] `apm refresh-epic <id> --merge` with stdout connected to a terminal prompts `Push refreshed epic to origin? [Y/n]`; pressing Enter or typing `y`/`Y` pushes; typing `n`/`N` skips with the stale-origin warning.
 - [ ] `apm refresh-epic <id> --merge` with stdout not connected to a terminal skips the push without prompting and prints the stale-origin warning to stderr.
 - [ ] When the local merge fails with a conflict, no push is attempted regardless of the `--push`/`--no-push` flags.
 - [ ] Passing both `--push` and `--no-push` together is rejected as a CLI error.
