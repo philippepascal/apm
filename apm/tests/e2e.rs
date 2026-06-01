@@ -763,13 +763,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to      = "done"
