@@ -33,7 +33,7 @@ Reference: run_refresh_epic in apm/src/cmd/epic.rs already implements the --merg
 
 ### Acceptance criteria
 
-- [ ] `apm epic close --help` describes at least three operational stages: quiescence check, the already-merged branch-delete shortcut (no PR), and the default push-and-open-PR path.
+- [x] `apm epic close --help` describes at least three operational stages: quiescence check, the already-merged branch-delete shortcut (no PR), and the default push-and-open-PR path.
 - [ ] `apm epic close --help` documents `--merge`, `--pr`, and `--auto` with one-line descriptions of each flag's semantics.
 - [ ] When the quiescence check finds blocking tickets whose branches are already merged into the epic branch or the default branch and have no live worker, the command lists them and prompts "Close N merged ticket(s)? [y/N]" on a TTY.
 - [ ] Accepting the auto-close prompt closes those tickets via `apm_core::ticket::close`; if no genuine blockers remain afterward, the command proceeds normally.
