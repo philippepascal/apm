@@ -28,7 +28,7 @@ This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <
 - [x] `apm refresh-epic <id> --merge` with stdout not connected to a terminal skips the push without prompting and prints the stale-origin warning to stderr.
 - [x] When the local merge fails with a conflict, no push is attempted regardless of the `--push`/`--no-push` flags.
 - [x] Passing both `--push` and `--no-push` together is rejected as a CLI error.
-- [ ] The `--pr` path behaviour is unchanged: `push_branch_tracking` still runs before PR creation.
+- [x] The `--pr` path behaviour is unchanged: `push_branch_tracking` still runs before PR creation.
 - [ ] The default path (no `--merge`, `--pr`, or `--auto` flag) behaviour is unchanged.
 
 ### Out of scope
