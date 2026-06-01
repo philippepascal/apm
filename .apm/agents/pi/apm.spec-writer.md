@@ -155,7 +155,7 @@ under `.apm/` other than your ticket via `apm spec`.
 
 ## Ammend tickets
 
-If the ticket starts in state `ammend` instead of `in_design`:
+If `### Amendment requests` has unchecked items, the ticket is an amendment. You are already in `in_design` when dispatched.
 
 1. `apm show <id>` — read `### Amendment requests` carefully; each item is
    a checkbox you must address.

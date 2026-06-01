@@ -1,0 +1,207 @@
++++
+id = "e2781682"
+title = "apm-server and apm-ui audit: update API and frontend for schema changes"
+state = "closed"
+priority = 0
+effort = 2
+risk = 1
+author = "philippepascal"
+owner = "philippepascal"
+branch = "ticket/e2781682-apm-server-and-apm-ui-audit-update-api-a"
+created_at = "2026-05-31T02:59:20.324716Z"
+updated_at = "2026-06-01T02:41:00.752487Z"
+epic = "9c3c4c20"
+target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
+depends_on = ["e05c0463", "4d20ba2f"]
++++
+
+## Spec
+
+### Problem
+
+After e05c0463 removes `transition.worker_profile` from `TransitionConfig` (adding `#[serde(deny_unknown_fields)]` to enforce the removal) and 4d20ba2f makes `workers.default` a mandatory non-optional `String`, the inline TOML fixture `MERGE_FAILED_WORKFLOW_CONFIG` in `apm-server/src/main.rs` breaks. It declares `worker_profile = "claude/coder"` on the `ready → in_progress` transition block, which will fail deserialization once `deny_unknown_fields` is active. It also lacks a `[workers]` section entirely, which fails validation after 4d20ba2f makes `workers.default` mandatory. A third inconsistency: 071886fc removes `merge_failed → in_progress` from the default workflow, but the test fixture retains it.
+
+The audit of the remaining surfaces found no other breaking changes. The `apm-server` API response types (`TransitionOption`, `StateNode`, `TransitionEdge` in `handlers/workflow.rs`) have never included transition-level `worker_profile` or `role`. The `apm-server/src/models.rs` response structs are clean. All `apm-ui` TypeScript interfaces, component props, and store types reference only fields that are unaffected by the schema changes. The net result is a single test-fixture update in one file.
+
+### Acceptance criteria
+
+- [x] `cargo test -p apm-server` passes with the updated fixture
+- [x] `MERGE_FAILED_WORKFLOW_CONFIG` in `apm-server/src/main.rs` contains no `worker_profile` key in any `[[workflow.states.transitions]]` block
+- [x] `MERGE_FAILED_WORKFLOW_CONFIG` contains a `[workers]` section with a non-empty `default` value
+- [x] `MERGE_FAILED_WORKFLOW_CONFIG` contains no `merge_failed → in_progress` transition
+- [x] `get_ticket_recovery_options_populated` test finds a `retry_merge` option pointing to `implemented`
+- [x] `list_tickets_merge_failure_state_ids` test still identifies `merge_failed` in `merge_failure_state_ids` and excludes `in_progress`
+- [x] No field named `worker_profile` appears in any `#[derive(serde::Serialize)]` struct in `apm-server/src/models.rs` or `apm-server/src/handlers/workflow.rs`
+- [x] No TypeScript `interface` or `type` in `apm-ui/src/` contains a field named `worker_profile` or a transition-level `role`
+- [x] get_ticket_recovery_options_populated finds exactly one recovery option (kind = "retry_merge", to = "implemented"); no return_to_worker entry is present
+
+### Out of scope
+
+- Schema struct changes in `apm-core` — owned by e05c0463 (`TransitionConfig.worker_profile` removal, `StateConfig.worker_profile` addition) and 4d20ba2f (`WorkersConfig.default` type change)
+- Updating `apm-core/src/recovery.rs` `classify_recovery_options` to look up state-level `worker_profile` instead of transition-level — this is a compile-time consequence of e05c0463 and is fixed there
+- Removing `merge_failed → in_progress` from `.apm/workflow.toml` and `apm-core/src/default/workflow.toml` — owned by 071886fc
+- Test fixture changes in `apm-core/src/recovery.rs` (`DEFAULT_WF`, `shuffled`, `renamed` have `worker_profile` on transitions) — owned by e05c0463
+- Help text and documentation sweep — a5cffb01
+- Adding `worker_profile` to the `StateNode` response in `handlers/workflow.rs` — the UI workflow graph does not consume it; this is a new feature, not a fix
+- New UI features or visual changes
+
+### Approach
+
+#### Audit results
+
+A full read of `apm-server/src/{models,handlers/tickets,handlers/workflow,handlers/maintenance,handlers/mod,agents,work,workers}.rs` and all `apm-ui/src/` TypeScript files confirms only one file needs editing: `apm-server/src/main.rs`.
+
+#### Recovery-options pipeline
+
+`apm-server/src/handlers/tickets.rs` `get_ticket` calls `is_merge_failure_state("merge_failed", &config.workflow)`. This returns `true` because the `in_progress → implemented` transition (`completion = "pr_or_epic_merge"`, `on_failure = "merge_failed"`) still exists in the updated fixture.
+
+`classify_recovery_options("merge_failed", &config.workflow)` then maps over `merge_failed`'s outgoing transitions. With the updated fixture only `merge_failed → implemented` remains (the `merge_failed → in_progress` block is deleted). The function classifies `implemented` as `RetryMerge` because it is the target of the merge-completion transition `in_progress → implemented`. Result: one `RecoveryOption { to: "implemented", kind: RetryMerge }`.
+
+The handler serialises this into `RecoveryOptionDto { to: "implemented", kind: "retry_merge", command: "apm state <id> implemented" }` and returns it in `TicketDetailResponse.recovery_options`.
+
+`TicketDetail.tsx` receives `recovery_options` via `GET /api/tickets/:id` and renders each item by iterating the array. No state names or kinds are hardcoded for display logic; the `kindLabel()` helper is formatting-only. With one item in the array, only the `retry_merge → implemented` row renders. The "Return to worker / in_progress" option disappears automatically.
+
+#### apm-server/src/main.rs — MERGE_FAILED_WORKFLOW_CONFIG
+
+**Before** (current fixture, lines ~2523–2569):
+
+```toml
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to             = "in_progress"
+  trigger        = "command:start"
+  worker_profile = "claude/coder"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+```
+
+**After** (replace the constant body with this verbatim):
+
+```toml
+[project]
+name = "test"
+
+[workers]
+default = "claude/coder"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
+
+[[workflow.states]]
+id    = "implemented"
+label = "Implemented"
+
+[[workflow.states]]
+id         = "merge_failed"
+label      = "Merge failed"
+actionable = ["supervisor"]
+
+  [[workflow.states.transitions]]
+  to      = "implemented"
+  trigger = "manual"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+```
+
+Three diffs: (1) `[workers]\ndefault = "claude/coder"` inserted after `[project]`. (2) `worker_profile = "claude/coder"` removed from the `ready → in_progress` transition block; the field moves to the `in_progress` state header. (3) The second `[[workflow.states.transitions]]` block under `merge_failed` (`to = "in_progress"`) is deleted.
+
+#### Test assertion review
+
+No assertion changes are required.
+
+`get_ticket_recovery_options_populated` asserts `!opts.is_empty()` and that a `retry_merge` option exists pointing to `implemented`. With only `merge_failed → implemented` remaining, `opts.len()` is 1 and both assertions still pass.
+
+`list_tickets_merge_failure_state_ids` asserts `merge_failed` is in `merge_failure_state_ids` and `in_progress` is not. `is_merge_failure_state("merge_failed")` checks whether any merge-completion transition names `merge_failed` as `on_failure`. The `in_progress → implemented` transition (`completion = "pr_or_epic_merge"`, `on_failure = "merge_failed"`) still exists, so `merge_failed` remains classified correctly.
+
+#### Verification
+
+Run `cargo test -p apm-server` to confirm all tests pass. No UI build or `vitest` changes are required.
+
+### Open questions
+
+
+### Amendment requests
+
+- [x] Trace the recovery-options pipeline explicitly. Identify where the UI's recovery options are computed (apm-core/src/recovery.rs::classify_recovery_options reads valid transitions from merge_failed). Confirm that after removing merge_failed to in_progress, only retry_merge to implemented remains, and that the UI consumes that result correctly. Add this to the Approach section.
+- [x] Provide the concrete final form of MERGE_FAILED_WORKFLOW_CONFIG (the inline TOML fixture) after all three edits, rather than describing the edits abstractly. A reader should be able to read the before-and-after directly from the spec and verify the diff matches.
+- [x] Add AC verifying the UI recovery surface offers only the remaining transitions. The dropdown or button row on a merge_failed ticket should not contain an in_progress option after the workflow change in 071886fc. Either an automated frontend test or a manual UI check counts.
+
+### Code review
+
+
+## History
+
+| When | From | To | By |
+|------|------|----|----|
+| 2026-05-31T02:59Z | — | new | philippepascal |
+| 2026-05-31T07:04Z | new | groomed | philippepascal |
+| 2026-05-31T07:55Z | groomed | in_design | philippepascal |
+| 2026-05-31T08:03Z | in_design | specd | claude |
+| 2026-05-31T19:36Z | specd | ammend | philippepascal |
+| 2026-05-31T19:47Z | ammend | in_design | philippepascal |
+| 2026-05-31T19:59Z | in_design | specd | claude |
+| 2026-05-31T21:04Z | specd | ready | philippepascal |
+| 2026-06-01T01:48Z | ready | in_progress | philippepascal |
+| 2026-06-01T01:57Z | in_progress | implemented | claude |
+| 2026-06-01T02:41Z | implemented | closed | philippepascal(apm-sync) |

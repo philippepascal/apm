@@ -52,7 +52,8 @@ pub async fn list_tickets(
                 let mut supervisor = vec!["new".to_string()];
                 supervisor.extend(
                     cfg.workflow.states.iter()
-                        .filter(|s| !s.terminal && s.id != "new" && s.actionable.iter().any(|a| a == "supervisor"))
+                        .filter(|s| !s.terminal && s.id != "new"
+                            && !s.transitions.iter().any(|t| t.trigger == "command:start"))
                         .map(|s| s.id.clone())
                 );
                 let merge_failure: Vec<String> = cfg.workflow.states.iter()
