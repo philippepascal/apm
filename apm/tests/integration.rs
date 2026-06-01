@@ -2081,18 +2081,19 @@ fn spawn_new_ticket_transitions_to_in_design() {
 }
 
 #[test]
-fn ammend_to_groomed_succeeds() {
-    let dir = init_repo();
+fn spawn_ammend_ticket_transitions_to_in_design() {
+    let dir = setup_for_prompt_dispatch();
     let p = dir.path();
+    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
     let (id, branch) = write_ticket_to_branch(p, "ammend", "needs revision");
-    let rel = ticket_rel_path(&branch);
 
-    apm::cmd::state::run(p, &id, "groomed".into(), false, false).unwrap();
-    let content = branch_content(p, &branch, &rel);
-    assert!(
-        content.contains("state = \"groomed\""),
-        "expected groomed state:\n{content}"
-    );
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
+    let pid = out.worker_pid.unwrap();
+    wait_for_pid(pid);
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"specd\""), "ammend ticket should transition through in_design to specd: {content}");
 }
 
 #[test]

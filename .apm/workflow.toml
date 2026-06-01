@@ -83,8 +83,8 @@ satisfies_deps = "spec"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to      = "groomed"
-  trigger = "manual"
+  to      = "in_design"
+  trigger = "command:start"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
