@@ -8868,18 +8868,31 @@ fn epic_close_auto_close_non_tty() {
     git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "-m", &format!("merge {id}")]);
     git(p, &["checkout", "main"]);
 
-    // In test harness, stdout is not a TTY. classify_epic_quiescence puts the ticket in
-    // auto_closeable, but should_close = false (no TTY, no --close-all). Ticket goes into
-    // remaining, and with close_all=false we get the blocker error.
-    let result = apm::cmd::epic::run_close(p, &epic_id, false, false, false, false);
-    let err = result.unwrap_err();
-    let msg = err.to_string();
+    // Invoke via subprocess so stdin/stdout are pipes (is_terminal() returns false).
+    // classify_epic_quiescence puts the ticket in auto_closeable, but should_close = false
+    // (no TTY, no --close-all). Ticket falls into remaining, producing the blocker error.
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["epic", "close", &epic_id])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .output()
+        .unwrap();
+
+    assert!(!out.status.success(), "expected non-zero exit; got success");
+    let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(
-        msg.contains("non-terminal"),
-        "expected merged ticket to appear as blocker on non-TTY; got: {msg}"
+        stderr.contains("non-terminal"),
+        "expected merged ticket to appear as blocker on non-TTY; got stderr: {stderr}"
     );
     assert!(
-        msg.contains(&id),
-        "expected ticket id {id} in blocker message; got: {msg}"
+        stderr.contains(&id),
+        "expected ticket id {id} in blocker message; got stderr: {stderr}"
     );
 }
