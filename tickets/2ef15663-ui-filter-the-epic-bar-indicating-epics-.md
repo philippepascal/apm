@@ -4,12 +4,12 @@ title = "UI: filter the epic bar indicating epics needing refresh"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2ef15663-ui-filter-the-epic-bar-indicating-epics-"
 created_at = "2026-06-01T17:18:45.877184Z"
-updated_at = "2026-06-01T17:20:15.220583Z"
+updated_at = "2026-06-01T17:20:19.907772Z"
 +++
 
 ## Spec
