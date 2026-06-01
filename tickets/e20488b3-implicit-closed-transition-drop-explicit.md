@@ -1,7 +1,7 @@
 +++
 id = "e20488b3"
 title = "Implicit closed transition: drop explicit close entries from workflow.toml"
-state = "implemented"
+state = "merge_failed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e20488b3-implicit-closed-transition-drop-explicit"
 created_at = "2026-06-01T07:14:21.218455Z"
-updated_at = "2026-06-01T08:07:02.422628Z"
+updated_at = "2026-06-01T08:07:04.671229Z"
 +++
 
 ## Spec
@@ -122,6 +122,10 @@ This affects `new`, `groomed`, `question`, `specd`, `ammend`, `in_design`, `read
 ### Code review
 
 
+### Merge notes
+
+merge conflict — resolve manually and push: 
+
 ## History
 
 | When | From | To | By |
@@ -133,3 +137,4 @@ This affects `new`, `groomed`, `question`, `specd`, `ammend`, `in_design`, `read
 | 2026-06-01T07:36Z | specd | ready | philippepascal |
 | 2026-06-01T07:45Z | ready | in_progress | philippepascal |
 | 2026-06-01T08:07Z | in_progress | implemented | claude |
+| 2026-06-01T08:07Z | implemented | merge_failed | claude |
