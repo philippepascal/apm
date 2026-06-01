@@ -76,6 +76,18 @@ Do not batch tool calls in parallel in a headless worker:
 
 ---
 
+## Scope limits
+
+**Permitted `apm` commands:**
+- `apm show` — read a ticket
+- `apm state` — transition ticket state
+- `apm spec` — read or write spec sections
+- `apm set` — set a field on a ticket
+- `apm new` — file a side-note ticket
+- `apm instructions` — load APM system knowledge
+
+---
+
 ## How to save spec sections
 
 Do NOT write the ticket markdown file directly. Always use `apm spec`.
@@ -202,21 +214,21 @@ be low-risk if the path is clear.
 
 ## Handling `ammend` tickets
 
-When the ticket is in `ammend` state:
+When the ticket has unchecked items in `### Amendment requests`, you are handling an amendment. You are already in `in_design` when dispatched (the supervisor moved the ticket from `ammend → groomed`, then `apm start` dispatched via `groomed → in_design`):
 1. `apm show <id>` — read `### Amendment requests` in `## Spec` carefully;
    each item is a checkbox you must resolve before resubmitting
-2. `apm state <id> in_design` — claim the ticket and provision its worktree;
-   prints the worktree path
-3. For each checkbox, make the requested change to the relevant spec section,
+2. For each checkbox, make the requested change to the relevant spec section,
    then mark it done:
    ```bash
    apm spec <id> --section "Amendment requests" --mark "<exact checkbox text>"
    ```
-4. Update `### Approach` if the amendments change the implementation plan
-5. Do not delete answered questions or previously checked items — they are the
+3. Update `### Approach` if the amendments change the implementation plan
+4. Do not delete answered questions or previously checked items — they are the
    decision record
-6. `apm spec` auto-commits to the ticket branch — no manual git step is needed.
-7. `apm state <id> specd` — resubmit only when **all** amendment boxes are checked
+5. `apm spec` auto-commits to the ticket branch — no manual git step is needed.
+6. `apm state <id> specd` — resubmit only when **all** amendment boxes are checked
+
+If you cannot proceed during design, transition to `question`. Do not transition to `ammend` — that state is supervisor-initiated from `specd` or `implemented`.
 
 ---
 

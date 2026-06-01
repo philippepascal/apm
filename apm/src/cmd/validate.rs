@@ -147,6 +147,21 @@ pub fn apply_config_migration_fixes(root: &Path) -> Result<bool> {
                  to spawn transitions in .apm/workflow.toml manually"
             );
         }
+        // If [workers].default is still absent after removal, add a placeholder so the
+        // config remains parseable and passes re-validation.
+        let needs_default = doc
+            .get("workers")
+            .and_then(|v| v.as_table())
+            .map(|t| !t.contains_key("default"))
+            .unwrap_or(true);
+        if needs_default {
+            if doc.get("workers").is_none() {
+                doc.insert("workers", toml_edit::Item::Table(toml_edit::Table::new()));
+            }
+            if let Some(workers) = doc.get_mut("workers").and_then(|v| v.as_table_mut()) {
+                workers.insert("default", toml_edit::value("claude/coder"));
+            }
+        }
     }
 
     // 8. Write back

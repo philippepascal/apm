@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::collections::HashSet;
 use std::path::Path;
 
-use crate::config::{Config, TransitionConfig};
+use crate::config::Config;
 
 // ---------------------------------------------------------------------------
 // Static fallback content
@@ -19,7 +19,7 @@ static STATIC_STATE_MACHINE: &str = "| From | To | Command |\n\
 | specd | ready | apm state <id> ready |\n\
 | specd | ammend | apm state <id> ammend |\n\
 | specd | in_design | apm state <id> in_design |\n\
-| ammend | in_design | apm state <id> in_design |\n\
+| ammend | groomed | apm state <id> groomed |\n\
 | ready | in_progress | apm start <id> |\n\
 | in_progress | implemented | apm state <id> implemented |\n\
 | in_progress | blocked | apm state <id> blocked |\n\
@@ -159,10 +159,12 @@ fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
     out.push_str("|------|----|----------|\n");
 
     for state in &config.workflow.states {
+        let state_role: Option<&str> = state.worker_profile.as_deref()
+            .and_then(|wp| wp.split_once('/').map(|(_, r)| r));
+
         for transition in &state.transitions {
             if let Some(role_name) = role {
-                let t_role = derive_transition_role(transition);
-                if t_role != role_name {
+                if state_role != Some(role_name) {
                     continue;
                 }
             }
@@ -307,23 +309,24 @@ fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> 
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn derive_transition_role(t: &TransitionConfig) -> String {
-    if let Some(ref wp) = t.worker_profile {
-        if let Some((_, role)) = wp.split_once('/') {
-            if !role.is_empty() {
-                return role.to_string();
-            }
-        }
-    }
-    "worker".to_string()
-}
+const WORKER_COMMAND_ALLOWLIST: &[&str] = &["show", "state", "spec", "set", "new", "instructions"];
 
-fn role_command_allowlist(role: &str) -> Option<&'static [&'static str]> {
-    match role {
-        "spec-writer" => Some(&["show", "spec", "set", "state", "new", "sync", "list", "next"]),
-        "worker" => Some(&["show", "start", "state", "spec", "new", "sync", "list", "next"]),
-        _ => None,
-    }
+/// Name + description tuples for the six worker-permitted `apm` commands.
+/// Names must stay in sync with WORKER_COMMAND_ALLOWLIST (ticket 9c66e199).
+/// Descriptions are purpose-built for agent consumption; they are NOT copied
+/// from clap `///` doc comments. If a subcommand's fundamental purpose changes,
+/// update both this const and the clap string in apm/src/main.rs in the same commit.
+pub(crate) const WORKER_COMMANDS: &[(&str, &str)] = &[
+    ("instructions", "Output APM system knowledge for agents: state machine, ticket format, shell discipline, session identity, and command reference"),
+    ("new",          "Create a new ticket"),
+    ("set",          "Set a field on a ticket"),
+    ("show",         "Show a ticket"),
+    ("spec",         "Read or write individual spec sections of a ticket"),
+    ("state",        "Transition a ticket's state"),
+];
+
+fn role_command_allowlist(_role: &str) -> Option<&'static [&'static str]> {
+    Some(WORKER_COMMAND_ALLOWLIST)
 }
 
 // ---------------------------------------------------------------------------
@@ -350,6 +353,7 @@ mod tests {
             ("next".to_string(), "Return next actionable ticket".to_string()),
             ("set".to_string(), "Set a field on a ticket".to_string()),
             ("prompt".to_string(), "Print system prompt".to_string()),
+            ("instructions".to_string(), "Print APM system knowledge".to_string()),
         ]
     }
 
@@ -412,23 +416,21 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let out = generate(tmp.path(), Some("worker"), None, &sample_commands()).unwrap();
 
-        // worker allowlist includes "start"
-        assert!(out.contains("apm start"), "'apm start' not found for worker role");
-
-        // worker allowlist excludes "prompt" (not in worker list)
-        // find the Command Reference section and assert "apm prompt" absent there
         let cr_pos = out.find("## Command Reference").unwrap();
         let cr_section = &out[cr_pos..];
-        assert!(
-            !cr_section.contains("apm prompt"),
-            "'apm prompt' found in worker command reference but should be excluded"
-        );
 
-        // Static fallback includes in_progress (worker acts there)
-        assert!(
-            out.contains("in_progress"),
-            "in_progress state missing from worker output"
-        );
+        // Six unified commands are present
+        assert!(cr_section.contains("apm show"), "'apm show' missing for worker role");
+        assert!(cr_section.contains("apm state"), "'apm state' missing for worker role");
+        assert!(cr_section.contains("apm spec"), "'apm spec' missing for worker role");
+        assert!(cr_section.contains("apm set"), "'apm set' missing for worker role");
+        assert!(cr_section.contains("apm new"), "'apm new' missing for worker role");
+        assert!(cr_section.contains("apm instructions"), "'apm instructions' missing for worker role");
+
+        // Supervisor commands excluded
+        assert!(!cr_section.contains("apm start"), "'apm start' found in worker command reference but should be excluded");
+        assert!(!cr_section.contains("apm sync"), "'apm sync' found in worker command reference but should be excluded");
+        assert!(!cr_section.contains("apm prompt"), "'apm prompt' found in worker command reference but should be excluded");
     }
 
     #[test]
@@ -436,29 +438,39 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let out = generate(tmp.path(), Some("spec-writer"), None, &sample_commands()).unwrap();
 
-        // spec-writer allowlist includes "spec" and "set"
         let cr_pos = out.find("## Command Reference").unwrap();
         let cr_section = &out[cr_pos..];
+
+        // Six unified commands are present
+        assert!(cr_section.contains("apm show"), "'apm show' missing for spec-writer");
+        assert!(cr_section.contains("apm state"), "'apm state' missing for spec-writer");
         assert!(cr_section.contains("apm spec"), "'apm spec' missing for spec-writer");
         assert!(cr_section.contains("apm set"), "'apm set' missing for spec-writer");
+        assert!(cr_section.contains("apm new"), "'apm new' missing for spec-writer");
+        assert!(cr_section.contains("apm instructions"), "'apm instructions' missing for spec-writer");
 
-        // spec-writer allowlist excludes "start"
-        assert!(
-            !cr_section.contains("apm start"),
-            "'apm start' found in spec-writer command reference but should be excluded"
-        );
+        // Supervisor commands excluded
+        assert!(!cr_section.contains("apm start"), "'apm start' found in spec-writer command reference but should be excluded");
     }
 
     #[test]
-    fn generate_unknown_role_falls_back_to_full_commands() {
+    fn generate_unknown_role_gets_worker_allowlist() {
         let tmp = tempfile::tempdir().unwrap();
         let out = generate(tmp.path(), Some("unknown-role-xyz"), None, &sample_commands()).unwrap();
 
-        // All commands should be present since unknown role falls back to unscoped
         let cr_pos = out.find("## Command Reference").unwrap();
         let cr_section = &out[cr_pos..];
-        assert!(cr_section.contains("apm start"), "start missing for unknown role");
-        assert!(cr_section.contains("apm prompt"), "prompt missing for unknown role");
+
+        // Six unified commands are present for any role
+        assert!(cr_section.contains("apm show"), "'apm show' missing for unknown role");
+        assert!(cr_section.contains("apm state"), "'apm state' missing for unknown role");
+        assert!(cr_section.contains("apm spec"), "'apm spec' missing for unknown role");
+        assert!(cr_section.contains("apm set"), "'apm set' missing for unknown role");
+        assert!(cr_section.contains("apm new"), "'apm new' missing for unknown role");
+        assert!(cr_section.contains("apm instructions"), "'apm instructions' missing for unknown role");
+
+        // Supervisor commands excluded
+        assert!(!cr_section.contains("apm prompt"), "'apm prompt' found for unknown role but should be excluded");
     }
 
     #[test]
@@ -481,22 +493,19 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "command:start"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-actionable = ["agent"]
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-worker_profile = "claude/coder"
 "#;
         let tmp = tempfile::tempdir().unwrap();
         let apm_dir = tmp.path().join(".apm");
@@ -514,42 +523,6 @@ worker_profile = "claude/coder"
     }
 
     #[test]
-    fn derive_transition_role_from_worker_profile() {
-        let t = crate::config::TransitionConfig {
-            to: "specd".to_string(),
-            trigger: "submit".to_string(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: Some("claude/spec-writer".to_string()),
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t), "spec-writer");
-    }
-
-    #[test]
-    fn derive_transition_role_defaults_to_worker() {
-        let t = crate::config::TransitionConfig {
-            to: "implemented".to_string(),
-            trigger: String::new(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: None,
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t), "worker");
-    }
-
-    #[test]
     fn live_state_machine_filters_by_role() {
 
         let config_toml = r#"
@@ -562,27 +535,24 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "start"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-actionable = ["agent"]
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "implemented"
 label = "Implemented"
-actionable = ["supervisor"]
 
 [[workflow.states.transitions]]
 to = "closed"
@@ -591,27 +561,24 @@ trigger = "approve"
 [[workflow.states]]
 id = "groomed"
 label = "Groomed"
-actionable = ["agent"]
+worker_profile = "claude/spec-writer"
 
 [[workflow.states.transitions]]
 to = "in_design"
 trigger = "claim"
-worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
+worker_profile = "claude/spec-writer"
 
 [[workflow.states.transitions]]
 to = "specd"
 trigger = "submit"
-worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "specd"
 label = "Specd"
-actionable = ["supervisor"]
 
 [[workflow.states]]
 id = "closed"
