@@ -1865,8 +1865,9 @@ label = "New"
   trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_design"
-label = "In Design"
+id             = "in_design"
+label          = "In Design"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -8370,8 +8371,19 @@ label = "Merge failed"
   trigger = "manual"
 
   [[workflow.states.transitions]]
-  to      = "in_progress"
+  to      = "merge_retry"
   trigger = "command:start"
+
+[[workflow.states]]
+id             = "merge_retry"
+label          = "Merge retry"
+worker_profile = "claude/coder"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
 
 [[workflow.states]]
 id       = "closed"

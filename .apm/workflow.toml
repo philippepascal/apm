@@ -205,11 +205,6 @@ worker_end     = true
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "manual"
-  outcome = "needs_input"
-
-  [[workflow.states.transitions]]
   to      = "closed"
   trigger = "manual"
   outcome = "cancelled"
