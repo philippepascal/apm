@@ -1,7 +1,7 @@
 +++
 id = "1469175e"
 title = "apm refresh-epic --merge: push after local merge so downstream sees the refresh"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1469175e-apm-refresh-epic-merge-push-after-local-"
 created_at = "2026-05-31T03:26:11.802159Z"
-updated_at = "2026-05-31T03:26:11.802159Z"
+updated_at = "2026-06-01T02:52:42.119077Z"
 +++
 
 ## Spec
@@ -96,3 +96,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-05-31T03:26Z | — | new | philippepascal |
+| 2026-06-01T02:52Z | new | groomed | philippepascal |
