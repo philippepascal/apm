@@ -392,13 +392,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -440,8 +440,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -453,9 +454,8 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
 
     fn make_ticket_content_with_history(id: &str, state: &str, epic: &str, history: &[(&str, &str)]) -> String {
@@ -625,7 +625,7 @@ label = "Ready"
         assert_eq!(b1.len(), 1, "expected exactly one blocker (the in_progress ticket)");
     }
 
-    fn make_state(terminal: bool, satisfies_deps: bool, actionable: Vec<&str>) -> StateConfig {
+    fn make_state(terminal: bool, satisfies_deps: bool) -> StateConfig {
         StateConfig {
             id: "x".to_string(),
             label: "x".to_string(),
@@ -634,8 +634,8 @@ label = "Ready"
             worker_end: false,
             satisfies_deps: crate::config::SatisfiesDeps::Bool(satisfies_deps),
             dep_requires: None,
+            worker_profile: None,
             transitions: vec![],
-            actionable: actionable.into_iter().map(|s| s.to_string()).collect(),
         }
     }
 
@@ -646,29 +646,29 @@ label = "Ready"
 
     #[test]
     fn all_terminal_is_done() {
-        let a = make_state(true, false, vec![]);
-        let b = make_state(true, false, vec![]);
+        let a = make_state(true, false);
+        let b = make_state(true, false);
         assert_eq!(derive_epic_state(&[&a, &b]), "done");
     }
 
     #[test]
     fn all_satisfies_deps_not_all_terminal_is_implemented() {
-        let a = make_state(false, true, vec![]);
-        let b = make_state(true, false, vec![]);
+        let a = make_state(false, true);
+        let b = make_state(true, false);
         assert_eq!(derive_epic_state(&[&a, &b]), "implemented");
     }
 
     #[test]
     fn any_neither_satisfies_nor_terminal_is_in_progress() {
-        let a = make_state(false, false, vec![]);
-        let b = make_state(true, false, vec![]);
+        let a = make_state(false, false);
+        let b = make_state(true, false);
         assert_eq!(derive_epic_state(&[&a, &b]), "in_progress");
     }
 
     #[test]
     fn mixed_non_terminal_non_satisfies_is_in_progress() {
-        let a = make_state(false, false, vec![]);
-        let b = make_state(true, false, vec![]);
+        let a = make_state(false, false);
+        let b = make_state(true, false);
         assert_eq!(derive_epic_state(&[&a, &b]), "in_progress");
     }
 

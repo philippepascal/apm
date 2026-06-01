@@ -1763,10 +1763,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-instructions = "worker-instructions.txt"
+id    = "ready"
+label = "Ready"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -1859,9 +1857,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
   [[workflow.states.transitions]]
   to      = "in_design"
@@ -2297,9 +2294,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to              = "in_design"
@@ -2641,9 +2637,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[ticket.sections]]
 name        = "Summary"
@@ -3479,7 +3474,7 @@ fn setup_with_worktrees() -> TempDir {
     // BYPASS: production workflow has explicit new → groomed → ... transitions that
     // block the workers tests' direct new → ready transition; override with a minimal
     // workflow that has no transitions on "new" (any transition is then allowed)
-    std::fs::write(p.join(".apm/workflow.toml"), "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\nlabel = \"New\"\n\n[[workflow.states]]\nid         = \"ready\"\nlabel      = \"Ready\"\nactionable = [\"agent\"]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n[[workflow.states]]\nid       = \"closed\"\nlabel    = \"Closed\"\nterminal = true\n\n[workflow.prioritization]\npriority_weight = 10.0\neffort_weight   = -2.0\nrisk_weight     = -1.0\n").unwrap();
+    std::fs::write(p.join(".apm/workflow.toml"), "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\nlabel = \"New\"\n\n[[workflow.states]]\nid    = \"ready\"\nlabel = \"Ready\"\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n[[workflow.states]]\nid       = \"closed\"\nlabel    = \"Closed\"\nterminal = true\n\n[workflow.prioritization]\npriority_weight = 10.0\neffort_weight   = -2.0\nrisk_weight     = -1.0\n").unwrap();
     git(p, &["add", ".apm/workflow.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "simplify workflow for worktree tests"]);
     dir
@@ -3880,12 +3875,11 @@ dir = "worktrees"
 aggressive = false
 
 [[workflow.states]]
-id = "ready"
+id    = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states]]
-id = "in_progress"
+id    = "in_progress"
 label = "In Progress"
 "#,
     )
@@ -4454,9 +4448,8 @@ name = "test"
 dir = "tickets"
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to      = "closed"
@@ -6482,18 +6475,16 @@ label = "New"
   on_failure = "merge_failed"
 
 [[workflow.states]]
-id         = "implemented"
-label      = "Implemented"
-actionable = ["supervisor"]
+id    = "implemented"
+label = "Implemented"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "manual"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
@@ -8024,13 +8015,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8081,8 +8072,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8094,9 +8086,8 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
     // Write the shuffled workflow to disk (no commit needed — Config::load reads from disk).
     std::fs::write(p.join(".apm/workflow.toml"), workflow_v2).unwrap();
@@ -8344,8 +8335,8 @@ fn close_already_closed_returns_error() {
 
 // --- recovery guidance ---
 
-/// Init a repo with a workflow that has merge_failed actionable for "agent"
-/// so that apm next can surface it.
+/// Init a repo with a workflow that has merge_failed agent-actionable (via
+/// command:start transition) so that apm next can surface it.
 fn setup_for_recovery() -> TempDir {
     let dir = init_repo();
     // Use pr_or_epic_merge (no git_host required).  Add transitions out of
@@ -8353,18 +8344,17 @@ fn setup_for_recovery() -> TempDir {
     std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8381,9 +8371,8 @@ label = "Implemented"
   trigger = "manual"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["agent"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
@@ -8391,7 +8380,7 @@ actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to      = "in_progress"
-  trigger = "manual"
+  trigger = "command:start"
 
 [[workflow.states]]
 id       = "closed"

@@ -139,19 +139,18 @@ pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, 
 }
 
 /// Return the set of agent names configured — the agent from `[workers].default`
-/// plus the agent part of every `worker_profile` on spawn transitions.
+/// plus the agent part of every state-level `worker_profile`.
 pub fn configured_agent_names(config: &Config) -> HashSet<String> {
     let mut names: HashSet<String> = HashSet::new();
     let primary = config.workers.default.as_deref()
         .and_then(|s| s.split_once('/').map(|(a, _)| a.to_string()))
         .unwrap_or_else(|| "claude".to_string());
     names.insert(primary);
+    // Walk state-level worker_profile fields
     for state in &config.workflow.states {
-        for transition in &state.transitions {
-            if let Some(ref wp) = transition.worker_profile {
-                if let Some((agent, _)) = wp.split_once('/') {
-                    names.insert(agent.to_string());
-                }
+        if let Some(ref wp) = state.worker_profile {
+            if let Some((agent, _)) = wp.split_once('/') {
+                names.insert(agent.to_string());
             }
         }
     }
@@ -680,7 +679,7 @@ fn validate_warnings_no_agents(config: &crate::config::Config, _root: &Path) -> 
             .collect();
 
     let agent_startable: Vec<&str> = config.workflow.states.iter()
-        .filter(|s| s.actionable.iter().any(|a| a == "agent" || a == "any"))
+        .filter(|s| s.transitions.iter().any(|t| t.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
 
@@ -744,7 +743,10 @@ pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAud
                 continue;
             }
 
-            let wp_str = transition.worker_profile.as_deref().unwrap_or(default_profile);
+            let to_state_wp = config.workflow.states.iter()
+                .find(|s| s.id == transition.to)
+                .and_then(|s| s.worker_profile.as_deref());
+            let wp_str = to_state_wp.unwrap_or(default_profile);
             let (agent, role) = wp_str.split_once('/')
                 .map(|(a, r)| (a.to_string(), r.to_string()))
                 .unwrap_or_else(|| ("claude".to_string(), "worker".to_string()));
@@ -754,7 +756,7 @@ pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAud
             result.push(TransitionAudit {
                 from_state: state.id.clone(),
                 to_state: transition.to.clone(),
-                worker_profile: transition.worker_profile.clone(),
+                worker_profile: to_state_wp.map(|s| s.to_string()),
                 agent,
                 role,
                 wrapper: wrapper_str,
@@ -1677,12 +1679,12 @@ name = "test"
 dir = "tickets"
 
 [[workflow.states]]
-id         = "start"
-label      = "Start"
-actionable = ["agent"]
+id    = "start"
+label = "Start"
 
 [[workflow.states.transitions]]
-to = "middle"
+to      = "middle"
+trigger = "command:start"
 
 [[workflow.states]]
 id    = "middle"
@@ -2134,14 +2136,14 @@ id    = "ready"
 label = "Ready"
 
 [[workflow.states.transitions]]
-to             = "in_progress"
-trigger        = "command:start"
-worker_profile = "pi/worker"
+to      = "in_progress"
+trigger = "command:start"
 
 [[workflow.states]]
-id       = "in_progress"
-label    = "In Progress"
-terminal = true
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "pi/worker"
+terminal       = true
 "#;
         let config = audit_config(toml);
         validate_agent_name(&config, "pi").expect("pi should be a configured agent");
@@ -2252,14 +2254,14 @@ id    = "ready"
 label = "Ready"
 
 [[workflow.states.transitions]]
-to             = "in_progress"
-trigger        = "command:start"
-worker_profile = "mock-happy/spec-writer"
+to      = "in_progress"
+trigger = "command:start"
 
 [[workflow.states]]
-id       = "in_progress"
-label    = "In Progress"
-terminal = true
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "mock-happy/spec-writer"
+terminal       = true
 "#;
         let config = audit_config(toml);
         let result = super::audit_agent_resolution(&config, Path::new("/tmp"));

@@ -1090,9 +1090,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -2531,13 +2530,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -2550,9 +2549,8 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
