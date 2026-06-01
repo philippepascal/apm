@@ -53,7 +53,136 @@ context if closed without review.
 
 ### Approach
 
-How the implementation will work.
+#### Step 1 — `apm-core/src/epic.rs`: add `EpicTicketInfo` and `non_terminal_epic_tickets()`
+
+Add a plain struct (no derives needed beyond Debug):
+
+```rust
+pub struct EpicTicketInfo {
+    pub id: String,
+    pub state: String,
+    pub title: String,
+}
+```
+
+Add a public function:
+
+```rust
+pub fn non_terminal_epic_tickets(
+    root: &Path,
+    epic_id: &str,
+    config: &crate::config::Config,
+) -> Result<Vec<EpicTicketInfo>>
+```
+
+Implementation: call `crate::ticket::load_all_from_git`, filter to tickets whose
+`epic` frontmatter equals `epic_id`, then filter to those whose state is NOT in
+`config.terminal_state_ids()`. Return sorted by `id`. This is the single helper
+that both guard paths use; no state-set knowledge leaks into the CLI layer.
+
+Add three inline unit tests in the existing `#[cfg(test)]` block, using the same
+`setup_repo()` and TOML constants already present:
+- `non_terminal_epic_tickets_all_closed_returns_empty`
+- `non_terminal_epic_tickets_mixed_returns_non_terminal`
+- `non_terminal_epic_tickets_ignores_other_epics`
+
+#### Step 2 — `apm/src/main.rs`: add `--close-all` to `EpicCommand::Close`
+
+Change the `Close` variant from:
+```rust
+Close { id: String }
+```
+to:
+```rust
+Close {
+    /// Epic ID (4–8 char hex prefix)
+    id: String,
+    /// Cascade-close all non-terminal tickets before closing the epic
+    #[arg(long)]
+    close_all: bool,
+}
+```
+
+Update the dispatch arm at line ~1251 to destructure `close_all` and pass it:
+```rust
+Command::Epic { command: EpicCommand::Close { id, close_all } }
+    => cmd::epic::run_close(&root, &id, close_all),
+```
+
+#### Step 3 — `apm/src/cmd/epic.rs`: update `run_close()`
+
+Change signature to `pub fn run_close(root: &Path, id_arg: &str, close_all: bool) -> Result<()>`.
+
+After the existing quiescence bail (currently ending at line ~99), insert the
+new guard immediately before step 4 (PR title derivation):
+
+```rust
+// Non-terminal check.
+let non_terminal = apm_core::epic::non_terminal_epic_tickets(root, epic_id, &config)?;
+if !non_terminal.is_empty() {
+    if !close_all {
+        let rows: String = non_terminal.iter()
+            .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+            .collect::<Vec<_>>()
+            .join("\n");
+        anyhow::bail!(
+            "epic has {} non-terminal ticket(s):\n{}\nRe-run with --close-all to cascade close, or close them manually first.",
+            non_terminal.len(), rows
+        );
+    }
+    // --close-all: fail-fast on blocked/question first.
+    let unsafe_tickets: Vec<_> = non_terminal.iter()
+        .filter(|t| t.state == "blocked" || t.state == "question")
+        .collect();
+    if !unsafe_tickets.is_empty() {
+        let rows: String = unsafe_tickets.iter()
+            .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+            .collect::<Vec<_>>()
+            .join("\n");
+        anyhow::bail!(
+            "cannot cascade close: the following tickets require manual resolution:\n{}\nResolve them manually, then retry.",
+            rows
+        );
+    }
+    // Safe to cascade.
+    let agent = apm_core::config::resolve_caller_name();
+    for t in &non_terminal {
+        print!("closing ticket #{} ... ", t.id);
+        apm_core::ticket::close(root, &config, &t.id, None, &agent, false)?;
+        println!("done");
+    }
+}
+```
+
+The rest of `run_close` (step 4 onwards — PR title, already-merged check, push, PR) is unchanged.
+
+#### Step 4 — Integration tests
+
+Add tests to `apm/tests/integration.rs` (or a new `apm/tests/epic_close.rs`):
+
+- `epic_close_no_flag_bails_on_non_terminal_ticket`: create a ticket in `specd`
+  (no impl history, so quiescence passes), call `run_close(root, epic_id, false)`,
+  assert `Err` whose message contains "non-terminal".
+
+- `epic_close_all_bails_on_blocked_ticket`: create a ticket in `blocked` (no impl
+  history), call `run_close(root, epic_id, true)`, assert `Err` message contains
+  "blocked".
+
+- `epic_close_all_bails_on_mixed_blocked_and_safe`: create one ticket in `specd`
+  and one in `blocked`, call `run_close(root, epic_id, true)`, assert `Err` and
+  that neither ticket was closed.
+
+- `epic_close_all_closes_safe_tickets`: create a ticket in `specd`, call
+  `run_close(root, epic_id, true)` — note: this will bail later when it tries
+  to push/open a PR; catch the git error and verify the ticket's branch state
+  was updated to `closed` before that point. Alternatively, stub the git push
+  by using a bare remote in the temp repo.
+
+For the last test, the simplest approach is to verify the ticket branch contains
+`state = "closed"` immediately after the cascade (read it from git) before the
+push step fails; or refactor just enough to make the cascade separately testable.
+The first three tests (bail paths) are straightforward since they exit before any
+git push.
 
 ### Open questions
 
