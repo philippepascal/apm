@@ -30,7 +30,7 @@ After 9c66e199 unifies the worker allow-list to exactly six commands, the set is
 - [x] `apm prompt <id> --system` output contains `## Command Reference` listing all six commands: `apm show`, `apm state`, `apm spec`, `apm set`, `apm new`, `apm instructions`
 - [x] `apm instructions <id> --role coder` and `apm prompt <id> --system` produce a `## Command Reference` section containing the same six command names for the same ticket
 - [x] A unit test in `apm-core/src/start.rs` asserts that `build_system_prompt` output contains `## Command Reference` with at least `apm show` and `apm instructions` present
-- [ ] All existing `build_system_prompt` layer-composition tests pass after updating their expected-string helpers to use `WORKER_COMMANDS` instead of `&[]`
+- [x] All existing `build_system_prompt` layer-composition tests pass after updating their expected-string helpers to use `WORKER_COMMANDS` instead of `&[]`
 - [ ] `cargo test --workspace` passes
 
 ### Out of scope
