@@ -254,7 +254,13 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
       </div>
       {(() => {
         const epicIdsInTickets = new Set(tickets.map((t) => t.epic).filter(Boolean))
-        const staleEpics = epics.filter((ep) => ep.behind_count > 0 && epicIdsInTickets.has(ep.id))
+        const staleEpics = epics.filter((ep) => {
+          if (ep.behind_count === 0) return false
+          if (!epicIdsInTickets.has(ep.id)) return false
+          if (epicFilter === '__none__') return false
+          if (epicFilter !== null && epicFilter !== ep.id) return false
+          return true
+        })
         if (staleEpics.length === 0) return null
         return (
           <div className="px-3 py-1.5 border-b border-gray-700 shrink-0 flex flex-wrap items-center gap-2">
