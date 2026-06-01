@@ -48,7 +48,70 @@ The fix is to encode the rule where it belongs — in the state machine itself �
 
 ### Approach
 
-How the implementation will work.
+#### 1. apm-core/src/state.rs — Block transitions from terminal source states
+
+In `transition()`, after `old_state` is set (line 49) and before the completion-strategy lookup, add:
+
+```rust
+if !force {
+    if let Some(src) = config.workflow.states.iter().find(|s| s.id == old_state) {
+        if src.terminal {
+            bail!("ticket {:?} is in terminal state {:?}; no further transitions are allowed", id, old_state);
+        }
+    }
+}
+```
+
+The implicit allow for terminal *targets* is already in place: the `else if !target_is_terminal` branch (lines 57–82) falls through to `(CompletionStrategy::None, None)` when `target_is_terminal = true`, bypassing the explicit-transition check. No further change to transition lookup logic is needed.
+
+#### 2. apm-core/src/validate.rs — New rule + update two existing checks
+
+In `validate_config_no_agents()`, inside the `for transition in &state.transitions` loop (near line 381):
+
+**Add before the "target must exist" check:**
+```rust
+if terminal_ids.contains(transition.to.as_str()) {
+    errors.push(format!(
+        "config: state.{}.transition({}) — explicit transitions to terminal states are not \
+         allowed; {} is always reachable as a supervisor close action",
+        state.id, transition.to, transition.to
+    ));
+}
+```
+
+**Update the "target must exist" check (currently line 384)** — replace the `!= "closed"` hard-code with the general terminal check:
+```rust
+// Before:
+if transition.to != "closed" && !state_ids.contains(transition.to.as_str()) {
+// After:
+if !terminal_ids.contains(transition.to.as_str()) && !state_ids.contains(transition.to.as_str()) {
+```
+
+**Remove the dead-end error** (currently lines 373–380): with the implicit close rule, any non-terminal state can always reach `closed`, so "tickets will be stranded" is no longer accurate. The existing BFS reachability warning in `validate_warnings` already catches workflows where no success outcome is reachable.
+
+#### 3. Workflow.toml files — Remove 10 closed-transition blocks each
+
+From `apm-core/src/default/workflow.toml` and `.apm/workflow.toml`, delete every block of the form:
+```toml
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+outcome = "cancelled"
+```
+
+This affects `new`, `groomed`, `question`, `specd`, `ammend`, `in_design`, `ready`, `in_progress`, `blocked`, and `implemented` — 10 entries per file, 20 total. The `closed` state declaration (with `terminal = true`) is kept unchanged.
+
+#### 4. Tests
+
+**validate.rs — update configs in broken tests:** remove any `to = "closed"` entries from inline test TOML configs that call `validate_config`. The `correct_config_passes` test (line 1210) is the primary one; give `in_progress` a non-terminal transition to replace the closed entry.
+
+**validate.rs — add new test** `explicit_terminal_transition_rejected`: verify a config with `to = "closed"` in a non-terminal state's transitions produces an error naming the source state and terminal target.
+
+**state.rs — update helper** `config_with_transitions()` (line 407): remove the `to = "closed"` entry; update `compute_valid_transitions_returns_expected_options` to expect one transition instead of two.
+
+**apm/tests/integration.rs — add two tests:**
+- Implicit close succeeds from a non-terminal state without the transition listed.
+- Close from terminal state fails with the expected error message.
 
 ### Open questions
 
