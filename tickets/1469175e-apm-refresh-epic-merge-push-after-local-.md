@@ -18,7 +18,7 @@ updated_at = "2026-06-01T07:02:38.542081Z"
 
 `apm refresh-epic --merge` merges the default branch into the epic worktree locally but does not push to origin. The dispatch path in `apm start` calls `remote_branch_tip`, which prefers `origin/<epic-branch>` when that ref exists. Any ticket dispatched after a local-only merge therefore receives the pre-merge epic content. The refresh is silently ineffective for all downstream workers until the supervisor pushes manually.
 
-This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <id> --merge` completed successfully, but a subsequent `apm start` on a ticket in that epic dispatched from the stale `origin/<epic-branch>` tip. The `--pr` path (lines 203–225 of `apm/src/cmd/epic.rs`) already calls `push_branch_tracking` before opening the PR; the `--merge` path has no equivalent step.
+This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <id> --merge` completed successfully, but a subsequent `apm start` on a ticket in that epic dispatched from the stale `origin/<epic-branch>` tip. The `--pr` path (the `else` branch of `run_refresh_epic` in `apm/src/cmd/epic.rs`) already calls `push_branch_tracking` before opening the PR; the `--merge` path has no equivalent step.
 
 ### Acceptance criteria
 
