@@ -3,13 +3,13 @@ id = "1469175e"
 title = "apm refresh-epic --merge: push after local merge so downstream sees the refresh"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1469175e-apm-refresh-epic-merge-push-after-local-"
 created_at = "2026-05-31T03:26:11.802159Z"
-updated_at = "2026-06-01T02:53:29.892877Z"
+updated_at = "2026-06-01T02:56:54.010526Z"
 +++
 
 ## Spec
