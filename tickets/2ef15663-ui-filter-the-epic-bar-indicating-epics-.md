@@ -1,7 +1,7 @@
 +++
 id = "2ef15663"
 title = "UI: filter the epic bar indicating epics needing refresh"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2ef15663-ui-filter-the-epic-bar-indicating-epics-"
 created_at = "2026-06-01T17:18:45.877184Z"
-updated_at = "2026-06-01T17:20:23.855683Z"
+updated_at = "2026-06-01T17:33:03.105149Z"
 +++
 
 ## Spec
@@ -76,3 +76,4 @@ No tests exist for this component's render output today; no test changes are req
 | 2026-06-01T17:18Z | new | groomed | philippepascal |
 | 2026-06-01T17:18Z | groomed | in_design | philippepascal |
 | 2026-06-01T17:20Z | in_design | specd | claude |
+| 2026-06-01T17:33Z | specd | ready | philippepascal |
