@@ -103,7 +103,8 @@ Close {
 }
 ```
 
-Update the dispatch arm at line ~1251 to destructure `close_all` and pass it:
+Update the `EpicCommand::Close` dispatch arm (the match arm that calls `cmd::epic::run_close`) to
+destructure `close_all` and pass it:
 ```rust
 Command::Epic { command: EpicCommand::Close { id, close_all } }
     => cmd::epic::run_close(&root, &id, close_all),
@@ -113,8 +114,8 @@ Command::Epic { command: EpicCommand::Close { id, close_all } }
 
 Change signature to `pub fn run_close(root: &Path, id_arg: &str, close_all: bool) -> Result<()>`.
 
-After the existing quiescence bail (currently ending at line ~99), insert the
-new guard immediately before step 4 (PR title derivation):
+After the existing quiescence bail (the closing `}` of the `if !blockers.is_empty()` block), insert
+the new guard immediately before step 4 (PR title derivation / `branch_to_title` call):
 
 ```rust
 // Non-terminal check.
@@ -144,17 +145,30 @@ if !non_terminal.is_empty() {
             rows
         );
     }
-    // Safe to cascade.
+    // Safe to cascade — fail-fast error handling.
+    // If any close fails: bail immediately, leave already-closed tickets closed,
+    // do not touch the epic. Re-running --close-all is safe because
+    // non_terminal_epic_tickets() only returns tickets that are still non-terminal,
+    // so successfully closed tickets are skipped on retry.
     let agent = apm_core::config::resolve_caller_name();
     for t in &non_terminal {
         print!("closing ticket #{} ... ", t.id);
-        apm_core::ticket::close(root, &config, &t.id, None, &agent, false)?;
+        apm_core::ticket::close(root, &config, &t.id, None, &agent, false)
+            .with_context(|| format!("failed to close ticket #{}", t.id))?;
         println!("done");
     }
 }
 ```
 
-The rest of `run_close` (step 4 onwards — PR title, already-merged check, push, PR) is unchanged.
+**Error handling**: fail-fast is chosen over continue-on-error or roll-back.
+Rationale: it is the simplest option and is effectively idempotent — tickets already
+closed in a previous partial run will not appear in `non_terminal_epic_tickets()` on
+retry, so the supervisor can fix the failing ticket and re-run without any cleanup.
+If `apm_core::ticket::close` errors, the error is surfaced with the failing ticket's
+ID via `.with_context(...)` and the epic is left open. No roll-back of earlier closes
+is performed.
+
+The rest of `run_close` (PR title derivation, already-merged check, push, PR) is unchanged.
 
 #### Step 4 — Integration tests
 
