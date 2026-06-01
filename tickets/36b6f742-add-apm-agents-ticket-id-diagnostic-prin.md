@@ -1,7 +1,7 @@
 +++
 id = "36b6f742"
 title = "Add apm agents <ticket-id> diagnostic: print resolved agent, role, model, manifest with provenance"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/36b6f742-add-apm-agents-ticket-id-diagnostic-prin"
 created_at = "2026-05-30T16:50:01.198693Z"
-updated_at = "2026-05-30T19:01:32.385768Z"
+updated_at = "2026-06-01T02:40:36.961029Z"
 +++
 
 ## Spec
@@ -211,3 +211,4 @@ Integration tests in `apm/tests/e2e.rs` (temp git repo, default workflow):
 | 2026-05-30T18:09Z | specd | ready | philippepascal |
 | 2026-05-30T18:44Z | ready | in_progress | philippepascal |
 | 2026-05-30T19:01Z | in_progress | implemented | claude |
+| 2026-06-01T02:40Z | implemented | closed | philippepascal(apm-sync) |
