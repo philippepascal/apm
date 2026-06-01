@@ -1,7 +1,7 @@
 +++
 id = "e20488b3"
 title = "Implicit closed transition: drop explicit close entries from workflow.toml"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e20488b3-implicit-closed-transition-drop-explicit"
 created_at = "2026-06-01T07:14:21.218455Z"
-updated_at = "2026-06-01T07:16:16.212088Z"
+updated_at = "2026-06-01T07:34:41.566183Z"
 +++
 
 ## Spec
@@ -129,3 +129,4 @@ This affects `new`, `groomed`, `question`, `specd`, `ammend`, `in_design`, `read
 | 2026-06-01T07:14Z | — | new | philippepascal |
 | 2026-06-01T07:16Z | new | groomed | philippepascal |
 | 2026-06-01T07:16Z | groomed | in_design | philippepascal |
+| 2026-06-01T07:34Z | in_design | specd | philippepascal |
