@@ -33,7 +33,10 @@ This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Cascading default-branch updates into individual in-flight ticket worktrees after an epic refresh — separate, larger concern; file as its own ticket
+- Changes to the dispatch-time merge logic in `apm-core/src/start.rs` (`remote_branch_tip`'s origin-preference) — separate design decision
+- `--push`/`--no-push` flags on the `--pr` path (`--pr` always pushes before creating a PR; no change needed)
+- Explicit push-flag support for the `--auto` path — the default prompt/warn logic applies when `--auto` resolves to a local merge
 
 ### Approach
 
