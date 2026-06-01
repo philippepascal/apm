@@ -1,7 +1,7 @@
 +++
 id = "48d3932b"
 title = "Simplify apm prompt --explain output: hide cascade detail when no fallback fired"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/48d3932b-simplify-apm-prompt-explain-output-hide-"
 created_at = "2026-05-30T07:40:46.558546Z"
-updated_at = "2026-05-30T18:33:19.679211Z"
+updated_at = "2026-06-01T02:40:40.612483Z"
 +++
 
 ## Spec
@@ -138,3 +138,4 @@ merge conflict — resolve manually and push:
 | 2026-05-30T18:30Z | merge_failed | implemented | claude |
 | 2026-05-30T18:30Z | implemented | merge_failed | claude |
 | 2026-05-30T18:33Z | merge_failed | implemented | claude |
+| 2026-06-01T02:40Z | implemented | closed | philippepascal(apm-sync) |
