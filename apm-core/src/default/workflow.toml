@@ -35,7 +35,7 @@ id    = "question"
 label = "Question"
 
   [[workflow.states.transitions]]
-  to      = "groomed"
+  to      = "ammend"
   trigger = "manual"
   outcome = "needs_input"
 
