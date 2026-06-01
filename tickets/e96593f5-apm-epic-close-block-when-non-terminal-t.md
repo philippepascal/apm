@@ -189,6 +189,7 @@ git push.
 
 ### Amendment requests
 
+- [ ] Line number drift: the spec cites apm/src/cmd/epic.rs::run_close at lines 73-132, but the actual function spans lines 73-133 (off by one). Update the spec reference, or describe the location by symbol (the run_close function in apm/src/cmd/epic.rs) so future edits do not invalidate the spec.
 
 ### Code review
 
