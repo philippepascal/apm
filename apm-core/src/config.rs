@@ -99,7 +99,6 @@ pub struct GitHostConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
-#[derive(Default)]
 pub struct WorkersConfig {
     /// Docker image used to run worker agents; omit for local execution.
     pub container: Option<String>,
@@ -111,10 +110,22 @@ pub struct WorkersConfig {
     pub env: std::collections::HashMap<String, String>,
     /// Default worker profile used when no state-level `worker_profile` is set.
     /// Format: `"agent/role"` (e.g. `"claude/coder"`).
-    pub default: Option<String>,
+    pub default: String,
     /// Model identifier passed to the worker agent (e.g. `"claude-sonnet-4-5"`).
     /// Can be overridden per-machine in `.apm/local.toml` under `[workers].model`.
     pub model: Option<String>,
+}
+
+impl Default for WorkersConfig {
+    fn default() -> Self {
+        Self {
+            container: None,
+            keychain: std::collections::HashMap::new(),
+            env: std::collections::HashMap::new(),
+            default: String::new(),
+            model: None,
+        }
+    }
 }
 
 
@@ -967,6 +978,7 @@ dir = "tickets"
 
 [workers]
 container = "apm-worker:latest"
+default = "claude/coder"
 
 [workers.keychain]
 ANTHROPIC_API_KEY = "anthropic-api-key"
@@ -988,7 +1000,7 @@ dir = "tickets"
         let config: Config = toml::from_str(toml).unwrap();
         assert!(config.workers.container.is_none());
         assert!(config.workers.keychain.is_empty());
-        assert!(config.workers.default.is_none());
+        assert!(config.workers.default.is_empty());
         assert!(config.workers.model.is_none());
         assert!(config.workers.env.is_empty());
     }
@@ -1006,7 +1018,23 @@ dir = "tickets"
 default = "claude/coder"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
-        assert_eq!(config.workers.default.as_deref(), Some("claude/coder"));
+        assert_eq!(config.workers.default, "claude/coder");
+    }
+
+    #[test]
+    fn workers_default_missing_fails_parse() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+container = "apm-worker:latest"
+"#;
+        let result = toml::from_str::<Config>(toml);
+        assert!(result.is_err(), "expected parse error when [workers] has no default key");
     }
 
     #[test]
@@ -1017,6 +1045,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [workers.env]
 CUSTOM_VAR = "value"

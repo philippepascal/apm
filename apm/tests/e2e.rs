@@ -592,6 +592,9 @@ name = "test"
 [tickets]
 dir = "tickets"
 
+[workers]
+default = "claude/coder"
+
 [agents]
 max_concurrent = 1
 

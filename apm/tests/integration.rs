@@ -1751,6 +1751,9 @@ name = "test"
 [tickets]
 dir = "tickets"
 
+[workers]
+default = "claude/coder"
+
 [worktrees]
 dir = ".apm--worktrees"
 
@@ -1844,6 +1847,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [worktrees]
 dir = "worktrees"
@@ -2692,6 +2698,9 @@ name = "test"
 [tickets]
 dir = "tickets"
 
+[workers]
+default = "claude/coder"
+
 [[ticket.sections]]
 name = "Problem"
 type = "free"
@@ -3088,6 +3097,9 @@ name = "test"
 [tickets]
 dir = "tickets"
 
+[workers]
+default = "claude/coder"
+
 [agents]
 max_concurrent = 1
 
@@ -3308,6 +3320,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [agents]
 max_concurrent = 1
