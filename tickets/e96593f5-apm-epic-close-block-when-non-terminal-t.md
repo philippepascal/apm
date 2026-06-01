@@ -44,7 +44,12 @@ context if closed without review.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm refresh-epic` cascade into ticket branches (separate ticket).
+- The `refresh-epic --merge` push bug (separate ticket).
+- Renaming or refactoring existing epic subcommands beyond adding `--close-all`.
+- Changes to `apm sync`'s ready-to-close detection.
+- Closing tickets that have live workers; that remains the quiescence check's responsibility.
+- Determining whether "safe" states for cascade-close should be configurable; the set (`blocked`, `question`) is hard-coded for now.
 
 ### Approach
 
