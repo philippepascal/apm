@@ -41,9 +41,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to      = "in_design"
