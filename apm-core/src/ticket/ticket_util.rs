@@ -475,9 +475,6 @@ pub fn list_filtered<'a>(
     mine_user: Option<&str>,
 ) -> Vec<&'a Ticket> {
     let terminal = config.terminal_state_ids();
-    let actionable_map: std::collections::HashMap<&str, &Vec<String>> = config.workflow.states.iter()
-        .map(|s| (s.id.as_str(), &s.actionable))
-        .collect();
 
     tickets.iter().filter(|t| {
         let fm = &t.frontmatter;
@@ -486,8 +483,13 @@ pub fn list_filtered<'a>(
         let state_is_terminal = state_filter.is_some_and(|s| terminal.contains(s));
         let terminal_ok = all || state_is_terminal || !terminal.contains(fm.state.as_str());
         let actionable_ok = actionable_filter.is_none_or(|actor| {
-            actionable_map.get(fm.state.as_str())
-                .is_some_and(|actors| actors.iter().any(|a| a == actor || a == "any"))
+            let state = config.workflow.states.iter().find(|s| s.id == fm.state);
+            match (actor, state) {
+                ("agent", Some(s)) => s.transitions.iter().any(|t| t.trigger == "command:start"),
+                ("supervisor", Some(s)) => !s.terminal
+                    && !s.transitions.iter().any(|t| t.trigger == "command:start"),
+                _ => false,
+            }
         });
         let author_ok = author_filter.is_none_or(|a| fm.author.as_deref() == Some(a));
         let owner_ok = owner_filter.is_none_or(|o| fm.owner.as_deref() == Some(o));
@@ -842,7 +844,7 @@ mod tests {
         let mut states_toml = String::new();
         for s in ["new", "ready", "in_progress"] {
             states_toml.push_str(&format!(
-                "[[workflow.states]]\nid = \"{s}\"\nlabel = \"{s}\"\nterminal = false\nactionable = [\"agent\"]\n\n"
+                "[[workflow.states]]\nid = \"{s}\"\nlabel = \"{s}\"\nterminal = false\n\n"
             ));
         }
         for s in terminal_states {
@@ -1131,7 +1133,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states]]
 id = "done"
@@ -1185,13 +1186,11 @@ dir = "tickets"
 [[workflow.states]]
 id = "groomed"
 label = "Groomed"
-actionable = ["agent"]
 dep_requires = "spec"
 
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states]]
 id = "specd"

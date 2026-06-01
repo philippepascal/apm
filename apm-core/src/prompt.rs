@@ -65,13 +65,15 @@ fn resolve_agent_role(
     agent_override: Option<&str>,
     role_override: Option<&str>,
 ) -> Result<(String, String)> {
-    let default_wp = config.workers.default.as_deref().unwrap_or("claude/coder");
-    let wp_str = triggering_transition
-        .and_then(|tr| tr.worker_profile.as_deref())
-        .unwrap_or(default_wp);
-    let wp = resolve_worker_profile(wp_str, &config.workers)?;
+    let dest_id = triggering_transition.map(|tr| tr.to.as_str()).unwrap_or("in_progress");
+    let wp_str_owned = config.workflow.states.iter()
+        .find(|s| s.id == dest_id)
+        .and_then(|s| s.worker_profile.as_deref())
+        .unwrap_or_else(|| config.workers.default.as_str())
+        .to_string();
+    let wp = resolve_worker_profile(&wp_str_owned, &config.workers)?;
     let mut agent = wp.agent.clone();
-    apply_frontmatter_agent(&mut agent, frontmatter, wp_str);
+    apply_frontmatter_agent(&mut agent, frontmatter, &wp_str_owned);
     let agent = agent_override.unwrap_or(&agent).to_string();
     let role = role_override.unwrap_or(&wp.role).to_string();
     Ok((agent, role))
@@ -277,7 +279,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to = "in_progress"
@@ -449,7 +450,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to = "in_progress"
