@@ -2076,9 +2076,13 @@ label = "In Design"
   outcome = "success"
 
   [[workflow.states.transitions]]
-  to = "closed"
+  to = "question"
   trigger = "manual"
-  outcome = "cancelled"
+  outcome = "needs_input"
+
+[[workflow.states]]
+id = "question"
+label = "Question"
 
 [[workflow.states]]
 id = "specd"
@@ -2091,11 +2095,6 @@ worker_end = true
   trigger = "manual"
   outcome = "success"
 
-  [[workflow.states.transitions]]
-  to = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
-
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
@@ -2105,22 +2104,12 @@ label = "In Progress"
   trigger = "manual"
   outcome = "success"
 
-  [[workflow.states.transitions]]
-  to = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
-
 [[workflow.states]]
 id = "implemented"
 label = "Implemented"
 satisfies_deps = true
 worker_end = true
 terminal = false
-
-  [[workflow.states.transitions]]
-  to = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id = "closed"
@@ -2315,11 +2304,6 @@ dir = "tickets"
 id = "in_design"
 label = "In Design"
 
-  [[workflow.states.transitions]]
-  to = "closed"
-  trigger = "manual"
-  outcome = "needs_input"
-
 [[workflow.states]]
 id = "closed"
 label = "Closed"
@@ -2415,8 +2399,8 @@ updated_at = "2026-01-01T00:00:00Z"
         let ticket_from_branch = String::from_utf8_lossy(&out.stdout).to_string();
         assert!(!ticket_from_branch.contains("state = \"specd\""),
             "mock-sad should NOT transition to specd\n{ticket_from_branch}\nlog: {log_content}");
-        // Should have transitioned to some other state
-        assert!(ticket_from_branch.contains("state = \"closed\"") || ticket_from_branch.contains("state = \"in_design\""),
+        // Should have transitioned to a non-success state (or stayed in_design if the transition failed cleanly)
+        assert!(ticket_from_branch.contains("state = \"question\"") || ticket_from_branch.contains("state = \"in_design\""),
             "mock-sad should transition to a non-success state\n{ticket_from_branch}\nlog: {log_content}");
     }
 
