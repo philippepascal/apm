@@ -28,7 +28,7 @@ The fix is to make `[workers].default` mandatory in `config.toml`: change its ty
 - [x] A `config.toml` that has a `[workers]` section but no `default` key fails TOML deserialization with a clear error.
 - [x] A `config.toml` with no `[workers]` section (default = "") fails `apm validate` with an error that names `config.toml` and the field.
 - [x] A `config.toml` with `[workers] default = ""` (explicitly empty) fails `apm validate` with the same error.
-- [ ] A `config.toml` with `[workers] default = "claude/coder"` passes `apm validate` with no error about `workers.default`.
+- [x] A `config.toml` with `[workers] default = "claude/coder"` passes `apm validate` with no error about `workers.default`.
 - [ ] `apm start --spawn` on a ticket in a project whose `workers.default` is `"mock-happy/coder"` dispatches using `"mock-happy/coder"`, not `"claude/coder"`.
 - [ ] `rg 'unwrap_or\("claude/coder"\)|"claude/coder"\.to_string\(\)' apm-core/src/ --glob '!**/default/**'` returns no matches.
 - [ ] All existing `cargo test --workspace` tests pass.
