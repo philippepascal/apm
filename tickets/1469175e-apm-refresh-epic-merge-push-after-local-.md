@@ -1,7 +1,7 @@
 +++
 id = "1469175e"
 title = "apm refresh-epic --merge: push after local merge so downstream sees the refresh"
-state = "in_design"
+state = "specd"
 priority = 7
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/1469175e-apm-refresh-epic-merge-push-after-local-"
 created_at = "2026-05-31T03:26:11.802159Z"
-updated_at = "2026-06-01T02:57:02.573513Z"
+updated_at = "2026-06-01T02:57:06.424806Z"
 +++
 
 ## Spec
@@ -136,3 +136,4 @@ Add three test cases. Each sets up a temp git repo with a bare remote (so actual
 | 2026-05-31T03:26Z | — | new | philippepascal |
 | 2026-06-01T02:52Z | new | groomed | philippepascal |
 | 2026-06-01T02:53Z | groomed | in_design | philippepascal |
+| 2026-06-01T02:57Z | in_design | specd | claude |
