@@ -30,7 +30,7 @@ The fix is to replace the per-role match arms with a single `WORKER_COMMAND_ALLO
 - [x] `apm instructions --role spec-writer` Command Reference lists the same six commands as coder
 - [x] `apm instructions --role any-unknown-role` Command Reference lists the same six commands
 - [x] `apm instructions` (no role) Command Reference remains unfiltered
-- [ ] The literal strings `"spec-writer"` and `"worker"` do not appear in the command-filtering logic of `instructions.rs`
+- [x] The literal strings `"spec-writer"` and `"worker"` do not appear in the command-filtering logic of `instructions.rs`
 - [ ] `cargo test --workspace` passes with updated test assertions
 - [ ] `apm.coder.md` (default and project copy) Permitted commands section lists: show, state, spec, set, new, instructions
 - [ ] `apm.spec-writer.md` (default and project copy) Permitted commands section lists: show, state, spec, set, new, instructions
