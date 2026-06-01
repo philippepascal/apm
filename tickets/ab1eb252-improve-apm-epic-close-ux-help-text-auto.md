@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab1eb252-improve-apm-epic-close-ux-help-text-auto"
 created_at = "2026-05-30T18:53:24.160398Z"
-updated_at = "2026-05-30T19:09:16.667944Z"
+updated_at = "2026-06-01T03:06:46.530890Z"
+depends_on = ["e96593f5"]
 +++
 
 ## Spec
