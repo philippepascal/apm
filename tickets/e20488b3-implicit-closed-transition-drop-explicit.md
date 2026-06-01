@@ -1,7 +1,7 @@
 +++
 id = "e20488b3"
 title = "Implicit closed transition: drop explicit close entries from workflow.toml"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e20488b3-implicit-closed-transition-drop-explicit"
 created_at = "2026-06-01T07:14:21.218455Z"
-updated_at = "2026-06-01T07:14:21.218455Z"
+updated_at = "2026-06-01T07:16:02.929398Z"
 +++
 
 ## Spec
@@ -93,3 +93,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-01T07:14Z | — | new | philippepascal |
+| 2026-06-01T07:16Z | new | groomed | philippepascal |
