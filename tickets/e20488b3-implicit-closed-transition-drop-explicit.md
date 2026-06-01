@@ -22,7 +22,21 @@ The fix is to encode the rule where it belongs â€” in the state machine itself â
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm state <id> closed` succeeds from `new` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `groomed` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `question` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `specd` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `ammend` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `in_design` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `ready` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `in_progress` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `blocked` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `implemented` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` succeeds from `merge_failed` without a `to = "closed"` entry in workflow.toml
+- [ ] `apm state <id> closed` fails with a clear error when the ticket is already in state `closed`
+- [ ] `apm validate` rejects a workflow.toml that contains an explicit `to = "closed"` (or any terminal state) transition, and the error message names both the source state and the terminal target
+- [ ] `apm-core/src/default/workflow.toml` contains zero `[[workflow.states.transitions]]` blocks with `to = "closed"`
+- [ ] `cargo test --workspace` passes
 
 ### Out of scope
 
