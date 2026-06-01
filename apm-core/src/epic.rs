@@ -392,13 +392,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -440,8 +440,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -453,9 +454,8 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
 
     fn make_ticket_content_with_history(id: &str, state: &str, epic: &str, history: &[(&str, &str)]) -> String {

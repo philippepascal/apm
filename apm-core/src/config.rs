@@ -109,7 +109,7 @@ pub struct WorkersConfig {
     /// Environment variables injected into every worker process.
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
-    /// Default worker profile used when a transition has no `worker_profile` set.
+    /// Default worker profile used when no state-level `worker_profile` is set.
     /// Format: `"agent/role"` (e.g. `"claude/coder"`).
     pub default: Option<String>,
     /// Model identifier passed to the worker agent (e.g. `"claude-sonnet-4-5"`).
@@ -317,8 +317,8 @@ pub struct StateConfig {
     #[serde(default)]
     pub dep_requires: Option<String>,
     /// Worker profile for agents that operate in this state. Format: `"agent/role"`
-    /// (e.g. `"claude/coder"`). When set, dispatch resolution prefers this over
-    /// transition-level `worker_profile`.
+    /// (e.g. `"claude/coder"`). Used by dispatch resolution before falling back to
+    /// `[workers].default`.
     #[serde(default)]
     pub worker_profile: Option<String>,
     /// List of outgoing transitions from this state.
@@ -328,6 +328,7 @@ pub struct StateConfig {
 
 /// A directed edge in the state machine: from the parent state to `to`.
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct TransitionConfig {
     /// Target state ID after this transition fires.
     pub to: String,
@@ -352,11 +353,6 @@ pub struct TransitionConfig {
     /// Optional warning message shown to the supervisor before the transition is confirmed.
     #[serde(default)]
     pub warning: Option<String>,
-    /// Worker profile for the agent spawned by this transition. Format: `"agent/role"`
-    /// (e.g. `"claude/spec-writer"`). The agent name selects the wrapper; the role
-    /// selects `.apm/agents/<agent>/apm.<role>.md` for the instruction file.
-    #[serde(default)]
-    pub worker_profile: Option<String>,
     #[serde(default)]
     pub on_failure: Option<String>,
     /// Semantic outcome of this transition from the worker's perspective.
@@ -678,8 +674,12 @@ impl Config {
         // Transition-based path (existing logic, additive)
         for state in &self.workflow.states {
             for t in &state.transitions {
-                let is_coder_start = t.trigger == "command:start"
-                    && t.worker_profile.as_deref().is_none_or(|p| !p.ends_with("/spec-writer"));
+                let dest_is_spec_writer = self.workflow.states.iter()
+                    .find(|s| s.id == t.to)
+                    .and_then(|s| s.worker_profile.as_deref())
+                    .map(|wp| wp.ends_with("/spec-writer"))
+                    .unwrap_or(false);
+                let is_coder_start = t.trigger == "command:start" && !dest_is_spec_writer;
                 let is_merge_completion = matches!(t.completion,
                     CompletionStrategy::Pr | CompletionStrategy::Merge | CompletionStrategy::PrOrEpicMerge);
                 if is_coder_start || is_merge_completion {
@@ -709,14 +709,34 @@ impl Config {
                 path.display()
             ))?;
         let mut config: Config = toml::from_str(&contents)
-            .with_context(|| format!("cannot parse {}", path.display()))?;
+            .map_err(|e| {
+                if e.to_string().contains("worker_profile") {
+                    anyhow::anyhow!(
+                        "{}: `transition.worker_profile` is no longer supported — \
+                         move `worker_profile` to the state block instead",
+                        path.display()
+                    )
+                } else {
+                    anyhow::anyhow!("cannot parse {}: {}", path.display(), e)
+                }
+            })?;
 
         let workflow_path = apm_dir.join("workflow.toml");
         if workflow_path.exists() {
             let wf_contents = std::fs::read_to_string(&workflow_path)
                 .with_context(|| format!("cannot read {}", workflow_path.display()))?;
             let wf: WorkflowFile = toml::from_str(&wf_contents)
-                .with_context(|| format!("cannot parse {}", workflow_path.display()))?;
+                .map_err(|e| {
+                    if e.to_string().contains("worker_profile") {
+                        anyhow::anyhow!(
+                            "{}: `transition.worker_profile` is no longer supported — \
+                             move `worker_profile` to the state block instead",
+                            workflow_path.display()
+                        )
+                    } else {
+                        anyhow::anyhow!("cannot parse {}: {}", workflow_path.display(), e)
+                    }
+                })?;
             if !config.workflow.states.is_empty() {
                 config.load_warnings.push(
                     "both .apm/workflow.toml and [workflow] in config.toml exist; workflow.toml takes precedence".into()
@@ -846,18 +866,43 @@ trigger = "manual"
         assert!(t.focus_section.is_none());
         assert!(t.context_section.is_none());
         assert!(t.outcome.is_none());
-        assert!(t.worker_profile.is_none());
     }
 
     #[test]
-    fn transition_config_worker_profile_field() {
+    fn transition_worker_profile_rejected() {
         let toml = r#"
-to             = "in_design"
+to             = "in_progress"
 trigger        = "command:start"
-worker_profile = "claude/spec-writer"
+worker_profile = "claude/coder"
 "#;
-        let t: TransitionConfig = toml::from_str(toml).unwrap();
-        assert_eq!(t.worker_profile.as_deref(), Some("claude/spec-writer"));
+        let result = toml::from_str::<TransitionConfig>(toml);
+        assert!(result.is_err(), "worker_profile on transition must be rejected");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("worker_profile"),
+            "error must name the field; got: {msg}"
+        );
+    }
+
+    #[test]
+    fn state_worker_profile_accepted() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+"#;
+        let result = toml::from_str::<Config>(toml);
+        assert!(result.is_ok(), "worker_profile at state level must be accepted; err: {:?}", result.err());
+        let config = result.unwrap();
+        let state = config.workflow.states.iter().find(|s| s.id == "in_progress").unwrap();
+        assert_eq!(state.worker_profile.as_deref(), Some("claude/coder"));
     }
 
     #[test]
@@ -1194,13 +1239,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -1234,13 +1279,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -1315,7 +1360,7 @@ label = "In Progress"
 
     #[test]
     fn implementation_state_ids_spec_writer_start_excluded() {
-        // A command:start whose worker_profile ends with "/spec-writer" must NOT
+        // A command:start to a state with worker_profile = "claude/spec-writer" must NOT
         // contribute an implementation state.
         let toml = r#"
 [project]
@@ -1329,13 +1374,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_design"
-  trigger        = "command:start"
-  worker_profile = "claude/spec-writer"
+  to      = "in_design"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_design"
-label = "In Design"
+id             = "in_design"
+label          = "In Design"
+worker_profile = "claude/spec-writer"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         let ids = config.implementation_state_ids();
@@ -1358,13 +1403,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -1388,8 +1433,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -1401,9 +1447,8 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
         let c1: Config = toml::from_str(toml_v1).unwrap();
         let c2: Config = toml::from_str(toml_v2).unwrap();

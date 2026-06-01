@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::collections::HashSet;
 use std::path::Path;
 
-use crate::config::{Config, TransitionConfig};
+use crate::config::Config;
 
 // ---------------------------------------------------------------------------
 // Static fallback content
@@ -19,7 +19,7 @@ static STATIC_STATE_MACHINE: &str = "| From | To | Command |\n\
 | specd | ready | apm state <id> ready |\n\
 | specd | ammend | apm state <id> ammend |\n\
 | specd | in_design | apm state <id> in_design |\n\
-| ammend | in_design | apm state <id> in_design |\n\
+| ammend | groomed | apm state <id> groomed |\n\
 | ready | in_progress | apm start <id> |\n\
 | in_progress | implemented | apm state <id> implemented |\n\
 | in_progress | blocked | apm state <id> blocked |\n\
@@ -164,9 +164,7 @@ fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
 
         for transition in &state.transitions {
             if let Some(role_name) = role {
-                let owned_by_state = state_role == Some(role_name);
-                let owned_by_transition = derive_transition_role(transition) == role_name;
-                if !owned_by_state && !owned_by_transition {
+                if state_role != Some(role_name) {
                     continue;
                 }
             }
@@ -310,17 +308,6 @@ fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-fn derive_transition_role(t: &TransitionConfig) -> String {
-    if let Some(ref wp) = t.worker_profile {
-        if let Some((_, role)) = wp.split_once('/') {
-            if !role.is_empty() {
-                return role.to_string();
-            }
-        }
-    }
-    "worker".to_string()
-}
 
 fn role_command_allowlist(role: &str) -> Option<&'static [&'static str]> {
     match role {
@@ -489,7 +476,6 @@ label = "Ready"
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "command:start"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "in_progress"
@@ -499,7 +485,6 @@ worker_profile = "claude/coder"
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-worker_profile = "claude/coder"
 "#;
         let tmp = tempfile::tempdir().unwrap();
         let apm_dir = tmp.path().join(".apm");
@@ -517,42 +502,6 @@ worker_profile = "claude/coder"
     }
 
     #[test]
-    fn derive_transition_role_from_worker_profile() {
-        let t = crate::config::TransitionConfig {
-            to: "specd".to_string(),
-            trigger: "submit".to_string(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: Some("claude/spec-writer".to_string()),
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t), "spec-writer");
-    }
-
-    #[test]
-    fn derive_transition_role_defaults_to_worker() {
-        let t = crate::config::TransitionConfig {
-            to: "implemented".to_string(),
-            trigger: String::new(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: None,
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t), "worker");
-    }
-
-    #[test]
     fn live_state_machine_filters_by_role() {
 
         let config_toml = r#"
@@ -565,11 +514,11 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "start"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "in_progress"
@@ -591,11 +540,11 @@ trigger = "approve"
 [[workflow.states]]
 id = "groomed"
 label = "Groomed"
+worker_profile = "claude/spec-writer"
 
 [[workflow.states.transitions]]
 to = "in_design"
 trigger = "claim"
-worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "in_design"
@@ -605,7 +554,6 @@ worker_profile = "claude/spec-writer"
 [[workflow.states.transitions]]
 to = "specd"
 trigger = "submit"
-worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "specd"
