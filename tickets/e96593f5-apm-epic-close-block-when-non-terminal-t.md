@@ -1,7 +1,7 @@
 +++
 id = "e96593f5"
 title = "apm epic close: block when non-terminal tickets exist; add --close-all to cascade"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e96593f5-apm-epic-close-block-when-non-terminal-t"
 created_at = "2026-05-31T03:26:36.317944Z"
-updated_at = "2026-06-01T03:01:54.863471Z"
+updated_at = "2026-06-01T03:01:59.329097Z"
 +++
 
 ## Spec
@@ -200,3 +200,4 @@ git push.
 | 2026-05-31T03:26Z | — | new | philippepascal |
 | 2026-06-01T02:52Z | new | groomed | philippepascal |
 | 2026-06-01T02:57Z | groomed | in_design | philippepascal |
+| 2026-06-01T03:01Z | in_design | specd | claude |
