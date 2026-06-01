@@ -125,6 +125,7 @@ Add three test cases. Each sets up a temp git repo with a bare remote (so actual
 
 ### Amendment requests
 
+- [ ] Line number drift: the spec cites apm-core/src/start.rs lines 454-458 for the dispatch-preference logic that reads origin/<branch>, but the actual location after recent edits is around lines 481-485 (the remote_branch_tip preference branch in start.rs::run). Either update the line references, or describe the location by symbol (the remote_branch_tip preference branch in start.rs::run) so future drift does not invalidate the spec.
 
 ### Code review
 
