@@ -8740,23 +8740,22 @@ fn close_from_terminal_state_fails() {
     }
 }
 
-// --- epic close: non-terminal guard ---
+// --- epic close: quiescence guard with classify_epic_quiescence ---
 
-/// Set up a test repo with an epic branch that has one commit ahead of main.
+/// Set up a test repo with a local.toml so run_close can resolve caller name.
 fn setup_epic_with_commit() -> (tempfile::TempDir, String) {
     let (dir, epic_id) = setup_with_epic();
     std::fs::write(dir.path().join(".apm/local.toml"), "username = \"test\"\n").unwrap();
     (dir, epic_id)
 }
 
-/// Create a ticket in the given epic and force it to `state`.
+/// Create a ticket in the given epic and force it to `state`. Returns (id, branch).
 fn epic_ticket_in_state(dir: &std::path::Path, epic_id: &str, title: &str, state: &str) -> (String, String) {
     let out = run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--epic", epic_id, title]);
     let stdout = String::from_utf8_lossy(&out.stdout);
     let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
     let id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
     let branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
-    // spec validation requires AC checklist items for states like specd.
     run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [ ] Done", "--no-aggressive"]);
     run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"]);
     (id, branch)
@@ -8767,10 +8766,10 @@ fn epic_close_no_flag_bails_on_non_terminal_ticket() {
     let (dir, epic_id) = setup_epic_with_commit();
     let p = dir.path();
 
-    // specd has no impl history → quiescence passes, but non-terminal guard fires.
+    // specd has no impl history → quiescence passes, but classify finds a genuine blocker.
     epic_ticket_in_state(p, &epic_id, "Specd ticket", "specd");
 
-    let result = apm::cmd::epic::run_close(p, &epic_id, false);
+    let result = apm::cmd::epic::run_close(p, &epic_id, false, false, false, false);
     let err = result.unwrap_err();
     let msg = err.to_string();
     assert!(
@@ -8790,7 +8789,7 @@ fn epic_close_all_bails_on_blocked_ticket() {
 
     epic_ticket_in_state(p, &epic_id, "Blocked ticket", "blocked");
 
-    let result = apm::cmd::epic::run_close(p, &epic_id, true);
+    let result = apm::cmd::epic::run_close(p, &epic_id, true, false, false, false);
     let err = result.unwrap_err();
     let msg = err.to_string();
     assert!(
@@ -8811,7 +8810,7 @@ fn epic_close_all_bails_on_mixed_blocked_and_safe() {
     let (id_safe, branch_safe) = epic_ticket_in_state(p, &epic_id, "Safe ticket", "specd");
     let (_id_blocked, _branch_blocked) = epic_ticket_in_state(p, &epic_id, "Blocked ticket", "blocked");
 
-    let result = apm::cmd::epic::run_close(p, &epic_id, true);
+    let result = apm::cmd::epic::run_close(p, &epic_id, true, false, false, false);
     let err = result.unwrap_err();
     let msg = err.to_string();
     assert!(
@@ -8819,14 +8818,14 @@ fn epic_close_all_bails_on_mixed_blocked_and_safe() {
         "expected bail on mixed blocked+safe; got: {msg}"
     );
 
-    // The safe ticket must not have been closed (bail happened before any close).
+    // Safe ticket must not have been closed — bail fired before any cascade.
     let rel = ticket_rel_path(&branch_safe);
     let content = branch_content(p, &branch_safe, &rel);
     assert!(
         !content.contains("state = \"closed\""),
         "safe ticket must not be closed when mix contains blocked; got: {content}"
     );
-    let _ = id_safe; // referenced above
+    let _ = id_safe;
 }
 
 #[test]
@@ -8837,14 +8836,13 @@ fn epic_close_all_closes_safe_tickets() {
     let (_id, branch) = epic_ticket_in_state(p, &epic_id, "Safe ticket", "specd");
 
     // run_close will cascade-close the ticket then fail at the git push step (no remote).
-    // That is expected: we only care that the ticket was closed before the push.
-    let result = apm::cmd::epic::run_close(p, &epic_id, true);
-    // The error must be about the push, not about our non-terminal guard.
+    // That's expected: we only care that the ticket was closed before the push.
+    let result = apm::cmd::epic::run_close(p, &epic_id, true, false, false, false);
     if let Err(ref e) = result {
         let msg = e.to_string();
         assert!(
             !msg.contains("non-terminal") && !msg.contains("require manual resolution"),
-            "cascade close should have succeeded but got an unexpected error: {msg}"
+            "cascade close should have succeeded but got an unexpected quiescence error: {msg}"
         );
     }
 
@@ -8853,5 +8851,35 @@ fn epic_close_all_closes_safe_tickets() {
     assert!(
         content.contains("state = \"closed\""),
         "ticket must be closed after --close-all cascade; got: {content}"
+    );
+}
+
+#[test]
+fn epic_close_auto_close_non_tty() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    // Create a ticket in specd (no impl history) — quiescence passes.
+    let (id, branch) = epic_ticket_in_state(p, &epic_id, "Merged ticket", "specd");
+
+    // Merge the ticket branch into the epic branch so it becomes auto_closeable.
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    git(p, &["checkout", &epic_branch]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "-m", &format!("merge {id}")]);
+    git(p, &["checkout", "main"]);
+
+    // In test harness, stdout is not a TTY. classify_epic_quiescence puts the ticket in
+    // auto_closeable, but should_close = false (no TTY, no --close-all). Ticket goes into
+    // remaining, and with close_all=false we get the blocker error.
+    let result = apm::cmd::epic::run_close(p, &epic_id, false, false, false, false);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("non-terminal"),
+        "expected merged ticket to appear as blocker on non-TTY; got: {msg}"
+    );
+    assert!(
+        msg.contains(&id),
+        "expected ticket id {id} in blocker message; got: {msg}"
     );
 }

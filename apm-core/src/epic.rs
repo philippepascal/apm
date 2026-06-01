@@ -11,25 +11,85 @@ pub struct EpicTicketInfo {
     pub title: String,
 }
 
-pub fn non_terminal_epic_tickets(
+pub struct EpicQuiescenceResult {
+    pub unsafe_tickets: Vec<EpicTicketInfo>,
+    pub auto_closeable: Vec<EpicTicketInfo>,
+    pub genuine_blockers: Vec<EpicTicketInfo>,
+}
+
+pub fn classify_epic_quiescence(
     root: &Path,
     epic_id: &str,
     config: &crate::config::Config,
-) -> Result<Vec<EpicTicketInfo>> {
+    worktrees: &[(std::path::PathBuf, String)],
+    epic_branch: &str,
+) -> Result<EpicQuiescenceResult> {
     let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)?;
     let terminal = config.terminal_state_ids();
-    let mut result: Vec<EpicTicketInfo> = all_tickets
-        .into_iter()
+    let default_branch = &config.project.default_branch;
+
+    let mut unsafe_tickets = Vec::new();
+    let mut auto_closeable = Vec::new();
+    let mut genuine_blockers = Vec::new();
+
+    for t in all_tickets
+        .iter()
         .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
         .filter(|t| !terminal.contains(&t.frontmatter.state))
-        .map(|t| EpicTicketInfo {
-            id: t.frontmatter.id,
-            state: t.frontmatter.state,
-            title: t.frontmatter.title,
-        })
-        .collect();
-    result.sort_by(|a, b| a.id.cmp(&b.id));
-    Ok(result)
+    {
+        let info = EpicTicketInfo {
+            id: t.frontmatter.id.clone(),
+            state: t.frontmatter.state.clone(),
+            title: t.frontmatter.title.clone(),
+        };
+
+        // 1. Unsafe states always block manually.
+        if info.state == "blocked" || info.state == "question" {
+            unsafe_tickets.push(info);
+            continue;
+        }
+
+        // 2. Live worker → genuine blocker.
+        let ticket_branch = t.frontmatter.branch.clone()
+            .or_else(|| crate::ticket_fmt::branch_name_from_path(&t.path));
+        let has_live_worker = ticket_branch.as_ref().and_then(|branch| {
+            worktrees.iter().find(|(_, b)| b == branch)
+        }).map(|(wt_path, _)| {
+            let pid_file = wt_path.join(".apm-worker.pid");
+            if pid_file.exists() {
+                if let Ok((pid, _)) = crate::worker::read_pid_file(&pid_file) {
+                    return crate::worker::is_alive(pid);
+                }
+            }
+            false
+        }).unwrap_or(false);
+
+        if has_live_worker {
+            genuine_blockers.push(info);
+            continue;
+        }
+
+        // 3. Branch merged into epic or default → auto_closeable.
+        let is_merged = ticket_branch.as_ref().map(|branch| {
+            let merged_into_epic = git_util::is_branch_merged_into(root, branch, epic_branch)
+                .unwrap_or(false);
+            let merged_into_default = git_util::is_branch_merged_into(root, branch, default_branch)
+                .unwrap_or(false);
+            merged_into_epic || merged_into_default
+        }).unwrap_or(false);
+
+        if is_merged {
+            auto_closeable.push(info);
+        } else {
+            genuine_blockers.push(info);
+        }
+    }
+
+    unsafe_tickets.sort_by(|a, b| a.id.cmp(&b.id));
+    auto_closeable.sort_by(|a, b| a.id.cmp(&b.id));
+    genuine_blockers.sort_by(|a, b| a.id.cmp(&b.id));
+
+    Ok(EpicQuiescenceResult { unsafe_tickets, auto_closeable, genuine_blockers })
 }
 
 pub struct MergeStatus {
@@ -401,7 +461,7 @@ mod tests {
     }
 
     #[test]
-    fn non_terminal_epic_tickets_all_closed_returns_empty() {
+    fn classify_epic_quiescence_all_closed_returns_empty() {
         let tmp = setup_repo();
         let p = tmp.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -409,17 +469,23 @@ mod tests {
 
         let config = crate::config::Config::load(p).unwrap();
 
-        let content_a = make_ticket_content("aa110001", "closed", "epicaaaa");
-        crate::git::commit_to_branch(p, "ticket/aa110001-ta", "tickets/aa110001-ta.md", &content_a, "add ta").unwrap();
-        let content_b = make_ticket_content("aa110002", "closed", "epicaaaa");
-        crate::git::commit_to_branch(p, "ticket/aa110002-tb", "tickets/aa110002-tb.md", &content_b, "add tb").unwrap();
+        // Create epic branch.
+        git_cmd(p, &["checkout", "-b", "epic/qq110000-test"]);
+        git_cmd(p, &["checkout", "main"]);
 
-        let result = non_terminal_epic_tickets(p, "epicaaaa", &config).unwrap();
-        assert!(result.is_empty(), "expected empty when all tickets are closed, got: {result:?}");
+        let content_a = make_ticket_content("qq110001", "closed", "qq110000");
+        crate::git::commit_to_branch(p, "ticket/qq110001-ta", "tickets/qq110001-ta.md", &content_a, "add ta").unwrap();
+        let content_b = make_ticket_content("qq110002", "closed", "qq110000");
+        crate::git::commit_to_branch(p, "ticket/qq110002-tb", "tickets/qq110002-tb.md", &content_b, "add tb").unwrap();
+
+        let result = classify_epic_quiescence(p, "qq110000", &config, &[], "epic/qq110000-test").unwrap();
+        assert!(result.unsafe_tickets.is_empty(), "unsafe should be empty");
+        assert!(result.auto_closeable.is_empty(), "auto_closeable should be empty");
+        assert!(result.genuine_blockers.is_empty(), "genuine_blockers should be empty");
     }
 
     #[test]
-    fn non_terminal_epic_tickets_mixed_returns_non_terminal() {
+    fn classify_epic_quiescence_ignores_other_epics() {
         let tmp = setup_repo();
         let p = tmp.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -427,19 +493,27 @@ mod tests {
 
         let config = crate::config::Config::load(p).unwrap();
 
-        let content_closed = make_ticket_content("bb220001", "closed", "epicbbbb");
-        crate::git::commit_to_branch(p, "ticket/bb220001-tc", "tickets/bb220001-tc.md", &content_closed, "add tc").unwrap();
-        let content_ready = make_ticket_content("bb220002", "ready", "epicbbbb");
-        crate::git::commit_to_branch(p, "ticket/bb220002-td", "tickets/bb220002-td.md", &content_ready, "add td").unwrap();
+        git_cmd(p, &["checkout", "-b", "epic/qq120000-test"]);
+        git_cmd(p, &["checkout", "main"]);
 
-        let result = non_terminal_epic_tickets(p, "epicbbbb", &config).unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].id, "bb220002");
-        assert_eq!(result[0].state, "ready");
+        // Non-terminal in target epic.
+        let content_a = make_ticket_content("qq120001", "ready", "qq120000");
+        crate::git::commit_to_branch(p, "ticket/qq120001-ta", "tickets/qq120001-ta.md", &content_a, "add ta").unwrap();
+        // Non-terminal in different epic — must be ignored.
+        let content_b = make_ticket_content("qq120002", "ready", "otherep0");
+        crate::git::commit_to_branch(p, "ticket/qq120002-tb", "tickets/qq120002-tb.md", &content_b, "add tb").unwrap();
+
+        let result = classify_epic_quiescence(p, "qq120000", &config, &[], "epic/qq120000-test").unwrap();
+        let all: Vec<_> = result.unsafe_tickets.iter()
+            .chain(result.auto_closeable.iter())
+            .chain(result.genuine_blockers.iter())
+            .collect();
+        assert_eq!(all.len(), 1, "only ticket qq120001 should be classified");
+        assert_eq!(all[0].id, "qq120001");
     }
 
     #[test]
-    fn non_terminal_epic_tickets_ignores_other_epics() {
+    fn classify_epic_quiescence_three_buckets() {
         let tmp = setup_repo();
         let p = tmp.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -447,16 +521,33 @@ mod tests {
 
         let config = crate::config::Config::load(p).unwrap();
 
-        // Non-terminal ticket in the target epic.
-        let content_a = make_ticket_content("cc330001", "ready", "epiccccc");
-        crate::git::commit_to_branch(p, "ticket/cc330001-te", "tickets/cc330001-te.md", &content_a, "add te").unwrap();
-        // Non-terminal ticket in a different epic — must be ignored.
-        let content_b = make_ticket_content("cc330002", "ready", "epicdddd");
-        crate::git::commit_to_branch(p, "ticket/cc330002-tf", "tickets/cc330002-tf.md", &content_b, "add tf").unwrap();
+        // Create epic branch.
+        git_cmd(p, &["checkout", "-b", "epic/qq130000-test"]);
+        git_cmd(p, &["checkout", "main"]);
 
-        let result = non_terminal_epic_tickets(p, "epiccccc", &config).unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].id, "cc330001");
+        // 1. blocked ticket → unsafe_tickets.
+        let content_blocked = make_ticket_content("qq130001", "blocked", "qq130000");
+        crate::git::commit_to_branch(p, "ticket/qq130001-t-blocked", "tickets/qq130001-t-blocked.md", &content_blocked, "add blocked").unwrap();
+
+        // 2. ready ticket whose branch is merged into the epic branch → auto_closeable.
+        let content_merged = make_ticket_content("qq130002", "ready", "qq130000");
+        crate::git::commit_to_branch(p, "ticket/qq130002-t-merged", "tickets/qq130002-t-merged.md", &content_merged, "add merged").unwrap();
+        // Merge the ticket branch into the epic branch.
+        git_cmd(p, &["checkout", "epic/qq130000-test"]);
+        git_cmd(p, &["merge", "--no-ff", "ticket/qq130002-t-merged", "-m", "merge ticket qq130002"]);
+        git_cmd(p, &["checkout", "main"]);
+
+        // 3. ready ticket with an unmerged branch → genuine_blockers.
+        let content_unmerged = make_ticket_content("qq130003", "ready", "qq130000");
+        crate::git::commit_to_branch(p, "ticket/qq130003-t-unmerged", "tickets/qq130003-t-unmerged.md", &content_unmerged, "add unmerged").unwrap();
+
+        let result = classify_epic_quiescence(p, "qq130000", &config, &[], "epic/qq130000-test").unwrap();
+        assert_eq!(result.unsafe_tickets.len(), 1, "one unsafe ticket expected");
+        assert_eq!(result.unsafe_tickets[0].id, "qq130001");
+        assert_eq!(result.auto_closeable.len(), 1, "one auto_closeable ticket expected");
+        assert_eq!(result.auto_closeable[0].id, "qq130002");
+        assert_eq!(result.genuine_blockers.len(), 1, "one genuine blocker expected");
+        assert_eq!(result.genuine_blockers[0].id, "qq130003");
     }
 
     const TOML_WITH_WORKER_END: &str = concat!(

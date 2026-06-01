@@ -70,13 +70,44 @@ enum EpicCommand {
         /// Title for the epic
         title: String,
     },
-    /// Open a PR from the epic branch to the default branch
+    /// Merge the epic branch into default or open a PR for it
+    #[command(long_about = "Merge the epic branch into the default branch or open a PR for it.
+
+Steps performed:
+
+  1. Quiescence check — every ticket in the epic must be in a terminal state.
+     Tickets whose branches are already merged into the epic or default branch
+     are offered for auto-close on a TTY (\"Close N merged ticket(s)? [y/N]\").
+     Use --close-all to close all safe non-terminal tickets without prompting.
+
+  2. Already-merged shortcut — if the epic branch has no commits ahead of the
+     default branch it is already merged. The epic branch is deleted locally and
+     remotely; no PR is created or updated.
+
+  3. --pr (default) — pushes the epic branch to origin and creates or updates a
+     GitHub PR targeting the default branch.
+
+  4. --merge — performs a local fast-forward or merge commit of the epic branch
+     into the default branch; no PR is created. The main worktree must be on the
+     default branch.
+
+     --auto — merges locally when the merge would be clean; falls back to --pr
+     when the merge would produce conflicts.")]
     Close {
         /// Epic ID (4–8 char hex prefix)
         id: String,
         /// Cascade-close all non-terminal tickets before closing the epic
         #[arg(long)]
         close_all: bool,
+        /// Merge the epic branch into default locally; skip PR creation
+        #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
+        merge: bool,
+        /// Push the epic branch and open or update a PR (default behaviour)
+        #[arg(long, conflicts_with_all = ["merge", "auto_mode"])]
+        pr: bool,
+        /// Merge locally when clean; fall back to opening a PR on conflicts
+        #[arg(long = "auto", conflicts_with_all = ["merge", "pr"])]
+        auto_mode: bool,
     },
     /// List all epics with derived state and ticket counts
     List,
@@ -1257,8 +1288,8 @@ fn main() -> Result<()> {
             command: EpicCommand::New { title },
         } => cmd::epic::run_new(&root, title),
         Command::Epic {
-            command: EpicCommand::Close { id, close_all },
-        } => cmd::epic::run_close(&root, &id, close_all),
+            command: EpicCommand::Close { id, close_all, merge, pr, auto_mode },
+        } => cmd::epic::run_close(&root, &id, close_all, merge, pr, auto_mode),
         Command::Epic {
             command: EpicCommand::List,
         } => cmd::epic::run_list(&root),

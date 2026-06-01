@@ -70,7 +70,7 @@ pub fn run_new(root: &Path, title: String) -> Result<()> {
     Ok(())
 }
 
-pub fn run_close(root: &Path, id_arg: &str, close_all: bool) -> Result<()> {
+pub fn run_close(root: &Path, id_arg: &str, close_all: bool, merge: bool, _pr: bool, auto_mode: bool) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
     // 1. Resolve the epic branch from the id prefix.
@@ -88,52 +88,68 @@ pub fn run_close(root: &Path, id_arg: &str, close_all: bool) -> Result<()> {
     // 2. Parse the 8-char epic ID from the branch name: epic/<id>-<slug>
     let epic_id = epic_id_from_branch(&epic_branch);
 
-    // 3. Quiescence check: no ticket may be in an active state or have a live worker.
+    // 3. Unified quiescence check using classify_epic_quiescence.
     let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;
-    let blockers = apm_core::epic::epic_is_quiescent(root, epic_id, &config, &worktrees)?;
-    if !blockers.is_empty() {
+    let result = apm_core::epic::classify_epic_quiescence(
+        root, epic_id, &config, &worktrees, &epic_branch,
+    )?;
+
+    // Unsafe tickets always block — no flag overrides this.
+    if !result.unsafe_tickets.is_empty() {
+        let rows = result.unsafe_tickets.iter()
+            .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+            .collect::<Vec<_>>()
+            .join("\n");
         anyhow::bail!(
-            "cannot close epic: the following tickets are not quiescent:\n{}",
-            blockers.join("\n")
+            "cannot close epic: the following tickets require manual resolution:\n{}\nResolve them manually, then retry.",
+            rows
         );
     }
 
-    // 3b. Non-terminal check: every ticket in the epic must be in a terminal state.
-    let non_terminal = apm_core::epic::non_terminal_epic_tickets(root, epic_id, &config)?;
-    if !non_terminal.is_empty() {
+    // Merged but not yet closed: offer auto-close.
+    // --close-all closes without prompt; on TTY ask interactively; on non-TTY treat as blocker.
+    let mut remaining: Vec<&apm_core::epic::EpicTicketInfo> =
+        result.genuine_blockers.iter().collect();
+    if !result.auto_closeable.is_empty() {
+        let should_close = close_all || (std::io::stdout().is_terminal() && {
+            let n = result.auto_closeable.len();
+            println!("\nTickets merged but not yet closed ({n}):");
+            for t in &result.auto_closeable {
+                println!("  {}  {}", t.id, t.title);
+            }
+            crate::util::prompt_yes_no(&format!("\nClose {n} merged ticket(s)? [y/N] "))?
+        });
+        if should_close {
+            let actor = format!("{}(apm-epic-close)", apm_core::config::resolve_caller_name());
+            for t in &result.auto_closeable {
+                match apm_core::ticket::close(root, &config, &t.id, None, &actor, false) {
+                    Ok(msgs) => msgs.iter().for_each(|m| println!("{m}")),
+                    Err(e) => eprintln!("warning: could not close {}: {e:#}", t.id),
+                }
+            }
+        } else {
+            // User declined or non-TTY — treat declined tickets as blockers.
+            remaining.extend(result.auto_closeable.iter());
+        }
+    }
+
+    // Genuine blockers (unmerged tickets, live-worker tickets, any declined auto-closeables).
+    if !remaining.is_empty() {
         if !close_all {
-            let rows: String = non_terminal
-                .iter()
+            let rows = remaining.iter()
                 .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
                 .collect::<Vec<_>>()
                 .join("\n");
             anyhow::bail!(
                 "epic has {} non-terminal ticket(s):\n{}\nRe-run with --close-all to cascade close, or close them manually first.",
-                non_terminal.len(),
+                remaining.len(),
                 rows
             );
         }
-        // --close-all: fail-fast on blocked/question first.
-        let unsafe_tickets: Vec<_> = non_terminal
-            .iter()
-            .filter(|t| t.state == "blocked" || t.state == "question")
-            .collect();
-        if !unsafe_tickets.is_empty() {
-            let rows: String = unsafe_tickets
-                .iter()
-                .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
-                .collect::<Vec<_>>()
-                .join("\n");
-            anyhow::bail!(
-                "cannot cascade close: the following tickets require manual resolution:\n{}\nResolve them manually, then retry.",
-                rows
-            );
-        }
-        // Safe to cascade close.
-        let agent = apm_core::config::resolve_caller_name();
-        for t in &non_terminal {
+        let actor = format!("{}(apm-epic-close)", apm_core::config::resolve_caller_name());
+        for t in &remaining {
             print!("closing ticket #{} ... ", t.id);
-            apm_core::ticket::close(root, &config, &t.id, None, &agent, false)
+            apm_core::ticket::close(root, &config, &t.id, None, &actor, false)
                 .with_context(|| format!("failed to close ticket #{}", t.id))?;
             println!("done");
         }
@@ -155,20 +171,51 @@ pub fn run_close(root: &Path, id_arg: &str, close_all: bool) -> Result<()> {
         return Ok(());
     }
 
-    // 6. Push the epic branch and create or reuse an open PR.
-    apm_core::git::push_branch_tracking(root, &epic_branch)?;
-    let mut messages = vec![];
-    apm_core::github::gh_pr_create_or_update(
-        root,
-        &epic_branch,
-        default_branch,
-        epic_id,
-        &pr_title,
-        &format!("Epic: {epic_branch}"),
-        &mut messages,
-    )?;
-    for m in &messages {
-        println!("{m}");
+    // 6. Merge locally or push+PR based on flags.
+    let do_merge = merge || (auto_mode && {
+        let s = apm_core::epic::merge_tree_status(root, default_branch, &epic_branch)?;
+        s.clean
+    });
+
+    if do_merge {
+        let main_root = apm_core::git_util::main_worktree_root(root)
+            .unwrap_or_else(|| root.to_path_buf());
+        let head_out = std::process::Command::new("git")
+            .current_dir(&main_root)
+            .args(["symbolic-ref", "--short", "HEAD"])
+            .output()?;
+        let head = String::from_utf8_lossy(&head_out.stdout);
+        if head.trim() != default_branch {
+            anyhow::bail!(
+                "cannot merge: main worktree is on '{}', not '{default_branch}'. \
+                 Check out {default_branch} first, or use --pr.",
+                head.trim()
+            );
+        }
+        let mut messages = vec![];
+        match apm_core::git_util::merge_ref(&main_root, &epic_branch, &mut messages) {
+            Some(msg) => {
+                for m in &messages { println!("{m}"); }
+                println!("{msg}");
+            }
+            None => anyhow::bail!(
+                "merge conflict — resolve manually after checking out {default_branch}, \
+                 or use --pr to open a PR instead"
+            ),
+        }
+    } else {
+        apm_core::git::push_branch_tracking(root, &epic_branch)?;
+        let mut messages = vec![];
+        apm_core::github::gh_pr_create_or_update(
+            root,
+            &epic_branch,
+            default_branch,
+            epic_id,
+            &pr_title,
+            &format!("Epic: {epic_branch}"),
+            &mut messages,
+        )?;
+        for m in &messages { println!("{m}"); }
     }
     Ok(())
 }
