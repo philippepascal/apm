@@ -1,7 +1,7 @@
 +++
 id = "52d2a814"
 title = "apm validate: enforce trigger-uniqueness and worker_profile shape"
-state = "ready"
+state = "in_progress"
 priority = 5
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/52d2a814-apm-validate-enforce-trigger-uniqueness-"
 created_at = "2026-05-31T02:57:37.160432Z"
-updated_at = "2026-05-31T21:04:07.664162Z"
+updated_at = "2026-06-01T00:52:11.311388Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["071886fc"]
@@ -151,3 +151,4 @@ The default-workflow test does not load `apm-core/src/default/workflow.toml` fro
 | 2026-05-31T19:43Z | ammend | in_design | philippepascal |
 | 2026-05-31T19:46Z | in_design | specd | claude |
 | 2026-05-31T21:04Z | specd | ready | philippepascal |
+| 2026-06-01T00:52Z | ready | in_progress | philippepascal |
