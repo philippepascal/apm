@@ -22,7 +22,11 @@ The desired behaviour: the epic bar should reflect the same epic scope as the re
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When no epic filter is active, the epic bar shows all stale epics that appear in any ticket (existing behaviour unchanged)
+- [ ] When a specific epic ID is selected in the epic filter and that epic is stale, the epic bar shows exactly one badge for that epic
+- [ ] When a specific epic ID is selected in the epic filter and that epic is not stale, the epic bar is hidden
+- [ ] When the "No epic" filter (`__none__`) is active, the epic bar is hidden
+- [ ] Stale epics that belong to a different epic than the active filter are not shown in the epic bar while that filter is active
 
 ### Out of scope
 
