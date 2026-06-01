@@ -64,47 +64,40 @@ id         = "new"
 label      = "New"
 
 [[workflow.states]]
-id         = "groomed"
-label      = "Groomed"
-actionable = ["agent"]
+id    = "groomed"
+label = "Groomed"
 
 [[workflow.states]]
-id         = "question"
-label      = "Question"
-actionable = ["supervisor"]
+id    = "question"
+label = "Question"
 
 [[workflow.states]]
-id         = "in_design"
-label      = "In Design"
+id    = "in_design"
+label = "In Design"
 
 [[workflow.states]]
-id         = "specd"
-label      = "Specd"
-actionable = ["supervisor"]
+id    = "specd"
+label = "Specd"
 
 [[workflow.states]]
-id         = "ammend"
-label      = "Ammend"
-actionable = ["agent"]
+id    = "ammend"
+label = "Ammend"
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
 [[workflow.states]]
 id    = "in_progress"
 label = "In Progress"
 
 [[workflow.states]]
-id         = "implemented"
-label      = "Implemented"
-actionable = ["supervisor"]
+id    = "implemented"
+label = "Implemented"
 
 [[workflow.states]]
-id         = "accepted"
-label      = "Accepted"
-actionable = ["supervisor"]
+id    = "accepted"
+label = "Accepted"
 
 [[workflow.states]]
 id       = "closed"
@@ -608,16 +601,15 @@ effort_weight   = -2.0
 risk_weight     = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to      = "specd"
 trigger = "manual"
 
 [[workflow.states]]
-id = "specd"
+id    = "specd"
 label = "Specd"
 
 [[workflow.states.transitions]]
@@ -625,16 +617,15 @@ to      = "ready"
 trigger = "manual"
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
 [[workflow.states.transitions]]
 to      = "closed"
 trigger = "manual"
 
 [[workflow.states]]
-id = "closed"
+id    = "closed"
 label = "Closed"
 terminal = true
 "#,
@@ -772,13 +763,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to      = "done"

@@ -1763,10 +1763,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
-instructions = "worker-instructions.txt"
+id    = "ready"
+label = "Ready"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
@@ -1859,17 +1857,17 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
   [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_design"
-label = "In Design"
+id             = "in_design"
+label          = "In Design"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -2077,19 +2075,18 @@ fn spawn_new_ticket_transitions_to_in_design() {
 }
 
 #[test]
-fn spawn_ammend_ticket_transitions_to_in_design() {
-    let dir = setup_for_prompt_dispatch();
+fn ammend_to_groomed_succeeds() {
+    let dir = init_repo();
     let p = dir.path();
-    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    let (id, branch) = write_ticket_to_branch(p, "ammend", "fix spec");
+    let (id, branch) = write_ticket_to_branch(p, "ammend", "needs revision");
+    let rel = ticket_rel_path(&branch);
 
-    std::env::set_var("APM_AGENT_NAME", "test-agent");
-    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
-    let pid = out.worker_pid.unwrap();
-    wait_for_pid(pid);
-
-    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"specd\""), "ammend ticket should transition to specd: {content}");
+    apm::cmd::state::run(p, &id, "groomed".into(), false, false).unwrap();
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"groomed\""),
+        "expected groomed state:\n{content}"
+    );
 }
 
 #[test]
@@ -2297,9 +2294,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to              = "in_design"
@@ -2641,9 +2637,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[ticket.sections]]
 name        = "Summary"
@@ -3479,7 +3474,7 @@ fn setup_with_worktrees() -> TempDir {
     // BYPASS: production workflow has explicit new → groomed → ... transitions that
     // block the workers tests' direct new → ready transition; override with a minimal
     // workflow that has no transitions on "new" (any transition is then allowed)
-    std::fs::write(p.join(".apm/workflow.toml"), "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\nlabel = \"New\"\n\n[[workflow.states]]\nid         = \"ready\"\nlabel      = \"Ready\"\nactionable = [\"agent\"]\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n[[workflow.states]]\nid       = \"closed\"\nlabel    = \"Closed\"\nterminal = true\n\n[workflow.prioritization]\npriority_weight = 10.0\neffort_weight   = -2.0\nrisk_weight     = -1.0\n").unwrap();
+    std::fs::write(p.join(".apm/workflow.toml"), "[workflow]\n\n[[workflow.states]]\nid    = \"new\"\nlabel = \"New\"\n\n[[workflow.states]]\nid    = \"ready\"\nlabel = \"Ready\"\n\n[[workflow.states]]\nid    = \"in_progress\"\nlabel = \"In Progress\"\n\n[[workflow.states]]\nid       = \"closed\"\nlabel    = \"Closed\"\nterminal = true\n\n[workflow.prioritization]\npriority_weight = 10.0\neffort_weight   = -2.0\nrisk_weight     = -1.0\n").unwrap();
     git(p, &["add", ".apm/workflow.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "simplify workflow for worktree tests"]);
     dir
@@ -3880,12 +3875,11 @@ dir = "worktrees"
 aggressive = false
 
 [[workflow.states]]
-id = "ready"
+id    = "ready"
 label = "Ready"
-actionable = ["agent"]
 
 [[workflow.states]]
-id = "in_progress"
+id    = "in_progress"
 label = "In Progress"
 "#,
     )
@@ -4454,9 +4448,8 @@ name = "test"
 dir = "tickets"
 
 [[workflow.states]]
-id         = "new"
-label      = "New"
-actionable = ["agent"]
+id    = "new"
+label = "New"
 
 [[workflow.states.transitions]]
 to      = "closed"
@@ -6482,18 +6475,16 @@ label = "New"
   on_failure = "merge_failed"
 
 [[workflow.states]]
-id         = "implemented"
-label      = "Implemented"
-actionable = ["supervisor"]
+id    = "implemented"
+label = "Implemented"
 
   [[workflow.states.transitions]]
   to      = "in_progress"
   trigger = "manual"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
@@ -6589,30 +6580,22 @@ fn merge_failed_to_implemented_does_not_trigger_another_merge() {
 }
 
 #[test]
-fn merge_failed_to_in_progress_succeeds() {
-    let dir = setup_with_merge_workflow();
+fn merge_failed_to_in_progress_rejected() {
+    let dir = init_repo();
     let p = dir.path();
-
-    // Create ticket and force it to merge_failed state directly.
-    apm::cmd::new::run(p, "Retry merge".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
-    let branch = find_ticket_branch(p, "retry-merge");
-    let id = find_ticket_id(p, "retry-merge");
+    let (id, branch) = write_ticket_to_branch(p, "merge_failed", "retry rejected");
     let rel = ticket_rel_path(&branch);
 
-    let existing = branch_content(p, &branch, &rel);
-    let updated = existing.replace("state = \"new\"", "state = \"merge_failed\"");
-    git(p, &["checkout", &branch]);
-    std::fs::write(p.join(&rel), &updated).unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "set merge_failed"]);
-    git(p, &["checkout", "main"]);
-
-    apm::cmd::state::run(p, &id, "in_progress".into(), false, false).unwrap();
-    let content = branch_content(p, &branch, &rel);
+    let result = apm::cmd::state::run(p, &id, "in_progress".into(), false, false);
+    assert!(result.is_err(), "expected merge_failed → in_progress to be rejected");
+    let msg = result.unwrap_err().to_string();
     assert!(
-        content.contains("state = \"in_progress\""),
-        "expected in_progress state:\n{content}"
+        msg.contains("no transition"),
+        "expected 'no transition' in error message: {msg}"
     );
+    // State must not have changed.
+    let content = branch_content(p, &branch, &rel);
+    assert!(content.contains("state = \"merge_failed\""), "state should remain merge_failed:\n{content}");
 }
 
 #[test]
@@ -8024,13 +8007,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8081,8 +8064,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8094,9 +8078,8 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
     // Write the shuffled workflow to disk (no commit needed — Config::load reads from disk).
     std::fs::write(p.join(".apm/workflow.toml"), workflow_v2).unwrap();
@@ -8344,8 +8327,8 @@ fn close_already_closed_returns_error() {
 
 // --- recovery guidance ---
 
-/// Init a repo with a workflow that has merge_failed actionable for "agent"
-/// so that apm next can surface it.
+/// Init a repo with a workflow that has merge_failed agent-actionable (via
+/// command:start transition) so that apm next can surface it.
 fn setup_for_recovery() -> TempDir {
     let dir = init_repo();
     // Use pr_or_epic_merge (no git_host required).  Add transitions out of
@@ -8353,18 +8336,17 @@ fn setup_for_recovery() -> TempDir {
     std::fs::write(dir.path().join(".apm/workflow.toml"), r#"[workflow]
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8381,17 +8363,27 @@ label = "Implemented"
   trigger = "manual"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["agent"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
   trigger = "manual"
 
   [[workflow.states.transitions]]
-  to      = "in_progress"
-  trigger = "manual"
+  to      = "merge_retry"
+  trigger = "command:start"
+
+[[workflow.states]]
+id             = "merge_retry"
+label          = "Merge retry"
+worker_profile = "claude/coder"
+
+  [[workflow.states.transitions]]
+  to         = "implemented"
+  trigger    = "manual"
+  completion = "pr_or_epic_merge"
+  on_failure = "merge_failed"
 
 [[workflow.states]]
 id       = "closed"
