@@ -37,7 +37,27 @@ The desired behaviour: the epic bar should reflect the same epic scope as the re
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-ui/src/components/supervisor/SupervisorView.tsx`
+
+The only change is in the inline IIFE that renders the epic bar (currently around line 255). Replace the single-condition `staleEpics` filter with one that also gates on `epicFilter`:
+
+```tsx
+// Before
+const staleEpics = epics.filter((ep) => ep.behind_count > 0 && epicIdsInTickets.has(ep.id))
+
+// After
+const staleEpics = epics.filter((ep) => {
+  if (ep.behind_count === 0) return false
+  if (!epicIdsInTickets.has(ep.id)) return false
+  if (epicFilter === '__none__') return false
+  if (epicFilter !== null && epicFilter !== ep.id) return false
+  return true
+})
+```
+
+`epicFilter` is already in the closure (declared at line 45 via `useLayoutStore`), so no new state, props, or imports are needed. The existing `staleEpics.length === 0` guard already hides the bar when the filtered list is empty, covering the cases where the selected epic is not stale and where `__none__` is active.
+
+No tests exist for this component's render output today; no test changes are required. Manual verification: apply each epic filter permutation and confirm the bar matches the expected output from the acceptance criteria.
 
 ### Open questions
 
