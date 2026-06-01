@@ -52,7 +52,6 @@ pub fn resolve_worker_profile(worker_profile_str: &str, workers: &WorkersConfig)
 /// Priority order:
 /// 1. Destination state's `worker_profile` field
 /// 2. `[workers].default`
-/// 3. Built-in fallback `"claude/coder"`
 ///
 /// Returns `(profile_string, source_label)`.
 fn resolve_dispatch_profile(
@@ -70,11 +69,7 @@ fn resolve_dispatch_profile(
         );
     }
     // 2. workers.default
-    if let Some(wp) = config.workers.default.as_deref() {
-        return (wp.to_string(), "workers.default".to_string());
-    }
-    // 3. Built-in fallback
-    ("claude/coder".to_string(), "built-in fallback".to_string())
+    (config.workers.default.clone(), "workers.default".to_string())
 }
 
 #[derive(serde::Deserialize, Default, Debug)]
@@ -210,6 +205,12 @@ pub fn resolve_for_diagnostic(root: &Path, id_arg: &str) -> Result<AgentDiagnost
         &to_id,
         &config,
     );
+
+    if worker_profile_str.is_empty() {
+        anyhow::bail!(
+            "workers.default is not set — add `default = \"claude/coder\"` under [workers] in .apm/config.toml"
+        );
+    }
 
     let (agent_base, role) = parse_worker_profile(&worker_profile_str)?;
     let mut agent = agent_base;
@@ -1927,11 +1928,9 @@ mod tests {
         fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
         fs::create_dir_all(root.join("tickets")).unwrap();
 
-        let workers_section = if let Some(d) = workers_default {
-            format!("[workers]\ndefault = \"{d}\"\n")
-        } else {
-            "[workers]\n".to_string()
-        };
+        let workers_section = workers_default
+            .map(|d| format!("[workers]\ndefault = \"{d}\"\n"))
+            .unwrap_or_default();
         fs::write(root.join(".apm/config.toml"), format!(
             "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
         )).unwrap();
@@ -2060,7 +2059,7 @@ name = "test-project"
 default_branch = "main"
 
 [workers]
-agent = "mock-happy"
+default = "mock-happy/coder"
 
 [tickets]
 dir = "tickets"
@@ -2307,7 +2306,7 @@ Some approach.
 name = "test"
 default_branch = "main"
 [workers]
-agent = "mock-happy"
+default = "mock-happy/coder"
 [tickets]
 dir = "tickets"
 "#).unwrap();
@@ -2550,7 +2549,7 @@ updated_at = "2026-01-01T00:00:00Z"
             .unwrap_or_default();
         let workers_section = workers_default
             .map(|d| format!("[workers]\ndefault = \"{d}\"\n"))
-            .unwrap_or_else(|| "[workers]\n".to_string());
+            .unwrap_or_default();
         let toml_str = format!(
             "[project]\nname = \"test\"\n[tickets]\ndir = \"tickets\"\n{workers_section}\n\
              [[workflow.states]]\nid = \"src\"\nlabel = \"Src\"\n\n\
@@ -2585,11 +2584,11 @@ updated_at = "2026-01-01T00:00:00Z"
     }
 
     #[test]
-    fn dispatch_profile_builtin_fallback() {
+    fn dispatch_profile_empty_when_no_workers_default() {
         let config = make_minimal_config("dest", None, None);
         let (profile, source) = super::resolve_dispatch_profile("dest", &config);
-        assert_eq!(profile, "claude/coder");
-        assert_eq!(source, "built-in fallback");
+        assert_eq!(profile, "", "no state profile and no workers.default yields empty string");
+        assert_eq!(source, "workers.default");
     }
 
     // --- resolve_for_diagnostic with state-level profiles ---
@@ -2606,11 +2605,9 @@ updated_at = "2026-01-01T00:00:00Z"
         fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
         fs::create_dir_all(root.join("tickets")).unwrap();
 
-        let workers_section = if let Some(d) = workers_default {
-            format!("[workers]\ndefault = \"{d}\"\n")
-        } else {
-            "[workers]\n".to_string()
-        };
+        let workers_section = workers_default
+            .map(|d| format!("[workers]\ndefault = \"{d}\"\n"))
+            .unwrap_or_default();
         fs::write(root.join(".apm/config.toml"), format!(
             "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
         )).unwrap();

@@ -142,10 +142,9 @@ pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, 
 /// plus the agent part of every state-level `worker_profile`.
 pub fn configured_agent_names(config: &Config) -> HashSet<String> {
     let mut names: HashSet<String> = HashSet::new();
-    let primary = config.workers.default.as_deref()
-        .and_then(|s| s.split_once('/').map(|(a, _)| a.to_string()))
-        .unwrap_or_else(|| "claude".to_string());
-    names.insert(primary);
+    if let Some((agent, _)) = config.workers.default.split_once('/') {
+        names.insert(agent.to_string());
+    }
     // Walk state-level worker_profile fields
     for state in &config.workflow.states {
         if let Some(ref wp) = state.worker_profile {
@@ -322,6 +321,12 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
 
 fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
+
+    if config.workers.default.is_empty() {
+        errors.push(
+            "config: workers.default is not set — add `default = \"claude/coder\"` under [workers] in .apm/config.toml".into()
+        );
+    }
 
     let state_ids: HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
@@ -813,7 +818,7 @@ fn format_wrapper(root: &Path, agent: &str) -> String {
 /// Build an agent-resolution audit for every `command:start` spawn transition in the config.
 pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAudit> {
     let mut result = Vec::new();
-    let default_profile = config.workers.default.as_deref().unwrap_or("claude/coder");
+    let default_profile = config.workers.default.as_str();
 
     for state in &config.workflow.states {
         for transition in &state.transitions {
@@ -893,6 +898,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [worktrees]
 dir = "worktrees"
@@ -1204,6 +1212,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [[workflow.states]]
 id    = "new"
@@ -1738,6 +1749,7 @@ name = "test"
 dir = "tickets"
 
 [workers]
+default = "claude/coder"
 container = ""
 "#;
         let config = load_config(toml);
@@ -2299,6 +2311,9 @@ terminal = true
     #[test]
     fn audit_default_agent_resolution() {
         let toml = r#"
+[workers]
+default = "claude/coder"
+
 [[workflow.states]]
 id    = "ready"
 label = "Ready"
@@ -2381,6 +2396,9 @@ terminal = true
     #[test]
     fn audit_no_worker_profiles_no_panic() {
         let toml = r#"
+[workers]
+default = "claude/coder"
+
 [[workflow.states]]
 id    = "ready"
 label = "Ready"
@@ -2397,6 +2415,67 @@ terminal = true
         let config = audit_config(toml);
         let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
         assert_eq!(result.len(), 1, "should not panic with no worker_profile");
+    }
+
+    #[test]
+    fn workers_default_absent_fails_validate() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to = "done"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("workers.default")),
+            "expected workers.default error when [workers] section is absent; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn workers_default_empty_fails_validate() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = ""
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to = "done"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("workers.default")),
+            "expected workers.default error when default = \"\"; got: {errors:?}"
+        );
     }
 
     #[test]

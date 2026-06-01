@@ -69,8 +69,7 @@ fn resolve_agent_role(
     let wp_str_owned = config.workflow.states.iter()
         .find(|s| s.id == dest_id)
         .and_then(|s| s.worker_profile.as_deref())
-        .or_else(|| config.workers.default.as_deref())
-        .unwrap_or("claude/coder")
+        .unwrap_or_else(|| config.workers.default.as_str())
         .to_string();
     let wp = resolve_worker_profile(&wp_str_owned, &config.workers)?;
     let mut agent = wp.agent.clone();
