@@ -190,6 +190,7 @@ git push.
 ### Amendment requests
 
 - [ ] Line number drift: the spec cites apm/src/cmd/epic.rs::run_close at lines 73-132, but the actual function spans lines 73-133 (off by one). Update the spec reference, or describe the location by symbol (the run_close function in apm/src/cmd/epic.rs) so future edits do not invalidate the spec.
+- [ ] Cascade close error handling is ambiguous in the pseudocode. The current shape propagates errors immediately, which means a mid-cascade failure leaves N tickets closed, M tickets orphaned, and the epic still open. Choose one explicit behaviour and document it: (a) fail-fast — bail on first error, do not close the epic, leave already-closed tickets closed; (b) continue-on-error — attempt to close all tickets, then bail with a list of failures, do not close the epic; (c) roll-back — undo any closes that succeeded if a later one fails. State which option is chosen, the rationale, and how progress is reported to the supervisor.
 
 ### Code review
 
