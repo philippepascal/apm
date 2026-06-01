@@ -73,16 +73,6 @@ dep_requires   = "spec"
 satisfies_deps = "spec"
 
   [[workflow.states.transitions]]
-  to      = "specd"
-  trigger = "manual"
-  outcome = "success"
-
-  [[workflow.states.transitions]]
-  to      = "question"
-  trigger = "manual"
-  outcome = "needs_input"
-
-  [[workflow.states.transitions]]
   to      = "in_design"
   trigger = "command:start"
   outcome = "needs_input"
