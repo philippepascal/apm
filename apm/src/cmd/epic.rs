@@ -132,7 +132,7 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_mode: bool) -> Result<()> {
+pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_mode: bool, push: bool, no_push: bool) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
     let matches = apm_core::epic::find_epic_branches(root, id_arg);
@@ -199,6 +199,26 @@ pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_m
                     "merge conflict — resolve manually after checking out {epic_branch}, or use --pr to open a PR instead"
                 );
             }
+        }
+
+        let should_push = if push {
+            true
+        } else if no_push {
+            false
+        } else if std::io::stdout().is_terminal() {
+            crate::util::prompt_yes_no_default_yes("Push refreshed epic to origin? [Y/n] ")?
+        } else {
+            false
+        };
+
+        if should_push {
+            apm_core::git::push_branch_tracking(root, &epic_branch)?;
+            println!("pushed {epic_branch} to origin");
+        } else {
+            eprintln!(
+                "warning: {epic_branch} was not pushed; \
+                 downstream `apm start` will read stale origin content until pushed manually"
+            );
         }
     } else {
         let log_out = std::process::Command::new("git")

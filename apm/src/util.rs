@@ -30,6 +30,15 @@ pub fn prompt_yes_no(prompt: &str) -> io::Result<bool> {
     Ok(line.trim().eq_ignore_ascii_case("y"))
 }
 
+/// Print `prompt`, flush stdout, read one line; returns true unless the user types "n" (default yes).
+pub fn prompt_yes_no_default_yes(prompt: &str) -> io::Result<bool> {
+    print!("{prompt}");
+    io::stdout().flush()?;
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    Ok(!line.trim().eq_ignore_ascii_case("n"))
+}
+
 /// Resolve a ticket ID argument to its worktree path and canonical ticket ID.
 /// Loads config and tickets from git internally.
 pub fn worktree_for_ticket(root: &Path, id_arg: &str) -> Result<(PathBuf, String)> {
