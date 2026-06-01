@@ -31,7 +31,7 @@ The fix is to make `[workers].default` mandatory in `config.toml`: change its ty
 - [x] A `config.toml` with `[workers] default = "claude/coder"` passes `apm validate` with no error about `workers.default`.
 - [x] `apm start --spawn` on a ticket in a project whose `workers.default` is `"mock-happy/coder"` dispatches using `"mock-happy/coder"`, not `"claude/coder"`.
 - [x] `rg 'unwrap_or\("claude/coder"\)|"claude/coder"\.to_string\(\)' apm-core/src/ --glob '!**/default/**'` returns no matches.
-- [ ] All existing `cargo test --workspace` tests pass.
+- [x] All existing `cargo test --workspace` tests pass.
 
 ### Out of scope
 
