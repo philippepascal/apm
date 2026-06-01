@@ -29,7 +29,7 @@ The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain thr
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> ammend` on a ticket in `in_design` returns an error (transition not defined)
+- [x] `apm state <id> ammend` on a ticket in `in_design` returns an error (transition not defined)
 - [ ] `apm state <id> in_progress` on a ticket in `merge_failed` returns an error (transition not defined)
 - [ ] `apm state <id> groomed` on a ticket in `ammend` succeeds and the ticket reaches `groomed`
 - [ ] `apm start` does not pick up tickets in `ammend` state (no `command:start` exits from `ammend`)
