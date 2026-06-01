@@ -84,8 +84,10 @@ your environment, ignore it entirely.
 **Permitted `apm` commands:**
 - `apm show` — read a ticket
 - `apm state` — transition ticket state
-- `apm new --side-note` — file an out-of-scope observation
-- `apm spec <id> --section "Open questions"` — write blocking questions (blocked flow only)
+- `apm spec` — read or write spec sections
+- `apm set` — set a field on a ticket
+- `apm new` — file a side-note ticket
+- `apm instructions` — load APM system knowledge
 
 ---
 

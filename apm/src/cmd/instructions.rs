@@ -119,26 +119,25 @@ mod tests {
     }
 
     #[test]
-    fn worker_role_includes_start() {
+    fn worker_role_includes_show_and_set() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = extract_commands(&make_test_cmd());
         let out = apm_core::instructions::generate(tmp.path(), Some("worker"), None, &commands).unwrap();
         let cr_pos = out.find("## Command Reference").unwrap();
-        assert!(
-            out[cr_pos..].contains("apm start"),
-            "apm start not found in worker command reference"
-        );
+        let cr_section = &out[cr_pos..];
+        assert!(cr_section.contains("apm show"), "apm show not found in worker command reference");
+        assert!(cr_section.contains("apm set"), "apm set not found in worker command reference");
     }
 
     #[test]
-    fn worker_role_excludes_set() {
+    fn worker_role_excludes_start() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = extract_commands(&make_test_cmd());
         let out = apm_core::instructions::generate(tmp.path(), Some("worker"), None, &commands).unwrap();
         let cr_pos = out.find("## Command Reference").unwrap();
         assert!(
-            !out[cr_pos..].contains("apm set"),
-            "apm set found in worker command reference but should be excluded"
+            !out[cr_pos..].contains("apm start"),
+            "apm start found in worker command reference but should be excluded"
         );
     }
 }
