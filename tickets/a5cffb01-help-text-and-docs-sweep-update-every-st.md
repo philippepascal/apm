@@ -1,7 +1,7 @@
 +++
 id = "a5cffb01"
 title = "Help text and docs sweep: update every stale reference to old schema"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/a5cffb01-help-text-and-docs-sweep-update-every-st"
 created_at = "2026-05-31T02:59:02.592158Z"
-updated_at = "2026-05-31T21:04:16.660841Z"
+updated_at = "2026-06-01T01:57:54.043616Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["e05c0463", "9c66e199", "4d20ba2f"]
@@ -214,3 +214,4 @@ apm help workflow | grep "transitions.worker_profile"  # must print nothing
 | 2026-05-31T20:55Z | ammend | in_design | philippepascal |
 | 2026-05-31T20:56Z | in_design | specd | claude |
 | 2026-05-31T21:04Z | specd | ready | philippepascal |
+| 2026-06-01T01:57Z | ready | in_progress | philippepascal |
