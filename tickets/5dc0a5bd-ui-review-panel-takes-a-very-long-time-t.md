@@ -1,7 +1,7 @@
 +++
 id = "5dc0a5bd"
 title = "UI review panel takes a very long time to close"
-state = "ready"
+state = "in_progress"
 priority = 6
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5dc0a5bd-ui-review-panel-takes-a-very-long-time-t"
 created_at = "2026-06-01T18:17:29.250149Z"
-updated_at = "2026-06-01T18:25:08.938555Z"
+updated_at = "2026-06-01T18:25:20.146379Z"
 +++
 
 ## Spec
@@ -100,3 +100,4 @@ Place it as the first child inside each top-level `<div>` so it appears above th
 | 2026-06-01T18:17Z | groomed | in_design | philippepascal |
 | 2026-06-01T18:22Z | in_design | specd | claude |
 | 2026-06-01T18:25Z | specd | ready | philippepascal |
+| 2026-06-01T18:25Z | ready | in_progress | philippepascal |
