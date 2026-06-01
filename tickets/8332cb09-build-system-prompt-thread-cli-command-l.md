@@ -1,7 +1,7 @@
 +++
 id = "8332cb09"
 title = "build_system_prompt: thread CLI command list into Layer 3 of worker prompt"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8332cb09-build-system-prompt-thread-cli-command-l"
 created_at = "2026-05-31T02:58:36.745209Z"
-updated_at = "2026-05-31T21:04:14.493063Z"
+updated_at = "2026-06-01T01:17:33.856639Z"
 epic = "9c3c4c20"
 target_branch = "epic/9c3c4c20-workflow-schema-cleanup-state-level-work"
 depends_on = ["9c66e199"]
@@ -171,3 +171,4 @@ If 9c66e199's `sample_commands()` update (adding `"instructions"`) has not yet l
 | 2026-05-31T20:07Z | ammend | in_design | philippepascal |
 | 2026-05-31T20:11Z | in_design | specd | claude |
 | 2026-05-31T21:04Z | specd | ready | philippepascal |
+| 2026-06-01T01:17Z | ready | in_progress | philippepascal |
