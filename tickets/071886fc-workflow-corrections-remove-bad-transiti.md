@@ -36,7 +36,7 @@ The default `workflow.toml` (and the project's `.apm/workflow.toml`) contain thr
 - [x] A ticket can traverse `specd → ammend → groomed → in_design → specd` without error
 - [x] `apm list --actionable` does not include `ammend` tickets in the agent-actionable set
 - [x] The spec-writer agent prompts no longer instruct the agent to run `apm state <id> in_design` from `ammend`
-- [ ] `cargo test --workspace` passes after all changes
+- [x] `cargo test --workspace` passes after all changes
 
 ### Out of scope
 
