@@ -16,7 +16,9 @@ updated_at = "2026-06-01T17:18:55.989171Z"
 
 ### Problem
 
-when filtering ticket by epic, the epic bar that includes epic that needs refresh should also be filtered
+The Supervisor board has an epic bar — a row of amber/red badges, one per stale epic (branches that are behind `HEAD` and need a `git pull`). When a user applies an epic filter using the dropdown, the ticket swimlanes narrow to only the selected epic's tickets, but the epic bar continues to show all stale epics regardless of the filter. The bar and the board are out of sync.
+
+The desired behaviour: the epic bar should reflect the same epic scope as the rest of the board. When a specific epic filter is active, show only that epic's badge (if it is stale). When the "No epic" filter is active, hide the bar entirely — tickets with no epic cannot belong to a stale epic branch. When no filter is active, the bar behaves exactly as it does today.
 
 ### Acceptance criteria
 
