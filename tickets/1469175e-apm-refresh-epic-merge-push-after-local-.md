@@ -29,7 +29,7 @@ This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <
 - [x] When the local merge fails with a conflict, no push is attempted regardless of the `--push`/`--no-push` flags.
 - [x] Passing both `--push` and `--no-push` together is rejected as a CLI error.
 - [x] The `--pr` path behaviour is unchanged: `push_branch_tracking` still runs before PR creation.
-- [ ] The default path (no `--merge`, `--pr`, or `--auto` flag) behaviour is unchanged.
+- [x] The default path (no `--merge`, `--pr`, or `--auto` flag) behaviour is unchanged.
 
 ### Out of scope
 
