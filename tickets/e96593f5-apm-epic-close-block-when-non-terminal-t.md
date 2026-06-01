@@ -33,7 +33,14 @@ context if closed without review.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic close <id>` succeeds unchanged when every ticket in the epic is in `closed` state.
+- [ ] `apm epic close <id>` exits non-zero and prints a table of non-terminal tickets (id, state, title) when at least one ticket is non-terminal.
+- [ ] The non-terminal bail message ends with `Re-run with --close-all to cascade close, or close them manually first.`
+- [ ] `apm epic close <id> --close-all` exits non-zero and prints a table of offending tickets before closing anything when at least one ticket is in `blocked` or `question`.
+- [ ] `apm epic close <id> --close-all` closes each non-terminal ticket and then closes the epic when all non-terminal tickets are in states other than `blocked`/`question`.
+- [ ] `apm epic close <id> --close-all` prints `closing ticket #<id> ... done` for each ticket it closes.
+- [ ] `apm epic close <id> --close-all` with a mix of `blocked` and closable tickets bails before modifying any ticket or the epic.
+- [ ] The existing quiescence check (live workers, active coding states) still runs before the new non-terminal check in both paths.
 
 ### Out of scope
 
