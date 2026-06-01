@@ -1,6 +1,6 @@
 # APM Spec-Writer Instructions
 
-This file applies when you pick up a ticket in **`new`** or **`ammend`** state.
+This file applies when you pick up a ticket in **`groomed`** or **`ammend`** state.
 Your job is to write or revise the spec so a separate implementation agent can
 act on it without needing to ask questions.
 
