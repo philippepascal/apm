@@ -1,7 +1,7 @@
 +++
 id = "2ef15663"
 title = "UI: filter the epic bar indicating epics needing refresh"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/2ef15663-ui-filter-the-epic-bar-indicating-epics-"
 created_at = "2026-06-01T17:18:45.877184Z"
-updated_at = "2026-06-01T17:18:45.877184Z"
+updated_at = "2026-06-01T17:18:51.491662Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-01T17:18Z | — | new | philippepascal |
+| 2026-06-01T17:18Z | new | groomed | philippepascal |
