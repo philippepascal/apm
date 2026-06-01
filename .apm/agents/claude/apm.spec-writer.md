@@ -76,6 +76,18 @@ Do not batch tool calls in parallel in a headless worker:
 
 ---
 
+## Scope limits
+
+**Permitted `apm` commands:**
+- `apm show` — read a ticket
+- `apm state` — transition ticket state
+- `apm spec` — read or write spec sections
+- `apm set` — set a field on a ticket
+- `apm new` — file a side-note ticket
+- `apm instructions` — load APM system knowledge
+
+---
+
 ## How to save spec sections
 
 Do NOT write the ticket markdown file directly. Always use `apm spec`.
