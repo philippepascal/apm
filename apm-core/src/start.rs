@@ -47,19 +47,16 @@ pub fn resolve_worker_profile(worker_profile_str: &str, workers: &WorkersConfig)
     })
 }
 
-/// Resolve the worker profile for a dispatch: source_state → dest_state.
+/// Resolve the worker profile for a dispatch to `dest_state_id`.
 ///
 /// Priority order:
 /// 1. Destination state's `worker_profile` field
-/// 2. Firing transition's `worker_profile` field
-/// 3. `[workers].default`
-/// 4. Built-in fallback `"claude/coder"`
+/// 2. `[workers].default`
+/// 3. Built-in fallback `"claude/coder"`
 ///
 /// Returns `(profile_string, source_label)`.
 fn resolve_dispatch_profile(
-    source_state_id: &str,
     dest_state_id: &str,
-    triggering_transition: Option<&TransitionConfig>,
     config: &Config,
 ) -> (String, String) {
     // 1. Destination state's worker_profile
@@ -72,18 +69,11 @@ fn resolve_dispatch_profile(
             format!("workflow.toml state {dest_state_id}.worker_profile"),
         );
     }
-    // 2. Firing transition's worker_profile
-    if let Some(wp) = triggering_transition.and_then(|tr| tr.worker_profile.as_deref()) {
-        return (
-            wp.to_string(),
-            format!("workflow.toml transition {source_state_id} → {dest_state_id}"),
-        );
-    }
-    // 3. workers.default
+    // 2. workers.default
     if let Some(wp) = config.workers.default.as_deref() {
         return (wp.to_string(), "workers.default".to_string());
     }
-    // 4. Built-in fallback
+    // 3. Built-in fallback
     ("claude/coder".to_string(), "built-in fallback".to_string())
 }
 
@@ -171,7 +161,7 @@ pub fn resolve_for_diagnostic(root: &Path, id_arg: &str) -> Result<AgentDiagnost
     let ticket_state = t.frontmatter.state.clone();
 
     // Find command:start for current state; if absent scan all states for fallback.
-    let (dispatchable, resolved_from_state, from_id, to_id, transition_for_resolution) = {
+    let (dispatchable, resolved_from_state, from_id, to_id, _transition_for_resolution) = {
         let current = config.workflow.states.iter()
             .find(|s| s.id == ticket_state)
             .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
@@ -217,9 +207,7 @@ pub fn resolve_for_diagnostic(root: &Path, id_arg: &str) -> Result<AgentDiagnost
     let transition_label = format!("{from_id} → {to_id}");
 
     let (worker_profile_str, profile_source) = resolve_dispatch_profile(
-        &from_id,
         &to_id,
-        transition_for_resolution.as_ref(),
         &config,
     );
 
@@ -513,9 +501,7 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
     }
 
     let (worker_profile_str, _) = resolve_dispatch_profile(
-        &old_state,
         &new_state,
-        triggering_transition,
         &config,
     );
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
@@ -645,9 +631,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .map(|tr| tr.to.as_str())
         .unwrap_or("in_progress");
     let (worker_profile_str, _) = resolve_dispatch_profile(
-        &old_state,
         dest,
-        triggering_transition_owned.as_ref(),
         &config,
     );
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
@@ -828,9 +812,7 @@ pub fn spawn_next_worker(
         .map(|tr| tr.to.as_str())
         .unwrap_or("in_progress");
     let (worker_profile_str, _) = resolve_dispatch_profile(
-        &old_state,
         dest,
-        triggering_transition_owned.as_ref(),
         &config,
     );
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
@@ -1901,7 +1883,7 @@ mod tests {
         ticket_state: &str,
         ticket_id: &str,
         workers_default: Option<&str>,
-        transition_worker_profile: Option<&str>,
+        dest_state_worker_profile: Option<&str>,
         manifest_model: Option<&str>,
         agent_overrides: Option<(&str, &str)>,
     ) {
@@ -1919,13 +1901,13 @@ mod tests {
             "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
         )).unwrap();
 
-        let wp_line = if let Some(wp) = transition_worker_profile {
-            format!("  worker_profile = \"{wp}\"\n")
+        let dest_wp_line = if let Some(wp) = dest_state_worker_profile {
+            format!("worker_profile = \"{wp}\"\n")
         } else {
             String::new()
         };
         fs::write(root.join(".apm/workflow.toml"), format!(
-            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n{wp_line}\n[[workflow.states]]\nid = \"in_progress\"\nlabel = \"In Progress\"\n\n  [[workflow.states.transitions]]\n  to = \"done\"\n  trigger = \"manual\"\n  outcome = \"success\"\n\n[[workflow.states]]\nid = \"done\"\nlabel = \"Done\"\nterminal = true\n\n[[workflow.states]]\nid = \"new\"\nlabel = \"New\"\n\n  [[workflow.states.transitions]]\n  to = \"ready\"\n  trigger = \"manual\"\n  outcome = \"success\"\n"
+            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n\n[[workflow.states]]\nid = \"in_progress\"\nlabel = \"In Progress\"\n{dest_wp_line}\n  [[workflow.states.transitions]]\n  to = \"done\"\n  trigger = \"manual\"\n  outcome = \"success\"\n\n[[workflow.states]]\nid = \"done\"\nlabel = \"Done\"\nterminal = true\n\n[[workflow.states]]\nid = \"new\"\nlabel = \"New\"\n\n  [[workflow.states.transitions]]\n  to = \"ready\"\n  trigger = \"manual\"\n  outcome = \"success\"\n"
         )).unwrap();
 
         if let Some(model) = manifest_model {
@@ -1964,7 +1946,7 @@ mod tests {
         assert_eq!(diag.role, "coder");
         assert_eq!(diag.model.as_deref(), Some("sonnet"));
         assert!(diag.manifest_present);
-        assert!(diag.agent_source.contains("workflow.toml transition"), "expected workflow.toml source, got: {}", diag.agent_source);
+        assert!(diag.agent_source.contains("workflow.toml state"), "expected state-level workflow.toml source, got: {}", diag.agent_source);
         assert!(diag.model_source.contains("coder.toml"), "expected manifest source, got: {}", diag.model_source);
         assert!(diag.dispatchable);
         assert_eq!(diag.resolved_from_state, "ready");
@@ -2542,45 +2524,27 @@ updated_at = "2026-01-01T00:00:00Z"
         toml::from_str(&toml_str).unwrap()
     }
 
-    fn make_transition_with_profile(to: &str, profile: Option<&str>) -> crate::config::TransitionConfig {
-        crate::config::TransitionConfig {
-            to: to.to_string(),
-            trigger: "command:start".to_string(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: profile.map(|s| s.to_string()),
-            on_failure: None,
-            outcome: None,
-        }
-    }
-
     #[test]
-    fn dispatch_profile_state_wins_over_transition() {
-        let config = make_minimal_config("dest", Some("claude/coder"), None);
-        let tr = make_transition_with_profile("dest", Some("claude/spec-writer"));
-        let (profile, source) = super::resolve_dispatch_profile("src", "dest", Some(&tr), &config);
-        assert_eq!(profile, "claude/coder", "state-level must win over transition");
+    fn dispatch_profile_state_wins_over_workers_default() {
+        let config = make_minimal_config("dest", Some("claude/coder"), Some("claude/other"));
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
+        assert_eq!(profile, "claude/coder", "state-level must win over workers.default");
         assert!(source.contains("state"), "source must mention 'state', got: {source}");
     }
 
     #[test]
-    fn dispatch_profile_transition_fallback() {
-        let config = make_minimal_config("dest", None, None);
-        let tr = make_transition_with_profile("dest", Some("claude/spec-writer"));
-        let (profile, source) = super::resolve_dispatch_profile("src", "dest", Some(&tr), &config);
-        assert_eq!(profile, "claude/spec-writer");
-        assert!(source.contains("transition"), "source must mention 'transition', got: {source}");
+    fn dispatch_ignores_transition_worker_profile() {
+        // No state profile, workers.default is set → must return workers.default (no transition fallback)
+        let config = make_minimal_config("dest", None, Some("claude/custom"));
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
+        assert_eq!(profile, "claude/custom", "must fall through to workers.default");
+        assert_eq!(source, "workers.default");
     }
 
     #[test]
     fn dispatch_profile_workers_default_fallback() {
         let config = make_minimal_config("dest", None, Some("claude/custom"));
-        let tr = make_transition_with_profile("dest", None);
-        let (profile, source) = super::resolve_dispatch_profile("src", "dest", Some(&tr), &config);
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
         assert_eq!(profile, "claude/custom");
         assert_eq!(source, "workers.default");
     }
@@ -2588,7 +2552,7 @@ updated_at = "2026-01-01T00:00:00Z"
     #[test]
     fn dispatch_profile_builtin_fallback() {
         let config = make_minimal_config("dest", None, None);
-        let (profile, source) = super::resolve_dispatch_profile("src", "dest", None, &config);
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
         assert_eq!(profile, "claude/coder");
         assert_eq!(source, "built-in fallback");
     }
@@ -2600,7 +2564,6 @@ updated_at = "2026-01-01T00:00:00Z"
         ticket_state: &str,
         ticket_id: &str,
         workers_default: Option<&str>,
-        transition_worker_profile: Option<&str>,
         dest_state_worker_profile: Option<&str>,
     ) {
         use std::fs;
@@ -2617,11 +2580,6 @@ updated_at = "2026-01-01T00:00:00Z"
             "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
         )).unwrap();
 
-        let wp_line = if let Some(wp) = transition_worker_profile {
-            format!("  worker_profile = \"{wp}\"\n")
-        } else {
-            String::new()
-        };
         let dest_wp_line = if let Some(dwp) = dest_state_worker_profile {
             format!("worker_profile = \"{dwp}\"\n")
         } else {
@@ -2629,7 +2587,7 @@ updated_at = "2026-01-01T00:00:00Z"
         };
 
         fs::write(root.join(".apm/workflow.toml"), format!(
-            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n{wp_line}\n\
+            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n\n\
              [[workflow.states]]\nid = \"in_progress\"\nlabel = \"In Progress\"\n{dest_wp_line}\n  [[workflow.states.transitions]]\n  to = \"done\"\n  trigger = \"manual\"\n  outcome = \"success\"\n\n\
              [[workflow.states]]\nid = \"done\"\nlabel = \"Done\"\nterminal = true\n\n\
              [[workflow.states]]\nid = \"new\"\nlabel = \"New\"\n\n  [[workflow.states.transitions]]\n  to = \"ready\"\n  trigger = \"manual\"\n  outcome = \"success\"\n"
@@ -2656,35 +2614,33 @@ updated_at = "2026-01-01T00:00:00Z"
     fn resolve_for_diagnostic_state_worker_profile_wins() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        // dest (in_progress) has state-level "claude/coder"; transition has "claude/spec-writer"
-        // state-level must win
+        // in_progress has state-level "claude/coder"; profile_source must mention "state"
         make_diagnostic_repo_with_dest_profile(
             root, "ready", "bb000001",
             None,
-            Some("claude/spec-writer"),
             Some("claude/coder"),
         );
         let diag = super::resolve_for_diagnostic(root, "bb000001").unwrap();
         assert_eq!(diag.worker_profile_str, "claude/coder",
-            "state-level profile must win over transition-level");
+            "state-level profile must be used");
         assert!(diag.profile_source.contains("state"),
             "profile_source must contain 'state' when from state-level; got: {}", diag.profile_source);
     }
 
     #[test]
-    fn resolve_for_diagnostic_transition_fallback_when_no_state_profile() {
+    fn resolve_for_diagnostic_workers_default_fallback() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        // dest (in_progress) has NO state-level profile; transition has "claude/spec-writer"
+        // in_progress has no state-level profile; workers.default set → must use workers.default
         make_diagnostic_repo_with_dest_profile(
             root, "ready", "bb000002",
-            None,
-            Some("claude/spec-writer"),
+            Some("claude/custom"),
             None,
         );
         let diag = super::resolve_for_diagnostic(root, "bb000002").unwrap();
-        assert_eq!(diag.worker_profile_str, "claude/spec-writer");
-        assert!(diag.profile_source.contains("transition"),
-            "profile_source must contain 'transition' when from transition-level; got: {}", diag.profile_source);
+        assert_eq!(diag.worker_profile_str, "claude/custom",
+            "must fall through to workers.default; got: {}", diag.worker_profile_str);
+        assert_eq!(diag.profile_source, "workers.default",
+            "profile_source must be workers.default; got: {}", diag.profile_source);
     }
 }

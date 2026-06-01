@@ -23,7 +23,6 @@ dep_requires = "spec"
   [[workflow.states.transitions]]
   to              = "in_design"
   trigger         = "command:start"
-  worker_profile  = "claude/spec-writer"
   context_section = "Problem"
   outcome         = "needs_input"
 
@@ -84,10 +83,9 @@ satisfies_deps = "spec"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to             = "in_design"
-  trigger        = "command:start"
-  worker_profile = "claude/spec-writer"
-  outcome        = "needs_input"
+  to      = "in_design"
+  trigger = "command:start"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "closed"
@@ -102,13 +100,11 @@ worker_profile = "claude/spec-writer"
   [[workflow.states.transitions]]
   to      = "specd"
   trigger = "manual"
-  worker_profile = "claude/spec-writer"
   outcome = "success"
 
   [[workflow.states.transitions]]
   to      = "question"
   trigger = "manual"
-  worker_profile = "claude/spec-writer"
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
@@ -127,10 +123,9 @@ label          = "Ready"
 satisfies_deps = "spec"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
-  outcome        = "needs_input"
+  to      = "in_progress"
+  trigger = "command:start"
+  outcome = "needs_input"
 
   [[workflow.states.transitions]]
   to      = "ammend"

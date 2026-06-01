@@ -61,14 +61,17 @@ pub fn classify_recovery_options(state_id: &str, workflow: &WorkflowConfig) -> V
         .collect();
 
     let coder_start_ids: HashSet<String> = workflow.states.iter()
-        .flat_map(|s| s.transitions.iter())
-        .filter(|t| {
-            t.trigger == "command:start"
-                && t.worker_profile
-                    .as_deref()
-                    .is_none_or(|p| !p.ends_with("/spec-writer"))
+        .flat_map(|s| s.transitions.iter().map(move |t| (s, t)))
+        .filter(|(_, t)| t.trigger == "command:start")
+        .filter(|(_, t)| {
+            let dest_is_spec_writer = workflow.states.iter()
+                .find(|s| s.id == t.to)
+                .and_then(|s| s.worker_profile.as_deref())
+                .map(|wp| wp.ends_with("/spec-writer"))
+                .unwrap_or(false);
+            !dest_is_spec_writer
         })
-        .map(|t| t.to.clone())
+        .map(|(_, t)| t.to.clone())
         .collect();
 
     let terminal_ids: HashSet<&str> = workflow.states.iter()
@@ -111,13 +114,13 @@ id    = "ready"
 label = "Ready"
 
   [[states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[states.transitions]]
   to         = "implemented"
@@ -182,8 +185,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[states.transitions]]
   to         = "implemented"
@@ -196,9 +200,8 @@ id    = "ready"
 label = "Ready"
 
   [[states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
         let wf = parse_workflow(shuffled);
         let opts = classify_recovery_options("merge_failed", &wf);
@@ -216,13 +219,13 @@ id    = "ready"
 label = "Ready"
 
   [[states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[states.transitions]]
   to         = "shipped"

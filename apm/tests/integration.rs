@@ -8015,13 +8015,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8072,8 +8072,9 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -8085,9 +8086,8 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 "#;
     // Write the shuffled workflow to disk (no commit needed — Config::load reads from disk).
     std::fs::write(p.join(".apm/workflow.toml"), workflow_v2).unwrap();
@@ -8348,13 +8348,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
