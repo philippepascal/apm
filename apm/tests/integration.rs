@@ -1875,10 +1875,6 @@ id             = "in_design"
 label          = "In Design"
 worker_profile = "claude/coder"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -2711,8 +2707,12 @@ id    = "new"
 label = "New"
 
 [[workflow.states.transitions]]
-to              = "closed"
+to              = "review"
 context_section = "NonExistentSection"
+
+[[workflow.states]]
+id    = "review"
+label = "Review"
 
 [[workflow.states]]
 id       = "closed"
@@ -3113,10 +3113,6 @@ risk_weight = -1.0
 id    = "new"
 label = "New"
 
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
-
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -3336,10 +3332,6 @@ risk_weight = -1.0
 [[workflow.states]]
 id    = "new"
 label = "New"
-
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -3627,10 +3619,6 @@ label = "In Progress"
 [[workflow.states]]
 id    = "implemented"
 label = "Implemented"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -4466,10 +4454,6 @@ dir = "tickets"
 [[workflow.states]]
 id    = "new"
 label = "New"
-
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
 
 [[workflow.states]]
 id       = "closed"
@@ -8374,10 +8358,6 @@ worker_profile = "claude/coder"
 id    = "implemented"
 label = "Implemented"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-
 [[workflow.states]]
 id    = "merge_failed"
 label = "Merge failed"
@@ -8714,4 +8694,48 @@ fn refresh_epic_merge_noninteractive_skips_push() {
         stderr.contains("was not pushed"),
         "stderr should contain stale-origin warning; got:\n{stderr}"
     );
+}
+
+// ── Implicit close: no explicit transition required ───────────────────────────
+
+/// Closing a non-terminal ticket succeeds without any explicit `to = "closed"`
+/// transition in the workflow — the state machine allows it implicitly.
+#[test]
+fn implicit_close_succeeds_without_explicit_transition() {
+    let dir = init_repo();
+    let p = dir.path();
+    // init_repo() uses the default workflow which has no `to = "closed"` entries.
+    let (id, _branch) = create_ticket(p, "implicit close test");
+    // Ticket starts in "new". The workflow has no explicit closed transition for new,
+    // but the implicit rule should allow it.
+    let result = apm_core::state::transition(p, &id, "closed".into(), true, false);
+    assert!(
+        result.is_ok(),
+        "implicit close should succeed from non-terminal state; got: {}",
+        result.err().map(|e| e.to_string()).unwrap_or_default()
+    );
+    assert_eq!(result.unwrap().new_state, "closed");
+}
+
+/// Attempting to transition a ticket that is already in a terminal state fails
+/// with a clear error message.
+#[test]
+fn close_from_terminal_state_fails() {
+    let dir = init_repo();
+    let p = dir.path();
+    let (id, _branch) = create_ticket(p, "close from terminal test");
+    // Force-close the ticket first (bypasses the terminal-source guard).
+    apm_core::state::transition(p, &id, "closed".into(), true, true).unwrap();
+    // Now try to close again without force — must fail.
+    let result = apm_core::state::transition(p, &id, "closed".into(), true, false);
+    match result {
+        Ok(_) => panic!("transition from terminal state should have failed"),
+        Err(e) => {
+            let msg = e.to_string();
+            assert!(
+                msg.contains("terminal state"),
+                "expected 'terminal state' in error; got: {msg}"
+            );
+        }
+    }
 }

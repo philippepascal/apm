@@ -622,10 +622,6 @@ trigger = "manual"
 id    = "ready"
 label = "Ready"
 
-[[workflow.states.transitions]]
-to      = "closed"
-trigger = "manual"
-
 [[workflow.states]]
 id    = "closed"
 label = "Closed"
@@ -779,9 +775,8 @@ worker_profile = "claude/coder"
   outcome = "success"
 
 [[workflow.states]]
-id       = "done"
-label    = "Done"
-terminal = true
+id    = "done"
+label = "Done"
 "#).unwrap();
 
     fs::write(dir.join(".apm/agents/claude/coder.toml"), "model = \"sonnet\"\n").unwrap();

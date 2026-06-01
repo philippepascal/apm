@@ -15,9 +15,6 @@ const MINIMAL_WORKFLOW: &str = r#"
 id = "new"
 label = "New"
 
-[[workflow.states.transitions]]
-to = "closed"
-
 [[workflow.states]]
 id = "closed"
 label = "Closed"
