@@ -3,13 +3,13 @@ id = "5dc0a5bd"
 title = "UI review panel takes a very long time to close"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5dc0a5bd-ui-review-panel-takes-a-very-long-time-t"
 created_at = "2026-06-01T18:17:29.250149Z"
-updated_at = "2026-06-01T18:17:36.453464Z"
+updated_at = "2026-06-01T18:22:14.212339Z"
 +++
 
 ## Spec
