@@ -370,18 +370,19 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
             ));
         }
 
-        // Non-terminal state with no outgoing transitions (tickets will be stranded).
-        if !state.terminal && state.transitions.is_empty() {
-            errors.push(format!(
-                "config: state.{} — no outgoing transitions (tickets will be stranded)",
-                state.id
-            ));
-        }
-
         for transition in &state.transitions {
-            // Transition target must exist.  "closed" is a built-in terminal state
-            // that is always valid even when absent from [[workflow.states]].
-            if transition.to != "closed" && !state_ids.contains(transition.to.as_str()) {
+            // Explicit transitions to terminal states are forbidden; terminal states are
+            // always reachable as a supervisor close action.
+            if terminal_ids.contains(transition.to.as_str()) {
+                errors.push(format!(
+                    "config: state.{}.transition({}) — explicit transitions to terminal states are not \
+                     allowed; {} is always reachable as a supervisor close action",
+                    state.id, transition.to, transition.to
+                ));
+            }
+
+            // Transition target must exist.
+            if !terminal_ids.contains(transition.to.as_str()) && !state_ids.contains(transition.to.as_str()) {
                 errors.push(format!(
                     "config: state.{}.transition({}) — target state '{}' does not exist",
                     state.id, transition.to, transition.to
@@ -1231,9 +1232,6 @@ id       = "in_progress"
 label    = "In Progress"
 terminal = false
 
-[[workflow.states.transitions]]
-to = "closed"
-
 [[workflow.states]]
 id       = "closed"
 label    = "Closed"
@@ -1313,9 +1311,10 @@ to = "closed"
         assert!(!known_states.contains(ticket.frontmatter.state.as_str()));
     }
 
-    // Test 6: dead-end non-terminal state is detected
+    // Test 6: dead-end non-terminal state is no longer an error — implicit close
+    // means any non-terminal state can always be closed by the supervisor.
     #[test]
-    fn dead_end_non_terminal_detected() {
+    fn dead_end_non_terminal_not_an_error() {
         let toml = r#"
 [project]
 name = "test"
@@ -1335,8 +1334,48 @@ terminal = true
         let config = load_config(toml);
         let errors = validate_config(&config, Path::new("/tmp"));
         assert!(
-            errors.iter().any(|e| e.contains("state.stuck") && e.contains("no outgoing transitions")),
-            "expected dead-end error in {errors:?}"
+            !errors.iter().any(|e| e.contains("state.stuck") && e.contains("no outgoing transitions")),
+            "dead-end should not be an error after implicit-close rule; got: {errors:?}"
+        );
+    }
+
+    // Test 6b: explicit terminal transition is rejected with a clear error naming
+    // the source state and the terminal target.
+    #[test]
+    fn explicit_terminal_transition_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = "claude/coder"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+outcome = "cancelled"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("state.new.transition(closed)") && e.contains("explicit transitions to terminal states")),
+            "expected explicit-terminal-transition error naming source and target; got: {errors:?}"
+        );
+        assert!(
+            errors.iter().any(|e| e.contains("closed") && e.contains("always reachable")),
+            "error should mention that closed is always reachable; got: {errors:?}"
         );
     }
 
@@ -1997,9 +2036,6 @@ dir = "{dir}"
 [[workflow.states]]
 id       = "merge_failed"
 label    = "Merge failed"
-
-[[workflow.states.transitions]]
-to = "closed"
 "#
         } else {
             ""

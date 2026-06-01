@@ -48,6 +48,18 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     };
     let old_state = t.frontmatter.state.clone();
 
+    // Block transitions FROM terminal states (unless forced).
+    if !force {
+        if let Some(src) = config.workflow.states.iter().find(|s| s.id == old_state) {
+            if src.terminal {
+                bail!(
+                    "ticket {:?} is in terminal state {:?}; no further transitions are allowed",
+                    id, old_state
+                );
+            }
+        }
+    }
+
     let target_is_terminal = config.workflow.states.iter()
         .find(|s| s.id == new_state)
         .map(|s| s.terminal)
@@ -412,9 +424,6 @@ mod tests {
             "id = \"new\"\nlabel = \"New\"\n",
             "[[workflow.states.transitions]]\n",
             "to = \"ready\"\nlabel = \"Mark ready\"\n",
-            "[[workflow.states.transitions]]\n",
-            "to = \"closed\"\nlabel = \"\"\n",
-            "warning = \"This will close the ticket\"\n",
             "[[workflow.states]]\n",
             "id = \"ready\"\nlabel = \"Ready\"\n",
             "[[workflow.states]]\n",
@@ -455,13 +464,10 @@ mod tests {
     fn compute_valid_transitions_returns_expected_options() {
         let config = config_with_transitions();
         let opts = compute_valid_transitions("new", &config);
-        assert_eq!(opts.len(), 2);
+        assert_eq!(opts.len(), 1);
         assert_eq!(opts[0].to, "ready");
         assert_eq!(opts[0].label, "Mark ready");
         assert!(opts[0].warning.is_none());
-        assert_eq!(opts[1].to, "closed");
-        assert_eq!(opts[1].label, "-> closed");
-        assert_eq!(opts[1].warning.as_deref(), Some("This will close the ticket"));
     }
 
     #[test]

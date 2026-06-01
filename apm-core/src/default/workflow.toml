@@ -9,11 +9,6 @@ label = "New"
   trigger = "manual"
   outcome = "needs_input"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
-
 [[workflow.states]]
 id           = "groomed"
 label        = "Groomed"
@@ -25,11 +20,6 @@ dep_requires = "spec"
   context_section = "Problem"
   outcome         = "needs_input"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
-
 [[workflow.states]]
 id    = "question"
 label = "Question"
@@ -38,11 +28,6 @@ label = "Question"
   to      = "ammend"
   trigger = "manual"
   outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "specd"
@@ -60,11 +45,6 @@ worker_end     = true
   trigger = "manual"
   outcome = "needs_input"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
-
 [[workflow.states]]
 id             = "ammend"
 label          = "Ammend"
@@ -75,11 +55,6 @@ satisfies_deps = "spec"
   to      = "in_design"
   trigger = "command:start"
   outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "in_design"
@@ -95,11 +70,6 @@ worker_profile = "claude/spec-writer"
   to      = "question"
   trigger = "manual"
   outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "ready"
@@ -120,11 +90,6 @@ satisfies_deps = "spec"
   to      = "specd"
   trigger = "manual"
   outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "in_progress"
@@ -156,11 +121,6 @@ worker_profile = "claude/coder"
   trigger = "manual"
   outcome = "needs_input"
 
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
-
 [[workflow.states]]
 id    = "blocked"
 label = "Blocked"
@@ -170,11 +130,6 @@ label = "Blocked"
   trigger = "manual"
   label   = "Supervisor answered questions — agent can resume"
   outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id             = "implemented"
@@ -192,11 +147,6 @@ worker_end     = true
   to      = "ammend"
   trigger = "manual"
   outcome = "needs_input"
-
-  [[workflow.states.transitions]]
-  to      = "closed"
-  trigger = "manual"
-  outcome = "cancelled"
 
 [[workflow.states]]
 id    = "merge_failed"
